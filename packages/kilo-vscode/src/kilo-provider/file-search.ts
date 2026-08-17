@@ -20,23 +20,6 @@ type Input = {
   post: (message: unknown) => void
 }
 
-type Cache = {
-  files: string[]
-  folders: string[]
-  updated: number
-}
-
-const cache = new Map<string, Cache>()
-
-export function prewarmFileSearch(client: KiloClient | null, dir: string): void {
-  if (!client || !dir) return
-  void fetchBackend(client, dir, "").then(([files, folders]) => {
-    if (files.length || folders.length) {
-      cache.set(dir, { files, folders, updated: Date.now() })
-    }
-  })
-}
-
 async function fetchBackend(client: KiloClient, dir: string, query: string): Promise<[string[], string[]]> {
   if (!client?.find?.files) return [[], []]
   const [fileRes, folderRes] = await Promise.allSettled([
@@ -76,22 +59,10 @@ export async function handleFileSearch(input: Input): Promise<void> {
   const id = input.message.sessionID ?? input.current ?? input.context
   const dir = input.dir(id)
   const query = input.message.query
-  const entry = !query && dir ? cache.get(dir) : undefined
-
-  if (entry) {
-    const open = await input.open(dir)
-    const { paths, items } = assemble(query, dir, entry.files, entry.folders, open)
-    input.post({ type: "fileSearchResult", paths, items, dir, requestId: input.message.requestId })
-  }
-
-  void fetchBackend(client, dir, query).then(async ([files, folders]) => {
-    if (!query && dir && (files.length || folders.length)) {
-      cache.set(dir, { files, folders, updated: Date.now() })
-    }
-    const open = dir ? await input.open(dir) : new Set<string>()
-    const { paths, items } = assemble(query, dir, files, folders, open)
-    input.post({ type: "fileSearchResult", paths, items, dir, requestId: input.message.requestId })
-  })
+  const [files, folders] = await fetchBackend(client, dir, query)
+  const open = dir ? await input.open(dir) : new Set<string>()
+  const { paths, items } = assemble(query, dir, files, folders, open)
+  input.post({ type: "fileSearchResult", paths, items, dir, requestId: input.message.requestId })
 }
 
 function settled(result: PromiseSettledResult<{ data: string[] }>, kind: "file" | "folder"): string[] {

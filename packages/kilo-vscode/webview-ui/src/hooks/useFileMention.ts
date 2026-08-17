@@ -25,6 +25,21 @@ import {
 } from "./file-mention-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
+const FILE_SEARCH_CACHE_MS = 5000
+const FILE_SEARCH_CACHE_LIMIT = 8
+
+type FileSearchCache = {
+  items: Array<FileSearchItem | string>
+  updated: number
+  revision: number
+}
+
+type FileSearchRequest = {
+  id: string
+  query: string
+  scope: string
+  revision: number
+}
 
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
@@ -118,8 +133,8 @@ export function useFileMention(
   const [sessionPicker, setSessionPicker] = createSignal(false)
   const [sessionCandidates, setSessionCandidates] = createSignal<SessionSearchItem[]>([])
   let workspaceDir = ""
-  let cached: Array<FileSearchItem | string> = []
-  const cache = new Map<string, Array<FileSearchItem | string>>()
+  const cache = new Map<string, FileSearchCache>()
+  const dirs = new Map<string, string>()
   // Accumulates every path ever mentioned so syncMentionedPaths can
   // rediscover them after a native undo restores the text.
   const knownPaths = new Set<string>()
@@ -129,6 +144,9 @@ export function useFileMention(
 
   let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
   let fileSearchCounter = 0
+  let fileSearchRevision = 0
+  let fileSearchRequest: FileSearchRequest | undefined
+  let prewarmRequest: FileSearchRequest | undefined
   let filePickerCounter = 0
   let sessionSearchCounter = 0
   let pickerState: {
@@ -142,17 +160,75 @@ export function useFileMention(
   let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
 
   const showMention = () => mentionQuery() !== null
+  const scope = () => sessionID?.() ?? ""
+  let activeScope = scope()
+
+  const syncScope = () => {
+    const value = scope()
+    if (value === activeScope) return value
+    activeScope = value
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRevision++
+    fileSearchRequest = undefined
+    prewarmRequest = undefined
+    workspaceDir = dirs.get(value) ?? ""
+    setMentionResults([])
+    setMentionIndex(0)
+    return value
+  }
+
+  const readCache = (dir: string): Array<FileSearchItem | string> => {
+    if (!dir) return []
+    const entry = cache.get(dir)
+    if (!entry) return []
+    if (Date.now() - entry.updated <= FILE_SEARCH_CACHE_MS) return entry.items
+    cache.delete(dir)
+    return []
+  }
+
+  const writeCache = (dir: string, items: Array<FileSearchItem | string>, revision: number) => {
+    if (!dir) return
+    const entry = cache.get(dir)
+    if (entry && entry.revision > revision) return
+    cache.delete(dir)
+    cache.set(dir, { items, updated: Date.now(), revision })
+    while (cache.size > FILE_SEARCH_CACHE_LIMIT) {
+      const oldest = cache.keys().next().value
+      if (!oldest) return
+      cache.delete(oldest)
+    }
+  }
+
+  const replaceResults = (items: MentionResult[]) => {
+    const index = mentionIndex()
+    const selected = mentionResults()[index]
+    setMentionResults(items)
+    if (!selected) {
+      setMentionIndex(0)
+      return
+    }
+    const next = items.findIndex((item) => item.type === selected.type && item.value === selected.value)
+    setMentionIndex(next >= 0 ? next : Math.min(index, Math.max(items.length - 1, 0)))
+  }
 
   createEffect(() => {
     if (!showMention()) setMentionIndex(0)
   })
 
   createEffect(() => {
-    const id = sessionID?.()
+    const id = syncScope()
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRequest = undefined
+    setMentionQuery(null)
+    setMentionResults([])
+    setMentionIndex(0)
+    const revision = ++fileSearchRevision
+    const requestId = `file-search-prewarm-${revision}`
+    prewarmRequest = { id: requestId, query: "", scope: id, revision }
     vscode.postMessage({
       type: "requestFileSearch",
       query: "",
-      requestId: "file-search-prewarm",
+      requestId,
       ...(id ? { sessionID: id } : {}),
     })
   })
@@ -170,18 +246,25 @@ export function useFileMention(
       return
     }
     if (message.type !== "fileSearchResult") return
-    if (message.requestId === `file-search-${fileSearchCounter}` || message.requestId === "file-search-prewarm") {
-      const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
+    const request =
+      message.requestId === fileSearchRequest?.id
+        ? fileSearchRequest
+        : message.requestId === prewarmRequest?.id
+          ? prewarmRequest
+          : undefined
+    if (!request || request.scope !== scope()) return
+    if (request === fileSearchRequest) fileSearchRequest = undefined
+    if (request === prewarmRequest) prewarmRequest = undefined
+    if (request.revision < fileSearchRevision) return
+
+    const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
+    if (message.dir) {
+      dirs.set(request.scope, message.dir)
       workspaceDir = message.dir
-      if (message.dir) cache.set(message.dir, items)
-      if (!mentionQuery()) {
-        cached = items
-      }
-      if (showMention() && message.requestId === `file-search-${fileSearchCounter}`) {
-        setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
-        setMentionIndex(0)
-      }
     }
+    if (!request.query) writeCache(message.dir, items, request.revision)
+    if (!showMention() || request.query !== mentionQuery()) return
+    replaceResults(buildMentionResults(request.query, items, git?.() ?? true))
   })
 
   onCleanup(() => {
@@ -190,19 +273,25 @@ export function useFileMention(
     if (pendingArrowSnap) clearTimeout(pendingArrowSnap.timer)
   })
 
-  const requestFileSearch = (query: string, immediate = false) => {
+  const requestFileSearch = (query: string) => {
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    const revision = ++fileSearchRevision
+    const request = {
+      id: `file-search-${++fileSearchCounter}`,
+      query,
+      scope: syncScope(),
+      revision,
+    }
+    fileSearchRequest = request
     const send = () => {
-      fileSearchCounter++
-      const id = sessionID?.()
       vscode.postMessage({
         type: "requestFileSearch",
         query,
-        requestId: `file-search-${fileSearchCounter}`,
-        ...(id ? { sessionID: id } : {}),
+        requestId: request.id,
+        ...(request.scope ? { sessionID: request.scope } : {}),
       })
     }
-    if (immediate || !query) {
+    if (!query) {
       send()
       return
     }
@@ -210,6 +299,9 @@ export function useFileMention(
   }
 
   const closeMention = () => {
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRevision++
+    fileSearchRequest = undefined
     setMentionQuery(null)
     setMentionResults([])
     setSessionPicker(false)
@@ -319,6 +411,7 @@ export function useFileMention(
   let suppress = false
 
   const onInput = (val: string, cursor: number) => {
+    syncScope()
     syncMentionedPaths(val)
     if (suppress) return
     closeSessionPicker()
@@ -327,11 +420,11 @@ export function useFileMention(
     if (match) {
       const query = match[1] ?? ""
       setMentionQuery(query)
-      const items = (workspaceDir && cache.get(workspaceDir)) || cached
+      const items = readCache(workspaceDir)
       if (!query) {
         setMentionResults(buildMentionResults("", items, git?.() ?? true))
         setMentionIndex(0)
-        requestFileSearch("", true)
+        requestFileSearch("")
         return
       }
       setMentionResults((prev) => {
