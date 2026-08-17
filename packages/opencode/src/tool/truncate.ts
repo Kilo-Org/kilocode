@@ -52,15 +52,18 @@ const layer = Layer.effect(
     const fs = yield* FSUtil.Service
 
     const cleanup = Effect.fn("Truncate.cleanup")(function* () {
-      const cutoff = Identifier.timestamp(
-        Identifier.create("tool", "ascending", Date.now() - Duration.toMillis(RETENTION)),
-      )
+      // kilocode_change start - encoded timestamps wrap every 2^36 ms, so compare modular age.
+      const range = 2 ** 36
+      const now = Identifier.timestamp(Identifier.create("tool", "ascending"))
+      const retention = Duration.toMillis(RETENTION)
+      // kilocode_change end
       const entries = yield* fs.readDirectory(TRUNCATION_DIR).pipe(
         Effect.map((all) => all.filter((name) => name.startsWith("tool_"))),
         Effect.catch(() => Effect.succeed([])),
       )
       for (const entry of entries) {
-        if (Identifier.timestamp(entry) >= cutoff) continue
+        const age = (now - Identifier.timestamp(entry) + range) % range // kilocode_change
+        if (age <= retention) continue // kilocode_change
         yield* fs.remove(path.join(TRUNCATION_DIR, entry)).pipe(Effect.catch(() => Effect.void))
       }
     })

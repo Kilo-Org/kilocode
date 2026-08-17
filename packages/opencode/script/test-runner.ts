@@ -293,10 +293,12 @@ const BATCH_EXCLUDES = [
   "kilocode/daemon.test.ts", // spawns real daemon subprocesses, races wall-clock deadlines
   "kilocode/instance-vcs-watcher.test.ts",
   "kilocode/issue-8656-stall.test.ts",
+  "kilocode/session-export/e2e.test.ts", // spawns git and waits on wall-clock capture deadlines
   // Heavy real-work files: a batch runs members sequentially, so files whose runtime is
   // dominated by real execution (not process boot) parallelize better in their own process.
   "tool/shell.test.ts",
   "tool/task.test.ts",
+  "tool/truncation.test.ts", // spawns a process and mutates the shared truncation directory
 ]
 // Entry semantics shared by FAST_TIERS and BATCH_EXCLUDES: ".ts" = exact file, else prefix.
 const matchesEntry = (file: string, entry: string) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry))

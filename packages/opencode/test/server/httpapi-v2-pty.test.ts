@@ -255,6 +255,14 @@ describe("v2 pty HttpApi", () => {
         )
         expect(created.status).toBe(200)
         const info = (yield* Schema.decodeUnknownEffect(Location.response(Pty.Info))(yield* created.json)).data
+        yield* Effect.addFinalizer(() =>
+          HttpClientRequest.delete(`/api/pty/${info.id}`).pipe(
+            directoryHeader(dir),
+            HttpClient.execute,
+            Effect.catch(() => Effect.void),
+            Effect.asVoid,
+          ),
+        )
 
         const socket = yield* Socket.makeWebSocket(
           `${(yield* serverUrl()).replace(/^http/, "ws")}/api/pty/${info.id}/connect?cursor=0&location[directory]=${encodeURIComponent(dir)}`,
@@ -282,8 +290,7 @@ describe("v2 pty HttpApi", () => {
         expect(output).toContain(`caller|plugin|plugin|xterm-256color|1|${info.id}|||${cwd}`)
         // kilocode_change end
         yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
-        yield* HttpClientRequest.delete(`/api/pty/${info.id}`).pipe(directoryHeader(dir), HttpClient.execute)
       }),
-    30_000, // kilocode_change - external plugin loading and websocket setup can exceed Bun's 5s default
+    60_000, // kilocode_change - external plugin loading and websocket setup compete with the Darwin profile
   )
 })
