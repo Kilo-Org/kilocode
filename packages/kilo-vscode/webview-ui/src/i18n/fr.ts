@@ -1151,7 +1151,7 @@ export const dict = {
 
   "settings.display.tokenThroughput.title": "Afficher le débit de tokens",
   "settings.display.tokenThroughput.description":
-    "Affiche le taux de génération de texte (tokens/s) sur le dernier message de l'assistant et dans l'en-tête de la tâche. Masqué par défaut pour garder le chat épuré.",
+    "Afficher la vitesse de génération du texte (tokens/sec) dans le dernier message de l’assistant et dans l’en-tête de la tâche. Affichée par défaut ; désactivez ce paramètre pour la masquer si nécessaire.",
   "settings.display.autoApprovalReason.title": "Afficher la raison de l'approbation automatique",
   "settings.display.autoApprovalReason.description":
     "Affiche une ligne sur les appels d'outils expliquant pourquoi ils ont été approuvés automatiquement (règle correspondante, agent par défaut, mode YOLO, etc.).",

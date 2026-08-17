@@ -1188,7 +1188,7 @@
         },
         "kilo-code.new.showTokenThroughput": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Show tokens-per-second (prompt-processing / text-generation) badges on assistant messages and the task header"
         },
         "kilo-code.new.showAutoApprovalReason": {

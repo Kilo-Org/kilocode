@@ -1102,7 +1102,7 @@ export const dict = {
   "settings.display.mcpTool.collapsed": "جمع‌شده",
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
-    "نرخ تولید متن (توکن/ثانیه) را در آخرین پیام دستیار و در سربرگ وظیفه نمایش می‌دهد. به‌طور پیش‌فرض پنهان است تا چت شلوغ نشود.",
+    "نمایش نرخ تولید متن (tokens/sec) در جدیدترین پیام دستیار و سربرگ کار. به‌طور پیش‌فرض نمایش داده می‌شود؛ برای پنهان کردن آن در صورت نیاز، این تنظیم را غیرفعال کنید.",
   "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
   "settings.display.autoApprovalReason.description":
     "نمایش خطی در فراخوانی ابزارها که توضیح می‌دهد چرا به‌طور خودکار تأیید شده‌اند (قانون مطابق، پیش‌فرض عامل، حالت YOLO و غیره).",

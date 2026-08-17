@@ -1077,7 +1077,7 @@ export const dict = {
 
   "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":
-    "En son asistan mesajında ve görev başlığında metin üretim hızını (token/sn) gösterir. Sohbeti dağınık göstermemek için varsayılan olarak gizlidir.",
+    "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
   "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
   "settings.display.autoApprovalReason.description":
     "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",

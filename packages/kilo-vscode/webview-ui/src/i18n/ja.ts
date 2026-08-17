@@ -1110,7 +1110,7 @@ export const dict = {
 
   "settings.display.tokenThroughput.title": "トークンスループットを表示",
   "settings.display.tokenThroughput.description":
-    "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（トークン/秒）を表示します。チャットを整理するためデフォルトでは非表示です。",
+    "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（tokens/sec）を表示します。デフォルトで表示され、必要に応じてこの設定を無効にすると非表示にできます。",
   "settings.display.autoApprovalReason.title": "自動承認の理由を表示",
   "settings.display.autoApprovalReason.description":
     "ツール呼び出しが自動承認された理由（一致したルール、エージェントのデフォルト、YOLOモードなど）を示す行を表示します。",

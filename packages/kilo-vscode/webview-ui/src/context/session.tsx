@@ -2715,7 +2715,9 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? store.messages[id] || [] : []
   }
 
-  const getParts = (messageID: string) => stash.peek(messageID) ?? untrack(() => store.parts[messageID]) ?? []
+  // Keep off-screen history in the non-reactive stash, but track live parts so
+  // newly streamed messages invalidate the transcript.
+  const getParts = (messageID: string) => stash.peek(messageID) ?? store.parts[messageID] ?? []
 
   const getSessionToolParts = (sessionID: string) => store.toolParts[sessionID] ?? []
 

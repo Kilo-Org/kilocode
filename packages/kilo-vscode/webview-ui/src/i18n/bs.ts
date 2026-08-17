@@ -1122,7 +1122,7 @@ export const dict = {
 
   "settings.display.tokenThroughput.title": "Prikaži protok tokena",
   "settings.display.tokenThroughput.description":
-    "Prikazuje brzinu generisanja teksta (tokena/s) na najnovijoj poruci asistenta i u zaglavlju zadatka. Podrazumevano skriveno radi urednijeg chata.",
+    "Prikažite brzinu generisanja teksta (tokens/sec) u najnovijoj poruci asistenta i zaglavlju zadatka. Prikazuje se podrazumijevano; onemogućite ovu postavku da biste je po potrebi sakrili.",
   "settings.display.autoApprovalReason.title": "Prikaži razlog automatskog odobravanja",
   "settings.display.autoApprovalReason.description":
     "Prikazuje red uz pozive alata koji objašnjava zašto su automatski odobreni (odgovarajuće pravilo, podrazumevana vrijednost agenta, YOLO režim itd.).",

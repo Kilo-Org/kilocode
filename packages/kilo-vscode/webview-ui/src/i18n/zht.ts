@@ -1018,7 +1018,7 @@ export const dict = {
 
   "settings.display.tokenThroughput.title": "顯示權杖吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助理訊息與工作標題中顯示文字生成速率（權杖/秒）。預設隱藏，以保持對話簡潔。",
+    "在最新的助理訊息和任務標題中顯示文字生成速率（tokens/sec）。預設顯示；需要時停用此設定即可隱藏。",
   "settings.display.autoApprovalReason.title": "顯示自動核准原因",
   "settings.display.autoApprovalReason.description":
     "在工具呼叫中顯示一行說明其被自動核准的原因（符合的規則、代理預設值、YOLO 模式等）。",
