@@ -1489,12 +1489,11 @@ export const SessionProvider: ParentComponent = (props) => {
         setStore("messages", sessionID, reconcile(merged, { key: "id" }))
       }
 
-      for (const msg of messages) {
+      const cutoff = Math.max(0, messages.length - 15)
+      for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i]!
         const parts = msg.parts ?? []
         if (mode === "reconcile" && store.parts[msg.id]) {
-          // Reconcile on a message already hydrated into the reactive store:
-          // write parts directly so visible turns pick up server corrections,
-          // but do not erase proven newer streamed text absent from a stale snapshot.
           const merged = mergeParts(store.parts[msg.id], parts, input.since ?? Number.POSITIVE_INFINITY)
           setStore("parts", msg.id, reconcile(merged, { key: "id" }))
           stash.remove(msg.id)
@@ -1502,9 +1501,12 @@ export const SessionProvider: ParentComponent = (props) => {
         }
         if (parts.length > 0) {
           loadedParts[msg.id] = parts
-          // Stash parts outside the reactive store. They hydrate on demand
-          // when the virtualizer renders the corresponding turn.
-          stash.put(msg.id, parts)
+          if (i >= cutoff) {
+            setStore("parts", msg.id, parts)
+            stash.remove(msg.id)
+          } else {
+            stash.put(msg.id, parts)
+          }
           continue
         }
         if (mode === "reconcile") stash.remove(msg.id)
@@ -2604,18 +2606,15 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
     const ready = loaded().has(id)
-    // Reflect the selection locally and synchronously so the chat always tracks
-    // the sidebar/tab selection. These are local signals and need no backend, so
-    // they update even while disconnected. Bailing out here when not connected
-    // froze the chat on the previous session while the side diff (resolved from
-    // the worktree selection) still moved (the reported "only the diff changes").
-    agentDrafts.prune(draftSessionID())
-    setCloudPreviewId(null)
-    setCurrentSessionID(id)
-    setDraftSessionID(id)
-    setUserClearedSession(false)
-    setLoading(!ready)
-    if (!ready) patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
+    batch(() => {
+      agentDrafts.prune(draftSessionID())
+      setCloudPreviewId(null)
+      setCurrentSessionID(id)
+      setDraftSessionID(id)
+      setUserClearedSession(false)
+      setLoading(!ready)
+      if (!ready) patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
+    })
     // Only the message fetch needs the backend. Defer it while offline and let
     // the reconnect effect replay it. We defer even for cached sessions: the
     // load message is what re-focuses the backend (focusSession, contextSessionID,

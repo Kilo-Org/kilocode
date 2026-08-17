@@ -1771,6 +1771,10 @@ body.am-wt-dragging-active * {
   position: relative;
 }
 
+.am-chat-wrapper.am-chat-wrapper-hidden {
+  display: none;
+}
+
 .am-readonly-banner {
   display: flex;
   align-items: center;

@@ -6,6 +6,7 @@
  * draft, terminal, or review) and falls back to the first available session.
  */
 
+import { batch } from "solid-js"
 import { LOCAL } from "./navigate"
 
 interface TermState {
@@ -39,23 +40,28 @@ export interface SelectionActionDeps<T extends SessionLike> {
 /** Select the Local context: restore its remembered tab or fall back to the first session/draft. */
 export function selectLocalAction<T extends SessionLike>(deps: SelectionActionDeps<T>, locals: T[]): void {
   deps.saveTabMemory()
-  deps.setReviewActive(false)
-  deps.setSelection(LOCAL)
   deps.post({ type: "agentManager.requestRepoInfo" })
   const remembered = deps.tabMemory()[LOCAL]
-  if (deps.terms.hasRemembered(deps.nsKey(LOCAL), remembered)) return deps.activateTerminal(remembered!)
-  deps.terms.setActiveId(undefined)
-  const target = remembered ? locals.find((s) => s.id === remembered) : undefined
-  const fallback = target ?? locals[0]
-  if (fallback && !deps.isPending(fallback.id)) {
-    deps.setActivePendingId(undefined)
-    deps.selectSession(fallback.id)
-  } else {
-    deps.setActivePendingId(fallback && deps.isPending(fallback.id) ? fallback.id : undefined)
-    deps.clearSession()
-    deps.post({ type: "agentManager.showExistingLocalTerminal" })
-  }
-  deps.setReviewActive(deps.isReviewTab(remembered, LOCAL))
+  batch(() => {
+    deps.setReviewActive(false)
+    deps.setSelection(LOCAL)
+    if (deps.terms.hasRemembered(deps.nsKey(LOCAL), remembered)) {
+      deps.activateTerminal(remembered!)
+      return
+    }
+    deps.terms.setActiveId(undefined)
+    const target = remembered ? locals.find((s) => s.id === remembered) : undefined
+    const fallback = target ?? locals[0]
+    if (fallback && !deps.isPending(fallback.id)) {
+      deps.setActivePendingId(undefined)
+      deps.selectSession(fallback.id)
+    } else {
+      deps.setActivePendingId(fallback && deps.isPending(fallback.id) ? fallback.id : undefined)
+      deps.clearSession()
+      deps.post({ type: "agentManager.showExistingLocalTerminal" })
+    }
+    deps.setReviewActive(deps.isReviewTab(remembered, LOCAL))
+  })
 }
 
 /** Select a worktree: restore its remembered tab or fall back to its first session. */
@@ -65,13 +71,18 @@ export function selectWorktreeAction<T extends SessionLike>(
   sessions: T[],
 ): void {
   deps.saveTabMemory()
-  deps.setSelection(worktreeId)
   const remembered = deps.tabMemory()[worktreeId]
-  if (deps.terms.hasRemembered(deps.nsKey(worktreeId), remembered)) return deps.activateTerminal(remembered!)
-  deps.terms.setActiveId(undefined)
-  const target = remembered ? sessions.find((s) => s.id === remembered) : undefined
-  const fallback = target ?? sessions[0]
-  if (fallback) deps.selectSession(fallback.id)
-  else deps.resetSession()
-  deps.setReviewActive(deps.isReviewTab(remembered, worktreeId))
+  batch(() => {
+    deps.setSelection(worktreeId)
+    if (deps.terms.hasRemembered(deps.nsKey(worktreeId), remembered)) {
+      deps.activateTerminal(remembered!)
+      return
+    }
+    deps.terms.setActiveId(undefined)
+    const target = remembered ? sessions.find((s) => s.id === remembered) : undefined
+    const fallback = target ?? sessions[0]
+    if (fallback) deps.selectSession(fallback.id)
+    else deps.resetSession()
+    deps.setReviewActive(deps.isReviewTab(remembered, worktreeId))
+  })
 }
