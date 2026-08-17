@@ -234,7 +234,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 onClose={tab().close}
                 placement="bottom-start"
                 hover
-                autofocus={false}
                 alert={hasInput}
               />
             </div>

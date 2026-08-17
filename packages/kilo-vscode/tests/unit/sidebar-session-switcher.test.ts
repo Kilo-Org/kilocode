@@ -21,9 +21,13 @@ describe("sidebar session switcher", () => {
 
   it("opens on hover and closes when the pointer leaves the switcher", () => {
     expect(header).toContain("hover")
+    expect(header).not.toContain("autofocus={false}")
+    expect(switcher).toContain('setSource("hover")')
+    expect(switcher).toContain('setSource("trigger")')
     expect(switcher).toContain("onPointerEnter: show")
     expect(switcher).toContain("onPointerLeave: schedule")
     expect(switcher).toContain("onPointerLeave={hide}")
+    expect(switcher).toContain("onClick: activate")
   })
 
   it("keeps tab selection and closing wired through local tabs", () => {

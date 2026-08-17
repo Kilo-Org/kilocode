@@ -38,6 +38,7 @@ interface SessionTabSwitcherProps {
 
 export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) => {
   const [open, setOpen] = createSignal(props.defaultOpen ?? false)
+  const [source, setSource] = createSignal<"trigger" | "hover">("trigger")
   const [notice, setNotice] = createSignal("")
   let list: ListRef | undefined
   let root: HTMLDivElement | undefined
@@ -59,6 +60,7 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
   const show = () => {
     if (!props.hover) return
     clear()
+    if (!open()) setSource("hover")
     setOpen(true)
   }
 
@@ -77,8 +79,13 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
   onCleanup(clear)
 
   createEffect(() => {
-    if (open() && props.autofocus !== false) focus(true)
+    if (open() && props.autofocus !== false && source() === "trigger") focus(true)
   })
+
+  const activate = () => {
+    setSource("trigger")
+    if (open()) focus(true)
+  }
 
   const select = (item: SessionTabSwitcherItem) => {
     setOpen(false)
@@ -147,6 +154,7 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
         open={open()}
         onOpenChange={(next) => {
           clear()
+          if (next && !open()) setSource("trigger")
           setOpen(next)
         }}
         modal={false}
@@ -162,6 +170,11 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
           class: "search-menu-trigger",
           classList: { "session-tab-switcher-trigger-alert": props.alert?.() ?? false },
           "aria-label": props.labels.open,
+          onClick: activate,
+          onKeyDown: (event) => {
+            if (event.key !== "Enter" && event.key !== " " && event.key !== "ArrowDown") return
+            activate()
+          },
           onPointerEnter: show,
           onPointerLeave: schedule,
         }}
@@ -176,7 +189,7 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
             filterKeys={["title"]}
             current={current()}
             noInitialSelection
-            search={{ placeholder: props.labels.search, autofocus: props.autofocus !== false }}
+            search={{ placeholder: props.labels.search, autofocus: props.autofocus !== false && !props.hover }}
             onKeyEvent={key}
             onMove={(item) => setNotice(item ? item.title : "")}
             onSelect={(item) => {
