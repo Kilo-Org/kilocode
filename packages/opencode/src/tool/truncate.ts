@@ -11,6 +11,7 @@ import { ToolID } from "./schema"
 import { TRUNCATION_DIR } from "./truncation-dir"
 
 const RETENTION = Duration.days(7)
+const SPAN = 0x1000000000 // kilocode_change - IDs store 36-bit millisecond timestamps
 
 export const MAX_LINES = 2000
 export const MAX_BYTES = 50 * 1024
@@ -52,15 +53,15 @@ const layer = Layer.effect(
     const fs = yield* FSUtil.Service
 
     const cleanup = Effect.fn("Truncate.cleanup")(function* () {
-      const cutoff = Identifier.timestamp(
-        Identifier.create("tool", "ascending", Date.now() - Duration.toMillis(RETENTION)),
-      )
+      const now = Date.now() % SPAN // kilocode_change
+      const retention = Duration.toMillis(RETENTION) // kilocode_change
       const entries = yield* fs.readDirectory(TRUNCATION_DIR).pipe(
         Effect.map((all) => all.filter((name) => name.startsWith("tool_"))),
         Effect.catch(() => Effect.succeed([])),
       )
       for (const entry of entries) {
-        if (Identifier.timestamp(entry) >= cutoff) continue
+        const age = (now - Identifier.timestamp(entry) + SPAN) % SPAN // kilocode_change
+        if (age <= retention) continue // kilocode_change
         yield* fs.remove(path.join(TRUNCATION_DIR, entry)).pipe(Effect.catch(() => Effect.void))
       }
     })
