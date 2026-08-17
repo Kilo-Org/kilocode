@@ -29,7 +29,7 @@ function askRulesetWithMcp(servers: string[], user: Permission.Ruleset = []) {
     const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
     mcpRules[sanitized + "_*"] = "ask"
   }
-  // Mirrors Ask agent merge order: defaults, ask-specific guard, user config, user denies last.
+  // Mirrors Ask agent merge order: guard, user config, Bash guard, user denies.
   return Permission.merge(
     Permission.fromConfig({
       "*": "deny",
@@ -49,6 +49,7 @@ function askRulesetWithMcp(servers: string[], user: Permission.Ruleset = []) {
       ...mcpRules,
     }),
     user,
+    Permission.fromConfig({ bash: readOnlyBash }),
     user.filter((r) => r.action === "deny"),
   )
 }
@@ -183,25 +184,49 @@ describe("Ask agent bash permissions", () => {
 
   describe("denied write/execute commands", () => {
     const denied = [
-      "find . -exec rm {} \\;",
       "touch newfile.ts",
       "mkdir src/new",
+      "rmdir src/old",
       "cp a.ts b.ts",
       "mv old.ts new.ts",
-      "tsc --noEmit",
-      "tar xzf archive.tar.gz",
-      "npm install",
-      "python3 script.py",
       "rm -rf /",
-      "node server.js",
-      "bun run dev",
-      "curl http://example.com",
+      "install source target",
+      "ln -s source target",
+      "chmod +x script.sh",
+      "chown user file",
+      "truncate -s 0 file",
+      "tee file",
+      "dd if=input of=output",
+      "sed -i -e 's/old/new/' file",
+      "sed -i.bak -e 's/old/new/' file",
+      "sed -Ei.bak -e 's/old/new/' file",
+      "sed -e 's/old/new/' -i file",
+      "sed --in-place=.bak -e 's/old/new/' file",
     ]
 
     for (const cmd of denied) {
       test(`"${cmd}" → deny`, () => {
         const result = Permission.evaluate("bash", cmd, ruleset)
         expect(result.action).toBe("deny")
+      })
+    }
+  })
+
+  describe("unclassified commands require approval", () => {
+    const asked = [
+      "find . -print",
+      "tsc --noEmit",
+      "npm view react version",
+      "python3 -c 'print(1)'",
+      "node --version",
+      "curl https://example.com",
+      "sed -n '1,5p' README.md",
+    ]
+
+    for (const cmd of asked) {
+      test(`"${cmd}" → ask`, () => {
+        const result = Permission.evaluate("bash", cmd, ruleset)
+        expect(result.action).toBe("ask")
       })
     }
   })
