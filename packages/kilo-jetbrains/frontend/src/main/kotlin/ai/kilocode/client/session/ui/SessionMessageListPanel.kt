@@ -97,6 +97,9 @@ class SessionMessageListPanel(
 
     init {
         Disposer.register(parent, this)
+        (layout as? SessionLayout)?.maxWidth = { view ->
+            SessionUiStyle.SessionLayout.readableWidth(view, style.transcriptFont)
+        }
         applyStyle(style)
 
         model.addListener(parent) { event ->

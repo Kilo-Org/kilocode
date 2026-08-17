@@ -44,6 +44,9 @@ import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
 import ai.kilocode.client.session.controller.PromptSelection
 import ai.kilocode.client.session.controller.SessionController
@@ -452,7 +455,14 @@ class SessionUi(
         sessionContent.add(header, BorderLayout.NORTH)
         sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
-        root.content.add(prompt, BorderLayout.SOUTH)
+        root.content.add(
+            prompt.align(
+                HAlign.CENTER,
+                VAlign.FIT,
+                maxW = { SessionUiStyle.SessionLayout.readableWidth(prompt, style.transcriptFont) },
+            ),
+            BorderLayout.SOUTH,
+        )
         add(root, BorderLayout.CENTER)
     }
 
