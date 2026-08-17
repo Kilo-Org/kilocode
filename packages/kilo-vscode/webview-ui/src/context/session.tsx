@@ -62,10 +62,14 @@ import {
   buildSessionToolParts,
   childID,
   dropSet,
+  emptyPageState,
+  messageParts,
   reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
   upsertSessionToolPart,
+  type MessageMutation,
+  type MessagePageState,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
@@ -90,22 +94,6 @@ import { createModelSelector } from "./session-model-selector"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
-
-type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
-
-interface MessagePageState {
-  loadingInitial: boolean
-  loadingOlder: boolean
-  before?: string
-  hasMore: boolean
-  lastMutation?: MessageMutation
-}
-
-const emptyPageState: MessagePageState = {
-  loadingInitial: false,
-  loadingOlder: false,
-  hasMore: false,
-}
 
 // Store structure for messages and parts
 interface SessionStore {
@@ -1403,24 +1391,21 @@ export const SessionProvider: ParentComponent = (props) => {
     return [...merged, ...orphans]
   }
 
-  function setTools(sessionID: string, tools: ToolPart[]) {
-    setStore("toolParts", sessionID, reconcileSessionToolParts(tools))
+  function setTools(sessionID: string, tools: ToolPart[], mode?: MessageLoadMode) {
+    setStore("toolParts", sessionID, mode === "replace" ? tools : reconcileSessionToolParts(tools))
   }
 
-  function rebuildToolParts(sessionID: string, messages: Message[], parts?: Record<string, Part[]>) {
+  function rebuildToolParts(
+    sessionID: string,
+    messages: Message[],
+    parts?: Record<string, Part[]>,
+    mode?: MessageLoadMode,
+  ) {
     const tools = buildSessionToolParts(
       messages,
-      (msg) => parts?.[msg.id] ?? store.parts[msg.id] ?? stash.peek(msg.id) ?? msg.parts,
+      (msg) => parts?.[msg.id] ?? stash.peek(msg.id) ?? untrack(() => store.parts[msg.id]) ?? msg.parts,
     )
-    setTools(sessionID, tools)
-  }
-
-  function messageParts(messages: Message[]): Record<string, Part[]> {
-    const parts: Record<string, Part[]> = {}
-    for (const msg of messages) {
-      if (msg.parts && msg.parts.length > 0) parts[msg.id] = msg.parts
-    }
-    return parts
+    setTools(sessionID, tools, mode)
   }
 
   function patchToolPart(sessionID: string | undefined, messageID: string, part: Part) {
@@ -1512,7 +1497,7 @@ export const SessionProvider: ParentComponent = (props) => {
         if (mode === "reconcile") stash.remove(msg.id)
       }
 
-      rebuildToolParts(sessionID, merged, loadedParts)
+      rebuildToolParts(sessionID, merged, loadedParts, mode)
 
       // "reconcile" is a background tail refresh, not a page navigation —
       // preserve the existing pagination cursor/hasMore so "load earlier"
@@ -1857,8 +1842,10 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function visibleToolParts(sessionID: string, messages: Message[]): ToolPart[] {
+    const tools = store.toolParts[sessionID]
+    if (!tools || tools.length === 0 || messages.length === 0) return []
     const ids = new Set(messages.map((msg) => msg.id))
-    return (store.toolParts[sessionID] ?? []).filter((part) => !part.messageID || ids.has(part.messageID))
+    return tools.filter((part) => !part.messageID || ids.has(part.messageID))
   }
 
   /**
@@ -1871,8 +1858,9 @@ export const SessionProvider: ParentComponent = (props) => {
     const queue = [rootID]
     while (queue.length > 0) {
       const sid = queue.pop()!
+      const tools = store.toolParts[sid]
+      if (!tools || tools.length === 0 || !tools.some((t) => t.tool === "task")) continue
       for (const p of visibleToolParts(sid, source(sid))) {
-        // Webview ToolState omits runtime metadata; task parts still carry it from the backend.
         const child = childID(
           p as {
             type: string
@@ -2727,9 +2715,7 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? store.messages[id] || [] : []
   }
 
-  const getParts = (messageID: string) => {
-    return store.parts[messageID] || stash.peek(messageID) || []
-  }
+  const getParts = (messageID: string) => stash.peek(messageID) ?? untrack(() => store.parts[messageID]) ?? []
 
   const getSessionToolParts = (sessionID: string) => store.toolParts[sessionID] ?? []
 
