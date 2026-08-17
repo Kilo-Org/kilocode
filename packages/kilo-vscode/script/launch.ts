@@ -32,7 +32,8 @@ import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { homedir, tmpdir } from "node:os"
 import { delimiter, join, resolve } from "node:path"
-import { spawn } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
+import { preferWindowsGuiExecutable, spawnNeedsWindowsShell, windowsPathExtensions } from "./windows-app"
 
 const win = process.platform === "win32"
 const root = join(import.meta.dir, "..")
@@ -124,7 +125,7 @@ const accessible = opts["accessible"] === true
 
 function which(name: string): string | null {
   const paths = (process.env.PATH ?? "").split(delimiter).filter(Boolean)
-  const exts = win ? [".cmd", ".exe", ".bat", ""] : [""]
+  const exts = win ? windowsPathExtensions() : [""]
 
   for (const dir of paths) {
     for (const ext of exts) {
@@ -138,7 +139,7 @@ function which(name: string): string | null {
 
 function detect(): string {
   const env = explicit ?? process.env["VSCODE_EXEC_PATH"]
-  if (env && existsSync(env)) return env
+  if (env && existsSync(env)) return win ? preferWindowsGuiExecutable(env) : env
 
   const candidates: string[] = []
   const prefer = insiders ? "insiders" : "stable"
@@ -193,7 +194,7 @@ function detect(): string {
 
   // Last resort: PATH lookup
   const path = insiders ? (which("code-insiders") ?? which("code")) : (which("code") ?? which("code-insiders"))
-  if (path) return path
+  if (path) return win ? preferWindowsGuiExecutable(path) : path
 
   console.error(
     `Could not find VS Code. Set VSCODE_EXEC_PATH or pass --app-path.\n` +
@@ -384,6 +385,16 @@ async function launch() {
   console.log(`[launch] Accessibility support: ${accessible ? "on" : "off"}`)
 
   if (blocking) {
+    if (spawnNeedsWindowsShell(app)) {
+      const result = spawnSync(app, args, {
+        cwd: workspace,
+        env,
+        stdio: ["ignore", "inherit", "inherit"],
+        shell: true,
+      })
+      console.log(`[launch] VS Code exited (code ${result.status})`)
+      return
+    }
     const result = Bun.spawnSync([app, ...args], {
       cwd: workspace,
       env,
@@ -393,13 +404,14 @@ async function launch() {
     return
   }
 
-  // Do not set `shell: true` on Windows. cmd.exe splits Code.exe paths that
-  // contain spaces (for example `Microsoft VS Code`), so the isolated host never starts.
+  // Do not wrap Code.exe in cmd.exe: paths with spaces (Microsoft VS Code) get split.
+  // Keep a shell only for leftover .cmd/.bat shims that CreateProcess cannot run.
   const child = spawn(app, args, {
     cwd: workspace,
     detached: !win,
     env,
     stdio: "ignore",
+    ...(spawnNeedsWindowsShell(app) ? { shell: true } : {}),
   })
   child.unref()
 
