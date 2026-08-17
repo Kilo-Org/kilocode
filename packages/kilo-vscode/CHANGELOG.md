@@ -1,5 +1,54 @@
 # kilo-code
 
+## 7.4.22
+
+### Minor Changes
+
+- [#11219](https://github.com/Kilo-Org/kilocode/pull/11219) [`8013e5f`](https://github.com/Kilo-Org/kilocode/commit/8013e5f50451225bb32b1284579322c137f497e3) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Make file references in agent responses clickable by validating inline code spans against the filesystem. Code spans that match real files in the workspace become clickable links that open the file at the referenced line. Non-existent paths stay as plain code. Also adds fallback workspace search and "File not found" warning when clicking dead links.
+
+- [#13071](https://github.com/Kilo-Org/kilocode/pull/13071) [`3e3dd3d`](https://github.com/Kilo-Org/kilocode/commit/3e3dd3dcb2a711192ec2477ef7c0532b11f67886) Thanks [@cosi-conda](https://github.com/cosi-conda)! - Add Agent Manager PR comment actions: resolve/unresolve review threads, jump to comments section, and scroll-to-top for PR diff view.
+
+- [#13084](https://github.com/Kilo-Org/kilocode/pull/13084) [`5c97b48`](https://github.com/Kilo-Org/kilocode/commit/5c97b481d233d294859bcb737448661910fd4916) - Remove the built-in experimental Morph WarpGrep codebase search tool and ignore its retired configuration flag.
+
+### Patch Changes
+
+- [#13063](https://github.com/Kilo-Org/kilocode/pull/13063) [`ca9a99f`](https://github.com/Kilo-Org/kilocode/commit/ca9a99ffd8f118b5445e0fc2c890c4c6dd797d66) - Show and select the model's default reasoning variant in chat and Agent Manager.
+
+- [#13100](https://github.com/Kilo-Org/kilocode/pull/13100) [`753d560`](https://github.com/Kilo-Org/kilocode/commit/753d5609859f2b646c404392e71ca048714f61dd) - Support structured AWS access keys and Google Cloud service-account JSON when connecting Bedrock and Vertex AI in VS Code.
+
+- [#12373](https://github.com/Kilo-Org/kilocode/pull/12373) [`3a99f36`](https://github.com/Kilo-Org/kilocode/commit/3a99f36d96d316f03d481d7b120b9f1aaca243f1) Thanks [@mvanhorn](https://github.com/mvanhorn)! - Fix subagent permission errors that referenced phantom deny rules and blocked commands the subagent's own config explicitly allowed. A read-only or delegating agent's `readOnlyBash` allowlist is no longer projected onto a writable subagent as a bash ceiling, so a delegated subagent can run its own allowed commands (e.g. `git status`). Edit, notebook, and MCP denials are still inherited as hard ceilings.
+
+- [#13088](https://github.com/Kilo-Org/kilocode/pull/13088) [`9f4ab3a`](https://github.com/Kilo-Org/kilocode/commit/9f4ab3a8be8fedf23eb3950226dd92fcc9f0cc27) - Keep the Changes chip and Git changes visible across tab switches in multi-repository workspaces.
+
+- Changes from opencode v1.17.13 to v1.18.0 upstream:
+  - Core Improvements: Added a code mode MCP adapter for running confined orchestration scripts against connected MCP tools.
+  - Core Improvements: Hid the `execute` tool unless code mode is enabled.
+  - Core Improvements: Add a model-specific system prompt for Meta Muse Spark.
+  - Core Improvements: Updated Azure AI support for GPT-5.6.
+  - Core Bugfixes: Fixed paginated MCP tool catalogs losing tool metadata and output schema validation.
+  - Core Bugfixes: Preserved low reasoning effort for OpenRouter small-model variants instead of disabling it.
+  - Core Bugfixes: Fixed GitHub Copilot model routing to honor each model's advertised chat or responses endpoint.
+  - Core Bugfixes: Fixed session lists to match equivalent instance directories reliably.
+  - Core Bugfixes: Fixed Cerebras reasoning replay so earlier assistant reasoning is sent back in the provider-supported field.
+  - Core Bugfixes: Better classify Z.ai context-window overflow errors so oversized requests surface the right failure mode (@fengjikui)
+  - Core Bugfixes: Handle unavailable config directories more gracefully when reading config files
+  - Core Bugfixes: Exposed reasoning effort variants for Grok models.
+  - Core Bugfixes: Improved xAI prompt cache routing and PDF file support in Responses models.
+  - Core Bugfixes: Improved Meta model handling for reasoning variants and provider requests.
+  - Core Bugfixes: Prevent crashes and bad pricing data when GitHub Copilot returns models with a zero billing batch size.
+  - Core Bugfixes: Supported OpenAI pro reasoning mode.
+  - Core Bugfixes: Disabled response storage by default for xAI Responses. (@geraint0923)
+  - Core Bugfixes: Added OAuth support for Luna Responses Lite.
+  - Core Bugfixes: Switched to another available org after logging out in the console.
+  - Core Bugfixes: Used Codex context limits for GPT-5.6 over OAuth. (@nabilfreeman)
+  - Core Bugfixes: Removed an obsolete Codex workaround that could interfere with OpenAI Luna Responses Lite requests.
+  - TUI Bugfixes: Fixed spinner registration so loading indicators keep rendering across TUI surfaces.
+  - TUI Bugfixes: Forwarded CLI environment variables to the TUI worker.
+
+- Adopt upstream improvements from v1.18.1 through v1.18.13, including model compatibility, MCP reliability, and TUI enhancements.
+
+- [#13104](https://github.com/Kilo-Org/kilocode/pull/13104) [`9b01d97`](https://github.com/Kilo-Org/kilocode/commit/9b01d97cf336e42a33ede75d44232c907c022938) - Preserve workspace restoration outcomes when reverting fresh VS Code sessions.
+
 ## 7.4.21
 
 ### Minor Changes

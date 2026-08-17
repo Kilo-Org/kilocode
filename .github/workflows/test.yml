@@ -64,9 +64,9 @@ jobs:
             exit 0
           fi
           echo 'general=true' >> "$GITHUB_OUTPUT"
-          # kilocode_change - Windows is 6 shards (was 4): CLI tests now run at KILO_TEST_CONCURRENCY=2
-          # instead of the default 4 to cut CPU contention on the 4-vCPU runner; more shards keep
-          # per-shard wall-clock within the job timeout despite the lower per-shard parallelism.
+          # kilocode_change - Windows runs 6 shards at KILO_TEST_CONCURRENCY=2. Measured: a
+          # 5-shard matrix was worse on both wall-clock (slowest job 9.3m vs 6.7m) and machine
+          # minutes (43 vs 37) — with 2 workers per shard, packing more work per shard loses.
           echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true},{"os":"windows","index":1,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true},{"os":"windows","index":2,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":3,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":4,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":5,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":6,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false}]' >> "$GITHUB_OUTPUT"
   # kilocode_change end
   unit:
@@ -80,6 +80,12 @@ jobs:
         settings: ${{ fromJSON(needs.changes.outputs.settings) }} # kilocode_change
     runs-on: ${{ matrix.settings.host }}
     timeout-minutes: 45 # kilocode_change
+    # kilocode_change start - manual dispatches exist to validate real execution (soak runs,
+    # timing measurements); every turbo step in this job bypasses the cache on dispatch
+    # instead of replaying a same-commit hit and executing nothing.
+    env:
+      TURBO_FORCE: ${{ github.event_name == 'workflow_dispatch' && 'true' || '' }}
+    # kilocode_change end
     defaults:
       run:
         shell: bash
@@ -88,6 +94,28 @@ jobs:
       - name: Skip unchanged general unit tests
         if: ${{ !matrix.settings.run }}
         run: echo "Only isolated product, documentation, or metadata files changed; general unit tests are unchanged."
+      # kilocode_change end
+
+      # kilocode_change start - Defender real-time scanning taxes every process spawn and
+      # temp-file write on Windows; the suite spawns hundreds of test processes and builds
+      # temp git repos, so exclude the runner's work and temp paths up front. Best effort by
+      # design: on images where Defender is absent or locked down, the suite runs unchanged.
+      - name: Exclude runner work dirs from Defender scanning
+        if: matrix.settings.run && runner.os == 'Windows'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $applied = 0
+          foreach ($dir in @($env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun")) {
+            if (-not $dir) { continue }
+            try {
+              Add-MpPreference -ExclusionPath $dir -ErrorAction Stop
+              $applied++
+            } catch {
+              Write-Host "Defender exclusion failed for ${dir}: $($_.Exception.Message)"
+            }
+          }
+          Write-Host "Defender path exclusions applied: $applied"
       # kilocode_change end
 
       - name: Checkout repository
@@ -181,11 +209,10 @@ jobs:
           # 6 shards to absorb the lower per-shard parallelism. Linux/macOS (not timeout
           # offenders; macOS is a single unsharded job) keep the default.
           KILO_TEST_CONCURRENCY: ${{ matrix.settings.os == 'windows' && '2' || '' }}
-          # kilocode_change - raise the per-file kill deadline on Windows only. Heavy real-server
-          # files run ~230-270s serially there (vs ~40s on macOS/Linux), leaving only ~30s under
-          # the 300s default; 600s gives healthy-but-slow files real margin without masking hangs
-          # elsewhere (Linux/macOS keep the 300s default).
-          KILO_TEST_FILE_TIMEOUT: ${{ matrix.settings.os == 'windows' && '600000' || '' }}
+          # kilocode_change - 600s on every OS: the deadline guards against hangs, and a
+          # saturated shard can legitimately hold a heavy real-subprocess file past 300s
+          # (seen on Linux: run-process passing every test, killed at the deadline twice).
+          KILO_TEST_FILE_TIMEOUT: "600000"
       # kilocode_change end
 
       # kilocode_change start
@@ -203,6 +230,9 @@ jobs:
 
       - name: Upload unit artifacts
         if: always() && matrix.settings.run
+        # kilocode_change - diagnostics only: a runner-side network blip here must not
+        # fail a job whose tests already passed (seen as ECONNREFUSED on Blacksmith).
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: unit-${{ matrix.settings.os }}-${{ matrix.settings.index }}-${{ github.run_attempt }}

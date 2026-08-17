@@ -24,7 +24,6 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.Centerizer
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
@@ -68,7 +67,7 @@ class EmptySessionPanel(
     private val feedback = EmptySessionFeedback(browse)
 
     private val welcomeLabel = JBLabel(welcomeHtml()).apply {
-        foreground = UIUtil.getContextHelpForeground()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
         horizontalAlignment = JBLabel.CENTER
         setAllowAutoWrapping(true)
     }

@@ -7,11 +7,13 @@ import type { SessionInfo } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
+import { SessionSkeleton } from "./Skeleton"
 
 interface Props {
   sessions: Accessor<SessionInfo[]>
   loaded: Accessor<boolean>
   collapsed: Accessor<boolean>
+  disabled?: boolean
   active: Accessor<string | undefined>
   onToggle: () => void
   onSelect: (id: string) => void
@@ -33,31 +35,14 @@ export const UnassignedSessionsSection: Component<Props> = (props) => {
       <SidebarSectionHeader
         class="am-section-header am-section-toggle"
         expanded={!props.collapsed()}
+        disabled={props.disabled}
         ariaLabel={t("agentManager.section.sessions")}
         label={<span class="am-section-label">{t("agentManager.section.sessions")}</span>}
         onToggle={props.onToggle}
       />
       <Show when={!props.collapsed()}>
         <div class="am-list">
-          <Show
-            when={props.loaded()}
-            fallback={
-              <div class="am-skeleton-list">
-                <div class="am-skeleton-session">
-                  <div class="am-skeleton-session-title" style={{ width: "70%" }} />
-                  <div class="am-skeleton-session-time" />
-                </div>
-                <div class="am-skeleton-session">
-                  <div class="am-skeleton-session-title" style={{ width: "55%" }} />
-                  <div class="am-skeleton-session-time" />
-                </div>
-                <div class="am-skeleton-session">
-                  <div class="am-skeleton-session-title" style={{ width: "65%" }} />
-                  <div class="am-skeleton-session-time" />
-                </div>
-              </div>
-            }
-          >
+          <Show when={props.loaded()} fallback={<SessionSkeleton />}>
             <For each={props.sessions()}>
               {(session) => (
                 <ContextMenu>

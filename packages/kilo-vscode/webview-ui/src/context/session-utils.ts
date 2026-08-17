@@ -1,5 +1,23 @@
 import { reconcile } from "solid-js/store"
-import type { Message, Part, ToolPart } from "../types/messages"
+import type { Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
+
+export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
+
+export type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
+
+export interface MessagePageState {
+  loadingInitial: boolean
+  loadingOlder: boolean
+  before?: string
+  hasMore: boolean
+  lastMutation?: MessageMutation
+}
+
+export const emptyPageState: MessagePageState = {
+  loadingInitial: false,
+  loadingOlder: false,
+  hasMore: false,
+}
 
 /** Remove ids from a Set immutably, returning the original when nothing changed. */
 export function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
@@ -8,7 +26,13 @@ export function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
   return next.size === prev.size ? prev : next
 }
 
-export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
+export function messageParts(messages: Message[]): Record<string, Part[]> {
+  const parts: Record<string, Part[]> = {}
+  for (const msg of messages) {
+    if (msg.parts && msg.parts.length > 0) parts[msg.id] = msg.parts
+  }
+  return parts
+}
 
 type SnapshotPart = {
   type?: string

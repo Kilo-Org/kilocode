@@ -101,7 +101,6 @@ import java.nio.file.Path
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
-import javax.swing.UIManager
 
 /**
  * Top-level session UI composition root.
@@ -208,8 +207,6 @@ class SessionUi(
             return listOf(text)
         }
     }
-    private var editorTheme = style.editorScheme
-    private var colorTheme = UIManager.getLookAndFeel()
     private var wasBusy = false
     // Kept separate so a background stat refresh (turn end / revert) can supersede another refresh
     // but never cancel an in-flight user-initiated open.
@@ -302,6 +299,7 @@ class SessionUi(
 
     private fun buildUi() {
         root = SessionRootPanel()
+        // Containers stay transparent over the single self-rendered session root backdrop.
         fileLinks = SessionFileLinks(workspace.directory, workspaces, cs, root, ::openUrl)
         SessionContextMenu.install(root, this)
 
@@ -335,14 +333,9 @@ class SessionUi(
             )
         }
 
-        overlay = SessionHoverCopyOverlay(root, this)
-        root.addOverlay(overlay) { pane, child ->
-            overlay.bounds(pane, child)
-        }
+        sessionContent = JPanel(BorderLayout()).apply { isOpaque = false }
 
-        sessionContent = JPanel(BorderLayout())
-
-        blankBody = JPanel(BorderLayout())
+        blankBody = JPanel(BorderLayout()).apply { isOpaque = false }
 
         load = LoadingPanel()
         progressBody = load
@@ -390,6 +383,10 @@ class SessionUi(
         header = SessionHeaderPanel(controller, this) { openBranchChanges() }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
+        overlay = SessionHoverCopyOverlay(root, scroll.component, this)
+        root.addOverlay(overlay) { pane, child ->
+            overlay.bounds(pane, child)
+        }
         messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
         scroll.onScroll = {
             overlay.clear()
@@ -623,11 +620,7 @@ class SessionUi(
     private fun bindStyle() {
         addHierarchyListener { event ->
             if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
-            if (!isShowing) {
-                popup.hideAll()
-                return@addHierarchyListener
-            }
-            applyStyleIfThemeChanged()
+            if (!isShowing) popup.hideAll()
         }
 
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
@@ -986,27 +979,13 @@ class SessionUi(
         if (disposed) return
         this.style = style
         selection.applyStyle(style)
-        editorTheme = style.editorScheme
-        colorTheme = UIManager.getLookAndFeel()
-        background = style.editorBackground
-        root.background = style.editorBackground
-        root.content.background = style.editorBackground
-        sessionContent.background = style.editorBackground
-        blankBody.background = style.editorBackground
         load.applyStyle(style)
         header.applyStyle(style)
         prompt.applyStyle(style)
         connection.applyStyle(style)
         scroll.applyStyle(style)
+        empty?.applyStyle(style)
         refresh()
-    }
-
-    private fun applyStyleIfThemeChanged() {
-        if (disposed) return
-        val next = SessionEditorStyle.current()
-        val laf = UIManager.getLookAndFeel()
-        if (editorTheme === next.editorScheme && colorTheme == laf) return
-        applyStyle(next)
     }
 
     private fun openProfileSettings() {

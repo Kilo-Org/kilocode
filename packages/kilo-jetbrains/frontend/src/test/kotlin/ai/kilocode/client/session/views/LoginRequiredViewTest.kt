@@ -166,7 +166,7 @@ class LoginRequiredViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test description uses hintFont not editor font family`() {
+    fun `test description uses secondary font not editor font family`() {
         edt {
             val view = LoginRequiredView(openProfile = {}, dismiss = {})
             view.show("Sign in required.")
@@ -179,7 +179,7 @@ class LoginRequiredViewTest : BasePlatformTestCase() {
                 "Description font should not use editor font family",
                 desc!!.font.name == "Courier New",
             )
-            assertEquals("Description font should equal hintFont", style.hintFont, desc.font)
+            assertEquals("Description font should equal secondary text font", SessionUiStyle.Text.Secondary.font(style), desc.font)
         }
     }
 

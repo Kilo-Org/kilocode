@@ -57,6 +57,8 @@ exclude = [
   '^https?://aistudio\.google\.com/api-keys/?$',
   # Linear intermittently returns 503 to CI link checks.
   '^https?://linear\.app/?$',
+  # These VS Code Marketplace pages intermittently return 503 to automated link checks.
+  '^https://marketplace\.visualstudio\.com/items\?itemName=(connor4312\.esbuild-problem-matchers|dbaeumer\.vscode-eslint|esbenp\.prettier-vscode|Requesty\.requesty)$',
   # Consistently times out in CI
   '^https?://opncd\.ai',
   '^https?://zod\.dev/v4/changelog',
