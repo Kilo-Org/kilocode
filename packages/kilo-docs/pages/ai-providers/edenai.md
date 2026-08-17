@@ -1,6 +1,6 @@
 ---
 title: "Using Eden AI with Kilo Code"
-description: "Connect Kilo Code to Eden AI, an EU-based OpenAI-compatible gateway, with one API key, an EU data-residency endpoint, and exact per-request cost."
+description: "Configure Eden AI in Kilo Code, an EU-based OpenAI-compatible gateway, for one API key across many vendors and an EU endpoint for data residency."
 sidebar_label: Eden AI
 ---
 
