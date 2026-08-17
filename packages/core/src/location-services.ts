@@ -20,7 +20,6 @@ import { PluginV2 } from "./plugin"
 import { PluginInternal } from "./plugin/internal"
 import { Policy } from "./policy"
 import { ProjectCopy } from "./project/copy"
-import { Pty } from "./pty"
 import { QuestionV2 } from "./question"
 import { Reference } from "./reference"
 import { ReferenceGuidance } from "./reference/guidance"
@@ -56,7 +55,6 @@ export const locationServices = LayerNode.group([
   FileSystemSearch.node,
   FileSystem.node,
   Watcher.node,
-  Pty.node,
   SkillV2.node,
   SystemContextRegistry.node,
   SystemContextBuiltIns.node,

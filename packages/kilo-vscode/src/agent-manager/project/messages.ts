@@ -12,6 +12,7 @@ import type { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { ProjectContexts } from "./contexts"
 import { projectIdFor, resolveProjectRoot, samePath } from "./paths"
+import { projectDirectories } from "./init"
 import type { SidebarTarget } from "./route"
 
 export interface ProjectMessageDeps {
@@ -33,6 +34,7 @@ export interface ProjectMessageDeps {
   error: (message: string) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
   ready: (ctx: ProjectContext) => Promise<ProjectInitResult>
+  removePtys?: (directory: string) => Promise<void>
   log: (...args: unknown[]) => void
 }
 
@@ -170,6 +172,13 @@ async function addProject(deps: ProjectMessageDeps): Promise<void> {
 
 async function removeProject(id: string, deps: ProjectMessageDeps): Promise<void> {
   if (disabled(deps)) return
+  const ctx = deps.contexts.resolve(id)
+  if (ctx) {
+    const clean = deps.removePtys
+    for (const directory of projectDirectories(ctx)) {
+      if (clean) await clean(directory).catch((error) => deps.log(`removeProject: failed to remove PTYs for ${directory}`, error))
+    }
+  }
   await deps.contexts.remove(id)
   await deps.registry.remove(id)
   deps.push()

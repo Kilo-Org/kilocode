@@ -42,6 +42,7 @@ export interface LifecycleHost {
   capture: (event: string, props: Record<string, unknown>) => void
   autoName: () => { enabled: boolean }
   client: () => KiloClient
+  removePtys: (directory: string) => Promise<void>
   metadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   post: (message: AgentManagerOutMessage) => void
   log: (...args: unknown[]) => void
@@ -118,6 +119,7 @@ export async function deleteLifecycleWorktree(
   // Disk removal after state is clean — pollers no longer reference this worktree.
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
   try {
+    await host.removePtys(worktree.path)
     await ctx.worktreeManager().removeWorktree(worktree.path, branch)
   } catch (error) {
     host.log(`Failed to remove worktree from disk: ${error}`)
@@ -155,6 +157,11 @@ export async function removeStaleLifecycleWorktree(
   const orphaned = state.removeWorktree(worktreeId)
   host.stopDiffs(worktree.path, orphaned)
   for (const session of orphaned) host.sessions.clearDirectory(session.id)
+  try {
+    await host.removePtys(worktree.path)
+  } catch (error) {
+    host.log(`Failed to remove stale worktree PTYs: ${error}`)
+  }
   ctx.stale.delete(worktreeId)
   host.push()
   host.log(`Removed stale worktree entry ${worktreeId} (${worktree.branch})`)

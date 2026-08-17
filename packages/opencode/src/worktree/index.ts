@@ -15,6 +15,7 @@ import { Effect, Layer, Path, Schema, Scope, Context } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { AppProcess } from "@opencode-ai/core/process"
+import { Pty } from "@opencode-ai/core/pty" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { WorktreeCleanup } from "@/kilocode/worktree-cleanup" // kilocode_change
 import { WorktreeEvent } from "@opencode-ai/schema/worktree-event"
@@ -412,6 +413,7 @@ const layer: Layer.Layer<
         if (directoryExists) {
           yield* stopFsmonitor(directory)
           yield* cleanDirectory(directory)
+          yield* (yield* Pty.Service).removeDirectory(directory) // kilocode_change
         }
         return true
       }
@@ -441,6 +443,7 @@ const layer: Layer.Layer<
       }
 
       yield* cleanDirectory(entry.path)
+      yield* (yield* Pty.Service).removeDirectory(entry.path) // kilocode_change
 
       const branch = entry.branch?.replace(/^refs\/heads\//, "")
       if (branch) {
@@ -624,7 +627,7 @@ const layer: Layer.Layer<
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [FSUtil.node, path, AppProcess.node, Git.node, Project.node, InstanceStore.node, Database.node],
+  deps: [FSUtil.node, path, AppProcess.node, Git.node, Project.node, InstanceStore.node, Database.node, Pty.node], // kilocode_change
 })
 
 export * as Worktree from "."

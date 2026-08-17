@@ -1,8 +1,8 @@
 export * as Pty from "./pty"
 
-import { makeLocationNode } from "./effect/app-node"
+import { makeGlobalNode } from "./effect/app-node" // kilocode_change
 import type { Disp, Proc } from "#pty"
-import { Context, Effect, Layer, Schema, Types } from "effect"
+import { Context, Effect, Layer, Option, Schema, Types } from "effect" // kilocode_change
 import { Pty } from "@opencode-ai/schema/pty"
 import { Config } from "./config"
 import { EventV2 } from "./event"
@@ -31,6 +31,7 @@ type Subscriber = {
 
 type Active = {
   info: Info
+  directory: string // kilocode_change
   process: Proc
   buffer: string
   bufferCursor: number
@@ -96,6 +97,7 @@ export interface Interface {
   readonly create: (input: CreateInput) => Effect.Effect<Info>
   readonly update: (id: PtyID, input: UpdateInput) => Effect.Effect<Info, NotFoundError>
   readonly remove: (id: PtyID) => Effect.Effect<void, NotFoundError>
+  readonly removeDirectory: (directory: string) => Effect.Effect<void> // kilocode_change
   readonly write: (id: PtyID, data: string) => Effect.Effect<void, NotFoundError>
   readonly attach: (id: PtyID, input: AttachInput) => Effect.Effect<Attachment, NotFoundError | ExitedError>
 }
@@ -106,8 +108,6 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const events = yield* EventV2.Service
-    const location = yield* Location.Service
-    const config = yield* Config.Service
     const context = yield* Effect.context()
     const runFork = Effect.runForkWith(context)
     const sessions = new Map<PtyID, Active>()
@@ -150,6 +150,10 @@ const layer = Layer.effect(
     const requireSession = Effect.fn("Pty.requireSession")(function* (id: PtyID) {
       const session = sessions.get(id)
       if (!session) return yield* new NotFoundError({ ptyID: id })
+      // kilocode_change start - the global registry still enforces location isolation.
+      const location = Option.getOrUndefined(yield* Effect.serviceOption(Location.Service))
+      if (location && session.directory !== location.directory) return yield* new NotFoundError({ ptyID: id })
+      // kilocode_change end
       return session
     })
 
@@ -173,8 +177,20 @@ const layer = Layer.effect(
       yield* removeSession(id)
     })
 
+    // kilocode_change start - explicit worktree deletion is the PTY cleanup boundary.
+    const removeDirectory = Effect.fn("Pty.removeDirectory")(function* (directory: string) {
+      const owned = Array.from(sessions.values()).filter((session) => session.directory === directory)
+      yield* Effect.forEach(owned, (session) => removeSession(session.info.id), { concurrency: 4 })
+    })
+    // kilocode_change end
+
     const list = Effect.fn("Pty.list")(function* () {
-      return Array.from(sessions.values()).map((session) => session.info)
+      // kilocode_change start - filter the process-wide registry by request location.
+      const location = Option.getOrUndefined(yield* Effect.serviceOption(Location.Service))
+      return Array.from(sessions.values())
+        .filter((session) => !location || session.directory === location.directory)
+        .map((session) => session.info)
+      // kilocode_change end
     })
 
     const get = Effect.fn("Pty.get")(function* (id: PtyID) {
@@ -190,10 +206,16 @@ const layer = Layer.effect(
         cwd: input.cwd,
       })
       const implicit = !resolved.command
-      const command = resolved.command || Shell.preferred(Config.latest(yield* config.entries(), "shell"))
+      // kilocode_change start - location and config are request-scoped now that PTYs are global.
+      const location = Option.getOrUndefined(yield* Effect.serviceOption(Location.Service))
+      const config = Option.getOrUndefined(yield* Effect.serviceOption(Config.Service))
+      const entries = config ? yield* config.entries() : []
+      const command = resolved.command || Shell.preferred(Config.latest(entries, "shell"))
       const base = resolved.args ?? []
       const args = implicit && Shell.login(command) ? [...base, "-l"] : [...base]
-      const cwd = resolved.cwd || location.directory
+      const cwd = resolved.cwd || location?.directory || process.cwd()
+      const directory = location?.directory || cwd
+      // kilocode_change end
       // kilocode_change end
       const env = {
         ...process.env,
@@ -236,6 +258,7 @@ const layer = Layer.effect(
       }
       const session: Active = {
         info,
+        directory, // kilocode_change
         process: proc,
         buffer: "",
         bufferCursor: 0,
@@ -307,7 +330,10 @@ const layer = Layer.effect(
     const attach = Effect.fn("Pty.attach")(function* (id: PtyID, input: AttachInput) {
       const session = yield* requireSession(id)
       if (session.info.status !== "running" && !input.allowExited) return yield* new ExitedError({ ptyID: id }) // kilocode_change
-      yield* Effect.logInfo("client attached to session", { id, directory: location.directory })
+      // kilocode_change start - location is optional because the registry is process-wide.
+      const location = Option.getOrUndefined(yield* Effect.serviceOption(Location.Service))
+      yield* Effect.logInfo("client attached to session", { id, directory: location?.directory })
+      // kilocode_change end
       const token = {}
       const subscriber: Subscriber = {
         onData: input.onData,
@@ -358,10 +384,10 @@ const layer = Layer.effect(
       }
     })
 
-    return Service.of({ list, get, create, update, remove, write, attach })
+    return Service.of({ list, get, create, update, remove, removeDirectory, write, attach }) // kilocode_change
   }),
 )
 
-export const locationLayer = layer.pipe(Layer.provide(Config.locationLayer))
+export const locationLayer = layer // kilocode_change
 
-export const node = makeLocationNode({ service: Service, layer, deps: [EventV2.node, Location.node, Config.node] })
+export const node = makeGlobalNode({ service: Service, layer, deps: [EventV2.node] }) // kilocode_change

@@ -287,7 +287,7 @@ describe("pty", () => {
 
 const configuredShell = process.platform === "win32" ? undefined : Bun.which("bash")
 const configuredIt = testEffect(
-  AppNodeBuilder.build(LayerNode.group([Pty.node, EventV2.node]), [
+  AppNodeBuilder.build(LayerNode.group([Pty.node, EventV2.node, Config.node, Location.node]), [ // kilocode_change
     [
       Config.node,
       Layer.mock(Config.Service)({

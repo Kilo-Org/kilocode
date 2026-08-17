@@ -35,6 +35,7 @@ import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
+import { removePtys } from "./pty-cleanup"
 import { executeVscodeTask } from "./task-runner"
 import { runWorktreeSetupScript } from "./setup-script-task"
 import { RunController } from "./run/controller"
@@ -189,6 +190,7 @@ export class AgentManagerProvider implements Disposable {
       activate: (ctx) => this.activateProject(ctx),
       expand: (ctx) => this.initExpanded(ctx),
       ready: (ctx) => initContextState(ctx, (...args) => this.log(...args)),
+      removePtys: (directory) => removePtys((dir) => this.connectionService.getClientAsync(dir), directory),
       push: () => this.pushProjects(),
       changed: () => this.onWorkspaceChanged(),
       refresh: () => this.pushState(),
@@ -1029,7 +1031,6 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  /** Remove a worktree whose session could not be safely initialized. */
   private async discardWorktree(id: string, dir: string, branch: string, sessionId?: string): Promise<void> {
     this.getStateManager()?.removeWorktree(id)
     this.pushState()
@@ -1045,13 +1046,13 @@ export class AgentManagerProvider implements Disposable {
     }
 
     try {
+      await removePtys((directory) => this.connectionService.getClientAsync(directory), dir)
       await this.getWorktreeManager()?.removeWorktree(dir, branch)
     } catch (err) {
       this.log(`Failed to remove worktree ${id} after setup failed:`, err)
     }
   }
 
-  /** Send worktreeSetup.ready + pushState after worktree creation. */
   private notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void {
     this.pushState()
     this.postToWebview({
@@ -1115,6 +1116,7 @@ export class AgentManagerProvider implements Disposable {
         },
         cleanupWorktree: async (wid, dir) => {
           this.getStateManager()?.removeWorktree(wid)
+          await removePtys((directory) => this.connectionService.getClientAsync(directory), dir)
           await this.getWorktreeManager()?.removeWorktree(dir)
           this.pushState()
         },
@@ -1132,8 +1134,6 @@ export class AgentManagerProvider implements Disposable {
       req,
     )
   }
-
-  // Worktree actions
 
   /** Create a new worktree with an auto-created first session. */
   private async onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null> {
@@ -1457,8 +1457,6 @@ export class AgentManagerProvider implements Disposable {
     })
   }
 
-  // Manager accessors — repository-bound services are owned by the active ProjectContext (immutable per root).
-  /** Provider capabilities for the worktree lifecycle handlers (state stays in ProjectContext). */
   private get lifecycleHost(): LifecycleHost {
     return {
       createOnDisk: (opts) => this.createWorktreeOnDisk(opts),
@@ -1486,6 +1484,7 @@ export class AgentManagerProvider implements Disposable {
       capture: (event, props) => this.host.capture(event, props),
       autoName: () => this.host.autoBranchNaming(),
       client: () => this.connectionService.getClient(),
+      removePtys: (directory) => removePtys((dir) => this.connectionService.getClientAsync(dir), directory),
       metadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),

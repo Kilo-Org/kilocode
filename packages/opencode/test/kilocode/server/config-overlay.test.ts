@@ -855,7 +855,7 @@ describe("config overlay routes", () => {
     expect(await SandboxStore.read(project.path, child.id)).toMatchObject({ mode: "deny" })
   })
 
-  terminal("preserves active terminals after updating global console preferences", async () => {
+  terminal("preserves active terminals after updating global model settings", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
     ;(Global.Path as { config: string }).config = global.path
@@ -872,7 +872,7 @@ describe("config overlay routes", () => {
         await request(Server.Default().app, undefined, "/config/overlay", {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ scope: "global", set: { console: { diff_style: "split" } } }),
+          body: JSON.stringify({ scope: "global", set: { model: "test/model" } }),
         }),
       )
 

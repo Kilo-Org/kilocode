@@ -33,6 +33,7 @@ export function createProjectWiring(opts: {
   expand: (ctx: ProjectContext) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
   ready: (ctx: ProjectContext) => Promise<ProjectInitResult>
+  removePtys: (directory: string) => Promise<void>
   /** Push the project catalog to the webview. */
   push: () => void
   /** Re-derive the pinned project after workspace folder changes. */
@@ -62,6 +63,7 @@ export function createProjectWiring(opts: {
     activate: opts.activate,
     expand: opts.expand,
     ready: opts.ready,
+    removePtys: opts.removePtys,
     push: opts.push,
     selected: opts.selected,
     error: (message) => opts.host.showError(message),
