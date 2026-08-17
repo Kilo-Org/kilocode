@@ -129,13 +129,13 @@ async function ancestor(git: GitOps, dir: string, base: string, log?: Log): Prom
 export function splitPatches(patchText: string, files: string[]): Map<string, string> {
   const map = new Map<string, string>()
   if (!patchText || files.length === 0) return map
-  const starts = files
-    .map((file) => ({ file, start: patchText.indexOf(`diff --git a/${file} b/${file}\n`) }))
-    .filter((item) => item.start >= 0)
-    .sort((a, b) => a.start - b.start)
-  for (let i = 0; i < starts.length; i++) {
-    const item = starts[i]!
-    map.set(item.file, patchText.slice(item.start, starts[i + 1]?.start ?? patchText.length))
+  const names = new Map(files.map((file) => [`diff --git a/${file} b/${file}`, file]))
+  const headers = [...patchText.matchAll(/^diff --git a\/.* b\/.*$/gm)]
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i]!
+    const file = names.get(header[0])
+    if (!file || header.index === undefined) continue
+    map.set(file, patchText.slice(header.index, headers[i + 1]?.index ?? patchText.length))
   }
   return map
 }

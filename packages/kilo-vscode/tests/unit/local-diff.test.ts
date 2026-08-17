@@ -143,6 +143,29 @@ describe("splitPatches", () => {
     expect(splitPatches(patch, [file]).get(file)).toBe(patch)
   })
 
+  it("ignores header-looking lines inside a patch body", () => {
+    const patch = [
+      "diff --git a/patches/example.patch b/patches/example.patch",
+      "--- a/patches/example.patch",
+      "+++ b/patches/example.patch",
+      "@@ -1 +1 @@",
+      "-old",
+      "+diff --git a/target.ts b/target.ts",
+      "diff --git a/target.ts b/target.ts",
+      "--- a/target.ts",
+      "+++ b/target.ts",
+      "@@ -1 +1 @@",
+      "-before",
+      "+after",
+      "",
+    ].join("\n")
+
+    const result = splitPatches(patch, ["patches/example.patch", "target.ts"])
+
+    expect(result.get("patches/example.patch")).toContain("+diff --git a/target.ts b/target.ts")
+    expect(result.get("target.ts")).toContain("+after")
+  })
+
   it("keeps binary patches and ignores empty input", () => {
     const patch = "diff --git a/image.bin b/image.bin\nBinary files a/image.bin and b/image.bin differ\n"
     expect(splitPatches(patch, ["image.bin"]).get("image.bin")).toBe(patch)

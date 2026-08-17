@@ -233,7 +233,7 @@ export class WorktreeDiffController {
   public async preload(ids: string[]): Promise<void> {
     await this.ready("stateReady rejected, continuing diff preload:")
     for (const id of ids) {
-      if (!id || this.diffCache.size >= CACHE_MAX_ENTRIES) break
+      if (!id) continue
       const parsed = parseDiffId(id)
       const ctx = parsed.ctx
       const key = composeDiffId(ctx, parsed.scope, parsed.sessionId)
