@@ -420,7 +420,7 @@ const layer: Layer.Layer<
       if (!entry?.path) {
         const directoryExists = yield* fs.exists(directory).pipe(Effect.orDie)
         if (directoryExists) {
-          yield* clear(directory)
+          yield* clear(directory) // kilocode_change
           yield* stopFsmonitor(directory)
           yield* cleanDirectory(directory)
         }
@@ -429,7 +429,7 @@ const layer: Layer.Layer<
 
       // Git may return the original casing when a caller supplied a normalized Windows path.
       yield* store.disposeDirectory(entry.path)
-      yield* clear(entry.path)
+      yield* clear(entry.path) // kilocode_change
       const removed = yield* WorktreeCleanup.remove({
         root: ctx.worktree,
         target: entry.path,
