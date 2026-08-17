@@ -104,10 +104,7 @@ internal class SessionScroll(
 
     @RequiresEdt
     fun atBottom(): Boolean {
-        return when {
-            component.viewport.view !== messages -> tail
-            else -> tail
-        }
+        return tail
     }
 
     @RequiresEdt
