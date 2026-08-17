@@ -198,10 +198,11 @@ export function activeUserMessageID(
   messages: Message[],
   status: SessionStatusInfo,
   parts?: (msg: Message) => Message["parts"],
+  submitting?: boolean,
 ) {
   const id = active(messages, status, parts)
   if (id) return id
-  if (status.type === "idle") return undefined
+  if (status.type === "idle" && !submitting) return undefined
   return pending(messages, parts)
 }
 
@@ -209,8 +210,9 @@ export function queuedUserMessageIDs(
   messages: Message[],
   status: SessionStatusInfo,
   parts?: (msg: Message) => Message["parts"],
+  submitting?: boolean,
 ) {
-  if (status.type === "idle") return []
+  if (status.type === "idle" && !submitting) return []
   const users = messages.filter((msg) => msg.role === "user")
   const running = active(messages, status, parts)
   if (running) {

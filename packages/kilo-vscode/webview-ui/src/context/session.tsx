@@ -61,6 +61,8 @@ import {
   buildCostBreakdown,
   buildSessionToolParts,
   childID,
+  mergeMessages,
+  messageParts,
   reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
@@ -473,6 +475,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Tracks optimistic messageIDs that haven't been confirmed by the server yet.
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
   const pendingOptimistic = new Map<string, Set<string>>()
+  const pendingOptimisticParts = new Map<string, Set<string>>()
   // Sessions can be created/imported while an older list request is still in flight.
   // Keep them until a later list payload confirms them or deletion arrives.
   const freshSessions = new Set<string>()
@@ -1380,28 +1383,6 @@ export const SessionProvider: ParentComponent = (props) => {
     setPages(sessionID, { ...(pages[sessionID] ?? emptyPageState), ...patch })
   }
 
-  function mergeMessages(current: Message[], incoming: Message[], mode: Exclude<MessageLoadMode, "focus">) {
-    if (mode === "reconcile") {
-      // Tail reconcile: incoming is the authoritative newest-N snapshot.
-      // Local state may already hold some of those IDs and may also hold
-      // newer optimistic entries created after the fetch was taken. Merge
-      // by id (server wins on collision) then sort by createdAt so new
-      // server messages land in the right position and optimistic tail
-      // entries stay at the end.
-      const byId = new Map<string, Message>()
-      for (const msg of current) byId.set(msg.id, msg)
-      for (const msg of incoming) byId.set(msg.id, msg)
-      return [...byId.values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    }
-    const seen = new Set<string>()
-    const source = mode === "prepend" ? [...incoming, ...current] : incoming
-    return source.filter((msg) => {
-      if (seen.has(msg.id)) return false
-      seen.add(msg.id)
-      return true
-    })
-  }
-
   function recoverPrefs(sessionID: string, messages: Message[], names = agentNames()) {
     const prefs = resolveMessagePrefs(messages, names)
     if (prefs.agent && !store.agentSelections[sessionID]) {
@@ -1449,14 +1430,6 @@ export const SessionProvider: ParentComponent = (props) => {
       (msg) => parts?.[msg.id] ?? store.parts[msg.id] ?? stash.peek(msg.id) ?? msg.parts,
     )
     setTools(sessionID, tools)
-  }
-
-  function messageParts(messages: Message[]): Record<string, Part[]> {
-    const parts: Record<string, Part[]> = {}
-    for (const msg of messages) {
-      if (msg.parts && msg.parts.length > 0) parts[msg.id] = msg.parts
-    }
-    return parts
   }
 
   function patchToolPart(sessionID: string | undefined, messageID: string, part: Part) {
@@ -1523,6 +1496,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }
 
       for (const msg of messages) {
+        pendingOptimisticParts.delete(msg.id)
         const parts = msg.parts ?? []
         if (mode === "reconcile" && store.parts[msg.id]) {
           // Reconcile on a message already hydrated into the reactive store:
@@ -1583,21 +1557,8 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleMessageCreated(message: Message) {
     if (message.role === "assistant") clearSessionDraftDiscarded(message.sessionID)
     // Message confirmed by server — no longer optimistic.
-    // Clear placeholder parts so they don't duplicate alongside real parts
-    // arriving via individual part.updated events (the server's message.updated
-    // SSE event does NOT include parts).
     const pending = pendingOptimistic.get(message.sessionID)
-    const wasOptimistic = pending?.has(message.id)
     pending?.delete(message.id)
-
-    if (wasOptimistic) {
-      setStore(
-        "parts",
-        produce((p) => {
-          delete p[message.id]
-        }),
-      )
-    }
 
     const exists = (store.messages[message.sessionID] ?? []).some((msg) => msg.id === message.id)
     setStore("messages", message.sessionID, (msgs = []) => {
@@ -1619,6 +1580,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (message.parts && message.parts.length > 0) {
       stash.remove(message.id)
       setStore("parts", message.id, message.parts)
+      pendingOptimisticParts.delete(message.id)
     }
     rebuildToolParts(message.sessionID, store.messages[message.sessionID] ?? [])
   }
@@ -1652,6 +1614,8 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore("parts", effectiveMessageID, stashed)
     }
 
+    const optIds = pendingOptimisticParts.get(effectiveMessageID)
+
     setStore(
       "parts",
       produce((parts) => {
@@ -1659,11 +1623,12 @@ export const SessionProvider: ParentComponent = (props) => {
           parts[effectiveMessageID] = []
         }
 
-        const existingIndex = parts[effectiveMessageID].findIndex((p) => p.id === part.id)
+        const list = parts[effectiveMessageID]
+        const existingIndex = list.findIndex((p) => p.id === part.id)
 
         if (existingIndex >= 0) {
           // Update existing part
-          const existing = parts[effectiveMessageID][existingIndex]
+          const existing = list[existingIndex]
           if (
             delta?.type === "text-delta" &&
             delta.textDelta &&
@@ -1680,9 +1645,21 @@ export const SessionProvider: ParentComponent = (props) => {
             }
             Object.assign(existing, part)
           }
+        } else if (optIds && optIds.size > 0) {
+          // Server part arrived for a message with optimistic parts:
+          // replace matching optimistic part in place so the prompt never flickers empty.
+          const optIdx = list.findIndex((p) => optIds.has(p.id) && p.type === part.type)
+          if (optIdx >= 0) {
+            const replaced = list[optIdx]
+            optIds.delete(replaced.id)
+            list[optIdx] = part
+          } else {
+            list.push(part)
+          }
+          if (optIds.size === 0) pendingOptimisticParts.delete(effectiveMessageID)
         } else {
           // Add new part
-          parts[effectiveMessageID].push(part)
+          list.push(part)
         }
       }),
     )
@@ -1861,6 +1838,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!message.messageID && sid) aborts.clear(sid)
     if (sid && message.messageID) {
       pendingOptimistic.get(sid)?.delete(message.messageID)
+      pendingOptimisticParts.delete(message.messageID)
       stash.remove(message.messageID)
       batch(() => {
         setStore("messages", sid, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
@@ -2019,7 +1997,10 @@ export const SessionProvider: ParentComponent = (props) => {
       // Collect message IDs so we can clean up their parts (store + stash)
       const msgs = store.messages[sessionID] ?? []
       const msgIds = msgs.map((m) => m.id)
-      for (const id of msgIds) stash.remove(id)
+      for (const id of msgIds) {
+        stash.remove(id)
+        pendingOptimisticParts.delete(id)
+      }
       clearHiddenErrors(msgIds)
 
       setStore(
@@ -2238,19 +2219,24 @@ export const SessionProvider: ParentComponent = (props) => {
     pendingOptimistic.set(sid, pending)
 
     const parts: Part[] = []
+    const partIds = new Set<string>()
     if (text) {
+      const partId = Identifier.ascending("part")
+      partIds.add(partId)
       parts.push({
         type: "text" as const,
-        id: Identifier.ascending("part"),
+        id: partId,
         messageID,
         text,
         metadata: review ? reviewMetadata(review) : undefined,
       })
     }
     for (const file of files ?? []) {
+      const partId = Identifier.ascending("part")
+      partIds.add(partId)
       parts.push({
         type: "file" as const,
-        id: Identifier.ascending("part"),
+        id: partId,
         messageID,
         mime: file.mime,
         url: file.url,
@@ -2258,6 +2244,7 @@ export const SessionProvider: ParentComponent = (props) => {
         source: file.source,
       })
     }
+    pendingOptimisticParts.set(messageID, partIds)
 
     setStore("messages", sid, (msgs = []) => [...msgs, temp])
     setStore("parts", messageID, parts)
@@ -2862,6 +2849,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function deleteQueuedMessage(sessionID: string, messageID: string) {
     if (!server.isConnected()) return
     pendingOptimistic.get(sessionID)?.delete(messageID)
+    pendingOptimisticParts.delete(messageID)
     finishSubmission(messageID)
     vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
   }
@@ -2915,16 +2903,20 @@ export const SessionProvider: ParentComponent = (props) => {
     return buildCostBreakdown(id, costs, familyLabels(), language.t("context.stats.thisSession"))
   })
 
-  // Status text derived from last assistant message parts
+  // Status text derived from current turn's assistant message parts
   const statusText = createMemo<string | undefined>(() => {
     if (status() === "idle") return undefined
+    const thinking = language.t("ui.sessionTurn.status.thinking")
     const fallback = language.t("ui.sessionTurn.status.consideringNextSteps")
     const id = currentSessionID()
     const msgs = messages()
-    for (let i = msgs.length - 1; i >= 0; i--) {
+    const lastUserIdx = msgs.findLastIndex((m) => m.role === "user")
+    if (lastUserIdx < 0) return thinking
+
+    for (let i = msgs.length - 1; i > lastUserIdx; i--) {
       if (msgs[i].role !== "assistant") continue
       const parts = getParts(msgs[i].id)
-      if (parts.length === 0) break
+      if (parts.length === 0) return thinking
       const raw = computeStatus(parts[parts.length - 1], language.t) ?? fallback
       // When delegating to a subagent and that subagent is blocked on a prompt,
       // replace the generic "Delegating work" label with a more informative one
@@ -2937,7 +2929,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       return raw
     }
-    return fallback
+    return thinking
   })
 
   const modelUsage = createMemo<SessionModelUsage | undefined>(() => {

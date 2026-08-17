@@ -179,10 +179,23 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const isEmpty = () => turns().length === 0 && !session.loading() && !revert()
 
   const activeUserID = createMemo(() =>
-    getActiveUserMessageID(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id)),
+    getActiveUserMessageID(
+      session.messages(),
+      session.statusInfo(),
+      (msg) => session.getParts(msg.id),
+      session.submitting(),
+    ),
   )
   const queuedIDs = createMemo(
-    () => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id))),
+    () =>
+      new Set(
+        queuedUserMessageIDs(
+          session.messages(),
+          session.statusInfo(),
+          (msg) => session.getParts(msg.id),
+          session.submitting(),
+        ),
+      ),
   )
   const rows = createMemo((prev: TranscriptRow[] | undefined) => {
     const active = activeUserID()
