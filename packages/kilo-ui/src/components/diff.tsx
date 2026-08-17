@@ -27,7 +27,9 @@ type Job = { run: () => void; cancelled: boolean }
 // IntersectionObserver per diff showed up in profiles, so all deferred diffs
 // share a single observer and only register their element + render callback.
 const watchers = new Map<Element, Job>()
+const queue: Job[] = []
 let shared: IntersectionObserver | undefined
+let frame: number | undefined
 
 function lines(text: string): number {
   if (!text) return 0
@@ -49,6 +51,23 @@ function release(node: Element) {
   shared = undefined
 }
 
+function enqueue(job: Job) {
+  queue.push(job)
+  schedule()
+}
+
+// Render one newly visible diff per frame so a large intersection batch does
+// not monopolize the main thread during fast scrolling or session switches.
+function schedule() {
+  if (frame !== undefined) return
+  frame = requestAnimationFrame(() => {
+    frame = undefined
+    const job = queue.shift()
+    if (job && !job.cancelled) job.run()
+    if (queue.length > 0) schedule()
+  })
+}
+
 // Defer Pierre's expensive DOM render until the diff is close to the viewport.
 function observe(node: Element, cb: () => void): () => void {
   if (typeof IntersectionObserver === "undefined") {
@@ -66,7 +85,7 @@ function observe(node: Element, cb: () => void): () => void {
         if (!item) continue
         watchers.delete(entry.target)
         release(entry.target)
-        if (!item.cancelled) item.run()
+        enqueue(item)
       }
     },
     { rootMargin: OBSERVER_MARGIN },
@@ -224,10 +243,7 @@ export function Diff<T>(props: DiffProps<T>) {
   }
 
   createEffect(() => {
-    if (visible()) {
-      container.style.minHeight = ""
-      return
-    }
+    if (visible()) return
     container.style.minHeight = `${estimate()}px`
   })
 

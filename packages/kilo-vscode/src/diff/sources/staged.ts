@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { GitOps } from "../../agent-manager/GitOps"
-import { generatedLike, splitPatches } from "../../agent-manager/local-diff"
+import { generatedLike, requiresContents, splitPatches } from "../../agent-manager/local-diff"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import { imageMime, loadImage } from "../shared/image"
 import { resolveInside } from "../shared/path"
@@ -73,6 +73,7 @@ export function createStagedDiffSource(opts: StagedDiffSourceOptions = {}): Diff
       git.execGit(
         ["-c", "core.quotepath=false", "diff", "--cached", "--no-ext-diff", "--no-renames", "-U3", "HEAD"],
         dir,
+        { maxOutput: MAX_DETAIL_BYTES },
       ),
       git.execGit(["-c", "core.quotepath=false", "diff", "--cached", "--name-status", "--no-renames", "HEAD"], dir),
       git.execGit(["-c", "core.quotepath=false", "diff", "--cached", "--numstat", "--no-renames", "HEAD"], dir),
@@ -87,23 +88,27 @@ export function createStagedDiffSource(opts: StagedDiffSourceOptions = {}): Diff
     }
     const counts = parseNumstat(numstat.code === 0 ? numstat.stdout : "")
     const refs = parseRawOids(raw.code === 0 ? raw.stdout : "")
-    const patches = splitPatches(patchResult.code === 0 ? patchResult.stdout : "")
-    return parseNameStatus(nameStatus.stdout).map((item) => {
+    const items = parseNameStatus(nameStatus.stdout)
+    const patches = splitPatches(
+      patchResult.code === 0 ? patchResult.stdout : "",
+      items.map((item) => item.file),
+    )
+    return items.map((item) => {
       const ref = refs.get(item.file)
-      const count = counts.get(item.file)
-      const patch = patches.get(item.file) ?? ""
+      const count = counts.get(item.file) ?? { additions: 0, deletions: 0, binary: false }
+      const patch = patches.get(item.file)
       const isImage = imageMime(item.file) !== undefined
-      const isLarge = patch.length > MAX_DETAIL_BYTES
-      const summarized = isImage || count?.binary || isLarge
+      const summarized = isImage || count.binary || patch === undefined || requiresContents(item.file)
       const entry: FileEntry = {
         file: item.file,
         status: item.status,
-        additions: count?.additions ?? 0,
-        deletions: count?.deletions ?? 0,
+        additions: count.additions,
+        deletions: count.deletions,
         tracked: true,
-        binary: count?.binary ?? false,
+        binary: count.binary,
         patch: summarized ? undefined : patch,
         summarized,
+        stamp: `${item.status}:${ref?.before ?? "missing"}:${ref?.after ?? "missing"}`,
       }
       return stamp(
         entry,

@@ -126,25 +126,22 @@ async function ancestor(git: GitOps, dir: string, base: string, log?: Log): Prom
   return anc
 }
 
-export function splitPatches(patchText: string): Map<string, string> {
+export function splitPatches(patchText: string, files: string[]): Map<string, string> {
   const map = new Map<string, string>()
-  if (!patchText) return map
-  const headerRegex = /^diff --git a\/(.+?) b\/(.+)$/gm
-  let match: RegExpExecArray | null
-  let lastFile: string | null = null
-  let lastStart = 0
-
-  while ((match = headerRegex.exec(patchText)) !== null) {
-    if (lastFile !== null) {
-      map.set(lastFile, patchText.slice(lastStart, match.index))
-    }
-    lastFile = match[2]!
-    lastStart = match.index
-  }
-  if (lastFile !== null) {
-    map.set(lastFile, patchText.slice(lastStart))
+  if (!patchText || files.length === 0) return map
+  const starts = files
+    .map((file) => ({ file, start: patchText.indexOf(`diff --git a/${file} b/${file}\n`) }))
+    .filter((item) => item.start >= 0)
+    .sort((a, b) => a.start - b.start)
+  for (let i = 0; i < starts.length; i++) {
+    const item = starts[i]!
+    map.set(item.file, patchText.slice(item.start, starts[i + 1]?.start ?? patchText.length))
   }
   return map
+}
+
+export function requiresContents(file: string): boolean {
+  return /\.(md|mdx|markdown)$/i.test(file)
 }
 
 function parseNumstatOutput(stdout: string) {
@@ -202,7 +199,9 @@ function statusFromCode(code: string): Status {
 
 async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<WorktreeDiffEntry[]> {
   const [patchResult, nameStatus, numstatResult, untracked] = await Promise.all([
-    git.execGit(["-c", "core.quotepath=false", "diff", "--no-ext-diff", "--no-renames", "-U3", anc], dir),
+    git.execGit(["-c", "core.quotepath=false", "diff", "--no-ext-diff", "--no-renames", "-U3", anc], dir, {
+      maxOutput: MAX_DETAIL_BYTES,
+    }),
     git.execGit(["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", anc], dir),
     git.execGit(["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc], dir),
     git.execGit(["ls-files", "--others", "--exclude-standard"], dir),
@@ -213,30 +212,36 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<W
     return []
   }
 
+  const tracked = nameStatus.stdout
+    .trim()
+    .split("\n")
+    .flatMap((line) => {
+      if (!line) return []
+      const parts = line.split("\t")
+      const code = parts[0]
+      const file = parts.slice(1).join("\t")
+      return file && code ? [{ file, code }] : []
+    })
   const counts = numstatResult.code === 0 ? parseNumstatOutput(numstatResult.stdout) : new Map()
-  const patches = splitPatches(patchResult.code === 0 ? patchResult.stdout : "")
+  const patches = splitPatches(
+    patchResult.code === 0 ? patchResult.stdout : "",
+    tracked.map((item) => item.file),
+  )
   const result: WorktreeDiffEntry[] = []
   const seen = new Set<string>()
   const stampTasks: Promise<void>[] = []
 
-  for (const line of nameStatus.stdout.trim().split("\n")) {
-    if (!line) continue
-    const parts = line.split("\t")
-    const code = parts[0]
-    const file = parts.slice(1).join("\t")
-    if (!file || !code) continue
+  for (const { file, code } of tracked) {
     seen.add(file)
     const status = statusFromCode(code)
     const stat = counts.get(file) ?? { additions: 0, deletions: 0, binary: false }
     const mime = imageMime(file)
-    const patch = patches.get(file) ?? ""
-    const isLarge = patch.length > MAX_DETAIL_BYTES
-    const summarized = mime !== undefined || stat.binary || isLarge
-    const actualPatch = summarized ? "" : patch
+    const patch = patches.get(file)
+    const summarized = mime !== undefined || stat.binary || patch === undefined || requiresContents(file)
 
     const entry: WorktreeDiffEntry = {
       file,
-      patch: actualPatch,
+      patch: summarized ? "" : patch,
       before: "",
       after: "",
       additions: stat.additions,
@@ -250,25 +255,26 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<W
     }
     result.push(entry)
 
-    if (mime) {
+    if (status !== "deleted" && summarized) {
       stampTasks.push(
         statStamp(dir, file).then((s) => {
-          entry.stamp = `${anc}:${s}`
+          entry.stamp = `${status}:${stat.additions}:${stat.deletions}:${anc}:${s}`
         }),
       )
     }
   }
 
   const untrackedFiles = untracked.code === 0 ? untracked.stdout.trim().split("\n").filter(Boolean) : []
-  const untrackedTasks = untrackedFiles.map(async (file) => {
-    if (seen.has(file)) return
+  const untrackedTasks = untrackedFiles.map(async (file): Promise<WorktreeDiffEntry | undefined> => {
+    if (seen.has(file)) return undefined
     const full = resolveInside(dir, file)
-    if (!full) return
+    if (!full) return undefined
     const stat = await fs.lstat(full).catch(() => undefined)
-    if (!stat) return
+    if (!stat) return undefined
     const binary = await binaryFile(full)
     const mime = imageMime(file)
     let patch = ""
+    let after = ""
     let additions = 0
     let summarized = true
 
@@ -282,14 +288,15 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<W
         : await fs.readFile(full, "utf-8").catch(() => "")
       additions = linesOf(content)
       patch = buildUntrackedPatch(file, content)
+      if (requiresContents(file)) after = content
       summarized = false
     }
 
-    result.push({
+    return {
       file,
       patch,
       before: "",
-      after: "",
+      after,
       additions,
       deletions: 0,
       status: "added",
@@ -298,10 +305,12 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<W
       summarized,
       stamp: `${stat.size}:${stat.mtimeMs}`,
       kind: mime ? "image" : undefined,
-    })
+    }
   })
 
-  await Promise.all([...stampTasks, ...untrackedTasks])
+  const entries = await Promise.all(untrackedTasks)
+  await Promise.all(stampTasks)
+  result.push(...entries.filter((entry): entry is WorktreeDiffEntry => entry !== undefined))
   return result
 }
 

@@ -848,16 +848,17 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.requestDiffBranches") {
-      void this.sendDiffBranches(m.sessionId, m.scope)
+      void this.diffs.sendBranches(composeDiffId(m.sessionId, normalizeScope(m.scope)))
       return null
     }
     if (m.type === "agentManager.setDiffBaseBranch") {
       const logErr = (err: unknown) =>
         this.log("Failed to set diff base:", err instanceof Error ? err.message : String(err))
+      const id = composeDiffId(m.sessionId, normalizeScope(m.scope))
       void this.diffs
-        .setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch)
+        .setBase(id, m.branch)
         .catch(logErr)
-        .then(() => void this.sendDiffBranches(m.sessionId, m.scope))
+        .then(() => void this.diffs.sendBranches(id))
       return null
     }
     if (m.type === "agentManager.preloadWorktreeDiffs") {
@@ -868,25 +869,6 @@ export class AgentManagerProvider implements Disposable {
       this.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
       return null
     }
-  }
-
-  private async sendDiffBranches(sessionId: string, scope?: string): Promise<void> {
-    const id = composeDiffId(sessionId, normalizeScope(scope))
-    const result = await this.diffs.branches(id).catch((err) => {
-      this.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
-      return undefined
-    })
-    if (!result) return
-    this.postToWebview({
-      type: "agentManager.diffBranches",
-      sessionId: id,
-      branches: result.branches,
-      defaultBranch: result.defaultBranch,
-      autoBase: result.autoBase,
-      currentBase: result.currentBase,
-      isAuto: result.isAuto,
-      currentBranch: result.currentBranch,
-    })
   }
 
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {

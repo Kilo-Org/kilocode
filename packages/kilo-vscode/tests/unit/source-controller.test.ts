@@ -90,6 +90,24 @@ describe("SourceController.activate", () => {
     expect(notices[0]!.notice).toBe("snapshots-disabled")
   })
 
+  it("uses known diffs to suppress an unchanged warm refresh", async () => {
+    const diff = { file: "warm.ts", before: "", after: "", additions: 1, deletions: 0 }
+    const source: DiffSource = {
+      descriptor: WORKSPACE_DESC,
+      async fetch() {
+        return { diffs: [diff] }
+      },
+    }
+    const { controller, posted } = make({ workspace: source })
+
+    controller.setContext({ workspaceRoot: "/repo" })
+    await controller.activate("workspace", { poll: false, known: [diff] })
+
+    expect(byType(posted, "diffViewer.diffs")).toEqual([])
+    expect(byType(posted, "diffViewer.loading")).toEqual([])
+    controller.stop()
+  })
+
   it("disposes the previous source when activating a new one", async () => {
     let workspaceDisposed = 0
     const workspace: DiffSource = {

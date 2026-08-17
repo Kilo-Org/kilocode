@@ -43,6 +43,7 @@ interface ApplyPatchResult {
 interface ExecOptions {
   env?: NodeJS.ProcessEnv
   stdin?: string
+  maxOutput?: number
 }
 
 export interface ExecResult {
@@ -579,7 +580,7 @@ export class GitOps {
    * suitable for callers that need to tolerate legitimate failures (e.g.
    * `merge-base` on an orphan branch, `ls-files --error-unmatch`).
    */
-  execGit(args: string[], cwd: string, options?: { stdin?: string }): Promise<ExecResult> {
+  execGit(args: string[], cwd: string, options?: { stdin?: string; maxOutput?: number }): Promise<ExecResult> {
     return this.exec(args, cwd, options)
   }
 
@@ -639,11 +640,22 @@ export class GitOps {
       })
       const out: Buffer[] = []
       const err: Buffer[] = []
+      let size = 0
+      let limited = false
       let failure: string | undefined
       const abort = () => child.kill("SIGTERM")
 
       this.controller.signal.addEventListener("abort", abort, { once: true })
-      child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
+      child.stdout?.on("data", (chunk: Buffer) => {
+        size += chunk.length
+        if (options?.maxOutput !== undefined && size > options.maxOutput) {
+          limited = true
+          failure = `git output exceeded ${options.maxOutput} bytes`
+          child.kill("SIGTERM")
+          return
+        }
+        out.push(chunk)
+      })
       child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
       child.on("error", (error) => {
@@ -652,8 +664,8 @@ export class GitOps {
       child.on("close", (code) => {
         this.controller.signal.removeEventListener("abort", abort)
         resolve({
-          code: code ?? 1,
-          stdout: Buffer.concat(out),
+          code: failure ? 1 : (code ?? 1),
+          stdout: limited ? Buffer.alloc(0) : Buffer.concat(out),
           stderr: failure ?? Buffer.concat(err).toString("utf8"),
         })
       })

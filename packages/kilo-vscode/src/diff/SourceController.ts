@@ -15,7 +15,7 @@ type Messages = {
   unsupportedRevert: (source: DiffSource | undefined, file: string) => unknown
 }
 
-type ActivateOptions = { poll?: boolean; fetch?: boolean }
+type ActivateOptions = { poll?: boolean; fetch?: boolean; known?: DiffFile[] }
 
 const viewerMessages: Messages = {
   available: (descriptors, id) => ({
@@ -117,7 +117,8 @@ export class SourceController {
 
     if (opts.fetch === false) return
 
-    const keepPolling = await this.runFetch(source, epoch, true)
+    this.lastHash = opts.known ? hashFileDiffs(opts.known as never) : undefined
+    const keepPolling = await this.runFetch(source, epoch, opts.known === undefined)
     // Prevents the polling interval from starting after teardown or swap.
     if (this.epoch !== epoch || this.activeId !== id) return
     if (opts.poll !== false && keepPolling) this.startPolling(source, epoch)

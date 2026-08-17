@@ -2,20 +2,24 @@ import { SourceController } from "../diff/SourceController"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
 import { WorktreeDiffReverter, type StatusResolver } from "../diff/shared/reverter"
 import type { DiffFile, PanelContext } from "../diff/types"
-import type { DiffSource, DiffSourceNotice } from "../diff/sources/types"
+import type { DiffSource } from "../diff/sources/types"
 import type { DiffSourceCatalog } from "../diff/sources/catalog"
 import type { ApplyConflict, GitOps } from "./GitOps"
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { remoteRef, type ManagedSession, type WorktreeStateManager } from "./WorktreeStateManager"
-import { parseDiffId, scopeToSourceId } from "./diff-scope"
+import { composeDiffId, parseDiffId, scopeToSourceId } from "./diff-scope"
 import { diffSummary } from "./local-diff"
 import type { AgentManagerOutMessage, WorktreeDiffEntry } from "./types"
 
 const LOCAL_DIFF_ID = "local" as const
+const CACHE_MAX_ENTRIES = 4
+const CACHE_MAX_BYTES = 40_000_000
+const CACHE_TTL = 10_000
 
 type Target = { sessionId: string; directory: string; baseBranch: string }
 
 type AgentManagerDiffFile = DiffFile & WorktreeDiffEntry
+type CacheEntry = { diffs: AgentManagerDiffFile[]; time: number; bytes: number }
 
 export interface WorktreeDiffControllerContext {
   getState: () => WorktreeStateManager | undefined
@@ -39,7 +43,8 @@ export class WorktreeDiffController {
   private poll = false
   /** Ephemeral per-context base override, keyed by context id. */
   private baseOverrides = new Map<string, string>()
-  private diffCache = new Map<string, { diffs: AgentManagerDiffFile[]; notice?: DiffSourceNotice; time: number }>()
+  private diffCache = new Map<string, CacheEntry>()
+  private revisions = new Map<string, number>()
   private preloading = new Set<string>()
 
   constructor(private readonly ctx: WorktreeDiffControllerContext) {
@@ -59,8 +64,7 @@ export class WorktreeDiffController {
           notice,
         }),
         diffs: (source, diffs) => {
-          const { ctx } = parseDiffId(source.descriptor.id)
-          this.diffCache.set(ctx, { diffs: diffs as AgentManagerDiffFile[], time: Date.now() })
+          this.remember(source.descriptor.id, diffs as AgentManagerDiffFile[])
           return {
             type: "agentManager.worktreeDiff",
             sessionId: source.descriptor.id,
@@ -98,9 +102,7 @@ export class WorktreeDiffController {
     const current = this.controller.currentId
     const ctxId = current ? parseDiffId(current).ctx : undefined
     const stop = shouldStopDiffPolling(path, sessions, this.target, ctxId)
-    if (stop && ctxId) {
-      this.diffCache.delete(ctxId)
-    }
+    if (stop && ctxId) this.invalidate(ctxId)
     return stop
   }
 
@@ -214,7 +216,8 @@ export class WorktreeDiffController {
     const { ctx } = parseDiffId(id)
     if (branch) this.baseOverrides.set(ctx, branch)
     else this.baseOverrides.delete(ctx)
-    this.diffCache.delete(ctx)
+    this.revisions.set(ctx, (this.revisions.get(ctx) ?? 0) + 1)
+    this.invalidate(ctx)
     // Nothing to rebuild when the context isn't active; the override is
     // picked up the next time start()/request() resolves it.
     if (this.controller.currentId !== id) return
@@ -230,31 +233,35 @@ export class WorktreeDiffController {
   public async preload(ids: string[]): Promise<void> {
     await this.ready("stateReady rejected, continuing diff preload:")
     for (const id of ids) {
-      if (!id) continue
-      const { ctx } = parseDiffId(id)
-      if (this.controller.currentId === id || this.preloading.has(ctx)) continue
-      const cached = this.diffCache.get(ctx)
-      if (cached && Date.now() - cached.time < 10_000) continue
+      if (!id || this.diffCache.size >= CACHE_MAX_ENTRIES) break
+      const parsed = parseDiffId(id)
+      const ctx = parsed.ctx
+      const key = composeDiffId(ctx, parsed.scope, parsed.sessionId)
+      if (this.controller.currentId === key || this.preloading.has(key)) continue
+      const cached = this.diffCache.get(key)
+      if (cached && Date.now() - cached.time < CACHE_TTL) continue
 
       const resolved = await this.resolve(ctx)
       if (!resolved) continue
 
-      this.preloading.add(ctx)
+      const revision = this.revisions.get(ctx) ?? 0
+      this.preloading.add(key)
       try {
         const entries = await diffSummary(this.ctx.git, resolved.directory, resolved.baseBranch, (...args) =>
           this.ctx.log(...args),
         )
         const diffs = entries.map(toDiffFile) as AgentManagerDiffFile[]
-        this.diffCache.set(ctx, { diffs, time: Date.now() })
+        if ((this.revisions.get(ctx) ?? 0) !== revision) continue
+        this.remember(key, diffs)
         this.ctx.post({
           type: "agentManager.worktreeDiff",
-          sessionId: id,
+          sessionId: key,
           diffs,
         })
       } catch (err) {
         this.ctx.log("Preload diff failed for", id, err)
       } finally {
-        this.preloading.delete(ctx)
+        this.preloading.delete(key)
       }
     }
   }
@@ -266,6 +273,15 @@ export class WorktreeDiffController {
     const target = await this.resolve(ctx)
     if (!target) return undefined
     return await this.ctx.catalog.listWorkspaceBranches(this.baseOverrides.get(ctx), target.directory)
+  }
+
+  public async sendBranches(id: string): Promise<void> {
+    const result = await this.branches(id).catch((err) => {
+      this.ctx.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
+      return undefined
+    })
+    if (!result) return
+    this.ctx.post({ type: "agentManager.diffBranches", sessionId: id, ...result })
   }
 
   private async activate(id: string, poll: boolean, fetch: boolean): Promise<void> {
@@ -280,17 +296,19 @@ export class WorktreeDiffController {
     this.ctx.post({ type: "agentManager.worktreeDiffNotice", sessionId: id, notice: undefined })
 
     // If we have cached diffs for this context, push them immediately to eliminate initial loading delay!
-    const cached = this.diffCache.get(ctx)
-    if (cached) {
+    const cached = this.diffCache.get(id)
+    const warm = cached && Date.now() - cached.time < CACHE_TTL ? cached : undefined
+    if (warm) {
+      this.diffCache.delete(id)
+      this.diffCache.set(id, warm)
       this.ctx.post({
         type: "agentManager.worktreeDiff",
         sessionId: id,
-        diffs: cached.diffs,
+        diffs: warm.diffs,
       })
-      if (cached.notice !== undefined) {
-        this.ctx.post({ type: "agentManager.worktreeDiffNotice", sessionId: id, notice: cached.notice })
-      }
       this.ctx.post({ type: "agentManager.worktreeDiffLoading", sessionId: id, loading: false })
+    } else if (cached) {
+      this.diffCache.delete(id)
     }
 
     this.controller.setContext({
@@ -307,7 +325,7 @@ export class WorktreeDiffController {
       git: this.ctx.git,
       log: (...args) => this.ctx.log(...args),
     })
-    await this.controller.activate(id, { poll, fetch })
+    await this.controller.activate(id, { poll, fetch, known: warm?.diffs })
   }
 
   private async resolve(ctxId: string): Promise<{ directory: string; baseBranch: string } | undefined> {
@@ -341,6 +359,26 @@ export class WorktreeDiffController {
 
   private async ready(msg: string): Promise<void> {
     await this.ctx.getStateReady()?.catch((err) => this.ctx.log(msg, err))
+  }
+
+  private remember(id: string, diffs: AgentManagerDiffFile[]): void {
+    const bytes = diffs.reduce(
+      (sum, diff) => sum + (diff.patch?.length ?? 0) + diff.before.length + diff.after.length,
+      0,
+    )
+    this.diffCache.delete(id)
+    if (bytes > CACHE_MAX_BYTES) return
+    this.diffCache.set(id, { diffs, time: Date.now(), bytes })
+    const total = () => [...this.diffCache.values()].reduce((sum, entry) => sum + entry.bytes, 0)
+    while (this.diffCache.size > CACHE_MAX_ENTRIES || total() > CACHE_MAX_BYTES) {
+      this.diffCache.delete(this.diffCache.keys().next().value!)
+    }
+  }
+
+  private invalidate(ctx: string): void {
+    for (const id of this.diffCache.keys()) {
+      if (parseDiffId(id).ctx === ctx) this.diffCache.delete(id)
+    }
   }
 
   /**

@@ -1682,7 +1682,8 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.stopDiffWatch" })
   })
 
-  // Preload adjacent worktrees immediately, and all other worktrees during idle time.
+  // Keep only the likely next selections warm; preloading every worktree can
+  // retain large patches and waste Git work for sessions the user never opens.
   createEffect(() => {
     const order = sidebarOrder()
     const sel = selection() ?? LOCAL
@@ -1694,13 +1695,6 @@ const AgentManagerContent: Component = () => {
     )
     if (adjacent.length > 0) {
       vscode.postMessage({ type: "agentManager.preloadWorktreeDiffs", worktreeIds: adjacent })
-    }
-
-    const rest = ids.filter((id) => id !== sel && !adjacent.includes(id))
-    if (rest.length > 0) {
-      const schedule =
-        typeof requestIdleCallback !== "undefined" ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 200)
-      schedule(() => vscode.postMessage({ type: "agentManager.preloadWorktreeDiffs", worktreeIds: rest }))
     }
   })
 
