@@ -359,7 +359,7 @@
     },
     "packages/kilo-jetbrains": {
       "name": "@kilocode/kilo-jetbrains",
-      "version": "7.4.21",
+      "version": "7.4.22",
     },
     "packages/kilo-memory": {
       "name": "@kilocode/kilo-memory",
@@ -679,6 +679,7 @@
         "ws": "8.21.0",
         "xdg-basedir": "5.1.0",
         "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+        "yaml": "2.8.3",
         "yargs": "18.0.0",
         "zod": "catalog:",
       },

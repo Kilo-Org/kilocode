@@ -14,7 +14,7 @@ export interface McpInstallationMethod {
 
 export interface MarketplaceSuggestFor {
   filename?: string[]
-  vscode_extension?: string[]
+  vscode_extension?: Array<string | { name: string; id: string }>
 }
 
 export interface MarketplaceItemBase {

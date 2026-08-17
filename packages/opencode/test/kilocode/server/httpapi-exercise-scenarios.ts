@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { mkdir, rm } from "fs/promises"
 import path from "path"
+import { parse as parseJsonc } from "jsonc-parser"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { array, check, isRecord, object } from "../../server/httpapi-exercise/assertions"
@@ -35,6 +36,28 @@ const agent = async (dir: string) => {
     path.join(dir, ".kilo/agent/httpapi-remove.md"),
     "---\ndescription: HTTP API remove\n---\nRemove me.\n",
   )
+}
+
+const MARKETPLACE_MCP_ID = "httpapi-marketplace"
+
+// Seed a project config that already contains the marketplace MCP so the remove scenario
+// exercises the real deletion path instead of the missing-entry short circuit.
+const marketplaceMcp = async (dir: string) => {
+  await mkdir(path.join(dir, ".kilo"), { recursive: true })
+  await Bun.write(
+    path.join(dir, ".kilo", "kilo.jsonc"),
+    JSON.stringify({ mcp: { [MARKETPLACE_MCP_ID]: { type: "local", command: ["npx", "server"] } } }, null, 2),
+  )
+}
+
+async function projectMcp(dir: string, id: string) {
+  for (const name of ["kilo.jsonc", "kilo.json"]) {
+    const file = Bun.file(path.join(dir, ".kilo", name))
+    if (await file.exists()) return !!(parseJsonc(await file.text())?.mcp ?? {})[id]
+  }
+  const root = Bun.file(path.join(dir, "opencode.json"))
+  if (await root.exists()) return !!(parseJsonc(await root.text())?.mcp ?? {})[id]
+  return false
 }
 
 const duplicates = async (dir: string) => {
@@ -661,6 +684,57 @@ export const kiloScenarios: Scenario[] = [
       object(body)
       check(body.message === "agent not found", "agent removal should preserve the backend error message")
     }),
+  http.protected.get("/kilocode/marketplace", "kilocode.marketplace.list").json(200, (body) => {
+    object(body)
+    // The catalog fetch degrades to an empty list on failure, so only the shape is asserted.
+    array(body.items)
+    object(body.installed)
+  }),
+  http.protected
+    .post("/kilocode/marketplace/install", "kilocode.marketplace.install")
+    .inProject({ git: true })
+    .mutating()
+    .at((ctx) => ({
+      path: "/kilocode/marketplace/install",
+      headers: ctx.headers(),
+      body: {
+        target: "project",
+        item: {
+          type: "mcp",
+          id: MARKETPLACE_MCP_ID,
+          name: "HTTP API Marketplace",
+          description: "HTTP API marketplace fixture",
+          category: "development",
+          url: "https://example.com",
+          content: JSON.stringify({ command: "npx", args: ["server"] }),
+        },
+      },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        object(body)
+        check(body.success === true, "marketplace install should succeed")
+        const written = yield* Effect.promise(() => projectMcp(directory(ctx), MARKETPLACE_MCP_ID))
+        check(written, "installed MCP should be written to the project config")
+      }),
+    ),
+  http.protected
+    .post("/kilocode/marketplace/remove", "kilocode.marketplace.remove")
+    .inProject({ git: true, init: marketplaceMcp })
+    .mutating()
+    .at((ctx) => ({
+      path: "/kilocode/marketplace/remove",
+      headers: ctx.headers(),
+      body: { scope: "project", item: { id: MARKETPLACE_MCP_ID, type: "mcp" } },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        object(body)
+        check(body.success === true, "marketplace remove should succeed")
+        const present = yield* Effect.promise(() => projectMcp(directory(ctx), MARKETPLACE_MCP_ID))
+        check(!present, "removed MCP should be gone from the project config")
+      }),
+    ),
   http.protected
     .post("/kilocode/session-import/project", "kilocode.sessionImport.project")
     .mutating()
