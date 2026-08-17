@@ -1,25 +1,16 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, test } from "bun:test"
 import { $ } from "bun"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { ExportEvent } from "@/kilocode/session-export/events"
 import { Capture } from "@/kilocode/session-export/capture"
-import { resetEligibility } from "@/kilocode/session-export/eligibility"
 import { createWorkspaceProvider } from "@/kilocode/session-export/workspace-provider"
-
-const WAIT_MS = 35_000
-const BASELINE_MS = 30_000
 
 describe("session export worker e2e", () => {
   const dirs: string[] = []
 
-  beforeEach(() => {
-    resetEligibility()
-  })
-
   afterEach(() => {
-    resetEligibility()
     for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
   })
 
@@ -67,7 +58,7 @@ async function until(check: () => boolean): Promise<void> {
   const start = Date.now()
   // The capture worker competes for CPU with the rest of the suite on a loaded CI
   // shard; the loop returns on success, so a generous deadline costs healthy runs nothing.
-  while (Date.now() - start < WAIT_MS) {
+  while (Date.now() - start < 15_000) {
     if (check()) return
     await new Promise((resolve) => setTimeout(resolve, 10))
   }
@@ -85,9 +76,10 @@ function capture(posted: unknown[], snap: ConstructorParameters<typeof Capture>[
     nowMs: () => 100,
     syncSeq: () => seq.value++,
     snapshotProvider: snap,
-    // Leave a margin below until(): on a loaded CI shard the git snapshot can
-    // stall for seconds, and an equal timeout races the test poller.
-    baselineTimeoutMs: BASELINE_MS,
+    // Must match the generous until() budget below: on a loaded CI shard the git
+    // snapshot can exceed 1s, and a truncated baseline emits an empty envelope that
+    // makes the assertions fail no matter how long the test itself waits.
+    baselineTimeoutMs: 15_000,
   })
 }
 
