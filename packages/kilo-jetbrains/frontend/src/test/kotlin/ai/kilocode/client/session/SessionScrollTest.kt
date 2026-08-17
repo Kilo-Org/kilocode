@@ -25,6 +25,7 @@ import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.Container
 import java.awt.Point
 import javax.swing.AbstractButton
@@ -325,7 +326,7 @@ class SessionScrollTest : SessionUiTestBase() {
         assertEquals(value, bar.value)
     }
 
-    fun `test expanding tool at bottom preserves clicked header position`() {
+    fun `test expanding tool at bottom follows new transcript height`() {
         val mid = "tool_expand_bottom"
         val pid = "tool_expand_bottom_part"
         rpc.history.addAll(history(23) + toolHistory(mid, pid) + historyRange(1, start = 23))
@@ -337,18 +338,17 @@ class SessionScrollTest : SessionUiTestBase() {
         drainScroll()
         val view = toolView(mid, pid)
         assertFalse(bodyVisible(view))
-        val y = visibleY(view)
-        val value = bar.value
 
         toggle(view)
         drainScroll()
 
         assertTrue(bodyVisible(view))
-        assertEquals(y, visibleY(view))
-        assertEquals(value, bar.value)
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
     }
 
-    fun `test expanding modified files at bottom preserves clicked header position`() {
+    fun `test expanding modified files at bottom follows new transcript height`() {
         val mid = "modified_expand_bottom"
         val pid = "modified_expand_bottom_part"
         rpc.history.addAll(history(23) + modifiedHistory(mid, pid) + historyRange(1, start = 23))
@@ -360,15 +360,14 @@ class SessionScrollTest : SessionUiTestBase() {
         drainScroll()
         val view = modifiedView()
         assertFalse(view.bodyVisible())
-        val y = visibleY(view)
-        val value = bar.value
 
         view.toggle()
         drainScroll()
 
         assertTrue(view.bodyVisible())
-        assertEquals(y, visibleY(view))
-        assertEquals(value, bar.value)
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
     }
 
     fun `test preserve re-enables tail when viewport is near bottom`() {
@@ -664,6 +663,41 @@ class SessionScrollTest : SessionUiTestBase() {
         assertFalse(button.isVisible)
     }
 
+    fun `test non-user scroll while following re-pins instead of unfollowing`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+
+        setValuePassive(bar, bottom(bar) / 2)
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test user scroll while following still shows button`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setBottom(bar)
+        drainScroll()
+
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+    }
+
     fun `test scroll button resumes following during massive stream`() {
         showMessages()
         fillTranscript(48)
@@ -807,6 +841,88 @@ class SessionScrollTest : SessionUiTestBase() {
         assertSame(scrollComponent(), scrollView()?.parent?.parent)
         assertFalse(scrollView() is SessionMessageListPanel)
         assertFalse((scrollComponent() as JBScrollPane).isOverlappingScrollBar)
+    }
+
+    fun `test viewport shrink while at bottom keeps scroll pinned`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setBottom(bar)
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+
+        ui.setSize(800, 300)
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test viewport enlarge while at bottom keeps scroll pinned`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setBottom(bar)
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+
+        ui.setSize(800, 900)
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test viewport shrink in middle preserves scroll position`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+        val value = bar.value
+
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+
+        ui.setSize(800, 300)
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test enlarging viewport until content fits hides scroll button`() {
+        showMessages()
+        fillTranscript(8)
+        val bar = scrollBar()
+
+        assertTrue("maximum=${bar.maximum} visible=${bar.visibleAmount}", bar.maximum > bar.visibleAmount)
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+
+        val pane = scrollComponent() as JBScrollPane
+        pane.setSize(800, 900)
+        repeat(4) {
+            pane.doLayout()
+            (scrollView() as? Container)?.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+        }
+
+        val vp = pane.viewport
+        assertTrue("view=${vp.viewSize.height} extent=${vp.extentSize.height}", vp.viewSize.height <= vp.extentSize.height)
+        assertFalse(jumpButton().isVisible)
     }
 
     // ------ question/login-required autoscroll ------
