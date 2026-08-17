@@ -59,6 +59,8 @@ internal class SessionScroll(
     private var user = false
     private var value = 0
     private var question = false
+    private var extent = 0
+    private var content = 0
 
     init {
         jump = JBLabel(ScrollButtonIcon.create()).apply {
@@ -77,6 +79,7 @@ internal class SessionScroll(
                 user = true
             }
         })
+        component.viewport.addChangeListener { onViewport() }
         component.verticalScrollBar.addAdjustmentListener { onScroll() }
         root.addOverlay(jump) { _, child ->
             val size = child.preferredSize
@@ -431,8 +434,29 @@ internal class SessionScroll(
     }
 
     @RequiresEdt
+    private fun onViewport() {
+        val vp = component.viewport
+        val e = vp.extentSize.height
+        val c = vp.view?.height ?: 0
+        if (e == extent && c == content) return
+        extent = e
+        content = c
+        if (auto || opening) {
+            updateJump()
+            return
+        }
+        followTail()
+    }
+
+    @RequiresEdt
     private fun updateJump() {
-        val visible = component.viewport.view === messages && !atBottom()
+        val bar = component.verticalScrollBar
+        val vp = component.viewport
+        val scrollable = when {
+            vp.extentSize.height > 0 && vp.viewSize.height > 0 -> vp.viewSize.height > vp.extentSize.height
+            else -> bar.maximum > bar.visibleAmount
+        }
+        val visible = component.viewport.view === messages && scrollable && !atBottom()
         if (jump.isVisible == visible) return
         jump.isVisible = visible
         root.overlay.revalidate()
