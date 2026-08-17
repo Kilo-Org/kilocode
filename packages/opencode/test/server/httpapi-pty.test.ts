@@ -173,7 +173,8 @@ describe("pty HttpApi bridge", () => {
     expect(await list.json()).toEqual([])
   })
 
-  testPty("disposes PTY sessions with their legacy instance", async () => {
+  // kilocode_change start - instance disposal must preserve the global PTY registry.
+  testPty("preserves PTY sessions across legacy instance disposal", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
     const headers = { "x-kilo-directory": tmp.path }
     const created = await app().request(PtyPaths.create, {
@@ -182,13 +183,19 @@ describe("pty HttpApi bridge", () => {
       body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "sleep 5"] }),
     })
     expect(created.status).toBe(200)
+    const info = await created.json()
 
-    await disposeAllInstances()
+    try {
+      await disposeAllInstances()
 
-    const list = await app().request(PtyPaths.list, { headers })
-    expect(list.status).toBe(200)
-    expect(await list.json()).toEqual([])
+      const list = await app().request(PtyPaths.list, { headers })
+      expect(list.status).toBe(200)
+      expect(await list.json()).toEqual([info])
+    } finally {
+      await app().request(PtyPaths.remove.replace(":ptyID", info.id), { method: "DELETE", headers })
+    }
   })
+  // kilocode_change end
 
   test("returns 404 for missing PTY websocket before upgrade", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })

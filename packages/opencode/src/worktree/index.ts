@@ -11,7 +11,7 @@ import { Slug } from "@opencode-ai/core/util/slug"
 import { errorMessage } from "../util/error"
 import { GlobalBus } from "@/bus/global"
 import { Git } from "@/git"
-import { Effect, Layer, Path, Schema, Scope, Context } from "effect"
+import { Effect, Layer, Option, Path, Schema, Scope, Context } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { AppProcess } from "@opencode-ai/core/process"
@@ -396,6 +396,7 @@ const layer: Layer.Layer<
       }
 
       const directory = yield* canonical(input.directory)
+      const pty = yield* Effect.serviceOption(Pty.Service)
 
       // Preserve the loaded path casing for the store cache; `directory` is lowercased on Windows.
       if (directory !== (yield* canonical(ctx.worktree))) yield* store.disposeDirectory(input.directory)
@@ -413,7 +414,7 @@ const layer: Layer.Layer<
         if (directoryExists) {
           yield* stopFsmonitor(directory)
           yield* cleanDirectory(directory)
-          yield* (yield* Pty.Service).removeDirectory(directory) // kilocode_change
+          if (Option.isSome(pty)) yield* pty.value.removeDirectory(directory) // kilocode_change
         }
         return true
       }
@@ -443,7 +444,7 @@ const layer: Layer.Layer<
       }
 
       yield* cleanDirectory(entry.path)
-      yield* (yield* Pty.Service).removeDirectory(entry.path) // kilocode_change
+      if (Option.isSome(pty)) yield* pty.value.removeDirectory(entry.path) // kilocode_change
 
       const branch = entry.branch?.replace(/^refs\/heads\//, "")
       if (branch) {
@@ -627,7 +628,7 @@ const layer: Layer.Layer<
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [FSUtil.node, path, AppProcess.node, Git.node, Project.node, InstanceStore.node, Database.node, Pty.node], // kilocode_change
+  deps: [FSUtil.node, path, AppProcess.node, Git.node, Project.node, InstanceStore.node, Database.node],
 })
 
 export * as Worktree from "."
