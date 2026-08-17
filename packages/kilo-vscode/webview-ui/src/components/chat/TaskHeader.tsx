@@ -42,7 +42,8 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const busy = createMemo(() => session.status() === "busy")
   const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
 
-  const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
+  const money = createMemo(() => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }))
+  const fmt = (n: number) => money().format(n)
 
   const breakdown = () => session.costBreakdown()
 

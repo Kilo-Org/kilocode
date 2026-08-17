@@ -237,6 +237,11 @@ html[data-theme="kilo-vscode"]
   cursor: pointer;
 }
 
+.am-sidebar-header-toggle:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 .am-sidebar-header-toggle:hover {
   color: var(--text-base);
   background: var(--surface-inset-base-hover);
@@ -407,10 +412,16 @@ html[data-theme="kilo-vscode"]
   max-height: none;
 }
 
-.am-project-loading {
-  display: flex;
-  justify-content: center;
-  padding: 8px 0;
+/* Stands in for .am-local-branch so the local row keeps its two-line height
+   while a project's git state is still loading. */
+.am-local-branch-skeleton {
+  width: 72px;
+  max-width: 100%;
+  height: 8px;
+  margin: 2px 0;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
 /* Collapsible section toggle */
@@ -1769,6 +1780,10 @@ body.am-wt-dragging-active * {
   flex: 1;
   min-height: 0;
   position: relative;
+}
+
+.am-chat-wrapper.am-chat-wrapper-hidden {
+  display: none;
 }
 
 .am-readonly-banner {
@@ -3593,33 +3608,48 @@ body.am-wt-dragging-active * {
   animation: am-fade-in 0.2s ease;
 }
 
-/* Worktree skeleton — matches .am-worktree-item layout */
+/* Worktree skeleton — mirrors .am-worktree-item: icon column plus a label row
+   and a branch row, so settling into real rows costs no vertical shift. */
 .am-skeleton-wt {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 10px 10px;
+  padding: 6px 6px;
+  min-height: 36px;
+  box-sizing: border-box;
 }
 
 .am-skeleton-wt-icon {
   width: 16px;
   height: 16px;
+  margin-top: 3px;
   border-radius: 3px;
   background: var(--text-base);
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
   flex-shrink: 0;
 }
 
+.am-skeleton-wt-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+  padding-top: 5px;
+}
+
 .am-skeleton-wt-text {
-  height: 13px;
+  height: 10px;
   border-radius: 3px;
   background: var(--text-base);
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-.am-skeleton-wt:nth-child(2) .am-skeleton-wt-icon,
-.am-skeleton-wt:nth-child(2) .am-skeleton-wt-text {
-  animation-delay: 0.15s;
+.am-skeleton-wt-sub {
+  height: 7px;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
 /* Session skeleton — matches .am-item layout */
@@ -3645,16 +3675,6 @@ body.am-wt-dragging-active * {
   background: var(--text-base);
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
   flex-shrink: 0;
-}
-
-.am-skeleton-session:nth-child(2) .am-skeleton-session-title,
-.am-skeleton-session:nth-child(2) .am-skeleton-session-time {
-  animation-delay: 0.15s;
-}
-
-.am-skeleton-session:nth-child(3) .am-skeleton-session-title,
-.am-skeleton-session:nth-child(3) .am-skeleton-session-time {
-  animation-delay: 0.3s;
 }
 
 /* Tab switcher for New/Import tabs in the dialog */

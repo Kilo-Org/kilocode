@@ -360,15 +360,15 @@ function renderable(part: PartType, showReasoningSummaries = true) {
   return !!PART_MAPPING[part.type]
 }
 
-function toolDefaultOpen(tool: string, shell = false, edit = false) {
-  if (tool === "bash") return shell
-  if (tool === "edit" || tool === "write") return edit
-  if (tool === "apply_patch") return edit
+function toolDefaultOpen(tool: string, shell = false, edit = false, mcp?: boolean) {
+  if (tool === "bash" || tool === "background_process") return shell
+  if (tool === "edit" || tool === "write" || tool === "apply_patch") return edit
+  if (mcp !== undefined && !ToolRegistry.render(tool)) return mcp
 }
 
-function partDefaultOpen(part: PartType, shell = false, edit = false) {
+function partDefaultOpen(part: PartType, shell = false, edit = false, mcp?: boolean) {
   if (part.type !== "tool") return
-  return toolDefaultOpen(part.tool, shell, edit)
+  return toolDefaultOpen(part.tool, shell, edit, mcp)
 }
 
 function PartGrow(props: {
@@ -423,6 +423,7 @@ export function AssistantParts(props: {
   reasoningAutoCollapse?: boolean
   shellToolDefaultOpen?: boolean
   editToolDefaultOpen?: boolean
+  mcpToolDefaultOpen?: boolean
   animate?: boolean
 }) {
   const data = useData()
@@ -683,6 +684,7 @@ export function AssistantParts(props: {
                               entry().part,
                               props.shellToolDefaultOpen,
                               props.editToolDefaultOpen,
+                              props.mcpToolDefaultOpen,
                             )}
                             reasoningAutoCollapse={props.reasoningAutoCollapse}
                             hideDetails={false}

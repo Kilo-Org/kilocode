@@ -134,6 +134,7 @@ export interface BrowserSettings {
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
+export type McpToolDisplay = "expanded" | "collapsed"
 
 export interface Config {
   permission?: PermissionConfig
@@ -155,6 +156,7 @@ export interface Config {
   remote_control?: boolean
   terminal_command_display?: TerminalCommandDisplay
   code_edit_display?: CodeEditDisplay
+  mcp_tool_display?: McpToolDisplay
   hide_prompt_training_models?: boolean
   share?: "manual" | "auto" | "disabled"
   username?: string
