@@ -99,7 +99,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   const handleScroll = () => {
     if (!scroll) return
 
-    userActivity.consumeScroll()
+    const input = userActivity.consumeScroll()
     const distance = distanceFromBottom(scroll)
 
     if (!canScroll(scroll)) return
@@ -108,6 +108,10 @@ export function createAutoScroll(options: AutoScrollOptions) {
       if (store.userScrolled && (distance < 2 || !userActivity.isRecent())) setStore("userScrolled", false)
       return
     }
+
+    // Virtualizer and layout remeasurement can emit scroll before the
+    // ResizeObserver restores bottom-follow. Only user input should pause it.
+    if (!store.userScrolled && !input && !userActivity.isRecent()) return
 
     stop()
   }
