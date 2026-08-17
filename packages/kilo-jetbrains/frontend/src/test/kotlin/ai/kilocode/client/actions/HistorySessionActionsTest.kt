@@ -14,6 +14,7 @@ import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -24,13 +25,8 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 
 @Suppress("UnstableApiUsage")
 class HistorySessionActionsTest : BasePlatformTestCase() {
@@ -423,20 +419,12 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         waitFor { deleteCount >= n }
     }
 
-    private fun flush() = coroutines.drain(::pump)
+    private fun flush() = coroutines.drain()
 
-    private fun pump() {
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-    }
+    private fun pump() = pumpEdt()
 
-    private fun waitFor(done: () -> Boolean) = runBlocking {
-        withTimeout(5_000) {
-            while (!done()) {
-                delay(25)
-                ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-            }
-        }
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
+    private fun waitFor(done: () -> Boolean) {
+        assertTrue(coroutines.pumpUntil(cond = done))
     }
 
     private class FakeManager : SessionManager {

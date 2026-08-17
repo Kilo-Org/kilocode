@@ -10,6 +10,7 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
@@ -28,9 +29,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import java.awt.Cursor
 import java.awt.event.KeyEvent
 import java.time.Instant
@@ -997,19 +995,12 @@ class HistoryControllerTest : BasePlatformTestCase() {
         return events
     }
 
-    private fun flush() = coroutines.drain(::pump)
+    private fun flush() = coroutines.drain()
 
-    private fun pump() {
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-    }
+    private fun pump() = pumpEdt()
 
-    private fun waitFor(done: () -> Boolean) = runBlocking {
-        withTimeout(5_000) {
-            while (!done()) {
-                delay(10)
-                pump()
-            }
-        }
+    private fun waitFor(done: () -> Boolean) {
+        assertTrue(coroutines.pumpUntil(cond = done))
     }
 
     private fun key(component: JComponent, code: Int) {

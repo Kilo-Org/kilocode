@@ -14,6 +14,7 @@ import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.session.SessionActivityKind
@@ -543,7 +544,5 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun pump() {
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-    }
+    private fun pump() = pumpEdt()
 }

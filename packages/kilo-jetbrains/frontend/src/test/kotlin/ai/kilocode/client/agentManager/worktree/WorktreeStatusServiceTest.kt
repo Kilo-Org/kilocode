@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
@@ -12,7 +13,6 @@ import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
-import com.intellij.util.ui.UIUtil
 
 @Suppress("UnstableApiUsage")
 class WorktreeStatusServiceTest : BasePlatformTestCase() {
@@ -126,7 +126,5 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
 
     private fun drain() = coroutines.drain(::pump)
 
-    private fun pump() {
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-    }
+    private fun pump() = pumpEdt()
 }

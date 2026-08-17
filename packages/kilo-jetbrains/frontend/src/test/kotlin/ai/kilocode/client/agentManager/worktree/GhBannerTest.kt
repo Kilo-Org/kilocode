@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
@@ -9,7 +10,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.HyperlinkLabel
-import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
 
@@ -86,7 +86,5 @@ class GhBannerTest : BasePlatformTestCase() {
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
 
-    private fun pump() {
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-    }
+    private fun pump() = pumpEdt()
 }

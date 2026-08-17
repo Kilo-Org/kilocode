@@ -8,15 +8,16 @@ import ai.kilocode.client.settings.base.SettingsToggle
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TEST_WAIT_MS
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.openapi.actionSystem.impl.ActionButton
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
@@ -24,7 +25,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
@@ -52,8 +52,8 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
             val panel = ui
             if (panel != null) edt { panel.dispose() }
             ui = null
-            if (::uiCoroutines.isInitialized) uiCoroutines.close(::pump)
-            if (::appCoroutines.isInitialized) appCoroutines.close(::pump)
+            if (::uiCoroutines.isInitialized) uiCoroutines.close()
+            if (::appCoroutines.isInitialized) appCoroutines.close()
         } finally {
             super.tearDown()
         }
@@ -362,22 +362,21 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
     private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flushUntil(done: () -> Boolean) {
-        repeat(200) {
+        val end = System.nanoTime() + TEST_WAIT_MS * 1_000_000
+        while (true) {
             flush()
             if (done()) return
+            if (System.nanoTime() >= end) break
+            Thread.sleep(1)
         }
         flush()
         assertTrue(done())
     }
 
     private fun flush() {
-        appCoroutines.drain(::pump)
-        uiCoroutines.drain(::pump)
-        pump()
-    }
-
-    private fun pump() {
-        edt { UIUtil.dispatchAllInvocationEvents() }
+        appCoroutines.drain()
+        uiCoroutines.drain()
+        pumpEdt()
     }
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {

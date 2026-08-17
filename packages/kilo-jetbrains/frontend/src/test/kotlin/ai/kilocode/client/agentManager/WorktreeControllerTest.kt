@@ -10,6 +10,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeNames
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
@@ -19,7 +20,6 @@ import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -438,7 +438,5 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     private fun cache(): WorktreeNameCache = ApplicationManager.getApplication().service()
 
-    private fun pump() {
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-    }
+    private fun pump() = pumpEdt()
 }

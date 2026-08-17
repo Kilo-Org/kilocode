@@ -3,12 +3,11 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.ui.UIUtil
 
 @Suppress("UnstableApiUsage")
 class WorktreeSessionListControllerTest : BasePlatformTestCase() {
@@ -146,7 +145,5 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
 
     private fun drain() = coroutines.drain(::pump)
 
-    private fun pump() {
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-    }
+    private fun pump() = pumpEdt()
 }

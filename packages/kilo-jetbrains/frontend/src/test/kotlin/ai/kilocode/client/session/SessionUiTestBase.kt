@@ -28,7 +28,7 @@ import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.openapi.util.Disposer
-import com.intellij.util.ui.UIUtil
+import ai.kilocode.client.testing.pumpEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -78,7 +78,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             Disposer.dispose(ui)
-            coroutines.close { UIUtil.dispatchAllInvocationEvents() }
+            coroutines.close()
         } finally {
             super.tearDown()
         }
@@ -120,12 +120,12 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     }
 
     protected fun settle() {
-        coroutines.drain { UIUtil.dispatchAllInvocationEvents() }
+        coroutines.drain()
     }
 
     protected fun settleShort(ms: Long) = runBlocking {
         delay(ms)
-        UIUtil.dispatchAllInvocationEvents()
+        pumpEdt()
     }
 
     protected fun showMessages() {
@@ -156,7 +156,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
 
     protected fun forceFlush() {
         controller().flushEvents()
-        UIUtil.dispatchAllInvocationEvents()
+        pumpEdt()
     }
 
     protected fun forceFlushWithoutDispatch() {
@@ -166,7 +166,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     protected fun drainScroll() {
         repeat(4) {
             layout()
-            UIUtil.dispatchAllInvocationEvents()
+            pumpEdt()
         }
     }
 

@@ -16,6 +16,7 @@ import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestUiTimers
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -31,7 +32,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import javax.swing.JComponent
@@ -53,6 +53,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
+        TestDialogManager.setTestDialog(TestDialog.DEFAULT)
         coroutines = TestCoroutines()
         timers = TestUiTimers()
         rpc = FakeSessionRpcApi()
@@ -366,14 +367,10 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         time = SessionTimeDto(created = 0.0, updated = updated),
     )
 
-    private fun flush() = coroutines.drain(::pump)
+    private fun flush() = coroutines.drain()
 
     private fun waitUntil(block: () -> Boolean) {
-        repeat(10) {
-            flush()
-            if (edt(block)) return
-        }
-        assertTrue(edt(block))
+        assertTrue(coroutines.pumpUntil { edt(block) })
     }
 
     private fun useInactiveDisposeTimeout() {
@@ -394,11 +391,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         Registry.get(TIMEOUT).setValue(60_000, testRootDisposable)
     }
 
-    private fun pump() {
-        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
-            UIUtil.dispatchAllInvocationEvents()
-        }
-    }
+    private fun pump() = pumpEdt()
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
 

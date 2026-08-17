@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
@@ -9,7 +10,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
-import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
@@ -135,18 +135,11 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         pump()
     }
 
-    private fun drain() = coroutines.drain(::pump)
+    private fun drain() = coroutines.drain()
 
     private fun awaitCalls(count: Int) {
-        val end = System.nanoTime() + 5_000_000_000L
-        while (rpc.ghCalls.size < count) {
-            check(System.nanoTime() < end) { "Timed out waiting for gh calls" }
-            pump()
-            Thread.yield()
-        }
+        assertTrue(coroutines.pumpUntil { rpc.ghCalls.size >= count })
     }
 
-    private fun pump() {
-        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-    }
+    private fun pump() = pumpEdt()
 }

@@ -11,6 +11,7 @@ import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.ui.list.ActiveList
@@ -500,11 +501,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
     private fun flush() = coroutines.drain(::pump)
 
-    private fun pump() {
-        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
-            UIUtil.dispatchAllInvocationEvents()
-        }
-    }
+    private fun pump() = pumpEdt()
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
 
