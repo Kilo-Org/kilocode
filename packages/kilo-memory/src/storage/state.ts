@@ -1,6 +1,5 @@
 import { readdir, rm } from "fs/promises"
 import path from "path"
-import { MemoryAudit } from "./audit"
 import { MemoryFs } from "./fs"
 import { MemoryMarkdown } from "./markdown"
 import { MemoryPaths } from "./paths"
@@ -19,13 +18,10 @@ export namespace MemoryState {
     "corrections.md": "# Corrective Memory\n\n## Corrections\n",
   }
 
-  async function recover(root: string, file: string, error: unknown) {
+  async function recover(root: string, file: string) {
     await MemoryFs.backup(file)
     const state = MemorySchema.missing()
     await writeState(root, state)
-    await MemoryAudit.append(root, `recover state.json error=${MemoryFs.brief(error)}`).catch((err: unknown) =>
-      MemoryFs.warn("failed to audit memory state recovery", { err, root }),
-    )
     return state
   }
 
@@ -33,14 +29,14 @@ export namespace MemoryState {
     const file = MemoryPaths.files(root).state
     const data = await MemoryFs.json(file).catch(async (error: unknown) => {
       if (MemoryFs.miss(error)) return undefined
-      if (MemoryFs.parse(error)) return recover(root, file, error)
+      if (MemoryFs.parse(error)) return recover(root, file)
       throw error
     })
     if (data === undefined) return MemorySchema.missing()
     return Promise.resolve()
       .then(() => MemorySchema.parse(data))
       .catch((error: unknown) => {
-        if (MemoryFs.parse(error)) return recover(root, file, error)
+        if (MemoryFs.parse(error)) return recover(root, file)
         throw error
       })
   }
@@ -199,7 +195,6 @@ export namespace MemoryState {
       ? { ...(await readState(root)), enabled: true, autoInject: true }
       : { ...MemorySchema.create(), enabled: true }
     await writeState(root, state)
-    await MemoryAudit.append(root, "enable project source=command")
     return state
   }
 

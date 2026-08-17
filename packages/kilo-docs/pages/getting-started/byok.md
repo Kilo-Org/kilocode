@@ -34,7 +34,7 @@ Use your provider API key to route matching models through your account:
 - Novita
 - OpenAI
 - Xiaomi
-- xAI
+- SpaceXAI
 - Z.ai
 
 ### Subscription and direct provider plans

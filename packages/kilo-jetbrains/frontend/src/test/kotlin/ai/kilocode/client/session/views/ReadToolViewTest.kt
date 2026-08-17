@@ -3,7 +3,6 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
@@ -18,9 +17,7 @@ class ReadToolViewTest : BasePlatformTestCase() {
         val t = tool().also { it.input = mapOf("filePath" to "README.MD") }
 
         val view = ReadToolView(t)
-        val base: Any = view
 
-        assertTrue(base is SecondarySessionPartView)
         assertTrue(view.labelText().contains("Read"))
         assertTrue(view.labelText().contains("README.MD"))
     }
@@ -82,7 +79,7 @@ class ReadToolViewTest : BasePlatformTestCase() {
         assertTrue(view.labelText().contains(path))
     }
 
-    fun `test read output is secondary non expandable summary`() {
+    fun `test read output is non expandable summary without body`() {
         val t = tool().also { it.output = "file contents" }
         val view = ReadToolView(t)
 
@@ -90,8 +87,8 @@ class ReadToolViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
         assertFalse(view.bodyVisible())
         assertEquals("file contents", view.bodyText())
-        assertTrue(view.bodyCreated())
-        assertTrue(view.bodyWrap())
+        assertFalse(view.bodyCreated())
+        assertFalse(view.bodyWrap())
         assertNull(view.bodyEditor())
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, view.horizontalPolicy())
 

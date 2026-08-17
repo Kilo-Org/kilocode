@@ -1,5 +1,5 @@
 import path from "path"
-import { Context, Duration, Effect, Layer, Option, Schedule, Schema } from "effect"
+import { Context, Duration, Effect, Layer, Logger, Option, Schedule, Schema } from "effect" // kilocode_change
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { ModelsDev } from "@opencode-ai/schema/models-dev"
 import { Global } from "./global"
@@ -12,9 +12,15 @@ import * as ModelsRefresh from "./kilocode/models-refresh" // kilocode_change
 import { EventV2 } from "./event"
 import { makeGlobalNode } from "./effect/app-node"
 import { httpClient } from "./effect/app-node-platform"
+import { Observability } from "./observability" // kilocode_change
 
 export const CatalogModelStatus = Schema.Literals(["alpha", "beta", "deprecated"])
 export type CatalogModelStatus = typeof CatalogModelStatus.Type
+
+const InterleavedField = Schema.Union([
+  Schema.Literals(["reasoning", "reasoning_content", "reasoning_text"]),
+  Schema.String,
+])
 
 const USER_AGENT = `opencode/${InstallationChannel}/${InstallationVersion}/${Flag.KILO_CLIENT}`
 
@@ -45,8 +51,6 @@ const Cost = Schema.Struct({
   ),
 })
 
-// kilocode_change start - models.dev reasoning_options (snatched from upstream
-// v1.18.11, #36624): effort tiers, thinking toggles, and token budgets.
 const ReasoningOption = Schema.Union([
   Schema.Struct({
     type: Schema.Literal("effort"),
@@ -61,7 +65,6 @@ const ReasoningOption = Schema.Union([
     max: Schema.optional(Schema.Finite),
   }),
 ])
-// kilocode_change end
 
 export const Model = Schema.Struct({
   id: Schema.String,
@@ -70,14 +73,15 @@ export const Model = Schema.Struct({
   release_date: Schema.String,
   attachment: Schema.Boolean,
   reasoning: Schema.Boolean,
-  reasoning_options: Schema.optional(Schema.Array(ReasoningOption)), // kilocode_change
   temperature: Schema.Boolean,
   tool_call: Schema.Boolean,
+  reasoning_options: Schema.optional(Schema.Array(ReasoningOption)),
   interleaved: Schema.optional(
     Schema.Union([
-      Schema.Literal(true),
+      Schema.Boolean,
+      InterleavedField,
       Schema.Struct({
-        field: Schema.Literals(["reasoning", "reasoning_content", "reasoning_details"]),
+        field: InterleavedField,
       }),
     ]),
   ),
@@ -153,6 +157,7 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
     const events = yield* EventV2.Service
+    const loggers = yield* Effect.service(Logger.CurrentLoggers) // kilocode_change
     const http = HttpClient.filterStatusOk(
       (yield* HttpClient.HttpClient).pipe(
         HttpClient.retryTransient({
@@ -163,10 +168,10 @@ const layer = Layer.effect(
       ),
     )
 
-    const source = Flag.KILO_MODELS_URL || "https://models.dev"
+    const source = Flag.KILO_MODELS_URL || "https://models.dev" // kilocode_change
     const filepath = path.join(
       Global.Path.cache,
-      source === "https://models.dev" ? "models.json" : `models-${Hash.fast(source)}.json`,
+      source === "https://models.dev" ? "models.json" : `models-${Hash.fast(source)}.json`, // kilocode_change
     )
     const ttl = Duration.minutes(5)
     const lockKey = `models-dev:${filepath}`
@@ -256,6 +261,7 @@ const layer = Layer.effect(
       ).pipe(
         Effect.tapCause((cause) => Effect.logError("Failed to fetch models.dev", { cause: cause })),
         Effect.ignore,
+        Effect.provideService(Logger.CurrentLoggers, loggers), // kilocode_change
       )
     })
 
@@ -268,6 +274,12 @@ const layer = Layer.effect(
   }),
 )
 
-export const node = makeGlobalNode({ service: Service, layer: layer, deps: [FSUtil.node, EventV2.node, httpClient] })
+// kilocode_change start - capture file/OTLP loggers before the refresh fork
+export const node = makeGlobalNode({
+  service: Service,
+  layer: layer,
+  deps: [FSUtil.node, EventV2.node, httpClient, Observability.node],
+})
+// kilocode_change end
 
 export * as ModelsDev from "./models-dev"

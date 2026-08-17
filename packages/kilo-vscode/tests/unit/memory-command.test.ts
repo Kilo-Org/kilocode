@@ -22,6 +22,7 @@ type Case = {
   text?: string
   query?: string
   reason?: string
+  rest?: string
 }
 
 const cases = (await Bun.file(
@@ -31,7 +32,7 @@ const cases = (await Bun.file(
 function expected(item: Case): ParsedMemoryCommand | undefined {
   if (item.result === "none") return
   if (item.result === "help") return { kind: "help" }
-  if (item.result === "show") return { kind: "show" }
+  if (item.result === "show") return { kind: "show", rest: item.rest ?? "" }
   if (item.result === "usage") return { kind: "usage", reason: item.reason ?? "" }
   if (!item.operation) throw new Error(`Missing operation for fixture: ${item.name}`)
   if (item.operation === "remember" || item.operation === "correct") {
@@ -50,7 +51,7 @@ function expected(item: Case): ParsedMemoryCommand | undefined {
     if (item.confirm !== true) throw new Error(`Missing confirmation for fixture: ${item.name}`)
     return { kind: "operation", operation: item.operation, confirm: true }
   }
-  return { kind: "operation", operation: item.operation }
+  return { kind: "operation", operation: item.operation, rest: item.rest ?? "" }
 }
 
 describe("parseMemoryCommand", () => {

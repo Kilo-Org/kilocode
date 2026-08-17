@@ -2,6 +2,7 @@ package ai.kilocode.backend.cli
 
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -154,6 +155,27 @@ class ChatLogSummaryTest {
         assertTrue(out.contains("agent=code"), out)
         assertTrue(out.contains("model=kilo/gpt-5"), out)
         assertTrue(out.contains("variant=medium"), out)
+    }
+
+    @Test
+    fun `prompt dto summary includes editor context`() {
+        System.setProperty("kilo.dev.log.chat.content", "preview")
+
+        val out = ChatLogSummary.prompt(
+            PromptDto(
+                parts = listOf(PromptPartDto(type = "text", text = "hello")),
+                editorContext = EditorContextDto(
+                    activeFile = "settings.gradle",
+                    openTabs = listOf("settings.gradle", "src/App.kt"),
+                    visibleFiles = listOf("settings.gradle"),
+                ),
+            )
+        )
+
+        assertTrue(out.contains("editorContext=true"), out)
+        assertTrue(out.contains("activeFile=\"settings.gradle\""), out)
+        assertTrue(out.contains("openTabs=2"), out)
+        assertTrue(out.contains("visibleFiles=1"), out)
     }
 
     @Test

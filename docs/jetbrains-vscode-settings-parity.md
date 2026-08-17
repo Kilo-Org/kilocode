@@ -61,8 +61,7 @@ entire backend (`KiloClaudeCompatSettings` + RPC getter/setter + spawn-env wirin
 exists with no UI. Exposing it is the single lowest-effort item — just a checkbox bound to the
 existing RPC, no config plumbing.
 
-⚠️ Hold back `experimental.codebase_search` (leans on indexing) and
-`experimental.image_generation` (adds a tool) — arguably "enabling a feature."
+⚠️ Hold back `experimental.image_generation` (adds a tool) — arguably "enabling a feature."
 
 ## Tier 2 — Config is easy, but honoring it needs JetBrains rendering work
 
