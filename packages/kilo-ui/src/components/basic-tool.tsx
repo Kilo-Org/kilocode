@@ -44,18 +44,24 @@ export function BasicTool(props: BasicToolProps) {
     writeToolOpen(key(), open)
     props.onOpenChange?.(open)
   }
+  // Renders after the body/tool list, not before — it's context about what
+  // happened, not part of the header.
   const details = () => (
     <div data-slot="basic-tool-details">
-      <Show when={inBody() && approval()}>{(value) => <ToolApprovalLine display={value()} />}</Show>
       {props.children}
+      <Show when={inBody() && approval()}>{(value) => <ToolApprovalLine display={value()} />}</Show>
     </div>
   )
-  if (!("children" in props) && !inBody()) {
-    return <Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} />
-  }
+  // A <Show>, not a plain `if`: inBody() tracks the visibility toggle, which can
+  // flip after mount (Settings), so the branch must stay reactive.
   return (
-    <Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} hasDetails={inBody()}>
-      {details()}
-    </Base>
+    <Show
+      when={"children" in props || inBody()}
+      fallback={<Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} />}
+    >
+      <Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} hasDetails={inBody()}>
+        {details()}
+      </Base>
+    </Show>
   )
 }

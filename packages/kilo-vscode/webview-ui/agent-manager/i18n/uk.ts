@@ -212,7 +212,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "Попередній перегляд зображення недоступний для цього знімка сеансу.",
   "agentManager.review.endOfLongDiff": "Ви дійшли до кінця!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Пул-реквест",
   "agentManager.import.pastePrUrl": "Вставте URL PR...",
   "agentManager.import.open": "Відкрити",
   "agentManager.import.branches": "Гілки",
@@ -227,4 +227,9 @@ export const dict = {
   "agentManager.caffeination.armed": "Режим запобігання сну ввімкнено; натисніть, щоб вимкнути",
   "agentManager.caffeination.active": "Комп'ютер не переходить у сон",
   "agentManager.caffeination.unavailable": "Режим запобігання сну недоступний на цій платформі",
+
+  "agentManager.pr.error.gh_auth.title": "Потрібна автентифікація GitHub",
+  "agentManager.pr.error.gh_auth.description": "Виконайте 'gh auth login' у терміналі, щоб відновити статус PR.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI не встановлено",
+  "agentManager.pr.error.gh_missing.description": "Встановіть GitHub CLI, щоб увімкнути статус PR.",
 }

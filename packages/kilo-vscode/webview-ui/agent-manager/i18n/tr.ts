@@ -211,7 +211,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "Bu oturum anlık görüntüsü için görsel önizlemesi kullanılamıyor.",
   "agentManager.review.endOfLongDiff": "Sonuna geldiniz!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Çekme İsteği",
   "agentManager.import.pastePrUrl": "PR URL'sini yapıştırın...",
   "agentManager.import.open": "Aç",
   "agentManager.import.branches": "Dallar",
@@ -226,4 +226,10 @@ export const dict = {
   "agentManager.caffeination.armed": "Bilgisayarı uyanık tutma modu etkin; devre dışı bırakmak için tıklayın",
   "agentManager.caffeination.active": "Bilgisayar uyanık tutuluyor",
   "agentManager.caffeination.unavailable": "Bilgisayarı uyanık tutma modu bu platformda kullanılamıyor",
+
+  "agentManager.pr.error.gh_auth.title": "GitHub kimlik doğrulaması gerekli",
+  "agentManager.pr.error.gh_auth.description":
+    "PR durumunu geri yüklemek için terminalinizde 'gh auth login' komutunu çalıştırın.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI yüklü değil",
+  "agentManager.pr.error.gh_missing.description": "PR durumunu etkinleştirmek için GitHub CLI'yi yükleyin.",
 }

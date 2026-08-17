@@ -128,7 +128,7 @@ describe("isAuto", () => {
 })
 
 describe("autoChoices", () => {
-  it("uses backend Auto Efficient routes and resolves names when available", () => {
+  it("uses backend Auto routes and resolves names when available", () => {
     expect(
       autoChoices(
         {
@@ -144,12 +144,32 @@ describe("autoChoices", () => {
     ])
   })
 
-  it("ignores missing routes and non-efficient Auto models", () => {
+  it("shows routes for any Auto model when present", () => {
+    expect(
+      autoChoices(
+        {
+          providerID: KILO_GATEWAY_ID,
+          id: "kilo-auto/frontier",
+          autoRouting: { models: ["provider/model"] },
+        },
+        [{ id: "provider/model", name: "Provider: Model" }],
+      ),
+    ).toEqual([{ id: "provider/model", name: "Model" }])
+    expect(
+      autoChoices({
+        providerID: KILO_GATEWAY_ID,
+        id: "kilo-auto/free",
+        autoRouting: { models: ["provider/model"] },
+      }),
+    ).toEqual([{ id: "provider/model", name: "provider/model" }])
+  })
+
+  it("ignores missing routes and non-Auto models", () => {
     expect(autoChoices({ providerID: KILO_GATEWAY_ID, id: "kilo-auto/efficient" })).toEqual([])
     expect(
       autoChoices({
         providerID: KILO_GATEWAY_ID,
-        id: "kilo-auto/frontier",
+        id: "anthropic/claude-sonnet",
         autoRouting: { models: ["provider/model"] },
       }),
     ).toEqual([])

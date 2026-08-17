@@ -81,7 +81,10 @@ export const GrepTool = Tool.define(
 
           const rows = matches.map((item) => ({
             // kilocode_change
-            path: path.resolve(cwd, item.entry.path),
+            path: path.resolve(
+              requestedInfo?.type === "Directory" ? requested : path.dirname(requested),
+              item.entry.path,
+            ),
             line: item.line,
             text: item.text,
             context: item.context, // kilocode_change

@@ -593,7 +593,8 @@ export const WithPRBadges: Story = {
                   additions: 120,
                   deletions: 30,
                   files: 5,
-                  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+                  reviewers: [],
+                  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
                 }}
               />
               {/* Open + failing checks → green badge, red ✗ (no longer confusable with closed) */}
@@ -611,7 +612,8 @@ export const WithPRBadges: Story = {
                   additions: 15,
                   deletions: 8,
                   files: 3,
-                  checks: { status: "failure", total: 5, passed: 3, failed: 2, pending: 0, items: [] },
+                  reviewers: [],
+                  checks: { status: "failure", total: 5, passed: 3, failed: 2, pending: 0, checks: [] },
                 }}
               />
               {/* Open + changes requested → green badge, amber warning */}
@@ -629,7 +631,8 @@ export const WithPRBadges: Story = {
                   additions: 60,
                   deletions: 12,
                   files: 4,
-                  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+                  reviewers: [],
+                  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
                 }}
               />
               {/* Open + checks running → pulsing amber badge (animation disabled in snapshots) */}
@@ -647,7 +650,8 @@ export const WithPRBadges: Story = {
                   additions: 200,
                   deletions: 0,
                   files: 8,
-                  checks: { status: "pending", total: 5, passed: 2, failed: 0, pending: 3, items: [] },
+                  reviewers: [],
+                  checks: { status: "pending", total: 5, passed: 2, failed: 0, pending: 3, checks: [] },
                 }}
               />
               {/* Draft → gray badge */}
@@ -665,7 +669,8 @@ export const WithPRBadges: Story = {
                   additions: 30,
                   deletions: 5,
                   files: 2,
-                  checks: { status: "none", total: 0, passed: 0, failed: 0, pending: 0, items: [] },
+                  reviewers: [],
+                  checks: { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] },
                 }}
               />
               {/* Merged → purple badge, no status icon */}
@@ -683,7 +688,8 @@ export const WithPRBadges: Story = {
                   additions: 90,
                   deletions: 20,
                   files: 6,
-                  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+                  reviewers: [],
+                  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
                 }}
               />
               {/* Closed → red badge, no status icon (distinct from a failing open PR) */}
@@ -701,7 +707,8 @@ export const WithPRBadges: Story = {
                   additions: 10,
                   deletions: 4,
                   files: 1,
-                  checks: { status: "failure", total: 5, passed: 1, failed: 4, pending: 0, items: [] },
+                  reviewers: [],
+                  checks: { status: "failure", total: 5, passed: 1, failed: 4, pending: 0, checks: [] },
                 }}
               />
             </div>

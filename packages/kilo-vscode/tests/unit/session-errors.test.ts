@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { errorIDs, visibleError } from "../../webview-ui/src/context/session-errors"
+import {
+  errorIDs,
+  preserveSessionErrors,
+  visibleError,
+  withoutResolvedSessionErrors,
+} from "../../webview-ui/src/context/session-errors"
 import type { Message } from "../../webview-ui/src/types/messages"
 
 const base = {
@@ -43,5 +48,34 @@ describe("visibleError", () => {
     const messages = [assistant("message_1", { name: "MessageAbortedError" })]
 
     expect(visibleError(messages, () => false)).toBeUndefined()
+  })
+})
+
+describe("session error reconciliation", () => {
+  const error = {
+    name: "APIError",
+    data: { message: "prompt_cache_breakpoint is not supported on this model", isRetryable: false },
+  }
+
+  it("preserves transient errors across stale history replacements", () => {
+    const user = { ...base, id: "message_1", role: "user" as const }
+    const transient = { ...assistant("message_2", error), parentID: user.id, sessionErrorID: "event_1" }
+
+    expect(preserveSessionErrors([user, transient], [user])).toEqual([user, transient])
+  })
+
+  it("replaces a transient error with its persisted assistant message", () => {
+    const transient = { ...assistant("message_2", error), parentID: "message_1", sessionErrorID: "event_1" }
+    const persisted = { ...assistant("message_3", error), parentID: "message_1" }
+
+    expect(preserveSessionErrors([transient], [persisted])).toEqual([persisted])
+    expect(withoutResolvedSessionErrors([transient], [persisted])).toEqual([])
+  })
+
+  it("deduplicates repeated delivery of the same session error event", () => {
+    const first = { ...assistant("message_2", error), parentID: "message_1", sessionErrorID: "event_1" }
+    const repeat = { ...assistant("message_3", error), parentID: "message_1", sessionErrorID: "event_1" }
+
+    expect(withoutResolvedSessionErrors([first], [repeat])).toEqual([])
   })
 })

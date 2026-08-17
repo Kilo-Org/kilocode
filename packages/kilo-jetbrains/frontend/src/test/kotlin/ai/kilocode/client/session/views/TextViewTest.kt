@@ -229,14 +229,14 @@ class TextViewTest : BasePlatformTestCase() {
         assertEquals(style.editorForeground, view.md.foreground)
     }
 
-    fun `test prompt view uses transcript font and editor background`() {
+    fun `test prompt view uses transcript font and prompt background`() {
         val style = SessionEditorStyle.create(family = "Courier New", size = 23)
         val view = PromptView(Text("p1"))
 
         view.applyStyle(style)
 
         assertEquals(style.transcriptFont, view.md.font)
-        assertEquals(style.editorBackground, view.md.background)
+        assertEquals(SessionUiStyle.View.Prompt.bgColor(style), view.md.background)
         assertFalse(view.contentOpaque())
     }
 

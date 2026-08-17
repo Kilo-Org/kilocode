@@ -14,7 +14,7 @@ export const dict = {
   "agentManager.worktree.new": "새 Worktree",
   "agentManager.worktree.setupScript": "Worktree 설정 스크립트",
   "agentManager.worktree.delete": "Worktree 삭제",
-  "agentManager.worktree.confirmDelete": "Delete?",
+  "agentManager.worktree.confirmDelete": "삭제하시겠습니까?",
   "agentManager.worktree.stale": "오래됨",
   "agentManager.worktree.staleTooltip": "디스크에 없거나 더 이상 git worktree에서 추적되지 않습니다",
   "agentManager.worktree.removeStale": "오래된 Worktree 제거",
@@ -105,8 +105,8 @@ export const dict = {
   "agentManager.run.options": "실행 옵션",
   "agentManager.run.configure": "실행 스크립트 구성",
   "agentManager.shortcuts.openAgentManager": "Agent Manager 열기",
-  "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
-  "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
+  "agentManager.shortcuts.cycleAgentMode": "다음 에이전트 모드",
+  "agentManager.shortcuts.cyclePreviousAgentMode": "이전 에이전트 모드",
   "agentManager.shortcuts.showShortcuts": "키보드 단축키 표시",
   "agentManager.dialog.removeStaleWorktree.title": "오래된 Worktree 제거",
   "agentManager.dialog.removeStaleWorktree.messagePre": "오래된 Worktree 제거 ",
@@ -202,7 +202,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "이 세션 스냅샷에서는 이미지 미리보기를 사용할 수 없습니다.",
   "agentManager.review.endOfLongDiff": "끝까지 도달했습니다!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "풀 리퀘스트",
   "agentManager.import.pastePrUrl": "PR URL 붙여넣기...",
   "agentManager.import.open": "열기",
   "agentManager.import.branches": "브랜치",
@@ -217,4 +217,9 @@ export const dict = {
   "agentManager.caffeination.armed": "절전 방지 모드가 활성화되었습니다. 클릭하여 비활성화",
   "agentManager.caffeination.active": "컴퓨터를 절전 모드로 전환하지 않습니다",
   "agentManager.caffeination.unavailable": "이 플랫폼에서는 절전 방지 모드를 사용할 수 없습니다",
+
+  "agentManager.pr.error.gh_auth.title": "GitHub 인증 필요",
+  "agentManager.pr.error.gh_auth.description": "PR 상태를 복원하려면 터미널에서 'gh auth login'을 실행하세요.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI가 설치되지 않음",
+  "agentManager.pr.error.gh_missing.description": "PR 상태를 활성화하려면 GitHub CLI를 설치하세요.",
 }

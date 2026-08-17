@@ -1,6 +1,7 @@
 import DOMPurify from "dompurify"
 import { fnv1a } from "../context/marked"
 import { mountMermaidActions } from "./markdown-mermaid-actions"
+import { dataUrlToBlob } from "./markdown-mermaid-data-url"
 
 // DOMPurify >= 3.1.7 dropped foreignObject from the default HTML integration
 // points, which caused the inner <div> / <span> / <p> labels Mermaid renders
@@ -303,14 +304,43 @@ async function copyText(text: string) {
   await navigator.clipboard.writeText(text)
 }
 
-async function copyPng(svg: SVGSVGElement) {
-  const url = await png(svg)
-  const blob = await (await fetch(url)).blob()
+function supportsClipboardType(type: string) {
+  return typeof ClipboardItem !== "undefined" && "supports" in ClipboardItem && ClipboardItem.supports(type)
+}
+
+async function writeClipboard(items: Record<string, Blob>) {
   if (typeof ClipboardItem === "undefined") {
-    await navigator.clipboard.writeText(serialize(svg))
-    return
+    throw new Error("ClipboardItem is unavailable.")
   }
-  await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
+  await navigator.clipboard.write([new ClipboardItem(items)])
+}
+
+async function writePngClipboard(svg: SVGSVGElement) {
+  await writeClipboard({ "image/png": dataUrlToBlob(await png(svg)) })
+}
+
+async function copySvg(svg: SVGSVGElement) {
+  const markup = serialize(svg)
+  // Prefer a rich ClipboardItem so paste targets can pick SVG, PNG, or text.
+  // Previous writeText(serialize(svg)) always pasted markup instead of an image.
+  const pngBlob = dataUrlToBlob(await png(svg))
+  const items: Record<string, Blob> = {
+    "image/png": pngBlob,
+    "text/plain": new Blob([markup], { type: "text/plain" }),
+  }
+  if (supportsClipboardType("image/svg+xml")) {
+    items["image/svg+xml"] = new Blob([markup], { type: "image/svg+xml" })
+  }
+  try {
+    await writeClipboard(items)
+  } catch {
+    // Some hosts reject multi-type items; keep an image on the clipboard.
+    await writeClipboard({ "image/png": pngBlob })
+  }
+}
+
+async function copyPng(svg: SVGSVGElement) {
+  await writePngClipboard(svg)
 }
 
 function renderActions(el: HTMLDivElement, pre: HTMLPreElement, source: string, labels: MermaidLabels) {
@@ -329,7 +359,7 @@ function renderActions(el: HTMLDivElement, pre: HTMLPreElement, source: string, 
     mountMermaidActions(el, {
       labels,
       onCopySource: () => copyText(sourceText),
-      onCopySvg: () => copyText(sourceSvg()),
+      onCopySvg: () => copySvg(svg),
       onCopyPng: () => copyPng(svg),
       onDownloadSvg: () => save(sourceSvgUrl(), "mermaid-diagram.svg"),
       onDownloadPng: async () => save(await png(svg), "mermaid-diagram.png"),

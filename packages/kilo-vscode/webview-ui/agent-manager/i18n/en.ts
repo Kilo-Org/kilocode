@@ -221,4 +221,9 @@ export const dict = {
   "agentManager.caffeination.armed": "Keep-awake mode enabled; click to disable",
   "agentManager.caffeination.active": "Keeping computer awake",
   "agentManager.caffeination.unavailable": "Keep-awake mode is unavailable on this platform",
+
+  "agentManager.pr.error.gh_auth.title": "GitHub authentication required",
+  "agentManager.pr.error.gh_auth.description": "Run 'gh auth login' in your terminal to restore PR status.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI not installed",
+  "agentManager.pr.error.gh_missing.description": "Install the GitHub CLI to enable PR status.",
 }

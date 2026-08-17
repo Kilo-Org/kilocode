@@ -14,7 +14,7 @@ export const dict = {
   "agentManager.worktree.new": "Novo Worktree",
   "agentManager.worktree.setupScript": "Script de configuração do Worktree",
   "agentManager.worktree.delete": "Excluir Worktree",
-  "agentManager.worktree.confirmDelete": "Delete?",
+  "agentManager.worktree.confirmDelete": "Excluir?",
   "agentManager.worktree.stale": "Obsoleto",
   "agentManager.worktree.staleTooltip": "Ausente no disco ou não é mais rastreado pelo git worktree",
   "agentManager.worktree.removeStale": "Remover Worktree obsoleto",
@@ -106,8 +106,8 @@ export const dict = {
   "agentManager.run.options": "Opções de execução",
   "agentManager.run.configure": "Configurar script de execução",
   "agentManager.shortcuts.openAgentManager": "Abrir Agent Manager",
-  "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
-  "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
+  "agentManager.shortcuts.cycleAgentMode": "Próximo modo de agente",
+  "agentManager.shortcuts.cyclePreviousAgentMode": "Modo de agente anterior",
   "agentManager.shortcuts.showShortcuts": "Mostrar atalhos de teclado",
   "agentManager.dialog.removeStaleWorktree.title": "Remover Worktree obsoleto",
   "agentManager.dialog.removeStaleWorktree.messagePre": "Remover Worktree obsoleto ",
@@ -220,4 +220,9 @@ export const dict = {
   "agentManager.caffeination.active": "Mantendo o computador acordado",
   "agentManager.caffeination.unavailable":
     "O modo de manter o computador acordado não está disponível nesta plataforma",
+
+  "agentManager.pr.error.gh_auth.title": "Autenticação do GitHub necessária",
+  "agentManager.pr.error.gh_auth.description": "Execute 'gh auth login' no terminal para restaurar o status do PR.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI não instalado",
+  "agentManager.pr.error.gh_missing.description": "Instale o GitHub CLI para habilitar o status do PR.",
 }

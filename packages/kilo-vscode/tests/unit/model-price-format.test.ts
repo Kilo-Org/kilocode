@@ -18,6 +18,11 @@ describe("fmtPrice", () => {
     expect(fmtPrice(0)).toBe("Free")
   })
 
+  it("returns dash for negative price", () => {
+    expect(fmtPrice(-1)).toBe("—")
+    expect(fmtPrice(-1000000)).toBe("—")
+  })
+
   it("uses 4 decimal places for sub-cent prices", () => {
     expect(fmtPrice(0.005)).toBe("$0.0050/1M")
   })

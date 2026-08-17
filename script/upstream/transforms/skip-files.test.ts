@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { shouldSkip } from "./skip-files"
+import { defaultConfig } from "../utils/config"
 
 test("matches hosted package glob paths", () => {
   expect(shouldSkip("packages/web/package.json", ["packages/web/**"])).toBe(true)
@@ -19,6 +20,20 @@ test("matches upstream CLI scaffold glob paths", () => {
 test("matches upstream stats package glob paths", () => {
   expect(shouldSkip("packages/stats/app/package.json", ["packages/stats/**"])).toBe(true)
   expect(shouldSkip("packages/stats/core/src/index.ts", ["packages/stats/**"])).toBe(true)
+})
+
+test("matches upstream-only translation automation", () => {
+  expect(shouldSkip("script/translate-app.ts", defaultConfig.skipFiles)).toBe(true)
+  expect(shouldSkip("script/translate-app.test.ts", defaultConfig.skipFiles)).toBe(true)
+  expect(shouldSkip("script/translate-app.md", defaultConfig.skipFiles)).toBe(true)
+})
+
+test("matches the unsupported Kilo web command", () => {
+  expect(shouldSkip("packages/opencode/src/cli/cmd/web.ts", defaultConfig.skipFiles)).toBe(true)
+})
+
+test("transforms the Muse Spark prompt for Kilo branding", () => {
+  expect(defaultConfig.takeTheirsAndTransform).toContain("packages/opencode/src/session/prompt/meta.txt")
 })
 
 test("matches removed vscode sdk glob paths", () => {

@@ -18,7 +18,7 @@ import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
 import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
-import { mcpConfigScope, mcpEnabledPatch, selectedDefaultAgentValue } from "./agent-behaviour-patches"
+import { mcpConfigScope, mcpEnabledPatch, removable, selectedDefaultAgentValue } from "./agent-behaviour-patches"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
@@ -368,6 +368,7 @@ const AgentBehaviourTab: Component = () => {
               {(name, index) => {
                 const agent = () => session.allAgents().find((a) => a.name === name)
                 const isCustom = () => !agent()?.native
+                const allowed = () => removable(agent())
                 const agentCfg = () => config().agent?.[name] ?? {}
                 const disabled = () => agentCfg().disable ?? false
                 const hidden = () => agentCfg().hidden ?? false
@@ -477,7 +478,7 @@ const AgentBehaviourTab: Component = () => {
                       </Show>
                     </div>
                     <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
-                      <Show when={isCustom()}>
+                      <Show when={allowed()}>
                         <IconButton
                           size="small"
                           variant="ghost"
@@ -903,7 +904,7 @@ const AgentBehaviourTab: Component = () => {
                 "border-bottom": index() < skillPaths().length - 1 ? "1px solid var(--border-weak-base)" : "none",
               }}
             >
-              <Tooltip value={path} class="settings-skills-row-trigger">
+              <Tooltip value={path} class="settings-skills-row-trigger" contentClass="settings-skills-tooltip-content">
                 <span
                   style={{
                     width: "100%",
@@ -960,7 +961,7 @@ const AgentBehaviourTab: Component = () => {
                 "border-bottom": index() < skillUrls().length - 1 ? "1px solid var(--border-weak-base)" : "none",
               }}
             >
-              <Tooltip value={url} class="settings-skills-row-trigger">
+              <Tooltip value={url} class="settings-skills-row-trigger" contentClass="settings-skills-tooltip-content">
                 <span
                   style={{
                     width: "100%",

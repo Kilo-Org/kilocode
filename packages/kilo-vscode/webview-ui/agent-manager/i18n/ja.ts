@@ -14,7 +14,7 @@ export const dict = {
   "agentManager.worktree.new": "新しいWorktree",
   "agentManager.worktree.setupScript": "Worktreeセットアップスクリプト",
   "agentManager.worktree.delete": "Worktreeを削除",
-  "agentManager.worktree.confirmDelete": "Delete?",
+  "agentManager.worktree.confirmDelete": "削除しますか？",
   "agentManager.worktree.stale": "無効",
   "agentManager.worktree.staleTooltip": "ディスク上に存在しないか、git worktree で追跡されていません",
   "agentManager.worktree.removeStale": "無効な Worktree を削除",
@@ -107,8 +107,8 @@ export const dict = {
   "agentManager.run.options": "実行オプション",
   "agentManager.run.configure": "実行スクリプトを設定",
   "agentManager.shortcuts.openAgentManager": "Agent Managerを開く",
-  "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
-  "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
+  "agentManager.shortcuts.cycleAgentMode": "次のエージェントモード",
+  "agentManager.shortcuts.cyclePreviousAgentMode": "前のエージェントモード",
   "agentManager.shortcuts.showShortcuts": "キーボードショートカットを表示",
   "agentManager.dialog.removeStaleWorktree.title": "無効な Worktree を削除",
   "agentManager.dialog.removeStaleWorktree.messagePre": "無効な Worktree を削除 ",
@@ -204,7 +204,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "このセッションスナップショットでは画像プレビューを利用できません。",
   "agentManager.review.endOfLongDiff": "最後まで到達しました！",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "プルリクエスト",
   "agentManager.import.pastePrUrl": "PR URLを貼り付け...",
   "agentManager.import.open": "開く",
   "agentManager.import.branches": "ブランチ",
@@ -219,4 +219,11 @@ export const dict = {
   "agentManager.caffeination.armed": "スリープ防止モードが有効です。クリックして無効にします",
   "agentManager.caffeination.active": "コンピューターをスリープさせません",
   "agentManager.caffeination.unavailable": "このプラットフォームではスリープ防止モードを利用できません",
+
+  "agentManager.pr.error.gh_auth.title": "GitHub認証が必要です",
+  "agentManager.pr.error.gh_auth.description":
+    "PRステータスを復元するには、ターミナルで 'gh auth login' を実行してください。",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLIがインストールされていません",
+  "agentManager.pr.error.gh_missing.description":
+    "PRステータスを有効にするには、GitHub CLIをインストールしてください。",
 }

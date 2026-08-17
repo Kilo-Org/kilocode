@@ -36,7 +36,7 @@ export const dict = {
   "agentManager.section.moveUp": "Sposta su",
   "agentManager.section.moveDown": "Sposta giù",
 
-  "agentManager.hoverCard.branch": "BRANCH",
+  "agentManager.hoverCard.branch": "Ramo",
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessioni",
@@ -227,4 +227,10 @@ export const dict = {
   "agentManager.caffeination.active": "Computer mantenuto attivo",
   "agentManager.caffeination.unavailable":
     "La modalità per mantenere il computer attivo non è disponibile su questa piattaforma",
+
+  "agentManager.pr.error.gh_auth.title": "Autenticazione GitHub richiesta",
+  "agentManager.pr.error.gh_auth.description":
+    "Esegui 'gh auth login' nel terminale per ripristinare lo stato della PR.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI non installato",
+  "agentManager.pr.error.gh_missing.description": "Installa GitHub CLI per abilitare lo stato della PR.",
 }

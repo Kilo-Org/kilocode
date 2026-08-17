@@ -15,18 +15,11 @@ describe("websearch provider", () => {
   })
 
   test("supports an operational override", () => {
-    const original = process.env.KILO_WEBSEARCH_PROVIDER
-
-    try {
-      process.env.KILO_WEBSEARCH_PROVIDER = "parallel"
-      expect(selectWebSearchProvider(SESSION_ID)).toBe("parallel")
-
-      process.env.KILO_WEBSEARCH_PROVIDER = "exa"
-      expect(selectWebSearchProvider(SESSION_ID)).toBe("exa")
-    } finally {
-      if (original === undefined) delete process.env.KILO_WEBSEARCH_PROVIDER
-      else process.env.KILO_WEBSEARCH_PROVIDER = original
-    }
+    // kilocode_change start - the override is resolved via Env.Service by the tool and passed in
+    expect(selectWebSearchProvider(SESSION_ID, undefined, "parallel")).toBe("parallel")
+    expect(selectWebSearchProvider(SESSION_ID, undefined, "exa")).toBe("exa")
+    expect(selectWebSearchProvider(SESSION_ID, undefined, "bogus")).toBe(selectWebSearchProvider(SESSION_ID))
+    // kilocode_change end
   })
 
   test("routes to Exa when the Exa flag is enabled", () => {

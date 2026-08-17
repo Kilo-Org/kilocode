@@ -9,6 +9,7 @@ import { mergeDeep } from "remeda"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { errorMessage } from "@/util/error"
+import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import * as Formatter from "./formatter"
 
 export const Status = Schema.Struct({
@@ -85,8 +86,8 @@ const layer = Layer.effect(
                 .run(
                   ChildProcess.make(replaced[0]!, replaced.slice(1), {
                     cwd: dir,
-                    env: item.environment,
-                    extendEnv: true,
+                    env: modelEnv(item.environment), // kilocode_change - formatters must not inherit backend credentials
+                    extendEnv: false, // kilocode_change
                     stdin: "ignore",
                     stdout: "ignore",
                     stderr: "ignore",

@@ -168,6 +168,12 @@ Agent Manager local worktree sessions use the current shared `kilo serve` proces
 
 Extension-side code lives in `src/agent-manager/`, webview code in `webview-ui/agent-manager/`. The webview reuses the sidebar's provider chain and `ChatView` component, adding a `WorktreeModeProvider` and a split layout.
 
+### Multi-project migration
+
+Multi-project Agent Manager is an incremental migration behind the application-scoped `kilo-code.new.experimental.multiProject` flag (default `false`); flag-off behavior must remain unchanged. The project registry/contexts, per-project state and session routing, project sidebar, sections and drag-and-drop, progress/persistence, and project-targeted worktree creation are implemented.
+
+It is not yet a complete convergence: audit every operation for explicit project/worktree/session routing, finish immutable project-bound Settings and machine-local indexing consent, harden canonical Git identity and multi-window route ownership, and replace the duplicate `SidebarBody`/`ProjectSidebarBody` implementations with one shared body. Full two-project E2E and legacy-parity coverage is still incomplete.
+
 ## Webview UI (kilo-ui)
 
 New webview features must use **`@kilocode/kilo-ui`** components instead of raw HTML elements with inline styles. This is a Solid.js component library built on `@kobalte/core`.

@@ -149,6 +149,7 @@ export interface SessionTurnClosedMessage {
 
 export interface SessionErrorMessage {
   type: "sessionError"
+  eventID: string
   sessionID?: string
   error?: { name: string; data?: Record<string, unknown> }
 }
@@ -661,6 +662,11 @@ export interface ThroughputSettingLoadedMessage {
   visible: boolean
 }
 
+export interface AutoApprovalReasonSettingLoadedMessage {
+  type: "autoApprovalReasonSettingLoaded"
+  visible: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -1042,6 +1048,11 @@ export interface AgentManagerPRStatusMessage {
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+export interface AgentManagerPRErrorMessage {
+  type: "agentManager.prError"
+  error: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
 // Sidebar: Live worktree diff stats (extension → webview)
 export interface WorktreeStatsLoadedMessage {
   type: "worktreeStatsLoaded"
@@ -1360,6 +1371,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
+  | AutoApprovalReasonSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
@@ -1407,6 +1419,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
+  | AgentManagerPRErrorMessage
   | AgentManagerTerminalCreatedMessage
   | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage

@@ -12,6 +12,24 @@
     border: 1px solid var(--border-weak-base);
   }
 
+  &[data-size="large"] [data-slot="dialog-container"] {
+    width: min(calc(100vw - 32px), 800px);
+    height: min(calc(100vh - 32px), 720px);
+  }
+
+  &[data-size="large"] [data-slot="dialog-content"] {
+    max-width: 800px;
+  }
+
+  &[data-size="x-large"] [data-slot="dialog-container"] {
+    width: min(calc(100vw - 32px), 980px);
+    height: min(calc(100vh - 32px), 800px);
+  }
+
+  &[data-size="x-large"] [data-slot="dialog-content"] {
+    max-width: 980px;
+  }
+
   [data-slot="dialog-header"] {
     font-size: var(--kilo-font-size-14);
   }

@@ -2,6 +2,18 @@ import { Icon as Upstream, type IconProps as Props } from "@opencode-ai/ui/icon"
 import { splitProps } from "solid-js"
 
 const icons: Record<string, { path: string; viewBox: string }> = {
+  "circle-x-outline": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M7.5 7.5L12.5 12.5M12.5 7.5L7.5 12.5M18.3333 10C18.3333 14.6024 14.6024 18.3333 10 18.3333C5.39763 18.3333 1.66667 14.6024 1.66667 10C1.66667 5.39763 5.39763 1.66667 10 1.66667C14.6024 1.66667 18.3333 5.39763 18.3333 10Z" stroke="currentColor" stroke-linecap="square"/>`,
+  },
+  "pull-request": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M1.875 4.0625a2.8125 2.8125 0 1 1 3.75 2.6525v6.57a2.8138 2.8138 0 1 1-1.875 0V6.715A2.8125 2.8125 0 0 1 1.875 4.0625Zm7.096-.22125L11.96625.84625A.3125.3125 0 0 1 12.5 1.0675V3.125h1.25A3.125 3.125 0 0 1 16.875 6.25v7.035a2.8138 2.8138 0 1 1-1.875 0V6.25a1.25 1.25 0 0 0-1.25-1.25H12.5v2.0575a.3125.3125 0 0 1-.53375.22125L8.97125 4.34125a.3125.3125 0 0 1 0-.4425ZM4.6875 3.125a.9375.9375 0 1 0 0 1.875.9375.9375 0 0 0 0-1.875Zm0 11.875a.9375.9375 0 1 0 0 1.875.9375.9375 0 0 0 0-1.875Zm10.3125.9375a.9375.9375 0 1 0 1.875 0 .9375.9375 0 0 0-1.875 0Z" fill="currentColor"/>`,
+  },
+  refresh: {
+    viewBox: "0 0 20 20",
+    path: `<path d="M17.0837 10.0003C17.0837 13.9123 13.9123 17.0837 10.0003 17.0837C6.08833 17.0837 2.91699 13.9123 2.91699 10.0003C2.91699 6.08833 6.08833 2.91699 10.0003 2.91699C12.3717 2.91699 14.4722 4.07428 15.7698 5.83366M15.7698 5.83366V2.91699M15.7698 5.83366H12.8532" stroke="currentColor" stroke-linecap="square"/>`,
+  },
   memory: {
     viewBox: "0 0 24 24",
     path: `<path d="M2 7h4M2 12h4M2 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect width="16" height="20" x="4" y="2" rx="2" stroke="currentColor" stroke-width="2"/>`,

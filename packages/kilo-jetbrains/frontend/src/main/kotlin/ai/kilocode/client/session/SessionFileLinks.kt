@@ -59,7 +59,7 @@ class SessionFileLinks(
         }
         val target = parse(href)
         scope.launch {
-            val ok = service.openPath(dir, target.path, target.line, target.column)
+            val ok = service.openPath(dir, target.path, target.line, target.column, target.endLine)
             if (ok) {
                 track(target, "direct")
                 return@launch
@@ -72,7 +72,7 @@ class SessionFileLinks(
             when (val result = decide(false, found)) {
                 Resolution.Opened -> Unit
                 is Resolution.OpenDirect -> {
-                    val opened = service.openPath(dir, result.file.path, target.line, target.column)
+                    val opened = service.openPath(dir, result.file.path, target.line, target.column, target.endLine)
                     track(target, if (opened) "search_direct" else "missing")
                 }
                 is Resolution.Choose -> {
@@ -104,7 +104,7 @@ class SessionFileLinks(
             .createPopupChooserBuilder(files)
             .setRenderer(FileRenderer())
             .setItemChosenCallback { file ->
-                scope.launch { service.openPath(dir, file.path, target.line, target.column) }
+                scope.launch { service.openPath(dir, file.path, target.line, target.column, target.endLine) }
             }
             .createPopup()
         popup.show(anchor ?: RelativePoint.getCenterOf(root))
@@ -143,11 +143,11 @@ class SessionFileLinks(
         data object Missing : Resolution
     }
 
-    data class Target(val path: String, val line: Int? = null, val column: Int? = null)
+    data class Target(val path: String, val line: Int? = null, val column: Int? = null, val endLine: Int? = null)
 
     companion object {
         private const val FILE_SEARCH_LIMIT = 50
-        private val LINE = Regex(":(\\d+)(?:-\\d+)?(?::(\\d+))?$")
+        private val LINE = Regex(":(\\d+)(?:-(\\d+))?(?::(\\d+))?$")
         private val SCHEME = Regex("^([A-Za-z][A-Za-z0-9+.-]*):")
 
         fun parse(href: String): Target {
@@ -155,6 +155,7 @@ class SessionFileLinks(
             return Target(
                 href.substring(0, match.range.first),
                 match.groupValues[1].toIntOrNull(),
+                match.groupValues.getOrNull(3)?.takeIf { it.isNotBlank() }?.toIntOrNull(),
                 match.groupValues.getOrNull(2)?.takeIf { it.isNotBlank() }?.toIntOrNull(),
             )
         }
