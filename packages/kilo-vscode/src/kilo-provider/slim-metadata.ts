@@ -218,6 +218,7 @@ const slimmers: Record<string, (state: Record<string, unknown>) => Record<string
   multiedit: slimMultiedit,
   write: slimWrite,
   bash: slimBash,
+  task: slimOutput,
 }
 
 /** Strip provider metadata that the webview never reads from reasoning parts. */
