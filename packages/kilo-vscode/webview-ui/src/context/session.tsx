@@ -290,7 +290,7 @@ interface SessionContextValue {
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
   exportSessionTranscript: (id: string) => void
-  syncSession: (sessionID: string) => void
+  syncSession: (sessionID: string, parentSessionID?: string) => void
 
   // Cloud session preview
   cloudPreviewId: Accessor<string | null>
@@ -2822,8 +2822,8 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
   }
 
-  function syncSession(sessionID: string) {
-    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID: currentSessionID() })
+  function syncSession(sessionID: string, parentSessionID = currentSessionID()) {
+    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID })
   }
 
   const todos = () => {

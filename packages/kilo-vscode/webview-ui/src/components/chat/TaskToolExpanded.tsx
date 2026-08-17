@@ -18,6 +18,7 @@ import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
+import { useWorktreeMode } from "../../context/worktree-mode"
 import { childID } from "../../context/session-utils"
 import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
 
@@ -26,6 +27,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const language = useLanguage()
   const session = useSession()
   const vscode = useVSCode()
+  const worktree = useWorktreeMode()
 
   const childSessionId = () =>
     childID({
@@ -115,7 +117,16 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     e.stopPropagation()
     const id = childSessionId()
     if (!id) return
-    vscode.postMessage({ type: "openSubAgentViewer", sessionID: id, title: description() })
+    const title = description()
+    if (worktree) {
+      window.dispatchEvent(
+        new CustomEvent("agentManager.openSubagent", {
+          detail: { sessionID: id, title, parentSessionID: session.currentSessionID() },
+        }),
+      )
+      return
+    }
+    vscode.postMessage({ type: "openSubAgentViewer", sessionID: id, title })
   }
 
   const trigger = () => (
@@ -138,7 +149,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
           icon="square-arrow-top-right"
           size="small"
           variant="ghost"
-          aria-label="Open sub-agent in tab"
+          aria-label={worktree ? "Open sub-agent in panel" : "Open sub-agent in tab"}
           onClick={openInTab}
         />
       </Show>

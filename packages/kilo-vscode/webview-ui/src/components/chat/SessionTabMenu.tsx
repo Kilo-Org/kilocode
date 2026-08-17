@@ -8,6 +8,7 @@ export const SessionTabMenu: ParentComponent<{
   onFork?: () => void
   onClose: () => void
   onCloseOthers?: () => void
+  closeable?: boolean
   closeShortcut?: JSX.Element
 }> = (props) => {
   const { t } = useLanguage()
@@ -23,18 +24,22 @@ export const SessionTabMenu: ParentComponent<{
               <Icon name="fork" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.tab.forkSession")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
-            <ContextMenu.Separator />
+            <Show when={props.closeable !== false}>
+              <ContextMenu.Separator />
+            </Show>
           </Show>
-          <ContextMenu.Item onSelect={props.onClose}>
-            <Icon name="close" size="small" />
-            <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>
-            {props.closeShortcut}
-          </ContextMenu.Item>
-          <Show when={props.onCloseOthers}>
-            <ContextMenu.Item onSelect={() => props.onCloseOthers?.()}>
+          <Show when={props.closeable !== false}>
+            <ContextMenu.Item onSelect={props.onClose}>
               <Icon name="close" size="small" />
-              <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
+              <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>
+              {props.closeShortcut}
             </ContextMenu.Item>
+            <Show when={props.onCloseOthers}>
+              <ContextMenu.Item onSelect={() => props.onCloseOthers?.()}>
+                <Icon name="close" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
+              </ContextMenu.Item>
+            </Show>
           </Show>
         </ContextMenu.Content>
       </ContextMenu.Portal>
