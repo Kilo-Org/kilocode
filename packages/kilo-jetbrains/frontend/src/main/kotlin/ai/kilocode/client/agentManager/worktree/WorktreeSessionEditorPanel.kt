@@ -31,6 +31,7 @@ import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
+import com.intellij.ide.ActivityTracker
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
@@ -43,7 +44,6 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
-import com.intellij.openapi.progress.currentThreadCoroutineScope
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
@@ -61,8 +61,6 @@ import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.jetbrains.plugins.terminal.TerminalToolWindowFactory
 import java.awt.BorderLayout
 import java.awt.Color
@@ -266,9 +264,14 @@ class WorktreeSessionEditorPanel(
 
     @RequiresEdt
     private fun syncToolbar() {
-        if (!ApplicationManager.getApplication().isUnitTestMode) return
-        @Suppress("DEPRECATION")
-        toolbar.updateActionsImmediately()
+        // Tests need a synchronous refresh to assert action presentations; production nudges the
+        // platform's action-update pass instead of the deprecated blocking updateActionsImmediately().
+        if (ApplicationManager.getApplication().isUnitTestMode) {
+            @Suppress("DEPRECATION")
+            toolbar.updateActionsImmediately()
+            return
+        }
+        ActivityTracker.getInstance().inc()
     }
 
     @RequiresEdt
@@ -292,11 +295,7 @@ class WorktreeSessionEditorPanel(
         }
         if (focusExistingFrame(dir)) return
         LOG.info("worktree open: no local frame matched, delegating to backend dir=$dir")
-        currentThreadCoroutineScope().launch(Dispatchers.Default) {
-            val focused = runCatching { service<KiloWorktreeService>().open(dir) }
-            focused.onFailure { LOG.warn("worktree open: backend call failed dir=$dir", it) }
-            focused.onSuccess { LOG.info("worktree open: backend returned=$it dir=$dir") }
-        }
+        service<KiloWorktreeService>().openInBackground(dir)
     }
 
     /**

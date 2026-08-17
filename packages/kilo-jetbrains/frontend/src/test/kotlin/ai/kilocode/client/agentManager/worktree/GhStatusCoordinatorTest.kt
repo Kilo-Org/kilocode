@@ -79,6 +79,28 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test coordinator backs off on backend failure without reporting ok`() {
+        rpc.ghResult = GhAvailability.UNAUTH
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertEquals(GhAvailability.UNAUTH, service.current())
+        assertEquals(1, rpc.ghCalls.size)
+
+        // A backend/RPC failure must reach the coordinator's failure path, not be laundered into OK.
+        rpc.beforeGhStatus = { throw RuntimeException("backend down") }
+        timers.advanceBy(5_000)
+        drain()
+        assertEquals(2, rpc.ghCalls.size)
+        assertEquals(GhAvailability.UNAUTH, service.current())
+
+        // failures>0 now drives exponential backoff instead of the steady FAST cadence.
+        timers.advanceBy(5_000)
+        drain()
+        assertEquals(3, rpc.ghCalls.size)
+        assertEquals(GhAvailability.UNAUTH, service.current())
+        handle.close()
+    }
+
     fun `test coordinator stops polling after detach`() {
         val handle = edtWait { service.attach(project) }
         drain()

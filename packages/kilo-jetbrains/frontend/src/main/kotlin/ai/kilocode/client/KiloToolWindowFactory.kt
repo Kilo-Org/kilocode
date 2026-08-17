@@ -167,5 +167,8 @@ internal fun Content.applyAgentManagerBetaBadge() {
     icon = AllIcons.General.Beta
     description = KiloBundle.message("sidePanel.mode.agentManager.beta.description")
     putUserData(ToolWindow.SHOW_CONTENT_ICON, true)
+    // TAB_LABEL_ORIENTATION_KEY is @ApiStatus.Experimental and may change or disappear between IDE
+    // releases; we declare no untilBuild cap. Failure is benign: putUserData no-ops and the Beta
+    // icon falls back to the left of the tab label.
     putUserData(Content.TAB_LABEL_ORIENTATION_KEY, ComponentOrientation.RIGHT_TO_LEFT)
 }

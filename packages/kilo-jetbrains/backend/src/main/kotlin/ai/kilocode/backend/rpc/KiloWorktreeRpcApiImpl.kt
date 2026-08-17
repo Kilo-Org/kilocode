@@ -165,12 +165,9 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             if (status != GhAvailability.OK) return@parallel null
             val out = runGh(Path.of(item.path).normalize(), "pr", "view", item.branch, "--json", "number,state,isDraft,url,title")
             if (!out.ok) {
-                when (prError(out.stderr)) {
-                    GhAvailability.UNAUTH -> status = GhAvailability.UNAUTH
-                    GhAvailability.MISSING -> status = GhAvailability.MISSING
-                    GhAvailability.GIT_MISSING -> status = GhAvailability.GIT_MISSING
-                    GhAvailability.OK -> Unit
-                }
+                // prError only ever returns UNAUTH or OK; a missing gh/git binary is already caught
+                // by the upfront ghAvailable() check before this loop runs.
+                if (prError(out.stderr) == GhAvailability.UNAUTH) status = GhAvailability.UNAUTH
                 return@parallel null
             }
             parsePr(item.path, out.stdout)
@@ -457,7 +454,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 internal fun classifyGhError(text: String): GhAvailability {
     val msg = text.lowercase()
     if (msg.contains("not logged") || msg.contains("gh auth login") || msg.contains("authentication")) return GhAvailability.UNAUTH
-    if (msg.contains("cannot run program") || msg.contains("no such file") || msg.contains("not found")) return GhAvailability.MISSING
+    // Only treat process-spawn failures as MISSING. A bare "not found" match would misclassify
+    // transient gh auth failures (e.g. a GitHub Enterprise 404 or revoked token) as an uninstalled gh;
+    // scope to spawn/shell signals instead.
+    if (msg.contains("cannot run program") || msg.contains("no such file") || msg.contains("command not found")) return GhAvailability.MISSING
     return GhAvailability.OK
 }
 

@@ -17,6 +17,7 @@ import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * App-level service wrapping [ai.kilocode.rpc.KiloWorktreeRpcApi]. Mirrors [ai.kilocode.client.app.KiloWorkspaceService]:
@@ -63,6 +64,18 @@ class KiloWorktreeService internal constructor(
         false
     }
 
+    /**
+     * Fire-and-forget open on the service scope. EDT click handlers have no thread-bound coroutine
+     * scope, so they route through here instead of `currentThreadCoroutineScope()`, which throws
+     * outside progress/blocking contexts.
+     */
+    fun openInBackground(directory: String) {
+        cs.launch {
+            val ok = open(directory)
+            LOG.info("worktree open: backend returned=$ok dir=$directory")
+        }
+    }
+
     suspend fun stats(directory: String): WorktreeStatsListDto = try {
         call { stats(directory) }
     } catch (e: Exception) {
@@ -70,12 +83,12 @@ class KiloWorktreeService internal constructor(
         WorktreeStatsListDto()
     }
 
-    suspend fun ghStatus(directory: String): GhAvailability = try {
-        call { ghStatus(directory) }
-    } catch (e: Exception) {
-        LOG.warn("gh status failed for $directory", e)
-        GhAvailability.OK
-    }
+    /**
+     * Reports gh availability, or rethrows on RPC/backend failure. Callers ([GhStatusCoordinator])
+     * distinguish a healthy gh from an unhealthy backend via their own `runCatching` + backoff;
+     * swallowing errors here would publish a false "gh is fine" and reset that backoff.
+     */
+    suspend fun ghStatus(directory: String): GhAvailability = call { ghStatus(directory) }
 
     suspend fun prStatus(directory: String): WorktreePrListDto = try {
         call { prStatus(directory) }
