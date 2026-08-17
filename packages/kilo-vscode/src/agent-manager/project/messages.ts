@@ -176,7 +176,10 @@ async function removeProject(id: string, deps: ProjectMessageDeps): Promise<void
   if (ctx) {
     const clean = deps.removePtys
     for (const directory of projectDirectories(ctx)) {
-      if (clean) await clean(directory).catch((error) => deps.log(`removeProject: failed to remove PTYs for ${directory}`, error))
+      if (clean)
+        await clean(directory).catch((error) =>
+          deps.log(`removeProject: failed to remove PTYs for ${directory}`, error),
+        )
     }
   }
   await deps.contexts.remove(id)
