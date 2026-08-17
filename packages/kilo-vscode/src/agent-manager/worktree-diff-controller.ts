@@ -2,12 +2,13 @@ import { SourceController } from "../diff/SourceController"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
 import { WorktreeDiffReverter, type StatusResolver } from "../diff/shared/reverter"
 import type { DiffFile, PanelContext } from "../diff/types"
-import type { DiffSource } from "../diff/sources/types"
+import type { DiffSource, DiffSourceNotice } from "../diff/sources/types"
 import type { DiffSourceCatalog } from "../diff/sources/catalog"
 import type { ApplyConflict, GitOps } from "./GitOps"
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { remoteRef, type ManagedSession, type WorktreeStateManager } from "./WorktreeStateManager"
 import { parseDiffId, scopeToSourceId } from "./diff-scope"
+import { diffSummary } from "./local-diff"
 import type { AgentManagerOutMessage, WorktreeDiffEntry } from "./types"
 
 const LOCAL_DIFF_ID = "local" as const
@@ -38,6 +39,8 @@ export class WorktreeDiffController {
   private poll = false
   /** Ephemeral per-context base override, keyed by context id. */
   private baseOverrides = new Map<string, string>()
+  private diffCache = new Map<string, { diffs: AgentManagerDiffFile[]; notice?: DiffSourceNotice; time: number }>()
+  private preloading = new Set<string>()
 
   constructor(private readonly ctx: WorktreeDiffControllerContext) {
     this.controller = new SourceController(
@@ -55,11 +58,15 @@ export class WorktreeDiffController {
           sessionId: source.descriptor.id,
           notice,
         }),
-        diffs: (source, diffs) => ({
-          type: "agentManager.worktreeDiff",
-          sessionId: source.descriptor.id,
-          diffs: diffs as AgentManagerDiffFile[],
-        }),
+        diffs: (source, diffs) => {
+          const { ctx } = parseDiffId(source.descriptor.id)
+          this.diffCache.set(ctx, { diffs: diffs as AgentManagerDiffFile[], time: Date.now() })
+          return {
+            type: "agentManager.worktreeDiff",
+            sessionId: source.descriptor.id,
+            diffs: diffs as AgentManagerDiffFile[],
+          }
+        },
         diffFile: (source, file, diff) => ({
           type: "agentManager.worktreeDiffFile",
           sessionId: source?.descriptor.id ?? "",
@@ -90,7 +97,11 @@ export class WorktreeDiffController {
     // orphaned-session check matches sessions of the deleted worktree.
     const current = this.controller.currentId
     const ctxId = current ? parseDiffId(current).ctx : undefined
-    return shouldStopDiffPolling(path, sessions, this.target, ctxId)
+    const stop = shouldStopDiffPolling(path, sessions, this.target, ctxId)
+    if (stop && ctxId) {
+      this.diffCache.delete(ctxId)
+    }
+    return stop
   }
 
   public async apply(worktreeId: string, value?: unknown): Promise<void> {
@@ -203,6 +214,7 @@ export class WorktreeDiffController {
     const { ctx } = parseDiffId(id)
     if (branch) this.baseOverrides.set(ctx, branch)
     else this.baseOverrides.delete(ctx)
+    this.diffCache.delete(ctx)
     // Nothing to rebuild when the context isn't active; the override is
     // picked up the next time start()/request() resolves it.
     if (this.controller.currentId !== id) return
@@ -212,6 +224,39 @@ export class WorktreeDiffController {
     // recorded poll intent preserves watch mode even when the initial fetch
     // is still in flight (isPolling only turns true once it resolves).
     await this.activate(id, this.poll, true)
+  }
+
+  /** Preload diffs for adjacent or visible worktrees in the background. */
+  public async preload(ids: string[]): Promise<void> {
+    await this.ready("stateReady rejected, continuing diff preload:")
+    for (const id of ids) {
+      if (!id) continue
+      const { ctx } = parseDiffId(id)
+      if (this.controller.currentId === id || this.preloading.has(ctx)) continue
+      const cached = this.diffCache.get(ctx)
+      if (cached && Date.now() - cached.time < 10_000) continue
+
+      const resolved = await this.resolve(ctx)
+      if (!resolved) continue
+
+      this.preloading.add(ctx)
+      try {
+        const entries = await diffSummary(this.ctx.git, resolved.directory, resolved.baseBranch, (...args) =>
+          this.ctx.log(...args),
+        )
+        const diffs = entries.map(toDiffFile) as AgentManagerDiffFile[]
+        this.diffCache.set(ctx, { diffs, time: Date.now() })
+        this.ctx.post({
+          type: "agentManager.worktreeDiff",
+          sessionId: id,
+          diffs,
+        })
+      } catch (err) {
+        this.ctx.log("Preload diff failed for", id, err)
+      } finally {
+        this.preloading.delete(ctx)
+      }
+    }
   }
 
   /** Branch picker data for a context's directory, using any active override. */
@@ -233,6 +278,21 @@ export class WorktreeDiffController {
     // Clear any stale source notice up front; sources only push a notice when
     // one is active, so a swap away from a noticing source must reset it.
     this.ctx.post({ type: "agentManager.worktreeDiffNotice", sessionId: id, notice: undefined })
+
+    // If we have cached diffs for this context, push them immediately to eliminate initial loading delay!
+    const cached = this.diffCache.get(ctx)
+    if (cached) {
+      this.ctx.post({
+        type: "agentManager.worktreeDiff",
+        sessionId: id,
+        diffs: cached.diffs,
+      })
+      if (cached.notice !== undefined) {
+        this.ctx.post({ type: "agentManager.worktreeDiffNotice", sessionId: id, notice: cached.notice })
+      }
+      this.ctx.post({ type: "agentManager.worktreeDiffLoading", sessionId: id, loading: false })
+    }
+
     this.controller.setContext({
       workspaceRoot: this.ctx.getRoot(),
       dir: resolved?.directory,
@@ -342,6 +402,24 @@ export class WorktreeDiffController {
       message,
       conflicts,
     })
+  }
+}
+
+function toDiffFile(entry: WorktreeDiffEntry): AgentManagerDiffFile {
+  return {
+    file: entry.file ?? "",
+    before: entry.before ?? "",
+    after: entry.after ?? "",
+    patch: entry.patch,
+    additions: entry.additions,
+    deletions: entry.deletions,
+    status: entry.status,
+    tracked: entry.tracked,
+    generatedLike: entry.generatedLike,
+    summarized: entry.summarized,
+    stamp: entry.stamp,
+    kind: entry.kind,
+    image: entry.image,
   }
 }
 

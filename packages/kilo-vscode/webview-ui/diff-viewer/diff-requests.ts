@@ -42,8 +42,9 @@ export function createDiffRequests(opts: DiffRequestOptions) {
         for (const file of requested.keys()) {
           if (!files.has(file)) requested.delete(file)
         }
+        const diffMap = new Map(diffs.map((item) => [item.file, item]))
         for (const file of open) {
-          const diff = diffs.find((item) => item.file === file)
+          const diff = diffMap.get(file)
           if (!diff || diff.kind === "image") continue
           request(diff)
         }

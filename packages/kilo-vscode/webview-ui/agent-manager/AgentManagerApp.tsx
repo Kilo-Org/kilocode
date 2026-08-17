@@ -1670,12 +1670,38 @@ const AgentManagerContent: Component = () => {
     const id = review.id()
 
     if ((panel || active) && id) {
-      vscode.postMessage({ type: "agentManager.startDiffWatch", ...wireDiffId(id) })
+      const data = diffDatas()
+      const wired = wireDiffId(id)
+      const hasCached = Boolean(data[id] ?? data[wired.sessionId])
+      setDiffLoading(!hasCached)
+      vscode.postMessage({ type: "agentManager.startDiffWatch", ...wired })
       return
     }
 
     setDiffLoading(false)
     vscode.postMessage({ type: "agentManager.stopDiffWatch" })
+  })
+
+  // Preload adjacent worktrees immediately, and all other worktrees during idle time.
+  createEffect(() => {
+    const order = sidebarOrder()
+    const sel = selection() ?? LOCAL
+    const idx = order.findIndex((item) => item.id === sel)
+    if (idx === -1) return
+    const ids = order.filter((item) => item.type === "local" || item.type === "wt").map((item) => item.id)
+    const adjacent = [order[idx - 1]?.id, order[idx + 1]?.id].filter((id): id is string =>
+      Boolean(id && ids.includes(id)),
+    )
+    if (adjacent.length > 0) {
+      vscode.postMessage({ type: "agentManager.preloadWorktreeDiffs", worktreeIds: adjacent })
+    }
+
+    const rest = ids.filter((id) => id !== sel && !adjacent.includes(id))
+    if (rest.length > 0) {
+      const schedule =
+        typeof requestIdleCallback !== "undefined" ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 200)
+      schedule(() => vscode.postMessage({ type: "agentManager.preloadWorktreeDiffs", worktreeIds: rest }))
+    }
   })
 
   onCleanup(() => {

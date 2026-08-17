@@ -784,9 +784,6 @@ export class AgentManagerProvider implements Disposable {
     }
     if (m.type === "agentManager.setSessionsCollapsed") {
       this.state?.setSessionsCollapsed(m.collapsed)
-      // Multi-project bodies render collapsed purely from pushed state, so the
-      // mutation must round-trip; legacy mode is covered by its optimistic
-      // signal and the push is a no-op update.
       this.pushState()
       return null
     }
@@ -855,10 +852,16 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.setDiffBaseBranch") {
+      const logErr = (err: unknown) =>
+        this.log("Failed to set diff base:", err instanceof Error ? err.message : String(err))
       void this.diffs
         .setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch)
-        .catch((err) => this.log("Failed to set diff base:", err instanceof Error ? err.message : String(err)))
+        .catch(logErr)
         .then(() => void this.sendDiffBranches(m.sessionId, m.scope))
+      return null
+    }
+    if (m.type === "agentManager.preloadWorktreeDiffs") {
+      void this.diffs.preload(m.worktreeIds)
       return null
     }
     if (m.type === "agentManager.openFile") {

@@ -204,7 +204,7 @@ describe("diffSummary", () => {
     })
   })
 
-  it("all entries are summarized with empty before/after/patch", async () => {
+  it("all entries include patches with summarized=false for text files", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "untracked.txt"), "x\n")
       await fs.writeFile(path.join(dir, "seed.txt"), "changed\n")
@@ -213,10 +213,8 @@ describe("diffSummary", () => {
       const result = await diffSummary(git(), dir, base)
       expect(result.length).toBeGreaterThan(0)
       for (const entry of result) {
-        expect(entry.summarized).toBe(true)
-        expect(entry.before).toBe("")
-        expect(entry.after).toBe("")
-        expect(entry.patch).toBe("")
+        expect(entry.summarized).toBe(false)
+        expect(entry.patch).toBeTruthy()
         expect(typeof entry.stamp).toBe("string")
       }
     })
@@ -341,7 +339,7 @@ describe("diffFile", () => {
       const entry = summary.find((item) => item.file === "seed.txt")
       const result = await local.file(dir, base, "seed.txt")
 
-      expect(entry?.summarized).toBe(true)
+      expect(entry?.summarized).toBe(false)
       expect(result?.summarized).toBe(false)
       expect(result?.additions).toBe(entry?.additions)
       expect(result?.deletions).toBe(entry?.deletions)

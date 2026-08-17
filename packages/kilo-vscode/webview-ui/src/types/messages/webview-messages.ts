@@ -987,6 +987,12 @@ export interface SetDiffBaseBranchMessage {
   branch?: string
 }
 
+// Agent Manager: Preload diffs for adjacent or candidate worktrees (webview → extension)
+export interface PreloadWorktreeDiffsMessage {
+  type: "agentManager.preloadWorktreeDiffs"
+  worktreeIds: string[]
+}
+
 // Agent Manager: PR messages (webview → extension)
 export interface RefreshPRMessage {
   type: "agentManager.refreshPR"
@@ -1545,6 +1551,7 @@ export type WebviewMessage =
   | StopDiffWatchMessage
   | RequestDiffBranchesMessage
   | SetDiffBaseBranchMessage
+  | PreloadWorktreeDiffsMessage
   | RefreshPRMessage
   | OpenPRMessage
   | CommentActionMessage

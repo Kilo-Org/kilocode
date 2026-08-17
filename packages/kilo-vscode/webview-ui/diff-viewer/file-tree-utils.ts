@@ -39,12 +39,14 @@ export function buildFileTree(diffs: WorktreeFileDiff[]): FileTreeNode[] {
 
 /** Sort children at every level: directories first (alphabetically), then files (alphabetically). */
 function sortTree(nodes: FileTreeNode[]) {
-  nodes.sort((a, b) => {
-    const aDir = a.children ? 0 : 1
-    const bDir = b.children ? 0 : 1
-    if (aDir !== bDir) return aDir - bDir
-    return a.name.localeCompare(b.name)
-  })
+  if (nodes.length > 1) {
+    nodes.sort((a, b) => {
+      const aDir = a.children ? 0 : 1
+      const bDir = b.children ? 0 : 1
+      if (aDir !== bDir) return aDir - bDir
+      return a.name.localeCompare(b.name)
+    })
+  }
   for (const node of nodes) {
     if (node.children) sortTree(node.children)
   }

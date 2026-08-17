@@ -95,6 +95,8 @@ export function generatedLike(file: string): boolean {
 
 const BASE_CANDIDATES = ["main", "master", "dev", "develop"]
 
+const ancCache = new Map<string, { anc: string; time: number }>()
+
 export async function resolveBase(git: GitOps, dir: string, base: string): Promise<string> {
   // If the caller gave an explicit base, honor it. Return it as-is so merge-base
   // fails loudly on a stale/misspelled ref instead of silently diffing against
@@ -109,23 +111,48 @@ export async function resolveBase(git: GitOps, dir: string, base: string): Promi
 
 async function ancestor(git: GitOps, dir: string, base: string, log?: Log): Promise<string | undefined> {
   const resolvedBase = await resolveBase(git, dir, base)
+  const cacheKey = `${dir}\0${resolvedBase}`
+  const cached = ancCache.get(cacheKey)
+  if (cached && Date.now() - cached.time < 2000) return cached.anc
+
   const result = await git.execGit(["merge-base", "HEAD", resolvedBase], dir)
   if (result.code !== 0) {
     log?.("git merge-base failed", { code: result.code, stderr: result.stderr.trim(), dir, base, resolvedBase })
     return undefined
   }
-  return result.stdout.trim()
+  const anc = result.stdout.trim()
+  ancCache.set(cacheKey, { anc, time: Date.now() })
+  if (ancCache.size > 32) ancCache.delete(ancCache.keys().next().value!)
+  return anc
 }
 
-async function numstat(git: GitOps, dir: string, base: string, file?: string) {
-  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
-  if (file) args.push("--", file)
-  const result = await git.execGit(args, dir)
+export function splitPatches(patchText: string): Map<string, string> {
+  const map = new Map<string, string>()
+  if (!patchText) return map
+  const headerRegex = /^diff --git a\/(.+?) b\/(.+)$/gm
+  let match: RegExpExecArray | null
+  let lastFile: string | null = null
+  let lastStart = 0
+
+  while ((match = headerRegex.exec(patchText)) !== null) {
+    if (lastFile !== null) {
+      map.set(lastFile, patchText.slice(lastStart, match.index))
+    }
+    lastFile = match[2]!
+    lastStart = match.index
+  }
+  if (lastFile !== null) {
+    map.set(lastFile, patchText.slice(lastStart))
+  }
+  return map
+}
+
+function parseNumstatOutput(stdout: string) {
   const map = new Map<string, { additions: number; deletions: number; binary: boolean }>()
-  if (result.code !== 0) return map
-  for (const line of result.stdout.trim().split("\n")) {
+  for (const line of stdout.trim().split("\n")) {
     if (!line) continue
     const parts = line.split("\t")
+    if (parts.length < 3) continue
     const add = parts[0]
     const del = parts[1]
     const name = parts.slice(2).join("\t")
@@ -137,6 +164,14 @@ async function numstat(git: GitOps, dir: string, base: string, file?: string) {
     })
   }
   return map
+}
+
+async function numstat(git: GitOps, dir: string, base: string, file?: string) {
+  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
+  if (file) args.push("--", file)
+  const result = await git.execGit(args, dir)
+  if (result.code !== 0) return new Map<string, { additions: number; deletions: number; binary: boolean }>()
+  return parseNumstatOutput(result.stdout)
 }
 
 async function statStamp(dir: string, file: string): Promise<string> {
@@ -165,19 +200,24 @@ function statusFromCode(code: string): Status {
   return "modified"
 }
 
-async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<Meta[]> {
-  const nameStatus = await git.execGit(
-    ["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", anc],
-    dir,
-  )
+async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<WorktreeDiffEntry[]> {
+  const [patchResult, nameStatus, numstatResult, untracked] = await Promise.all([
+    git.execGit(["-c", "core.quotepath=false", "diff", "--no-ext-diff", "--no-renames", "-U3", anc], dir),
+    git.execGit(["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", anc], dir),
+    git.execGit(["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc], dir),
+    git.execGit(["ls-files", "--others", "--exclude-standard"], dir),
+  ])
+
   if (nameStatus.code !== 0) {
     log?.("git diff --name-status failed", { code: nameStatus.code, stderr: nameStatus.stderr.trim() })
     return []
   }
 
-  const counts = await numstat(git, dir, anc)
-  const result: Meta[] = []
+  const counts = numstatResult.code === 0 ? parseNumstatOutput(numstatResult.stdout) : new Map()
+  const patches = splitPatches(patchResult.code === 0 ? patchResult.stdout : "")
+  const result: WorktreeDiffEntry[] = []
   const seen = new Set<string>()
+  const stampTasks: Promise<void>[] = []
 
   for (const line of nameStatus.stdout.trim().split("\n")) {
     if (!line) continue
@@ -188,47 +228,80 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     seen.add(file)
     const status = statusFromCode(code)
     const stat = counts.get(file) ?? { additions: 0, deletions: 0, binary: false }
-    result.push({
+    const mime = imageMime(file)
+    const patch = patches.get(file) ?? ""
+    const isLarge = patch.length > MAX_DETAIL_BYTES
+    const summarized = mime !== undefined || stat.binary || isLarge
+    const actualPatch = summarized ? "" : patch
+
+    const entry: WorktreeDiffEntry = {
       file,
+      patch: actualPatch,
+      before: "",
+      after: "",
       additions: stat.additions,
       deletions: stat.deletions,
       status,
       tracked: true,
       generatedLike: generatedLike(file),
-      binary: stat.binary,
-      stamp:
-        status === "deleted" ? `deleted:${anc}` : `${imageMime(file) ? `${anc}:` : ""}${await statStamp(dir, file)}`,
-    })
+      summarized,
+      stamp: status === "deleted" ? `deleted:${anc}` : `${status}:${stat.additions}:${stat.deletions}:${anc}`,
+      kind: mime ? "image" : undefined,
+    }
+    result.push(entry)
+
+    if (mime) {
+      stampTasks.push(
+        statStamp(dir, file).then((s) => {
+          entry.stamp = `${anc}:${s}`
+        }),
+      )
+    }
   }
 
-  const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard"], dir)
-  if (untracked.code !== 0) {
-    log?.("git ls-files --others failed", { code: untracked.code, stderr: untracked.stderr.trim() })
-    return result
-  }
-
-  const files = untracked.stdout.trim()
-  if (!files) return result
-
-  for (const file of files.split("\n")) {
-    if (!file || seen.has(file)) continue
+  const untrackedFiles = untracked.code === 0 ? untracked.stdout.trim().split("\n").filter(Boolean) : []
+  const untrackedTasks = untrackedFiles.map(async (file) => {
+    if (seen.has(file)) return
     const full = resolveInside(dir, file)
-    if (!full) continue
-    const exists = await fs.lstat(full).catch(() => undefined)
-    if (!exists) continue
+    if (!full) return
+    const stat = await fs.lstat(full).catch(() => undefined)
+    if (!stat) return
     const binary = await binaryFile(full)
+    const mime = imageMime(file)
+    let patch = ""
+    let additions = 0
+    let summarized = true
+
+    if (mime) {
+      summarized = true
+    } else if (binary) {
+      summarized = true
+    } else if (stat.size <= MAX_UNTRACKED_BYTES) {
+      const content = stat.isSymbolicLink()
+        ? await fs.readlink(full).catch(() => "")
+        : await fs.readFile(full, "utf-8").catch(() => "")
+      additions = linesOf(content)
+      patch = buildUntrackedPatch(file, content)
+      summarized = false
+    }
+
     result.push({
       file,
-      additions: binary ? 0 : await lineCount(full),
+      patch,
+      before: "",
+      after: "",
+      additions,
       deletions: 0,
       status: "added",
       tracked: false,
       generatedLike: generatedLike(file),
-      binary,
-      stamp: await statStamp(dir, file),
+      summarized,
+      stamp: `${stat.size}:${stat.mtimeMs}`,
+      kind: mime ? "image" : undefined,
     })
-  }
+  })
 
+  await Promise.all([...stampTasks, ...untrackedTasks])
   return result
 }
 
@@ -251,20 +324,18 @@ function summarize(meta: Meta): WorktreeDiffEntry {
 }
 
 /**
- * Hot polling path. Returns one summarized entry per changed file (tracked or
- * untracked) relative to `merge-base HEAD base`. No file contents are read —
- * `before`/`after`/`patch` are empty strings. Matches the shape the server's
- * `WorktreeDiff.summary` emits.
+ * Fast unified diff path. Returns one entry per changed file (tracked or
+ * untracked) relative to `merge-base HEAD base`, with complete hunk patches
+ * populated for instant rendering.
  */
 export async function diffSummary(git: GitOps, dir: string, base: string, log?: Log): Promise<WorktreeDiffEntry[]> {
   const anc = await ancestor(git, dir, base, log)
   if (!anc) return []
-  const items = await list(git, dir, anc, log)
-  return items.map(summarize)
+  return await list(git, dir, anc, log)
 }
 
 export function createLocalDiff(git: GitOps, log?: Log) {
-  const states = new Map<string, { anc: string; metas: Map<string, Meta> }>()
+  const states = new Map<string, { anc: string; entries: Map<string, WorktreeDiffEntry> }>()
 
   return {
     summary: async (dir: string, base: string): Promise<WorktreeDiffEntry[]> => {
@@ -277,16 +348,27 @@ export function createLocalDiff(git: GitOps, log?: Log) {
 
       const items = await list(git, dir, anc, log)
       states.delete(id)
-      states.set(id, { anc, metas: new Map(items.map((item) => [item.file, item])) })
+      states.set(id, { anc, entries: new Map(items.map((item) => [item.file ?? "", item])) })
       if (states.size > 8) states.delete(states.keys().next().value!)
-      return items.map(summarize)
+      return items
     },
     file: async (dir: string, base: string, file: string): Promise<WorktreeDiffEntry | null> => {
       const state = states.get(`${dir}\0${base}`)
-      if (!state) return diffFile(git, dir, base, file, log)
-      const meta = state.metas.get(file)
-      if (!meta) return null
-      return materialize(git, dir, state.anc, meta, log)
+      if (state) {
+        const cached = state.entries.get(file)
+        if (cached && !cached.kind && cached.patch) {
+          const status = cached.status ?? "modified"
+          const before = await readBefore(git, dir, state.anc, file, status)
+          const after = await readAfter(dir, file, status)
+          return {
+            ...cached,
+            before,
+            after,
+            summarized: false,
+          }
+        }
+      }
+      return diffFile(git, dir, base, file, log)
     },
   }
 }

@@ -757,6 +757,11 @@ interface SetDiffBaseBranchIn {
   branch?: string
 }
 
+interface PreloadWorktreeDiffsIn {
+  type: "agentManager.preloadWorktreeDiffs"
+  worktreeIds: string[]
+}
+
 interface RefreshPRIn {
   type: "agentManager.refreshPR"
   worktreeId: string
@@ -1065,6 +1070,7 @@ export type AgentManagerInMessage =
   | RevertWorktreeFileIn
   | RequestDiffBranchesIn
   | SetDiffBaseBranchIn
+  | PreloadWorktreeDiffsIn
   | RefreshPRIn
   | OpenPRIn
   | CommentActionIn
