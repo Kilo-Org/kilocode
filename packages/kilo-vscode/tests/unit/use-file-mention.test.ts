@@ -900,6 +900,58 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("bounds remembered session directories", () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const state = createRoot((root) => {
+      dispose.fn = root
+      const [session, setSession] = createSignal("session-0")
+      return { mention: useFileMention(ctx, session, () => false), setSession }
+    })
+
+    const reply = (request: WebviewMessage | undefined, dir: string) => {
+      for (const handler of handlers) {
+        handler({
+          type: "fileSearchResult",
+          requestId: request?.type === "requestFileSearch" ? request.requestId : "",
+          dir,
+          paths: [],
+          items: [],
+        })
+      }
+    }
+
+    state.mention.onInput("@", 1)
+    reply(posted.at(-1), "/repo/0")
+    for (let index = 1; index <= 8; index++) {
+      state.mention.closeMention()
+      state.setSession(`session-${index}`)
+      state.mention.onInput("@", 1)
+      reply(posted.at(-1), `/repo/${index}`)
+    }
+
+    state.mention.closeMention()
+    state.setSession("session-0")
+    state.mention.onInput("@", 1)
+
+    expect(state.mention.mentionResults()).toEqual([
+      { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
+      { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
+      FILE_PICKER_RESULT,
+    ])
+
+    dispose.fn?.()
+  })
+
   it("preserves the highlighted file when fresh results replace cached results", () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()

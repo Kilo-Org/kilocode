@@ -199,6 +199,16 @@ export function useFileMention(
     }
   }
 
+  const writeDir = (id: string, dir: string) => {
+    dirs.delete(id)
+    dirs.set(id, dir)
+    while (dirs.size > FILE_SEARCH_CACHE_LIMIT) {
+      const oldest = dirs.keys().next().value
+      if (oldest === undefined) return
+      dirs.delete(oldest)
+    }
+  }
+
   const replaceResults = (items: MentionResult[]) => {
     const index = mentionIndex()
     const selected = mentionResults()[index]
@@ -259,7 +269,7 @@ export function useFileMention(
 
     const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
     if (message.dir) {
-      dirs.set(request.scope, message.dir)
+      writeDir(request.scope, message.dir)
       workspaceDir = message.dir
     }
     if (!request.query) writeCache(message.dir, items, request.revision)
