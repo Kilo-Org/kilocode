@@ -4,6 +4,7 @@ import * as os from "os"
 import * as path from "path"
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import { OrchestrationError, overview, prompt } from "../../src/agent-manager/orchestration-domain"
+import { managedInbox } from "../../src/agent-manager/managed-delivery"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import type { PRStatus as AgentManagerPRStatus } from "../../src/agent-manager/types"
 
@@ -24,6 +25,7 @@ describe("Agent Manager orchestration domain", () => {
   })
 
   afterEach(async () => {
+    managedInbox.events.length = 0
     await state.flush()
     fs.rmSync(root, { recursive: true, force: true })
   })
@@ -202,26 +204,25 @@ describe("Agent Manager orchestration domain", () => {
     )
   })
 
-  it("waits for a busy managed session to become idle before prompting", async () => {
+  it("queues a busy managed session instead of polling for idle", async () => {
     const managed = state.addWorktree({ branch: "fix/wait", path: worktree, parentBranch: "main" })
     state.addSession("ses_wait", managed.id)
-    let calls = 0
     const promptAsync = mock(async () => ({ data: undefined }))
     const client = {
       session: {
         get: mock(async () => ({ data: { id: "ses_wait", directory: worktree, title: "Wait" } as Session })),
-        status: mock(async () => ({ data: calls++ === 0 ? { ses_wait: { type: "busy" } } : {} })),
+        status: mock(async () => ({ data: { ses_wait: { type: "busy" } } })),
         promptAsync,
       },
     } as unknown as KiloClient
 
     await prompt({ client, root, state, sessionID: "ses_wait", text: "Continue", messageID: "amr_wait" })
 
-    expect(client.session.status).toHaveBeenCalledTimes(2)
-    expect(promptAsync).toHaveBeenCalledTimes(1)
+    expect(promptAsync).not.toHaveBeenCalled()
+    expect(managedInbox.peekForSession("ses_wait")?.text).toBe("Continue")
   })
 
-  it("rejects unknown, stale, cross-workspace, and busy targets", async () => {
+  it("rejects unknown, stale, and cross-workspace targets", async () => {
     const managed = state.addWorktree({ branch: "fix/errors", path: worktree, parentBranch: "main" })
     state.addSession("ses_target", managed.id)
     const promptAsync = mock(async () => ({ data: undefined }))
@@ -243,26 +244,6 @@ describe("Agent Manager orchestration domain", () => {
     ).rejects.toMatchObject({
       code: "cross_workspace",
     } satisfies Partial<OrchestrationError>)
-    ;(client.session.get as ReturnType<typeof mock>).mockImplementation(async () => ({
-      data: { id: "ses_target", directory: worktree, title: "Target" } as Session,
-    }))
-    ;(client.session.status as ReturnType<typeof mock>).mockImplementation(async () => ({
-      data: { ses_target: { type: "busy" } },
-    }))
-    await expect(
-      prompt({
-        client,
-        root,
-        state,
-        sessionID: "ses_target",
-        text: "Continue",
-        messageID: "amr_busy",
-        idleTimeoutMs: 0,
-      }),
-    ).rejects.toMatchObject({
-      code: "unavailable_session",
-    } satisfies Partial<OrchestrationError>)
-
     fs.rmSync(worktree, { recursive: true, force: true })
     await expect(
       prompt({ client, root, state, sessionID: "ses_target", text: "Continue", messageID: "amr_stale" }),

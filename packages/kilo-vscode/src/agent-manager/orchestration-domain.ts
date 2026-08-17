@@ -5,6 +5,7 @@ import type { LocalStats, WorktreeStats } from "./GitStatsPoller"
 import type { PRStatus } from "./types"
 import type { ManagedSession, Worktree, WorktreeStateManager } from "./WorktreeStateManager"
 import { SNAPSHOT_INITIALIZATION } from "./constants"
+import { promptWhenSafe } from "./managed-delivery"
 
 export type Activity = "idle" | "busy" | "retry" | "offline"
 export type FilterState = Activity | "waiting"
@@ -343,41 +344,19 @@ export async function prompt(input: {
   if (!(await sameManagedDirectory(response.data.directory, dir))) {
     throw new OrchestrationError("cross_workspace", "The managed session belongs to a different workspace directory")
   }
-  await waitForIdle(input.client, dir, input.sessionID, input.signal, input.idleTimeoutMs ?? 30_000)
   if (input.signal?.aborted) return
-  await input.client.session.promptAsync(
-    {
-      sessionID: input.sessionID,
-      directory: dir,
+  const result = await promptWhenSafe(input.client, {
+    sessionId: input.sessionID,
+    directory: dir,
+    text: input.text,
+    extra: {
       messageID: `msg_agent_manager_${input.messageID}`,
-      parts: [{ type: "text", text: input.text }],
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
-    { throwOnError: true },
-  )
-}
-
-async function waitForIdle(
-  client: KiloClient,
-  directory: string,
-  sessionID: string,
-  signal: AbortSignal | undefined,
-  timeout: number,
-  start = Date.now(),
-): Promise<void> {
-  if (signal?.aborted) return
-  const status = await client.session.status({ directory })
-  if (status.error) throw new OrchestrationError("host_error", "The managed session status could not be read")
-  const activity = status.data?.[sessionID]?.type ?? "idle"
-  if (activity === "idle") return
-  if (Date.now() - start >= timeout) {
-    throw new OrchestrationError(
-      "unavailable_session",
-      `The managed session is still ${activity}; only idle sessions can be prompted`,
-    )
+  })
+  if (result === "rejected") {
+    throw new OrchestrationError("unavailable_session", "The managed session cannot accept a prompt right now")
   }
-  await new Promise<void>((resolve) => setTimeout(resolve, 250))
-  return waitForIdle(client, directory, sessionID, signal, timeout, start)
 }
 
 export function move(input: { state: WorktreeStateManager; sessionID: string; sectionID: string | null }): void {

@@ -1,3 +1,4 @@
+import { promptWhenSafe } from "./managed-delivery"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 
 export interface PromoteHandoffInput {
@@ -18,18 +19,10 @@ export function handoffText(input: Omit<PromoteHandoffInput, "client" | "session
 }
 
 export async function recordPromotionHandoff(input: PromoteHandoffInput): Promise<void> {
-  const payload = {
-    sessionID: input.sessionId,
+  await promptWhenSafe(input.client, {
+    sessionId: input.sessionId,
     directory: input.directory,
-    noReply: true,
-    parts: [
-      {
-        type: "text",
-        text: handoffText(input),
-        synthetic: true,
-      },
-    ],
-  } as Parameters<KiloClient["session"]["promptAsync"]>[0]
-
-  await input.client.session.promptAsync(payload, { throwOnError: true })
+    text: handoffText(input),
+    extra: { noReply: true, synthetic: true },
+  })
 }

@@ -1,3 +1,4 @@
+import { promptWhenSafe } from "./managed-delivery"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 
 export interface ForkHandoffInput {
@@ -24,18 +25,11 @@ export function forkText(input: Pick<ForkHandoffInput, "directory">): string {
 }
 
 export async function recordForkHandoff(input: ForkHandoffInput): Promise<void> {
-  const payload = {
-    sessionID: input.sessionId,
-    ...(input.directory ? { directory: input.directory } : {}),
-    noReply: true,
-    parts: [
-      {
-        type: "text",
-        text: forkText(input),
-        synthetic: true,
-      },
-    ],
-  } as Parameters<KiloClient["session"]["promptAsync"]>[0]
-
-  await input.client.session.promptAsync(payload, { throwOnError: true })
+  const directory = input.directory ?? ""
+  await promptWhenSafe(input.client, {
+    sessionId: input.sessionId,
+    directory,
+    text: forkText(input),
+    extra: { noReply: true, synthetic: true },
+  })
 }
