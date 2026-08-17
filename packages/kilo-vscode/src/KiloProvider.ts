@@ -1584,7 +1584,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
       return true
     }
-    this.inspectorSessionIds.delete(message.sessionID)
+    if (message.scope === "inspector") this.inspectorSessionIds.delete(message.sessionID)
     this.releaseChildSession(message.sessionID)
     return true
   }
