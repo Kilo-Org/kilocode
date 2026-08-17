@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -47,13 +48,36 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
             val line = area.getFontMetrics(area.font).height
             val chrome = pane.insets.top + pane.insets.bottom +
                 (pane.viewportBorder?.getBorderInsets(pane)?.let { it.top + it.bottom } ?: 0) +
-                area.insets.top + area.insets.bottom + pane.horizontalScrollBar.preferredSize.height
+                area.insets.top + area.insets.bottom
 
             assertEquals(msg, area.text)
+            assertFalse(area.isOpaque)
+            assertFalse(pane.isOpaque)
+            assertFalse(pane.viewport.isOpaque)
+            assertEquals(0, area.insets.top)
+            assertEquals(0, area.insets.bottom)
+            assertEquals(UiStyle.Gap.pad(), area.insets.left)
+            assertEquals(UiStyle.Gap.pad(), area.insets.right)
             assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, pane.horizontalScrollBarPolicy)
             assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, pane.verticalScrollBarPolicy)
             assertTrue(pane.preferredSize.height <= line * SessionUiStyle.View.Outcome.ERROR_LINES + chrome)
             assertTrue(area.preferredSize.height > pane.preferredSize.height - chrome)
+        }
+    }
+
+    fun `test showError shrinks scroll pane for short messages`() {
+        edt {
+            val view = SessionOutcomeView()
+            val msg = "line 1\nline 2"
+            view.showError(msg, "APIError")
+
+            val pane = errorScroll(view, msg)
+            val area = pane.viewport.view as JBTextArea
+            val chrome = pane.insets.top + pane.insets.bottom +
+                (pane.viewportBorder?.getBorderInsets(pane)?.let { it.top + it.bottom } ?: 0) +
+                area.insets.top + area.insets.bottom
+
+            assertEquals(area.preferredSize.height + chrome, pane.preferredSize.height)
         }
     }
 
@@ -118,7 +142,23 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test error content extends to card side edges`() {
+        edt {
+            val view = SessionOutcomeView()
+            view.showError("Provider balance is too low", "APIError")
+
+            val ins = view.border.getBorderInsets(view)
+            assertEquals(0, ins.left)
+            assertEquals(0, ins.right)
+            assertEquals(UiStyle.Gap.lg(), ins.bottom)
+            assertEquals(UiStyle.Gap.pad(), headerBorder(view).left)
+        }
+    }
+
     private fun findText(root: Container, text: String) = findAll<JBTextArea>(root).firstOrNull { it.text == text }
+
+    private fun headerBorder(root: SessionOutcomeView) = ((root.layout as java.awt.BorderLayout).getLayoutComponent(java.awt.BorderLayout.NORTH) as Container)
+        .let { (it as javax.swing.JPanel).border.getBorderInsets(it) }
 
     private fun assertIcons(root: Container, icon: Icon) {
         val icons = findAll<JBLabel>(root).mapNotNull { it.icon }

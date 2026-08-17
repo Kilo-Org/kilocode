@@ -40,12 +40,8 @@ import javax.swing.JPanel
 open class DialogView(
     private val selection: SessionSelection? = null,
     private val focus: (() -> Unit)? = null,
-) : RoundedContentPanel(
-    UiStyle.Gap.pad(),
-    UiStyle.Gap.pad(),
-    UiStyle.Gap.lg(),
-    UiStyle.Gap.pad(),
-), SessionEditorStyleTarget {
+    // Insets are owned by syncInsets(); the super border is a placeholder it overwrites.
+) : RoundedContentPanel(0, 0), SessionEditorStyleTarget {
 
     // ---- Action descriptor ----
 
@@ -99,7 +95,17 @@ open class DialogView(
     private var top: JComponent? = null
     private var content: JComponent? = null
     private var actionLeft: JComponent? = null
+
+    // Top inset value used when top padding is on; QuestionView sets a non-standard step here.
+    private var topInset = UiStyle.Gap.pad()
+    // Header→content gap in the north stack.
     private var gap = UiStyle.Gap.lg()
+
+    // Which edges keep the standard dialog padding around the content.
+    private var padTop = true
+    private var padLeft = true
+    private var padRight = true
+    private var padBottom = true
 
     // action buttons keyed by id for retained updates
     private val actionButtons = mutableMapOf<String, JButton>()
@@ -112,12 +118,12 @@ open class DialogView(
 
     private val footer = JPanel(BorderLayout()).apply {
         isOpaque = false
-        border = JBUI.Borders.emptyTop(UiStyle.Gap.lg())
     }
 
     init {
         text.next(headerText).next(descriptionText)
         header.add(text, BorderLayout.CENTER)
+        syncInsets()
         syncNorth()
         add(north, BorderLayout.NORTH)
     }
@@ -190,10 +196,31 @@ open class DialogView(
         repaint()
     }
 
+    /**
+     * Choose which edges keep the standard dialog padding around the content.
+     * A disabled edge lets the content bleed to that card edge while the header
+     * and action footer keep their own standard side padding.
+     */
+    @RequiresEdt
+    fun setContentPadding(top: Boolean = true, left: Boolean = true, right: Boolean = true, bottom: Boolean = true) {
+        padTop = top
+        padLeft = left
+        padRight = right
+        padBottom = bottom
+        syncInsets()
+        revalidate()
+        repaint()
+    }
+
+    /**
+     * Set the top inset (when top padding is on) and the header→content gap.
+     * Use for non-standard vertical spacing; the standard values are used otherwise.
+     */
     @RequiresEdt
     fun setSpacing(top: Int, gap: Int) {
+        topInset = top
         this.gap = gap
-        border = JBUI.Borders.empty(top, UiStyle.Gap.pad(), UiStyle.Gap.lg(), UiStyle.Gap.pad())
+        syncInsets()
         syncNorth()
         revalidate()
         repaint()
@@ -314,6 +341,20 @@ open class DialogView(
     }
 
     private fun hasHeader() = icon.icon != null || headerText.text.isNotBlank() || descriptionText.isVisible
+
+    private fun syncInsets() {
+        val side = UiStyle.Gap.pad()
+        val innerLeft = if (padLeft) 0 else side
+        val innerRight = if (padRight) 0 else side
+        border = JBUI.Borders.empty(
+            if (padTop) topInset else 0,
+            if (padLeft) side else 0,
+            if (padBottom) UiStyle.Gap.lg() else 0,
+            if (padRight) side else 0,
+        )
+        north.border = JBUI.Borders.empty(0, innerLeft, 0, innerRight)
+        footer.border = JBUI.Borders.empty(UiStyle.Gap.lg(), innerLeft, 0, innerRight)
+    }
 
     private fun syncFooter() {
         val layout = footer.layout as BorderLayout

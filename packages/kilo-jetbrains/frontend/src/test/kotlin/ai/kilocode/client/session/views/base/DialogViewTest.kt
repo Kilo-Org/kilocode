@@ -169,6 +169,49 @@ class DialogViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test disabling side padding removes only those card insets`() {
+        edt {
+            val panel = DialogView()
+            panel.setContent(JLabel("body"))
+            panel.setContentPadding(left = false, right = false)
+
+            val ins = panel.border.getBorderInsets(panel)
+            assertEquals(0, ins.left)
+            assertEquals(0, ins.right)
+            assertEquals(UiStyle.Gap.pad(), ins.top)
+            assertEquals(UiStyle.Gap.lg(), ins.bottom)
+        }
+    }
+
+    fun `test disabling top and bottom padding removes those card insets`() {
+        edt {
+            val panel = DialogView()
+            panel.setContent(JLabel("body"))
+            panel.setContentPadding(top = false, bottom = false)
+
+            val ins = panel.border.getBorderInsets(panel)
+            assertEquals(0, ins.top)
+            assertEquals(0, ins.bottom)
+            assertEquals(UiStyle.Gap.pad(), ins.left)
+            assertEquals(UiStyle.Gap.pad(), ins.right)
+        }
+    }
+
+    fun `test disabling side padding keeps header and footer side insets`() {
+        edt {
+            val panel = DialogView()
+            panel.setHeader("Title")
+            panel.setContent(JLabel("body"))
+            panel.setContentPadding(left = false, right = false)
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) {}))
+
+            val north = region(panel, BorderLayout.NORTH) as JPanel
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            assertEquals(UiStyle.Gap.pad(), north.border.getBorderInsets(north).left)
+            assertEquals(UiStyle.Gap.pad(), footer.border.getBorderInsets(footer).left)
+        }
+    }
+
     // ------ setActions ------
 
     fun `test setActions renders one button per action`() {

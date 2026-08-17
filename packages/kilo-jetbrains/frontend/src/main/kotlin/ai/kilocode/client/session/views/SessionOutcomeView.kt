@@ -3,17 +3,19 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.OutcomeTone
-import ai.kilocode.client.session.ui.SessionCodeScroll
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.DialogView
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Dimension
+import java.awt.Rectangle
 import javax.swing.ScrollPaneConstants
 
 class SessionOutcomeView(
@@ -36,6 +38,7 @@ class SessionOutcomeView(
         setHeaderIcon(AllIcons.General.Error, kind ?: KiloBundle.message("session.error.title"))
         setHeader(KiloBundle.message("session.error.title"))
         error.text = message
+        setContentPadding(left = false, right = false)
         setContent(error.scroll)
         isVisible = true
         refresh()
@@ -57,6 +60,7 @@ class SessionOutcomeView(
         }
         setHeaderIcon(icon, title)
         setHeader(title, desc)
+        setContentPadding()
         setContent(null)
         isVisible = true
         refresh()
@@ -77,35 +81,62 @@ class SessionOutcomeView(
 }
 
 private class ErrorBody {
-    private val area = JBTextArea().apply {
+    private val area = object : JBTextArea() {
+        override fun getPreferredSize() = withWidth(super.getPreferredSize().height)
+
+        override fun scrollRectToVisible(aRect: Rectangle) {}
+
+        private fun withWidth(fallback: Int): Dimension {
+            val w = availableWidth()
+            if (w <= 0) return Dimension(super.getPreferredSize().width, fallback)
+            val old = size
+            setSize(w, Int.MAX_VALUE)
+            val ps = super.getPreferredSize()
+            setSize(old)
+            return Dimension(w, ps.height)
+        }
+
+        private fun availableWidth(): Int {
+            var node = parent
+            while (node != null) {
+                if (node.width > 0) {
+                    val ins = node.insets
+                    return (node.width - ins.left - ins.right).coerceAtLeast(0)
+                }
+                node = node.parent
+            }
+            return width
+        }
+    }.apply {
         isEditable = false
+        isOpaque = false
+        isFocusable = false
         caret.isVisible = false
         caret.isSelectionVisible = true
         lineWrap = true
         wrapStyleWord = true
-        background = SessionUiStyle.Colors.codeBlockBackground()
-        border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
-        )
+        border = JBUI.Borders.empty(0, UiStyle.Gap.pad())
     }
 
-    val scroll = object : SessionCodeScroll(area) {
+    val scroll = object : JBScrollPane(area) {
         override fun getPreferredSize(): Dimension {
             val size = super.getPreferredSize()
             val ins = viewportBorder?.getBorderInsets(this) ?: JBUI.emptyInsets()
-            val height = area.getFontMetrics(area.font).height * SessionUiStyle.View.Outcome.ERROR_LINES +
-                insets.top + insets.bottom + ins.top + ins.bottom + area.insets.top + area.insets.bottom +
-                horizontalScrollBar.preferredSize.height
+            val chrome = insets.top + insets.bottom + ins.top + ins.bottom + area.insets.top + area.insets.bottom
+            val cap = area.getFontMetrics(area.font).height * SessionUiStyle.View.Outcome.ERROR_LINES + chrome
+            val height = minOf(area.preferredSize.height + chrome, cap)
             return Dimension(size.width, height)
         }
 
         override fun updateUI() {
             super.updateUI()
             border = JBUI.Borders.empty()
-            viewport?.background = SessionUiStyle.Colors.codeBlockBackground()
+            viewportBorder = JBUI.Borders.empty()
+            viewport?.isOpaque = false
         }
     }.apply {
+        isOpaque = false
+        viewport.isOpaque = false
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
@@ -130,7 +161,5 @@ private class ErrorBody {
     fun applyStyle(style: SessionEditorStyle) {
         area.font = style.transcriptFont
         area.foreground = SessionUiStyle.Colors.foreground()
-        area.background = SessionUiStyle.Colors.codeBlockBackground()
-        scroll.viewport.background = SessionUiStyle.Colors.codeBlockBackground()
     }
 }
