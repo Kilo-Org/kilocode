@@ -393,12 +393,13 @@ async function launch() {
     return
   }
 
+  // Do not set `shell: true` on Windows. cmd.exe splits Code.exe paths that
+  // contain spaces (for example `Microsoft VS Code`), so the isolated host never starts.
   const child = spawn(app, args, {
     cwd: workspace,
     detached: !win,
     env,
     stdio: "ignore",
-    ...(win ? { shell: true } : {}),
   })
   child.unref()
 
