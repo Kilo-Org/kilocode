@@ -20,7 +20,7 @@ async function collectTs(dir: string): Promise<string[]> {
 }
 
 describe("kilo-foundation stays generic", () => {
-  test("source does not name AutoAITeam product roles or task statuses", async () => {
+  test("source does not name product-specific team roles or task statuses", async () => {
     const files = await collectTs(srcRoot)
     expect(files.length).toBeGreaterThan(0)
     const banned = /Engineering Manager|Reviewer|Tester|Discovery|MILESTONE_GATE|REVIEW_APPROVED|TEST_FAILED|DB_AGENT/
