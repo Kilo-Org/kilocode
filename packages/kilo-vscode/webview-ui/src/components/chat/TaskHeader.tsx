@@ -56,15 +56,18 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     const status = session.allStatusMap()[id]
     return status?.type === "busy" || status?.type === "retry"
   }
+  const tabInput = (id: string) => session.scopedQuestions(id).length > 0
   const rows = createMemo(() =>
     (tabs?.ids() ?? []).map((id) => ({
       id,
       title: tabTitle(id),
       active: tabs?.active() === id,
       busy: tabBusy(id),
+      input: tabInput(id),
       pending: isPendingTab(id),
     })),
   )
+  const hasInput = createMemo(() => rows().some((item) => item.input))
   const hasTabs = createMemo(() => !!props.sessionSwitcher && !!tabs && tabs.ids().length > 0)
 
   const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
@@ -231,6 +234,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 placement="bottom-start"
                 hover
                 autofocus={false}
+                alert={hasInput}
               />
             </div>
           )}

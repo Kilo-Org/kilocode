@@ -1,4 +1,3 @@
-import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { List } from "@kilocode/kilo-ui/list"
 import type { ListRef } from "@kilocode/kilo-ui/list"
@@ -12,6 +11,7 @@ interface SessionTabSwitcherItem {
   title: string
   active: boolean
   busy: boolean
+  input: boolean
   pending: boolean
 }
 
@@ -33,6 +33,7 @@ interface SessionTabSwitcherProps {
   placement?: "bottom-start" | "bottom-end"
   hover?: boolean
   autofocus?: boolean
+  alert?: () => boolean
 }
 
 export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) => {
@@ -133,6 +134,12 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
     </div>
   )
 
+  const state = (item: SessionTabSwitcherItem) => {
+    if (item.input) return "input"
+    if (item.busy) return "running"
+    return "stopped"
+  }
+
   return (
     <Tooltip value={props.labels.open} placement="bottom" gutter={8} inactive={open()}>
       <Popover
@@ -153,6 +160,7 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
           size: "normal",
           variant: "ghost",
           class: "search-menu-trigger",
+          classList: { "session-tab-switcher-trigger-alert": props.alert?.() ?? false },
           "aria-label": props.labels.open,
           onPointerEnter: show,
           onPointerLeave: schedule,
@@ -178,9 +186,16 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
           >
             {(item) => (
               <span class="search-menu-row">
-                <span class="search-menu-icon">
-                  <Show when={!item.busy} fallback={<Spinner class="search-menu-spinner" />}>
-                    <Icon name="speech-bubble" size="small" />
+                <span class="search-menu-icon session-tab-switcher-icon" data-state={state(item)}>
+                  <Show
+                    when={item.input}
+                    fallback={
+                      <Show when={item.busy}>
+                        <Spinner class="search-menu-spinner" />
+                      </Show>
+                    }
+                  >
+                    <span class="session-tab-switcher-question">?</span>
                   </Show>
                 </span>
                 <span class="search-menu-copy">

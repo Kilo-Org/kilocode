@@ -42,6 +42,31 @@
   text-transform: uppercase;
 }
 
+.session-tab-switcher-icon[data-state="running"] {
+  --icon-base: var(--vscode-testing-iconPassed, #73c991);
+  color: var(--icon-base);
+}
+
+.session-tab-switcher-icon[data-state="input"] {
+  --icon-base: var(--vscode-button-foreground);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--vscode-button-background);
+  color: var(--icon-base);
+}
+
+.session-tab-switcher-question {
+  color: var(--vscode-button-foreground);
+  font-size: var(--kilo-font-size-12);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.session-tab-switcher-icon[data-state="running"] [data-slot="icon-svg"] {
+  color: currentColor;
+}
+
 .session-tab-switcher-close[data-component="icon-button"] {
   position: absolute;
   inset-block-start: 50%;

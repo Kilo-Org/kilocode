@@ -16,8 +16,23 @@
 }
 
 [data-slot="task-header-session-switcher"] .search-menu-trigger[data-component="icon-button"] {
+  position: relative;
   width: 26px;
   height: 26px;
+}
+
+[data-slot="task-header-session-switcher"] .session-tab-switcher-trigger-alert::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-end: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--vscode-button-background);
+  box-shadow:
+    0 0 0 1px var(--surface-base, var(--vscode-editor-background)),
+    0 0 8px color-mix(in srgb, var(--vscode-button-background) 70%, transparent);
 }
 
 [data-slot="task-header-title-trigger"] {
