@@ -325,7 +325,8 @@ const AgentManagerContent: Component = () => {
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
   const subagents = createSubagentTabs({
     current: session.currentSessionID,
-    sync: session.syncSession,
+    sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
+    unsync: (id) => session.unsyncSession(id, "inspector"),
     show: () => {
       setHistory(false)
       setReviewActive(false)

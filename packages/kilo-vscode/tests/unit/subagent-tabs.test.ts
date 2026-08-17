@@ -4,10 +4,16 @@ import { createSubagentTabs } from "../../webview-ui/agent-manager/subagent-tabs
 
 function scene() {
   const [current] = createSignal<string | undefined>("parent")
-  const calls = { synced: [] as Array<[string, string | undefined]>, shown: 0, hidden: 0 }
+  const calls = {
+    synced: [] as Array<[string, string | undefined]>,
+    unsynced: [] as string[],
+    shown: 0,
+    hidden: 0,
+  }
   const tabs = createSubagentTabs({
     current,
     sync: (id, parent) => calls.synced.push([id, parent]),
+    unsync: (id) => calls.unsynced.push(id),
     show: () => calls.shown++,
     hide: () => calls.hidden++,
   })
@@ -47,6 +53,7 @@ describe("Agent Manager subagent tabs", () => {
       item.tabs.close("one")
       expect(item.tabs.tabs()).toEqual([])
       expect(item.tabs.active()).toBeUndefined()
+      expect(item.calls.unsynced).toEqual(["two", "three", "one"])
       expect(item.calls.hidden).toBe(1)
       dispose()
     })
@@ -62,6 +69,7 @@ describe("Agent Manager subagent tabs", () => {
       item.tabs.closeOthers("one")
       expect(item.tabs.tabs().map((tab) => tab.id)).toEqual(["one"])
       expect(item.tabs.active()).toBe("one")
+      expect(item.calls.unsynced).toEqual(["two", "three"])
       expect(item.calls.shown).toBe(4)
       dispose()
     })

@@ -9,6 +9,7 @@ export interface SubagentTab {
 interface Options {
   current: Accessor<string | undefined>
   sync: (id: string, parentID?: string) => void
+  unsync: (id: string) => void
   show: () => void
   hide: () => void
 }
@@ -20,6 +21,7 @@ export function createSubagentTabs(opts: Options) {
   const open = (id: string, title?: string, parentID?: string) => {
     if (!id) return
     const label = title?.trim() || "Sub-agent"
+    const existing = tabs().some((tab) => tab.id === id)
     batch(() => {
       setTabs((prev) => {
         const existing = prev.find((tab) => tab.id === id)
@@ -32,7 +34,7 @@ export function createSubagentTabs(opts: Options) {
       setActive(id)
       opts.show()
     })
-    opts.sync(id, parentID ?? opts.current())
+    if (!existing) opts.sync(id, parentID ?? opts.current())
   }
 
   const select = (id: string) => {
@@ -46,6 +48,7 @@ export function createSubagentTabs(opts: Options) {
     const index = current.findIndex((tab) => tab.id === id)
     if (index < 0) return
     const next = current.filter((tab) => tab.id !== id)
+    opts.unsync(id)
     setTabs(next)
     if (active() !== id) return
     const replacement = next[Math.min(index, next.length - 1)]
@@ -59,6 +62,9 @@ export function createSubagentTabs(opts: Options) {
 
   const closeOthers = (id: string) => {
     if (!tabs().some((tab) => tab.id === id)) return
+    for (const tab of tabs()) {
+      if (tab.id !== id) opts.unsync(tab.id)
+    }
     setTabs((prev) => prev.filter((tab) => tab.id === id))
     setActive(id)
     opts.show()

@@ -34,7 +34,7 @@ const SubagentChat: Component<{ active: Accessor<string | undefined> }> = (props
   createEffect(() => {
     const id = props.active()
     if (!id) return
-    session.selectSession(id)
+    session.selectSession(id, { focus: false })
   })
 
   return (
@@ -44,77 +44,88 @@ const SubagentChat: Component<{ active: Accessor<string | undefined> }> = (props
   )
 }
 
-export const SubagentPanel: Component<Props> = (props) => {
+const SubagentContent: Component<Props> = (props) => {
+  const session = useSession()
   const ids = () => props.tabs().map((tab) => tab.id)
   const title = (id: string) => props.tabs().find((tab) => tab.id === id)?.title ?? "Sub-agent"
   const close = (id: string, focus: { restore: () => void }) => {
     props.onClose(id)
+    session.releaseSession(id)
     if (ids().length > 0) focus.restore()
+  }
+  const closeOthers = (id: string) => {
+    const gone = ids().filter((item) => item !== id)
+    props.onCloseOthers(id)
+    for (const item of gone) session.releaseSession(item)
   }
 
   return (
-    <SessionProvider>
-      <section
-        class="am-subagent-panel"
-        classList={{ "am-subagent-panel-visible": props.visible() }}
-        aria-label="Subagents"
-        aria-hidden={!props.visible()}
-        inert={!props.visible()}
-      >
-        <header class="am-subagent-header">
-          <div class="am-subagent-heading">
-            <Icon name="task" size="small" />
-            <span>Subagents</span>
-            <span class="am-subagent-count">{props.tabs().length}</span>
-          </div>
-          <IconButton
-            icon="x"
-            size="small"
-            variant="ghost"
-            aria-label="Close subagents panel"
-            onClick={props.onClosePanel}
-          />
-        </header>
-        <InspectorTabStrip
-          ids={ids}
-          active={props.active}
-          label="Subagent sessions"
-          overlay={title}
-          onSelect={props.onSelect}
-          onReorder={props.onReorder}
-          renderTab={(id, api) => {
-            const label = title(id)
-            return (
-              <SortableClosableTab
-                id={id}
-                label={label}
-                tooltip={label}
-                icon="task"
-                showKeybind={false}
-                keybind={props.active() === id ? "" : props.nextKeybind}
-                closeKeybind={props.closeKeybind}
-                active={props.active() === id}
-                role="tab"
-                selected={props.active() === id}
-                tabIndex={props.active() === id ? 0 : -1}
-                onKeyDown={(event) => api.focus.key(id, event)}
-                onSelect={() => props.onSelect(id)}
-                onMiddleClick={(event) => {
-                  if (event.button !== 1) return
-                  event.preventDefault()
-                  event.stopPropagation()
-                  close(id, api.focus)
-                }}
-                onClose={() => close(id, api.focus)}
-                onCloseOthers={() => props.onCloseOthers(id)}
-              />
-            )
-          }}
-        />
-        <div class="am-subagent-chat">
-          <SubagentChat active={props.active} />
+    <section
+      class="am-subagent-panel"
+      classList={{ "am-subagent-panel-visible": props.visible() }}
+      aria-label="Subagents"
+      aria-hidden={!props.visible()}
+      inert={!props.visible()}
+    >
+      <header class="am-subagent-header">
+        <div class="am-subagent-heading">
+          <Icon name="task" size="small" />
+          <span>Subagents</span>
+          <span class="am-subagent-count">{props.tabs().length}</span>
         </div>
-      </section>
-    </SessionProvider>
+        <IconButton
+          icon="x"
+          size="small"
+          variant="ghost"
+          aria-label="Close subagents panel"
+          onClick={props.onClosePanel}
+        />
+      </header>
+      <InspectorTabStrip
+        ids={ids}
+        active={props.active}
+        label="Subagent sessions"
+        overlay={title}
+        onSelect={props.onSelect}
+        onReorder={props.onReorder}
+        renderTab={(id, api) => {
+          const label = title(id)
+          return (
+            <SortableClosableTab
+              id={id}
+              label={label}
+              tooltip={label}
+              icon="task"
+              showKeybind={false}
+              keybind={props.active() === id ? "" : props.nextKeybind}
+              closeKeybind={props.closeKeybind}
+              active={props.active() === id}
+              role="tab"
+              selected={props.active() === id}
+              tabIndex={props.active() === id ? 0 : -1}
+              onKeyDown={(event) => api.focus.key(id, event)}
+              onSelect={() => props.onSelect(id)}
+              onMiddleClick={(event) => {
+                if (event.button !== 1) return
+                event.preventDefault()
+                event.stopPropagation()
+                close(id, api.focus)
+              }}
+              onClose={() => close(id, api.focus)}
+              onCloseOthers={() => closeOthers(id)}
+            />
+          )
+        }}
+      />
+      <div class="am-subagent-chat">
+        <SubagentChat active={props.active} />
+      </div>
+    </section>
   )
 }
+
+export const SubagentPanel: Component<Props> = (props) => (
+  <SessionProvider>
+    <SubagentContent {...props} />
+  </SessionProvider>
+)

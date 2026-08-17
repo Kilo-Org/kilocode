@@ -52,10 +52,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     }),
   )
 
+  let synced: string | undefined
   createEffect(() => {
     const id = taskVisible(open(), childSessionId())
+    if (synced === id) return
+    if (synced) session.unsyncSession(synced)
+    synced = id
     if (!id) return
     session.syncSession(id)
+  })
+  onCleanup(() => {
+    if (synced) session.unsyncSession(synced)
   })
 
   const title = createMemo(() => i18n.t("ui.tool.agent", { type: props.input.subagent_type || props.tool }))

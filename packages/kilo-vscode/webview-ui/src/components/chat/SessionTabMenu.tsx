@@ -24,7 +24,7 @@ export const SessionTabMenu: ParentComponent<{
               <Icon name="fork" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.tab.forkSession")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
-            <Show when={props.closeable !== false}>
+            <Show when={props.closeable !== false || props.onCloseOthers}>
               <ContextMenu.Separator />
             </Show>
           </Show>
@@ -34,12 +34,12 @@ export const SessionTabMenu: ParentComponent<{
               <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>
               {props.closeShortcut}
             </ContextMenu.Item>
-            <Show when={props.onCloseOthers}>
-              <ContextMenu.Item onSelect={() => props.onCloseOthers?.()}>
-                <Icon name="close" size="small" />
-                <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
-              </ContextMenu.Item>
-            </Show>
+          </Show>
+          <Show when={props.onCloseOthers}>
+            <ContextMenu.Item onSelect={() => props.onCloseOthers?.()}>
+              <Icon name="close" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
+            </ContextMenu.Item>
           </Show>
         </ContextMenu.Content>
       </ContextMenu.Portal>
