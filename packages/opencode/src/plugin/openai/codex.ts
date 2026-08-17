@@ -422,8 +422,8 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
                     }
                   : model.id.includes("gpt-5.6")
                     ? {
-                        context: 500_000,
-                        input: 372_000,
+                        context: 1_050_000, // kilocode_change - use the current Codex limits for GPT-5.6 OAuth models
+                        input: 922_000, // kilocode_change
                         output: 128_000,
                       }
                     : model.limit,

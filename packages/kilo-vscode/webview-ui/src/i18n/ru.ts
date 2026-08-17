@@ -1109,10 +1109,15 @@ export const dict = {
     "Выберите, будут ли блоки изменений кода и различий изначально развёрнуты или свёрнуты.",
   "settings.display.codeEdit.expanded": "Развёрнуты",
   "settings.display.codeEdit.collapsed": "Свёрнуты",
+  "settings.display.mcpTool.title": "Блоки MCP и общих инструментов",
+  "settings.display.mcpTool.description":
+    "Выберите, будут ли блоки MCP и общих инструментов изначально развёрнуты или свёрнуты.",
+  "settings.display.mcpTool.expanded": "Развёрнуты",
+  "settings.display.mcpTool.collapsed": "Свёрнуты",
 
   "settings.display.tokenThroughput.title": "Показывать пропускную способность токенов",
   "settings.display.tokenThroughput.description":
-    "Отображает скорость генерации текста (токенов/с) в последнем сообщении ассистента и в заголовке задачи. По умолчанию скрыто, чтобы не загромождать чат.",
+    "Показывать скорость генерации текста (tokens/sec) в последнем сообщении ассистента и в заголовке задачи. Показывается по умолчанию; отключите этот параметр, чтобы при необходимости скрыть её.",
   "settings.display.autoApprovalReason.title": "Показывать причину автоодобрения",
   "settings.display.autoApprovalReason.description":
     "Показывает строку у вызовов инструментов, объясняющую, почему они были одобрены автоматически (совпавшее правило, значение агента по умолчанию, режим YOLO и т. д.).",

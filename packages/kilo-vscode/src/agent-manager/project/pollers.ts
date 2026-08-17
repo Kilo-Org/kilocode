@@ -23,7 +23,10 @@ import type { WorktreeStateManager } from "../WorktreeStateManager"
 
 export interface PollerPair {
   stats: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void }
-  pr: { poller: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void } }
+  pr: {
+    poller: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void }
+    replay?(): void
+  }
 }
 
 export type StatsOutMessage =
@@ -82,11 +85,40 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
 
 export class ProjectPollers {
   private readonly pollers = new Map<string, PollerPair>()
+  private readonly cache = new Map<string, { worktrees?: StatsOutMessage; local?: StatsOutMessage }>()
 
   constructor(
     private readonly deps: PollerDeps,
     private readonly create: (ctx: ProjectContext, deps: PollerDeps) => PollerPair = createPollerPair,
   ) {}
+
+  /**
+   * Record the latest stats per project on the way to the webview. A poller
+   * only emits when something changed, so a webview that mounts (or reloads)
+   * after an emit would otherwise keep its stats placeholders forever.
+   */
+  private recording(id: string): PollerDeps {
+    return {
+      ...this.deps,
+      post: (msg) => {
+        const entry = this.cache.get(id) ?? {}
+        if (msg.type === "agentManager.worktreeStats") entry.worktrees = msg
+        if (msg.type === "agentManager.localStats") entry.local = msg
+        this.cache.set(id, entry)
+        this.deps.post(msg)
+      },
+    }
+  }
+
+  /** Re-post the latest background project stats and PR statuses. */
+  replay(): void {
+    for (const [id, pair] of this.pollers) {
+      const entry = this.cache.get(id)
+      if (entry?.worktrees) this.deps.post(entry.worktrees)
+      if (entry?.local) this.deps.post(entry.local)
+      pair.pr.replay?.()
+    }
+  }
 
   /**
    * Reconcile pollers with the current expanded set: start pollers for
@@ -101,7 +133,7 @@ export class ProjectPollers {
       if (!ctx?.peekState()) continue
       wanted.add(snap.id)
       if (this.pollers.has(snap.id)) continue
-      const pair = this.create(ctx, this.deps)
+      const pair = this.create(ctx, this.recording(snap.id))
       pair.stats.setVisible(this.deps.visible())
       pair.pr.poller.setVisible(this.deps.visible())
       pair.stats.setEnabled(true)
@@ -113,6 +145,7 @@ export class ProjectPollers {
       pair.stats.stop()
       pair.pr.poller.stop()
       this.pollers.delete(id)
+      this.cache.delete(id)
     }
   }
 
@@ -129,6 +162,7 @@ export class ProjectPollers {
       pair.pr.poller.stop()
     }
     this.pollers.clear()
+    this.cache.clear()
   }
 }
 

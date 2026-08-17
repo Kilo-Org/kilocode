@@ -199,9 +199,9 @@ export function activeUserMessageID(
   status: SessionStatusInfo,
   parts?: (msg: Message) => Message["parts"],
 ) {
+  if (status.type === "idle") return undefined
   const id = active(messages, status, parts)
   if (id) return id
-  if (status.type === "idle") return undefined
   return pending(messages, parts)
 }
 
