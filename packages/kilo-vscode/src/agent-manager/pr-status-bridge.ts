@@ -9,6 +9,7 @@ import type { AgentManagerOutMessage, PRStatus } from "./types"
 import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
+import { resolveComment, unresolveComment } from "./pr/PRActions"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
@@ -83,6 +84,49 @@ export class PRStatusBridge {
     if (m.type === "agentManager.openPR") {
       const url = (m.url as string) ?? this.host.getWorktrees().find((w: Worktree) => w.id === m.worktreeId)?.prUrl
       if (url) this.host.openExternal(url)
+      return true
+    }
+    const isResolve = m.type === "agentManager.resolveComment"
+    const isUnresolve = m.type === "agentManager.unresolveComment"
+    if (isResolve || isUnresolve) {
+      const id = m.worktreeId as string
+      const threadId = m.threadId as string
+      const wt = this.host.getWorktrees().find((w: Worktree) => w.id === id)
+      const cwd = wt?.path ?? this.host.getWorkspaceRoot()
+      const resultType = isResolve ? "agentManager.resolveCommentResult" : "agentManager.unresolveCommentResult"
+      if (!cwd) {
+        this.host.log("resolveComment: no cwd for worktree", id)
+        this.host.postToWebview({
+          type: resultType,
+          worktreeId: id,
+          threadId,
+          success: false,
+        })
+        return true
+      }
+      const action = isResolve ? resolveComment : unresolveComment
+      action(threadId, cwd).then(
+        () => {
+          this.host.postToWebview({
+            type: resultType,
+            worktreeId: id,
+            threadId,
+            success: true,
+          })
+          // Refresh PR data after successful mutation to get updated comment state
+          this.poller.refresh(id)
+        },
+        (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err)
+          this.host.log(`${resultType} failed: ${msg}`)
+          this.host.postToWebview({
+            type: resultType,
+            worktreeId: id,
+            threadId,
+            success: false,
+          })
+        },
+      )
       return true
     }
     return false

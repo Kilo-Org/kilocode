@@ -11,7 +11,7 @@ The gateway works seamlessly with the [Vercel AI SDK](https://ai-sdk.dev), the [
 
 ## Key features
 
-- **One key, hundreds of models**: Access models from Anthropic, OpenAI, Google, xAI, Mistral, MiniMax, and more with a single API key
+- **One key, hundreds of models**: Access models from Anthropic, OpenAI, Google, SpaceXAI, Mistral, MiniMax, and more with a single API key
 - **OpenAI-compatible API**: Drop-in replacement for OpenAI's `/chat/completions` endpoint -- switch models by changing a single string
 - **Streaming support**: Full Server-Sent Events (SSE) streaming with time-to-first-token tracking
 - **BYOK (Bring Your Own Key)**: Use your own provider API keys with encrypted-at-rest storage

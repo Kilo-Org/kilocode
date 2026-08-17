@@ -150,6 +150,18 @@
 
 ## [Unreleased]
 
+## [7.0.16] - 2026-08-14
+
+### Added
+
+### Fixed
+- Improve JetBrains chat readability with refreshed session surfaces, softer spacing, clearer prompt bubbles, and more consistent hover states.
+- Make JetBrains CLI downloads more reliable by retrying transient failures and rate limits, and by avoiding authentication on public CLI asset fetches.
+
+### Changed
+- Update the JetBrains plugin CLI pin to Kilo Core 7.4.22.
+- Refresh Kilo Core with upstream provider, model variant, and session runtime updates.
+
 ## [7.0.15] - 2026-08-10
 
 ### Added

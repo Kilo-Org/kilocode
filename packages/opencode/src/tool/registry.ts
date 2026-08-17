@@ -37,6 +37,7 @@ import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_cha
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { Auth } from "@/auth" // kilocode_change
+import { Env } from "@/env" // kilocode_change - websearch resolves its config via Env.Service
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
@@ -548,6 +549,7 @@ export const node = LayerNode.suspend(() =>
       Git.node,
       Bus.node,
       Auth.node,
+      Env.node, // kilocode_change - websearch resolves its config via Env.Service
       SessionStatus.node,
       AgentManager.node,
       Notebook.node,

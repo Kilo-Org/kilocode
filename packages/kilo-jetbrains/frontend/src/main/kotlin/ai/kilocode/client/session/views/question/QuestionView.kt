@@ -185,7 +185,7 @@ class QuestionView(
         card.applyStyle(style)
         customEditor?.let { ed ->
             style.applyTranscriptToField(ed)
-            ed.background = style.editorBackground
+            ed.background = SessionUiStyle.Colors.codeBlockBackground()
             syncEditorHeight(ed)
         }
         val changed = texts.fold(false) { acc, item -> setFont(item.first, item.second) || acc }
@@ -223,7 +223,7 @@ class QuestionView(
         val total = q.items.size
         val shown = minOf(idx + 1, total)
         summary.text = KiloBundle.message("session.question.summary", shown, total)
-        summary.foreground = UiStyle.Colors.weak()
+        summary.foreground = SessionUiStyle.Text.Secondary.foreground()
         summary.isVisible = total > 1
         nav.isVisible = total > 1
         topPanel.isVisible = total > 1
@@ -331,7 +331,7 @@ class QuestionView(
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
         }
-        val qText = text(item.question, UiStyle.Colors.weak())
+        val qText = text(item.question, SessionUiStyle.Text.Secondary.foreground())
         qText.alignmentX = Component.LEFT_ALIGNMENT
         row.add(qText)
 
@@ -339,7 +339,7 @@ class QuestionView(
         val joined = answers.joinToString(", ")
         val answer = text(
             joined.ifBlank { KiloBundle.message("session.question.review.notAnswered") },
-            UiStyle.Colors.fg(),
+            SessionUiStyle.Colors.foreground(),
             true,
         )
         answer.alignmentX = Component.LEFT_ALIGNMENT
@@ -442,7 +442,7 @@ class QuestionView(
             addMouseListener(press)
         }
 
-        val label = text(KiloBundle.message("session.question.custom.label"), UiStyle.Colors.fg(), true)
+        val label = text(KiloBundle.message("session.question.custom.label"), SessionUiStyle.Colors.foreground(), true)
         label.alignmentX = Component.LEFT_ALIGNMENT
         label.addMouseListener(press)
         col.add(label)
@@ -526,7 +526,7 @@ class QuestionView(
         }
         selection?.register(ed)?.let(regs::add)
         style.applyTranscriptToField(ed)
-        ed.background = style.editorBackground
+        ed.background = SessionUiStyle.Colors.codeBlockBackground()
 
         // Pre-fill with saved text. This call also forces lazy document creation so
         // that addDocumentListener can install on a non-null document immediately.
@@ -700,13 +700,13 @@ class QuestionView(
             layout = if (center) GridBagLayout() else BoxLayout(this, BoxLayout.Y_AXIS)
             addMouseListener(press)
         }
-        val label = text(opt.label, UiStyle.Colors.fg(), true)
+        val label = text(opt.label, SessionUiStyle.Colors.foreground(), true)
         label.alignmentX = Component.LEFT_ALIGNMENT
         label.addMouseListener(press)
         col.add(label)
 
         if (opt.description.isNotBlank()) {
-            val desc = text(opt.description, UiStyle.Colors.weak())
+            val desc = text(opt.description, SessionUiStyle.Text.Secondary.foreground())
             desc.alignmentX = Component.LEFT_ALIGNMENT
             desc.addMouseListener(press)
             col.add(desc)

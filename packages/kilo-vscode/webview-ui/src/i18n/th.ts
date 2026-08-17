@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "เชื่อมต่อ Anaconda Desktop",
   "provider.anaconda.title.manage": "จัดการ Anaconda Desktop",
@@ -52,6 +54,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 
@@ -822,8 +825,6 @@ export const dict = {
   "settings.experimental.lsp.description": "เปิดใช้งานการรวม Language Server Protocol",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
-  "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
-  "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
   "settings.experimental.imageGeneration.title": "การสร้างภาพ",
   "settings.experimental.imageGeneration.description": "เปิดใช้งานการสร้างภาพด้วย AI",
   "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",
@@ -1086,10 +1087,14 @@ export const dict = {
   "settings.display.codeEdit.description": "เลือกว่าบล็อกการแก้ไขโค้ดและบล็อกแสดงความแตกต่างจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.codeEdit.expanded": "ขยาย",
   "settings.display.codeEdit.collapsed": "ยุบ",
+  "settings.display.mcpTool.title": "บล็อกเครื่องมือ MCP และเครื่องมือทั่วไป",
+  "settings.display.mcpTool.description": "เลือกว่าบล็อกเครื่องมือ MCP และเครื่องมือทั่วไปจะเริ่มต้นแบบขยายหรือยุบ",
+  "settings.display.mcpTool.expanded": "ขยาย",
+  "settings.display.mcpTool.collapsed": "ยุบ",
 
   "settings.display.tokenThroughput.title": "แสดงอัตราการประมวลผลโทเคน",
   "settings.display.tokenThroughput.description":
-    "แสดงอัตราการสร้างข้อความ (โทเคน/วินาที) บนข้อความล่าสุดของผู้ช่วยและในส่วนหัวของงาน ซ่อนโดยค่าเริ่มต้นเพื่อให้แชทดูเรียบร้อย",
+    "แสดงอัตราการสร้างข้อความ (tokens/sec) ในข้อความล่าสุดของผู้ช่วยและส่วนหัวของงาน แสดงโดยค่าเริ่มต้น; ปิดใช้งานการตั้งค่านี้เพื่อซ่อนเมื่อจำเป็น",
   "settings.display.autoApprovalReason.title": "แสดงเหตุผลการอนุมัติอัตโนมัติ",
   "settings.display.autoApprovalReason.description":
     "แสดงบรรทัดในการเรียกใช้เครื่องมือเพื่ออธิบายว่าเหตุใดจึงได้รับการอนุมัติอัตโนมัติ (กฎที่ตรงกัน ค่าเริ่มต้นของเอเจนต์ โหมด YOLO ฯลฯ)",

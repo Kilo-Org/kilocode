@@ -5,8 +5,8 @@ import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
-import { parsePRResult, checkStatus, formatCheckDuration, parseComments, parseReviewers } from "./am-pr-utils"
-import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
+import { parsePRResult, checkStatus, formatCheckDuration, parseComments, parseReviewers } from "./pr/am-pr-utils"
+import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./pr/am-pr-types"
 
 interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
@@ -485,7 +485,9 @@ export class PRStatusPoller {
         repository(owner: $owner, name: $repo) {
           pullRequest(number: $number) {
             reviewThreads(first: 100) {
+              totalCount
               nodes {
+                id
                 isResolved
                 comments(first: 1) {
                   nodes {
@@ -496,6 +498,7 @@ export class PRStatusPoller {
                     line
                     url
                     createdAt
+                    diffHunk
                   }
                 }
               }
@@ -520,8 +523,10 @@ export class PRStatusPoller {
         { cwd, timeout: 15_000 },
       )
       const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
-      const comments = parseComments((pr?.reviewThreads?.nodes ?? []) as GhThread[])
-      return { total: comments.length, unresolved: comments.filter((c) => !c.resolved).length, comments }
+      const threads = pr?.reviewThreads
+      const comments = parseComments((threads?.nodes ?? []) as GhThread[])
+      const totalCount = threads?.totalCount ?? comments.length
+      return { total: totalCount, unresolved: comments.filter((c) => !c.resolved).length, comments }
     } catch (err) {
       this.options.log("Failed to fetch PR comments:", err)
       return { total: 0, unresolved: 0, comments: [] }

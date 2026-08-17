@@ -70,7 +70,8 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const hasInput = createMemo(() => rows().some((item) => item.input))
   const hasTabs = createMemo(() => !!props.sessionSwitcher && !!tabs && tabs.ids().length > 0)
 
-  const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
+  const money = createMemo(() => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }))
+  const fmt = (n: number) => money().format(n)
 
   const breakdown = () => session.costBreakdown()
 

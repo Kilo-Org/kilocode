@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Forbind Anaconda Desktop",
   "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Tilslut udbyder",
 
@@ -836,8 +839,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Aktiver sprogserverprotokol-integration",
   "settings.experimental.batch.title": "Batchværktøj",
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
-  "settings.experimental.codebaseSearch.title": "Kodesøgning",
-  "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
   "settings.experimental.imageGeneration.title": "Billedgenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
   "settings.experimental.imageGenerationModel.title": "Billedmodel",
@@ -1108,10 +1109,14 @@ export const dict = {
     "Vælg, om blokke, der viser koderedigeringer og forskelle, starter foldet ud eller sammen.",
   "settings.display.codeEdit.expanded": "Foldet ud",
   "settings.display.codeEdit.collapsed": "Foldet sammen",
+  "settings.display.mcpTool.title": "MCP- og generiske værktøjsblokke",
+  "settings.display.mcpTool.description": "Vælg, om MCP- og generiske værktøjsblokke starter foldet ud eller sammen.",
+  "settings.display.mcpTool.expanded": "Foldet ud",
+  "settings.display.mcpTool.collapsed": "Foldet sammen",
 
   "settings.display.tokenThroughput.title": "Vis genereringshastighed",
   "settings.display.tokenThroughput.description":
-    "Viser tekstgenereringshastigheden (tokens/sek.) på den seneste assistentmeddelelse og i opgavehovedet. Skjult som standard for at holde chatten ryddig.",
+    "Vis tekstgenereringshastigheden (tokens/sec) i den seneste assistentbesked og i opgaveoverskriften. Vises som standard; deaktiver denne indstilling for at skjule den efter behov.",
   "settings.display.autoApprovalReason.title": "Vis grund til automatisk godkendelse",
   "settings.display.autoApprovalReason.description":
     "Viser en linje ved værktøjskald, der forklarer, hvorfor de blev automatisk godkendt (matchende regel, agent-standard, YOLO-tilstand osv.).",

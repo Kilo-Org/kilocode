@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "توصيل Anaconda Desktop",
   "provider.anaconda.title.manage": "إدارة Anaconda Desktop",
@@ -52,6 +54,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "اتصال بموفر",
 
@@ -814,8 +817,6 @@ export const dict = {
   "settings.experimental.lsp.description": "تمكين تكامل بروتوكول خادم اللغة",
   "settings.experimental.batch.title": "أداة دفعية",
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
-  "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
-  "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
   "settings.experimental.imageGeneration.title": "توليد الصور",
   "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
   "settings.experimental.imageGenerationModel.title": "نموذج الصور",
@@ -1080,10 +1081,14 @@ export const dict = {
     "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",
   "settings.display.codeEdit.expanded": "موسّعة",
   "settings.display.codeEdit.collapsed": "مطوية",
+  "settings.display.mcpTool.title": "كتل أدوات MCP والأدوات العامة",
+  "settings.display.mcpTool.description": "اختر ما إذا كانت كتل أدوات MCP والأدوات العامة تبدأ موسّعة أم مطوية.",
+  "settings.display.mcpTool.expanded": "موسّعة",
+  "settings.display.mcpTool.collapsed": "مطوية",
 
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
-    "عرض معدل توليد النص (رموز/ثانية) على آخر رسالة من المساعد وفي رأس المهمة. مخفي بشكل افتراضي للحفاظ على تنظيم المحادثة.",
+    "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",
   "settings.display.autoApprovalReason.title": "إظهار سبب الموافقة التلقائية",
   "settings.display.autoApprovalReason.description":
     "إظهار سطر عند استدعاءات الأدوات يوضح سبب الموافقة التلقائية عليها (قاعدة مطابقة، إعداد افتراضي للوكيل، وضع YOLO، إلخ).",

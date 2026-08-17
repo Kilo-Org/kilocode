@@ -39,7 +39,6 @@ The GitHub App requests the following permissions:
    - **Review Style** — Strict, Balanced, or Lenient
    - **Repository Selection** — All repositories or select specific ones
    - **Focus Areas** — Security, performance, bugs, style, testing, documentation
-   - **Max Review Time** — 5 to 30 minutes
    - **Use REVIEW.md** — Load repository-specific review guidance, including sub-agent usage, from the base branch
 4. Click **Save Configuration**
 
@@ -93,7 +92,7 @@ The repository list is synced from GitHub and can be refreshed from the configur
 
 - Check the Code Reviews page for error details on specific reviews
 - Ensure you have sufficient Kilo Code credits
-- Very large PRs may time out — try increasing the max review time
+- Very large PRs may time out — consider splitting the change into smaller PRs
 
 ### The GitHub App is missing permissions
 

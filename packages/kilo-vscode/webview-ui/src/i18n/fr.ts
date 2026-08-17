@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Connecter Anaconda Desktop",
   "provider.anaconda.title.manage": "Gérer Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Connecter un fournisseur",
 
@@ -856,9 +859,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Activer l'intégration du protocole de serveur de langage",
   "settings.experimental.batch.title": "Outil par lot",
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
-  "settings.experimental.codebaseSearch.title": "Recherche de code",
-  "settings.experimental.codebaseSearch.description":
-    "Activer la recherche en langage naturel par IA dans toute la base de code",
   "settings.experimental.imageGeneration.title": "Génération d'images",
   "settings.experimental.imageGeneration.description": "Activer la génération d'images par IA",
   "settings.experimental.imageGenerationModel.title": "Modèle d'image",
@@ -1143,10 +1143,15 @@ export const dict = {
     "Choisissez si les blocs de modification du code et de différences sont initialement développés ou réduits.",
   "settings.display.codeEdit.expanded": "Développés",
   "settings.display.codeEdit.collapsed": "Réduits",
+  "settings.display.mcpTool.title": "Blocs d'outils MCP et génériques",
+  "settings.display.mcpTool.description":
+    "Choisissez si les blocs d'outils MCP et génériques sont initialement développés ou réduits.",
+  "settings.display.mcpTool.expanded": "Développés",
+  "settings.display.mcpTool.collapsed": "Réduits",
 
   "settings.display.tokenThroughput.title": "Afficher le débit de tokens",
   "settings.display.tokenThroughput.description":
-    "Affiche le taux de génération de texte (tokens/s) sur le dernier message de l'assistant et dans l'en-tête de la tâche. Masqué par défaut pour garder le chat épuré.",
+    "Afficher la vitesse de génération du texte (tokens/sec) dans le dernier message de l’assistant et dans l’en-tête de la tâche. Affichée par défaut ; désactivez ce paramètre pour la masquer si nécessaire.",
   "settings.display.autoApprovalReason.title": "Afficher la raison de l'approbation automatique",
   "settings.display.autoApprovalReason.description":
     "Affiche une ligne sur les appels d'outils expliquant pourquoi ils ont été approuvés automatiquement (règle correspondante, agent par défaut, mode YOLO, etc.).",

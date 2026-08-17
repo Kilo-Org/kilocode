@@ -5,8 +5,8 @@ import {
   formatCheckDuration,
   parseComments,
   parseReviewers,
-} from "../../src/agent-manager/am-pr-utils"
-import type { GhThread, GhReviewRequest, GhReview } from "../../src/agent-manager/am-pr-types"
+} from "../../src/agent-manager/pr/am-pr-utils"
+import type { GhThread, GhReviewRequest, GhReview } from "../../src/agent-manager/pr/am-pr-types"
 
 // --- parsePRResult ---
 
@@ -220,6 +220,7 @@ describe("parseComments", () => {
   it("parses a resolved thread", () => {
     const threads: GhThread[] = [
       {
+        id: "PRT_thread1",
         isResolved: true,
         comments: {
           nodes: [
@@ -239,6 +240,7 @@ describe("parseComments", () => {
     expect(parseComments(threads)).toEqual([
       {
         id: "c1",
+        threadId: "PRT_thread1",
         author: "alice",
         avatar: "https://avatar",
         body: "looks good",
@@ -247,8 +249,28 @@ describe("parseComments", () => {
         url: "https://url",
         resolved: true,
         createdAt: new Date("2024-01-01T00:00:00Z").getTime(),
+        diffHunk: undefined,
       },
     ])
+  })
+
+  it("uses comment id as threadId fallback when thread has no id", () => {
+    const threads: GhThread[] = [{ isResolved: false, comments: { nodes: [{ id: "c2", body: "note" }] } }]
+    const result = parseComments(threads)
+    expect(result[0]?.threadId).toBe("c2")
+  })
+
+  it("parses diffHunk when present", () => {
+    const threads: GhThread[] = [
+      {
+        id: "PRT_t1",
+        isResolved: false,
+        comments: {
+          nodes: [{ id: "c3", body: "fix this", diffHunk: "@@ -1,3 +1,4 @@\n context\n+new line" }],
+        },
+      },
+    ]
+    expect(parseComments(threads)[0]?.diffHunk).toBe("@@ -1,3 +1,4 @@\n context\n+new line")
   })
 
   it("defaults missing author to 'unknown'", () => {
@@ -259,6 +281,7 @@ describe("parseComments", () => {
   it("only uses the first comment of each thread", () => {
     const threads: GhThread[] = [
       {
+        id: "PRT_t2",
         isResolved: false,
         comments: {
           nodes: [

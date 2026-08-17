@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Conectar Anaconda Desktop",
   "provider.anaconda.title.manage": "Gerenciar Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Conectar provedor",
 
@@ -842,9 +845,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Ativar integração do protocolo de servidor de linguagem",
   "settings.experimental.batch.title": "Ferramenta em lote",
   "settings.experimental.batch.description": "Ativar processamento em lote de chamadas de ferramentas",
-  "settings.experimental.codebaseSearch.title": "Pesquisa de código",
-  "settings.experimental.codebaseSearch.description":
-    "Ativar pesquisa por linguagem natural com IA em toda a base de código",
   "settings.experimental.imageGeneration.title": "Geração de imagens",
   "settings.experimental.imageGeneration.description": "Ativar geração de imagens por IA",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagem",
@@ -1123,10 +1123,15 @@ export const dict = {
     "Escolha se os blocos que exibem edições de código e diferenças começam expandidos ou recolhidos.",
   "settings.display.codeEdit.expanded": "Expandidos",
   "settings.display.codeEdit.collapsed": "Recolhidos",
+  "settings.display.mcpTool.title": "Blocos de ferramentas MCP e genéricas",
+  "settings.display.mcpTool.description":
+    "Escolha se os blocos de ferramentas MCP e genéricas começam expandidos ou recolhidos.",
+  "settings.display.mcpTool.expanded": "Expandidos",
+  "settings.display.mcpTool.collapsed": "Recolhidos",
 
   "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
-    "Exibe a taxa de geração de texto (tokens/s) na última mensagem do assistente e no cabeçalho da tarefa. Oculto por padrão para manter o chat organizado.",
+    "Exibir a taxa de geração de texto (tokens/sec) na mensagem mais recente do assistente e no cabeçalho da tarefa. Exibida por padrão; desative esta configuração para ocultá-la quando necessário.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo da aprovação automática",
   "settings.display.autoApprovalReason.description":
     "Mostra uma linha nas chamadas de ferramentas explicando por que foram aprovadas automaticamente (regra correspondente, padrão do agente, modo YOLO, etc.).",

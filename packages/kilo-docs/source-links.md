@@ -205,8 +205,6 @@
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://www.googleapis.com/auth/cloud-platform>
   <!-- packages/opencode/src/provider/provider.ts -->
-- <https://www.morphllm.com/>
-  <!-- packages/opencode/src/tool/warpgrep.ts -->
 - <https://www.rfc-editor.org/rfc/rfc8628.html#section-3.5>
   <!-- packages/opencode/src/plugin/github-copilot/copilot.ts -->
 - <https://x.com>

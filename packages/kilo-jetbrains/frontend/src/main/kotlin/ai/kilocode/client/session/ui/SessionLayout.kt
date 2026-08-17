@@ -149,6 +149,7 @@ open class SessionLayoutPanel(
     pad: Insets = JBUI.emptyInsets(),
 ) : BorderLayoutPanel(), javax.swing.Scrollable {
     init {
+        isOpaque = false
         layout = SessionLayout(gap, pad)
     }
 

@@ -1,5 +1,7 @@
 import { dict as en } from "./en"
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop 연결",
   "provider.anaconda.title.manage": "Anaconda Desktop 관리",
@@ -57,6 +59,7 @@ type Keys = keyof typeof en
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "공급자 연결",
 
@@ -827,8 +830,6 @@ export const dict = {
   "settings.experimental.lsp.description": "언어 서버 프로토콜 통합 활성화",
   "settings.experimental.batch.title": "배치 도구",
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
-  "settings.experimental.codebaseSearch.title": "코드베이스 검색",
-  "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
   "settings.experimental.imageGeneration.title": "이미지 생성",
   "settings.experimental.imageGeneration.description": "AI 이미지 생성 활성화",
   "settings.experimental.imageGenerationModel.title": "이미지 모델",
@@ -1089,10 +1090,14 @@ export const dict = {
   "settings.display.codeEdit.description": "코드 편집 블록과 차이점 블록을 처음부터 펼칠지 접을지 선택합니다.",
   "settings.display.codeEdit.expanded": "펼침",
   "settings.display.codeEdit.collapsed": "접힘",
+  "settings.display.mcpTool.title": "MCP 및 범용 도구 블록",
+  "settings.display.mcpTool.description": "MCP 및 범용 도구 블록을 처음부터 펼칠지 접을지 선택합니다.",
+  "settings.display.mcpTool.expanded": "펼침",
+  "settings.display.mcpTool.collapsed": "접힘",
 
   "settings.display.tokenThroughput.title": "토큰 처리량 표시",
   "settings.display.tokenThroughput.description":
-    "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(토큰/초)를 표시합니다. 채팅을 깔끔하게 유지하기 위해 기본적으로 숨겨져 있습니다.",
+    "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(tokens/sec)를 표시합니다. 기본적으로 표시되며, 필요할 때 이 설정을 비활성화하면 숨길 수 있습니다.",
   "settings.display.autoApprovalReason.title": "자동 승인 이유 표시",
   "settings.display.autoApprovalReason.description":
     "도구 호출이 자동으로 승인된 이유(일치한 규칙, 에이전트 기본값, YOLO 모드 등)를 설명하는 줄을 표시합니다.",

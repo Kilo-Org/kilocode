@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Poveži Anaconda Desktop",
   "provider.anaconda.title.manage": "Upravljaj Anaconda Desktopom",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Poveži provajdera",
 
@@ -837,8 +840,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Omogući integraciju jezičkog servera",
   "settings.experimental.batch.title": "Batch alat",
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
-  "settings.experimental.codebaseSearch.title": "Pretraga koda",
-  "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
   "settings.experimental.imageGenerationModel.title": "Model slike",
@@ -1113,10 +1114,15 @@ export const dict = {
     "Odaberite da li će blokovi koji prikazuju izmjene koda i razlike u početku biti prošireni ili sažeti.",
   "settings.display.codeEdit.expanded": "Prošireni",
   "settings.display.codeEdit.collapsed": "Sažeti",
+  "settings.display.mcpTool.title": "Blokovi MCP i generičkih alata",
+  "settings.display.mcpTool.description":
+    "Odaberite da li će blokovi MCP i generičkih alata u početku biti prošireni ili sažeti.",
+  "settings.display.mcpTool.expanded": "Prošireni",
+  "settings.display.mcpTool.collapsed": "Sažeti",
 
   "settings.display.tokenThroughput.title": "Prikaži protok tokena",
   "settings.display.tokenThroughput.description":
-    "Prikazuje brzinu generisanja teksta (tokena/s) na najnovijoj poruci asistenta i u zaglavlju zadatka. Podrazumevano skriveno radi urednijeg chata.",
+    "Prikažite brzinu generisanja teksta (tokens/sec) u najnovijoj poruci asistenta i zaglavlju zadatka. Prikazuje se podrazumijevano; onemogućite ovu postavku da biste je po potrebi sakrili.",
   "settings.display.autoApprovalReason.title": "Prikaži razlog automatskog odobravanja",
   "settings.display.autoApprovalReason.description":
     "Prikazuje red uz pozive alata koji objašnjava zašto su automatski odobreni (odgovarajuće pravilo, podrazumevana vrijednost agenta, YOLO režim itd.).",
