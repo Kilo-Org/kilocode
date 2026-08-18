@@ -5,6 +5,7 @@ import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.components.JBLabel
@@ -14,9 +15,11 @@ import com.intellij.util.ui.JBUI
 import java.awt.Cursor
 import java.awt.Point
 import java.awt.Rectangle
+import java.awt.event.ActionEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelListener
+import javax.swing.AbstractAction
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JScrollBar
@@ -32,6 +35,9 @@ internal class SessionScroll(
         private const val THRESHOLD = 32
         private const val OPEN_PASSES = 12
         private const val FOLLOW_PASSES = 6
+        private val KEY_SCROLL_ACTIONS = listOf(
+            "scrollUp", "scrollDown", "scrollHome", "scrollEnd", "unitScrollUp", "unitScrollDown",
+        )
     }
 
     private var style = SessionEditorStyle.current()
@@ -79,13 +85,16 @@ internal class SessionScroll(
                 user = true
             }
         })
+        markKeyScrollAsUser()
         component.viewport.addChangeListener { onViewport() }
         component.verticalScrollBar.addAdjustmentListener { onScroll() }
         root.addOverlay(jump) { _, child ->
             val size = child.preferredSize
             val gap = UiStyle.Gap.pad()
+            val lane = minOf(host.width, SessionUiStyle.SessionLayout.readableWidth(messages, style.transcriptFont))
+            val right = host.x + (host.width + lane) / 2
             Rectangle(
-                host.x + host.width - size.width - gap,
+                right - size.width - gap,
                 host.y + host.height - size.height - gap,
                 size.width,
                 size.height,
@@ -458,7 +467,10 @@ internal class SessionScroll(
             updateJump()
             return
         }
-        followTail()
+        // Only re-pin when following. Routing the not-following case through followBottom(false)
+        // would bump seq and abort in-flight multi-pass chains (e.g. the redo scrollMessageBottom
+        // pass) on the first streamed content growth. When not following, just refresh the jump button.
+        if (following()) followTail() else updateJump()
     }
 
     @RequiresEdt
@@ -479,5 +491,22 @@ internal class SessionScroll(
     @RequiresEdt
     private fun syncValue() {
         value = bar.value
+    }
+
+    // Keyboard scrolling (PageUp/PageDown/Home/End/arrows) fires the scroll pane's own scroll
+    // actions through its WHEN_ANCESTOR_OF_FOCUSED_COMPONENT bindings while a transcript child holds
+    // focus. Wrap those actions to flag a user gesture so keyboard scroll-up unfollows like a wheel
+    // or drag, instead of being re-pinned to the bottom by the programmatic follow branch in onScroll.
+    private fun markKeyScrollAsUser() {
+        val map = component.actionMap
+        for (key in KEY_SCROLL_ACTIONS) {
+            val base = map.get(key) ?: continue
+            map.put(key, object : AbstractAction() {
+                override fun actionPerformed(e: ActionEvent) {
+                    user = true
+                    base.actionPerformed(e)
+                }
+            })
+        }
     }
 }

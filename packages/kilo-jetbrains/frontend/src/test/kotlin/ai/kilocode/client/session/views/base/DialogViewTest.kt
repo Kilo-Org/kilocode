@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views.base
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
@@ -483,12 +484,7 @@ class DialogViewTest : BasePlatformTestCase() {
 
     // ------ helpers ------
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun region(panel: DialogView, region: String) = (panel.layout as BorderLayout).getLayoutComponent(region)
 

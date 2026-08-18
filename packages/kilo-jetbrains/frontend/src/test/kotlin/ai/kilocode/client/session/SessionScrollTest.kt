@@ -5,9 +5,11 @@ import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageErrorDto
@@ -647,6 +649,24 @@ class SessionScrollTest : SessionUiTestBase() {
         assertFalse(button.isVisible)
     }
 
+    fun `test scroll button aligns to centered readable lane`() {
+        ui.setSize(1600, 600)
+        showMessages()
+        fillTranscript(24)
+        val button = jumpButton()
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+        val host = scrollComponent().parent as JComponent
+        val view = find<SessionMessageListPanel>(ui)
+        val lane = minOf(host.width, SessionUiStyle.SessionLayout.readableWidth(view, SessionEditorStyle.current().transcriptFont))
+        val right = host.x + (host.width + lane) / 2
+
+        assertTrue(button.isVisible)
+        assertEquals(right, button.x + button.width + UiStyle.Gap.pad())
+        assertTrue(right < host.x + host.width)
+    }
+
     fun `test scroll button scrolls transcript to bottom`() {
         showMessages()
         fillTranscript(24)
@@ -679,6 +699,24 @@ class SessionScrollTest : SessionUiTestBase() {
         assertBottom(bar)
         assertTrue(ui.scroll.following())
         assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test keyboard scroll up while following unfollows`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+
+        keyScroll("scrollUp")
+        drainScroll()
+
+        assertTrue("value=${bar.value} bottom=${bottom(bar)}", bar.value < bottom(bar))
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
     }
 
     fun `test user scroll while following still shows button`() {
@@ -1337,8 +1375,6 @@ class SessionScrollTest : SessionUiTestBase() {
         assertTrue("expected=$expected bottom=${bottom(bar)}", expected < bottom(bar))
         assertTrue("value=${bar.value} expected=$expected", kotlin.math.abs(bar.value - expected) <= 1)
     }
-
-    // ------ helpers ------
 
     private fun button(text: String): JButton = findAll<JButton>(ui).first { it.text == text }
 

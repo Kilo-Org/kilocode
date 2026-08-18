@@ -44,7 +44,11 @@ import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
+import ai.kilocode.client.session.controller.PromptSelection
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.context.EditorContextGatherer
@@ -226,7 +230,7 @@ class SessionUi(
         bindStyle()
         bindMigration()
         onStateChanged(controller.model.state)
-        refreshBranchChanges()
+        if (showBranchBadge()) refreshBranchChanges()
         loaded?.let(::finishOpen)
     }
 
@@ -284,6 +288,21 @@ class SessionUi(
     }
 
     internal val promptFocusedComponent: JComponent get() = prompt.defaultFocusedComponent
+
+    /**
+     * Sends [text] as the session's first message. Used by the New Worktree flow to auto-start a
+     * session with the prompt typed in the dialog, routing through the same path as a typed prompt.
+     * The optional [select] carries the mode / model / reasoning picked in the dialog so the first
+     * turn runs with them even before this session's own model state has loaded.
+     */
+    @RequiresEdt
+    internal fun submitPrompt(text: String, select: PromptSelection? = null) {
+        if (text.isBlank()) return
+        // Seed the session's agent/model/reasoning so the pickers and later turns reflect the pick,
+        // then send the first turn carrying it too (so it applies before workspace-ready resolves).
+        select?.let { controller.applySelection(it) }
+        sendPrompt(text, emptyList(), select)
+    }
 
     @RequiresEdt
     internal fun focusPrompt() {
@@ -417,6 +436,7 @@ class SessionUi(
             onMentions = ::mentionParts,
             completion = completion,
             cs = cs,
+            hostedInEditorTab = manager?.hostedInEditorTab == true,
         )
         connection = ConnectionPanel(this, controller)
         root.addOverlay(connection) { pane, child ->
@@ -444,7 +464,14 @@ class SessionUi(
         sessionContent.add(header, BorderLayout.NORTH)
         sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
-        root.content.add(prompt, BorderLayout.SOUTH)
+        root.content.add(
+            prompt.align(
+                HAlign.CENTER,
+                VAlign.FIT,
+                maxW = { SessionUiStyle.SessionLayout.readableWidth(prompt, style.transcriptFont) },
+            ),
+            BorderLayout.SOUTH,
+        )
         add(root, BorderLayout.CENTER)
     }
 
@@ -530,7 +557,7 @@ class SessionUi(
                         controller,
                         event.recents,
                         history = { manager?.showHistory() },
-                        activity = { manager?.activity() ?: sessions.activity() },
+                        activity = { manager?.activity() ?: sessions.activitySnapshot() },
                         titles = { manager?.titles().orEmpty() },
                         timers = timers,
                     )
@@ -682,7 +709,7 @@ class SessionUi(
         }
     }
 
-    private fun sendPrompt(text: String, files: List<PromptPartDto>) {
+    private fun sendPrompt(text: String, files: List<PromptPartDto>, select: PromptSelection? = null) {
         if (text.isBlank() && files.isEmpty()) return
         prompt.clear()
         val follow = scroll.following()
@@ -711,7 +738,7 @@ class SessionUi(
             val model = controller.model.model ?: "none"
             "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
         }
-        controller.prompt(text, allFiles, editor.context)
+        controller.prompt(text, allFiles, editor.context, select)
         scroll.followBottom(follow)
     }
 
@@ -847,6 +874,11 @@ class SessionUi(
 
     /** Badge-only refresh: fetches stats (no patch text) and updates the header count. */
     private fun refreshBranchChanges() {
+        if (!showBranchBadge()) {
+            refreshJob?.cancel()
+            header.hideBranchChanges()
+            return
+        }
         refreshJob?.cancel()
         refreshJob = cs.launch {
             val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
@@ -864,6 +896,7 @@ class SessionUi(
 
     /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
     private fun openBranchChanges() {
+        if (!showBranchBadge()) return
         openJob?.cancel()
         openJob = cs.launch {
             val dir = workspace.directory
@@ -896,6 +929,8 @@ class SessionUi(
         )
         Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
     }
+
+    private fun showBranchBadge(): Boolean = manager?.showsBranchBadgeInHeader != false
 
     private fun openAttachment(messageId: String, item: FileAttachment) {
         val url = item.url.takeIf { it.isNotBlank() } ?: run {

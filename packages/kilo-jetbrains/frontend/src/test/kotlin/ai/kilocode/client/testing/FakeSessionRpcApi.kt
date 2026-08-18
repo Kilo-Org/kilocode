@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -73,6 +74,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Push status updates here. */
     val statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
 
+    /** Push activity updates here. */
+    val activity = MutableStateFlow<Map<String, SessionActivityDto>>(emptyMap())
+
     /** Pending permissions returned by [pendingPermissions]. */
     val pendingPermissionList = mutableListOf<PermissionRequestDto>()
 
@@ -109,6 +113,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val questionRejects = mutableListOf<Pair<String, String>>()
     val deletes = java.util.concurrent.CopyOnWriteArrayList<Pair<String, String>>()
     var deleteGate: CompletableDeferred<Unit>? = null
+    var deleteThrows: Exception? = null
     val renames = mutableListOf<Triple<String, String, String>>()
     var renameThrows: Exception? = null
     val lists = mutableListOf<String>()
@@ -156,6 +161,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun delete(id: String, directory: String) {
         assertNotEdt("delete")
+        deleteThrows?.let { throw it }
         deleteGate?.await()
         deletes.add(id to directory)
         listed.removeAll { it.id == id }
@@ -188,6 +194,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> {
         assertNotEdt("statuses")
         return statuses
+    }
+
+    override suspend fun activity(): Flow<Map<String, SessionActivityDto>> {
+        assertNotEdt("activity")
+        return activity
     }
 
     override suspend fun setDirectory(id: String, directory: String) {
