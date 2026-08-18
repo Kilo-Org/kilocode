@@ -1,16 +1,17 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer } from "effect"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Agent } from "../../src/agent/agent"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Session } from "../../src/session/session"
 import { SessionReminders } from "../../src/session/reminders"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
-import { ModelID, ProviderID } from "../../src/provider/schema"
 
 const sessionID = SessionID.make("ses_reminders")
-const model = { providerID: ProviderID.make("openai"), modelID: ModelID.make("gpt-4") }
+const model = { providerID: ProviderV2.ID.make("openai"), modelID: ModelV2.ID.make("gpt-4") }
 
 function userMsg(text: string): MessageV2.WithParts {
   const id = MessageID.ascending()
@@ -67,7 +68,7 @@ const apply = (messages: MessageV2.WithParts[]) =>
         Layer.mergeAll(
           RuntimeFlags.layer({ experimentalPlanMode: false }),
           Layer.mock(Session.Service, {}),
-          AppFileSystem.defaultLayer,
+          FSUtil.defaultLayer,
         ),
       ),
     ),

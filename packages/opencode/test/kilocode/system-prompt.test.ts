@@ -4,7 +4,8 @@ import { environmentDetails } from "../../src/kilocode/editor-context"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderTest } from "../fake/provider"
 
 import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
@@ -156,7 +157,7 @@ describe("environmentDetails", () => {
 
 describe("KiloSessionPrompt.injectEditorContext", () => {
   const sessionID = SessionID.make("ses_env_sep")
-  const providerID = ProviderID.make("test")
+  const providerID = ProviderV2.ID.make("test")
 
   function userInfo(id: string): MessageV2.User {
     return {
@@ -165,7 +166,7 @@ describe("KiloSessionPrompt.injectEditorContext", () => {
       role: "user",
       time: { created: 0 },
       agent: "user",
-      model: { providerID, modelID: ModelID.make("test") },
+      model: { providerID, modelID: ModelV2.ID.make("test") },
       tools: {},
       mode: "",
     } as unknown as MessageV2.User
