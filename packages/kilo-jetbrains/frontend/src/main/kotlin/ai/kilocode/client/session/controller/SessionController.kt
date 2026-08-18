@@ -1073,7 +1073,11 @@ class SessionController(
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
                     for (child in discovered.values.toSet()) trackChild(child)
-                    if (model.isEmpty()) setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty) else showSession()
+                    if (model.isEmpty() && model.state is SessionState.Idle) {
+                        setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    } else {
+                        showSession()
+                    }
                     loaded(!model.isEmpty())
                 }
             } catch (e: Exception) {
@@ -1125,7 +1129,11 @@ class SessionController(
                     childParts.clear()
                     childParts.putAll(discovered)
                     for (child in discovered.values.toSet()) trackChild(child)
-                    if (model.isEmpty()) setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty) else showSession()
+                    if (model.isEmpty() && model.state is SessionState.Idle) {
+                        setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    } else {
+                        showSession()
+                    }
                     loaded(!model.isEmpty())
                 }
             } catch (e: Exception) {
