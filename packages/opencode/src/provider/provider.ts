@@ -41,6 +41,7 @@ import {
   patchCustomLoaderResult,
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
+  hasKiloCredentials,
   buildTimeoutSignal,
   requestTimeout,
   wrapFirstByte,
@@ -2059,9 +2060,19 @@ const layer = Layer.effect(
         if (candidates[0]) return candidates[0]
       }
 
-      // kilocode_change start - fall back to kilo's auto small model
-      const kiloFallback = s.providers[ProviderV2.ID.make("kilo")] ?? s.catalog[ProviderV2.ID.make("kilo")]
-      if (kiloFallback?.models["kilo-auto/small"]) return kiloFallback.models["kilo-auto/small"]
+      // kilocode_change start - fall back to kilo's auto small model only when the user actually has
+      // kilo credentials. The kilo provider is always autoloaded (anonymous key), so checking it
+      // unconditionally would route auxiliary tasks (session titles, commit messages, branch names)
+      // to the cloud for users without kilo access and break offline/local-only setups.
+      const kiloFallback = s.providers[ProviderV2.ID.make("kilo")]
+      if (kiloFallback?.models["kilo-auto/small"]) {
+        const hasCreds = hasKiloCredentials(
+          cfg,
+          yield* auth.get(ProviderV2.ID.make("kilo")).pipe(Effect.orDie),
+          yield* env.all(),
+        )
+        if (hasCreds) return kiloFallback.models["kilo-auto/small"]
+      }
       // kilocode_change end
 
       return undefined

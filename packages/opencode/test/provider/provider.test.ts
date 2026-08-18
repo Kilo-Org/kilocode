@@ -770,8 +770,47 @@ it.instance(
 )
 
 it.instance(
-  // kilocode_change start - Kilo always has an auto-routed small-model fallback
-  "getSmallModel falls back to Kilo auto when model IDs lack family metadata",
+  // kilocode_change start - without kilo credentials, auxiliary tasks fall back to the session's own
+  // model instead of an unreachable cloud small model
+  "getSmallModel returns undefined without kilo credentials when model IDs lack family metadata",
+  Effect.gen(function* () {
+    const authContent = process.env.KILO_AUTH_CONTENT
+    const configContent = process.env.KILO_CONFIG_CONTENT
+    yield* Effect.acquireRelease(
+      Effect.sync(() => {
+        delete process.env.KILO_AUTH_CONTENT
+        delete process.env.KILO_CONFIG_CONTENT
+      }),
+      () =>
+        Effect.sync(() => {
+          if (authContent !== undefined) process.env.KILO_AUTH_CONTENT = authContent
+          if (configContent !== undefined) process.env.KILO_CONFIG_CONTENT = configContent
+        }),
+    )
+    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
+    expect(model).toBeUndefined()
+  }),
+  // kilocode_change end
+  {
+    config: {
+      provider: {
+        "test-provider": {
+          name: "Test Provider",
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "gpt-5-nano": { release_date: "2026-01-01" },
+          },
+          options: { apiKey: "test-key" },
+        },
+        kilo: null,
+      },
+    },
+  },
+)
+
+it.instance(
+  // kilocode_change start - Kilo users still get the auto-routed small-model fallback
+  "getSmallModel falls back to Kilo auto when the kilo provider is configured",
   Effect.gen(function* () {
     const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("test-provider"))
     expect(model).toMatchObject({ providerID: "kilo", id: "kilo-auto/small" })
@@ -787,6 +826,9 @@ it.instance(
             "gpt-5-nano": { release_date: "2026-01-01" },
           },
           options: { apiKey: "test-key" },
+        },
+        kilo: {
+          options: { apiKey: "kilo-key" },
         },
       },
     },

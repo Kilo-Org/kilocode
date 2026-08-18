@@ -280,6 +280,24 @@ export function kiloSmallModelPriority(providerID: string): string[] | undefined
   return undefined
 }
 
+/**
+ * True when the user has kilo credentials: a KILO_API_KEY env var, a stored
+ * auth entry, or an apiKey in the kilo provider config. Mirrors the hasKey
+ * check in the kilo custom loader. The kilo provider is autoloaded with an
+ * anonymous key even without credentials, so this gates the cloud
+ * kilo-auto/small fallback to users who can actually reach it.
+ */
+export function hasKiloCredentials(
+  cfg: { provider?: Record<string, { options?: { apiKey?: string } } | null> },
+  auth: unknown,
+  env: Record<string, string | undefined>,
+) {
+  if (env.KILO_API_KEY) return true
+  if (auth) return true
+  if (cfg.provider?.["kilo"]?.options?.apiKey) return true
+  return false
+}
+
 // ---------------------------------------------------------------------------
 // Fetch timeout wrappers
 // Replaces AbortSignal.timeout() with a cancellable setTimeout+AbortController
