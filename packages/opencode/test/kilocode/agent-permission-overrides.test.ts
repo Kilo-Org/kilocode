@@ -4,6 +4,8 @@ import type { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
+import { KiloTask } from "../../src/kilocode/tool/task"
+import { deriveSubagentSessionPermission } from "../../src/agent/subagent-permissions"
 import { provideTestInstance } from "../fixture/fixture"
 import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
 
@@ -35,14 +37,14 @@ afterEach(async () => {
   await disposeAllInstances()
 })
 
-test("ask agent honors user MCP allow over generated ask rule", async () => {
+test("ask agent honors per-agent MCP allow over generated ask rule", async () => {
   await using tmp = await tmpdir({
     config: {
       mcp: {
         context7: { type: "local", command: ["context7"] },
       },
-      permission: {
-        "context7_query-docs": { "*": "allow" },
+      agent: {
+        ask: { permission: { "context7_query-docs": { "*": "allow" } } },
       },
     },
   })
@@ -57,11 +59,222 @@ test("ask agent honors user MCP allow over generated ask rule", async () => {
   })
 })
 
-test("plan agent honors user bash allow over read-only deny default", async () => {
+// An MCP server is arbitrary third-party code, so the guard prompts for it rather than
+// denying it. A top-level rule must not raise that ceiling in a read-only mode: the
+// "Allow everything" toggle would otherwise auto-approve a filesystem or shell MCP
+// server's write tools in Ask. (#12053)
+for (const [label, permission] of [
+  ["allow-everything toggle", { "*": { "*": "allow" } }],
+  ["scalar catch-all", { "*": "allow" }],
+  ["server-wide allow", { "filesystem_*": "allow" }],
+  ["specific tool allow", { filesystem_write_file: { "*": "allow" } }],
+] as const) {
+  test(`read-only agents keep MCP tools at ask under a global ${label}`, async () => {
+    await using tmp = await tmpdir({
+      config: {
+        mcp: { filesystem: { type: "local", command: ["filesystem-mcp"] } },
+        permission: permission as never,
+      },
+    })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const ask = await load(tmp.path, (svc) => svc.get("ask"))
+        const plan = await load(tmp.path, (svc) => svc.get("plan"))
+        const code = await load(tmp.path, (svc) => svc.get("code"))
+        expect(Permission.evaluate("filesystem_write_file", "/etc/passwd", ask!.permission).action).toBe("ask")
+        expect(Permission.evaluate("filesystem_write_file", "/etc/passwd", plan!.permission).action).toBe("ask")
+        expect(Permission.evaluate("filesystem_write_file", "/etc/passwd", code!.permission).action).toBe("allow")
+      },
+    })
+  })
+}
+
+test("read-only agents still honor a user MCP deny", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      mcp: { filesystem: { type: "local", command: ["filesystem-mcp"] } },
+      permission: { "*": "allow", filesystem_write_file: "deny" },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      expect(Permission.evaluate("filesystem_write_file", "/etc/passwd", ask!.permission).action).toBe("deny")
+      expect(Permission.evaluate("filesystem_write_file", "/etc/passwd", plan!.permission).action).toBe("deny")
+    },
+  })
+})
+
+// Reapplying the guard's catch-all deny must not strand the read-only allowlist it sits
+// in front of. Without this, Ask cannot read a file and Plan cannot leave plan mode —
+// and every other test here still passes, because none of them exercises a safe tool.
+for (const [label, config] of [
+  ["a default install", {}],
+  ["a global catch-all allow", { permission: { "*": { "*": "allow" } } }],
+  ["a global catch-all ask", { permission: { "*": "ask" } }],
+] as const) {
+  test(`read-only agents keep their safe tools under ${label}`, async () => {
+    await using tmp = await tmpdir({ config: config as never })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const ask = await load(tmp.path, (svc) => svc.get("ask"))
+        const plan = await load(tmp.path, (svc) => svc.get("plan"))
+        const expected = label === "a global catch-all ask" ? "ask" : "allow"
+        for (const permission of ["read", "grep", "glob", "list", "skill", "question", "webfetch"]) {
+          expect(Permission.evaluate(permission, "src/index.ts", ask!.permission).action).toBe(expected)
+          expect(Permission.evaluate(permission, "src/index.ts", plan!.permission).action).toBe(expected)
+        }
+        expect(Permission.evaluate("plan_exit", "*", plan!.permission).action).toBe(expected)
+        expect(Permission.disabled(["read", "grep"], ask!.permission)).toEqual(new Set())
+      },
+    })
+  })
+}
+
+// MCP rules are spread into the guards, so a server named `agent` emits `agent_*`, which
+// wildcard-matches `agent_manager`. The guarded denies have to be emitted after them.
+test("read-only agents keep guarded tools denied against colliding MCP server names", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      mcp: {
+        agent: { type: "local", command: ["agent-mcp"] },
+        notebook: { type: "local", command: ["notebook-mcp"] },
+        repo: { type: "local", command: ["repo-mcp"] },
+        interactive: { type: "local", command: ["interactive-mcp"] },
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      for (const permission of ["agent_manager", "notebook_edit", "notebook_execute", "interactive_terminal"]) {
+        expect(Permission.evaluate(permission, "start", ask!.permission).action).toBe("deny")
+        expect(Permission.evaluate(permission, "start", plan!.permission).action).toBe("deny")
+      }
+    },
+  })
+})
+
+for (const [label, permission, action] of [
+  ["scalar catch-all", { "*": "allow" }, "allow"],
+  ["object catch-all", { "*": { "*": "allow" } }, "allow"],
+  ["explicit custom deny", { "*": "allow", project_mutator: "deny" }, "deny"],
+] as const) {
+  test(`read-only agents keep a custom mutator disabled under a global ${label}`, async () => {
+    await using tmp = await tmpdir({ config: { permission: permission as never } })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const ask = await load(tmp.path, (svc) => svc.get("ask"))
+        const plan = await load(tmp.path, (svc) => svc.get("plan"))
+        const code = await load(tmp.path, (svc) => svc.get("code"))
+        const tools = ["project_mutator"]
+        for (const agent of [ask, plan]) {
+          expect(agent).toBeDefined()
+          expect(Permission.evaluate("project_mutator", "write", agent!.permission).action).toBe("deny")
+          expect(Permission.disabled(tools, agent!.permission)).toEqual(new Set(tools))
+        }
+        expect(code).toBeDefined()
+        expect(Permission.evaluate("project_mutator", "write", code!.permission).action).toBe(action)
+        expect(Permission.disabled(tools, code!.permission)).toEqual(action === "deny" ? new Set(tools) : new Set())
+      },
+    })
+  })
+}
+
+test("read-only agents reject broad global shell and task approvals", async () => {
   await using tmp = await tmpdir({
     config: {
       permission: {
-        bash: { "cargo search *": "allow" },
+        "*": "ask",
+        bash: {
+          "*": "ask",
+          "cargo search *": "allow",
+        },
+        task: "allow",
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      const code = await load(tmp.path, (svc) => svc.get("code"))
+      const python = "python - <<'PY'\nfrom pathlib import Path\nPath('ask-bypass.txt').write_text('unsafe')\nPY"
+      expect(ask).toBeDefined()
+      expect(plan).toBeDefined()
+      expect(code).toBeDefined()
+      expect(Permission.evaluate("bash", python, ask!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", python, plan!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", python, code!.permission).action).toBe("ask")
+      // A narrowly written global allow does not reach a read-only mode either.
+      expect(Permission.evaluate("bash", "cargo search serde", ask!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "cargo search serde", code!.permission).action).toBe("allow")
+      expect(Permission.evaluate("skill", "review", ask!.permission).action).toBe("ask")
+      expect(Permission.evaluate("skill", "review", plan!.permission).action).toBe("ask")
+      expect(Permission.evaluate("skill", "review", code!.permission).action).toBe("ask")
+      expect(Permission.evaluate("edit", "src/ask-bypass.ts", ask!.permission).action).toBe("deny")
+      expect(Permission.evaluate("task", "general", ask!.permission).action).toBe("deny")
+      expect(Permission.evaluate("task", "general", plan!.permission).action).toBe("deny")
+      expect(Permission.disabled(["task"], ask!.permission)).toEqual(new Set(["task"]))
+      expect(Permission.evaluate("task", "general", code!.permission).action).toBe("allow")
+    },
+  })
+})
+
+// `*` is not the only way to spell a catch-all: wildcard-only patterns of any minimum
+// length can broadly grant bash/task, and a globbed permission key reaches `bash` too.
+// Each of these re-opened arbitrary shell execution or editing delegation. (#12053)
+for (const [label, permission] of [
+  ["double star", { bash: { "**": "allow" }, task: { "**": "allow" } }],
+  ["question star", { bash: { "?*": "allow" }, task: { "?*": "allow" } }],
+  ["star space star", { bash: { "* *": "allow" }, task: { "* *": "allow" } }],
+  ["double question star", { bash: { "??*": "allow" }, task: { "??*": "allow" } }],
+  ["triple question star", { bash: { "???*": "allow" }, task: { "???*": "allow" } }],
+  ["four question star question", { bash: { "????*?": "allow" }, task: { "????*?": "allow" } }],
+  ["globbed permission key", { "ba*": { "**": "allow" }, task: { "**": "allow" } }],
+] as const) {
+  test(`read-only agents reject catch-all spelled as ${label}`, async () => {
+    await using tmp = await tmpdir({ config: { permission } })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const ask = await load(tmp.path, (svc) => svc.get("ask"))
+        const plan = await load(tmp.path, (svc) => svc.get("plan"))
+        const code = await load(tmp.path, (svc) => svc.get("code"))
+        const python = "python - <<'PY'\nfrom pathlib import Path\nPath('bypass.txt').write_text('unsafe')\nPY"
+        expect(Permission.evaluate("bash", python, ask!.permission).action).toBe("deny")
+        expect(Permission.evaluate("bash", python, plan!.permission).action).toBe("deny")
+        expect(Permission.evaluate("task", "general", ask!.permission).action).toBe("deny")
+        expect(Permission.evaluate("task", "general", plan!.permission).action).toBe("deny")
+        // Code mode still honors both grants, and the read-only allowlist still applies.
+        expect(Permission.evaluate("bash", python, code!.permission).action).toBe("allow")
+        expect(Permission.evaluate("task", "general", code!.permission).action).toBe("allow")
+        expect(Permission.evaluate("bash", "ls -la", ask!.permission).action).toBe("allow")
+      },
+    })
+  })
+}
+
+test("plan agent honors per-agent bash allow over read-only deny default", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        plan: { permission: { bash: { "cargo search *": "allow" } } },
       },
     },
   })
@@ -70,8 +283,168 @@ test("plan agent honors user bash allow over read-only deny default", async () =
     directory: tmp.path,
     fn: async () => {
       const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
       expect(plan).toBeDefined()
       expect(Permission.evaluate("bash", "cargo search serde", plan!.permission).action).toBe("allow")
+      // Opting one mode in leaves the others alone.
+      expect(Permission.evaluate("bash", "cargo search serde", ask!.permission).action).toBe("deny")
+    },
+  })
+})
+
+// The "Always allow" reply persists `<prefix> *` rules into the *global* config, so a
+// single approval in code mode used to hand every read-only mode the interpreter it
+// approved — the original #12053 payload, reachable without touching a config file.
+// Each case checks the whole command and, where they differ, the per-command-node source
+// the shell tool actually asks with — a heredoc's node source stops at the redirect, so
+// the newline deny in readOnlyBash never sees the body at runtime.
+for (const [label, pattern, ...commands] of [
+  [
+    "python",
+    "python - *",
+    "python - <<'PY'\nfrom pathlib import Path\nPath('x').write_text('unsafe')\nPY",
+    "python - <<'PY'",
+  ],
+  ["node", "node *", "node -e \"require('fs').writeFileSync('x', 'unsafe')\""],
+  ["bash -c", "bash *", "bash -c 'rm -rf x'"],
+] as const) {
+  test(`read-only agents reject persisted always-allow rule for ${label}`, async () => {
+    await using tmp = await tmpdir({ config: { permission: { bash: { [pattern]: "allow" } } } })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const ask = await load(tmp.path, (svc) => svc.get("ask"))
+        const plan = await load(tmp.path, (svc) => svc.get("plan"))
+        const code = await load(tmp.path, (svc) => svc.get("code"))
+        for (const command of commands) {
+          expect(Permission.evaluate("bash", command, ask!.permission).action).toBe("deny")
+          expect(Permission.evaluate("bash", command, plan!.permission).action).toBe("deny")
+          expect(Permission.evaluate("bash", command, code!.permission).action).toBe("allow")
+        }
+      },
+    })
+  })
+}
+
+// A pattern keeping one literal character still matches almost every command, so the
+// read-only baseline cannot be decided by inspecting the pattern's shape. (#12053)
+for (const pattern of ["*e*", "*.*", "* -*", "*p*n*"] as const) {
+  test(`read-only agents reject near-catch-all pattern ${pattern}`, async () => {
+    await using tmp = await tmpdir({ config: { permission: { bash: { [pattern]: "allow" } } } })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const ask = await load(tmp.path, (svc) => svc.get("ask"))
+        const plan = await load(tmp.path, (svc) => svc.get("plan"))
+        const python = "python - <<'PY'\nfrom pathlib import Path\nPath('x').write_text('unsafe')\nPY"
+        expect(Permission.evaluate("bash", python, ask!.permission).action).toBe("deny")
+        expect(Permission.evaluate("bash", python, plan!.permission).action).toBe("deny")
+      },
+    })
+  })
+}
+
+// The allow-everything toggle persists exactly this, and every mutating tool asks under
+// its own permission, not under `edit`. `agent_manager` is the sharpest: it launches a
+// session running the default code agent, and it persists an always-rule of its own.
+test("read-only agents keep every mutating tool denied under a global allow", async () => {
+  await using tmp = await tmpdir({ config: { permission: { "*": { "*": "allow" } } } })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      const code = await load(tmp.path, (svc) => svc.get("code"))
+      for (const permission of [
+        "notebook_edit",
+        "notebook_execute",
+        "write",
+        "agent_manager",
+        "repo_clone",
+        "interactive_terminal",
+      ]) {
+        expect(Permission.evaluate(permission, "start", ask!.permission).action).toBe("deny")
+        expect(Permission.evaluate(permission, "start", plan!.permission).action).toBe("deny")
+        expect(Permission.evaluate(permission, "start", code!.permission).action).toBe("allow")
+      }
+    },
+  })
+})
+
+// agent_manager persists an always-rule per mode the same way the shell tool does.
+test("read-only agents reject a persisted agent_manager approval", async () => {
+  await using tmp = await tmpdir({ config: { permission: { agent_manager: { start: "allow" } } } })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      const code = await load(tmp.path, (svc) => svc.get("code"))
+      expect(Permission.evaluate("agent_manager", "start", ask!.permission).action).toBe("deny")
+      expect(Permission.evaluate("agent_manager", "start", plan!.permission).action).toBe("deny")
+      expect(Permission.evaluate("agent_manager", "start", code!.permission).action).toBe("allow")
+      expect(Permission.disabled(["agent_manager"], ask!.permission)).toEqual(new Set(["agent_manager"]))
+    },
+  })
+})
+
+test("plan agent keeps asking for subagents when the user configured task ask", async () => {
+  await using tmp = await tmpdir({ config: { permission: { task: "ask" } } })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
+      expect(Permission.evaluate("task", "explore", plan!.permission).action).toBe("ask")
+      // The guard's own deny still wins over a user-configured prompt.
+      expect(Permission.evaluate("task", "general", plan!.permission).action).toBe("deny")
+      expect(Permission.evaluate("task", "explore", ask!.permission).action).toBe("deny")
+    },
+  })
+})
+
+// Guarding a tool on the agent is not enough: Plan may delegate, and a subagent builds its
+// own ruleset from the same global config. KiloTask.inherited has to carry the guarded set
+// into the child session or the boundary leaks through `explore`.
+test("plan carries guarded denies into delegated sessions under a global catch-all", async () => {
+  await using tmp = await tmpdir({ config: { permission: { "*": { "*": "allow" } } } })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      const explore = await load(tmp.path, (svc) => svc.get("explore"))
+      const child = KiloTask.merge(
+        deriveSubagentSessionPermission({ parentSessionPermission: [], subagent: explore! }),
+        KiloTask.permissions(KiloTask.inherited({ caller: plan!, session: { permission: [] }, mcp: undefined })),
+      )
+      // A subagent session is evaluated as merge(agent, session), so session rules win.
+      const runtime = Permission.merge(explore!.permission, child)
+      for (const permission of ["agent_manager", "repo_clone", "write", "interactive_terminal", "bash", "edit"]) {
+        expect(Permission.evaluate(permission, "*", runtime).action).toBe("deny")
+      }
+    },
+  })
+})
+
+// Upstream's per-subagent opt-in (test/agent/agent.test.ts). Naming `general` exactly is
+// the one thing that lifts plan's deny — a wildcard covering it never does, and ask seals
+// `task` outright, so neither form reaches it there.
+test("plan agent honors an exact user allow for the general subagent", async () => {
+  await using tmp = await tmpdir({ config: { permission: { task: { general: "allow" } } } })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
+      expect(Permission.evaluate("task", "general", plan!.permission).action).toBe("allow")
+      expect(Permission.evaluate("task", "general", ask!.permission).action).toBe("deny")
     },
   })
 })
