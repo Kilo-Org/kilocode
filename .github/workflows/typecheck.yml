@@ -36,6 +36,7 @@ jobs:
               - '**'
               - '!.changeset/**'
               - '!.kilo/plans/**'
+              - '!packages/opencode/**'
               - '!packages/kilo-vscode/**'
               - '!packages/kilo-docs/**'
   # kilocode_change end
