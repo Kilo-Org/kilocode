@@ -21,6 +21,7 @@ import { isRecord } from "@/util/record"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { escapeHtml } from "@/util/html"
 import { trustedInProject } from "../kilocode/skill/trust" // kilocode_change
+import { allowed } from "../kilocode/skill/allow-list" // kilocode_change
 
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
@@ -374,7 +375,9 @@ const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       const list = Object.values(s.skills).toSorted((a, b) => a.name.localeCompare(b.name))
       if (!agent) return list
-      return list.filter((skill) => Permission.evaluate("skill", skill.name, agent.permission).action !== "deny")
+      // kilocode_change start - filter skills by permission deny and agent allow-list
+      return list.filter((skill) => Permission.evaluate("skill", skill.name, agent.permission).action !== "deny" && allowed(agent, skill.name)) // kilocode_change
+      // kilocode_change end
     })
 
     return Service.of({ get, require, all, dirs, available })

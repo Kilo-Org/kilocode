@@ -7,6 +7,7 @@ import { QuestionTool } from "./question"
 // kilocode_change start
 import { SuggestTool } from "../kilocode/suggestion/tool"
 import { Command } from "@/command"
+import { gateSkillTool } from "@/kilocode/tool/skill-gate"
 // kilocode_change end
 import { ShellTool } from "./shell"
 import { EditTool } from "./edit"
@@ -19,7 +20,7 @@ import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
 import { InvalidTool } from "./invalid"
-import { SkillTool } from "./skill"
+import { SkillTool } from "./skill" // kilocode_change
 import * as Tool from "./tool"
 import { Config } from "@/config/config"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin"
@@ -419,7 +420,8 @@ const layer = Layer.effect(
               .join("\n"),
             parameters: output.parameters,
             jsonSchema,
-            execute: tool.execute,
+            execute:
+              tool.id === SkillTool.id ? gateSkillTool(tool, input.agent) : tool.execute, // kilocode_change
             formatValidationError: tool.formatValidationError,
           }
           return ToolNetwork.isBuiltin(tool) ? ToolNetwork.builtin(result) : result

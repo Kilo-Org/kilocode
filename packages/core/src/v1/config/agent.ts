@@ -109,6 +109,12 @@ const AgentSchema = Schema.StructWithRest(
     maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated Use 'steps' field instead." }),
     permission: Schema.optional(ConfigPermissionV1.Info),
     requirements: Schema.optional(Requirements), // kilocode_change
+    // kilocode_change start - per-agent skill allow-list
+    skills: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+      description:
+        "Glob pattern allow-list of skills for this agent. Only skills matching the patterns are injected into the system prompt and loadable via the skill tool; a `!`-prefixed pattern excludes matching skills and the last matching pattern wins. A negation-only list (e.g. [\"!skill-a\"]) rejects every skill — use \"*\" together with `!` patterns to allow all but a few. Matching is case-sensitive. Unset or empty means all skills are available.",
+    }),
+    // kilocode_change end
   }),
   [Schema.Record(Schema.String, Schema.Any)],
 )
@@ -133,6 +139,7 @@ const KNOWN_KEYS = new Set([
   "disable",
   "tools",
   "requirements", // kilocode_change
+  "skills", // kilocode_change
 ])
 
 const normalize = (agent: Schema.Schema.Type<typeof AgentSchema>): Schema.Schema.Type<typeof AgentSchema> => {
