@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { SystemPrompt } from "../../src/session/system"
 import { environmentDetails } from "../../src/kilocode/editor-context"
+import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { MessageV2 } from "../../src/session/message-v2"
+import { SessionID, MessageID, PartID } from "../../src/session/schema"
+import { ModelID, ProviderID } from "../../src/provider/schema"
 import { ProviderTest } from "../fake/provider"
 
 import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
@@ -138,5 +142,64 @@ describe("environmentDetails", () => {
     expect(result).toContain("Working directory: /repo/.kilo/worktrees/feature")
     expect(result).toContain("Workspace root folder: /repo/.kilo/worktrees/feature")
     expect(result).toContain("Active file: src/app.ts")
+  })
+
+  test("block is separated from adjacent content with leading blank lines", () => {
+    const result = environmentDetails({ activeFile: "src/app.ts" })
+
+    expect(result.startsWith("\n\n<environment_details>")).toBe(true)
+    expect(result.endsWith("</environment_details>")).toBe(true)
+  })
+})
+
+describe("KiloSessionPrompt.injectEditorContext", () => {
+  const sessionID = SessionID.make("ses_env_sep")
+  const providerID = ProviderID.make("test")
+
+  function userInfo(id: string): MessageV2.User {
+    return {
+      id,
+      sessionID,
+      role: "user",
+      time: { created: 0 },
+      agent: "user",
+      model: { providerID, modelID: ModelID.make("test") },
+      tools: {},
+      mode: "",
+    } as unknown as MessageV2.User
+  }
+
+  test("appends the environment details block as its own part, separated from user text", () => {
+    const messageID = "m-user"
+    const msgs: MessageV2.WithParts[] = [
+      {
+        info: userInfo(messageID),
+        parts: [
+          {
+            id: PartID.make("prt_p1"),
+            sessionID,
+            messageID: MessageID.make("msg_m-user"),
+            type: "text",
+            text: "write this to a file:",
+          },
+        ] as MessageV2.Part[],
+      },
+    ]
+    const lastUser = {
+      ...msgs[0].info,
+      editorContext: { activeFile: "src/app.ts" },
+    } as unknown as MessageV2.User
+    const cache: KiloSessionPrompt.EnvCache = {}
+
+    KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache })
+
+    expect(msgs[0].parts).toHaveLength(2)
+    const userText = msgs[0].parts[0] as MessageV2.TextPart
+    const env = msgs[0].parts[1] as MessageV2.TextPart
+    expect(userText.text).toBe("write this to a file:")
+    expect(env.type).toBe("text")
+    expect(env.synthetic).toBe(true)
+    expect(env.text.startsWith("\n\n<environment_details>")).toBe(true)
+    expect(env.text).toContain("Active file: src/app.ts")
   })
 })
