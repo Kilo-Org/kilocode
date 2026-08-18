@@ -15,8 +15,10 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.session.controller.PromptSelection
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.util.edt
@@ -72,7 +74,6 @@ open class WorktreeSessionEditorManager(
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
     override val showsBranchBadgeInHeader: Boolean get() = false
     override val hostedInEditorTab: Boolean get() = true
-    override val minimalEmptySession: Boolean get() = true
     private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
     private var last: String? = null
@@ -134,6 +135,16 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     open fun deleting(): Set<String> = deleting
+
+    @RequiresEdt
+    override fun emptyPanel(parent: Disposable, controller: SessionController): EmptySessionPanel = EmptySessionPanel(
+        parent,
+        controller,
+        recents = emptyList(),
+        history = { showHistory() },
+        timers = timers,
+        minimal = true,
+    )
 
     @RequiresEdt
     override fun newSession() {

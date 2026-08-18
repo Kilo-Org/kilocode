@@ -10,6 +10,7 @@ import ai.kilocode.client.migration.MigrationUiState
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -76,6 +77,20 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         } finally {
             super.tearDown()
         }
+    }
+
+    fun `test empty panel is minimal`() {
+        val manager = manager()
+        val controller = controller()
+        flush()
+
+        val panel = edt { manager.emptyPanel(testRootDisposable, controller) }
+
+        assertTrue(panel.logoVisible())
+        assertTrue(panel.feedbackVisible())
+        assertFalse(panel.descriptionVisible())
+        assertFalse(panel.historyVisible())
+        assertFalse(panel.recentVisible())
     }
 
     fun `test new session creates and opens a persisted session`() {
@@ -419,6 +434,15 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         title = "Session $id",
         version = "1",
         time = SessionTimeDto(created = 0.0, updated = updated),
+    )
+
+    private fun controller() = SessionController(
+        parent = testRootDisposable,
+        sessions = sessions,
+        workspace = workspace,
+        app = app,
+        cs = coroutines.scope,
+        timers = timers,
     )
 
     private fun flush() = coroutines.drain()

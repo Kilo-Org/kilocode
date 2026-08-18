@@ -545,17 +545,9 @@ class SessionUi(
                     scroll.show(progressBody)
                 }
 
-                is SessionControllerEvent.ViewChanged.ShowRecents -> {
-                    val panel = EmptySessionPanel(
-                        this,
-                        controller,
-                        event.recents,
-                        history = { manager?.showHistory() },
-                        activity = { manager?.activity() ?: sessions.activitySnapshot() },
-                        titles = { manager?.titles().orEmpty() },
-                        timers = timers,
-                        minimal = manager?.minimalEmptySession == true,
-                    )
+                is SessionControllerEvent.ViewChanged.ShowEmpty -> {
+                    val panel = manager?.emptyPanel(this, controller)
+                        ?: EmptySessionPanel(this, controller, controller.recents(), timers = timers)
                     empty = panel
                     scroll.show(panel.view)
                 }

@@ -1,5 +1,7 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.telemetry.Telemetry
@@ -89,6 +91,17 @@ abstract class SessionHost(
     override fun focusPrompt() {
         focus(current?.promptFocusedComponent)
     }
+
+    @RequiresEdt
+    override fun emptyPanel(parent: Disposable, controller: SessionController): EmptySessionPanel = EmptySessionPanel(
+        parent,
+        controller,
+        controller.recents(),
+        history = { showHistory() },
+        activity = { activity() },
+        titles = { titles() },
+        timers = timers,
+    )
 
     @RequiresEdt
     protected fun currentUi(): SessionUi? = current
