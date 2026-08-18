@@ -1699,6 +1699,12 @@ export const layer = Layer.effect(
             Effect.provideService(ToolRegistry.Service, registry),
             Effect.provideService(MCP.Service, mcp),
             Effect.provideService(Truncate.Service, truncate),
+            // kilocode_change start - provide services used by session tool resolution
+            Effect.provideService(Config.Service, config),
+            Effect.provideService(Provider.Service, provider),
+            Effect.provideService(Database.Service, database),
+            Effect.provideService(RuntimeFlags.Service, flags),
+            // kilocode_change end
           )
 
           if (lastUser.format?.type === "json_schema") {
