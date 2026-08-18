@@ -62,6 +62,7 @@ export const PermissionDock: Component<{
   }
   const text = (rule: string) => (command() ? label(rule) : describeRule(props.request.toolName, rule, language.t))
   const external = () => props.request.toolName === "external_directory"
+  const sandboxEscalation = () => props.request.toolName === "sandbox_escalation"
   const cmdDescription = () => {
     const val = props.request.args?.description
     return typeof val === "string" && val.length > 0 ? val : undefined
@@ -129,6 +130,7 @@ export const PermissionDock: Component<{
   }
 
   const title = () => {
+    if (sandboxEscalation()) return language.t("notification.permission.titleSandboxEscalation")
     const skill = props.request.args?.skill
     if (skillShell() && typeof skill === "string" && skill.length > 0)
       // Escape the untrusted skill name so bidi/control chars can't reorder the header text.
