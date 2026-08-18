@@ -7,13 +7,17 @@ import com.intellij.openapi.diagnostic.Logger
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.management.ManagementFactory
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.logging.FileHandler
+import java.util.logging.ErrorManager
 import java.util.logging.Formatter
+import java.util.logging.Handler
 import java.util.logging.Level
 import java.util.logging.LogRecord
 
@@ -21,10 +25,10 @@ import java.util.logging.LogRecord
  * Logging interface for the Kilo JetBrains plugin.
  *
  * In normal (non-sandbox) mode, output goes through IntelliJ's own [com.intellij.openapi.diagnostic.Logger],
- * which writes to the standard IDE log file, and to rotated `kilo-dev.log.*` files inside the IDE log directory.
+ * which writes to the standard IDE log file, and to rotated `kilo.log*` files inside the IDE log directory.
  *
  * In sandbox mode (i.e. when running via `./gradlew runIde`, detected via the `idea.plugin.in.sandbox.mode`
- * system property), output is written only to `kilo-dev.log.*`.
+ * system property), output is written only to `kilo.log*`.
  *
  * Usage:
  * ```kotlin
@@ -105,7 +109,7 @@ internal class FileLog(cls: Class<*>) : KiloLog {
     companion object {
         private val level: Level by lazy { resolveLevel() }
         private const val LIMIT = 5_000_000
-        private const val COUNT = 3
+        private const val ROTATIONS = 2
 
         private val root: java.util.logging.Logger by lazy {
             val logger = java.util.logging.Logger.getLogger("ai.kilocode")
@@ -117,11 +121,11 @@ internal class FileLog(cls: Class<*>) : KiloLog {
             logger
         }
 
-        private val handler: FileHandler by lazy {
+        private val handler: Handler by lazy {
             val dir = resolveLogDir()
-            val path = dir.resolve("kilo-dev.log.%g")
+            val path = dir.resolve("kilo.log")
             IntellijLog(FileLog::class.java).info("Kilo diagnostic log directory: $dir")
-            val h = FileHandler(path.toString(), LIMIT, COUNT, true)
+            val h = RotatingLogHandler(path, LIMIT, ROTATIONS)
             h.formatter = KiloFormatter()
             h
         }
@@ -171,6 +175,53 @@ internal class FileLog(cls: Class<*>) : KiloLog {
     override fun error(msg: String, t: Throwable?) {
         if (t != null) root.logp(Level.SEVERE, name, null, msg, t) else root.logp(Level.SEVERE, name, null, msg)
     }
+}
+
+internal class RotatingLogHandler(
+    private val path: Path,
+    private val limit: Int,
+    private val count: Int,
+) : Handler() {
+    init {
+        Files.createDirectories(path.parent)
+    }
+
+    @Synchronized
+    override fun publish(record: LogRecord) {
+        if (!isLoggable(record)) return
+        runCatching {
+            val bytes = formatter.format(record).toByteArray(StandardCharsets.UTF_8)
+            rotate(bytes.size)
+            Files.newOutputStream(path, StandardOpenOption.CREATE, StandardOpenOption.APPEND).use {
+                it.write(bytes)
+            }
+        }.onFailure {
+            val err = if (it is Exception) it else RuntimeException(it)
+            reportError(null, err, ErrorManager.WRITE_FAILURE)
+        }
+    }
+
+    override fun flush() {}
+
+    override fun close() {}
+
+    private fun rotate(size: Int) {
+        if (limit <= 0 || count <= 0) return
+        val current = runCatching { Files.size(path) }.getOrDefault(0L)
+        if (current + size <= limit) return
+        for (i in count - 1 downTo 0) {
+            val src = rotated(i)
+            val dst = rotated(i + 1)
+            if (i == count - 1) {
+                Files.deleteIfExists(src)
+                continue
+            }
+            if (Files.exists(src)) Files.move(src, dst, StandardCopyOption.REPLACE_EXISTING)
+        }
+        if (Files.exists(path)) Files.move(path, rotated(0), StandardCopyOption.REPLACE_EXISTING)
+    }
+
+    private fun rotated(i: Int): Path = path.resolveSibling("${path.fileName}.$i")
 }
 
 internal class KiloFormatter : Formatter() {
