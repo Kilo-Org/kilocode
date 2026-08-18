@@ -6,7 +6,6 @@ import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.session.views.base.DialogView
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -15,7 +14,6 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import java.awt.Container
 import javax.swing.Icon
-import javax.swing.JButton
 import javax.swing.ScrollPaneConstants
 
 @Suppress("UnstableApiUsage")
@@ -117,27 +115,6 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
             assertNull(findText(view, "Provider balance is too low"))
             assertNull(findErrorScroll(view, "Provider balance is too low"))
             assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.description")))
-        }
-    }
-
-    fun `test showNotice renders copy warning icon and action`() {
-        edt {
-            var opened = false
-            val view = SessionOutcomeView()
-            view.showNotice(
-                "Kilo can't access this Dev Container project",
-                "Run Kilo inside the container.",
-                OutcomeTone.WARNING,
-                listOf(DialogView.Action("learn", "Learn more", primary = false) { opened = true }),
-            )
-
-            assertTrue(view.isVisible)
-            assertNotNull(findText(view, "Kilo can't access this Dev Container project"))
-            assertNotNull(findText(view, "Run Kilo inside the container."))
-            assertIcons(view, AllIcons.General.Warning)
-            val button = findAll<JButton>(view).first { it.text == "Learn more" }
-            button.doClick()
-            assertTrue(opened)
         }
     }
 

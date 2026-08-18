@@ -14,7 +14,6 @@ import ai.kilocode.client.migration.MigrationUiState
 import ai.kilocode.client.migration.ui.MigrationOverlayPanel
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.FileAttachment
-import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.scroll.SessionScroll
@@ -56,7 +55,6 @@ import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.SessionOutcomeView
-import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
@@ -68,7 +66,6 @@ import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.DiffFileDto
-import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
@@ -132,7 +129,6 @@ class SessionUi(
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
-        private const val DEVCONTAINER_URL = "https://kilo.ai/docs/jetbrains/dev-containers"
         private const val HIDE_MS = 120
     }
 
@@ -188,8 +184,6 @@ class SessionUi(
 
     private lateinit var progressBody: JPanel
 
-    private lateinit var unsupportedBody: JPanel
-
     private lateinit var messageBody: SessionMessageListPanel
 
     private lateinit var header: SessionHeaderPanel
@@ -200,7 +194,6 @@ class SessionUi(
     private lateinit var permission: PermissionView
     private lateinit var login: LoginRequiredView
     private lateinit var outcome: SessionOutcomeView
-    private lateinit var unsupported: SessionOutcomeView
     private lateinit var connection: ConnectionPanel
 
     private lateinit var prompt: PromptPanel
@@ -369,21 +362,6 @@ class SessionUi(
         load = LoadingPanel()
         progressBody = load
         val focus = { manager?.focusPrompt() ?: focusPrompt() }
-        unsupported = SessionOutcomeView(
-            selection = selection,
-            focus = focus,
-        )
-        unsupportedBody = JPanel(BorderLayout()).apply {
-            isOpaque = false
-            add(
-                unsupported.align(
-                    HAlign.CENTER,
-                    VAlign.TOP,
-                    maxW = { SessionUiStyle.SessionLayout.readableWidth(unsupported, style.transcriptFont) },
-                ),
-                BorderLayout.NORTH,
-            )
-        }
         question = QuestionView(
             project = project,
             reply = { id, dto, opts -> controller.replyQuestion(id, dto, opts) },
@@ -584,23 +562,12 @@ class SessionUi(
                         timers = timers,
                     )
                     empty = panel
-                    if (controller.model.workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) {
-                        scroll.show(body(controller.model.state))
-                    }
-                    if (controller.model.workspace.status != KiloWorkspaceStatusDto.UNSUPPORTED) {
-                        scroll.show(panel.view)
-                    }
+                    scroll.show(panel.view)
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowSession -> {
                     empty = null
                     scroll.show(body(controller.model.state))
-                }
-
-                is SessionControllerEvent.ViewChanged.ShowUnsupported -> {
-                    empty = null
-                    showUnsupported(event.reason)
-                    scroll.show(unsupportedBody)
                 }
 
                 is SessionControllerEvent.AppChanged -> {
@@ -609,9 +576,6 @@ class SessionUi(
 
                 is SessionControllerEvent.WorkspaceChanged -> {
                     prompt.setReady(controller.model.isReady())
-                    if (controller.model.workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED || scroll.view === unsupportedBody) {
-                        scroll.show(body(controller.model.state))
-                    }
                 }
 
                 is SessionControllerEvent.ConnectionChanged -> Unit
@@ -716,37 +680,10 @@ class SessionUi(
     }
 
     private fun body(state: SessionState): JPanel {
-        if (controller.model.workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) {
-            showUnsupported(controller.model.workspace.error)
-            return unsupportedBody
-        }
         if (controller.model.showSession) return messageBody
         if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (state is SessionState.Loading) return progressBody
         return blankBody
-    }
-
-    @RequiresEdt
-    private fun showUnsupported(reason: String?) {
-        val msg = unsupportedCopy(reason)
-        unsupported.showNotice(
-            KiloBundle.message(msg.first),
-            KiloBundle.message(msg.second),
-            OutcomeTone.WARNING,
-            listOf(
-                DialogView.Action("learn", KiloBundle.message("session.unsupported.learnMore"), primary = false) {
-                    openUrl(DEVCONTAINER_URL)
-                },
-            ),
-        )
-    }
-
-    private fun unsupportedCopy(reason: String?) = when (reason) {
-        "devcontainer_virtual_filesystem",
-        "wsl_virtual_filesystem",
-        "invalid_virtual_path" -> "session.unsupported.devcontainer.title" to "session.unsupported.devcontainer.description"
-
-        else -> "session.unsupported.devcontainer.title" to "session.unsupported.devcontainer.description"
     }
 
     private fun finishOpen(show: Boolean) {
@@ -1089,7 +1026,6 @@ class SessionUi(
         header.applyStyle(style)
         prompt.applyStyle(style)
         connection.applyStyle(style)
-        unsupported.applyStyle(style)
         scroll.applyStyle(style)
         empty?.applyStyle(style)
         refresh()

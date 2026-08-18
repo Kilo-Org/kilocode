@@ -40,7 +40,6 @@ class SessionOutcomeView(
         error.text = message
         setContentPadding(left = false, right = false)
         setContent(error.scroll)
-        setActions(emptyList())
         isVisible = true
         refresh()
     }
@@ -63,27 +62,6 @@ class SessionOutcomeView(
         setHeader(title, desc)
         setContentPadding()
         setContent(null)
-        setActions(emptyList())
-        isVisible = true
-        refresh()
-    }
-
-    @RequiresEdt
-    fun showNotice(
-        title: String,
-        description: String,
-        tone: OutcomeTone,
-        actions: List<DialogView.Action> = emptyList(),
-    ) {
-        val icon = when (tone) {
-            OutcomeTone.WARNING -> AllIcons.General.Warning
-            OutcomeTone.CRITICAL -> AllIcons.General.Error
-        }
-        setHeaderIcon(icon, title)
-        setHeader(title, description)
-        setContentPadding()
-        setContent(null)
-        setActions(actions)
         isVisible = true
         refresh()
     }

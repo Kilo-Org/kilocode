@@ -1,7 +1,6 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.session.SessionRef
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.Question
@@ -22,15 +21,12 @@ import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.ui.layout.Align
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
-import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
-import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -39,8 +35,6 @@ import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextArea
-import java.awt.Container
 import java.awt.Dimension
 import javax.swing.JLayeredPane
 import javax.swing.JPanel
@@ -203,24 +197,6 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
         assertSame(messages, qv.parent)
         assertSame(messages, pv.parent)
-    }
-
-    fun `test unsupported workspace shows standalone outcome card`() {
-        workspaceRpc.state.value = KiloWorkspaceStateDto(
-            status = KiloWorkspaceStatusDto.UNSUPPORTED,
-            error = "devcontainer_virtual_filesystem",
-        )
-        ui = newUi(displayMs = 1_000)
-        settle()
-        layout()
-
-        val view = find<SessionOutcomeView>(scrollView()!!)
-        val prompt = find<PromptPanel>(ui)
-
-        assertTrue(view.isVisible)
-        assertNotNull(findText(view, KiloBundle.message("session.unsupported.devcontainer.title")))
-        assertNotNull(findText(view, KiloBundle.message("session.unsupported.devcontainer.description")))
-        assertFalse(prompt.isSendEnabled)
     }
 
     fun `test header is docked above shared scroll pane and hidden while empty`() {
@@ -798,20 +774,6 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
     private fun promptPoint(root: SessionRootPanel, prompt: PromptPanel) =
         SwingUtilities.convertPoint(prompt.parent, prompt.x, prompt.y, root.overlay)
-
-    private fun findText(root: Container, text: String) = findAll<JBTextArea>(root).firstOrNull { it.text == text }
-
-    private inline fun <reified T> findAll(root: Container): List<T> = findAll(root, T::class.java)
-
-    private fun <T> findAll(root: Container, cls: Class<T>): List<T> {
-        val result = mutableListOf<T>()
-        if (cls.isInstance(root)) result.add(cls.cast(root))
-        for (child in root.components) {
-            if (cls.isInstance(child)) result.add(cls.cast(child))
-            if (child is Container) result.addAll(findAll(child, cls))
-        }
-        return result
-    }
 
     private class Row(override val sessionViewKind: SessionView.Kind) : JPanel(), SessionView {
         override fun getPreferredSize() = Dimension(100, 10)

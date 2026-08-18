@@ -31,10 +31,6 @@ sealed class SessionControllerEvent {
             override fun toString() = "ViewChanged recents=${recents.size}"
         }
 
-        data class ShowUnsupported(val reason: String) : ViewChanged() {
-            override fun toString() = "ViewChanged unsupported reason=$reason"
-        }
-
         data object ShowSession : ViewChanged() {
             override fun toString() = "ViewChanged session"
         }

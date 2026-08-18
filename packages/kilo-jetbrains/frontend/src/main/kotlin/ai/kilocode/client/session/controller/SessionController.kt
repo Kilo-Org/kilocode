@@ -619,10 +619,6 @@ class SessionController(
         LOG.debug {
             "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=connection-retry app=${model.app.status} workspace=${model.workspace.status}"
         }
-        if (model.workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) {
-            setConnectionTargetState(resolveConnectionState())
-            return
-        }
         capture("Connection Retry Clicked", connectionProps())
         setConnectionTargetState(SessionControllerEvent.ConnectionChanged.ShowConnecting)
         setVisibleConnectionState(SessionControllerEvent.ConnectionChanged.ShowConnecting)
@@ -968,7 +964,6 @@ class SessionController(
                     }
                     syncModelSelection()
                     syncConnectionState()
-                    syncWorkspaceViewState()
                     refreshAccountOverlay()
                 }
             }
@@ -987,7 +982,6 @@ class SessionController(
                 fire(SessionControllerEvent.WorkspaceChanged) {
                     model.workspace = state
                     syncConnectionState()
-                    syncWorkspaceViewState()
 
                     if (state.status != KiloWorkspaceStatusDto.READY) return@fire
 
@@ -2076,21 +2070,9 @@ class SessionController(
 
     private fun showSession() {
         assertEdt()
-        if (model.workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) {
-            syncWorkspaceViewState()
-            return
-        }
         if (!model.showSession) {
             setControllerViewState(SessionControllerEvent.ViewChanged.ShowSession)
         }
-    }
-
-    private fun syncWorkspaceViewState() {
-        assertEdt()
-        val workspace = model.workspace
-        if (workspace.status != KiloWorkspaceStatusDto.UNSUPPORTED) return
-        if (model.app.status != KiloAppStatusDto.READY) return
-        setControllerViewState(SessionControllerEvent.ViewChanged.ShowUnsupported(workspace.error ?: "unknown"))
     }
 
     private fun status(): String = when (partType) {
@@ -2295,20 +2277,14 @@ class SessionController(
         if (disposed) return false
         if (ref != null) return false
         if (sessionLoadState !is SessionLoadState.Idle) return false
-        if (model.workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) return false
         return !model.showSession
     }
 
     private fun setControllerViewState(event: SessionControllerEvent.ViewChanged) {
         assertEdt()
         if (disposed) return
-        if (event is SessionControllerEvent.ViewChanged.ShowSession) {
-            openLocal()
-        }
+        if (event is SessionControllerEvent.ViewChanged.ShowSession) openLocal()
         if (viewState == event) return
-        if (event is SessionControllerEvent.ViewChanged.ShowUnsupported) {
-            capture("Dev Container Unsupported Shown", connectionProps() + mapOf("reason" to event.reason))
-        }
         fire(event) {
             viewState = event
             if (event is SessionControllerEvent.ViewChanged.ShowSession) {
@@ -2321,7 +2297,6 @@ class SessionController(
             is SessionControllerEvent.ViewChanged.ShowRecents -> showAccountOverlay()
             is SessionControllerEvent.ViewChanged.ShowProgress -> hideAccountOverlay()
             is SessionControllerEvent.ViewChanged.ShowSession -> hideAccountOverlay()
-            is SessionControllerEvent.ViewChanged.ShowUnsupported -> hideAccountOverlay()
         }
     }
 
@@ -2335,9 +2310,7 @@ class SessionController(
         if (disposed) return
         connectionTargetState = event
         val state = event
-        if (event is SessionControllerEvent.ConnectionChanged.Hide ||
-            event is SessionControllerEvent.ConnectionChanged.ShowWarning
-        ) {
+        if (event is SessionControllerEvent.ConnectionChanged.Hide || event is SessionControllerEvent.ConnectionChanged.ShowWarning) {
             setVisibleConnectionState(event)
             return
         }
@@ -2395,10 +2368,6 @@ class SessionController(
                 app.downloadVersion,
                 app.downloadPlatform,
             )
-        }
-
-        if (workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) {
-            return SessionControllerEvent.ConnectionChanged.Hide
         }
 
         if (workspace.status == KiloWorkspaceStatusDto.ERROR) {
