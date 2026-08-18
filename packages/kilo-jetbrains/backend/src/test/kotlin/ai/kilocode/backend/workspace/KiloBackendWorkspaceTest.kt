@@ -232,6 +232,7 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `agents failure retries then transitions to Error`() = runBlocking {
         mock.agentsStatus = 500
+        mock.agents = """{"error":"invalid agent config"}"""
         val app = setup()
         val ws = ready(app)
 
@@ -241,6 +242,12 @@ class KiloBackendWorkspaceTest {
 
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("agents"))
+        val item = err.errors.single { it.resource == "agents" }
+        assertEquals(500, item.status)
+        assertTrue(item.detail?.contains("invalid agent config") == true)
+        assertTrue(log.messages.any { it.contains("agents response body:") && it.contains("invalid agent config") })
+        assertTrue(log.messages.any { it.contains("WARN: agents: all 3 attempts failed") })
+        assertTrue(log.messages.none { it.contains("ERROR: agents: all 3 attempts failed") })
     }
 
     @Test
