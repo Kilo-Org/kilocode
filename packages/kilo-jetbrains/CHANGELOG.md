@@ -150,6 +150,55 @@
 
 ## [Unreleased]
 
+## [7.1.0-rc.1] - 2026-08-18
+
+### Added
+- feat(opencode): link sessions to their pull request by @iscekic in https://github.com/Kilo-Org/kilocode/pull/13137
+- feat(vscode): support mcp tool display setting in display preferences by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13010
+- feat(vscode): show token throughput by default by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13164
+- feat(vscode): add subagent inspector tabs by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13173
+- feat(jetbrains): agent manager beta by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12433
+
+### Fixed
+- fix(agent-manager): hydrate background project loading by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12977
+- fix(ui): preserve streaming chat scroll position by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13160
+- fix(docs): exclude flaky Requesty marketplace link by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13161
+- fix(vscode): default speech to text to Parakeet by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13162
+- fix(cli): use full GPT-5.6 OAuth context by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13165
+- fix(vscode): restore text streaming by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13168
+- fix(agent-manager): restore live diff statistics by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13167
+- fix(cli): switch to the code model after planning by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13112
+- fix(vscode): apply the selected agent instead of the stale session agent by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/13142
+- fix(vscode): preserve cached reasoning variants by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13174
+- fix(vscode): keep file mentions fresh by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13158
+- fix(vscode): keep queued messages visible by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13176
+- fix(vscode): show provider hints in model selector by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13177
+- fix(vscode): shorten prompt model label by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13175
+- fix(agent-manager): default worktree session history by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13179
+- fix(opencode): prompt before sandboxed git writes by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13178
+- fix(agent-manager): keep subagent descriptions out of worktree titles by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13194
+- fix(agent-manager): use explicit Git fetch refspecs by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13196
+- fix(cli): preserve Kilo upgrade version lookup by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13199
+- fix(cli): persist snapshot disable across restarts by @quanzhuo in https://github.com/Kilo-Org/kilocode/pull/13195
+- fix(agent-manager): make tool requests strict by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13197
+- fix(cli): accept JWT share tokens when importing sessions by @eshurakov in https://github.com/Kilo-Org/kilocode/pull/13183
+- fix(vscode): stabilize Agent Manager inline diff scrolling by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13200
+- fix(cli): prevent VS Code server connection failure on unwritable state paths by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13115
+- fix(cli): keep ask and plan modes read-only under broad permission rules by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13124
+- fix(vscode): keep permission prompt actions reachable with large diffs by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13201
+- fix(tui): keep Kilo Gateway models visible in the model picker by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13170
+- fix(core): prevent concurrent WAL recovery crashes by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13180
+
+### Changed
+- release(jetbrains): v7.0.16 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13129
+- docs: add TrustedRouter provider page by @jperla in https://github.com/Kilo-Org/kilocode/pull/13023
+- perf(vscode): optimize top bar and timeline calculation performance by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13155
+- perf(agent-manager): optimize tab switching and context transition latency by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13156
+- perf(vscode): optimize large session load times and eliminate reactive cascades by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13154
+- docs(kilo-docs): remove maximum review time setting from Code Reviews by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13159
+- revert(agent-manager): restore provider-compatible tool schema by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13203
+
+
 ## [7.0.16] - 2026-08-14
 
 ### Added
