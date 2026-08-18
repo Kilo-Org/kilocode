@@ -40,6 +40,7 @@ open class WorktreeSessionEditorManager(
     project: Project,
     private val worktree: Workspace,
     private val list: WorktreeSessionListController,
+    private val del: (String, (Boolean, String?) -> Unit) -> Unit = list::delete,
     create: (Project, Workspace, SessionManager, SessionRef?, UiTimerSource) -> SessionUi =
         { project, workspace, manager, ref, timers ->
             service<SessionUiFactory>().create(project, workspace, manager, ref, timers)
@@ -202,11 +203,10 @@ open class WorktreeSessionEditorManager(
         onListChanged?.invoke()
         active.forEach { id ->
             val name = names[id] ?: title(id)
-            list.delete(id) { ok, err ->
+            del(id) { ok, err ->
                 deleting.remove(id)
                 onListChanged?.invoke()
-                if (ok) return@delete
-                notify(KiloBundle.message("worktree.session.delete.failed.title", name), err)
+                if (!ok) notify(KiloBundle.message("worktree.session.delete.failed.title", name), err)
             }
         }
         active.forEach(::forceSession)

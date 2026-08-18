@@ -213,8 +213,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     fun `test delete failure reverts row and notifies`() {
         val session = session("ses_1", updated = 1.0)
         rpc.listed += session
-        rpc.deleteThrows = IllegalStateException("delete unavailable")
-        val manager = manager()
+        val manager = manager(del = { _, done -> done(false, "delete unavailable") })
         edt { manager.start() }
         flush()
 
@@ -316,6 +315,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
 
     private fun manager(
         controller: WorktreeSessionListController = WorktreeSessionListController(sessions, DIR, coroutines.scope, telemetry = { _, _ -> }),
+        del: (String, (Boolean, String?) -> Unit) -> Unit = controller::delete,
         adopt: suspend (String, String, String) -> RenameWorktreeResultDto = { _, _, _ -> RenameWorktreeResultDto() },
         onAdopted: (WorktreeDto) -> Unit = {},
     ): WorktreeSessionEditorManager {
@@ -324,6 +324,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             project = project,
             worktree = workspace,
             list = controller,
+            del = del,
             create = { project, workspace, owner, ref, timers ->
                 val id = when (ref) {
                     is SessionRef.Local -> ref.id
