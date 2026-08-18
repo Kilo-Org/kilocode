@@ -1128,10 +1128,12 @@ export class WorktreeManager {
         ])
       }
       if (!(await this.gitTry(["show-ref", "--verify", "--quiet", `refs/heads/${info.headRefName}`]))) {
-        const ref = `refs/remotes/origin/${info.headRefName}`
-        await this.gitExec(["branch", info.headRefName, ref])
-        await this.gitExec(["config", `branch.${info.headRefName}.remote`, "origin"])
-        await this.gitExec(["config", `branch.${info.headRefName}.merge`, `refs/heads/${info.headRefName}`])
+        const start = `refs/remotes/origin/${info.headRefName}`
+        await this.gitExec(["branch", info.headRefName, start])
+        if (ok) {
+          await this.gitExec(["config", `branch.${info.headRefName}.remote`, "origin"])
+          await this.gitExec(["config", `branch.${info.headRefName}.merge`, `refs/heads/${info.headRefName}`])
+        }
       }
     }
   }
