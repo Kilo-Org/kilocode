@@ -21,6 +21,7 @@ import {
   Release as KiloRelease,
   Scoop as KiloScoop,
 } from "@/kilocode/installation"
+import { latest as kiloLatest } from "@/kilocode/installation/latest"
 // kilocode_change end
 import { InstallationEvent } from "@opencode-ai/schema/installation-event"
 
@@ -70,7 +71,6 @@ export class UpgradeFailedError extends Schema.TaggedErrorClass<UpgradeFailedErr
 }
 
 // Response schemas for external version APIs
-const GitHubRelease = Schema.Struct({ tag_name: Schema.String })
 const NpmPackage = Schema.Struct({ version: Schema.String })
 const BrewFormula = Schema.Struct({
   versions: Schema.Struct({ stable: Schema.String }),
@@ -302,19 +302,7 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
           return data.version
         }
 
-        // kilocode_change start - curl/unknown fallback: resolve from the public npm
-        // dist-tag instead of GitHub /releases/latest, which is polluted by non-CLI
-        // (e.g. JetBrains) releases and returns a tag like "jetbrains/v7.0.4" that
-        // breaks version resolution. Use the public registry directly: a curl-
-        // installed binary is not tied to any project's npm config.
-        const response = yield* httpOk.execute(
-          HttpClientRequest.get(`https://registry.npmjs.org/${KiloNpm.path}/${InstallationChannel}`).pipe(
-            HttpClientRequest.acceptJson,
-          ),
-        )
-        const data = yield* HttpClientResponse.schemaBodyJson(NpmPackage)(response)
-        return data.version
-        // kilocode_change end
+        return yield* kiloLatest(httpOk, KiloNpm.path, InstallationChannel) // kilocode_change
       }, Effect.orDie),
       upgrade: Effect.fn("Installation.upgrade")(function* (m: Method, target: string) {
         let upgradeResult: { code: number; stdout: string; stderr: string } | undefined

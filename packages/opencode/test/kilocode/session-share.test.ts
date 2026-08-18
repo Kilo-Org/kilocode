@@ -31,7 +31,7 @@ it.instance("shares and unshares sessions through Kilo public URLs", () => {
       const url = String(input)
       urls.push(url)
       if (url.endsWith("/api/user")) return new Response("{}", { status: 200 })
-      if (url.endsWith("/share")) return Response.json({ public_id: "public-1" })
+      if (url.endsWith("/share")) return Response.json({ share_token: "public-1" })
       if (url.endsWith("/unshare")) return new Response(null, { status: 200 })
       return new Response("{}", { status: 200 })
     },

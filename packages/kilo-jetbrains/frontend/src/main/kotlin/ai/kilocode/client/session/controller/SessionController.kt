@@ -20,14 +20,19 @@ import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.Reasoning
+import ai.kilocode.client.session.ui.mode.agentTitle
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.Outcome
+import ai.kilocode.client.session.model.OutcomeTone
+import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.client.util.edtLater as edt
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -120,6 +125,7 @@ class SessionController(
 
     companion object {
         private val LOG = KiloLog.create(SessionController::class.java)
+        private const val ABORT_ERROR = "MessageAbortedError"
         internal const val RECENT_LIMIT = 5
         internal const val DISPLAY_DELAY_MS = 1_000L
         internal const val REVERT_TIMEOUT_MS = 30_000L
@@ -183,6 +189,8 @@ class SessionController(
     private var agentTime: Double? = null
     private var prefModel: String? = null
     private var prefAgent: String? = null
+    private var prefVariantKey: String? = null
+    private var prefVariant: String? = null
     private var modelTime: Double? = null
     private val snapshots = mutableMapOf<PartKey, String>()
 
@@ -262,11 +270,16 @@ class SessionController(
         }
     }
 
-    fun prompt(text: String, files: List<PromptPartDto> = emptyList(), editorContext: EditorContextDto? = null) {
+    fun prompt(
+        text: String,
+        files: List<PromptPartDto> = emptyList(),
+        editorContext: EditorContextDto? = null,
+        select: PromptSelection? = null,
+    ) {
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val dto = promptDto(text, files, editorContext)
+        val dto = promptDto(text, files, editorContext, select)
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
         dispatch(Dispatch("prompt", "user", text, props, start, exists)) { id ->
@@ -631,6 +644,8 @@ class SessionController(
         modelTime = null
         prefModel = null
         prefAgent = null
+        prefVariantKey = null
+        prefVariant = null
         cs.launch {
             try {
                 sessions.updateConfig(directory, ConfigUpdateDto(agent = name))
@@ -654,6 +669,8 @@ class SessionController(
         modelTime = null
         prefModel = null
         prefAgent = null
+        prefVariantKey = null
+        prefVariant = null
         app.selectModel(agent, provider, id)
         selectResolvedModel(key)
         model.modelOverride = model.defaultModel != model.model
@@ -664,6 +681,8 @@ class SessionController(
         assertEdt()
         val agent = model.agent ?: return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model-reset agent=$agent" }
+        prefVariantKey = null
+        prefVariant = null
         app.clearModel(agent)
         val auto = configModel(agent) ?: providerModel(agent)
         selectResolvedModel(auto)
@@ -676,9 +695,43 @@ class SessionController(
         val key = model.model ?: return
         if (value !in model.variants) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
+        prefVariantKey = key
+        prefVariant = value
         app.selectVariant(key, value)
         model.variant = value
         capture("Reasoning Variant Selected", sessionProps() + mapOf("model" to key, "variant" to value))
+    }
+
+    /**
+     * Seeds this session's agent / model / reasoning from an initial [select] (New Worktree flow),
+     * mirroring VS Code's setSessionAgent + setSessionModel + variant seeding. Attaching the pick to
+     * the first prompt alone only affects that one turn; setting it as the session's preferred
+     * selection makes the pickers and every later turn use it too, and survives the later
+     * workspace-ready model resolution because [prefAgent] / [prefModel] / [prefVariant] win in
+     * [syncModelSelection].
+     */
+    fun applySelection(select: PromptSelection) {
+        assertEdt()
+        val agent = select.agent ?: return
+        fire(SessionControllerEvent.WorkspaceReady) {
+            model.agent = agent
+            val provider = select.provider
+            val id = select.model
+            if (provider != null && id != null) {
+                val key = "$provider/$id"
+                app.selectModel(agent, provider, id)
+                select.variant?.let { app.selectVariant(key, it) }
+                prefAgent = agent
+                prefModel = key
+                prefVariantKey = key
+                prefVariant = select.variant
+            } else {
+                prefVariantKey = null
+                prefVariant = null
+            }
+            syncModelSelection()
+            model.refreshHeader()
+        }
     }
 
     // ------ permission / question resolution ------
@@ -935,7 +988,7 @@ class SessionController(
                     model.agents = state.agents?.agents?.map {
                         AgentItem(
                             it.name,
-                            it.displayName ?: title(it.name),
+                            agentTitle(it.name, it.displayName),
                             it.description,
                             it.deprecated == true,
                         )
@@ -1310,6 +1363,8 @@ class SessionController(
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
                     } else if (status != null) {
                         seedStatus(status)
+                    } else {
+                        seedOutcome()
                     }
                 }
             }
@@ -1340,6 +1395,15 @@ class SessionController(
             else -> return  // idle or unknown — leave as Idle
         }
         model.setState(state)
+    }
+
+    private fun seedOutcome() {
+        val err = model.messages().lastOrNull { it.info.role == "assistant" }?.info?.error ?: return
+        if (err.type == ABORT_ERROR) {
+            model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED, OutcomeTone.WARNING))
+            return
+        }
+        model.setState(SessionState.Error(err.message ?: err.type, err.type))
     }
 
     private fun handle(event: ChatEventDto) {
@@ -1419,20 +1483,25 @@ class SessionController(
                 val current = model.state
                 if (current is SessionState.AwaitingQuestion) return
                 if (current is SessionState.AwaitingPermission) return
-                val clobberOk = event.reason == "completed"
-                    || current is SessionState.Busy
-                    || current is SessionState.Retry
-                    || current is SessionState.Offline
-                if (clobberOk) {
-                    if (event.reason == "completed") capture("Task Completed", sessionProps(event.sessionID))
-                    model.setState(SessionState.Idle)
+                if (current is SessionState.LoginRequired) return
+                if (current is SessionState.Error && event.reason != "completed") return
+                val ended = TurnOutcome.classify(event.reason)
+                when {
+                    ended != null -> model.setState(SessionState.TurnEnded(ended.first, ended.second))
+                    event.reason == "completed" -> {
+                        capture("Task Completed", sessionProps(event.sessionID))
+                        model.setState(SessionState.Idle)
+                    }
+                    current is SessionState.Busy || current is SessionState.Retry || current is SessionState.Offline -> model.setState(SessionState.Idle)
                 }
             }
 
             is ChatEventDto.SessionCreated -> adoptFollowup(event.info)
 
             is ChatEventDto.Error -> {
-                capture("Session Error", sessionProps(event.sessionID) + mapOf("context" to "event", "errorClass" to (event.error?.type ?: "unknown")))
+                if (event.error?.type != ABORT_ERROR) {
+                    capture("Session Error", sessionProps(event.sessionID) + mapOf("context" to "event", "errorClass" to (event.error?.type ?: "unknown")))
+                }
                 error(event, true)
             }
 
@@ -1553,6 +1622,7 @@ class SessionController(
             model.setState(SessionState.LoginRequired(KiloBundle.message("session.login.required.description")))
             return
         }
+        if (event.error?.type == ABORT_ERROR) return
         val msg = event.error?.message ?: event.error?.type ?: KiloBundle.message("session.error.unknown")
         model.setState(SessionState.Error(msg, event.error?.type))
     }
@@ -1657,7 +1727,11 @@ class SessionController(
         val state = when (dto.type) {
             "idle" -> {
                 val current = model.state
-                if (current is SessionState.LoginRequired || current is SessionState.Reverting) return
+                if (current is SessionState.Error
+                    || current is SessionState.TurnEnded
+                    || current is SessionState.LoginRequired
+                    || current is SessionState.Reverting
+                ) return
                 purgePending(sid)
                 // purgePending may promote a still-queued permission from another (unpurged) child
                 // session; mirror idle() and leave that card in place rather than clobbering it with Idle.
@@ -1666,7 +1740,7 @@ class SessionController(
             }
             "busy" -> {
                 val current = model.state
-                if (current is SessionState.Idle || current is SessionState.Error)
+                if (current is SessionState.Idle || current is SessionState.Error || current is SessionState.TurnEnded)
                     SessionState.Busy(KiloBundle.message("session.status.considering"))
                 else return // already in a more specific phase
             }
@@ -1770,6 +1844,7 @@ class SessionController(
         // Only apply if we're not in a more specific non-terminal state.
         val current = model.state
         if (current !is SessionState.Error
+            && current !is SessionState.TurnEnded
             && current !is SessionState.AwaitingPermission
             && current !is SessionState.AwaitingQuestion
             && current !is SessionState.LoginRequired
@@ -1825,19 +1900,24 @@ class SessionController(
         text: String,
         files: List<PromptPartDto> = emptyList(),
         editorContext: EditorContextDto? = null,
+        select: PromptSelection? = null,
     ): PromptDto {
-        val full = model.model
-        val sel = full?.let(::parseModel)
-        val variant = model.variant?.takeIf { it in model.variants }
+        val sel = model.model?.let(::parseModel)
+        val provider = select?.provider ?: sel?.first
+        val modelId = select?.model ?: sel?.second
+        val agent = select?.agent ?: model.agent
+        // An explicit variant comes from the dialog before the model catalog is loaded, so it can't
+        // be validated against model.variants yet; only the fallback is filtered.
+        val variant = select?.variant ?: model.variant?.takeIf { it in model.variants }
         val parts = buildList {
             text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
             addAll(files)
         }
         return PromptDto(
             parts = parts,
-            providerID = sel?.first,
-            modelID = sel?.second,
-            agent = model.agent,
+            providerID = provider,
+            modelID = modelId,
+            agent = agent,
             variant = variant,
             editorContext = editorContext,
         )
@@ -1892,8 +1972,11 @@ class SessionController(
         model.model = key
         val item = key?.let(::item)
         model.variants = item?.variants ?: emptyList()
+        val pref = prefVariant?.takeIf { prefVariantKey == key }
         val saved = key?.let { app.models.value.variant[it] }
-        model.variant = saved?.takeIf { it in model.variants } ?: model.variants.firstOrNull()
+        model.variant = pref?.takeIf { it in model.variants }
+            ?: saved?.takeIf { it in model.variants }
+            ?: model.variants.firstOrNull()
         model.refreshHeader()
     }
 
@@ -2350,10 +2433,6 @@ class SessionController(
         check(ApplicationManager.getApplication().isDispatchThread) { "SessionController state must be accessed on EDT" }
     }
 
-    private fun edt(block: () -> Unit) {
-        ApplicationManager.getApplication().invokeLater(block)
-    }
-
     private fun runEdt(block: () -> Unit) {
         val application = ApplicationManager.getApplication()
         if (application.isDispatchThread) {
@@ -2430,6 +2509,7 @@ class SessionController(
                 out.add("[error]")
                 out.add("[${state.message}]")
             }
+            is SessionState.TurnEnded -> out.add("[${state.outcome.name.lowercase()}]")
             is SessionState.LoginRequired -> {
                 out.add("[login-required]")
                 out.add("[${state.message}]")
@@ -2496,12 +2576,6 @@ private fun summary(count: Int): String {
     return "$base ($count)"
 }
 
-private fun title(name: String): String = name
-    .split('-', '_')
-    .filter { it.isNotEmpty() }
-    .joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
-    .ifEmpty { name }
-
 private const val KILO_PROVIDER = "kilo"
 private const val KILO_AUTO_MODEL = "kilo-auto/free"
 
@@ -2536,6 +2610,18 @@ private fun selection(value: String): ModelSelectionDto? {
     val parsed = parseModel(value) ?: return null
     return ModelSelectionDto(parsed.first, parsed.second)
 }
+
+/**
+ * An explicit agent / provider / model / reasoning selection to attach to a single prompt. Used by
+ * the New Worktree flow so the first turn runs with the mode and model picked in the dialog rather
+ * than whatever the freshly-opened session resolves as its default.
+ */
+data class PromptSelection(
+    val agent: String? = null,
+    val provider: String? = null,
+    val model: String? = null,
+    val variant: String? = null,
+)
 
 private fun parseModel(value: String): Pair<String, String>? {
     val slash = value.indexOf('/')

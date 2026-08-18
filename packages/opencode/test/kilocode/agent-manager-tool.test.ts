@@ -151,7 +151,7 @@ function publish(
 }
 
 describe("agent_manager tool", () => {
-  test("uses an object-root input schema without combinators", async () => {
+  test("uses an object-root input schema without combinators because more complex schemas break Claude models", async () => {
     const tool = await init()
     const schema = ToolJsonSchema.fromTool(tool)
 

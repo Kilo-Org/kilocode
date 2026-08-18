@@ -270,6 +270,7 @@ export const dict = {
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
+  "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",

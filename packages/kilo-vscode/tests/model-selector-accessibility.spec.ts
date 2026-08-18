@@ -204,8 +204,8 @@ test("selected favorite remains selected when its duplicate group is collapsed",
 test("large catalogs keep the rendered tree bounded and navigate to distant models", async ({ page }) => {
   await load(page, "shared--model-selector-large-catalog")
 
-  await page.getByRole("button", { name: "Select model: Provider 0 / Model 300" }).click()
-  const combobox = page.getByRole("combobox", { name: "Select model: Provider 0 / Model 300. Search models" })
+  await page.getByRole("button", { name: "Select model: Model 300" }).click()
+  const combobox = page.getByRole("combobox", { name: "Select model: Model 300. Search models" })
   const tree = page.getByRole("tree", { name: "Select model" })
 
   // The window mounts before we measure it, yet stays far smaller than the catalog.

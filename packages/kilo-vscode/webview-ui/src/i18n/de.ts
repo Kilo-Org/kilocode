@@ -281,6 +281,7 @@ export const dict = {
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
   "notification.permission.titleSkillShell": "Shell-Befehle aus dem Skill „{{skill}}“ ausführen?",
+  "notification.permission.titleSandboxEscalation": "Git-Vorgang außerhalb der Sandbox zulassen?",
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
   "ui.permission.doomLoop.prompt": "Potenzielle Schleife beim Tool {{tool}} erkannt. Weiter ausführen?",
   "ui.permission.doomLoop.rule": "{{tool}}-Aufrufe fortsetzen",

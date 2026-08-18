@@ -320,7 +320,7 @@ export class AgentManagerProvider implements Disposable {
     // Session events from sync or older backends can lack time/directory; a
     // throw here would escape into the SSE dispatch loop and starve the other
     // listeners (there is no per-listener error isolation).
-    if (!info?.time || !dir) return
+    if (!info?.time || !dir || (info.parentID !== undefined && info.parentID !== null)) return
     const ctx = this.contexts.byDirectory(dir)
     if (!ctx || ctx.lifecycle !== "ready") return
     const state = ctx.peekState()

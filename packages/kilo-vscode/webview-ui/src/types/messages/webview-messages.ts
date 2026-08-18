@@ -82,6 +82,7 @@ export interface LoadMessagesRequest {
   type: "loadMessages"
   sessionID: string
   mode?: MessageLoadMode
+  focus?: boolean
   before?: string
   limit?: number
 }
@@ -591,6 +592,13 @@ export interface SyncSessionRequest {
   type: "syncSession"
   sessionID: string
   parentSessionID?: string
+  scope?: "task" | "inspector"
+}
+
+export interface UnsyncSessionRequest {
+  type: "unsyncSession"
+  sessionID: string
+  scope?: "task" | "inspector"
 }
 
 // Agent Manager worktree messages
@@ -1488,6 +1496,7 @@ export type WebviewMessage =
   | ResetReadNotificationsRequest
   | SettingsTabChangedMessage
   | SyncSessionRequest
+  | UnsyncSessionRequest
   | CreateWorktreeSessionRequest
   | RequestNotificationsMessage
   | DismissNotificationMessage

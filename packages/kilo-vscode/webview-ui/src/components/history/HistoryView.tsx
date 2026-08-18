@@ -29,15 +29,14 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   const dialog = useDialog()
   const session = useSession()
   const tabs = useLocalTabs()
-  const [tab, setTab] = createSignal<Source>("local")
+  const worktreeIds = () => props.worktreeSessionIds?.()
+  const [tab, setTab] = createSignal<Source>(worktreeIds() ? "worktree" : "local")
   let local: HTMLButtonElement | undefined
   let cloud: HTMLButtonElement | undefined
   let worktree: HTMLButtonElement | undefined
   let localPanel: HTMLDivElement | undefined
   let cloudPanel: HTMLDivElement | undefined
   let worktreePanel: HTMLDivElement | undefined
-
-  const worktreeIds = () => props.worktreeSessionIds?.()
 
   createEffect(() => {
     if (tab() === "worktree" && !worktreeIds()) setTab("local")

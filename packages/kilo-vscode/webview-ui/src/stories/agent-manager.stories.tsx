@@ -87,13 +87,13 @@ const foldedDiffs: WorktreeFileDiff[] = [
 ]
 
 const ROWS = 140
-function edited(seed: string): WorktreeFileDiff {
+function edited(seed: string, file = "src/agent-edit.ts"): WorktreeFileDiff {
   const before = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-old-${i}"\n`).join("")
   const after = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-new-${i}"\n`).join("")
   const patch = [
-    "diff --git a/src/agent-edit.ts b/src/agent-edit.ts",
-    "--- a/src/agent-edit.ts",
-    "+++ b/src/agent-edit.ts",
+    `diff --git a/${file} b/${file}`,
+    `--- a/${file}`,
+    `+++ b/${file}`,
     `@@ -1,${ROWS} +1,${ROWS} @@`,
     ...before
       .trimEnd()
@@ -107,7 +107,7 @@ function edited(seed: string): WorktreeFileDiff {
   ].join("\n")
 
   return {
-    file: "src/agent-edit.ts",
+    file,
     status: "modified",
     additions: ROWS,
     deletions: ROWS,
@@ -320,6 +320,29 @@ export const DiffPanelWithDiffs: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+export const DiffPanelScrollUp: Story = {
+  name: "DiffPanel - scroll upward through large diffs",
+  render: () => {
+    const diffs = Array.from({ length: 5 }, (_, i) => edited(`review-${i}`, `src/review-${i}.ts`))
+    return (
+      <StoryProviders noPadding>
+        <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+          <DiffPanel
+            diffs={diffs}
+            loading={false}
+            sessionKey="inline-scroll-up"
+            diffStyle="unified"
+            onDiffStyleChange={() => {}}
+            comments={[]}
+            onCommentsChange={() => {}}
+            onClose={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    )
+  },
 }
 
 const buttonFixtureStyle: JSX.CSSProperties = {
@@ -1389,6 +1412,7 @@ const projectSession = (
 ): ProjectSessionInfo => ({
   id,
   worktreeId,
+  parentID: null,
   title,
   createdAt: "2026-07-19T09:00:00Z",
   updatedAt,

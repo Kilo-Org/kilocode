@@ -29,7 +29,7 @@ internal class BranchChangesBadge(
     private val count = JBLabel()
     private val stat = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT)
     private val row = Stack.horizontal(gap = UiStyle.Gap.sm()).next(count).next(stat)
-    private var files = emptyList<DiffFileDto>()
+    private var files = 0
     private var additions = 0
     private var deletions = 0
     private var over = false
@@ -89,18 +89,24 @@ internal class BranchChangesBadge(
         row.setBounds(ins.left, ins.top + (h - rowH) / 2, rowW, rowH)
     }
 
-    fun update(next: List<DiffFileDto>): Boolean {
-        if (files == next) return false
-        files = next
-        additions = files.sumOf { it.additions }
-        deletions = files.sumOf { it.deletions }
-        val text = KiloBundle.message(
-            if (files.size == 1) "session.changes.count.one" else "session.changes.count.other",
-            files.size,
+    fun update(next: List<DiffFileDto>): Boolean =
+        set(next.size, next.sumOf { it.additions }, next.sumOf { it.deletions })
+
+    /** Update from precomputed aggregates (e.g. worktree branch stats without a per-file list). */
+    fun update(files: Int, additions: Int, deletions: Int): Boolean =
+        set(files, additions, deletions)
+
+    private fun set(n: Int, add: Int, del: Int): Boolean {
+        if (files == n && additions == add && deletions == del) return false
+        files = n
+        additions = add
+        deletions = del
+        count.text = KiloBundle.message(
+            if (n == 1) "session.changes.count.one" else "session.changes.count.other",
+            n,
         )
-        count.text = text
-        stat.update(additions, deletions)
-        isVisible = files.isNotEmpty()
+        stat.update(add, del)
+        isVisible = n > 0
         revalidate()
         repaint()
         return true

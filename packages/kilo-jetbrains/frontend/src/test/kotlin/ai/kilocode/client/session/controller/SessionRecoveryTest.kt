@@ -4,6 +4,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -80,6 +81,46 @@ class SessionRecoveryTest : SessionControllerTestBase() {
 
         // State should remain Idle — other session's pending is irrelevant
         assertEquals(SessionState.Idle, m.model.state)
+    }
+
+    fun `test provider error is recovered from assistant history`() {
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(error = MessageErrorDto(type = "APIError", message = "OpenRouter balance is too low")),
+            emptyList(),
+        ))
+
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        assertSession(
+            """
+            assistant#msg1
+
+            [code] [kilo/gpt-5] [error] [OpenRouter balance is too low]
+            """,
+            m,
+        )
+    }
+
+    fun `test aborted assistant history recovers interrupted outcome`() {
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(error = MessageErrorDto(type = "MessageAbortedError", message = "aborted")),
+            emptyList(),
+        ))
+
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        assertSession(
+            """
+            assistant#msg1
+
+            [code] [kilo/gpt-5] [interrupted]
+            """,
+            m,
+        )
     }
 
     fun `test permission takes priority over question in recovery`() {
