@@ -28,6 +28,12 @@ interface SessionManager {
 
     val hostedInEditorTab: Boolean get() = false
 
+    /**
+     * When true the empty-session panel is reduced to the logo and the feedback/support button —
+     * no welcome copy, recent sessions, or history button. Used by the worktree session editor.
+     */
+    val minimalEmptySession: Boolean get() = false
+
     fun openSession(session: SessionDto) {
         openSession(SessionRef.Local(session))
     }

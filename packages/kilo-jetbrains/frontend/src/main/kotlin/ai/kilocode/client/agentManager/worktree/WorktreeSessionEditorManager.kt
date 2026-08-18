@@ -72,6 +72,7 @@ open class WorktreeSessionEditorManager(
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
     override val showsBranchBadgeInHeader: Boolean get() = false
     override val hostedInEditorTab: Boolean get() = true
+    override val minimalEmptySession: Boolean get() = true
     private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
     private var last: String? = null
