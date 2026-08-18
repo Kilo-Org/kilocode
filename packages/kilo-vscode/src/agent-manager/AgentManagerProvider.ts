@@ -321,6 +321,7 @@ export class AgentManagerProvider implements Disposable {
     // throw here would escape into the SSE dispatch loop and starve the other
     // listeners (there is no per-listener error isolation).
     if (!info?.time || !dir) return
+    if (info.parentID !== undefined && info.parentID !== null) return
     const ctx = this.contexts.byDirectory(dir)
     if (!ctx || ctx.lifecycle !== "ready") return
     const state = ctx.peekState()
