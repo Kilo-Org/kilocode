@@ -379,6 +379,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly openSessionIds = new Set<string>()
   private modelUsageSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
+  private readonly inspectorSessionIds = new Set<string>()
   private readonly checkpoints = new Map<string, Promise<void>>()
   private readonly sessionCreations = new Map<string, Promise<{ sid: string; dir: string } | undefined>>()
   private readonly draftSessions = new Map<string, { sid: string; dir: string; expires: number }>()
@@ -1083,6 +1084,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (await this.handleModelSelectorExpandedMessage(message)) return
       this.handleWebviewFocusMessage(message)
       this.visibleTaskStreams.handle(message)
+      this.handleStreamVisibilityMessage(message)
+      if (this.handleChildSyncMessage(message)) return
       if (await this.handleMemoryMessage(message)) return
       if (this.handleLegacyMigrationMessage(message)) return
       switch (message.type) {
@@ -1171,14 +1174,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           // isn't blocked by slow responses for earlier sessions.
           void this.handleLoadMessages(message.sessionID, {
             mode: message.mode,
+            focus: message.focus,
             before: message.before,
             limit: message.limit,
           })
-          break
-        case "syncSession":
-          this.handleSyncSession(message.sessionID, message.parentSessionID).catch((e) =>
-            console.error("[Kilo New] handleSyncSession failed:", e),
-          )
           break
         case "loadSessions":
           this.handleLoadSessions().catch((e) => console.error("[Kilo New] handleLoadSessions failed:", e))
@@ -1570,6 +1569,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, message.focused === true)
     }
+  }
+
+  private handleChildSyncMessage(
+    message: TypedWebviewMessage & { sessionID?: unknown; parentSessionID?: unknown; scope?: unknown },
+  ): boolean {
+    if (message.type !== "syncSession" && message.type !== "unsyncSession") return false
+    if (typeof message.sessionID !== "string") return true
+    if (message.type === "syncSession") {
+      if (message.scope === "inspector") this.inspectorSessionIds.add(message.sessionID)
+      const parent = typeof message.parentSessionID === "string" ? message.parentSessionID : undefined
+      this.handleSyncSession(message.sessionID, parent).catch((e) =>
+        console.error("[Kilo New] handleSyncSession failed:", e),
+      )
+      return true
+    }
+    if (message.scope === "inspector") this.inspectorSessionIds.delete(message.sessionID)
+    this.releaseChildSession(message.sessionID)
+    return true
+  }
+
+  private handleStreamVisibilityMessage(
+    message: TypedWebviewMessage & { sessionID?: unknown; visible?: unknown },
+  ): void {
+    if (message.type !== "streamSessionVisible" || message.visible !== false || typeof message.sessionID !== "string") {
+      return
+    }
+    this.releaseChildSession(message.sessionID)
   }
 
   private handleEditorOpenMessage(message: Parameters<typeof handleEditorAction>[0]): boolean {
@@ -1976,14 +2002,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async handleLoadMessages(
     sessionID: string,
-    options: { mode?: MessageLoadMode; before?: string; limit?: number; preserveStream?: boolean } = {},
+    options: {
+      mode?: MessageLoadMode
+      focus?: boolean
+      before?: string
+      limit?: number
+      preserveStream?: boolean
+    } = {},
   ): Promise<void> {
     const mode = options.mode ?? "replace"
     if (mode === "replace" || mode === "focus") {
-      this.stopCurrentSessionProcesses(sessionID)
       this.trackedSessionIds.add(sessionID)
-      this.focusSession(sessionID)
-      this.contextSessionID = sessionID
+      if (options.focus !== false) {
+        this.stopCurrentSessionProcesses(sessionID)
+        this.focusSession(sessionID)
+        this.contextSessionID = sessionID
+      }
     }
     if (!this.client) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend", sessionID })
@@ -2119,6 +2153,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private releaseChildSession(sessionID: string): void {
+    if (
+      this.inspectorSessionIds.has(sessionID) ||
+      this.visibleTaskStreams.has(sessionID) ||
+      this.currentSession?.id === sessionID ||
+      this.openSessionIds.has(sessionID)
+    ) {
+      return
+    }
+    if (!this.syncedChildSessions.delete(sessionID)) return
+    this.trackedSessionIds.delete(sessionID)
+    this.streams.drop(sessionID)
+    this.visibleTaskStreams.delete(sessionID)
+    this.sessionDirectories.delete(sessionID)
+    this.sessionGitDirectories.delete(sessionID)
+    this.sessionGitRecoveries.delete(sessionID)
+    this.connectionService.pruneSession(sessionID)
+  }
+
   /**
    * Build the context object used by the extracted session-refresh helpers.
    */
@@ -2252,6 +2305,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.streams.drop(sessionID)
     this.visibleTaskStreams.delete(sessionID)
     this.syncedChildSessions.delete(sessionID)
+    this.inspectorSessionIds.delete(sessionID)
     this.sessionDirectories.delete(sessionID)
     this.sessionGitDirectories.delete(sessionID)
     this.sessionGitRecoveries.delete(sessionID)
@@ -5091,6 +5145,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trackedSessionIds.clear()
     this.openSessionIds.clear()
     this.syncedChildSessions.clear()
+    this.inspectorSessionIds.clear()
     this.draftSessions.clear()
     this.sessionDirectories.clear()
     this.anacondaDesktop.dispose()

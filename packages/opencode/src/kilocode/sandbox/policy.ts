@@ -623,6 +623,10 @@ export function executeTool<A, E, R>(sessionID: SessionID, tool: { id: string },
   return execute(sessionID, Network.tool(tool, effect))
 }
 
+export function executeEscalated<A, E, R>(approved: boolean, effect: Effect.Effect<A, E, R>) {
+  return approved ? unrestricted(effect) : effect
+}
+
 export function executeMcp<A, E, R>(sessionID: SessionID, tool: object, effect: Effect.Effect<A, E, R>) {
   return execute(sessionID, Network.mcp(tool, effect))
 }

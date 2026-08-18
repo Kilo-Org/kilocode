@@ -200,9 +200,9 @@ export function activeUserMessageID(
   parts?: (msg: Message) => Message["parts"],
   submitting?: boolean,
 ) {
+  if (status.type === "idle" && !submitting) return undefined
   const id = active(messages, status, parts)
   if (id) return id
-  if (status.type === "idle" && !submitting) return undefined
   return pending(messages, parts)
 }
 

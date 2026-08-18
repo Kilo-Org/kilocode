@@ -89,6 +89,16 @@ describe("sendCommand dismisses pending tool requests", () => {
   })
 })
 
+describe("confirmed queued prompts retain optimistic parts", () => {
+  const source = readFile(SESSION_FILE)
+  const body = extractFunctionBody(source, "handleMessageCreated")
+
+  it("does not clear optimistic parts before canonical part events arrive", () => {
+    expect(body).toContain("Keep placeholder parts until their canonical part.updated events arrive")
+    expect(body).not.toContain("delete p[message.id]")
+  })
+})
+
 describe("static command completion contract", () => {
   const source = readFile(SESSION_FILE)
 
@@ -613,8 +623,8 @@ describe("Optimistic parts preservation and smooth status contract", () => {
 
   it("handlePartUpdated replaces matching optimistic parts in place", () => {
     const updated = extractFunctionBody(source, "handlePartUpdated")
-    expect(updated).toContain("pendingOptimisticParts.get(effectiveMessageID)")
-    expect(updated).toContain("optIds.delete")
+    expect(updated).toContain("optimisticParts.get(effectiveMessageID)")
+    expect(updated).toContain("mergeOptimisticPart")
   })
 
   it("statusText derives status only from the active turn after the last user message", () => {

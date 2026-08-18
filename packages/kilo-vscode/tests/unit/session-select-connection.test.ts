@@ -50,7 +50,7 @@ describe("selectSession keeps the chat in sync with the selection while offline"
     // Queue a replay unconditionally. The earlier `deferredFetch = ready ? undefined : id`
     // form skipped cached sessions, so a reconnect never re-sent the focus load that
     // re-focuses the backend (focusSession/contextSessionID/SSE tracking/reconcile).
-    expect(body).toContain("deferredFetch = id")
+    expect(body).toContain("deferredFetch = { id, focus }")
     expect(body).not.toMatch(/deferredFetch\s*=\s*ready\s*\?/)
   })
 })
@@ -61,12 +61,15 @@ describe("a deferred fetch is replayed on reconnect", () => {
     const effect = source.slice(source.indexOf("on(server.isConnected"))
     expect(effect).toContain("deferredFetch")
     // Replays with the focus/replace choice so cached sessions still re-focus the backend.
-    expect(effect).toMatch(/loadFocusedMessages\(\s*id,\s*loaded\(\)\.has\(id\)\s*\)/)
+    expect(effect).toMatch(
+      /loadFocusedMessages\(\s*pending\.id,\s*loaded\(\)\.has\(pending\.id\),\s*pending\.focus\s*\)/,
+    )
   })
 
   it("the focused load helper sends focus for cached sessions and replace otherwise", () => {
     const helper = source.slice(source.indexOf("function loadFocusedMessages("))
     expect(helper).toMatch(/mode: "focus"/)
     expect(helper).toMatch(/mode: "replace"/)
+    expect(helper).toContain("focus: false")
   })
 })

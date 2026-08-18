@@ -33,6 +33,6 @@ describe("speech-to-text discovery", () => {
   it("rejects empty or malformed catalogs so callers can use the static fallback", () => {
     expect(parseSpeechToTextCatalog([])).toBeUndefined()
     expect(parseSpeechToTextCatalog({ data: [] })).toBeUndefined()
-    expect(DEFAULT_SPEECH_TO_TEXT_MODEL.id).toBe("openai/whisper-large-v3-turbo")
+    expect(DEFAULT_SPEECH_TO_TEXT_MODEL.id).toBe("nvidia/parakeet-tdt-0.6b-v3")
   })
 })

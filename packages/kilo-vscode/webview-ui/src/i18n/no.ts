@@ -279,6 +279,7 @@ export const dict = {
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
+  "notification.permission.titleSandboxEscalation": "Tillate Git-operasjon utenfor sandkassen?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
   "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
@@ -1108,10 +1109,15 @@ export const dict = {
     "Velg om blokker for kodeendringer og forskjeller skal være utvidet eller skjult fra start.",
   "settings.display.codeEdit.expanded": "Utvidet",
   "settings.display.codeEdit.collapsed": "Skjult",
+  "settings.display.mcpTool.title": "Blokker for MCP- og generiske verktøy",
+  "settings.display.mcpTool.description":
+    "Velg om blokker for MCP- og generiske verktøy skal være utvidet eller skjult fra start.",
+  "settings.display.mcpTool.expanded": "Utvidet",
+  "settings.display.mcpTool.collapsed": "Skjult",
 
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
-    "Vis tekstgenereringshastighet (tokens/sek) på den siste assistentmeldingen og i oppgaveoverskriften. Skjult som standard for å holde chatten ryddig.",
+    "Vis tekstgenereringshastigheten (tokens/sec) i den nyeste assistentmeldingen og i oppgaveoverskriften. Vises som standard; deaktiver denne innstillingen for å skjule den ved behov.",
   "settings.display.autoApprovalReason.title": "Vis årsak til automatisk godkjenning",
   "settings.display.autoApprovalReason.description":
     "Viser en linje ved verktøykall som forklarer hvorfor de ble automatisk godkjent (samsvarende regel, agentstandard, YOLO-modus osv.).",
