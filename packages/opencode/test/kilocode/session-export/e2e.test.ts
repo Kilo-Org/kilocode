@@ -7,6 +7,8 @@ import type { ExportEvent } from "@/kilocode/session-export/events"
 import { Capture } from "@/kilocode/session-export/capture"
 import { createWorkspaceProvider } from "@/kilocode/session-export/workspace-provider"
 
+const WORKER_TIMEOUT_MS = 60_000
+
 describe("session export worker e2e", () => {
   const dirs: string[] = []
 
@@ -58,7 +60,7 @@ async function until(check: () => boolean): Promise<void> {
   const start = Date.now()
   // The capture worker competes for CPU with the rest of the suite on a loaded CI
   // shard; the loop returns on success, so a generous deadline costs healthy runs nothing.
-  while (Date.now() - start < 15_000) {
+  while (Date.now() - start < WORKER_TIMEOUT_MS) {
     if (check()) return
     await new Promise((resolve) => setTimeout(resolve, 10))
   }
@@ -79,7 +81,7 @@ function capture(posted: unknown[], snap: ConstructorParameters<typeof Capture>[
     // Must match the generous until() budget below: on a loaded CI shard the git
     // snapshot can exceed 1s, and a truncated baseline emits an empty envelope that
     // makes the assertions fail no matter how long the test itself waits.
-    baselineTimeoutMs: 15_000,
+    baselineTimeoutMs: WORKER_TIMEOUT_MS,
   })
 }
 
