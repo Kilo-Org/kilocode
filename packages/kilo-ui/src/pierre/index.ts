@@ -58,6 +58,9 @@ type DiffShared<T> = FileDiffOptions<T> & {
   // files so eager rendering does not expand full before/after content.
   // Defaults to virtualized.
   virtualized?: boolean
+  // Stable rendered-content identity used to preserve deferred height when a
+  // surrounding row virtualizer unmounts and later re-creates this diff.
+  sizeKey?: object
   class?: string
   classList?: ComponentProps<"div">["classList"]
 }
