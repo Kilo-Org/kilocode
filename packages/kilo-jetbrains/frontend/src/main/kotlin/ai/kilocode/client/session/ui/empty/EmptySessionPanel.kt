@@ -55,7 +55,12 @@ class EmptySessionPanel(
     private val browse: (String) -> Unit = BrowserUtil::browse,
     private val timers: UiTimerSource = UiTimers,
 ) : BorderLayoutPanel(), Disposable, SessionEditorStyleTarget {
-    val view: Align = align(HAlign.CENTER, VAlign.CENTER)
+    private var style = SessionEditorStyle.current()
+    val view: Align = align(
+        HAlign.CENTER,
+        VAlign.CENTER,
+        maxW = { SessionUiStyle.SessionLayout.readableWidth(this, style.transcriptFont) },
+    )
 
     private val timer = timers.timer(ACTIVITY_MS) { syncActivity() }
     internal val recent = RecentsList(recents, controller)
@@ -248,6 +253,7 @@ class EmptySessionPanel(
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
+        this.style = style
         welcomeLabel.font = style.regularFont
         recent.applyStyle(style)
         revalidate()
