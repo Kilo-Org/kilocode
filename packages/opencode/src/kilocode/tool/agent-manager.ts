@@ -59,7 +59,7 @@ const Task = Schema.Struct({
 )
 
 function wireSchema() {
-  const schema = ToolJsonSchema.fromSchema(Params, { additionalProperties: false })
+  const schema = structuredClone(ToolJsonSchema.fromSchema(Params))
 
   // llama.cpp rejects the prefix-only SessionID pattern. Keep the runtime brand
   // check, but omit that provider-incompatible hint from the advertised schema.
@@ -70,6 +70,9 @@ function wireSchema() {
     }
     if (!value || typeof value !== "object") return
     const item = value as Record<string, unknown>
+    if (item.type === "object" && item.additionalProperties === undefined) {
+      item.additionalProperties = false
+    }
     if (item.properties && typeof item.properties === "object") {
       const properties = item.properties as Record<string, unknown>
       if (properties.sessionID && typeof properties.sessionID === "object") {
@@ -117,7 +120,9 @@ const ListParams = strict({
 
 const PromptParams = strict({
   action: Schema.Literal("prompt"),
-  sessionID: SessionID,
+  sessionID: SessionID.annotate({
+    description: "Session ID returned by action=list. Do not use a worktree name, branch, or section name.",
+  }),
   prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)).check(
     Schema.makeFilter((value) => (value.trim() ? undefined : "Prompt must not be empty")),
   ),
@@ -125,7 +130,9 @@ const PromptParams = strict({
 
 const StopParams = strict({
   action: Schema.Literal("stop"),
-  sessionID: SessionID,
+  sessionID: SessionID.annotate({
+    description: "Session ID returned by action=list. Do not use a worktree name, branch, or section name.",
+  }),
 })
 
 const MoveParams = strict({

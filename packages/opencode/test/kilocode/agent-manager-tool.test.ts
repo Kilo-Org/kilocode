@@ -179,13 +179,23 @@ describe("agent_manager tool", () => {
       expect.objectContaining({ action: expect.objectContaining({ enum: ["list"] }) }),
     )
     expect(properties(branches[2]!)).toEqual(
-      expect.objectContaining({ action: expect.objectContaining({ enum: ["prompt"] }) }),
+      expect.objectContaining({
+        action: expect.objectContaining({ enum: ["prompt"] }),
+        sessionID: expect.objectContaining({
+          description: expect.stringContaining("Session ID returned by action=list"),
+        }),
+      }),
     )
     expect(properties(branches[3]!)).toEqual(
       expect.objectContaining({ action: expect.objectContaining({ enum: ["move"] }) }),
     )
     expect(properties(branches[4]!)).toEqual(
-      expect.objectContaining({ action: expect.objectContaining({ enum: ["stop"] }) }),
+      expect.objectContaining({
+        action: expect.objectContaining({ enum: ["stop"] }),
+        sessionID: expect.objectContaining({
+          description: expect.stringContaining("Session ID returned by action=list"),
+        }),
+      }),
     )
   })
 
