@@ -4,6 +4,9 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.migration.KiloMigrationService
+import ai.kilocode.client.migration.MigrationUiController
+import ai.kilocode.client.migration.MigrationUiState
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
@@ -12,8 +15,10 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.session.controller.PromptSelection
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.util.edt
@@ -30,6 +35,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.awt.BorderLayout
 import javax.swing.JComponent
@@ -55,6 +61,7 @@ open class WorktreeSessionEditorManager(
     },
     private val notify: (String, String?) -> Unit = { title, content -> KiloNotifications.error(project, title, content) },
     private val cs: CoroutineScope = service<SessionUiFactory>().scope(),
+    private val migration: MigrationUiController = service<KiloMigrationService>(),
     private val adopt: suspend (String, String, String) -> RenameWorktreeResultDto = { dir, path, name ->
         service<KiloWorktreeService>().adopt(dir, path, name)
     },
@@ -73,6 +80,9 @@ open class WorktreeSessionEditorManager(
     private var pending = false
     private var adopted = false
     private var adopting = false
+    private var startedOnce = false
+    private var migrationActive = false
+    private var migrationJob: Job? = null
     var onPresent: ((String?) -> Unit)? = null
     var onListChanged: (() -> Unit)? = null
 
@@ -80,14 +90,44 @@ open class WorktreeSessionEditorManager(
 
     init {
         Disposer.register(parent, this)
+        bindMigration()
     }
 
     @RequiresEdt
     fun start() {
+        startedOnce = true
         list.reload {
             val dto = latest()
             if (dto != null) openSession(SessionRef.Local(dto), false) else newSession(false)
         }
+    }
+
+    /**
+     * While the backend is paused for legacy migration, list/create fail and the editor can only
+     * show the empty session panel. Once migration finishes the backend is ready, so re-run [start]
+     * to create/open the real session — but only for an editor the user has actually opened
+     * ([startedOnce]), never for background worktree editor tabs.
+     */
+    private fun bindMigration() {
+        migrationJob = cs.launch {
+            migration.state.collect { state ->
+                edt {
+                    when (state) {
+                        is MigrationUiState.Needed -> migrationActive = true
+                        is MigrationUiState.Hidden -> {
+                            if (migrationActive && startedOnce) start()
+                            migrationActive = false
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @RequiresEdt
+    override fun dispose() {
+        migrationJob?.cancel()
+        super.dispose()
     }
 
     @RequiresEdt
@@ -95,6 +135,16 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     open fun deleting(): Set<String> = deleting
+
+    @RequiresEdt
+    override fun emptyPanel(parent: Disposable, controller: SessionController): EmptySessionPanel = EmptySessionPanel(
+        parent,
+        controller,
+        recents = emptyList(),
+        history = { showHistory() },
+        timers = timers,
+        minimal = true,
+    )
 
     @RequiresEdt
     override fun newSession() {
@@ -112,6 +162,11 @@ open class WorktreeSessionEditorManager(
                 openSession(SessionRef.Local(session), focus)
                 consumePendingPrompt()
             } else {
+                // The backend could not create a session yet (e.g. it is paused for legacy
+                // migration). Show the empty session panel so the worktree editor mirrors the tool
+                // window instead of a blank panel; WorktreeSessionEditorPanel re-runs start() once
+                // migration finishes to create the real session.
+                if (currentUi() == null) showBlank()
                 onListChanged?.invoke()
             }
         }

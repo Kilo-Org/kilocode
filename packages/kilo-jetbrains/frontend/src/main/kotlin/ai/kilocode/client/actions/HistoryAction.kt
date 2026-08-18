@@ -8,7 +8,6 @@ import ai.kilocode.client.agentManager.SidePanelMode
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.project.DumbAware
 import com.intellij.ui.content.Content
@@ -35,7 +34,7 @@ class HistoryAction : AnAction(
     private fun selectChat(e: AnActionEvent) {
         val manager = e.getData(PlatformDataKeys.TOOL_WINDOW)?.contentManager ?: return
         val chat = manager.contents.firstOrNull {
-            (it.component as? DataProvider)?.getData(SidePanelKeys.MODE.name) == SidePanelMode.CHAT
+            it.getUserData(SidePanelKeys.CONTENT_MODE) == SidePanelMode.CHAT
         } ?: return
         manager.setSelectedContent(chat, true)
     }
