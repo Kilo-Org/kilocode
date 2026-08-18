@@ -11,6 +11,7 @@ import {
   versionedName,
 } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+import type { PRInfo } from "../../src/agent-manager/git-import"
 import simpleGit from "simple-git"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
@@ -1137,6 +1138,58 @@ describe("WorktreeManager.createWorktree advanced", () => {
     const headParams = await wtGit.log(["-1"])
     const devParams = await git.log(["-1"])
     expect(headParams.latest?.hash).toBe(devParams.latest?.hash)
+  })
+
+  it("creates from a base branch excluded by the remote fetch refspec", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+
+    const result = await createManager(clone).createWorktree({ baseBranch: "topic", prompt: "from topic" })
+    const remoteHead = (await git.revparse(["refs/remotes/origin/topic"])).trim()
+    const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(worktreeHead).toBe(remoteHead)
+    expect(result.parentBranch).toBe("topic")
+  })
+
+  it("creates from a same-repository PR branch excluded by the remote fetch refspec", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+    await git.branch(["-D", "topic"])
+
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    const result = await manager.createFromPR("https://github.com/org/repo/pull/1")
+    const remoteHead = (await git.revparse(["refs/remotes/origin/topic"])).trim()
+    const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(worktreeHead).toBe(remoteHead)
+    expect(result.parentBranch).toBe("topic")
   })
 })
 
