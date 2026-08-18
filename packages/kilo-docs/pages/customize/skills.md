@@ -105,16 +105,19 @@ The remote server must serve an `index.json` file at the URL path with the follo
 ```json
 {
   "skills": [
-    { "name": "skill-name", "files": ["SKILL.md", "references/file.md"] }
+    { "name": "skill-name", "version": "2", "files": ["SKILL.md", "references/file.md"] }
   ]
 }
 ```
 
 Each skill object contains:
 - `name`: The skill name (must match the directory name)
+- `version`: Optional version string for refreshing cached skill files
 - `files`: Array of files to fetch for this skill (must include `SKILL.md`)
 
 Files are downloaded from `{url}/{skill-name}/{file}` paths.
+
+When you change a remote skill's contents or file list, also change its `version`. On the next skill rediscovery (`/reload` or a new session), Kilo downloads the complete new version before atomically replacing the cached directory. If any download fails, Kilo keeps the previous cached version.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -174,16 +177,19 @@ The remote server must serve an `index.json` file at the URL path with the follo
 ```json
 {
   "skills": [
-    { "name": "skill-name", "files": ["SKILL.md", "references/file.md"] }
+    { "name": "skill-name", "version": "2", "files": ["SKILL.md", "references/file.md"] }
   ]
 }
 ```
 
 Each skill object contains:
 - `name`: The skill name (must match the directory name)
+- `version`: Optional version string for refreshing cached skill files
 - `files`: Array of files to fetch for this skill (must include `SKILL.md`)
 
 Files are downloaded from `{url}/{skill-name}/{file}` paths.
+
+When you change a remote skill's contents or file list, also change its `version`. On the next skill rediscovery (`/reload` or a new session), Kilo downloads the complete new version before atomically replacing the cached directory. If any download fails, Kilo keeps the previous cached version.
 
 {% /tab %}
 {% /tabs %}
@@ -232,7 +238,7 @@ Skills are discovered when a session starts. The CLI scans all configured skill 
 - In the **CLI**: Skills are loaded when you start a new session or run `kilo run`
 - In the **VS Code extension**: Skills are loaded when the extension connects to the CLI server
 
-Skills are re-scanned at the start of each new session. To pick up newly added or modified skills, start a new session.
+Skills are re-scanned at the start of each new session. To pick up newly added or modified skills without starting a new session, use `/reload`.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -242,7 +248,7 @@ Skills are discovered when a session starts. The CLI scans all configured skill 
 - In the **CLI**: Skills are loaded when you start a new session or run `kilo run`
 - In the **VS Code extension**: Skills are loaded when the extension connects to the CLI server
 
-Skills are re-scanned at the start of each new session. To pick up newly added or modified skills, start a new session.
+Skills are re-scanned at the start of each new session. To pick up newly added or modified skills without starting a new session, use `/reload`.
 
 {% /tab %}
 {% /tabs %}
@@ -331,6 +337,29 @@ my-skill/
 ```
 
 These additional files can be referenced from your skill's instructions, allowing the agent to read documentation, execute scripts, or use templates as needed.
+
+## Shell commands in skills
+
+A `SKILL.md` body can embed shell commands with the `` !`command` `` syntax. When the agent loads the skill, each command runs and its standard output replaces the placeholder before the skill content reaches the model, grounding the skill in live data:
+
+```markdown
+---
+name: repo-status
+description: Summarize the current state of the repository
+---
+
+The working tree currently contains:
+
+!`git status --short`
+```
+
+Because the agent decides when to load a skill, embedded commands never run silently:
+
+- **Trusted skills only** — commands execute only in skills from trusted locations: global skills (such as `~/.kilo/skills/`, `~/.agents/skills/`, and `~/.claude/skills/`), skills built into Kilo Code, and absolute skill paths declared in global config. Project skills (`.kilo/skills/` in a repository) and skills fetched from remote URLs never execute commands; their placeholders are replaced with a marker noting the skill is untrusted.
+- **Approval required** — when the agent loads a trusted skill containing commands, every command in the file is listed in a single permission prompt before anything runs. Approving runs all of them; rejecting aborts the skill load. This prompt appears even when bash commands are otherwise auto-approved, and a deny rule on any command still blocks it.
+- **Kill switch** — set the `KILO_DISABLE_SKILL_SHELL` environment variable to disable embedded command execution entirely.
+
+Commands run in the project directory with a per-command timeout, and output is truncated before inlining. Placeholders inside fenced code blocks are treated as documentation examples and never execute, and command output is never re-scanned for further placeholders.
 
 ## Example: Creating a Skill
 
@@ -430,7 +459,7 @@ The new platform does not have a marketplace UI yet. You can find and share skil
 
 1. **Verify frontmatter**: Ensure `name` and `description` are present in the YAML frontmatter. The `name` does not need to match the directory name but should be unique across all loaded skills.
 
-2. **Start a new session**: Skills are scanned at session start. Begin a new session to pick up changes.
+2. **Reload or start a new session**: Use `/reload` to pick up changes without losing your current session, or start a new session.
 
 3. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory (e.g., `.kilo/skills/my-skill/SKILL.md`), not nested further.
 
@@ -441,7 +470,7 @@ The new platform does not have a marketplace UI yet. You can find and share skil
 
 1. **Verify frontmatter**: Ensure `name` and `description` are present in the YAML frontmatter. The `name` does not need to match the directory name but should be unique across all loaded skills.
 
-2. **Start a new session**: Skills are scanned at session start. Begin a new session to pick up changes.
+2. **Reload or start a new session**: Use `/reload` to pick up changes without losing your current session, or start a new session.
 
 3. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory (e.g., `.kilo/skills/my-skill/SKILL.md`), not nested further.
 

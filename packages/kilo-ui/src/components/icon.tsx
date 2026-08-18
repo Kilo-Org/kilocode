@@ -2,6 +2,26 @@ import { Icon as Upstream, type IconProps as Props } from "@opencode-ai/ui/icon"
 import { splitProps } from "solid-js"
 
 const icons: Record<string, { path: string; viewBox: string }> = {
+  "circle-x-outline": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M7.5 7.5L12.5 12.5M12.5 7.5L7.5 12.5M18.3333 10C18.3333 14.6024 14.6024 18.3333 10 18.3333C5.39763 18.3333 1.66667 14.6024 1.66667 10C1.66667 5.39763 5.39763 1.66667 10 1.66667C14.6024 1.66667 18.3333 5.39763 18.3333 10Z" stroke="currentColor" stroke-linecap="square"/>`,
+  },
+  "pull-request": {
+    viewBox: "0 0 20 20",
+    path: `<path d="M1.875 4.0625a2.8125 2.8125 0 1 1 3.75 2.6525v6.57a2.8138 2.8138 0 1 1-1.875 0V6.715A2.8125 2.8125 0 0 1 1.875 4.0625Zm7.096-.22125L11.96625.84625A.3125.3125 0 0 1 12.5 1.0675V3.125h1.25A3.125 3.125 0 0 1 16.875 6.25v7.035a2.8138 2.8138 0 1 1-1.875 0V6.25a1.25 1.25 0 0 0-1.25-1.25H12.5v2.0575a.3125.3125 0 0 1-.53375.22125L8.97125 4.34125a.3125.3125 0 0 1 0-.4425ZM4.6875 3.125a.9375.9375 0 1 0 0 1.875.9375.9375 0 0 0 0-1.875Zm0 11.875a.9375.9375 0 1 0 0 1.875.9375.9375 0 0 0 0-1.875Zm10.3125.9375a.9375.9375 0 1 0 1.875 0 .9375.9375 0 0 0-1.875 0Z" fill="currentColor"/>`,
+  },
+  refresh: {
+    viewBox: "0 0 20 20",
+    path: `<path d="M17.0837 10.0003C17.0837 13.9123 13.9123 17.0837 10.0003 17.0837C6.08833 17.0837 2.91699 13.9123 2.91699 10.0003C2.91699 6.08833 6.08833 2.91699 10.0003 2.91699C12.3717 2.91699 14.4722 4.07428 15.7698 5.83366M15.7698 5.83366V2.91699M15.7698 5.83366H12.8532" stroke="currentColor" stroke-linecap="square"/>`,
+  },
+  memory: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M2 7h4M2 12h4M2 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect width="16" height="20" x="4" y="2" rx="2" stroke="currentColor" stroke-width="2"/>`,
+  },
+  database: {
+    viewBox: "0 0 24 24",
+    path: `<ellipse cx="12" cy="5" rx="7" ry="3" stroke="currentColor" stroke-width="2"/><path d="M5 5v7c0 1.66 3.13 3 7 3s7-1.34 7-3V5M5 12v7c0 1.66 3.13 3 7 3s7-1.34 7-3v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  },
   "book-open-check": {
     viewBox: "0 0 24 24",
     path: `<path d="M12 21V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m16 12 2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6V4a1 1 0 0 0-1-1h-5a4 4 0 0 0-4 4 4 4 0 0 0-4-4H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6a1 1 0 0 0 1-1v-1.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
@@ -41,6 +61,14 @@ const icons: Record<string, { path: string; viewBox: string }> = {
   "files-collapse": {
     viewBox: "0 0 16 16",
     path: `<path d="M14 4.27051C14.5999 4.62053 15 5.26009 15 6V11C15 13.21 13.21 15 11 15H6C5.26009 15 4.62053 14.5999 4.27051 14H11C12.65 14 14 12.65 14 11V4.27051Z" fill="currentColor"/><path d="M9.5 7C9.776 7 10 7.224 10 7.5C10 7.776 9.776 8 9.5 8H5.5C5.224 8 5 7.776 5 7.5C5 7.224 5.224 7 5.5 7H9.5Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11 2C12.103 2 13 2.897 13 4V11C13 12.103 12.103 13 11 13H4C2.897 13 2 12.103 2 11V4C2 2.897 2.897 2 4 2H11ZM4 3C3.449 3 3 3.449 3 4V11C3 11.552 3.449 12 4 12H11C11.551 12 12 11.552 12 11V4C12 3.449 11.551 3 11 3H4Z" fill="currentColor"/>`,
+  },
+  reload: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3v5h-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21v-5h5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  gauge: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M12 14L9 10M12 14L15 10M21 15C21 18.866 17.866 22 14 22H10C6.134 22 3 18.866 3 15V9C3 5.134 6.134 2 10 2H14C17.866 2 21 5.134 21 9V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
 }
 

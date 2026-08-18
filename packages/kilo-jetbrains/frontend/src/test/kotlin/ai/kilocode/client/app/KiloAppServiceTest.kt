@@ -7,11 +7,14 @@ import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
+import kotlinx.coroutines.withTimeout
 
 /**
  * Service-level tests for [KiloAppService] profile/login/logout/org operations.
@@ -48,6 +51,47 @@ class KiloAppServiceTest : BasePlatformTestCase() {
         orgs: List<ProfileOrganizationDto> = emptyList(),
         currentOrgId: String? = null,
     ) = ProfileDto(email = email, name = name, organizations = orgs, balance = balance, currentOrgId = currentOrgId)
+
+    private suspend fun waitUntil(done: () -> Boolean) {
+        withTimeout(5_000) {
+            while (!done()) yield()
+        }
+    }
+
+    fun `test fetchCoreInfoAsync dedupes in flight requests`() = runBlocking(Dispatchers.Default) {
+        rpc.cliInfoGate = CompletableDeferred()
+        val seen = mutableListOf<CoreInfo?>()
+
+        app.fetchCoreInfoAsync { seen.add(it) }
+        app.fetchCoreInfoAsync { seen.add(it) }
+        waitUntil { rpc.cliVersionCalls == 1 }
+
+        assertEquals(1, rpc.cliVersionCalls)
+        assertEquals(0, rpc.cliPlatformCalls)
+        rpc.cliInfoGate!!.complete(Unit)
+        waitUntil { seen.size == 2 }
+
+        assertEquals(1, rpc.cliVersionCalls)
+        assertEquals(1, rpc.cliPlatformCalls)
+        assertEquals(listOf(CoreInfo("1.0.0", "darwin-arm64"), CoreInfo("1.0.0", "darwin-arm64")), seen)
+    }
+
+    fun `test fetchCoreInfoAsync retries after failure`() = runBlocking(Dispatchers.Default) {
+        val seen = mutableListOf<CoreInfo?>()
+        rpc.cliInfoError = RuntimeException("core failed")
+
+        app.fetchCoreInfoAsync { seen.add(it) }
+        waitUntil { seen.size == 1 }
+
+        assertNull(seen.single())
+        assertNull(app.core)
+        rpc.cliInfoError = null
+        app.fetchCoreInfoAsync { seen.add(it) }
+        waitUntil { seen.size == 2 }
+
+        assertEquals(CoreInfo("1.0.0", "darwin-arm64"), seen.last())
+        assertEquals(2, rpc.cliVersionCalls)
+    }
 
     // ------ refreshProfile ------
 

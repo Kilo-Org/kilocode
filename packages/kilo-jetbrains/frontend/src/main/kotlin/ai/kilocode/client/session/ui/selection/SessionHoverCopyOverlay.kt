@@ -6,6 +6,7 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.AWTEvent
 import java.awt.Component
+import java.awt.Container
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.Toolkit
@@ -17,11 +18,13 @@ import javax.swing.SwingUtilities
 
 internal class SessionHoverCopyOverlay(
     private val root: JComponent,
+    private val area: JComponent,
     parent: Disposable,
 ) : JPanel(null), Disposable {
     private var target: SessionCopyTarget? = null
     private val copy = SessionCopyButton(fill = true) { target?.copyText() }
     private val button = copy.button
+    private var child: JComponent = button
 
     init {
         isVisible = false
@@ -55,21 +58,46 @@ internal class SessionHoverCopyOverlay(
         if (visible.isEmpty) return Rectangle()
         val size = child.preferredSize
         val gap = JBUI.scale(4)
+        val limit = limit(pane)
+        if (limit.isEmpty) return Rectangle()
+        if (item.copyToolbar != null) {
+            val pt = SwingUtilities.convertPoint(anchor, Point(visible.x, visible.y), pane)
+            // A zero-height anchor is an inline header placeholder (edit/modified open-diff): center
+            // the floating button on the header row so it lines up with the change badge. A real-height
+            // anchor is a footer row (message/text copy): keep the button bottom-aligned inside it.
+            val inline = anchor.preferredSize.height == 0
+            val offset = if (inline) (visible.height - size.height) / 2 else visible.height - size.height
+            val x = clamp(pt.x + visible.width - size.width, limit.x, limit.x + limit.width - size.width)
+            val y = clamp(pt.y + offset, limit.y, limit.y + limit.height - size.height)
+            return Rectangle(x, y, size.width, size.height)
+        }
         val pt = SwingUtilities.convertPoint(anchor, Point(visible.x + visible.width, visible.y), pane)
-        val x = (pt.x - size.width - gap).coerceIn(0, (pane.width - size.width).coerceAtLeast(0))
-        val y = (pt.y + gap).coerceIn(0, (pane.height - size.height).coerceAtLeast(0))
+        val x = clamp(pt.x - size.width - gap, limit.x, limit.x + limit.width - size.width)
+        val y = clamp(pt.y + gap, limit.y, limit.y + limit.height - size.height)
         return Rectangle(x, y, size.width, size.height)
     }
 
-    override fun doLayout() {
-        button.setBounds(0, 0, width, height)
+    private fun limit(pane: JPanel): Rectangle {
+        if (!area.isShowing || area.parent == null) return Rectangle()
+        val pt = SwingUtilities.convertPoint(area.parent, area.location, pane)
+        return Rectangle(pt.x, pt.y, area.width, area.height)
     }
 
-    override fun getPreferredSize() = button.preferredSize
+    private fun clamp(value: Int, min: Int, max: Int): Int {
+        if (max < min) return min
+        return value.coerceIn(min, max)
+    }
 
-    override fun getMinimumSize() = button.minimumSize
+    override fun doLayout() {
+        child.setBounds(0, 0, width, height)
+        layout(child)
+    }
 
-    override fun getMaximumSize() = button.maximumSize
+    override fun getPreferredSize() = child.preferredSize
+
+    override fun getMinimumSize() = child.minimumSize
+
+    override fun getMaximumSize() = child.maximumSize
 
     @RequiresEdt
     private fun sync(event: MouseEvent) {
@@ -88,6 +116,7 @@ internal class SessionHoverCopyOverlay(
     private fun show(item: SessionCopyTarget) {
         if (target === item && isVisible) return
         target = item
+        use(item.copyToolbar ?: button)
         isVisible = true
         parent?.doLayout()
         revalidate()
@@ -116,6 +145,7 @@ internal class SessionHoverCopyOverlay(
     @RequiresEdt
     private fun conceal() {
         copy.dismiss()
+        use(button)
         if (target == null && !isVisible) return
         target = null
         isVisible = false
@@ -123,7 +153,20 @@ internal class SessionHoverCopyOverlay(
         repaint()
     }
 
+    @RequiresEdt
+    private fun use(comp: JComponent) {
+        if (child === comp && comp.parent === this) return
+        removeAll()
+        child = comp
+        add(child)
+    }
+
     override fun dispose() {
         clear()
     }
+}
+
+private fun layout(comp: Component) {
+    comp.doLayout()
+    if (comp is Container) comp.components.forEach(::layout)
 }

@@ -1,7 +1,17 @@
 :root {
-  font-family: var(--font-family-sans, Inter, system-ui, sans-serif);
+  font-family: var(--font-family-sans);
   background: var(--background-base);
   color: var(--text-base);
+}
+
+.kilo-console .header-mark-logo {
+  width: 1.75rem;
+  height: 1.75rem;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
 }
 
 * {

@@ -12,4 +12,10 @@ dependencies {
     intellijPlatform {
         intellijIdea(libs.versions.intellij.platform)
     }
+
+    testImplementation(kotlin("test"))
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

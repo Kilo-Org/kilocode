@@ -374,6 +374,8 @@
   font-size: var(--font-size-base);
   line-height: 1.4;
   white-space: pre-wrap;
+  /* Match textarea plaintext bidi behavior for each hard-newline paragraph. */
+  unicode-bidi: plaintext;
   word-wrap: break-word;
   overflow-x: hidden;
   overflow-y: auto;
@@ -652,6 +654,11 @@
   .prompt-speech-icon {
     animation: prompt-speech-recording-pulse 1.1s ease-in-out infinite;
   }
+}
+
+.prompt-speech-button--starting {
+  cursor: progress;
+  opacity: 0.7;
 }
 
 .prompt-speech-button--recording::after {

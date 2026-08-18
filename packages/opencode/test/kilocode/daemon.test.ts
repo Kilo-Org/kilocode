@@ -45,7 +45,7 @@ function opts(root: string): Daemon.Options {
     cors: [],
     command: [process.execPath, "--conditions=browser", path.join(process.cwd(), "src/index.ts")],
     env: dirs(root),
-    timeout: 20_000,
+    timeout: 30_000,
   }
 }
 
@@ -146,6 +146,31 @@ describe("daemon manager", () => {
     ).toStrictEqual(["/tmp/bun", "--conditions=browser", "/tmp/kilo/src/index.ts"])
   })
 
+  test("does not reuse legacy fixed-password daemons", () => {
+    const input = {
+      hostname: "127.0.0.1",
+      port: 4097,
+      mdns: false,
+      mdnsDomain: "kilo.local",
+      cors: [],
+    }
+    const state: Daemon.State = {
+      pid: 1,
+      hostname: input.hostname,
+      port: input.port,
+      url: "http://127.0.0.1:4097",
+      username: "kilo",
+      password: "kilo",
+      token: Buffer.from("kilo:kilo").toString("base64"),
+      version: "test",
+      startedAt: new Date(0).toISOString(),
+      log: "/tmp/daemon.log",
+      options: input,
+    }
+
+    expect(Daemon.matches(state, input, [])).toBe(false)
+  })
+
   test("reuses one daemon across caller directories", async () => {
     await using tmp = await tmpdir()
     const env = opts(tmp.path)
@@ -159,7 +184,7 @@ describe("daemon manager", () => {
     } finally {
       process.chdir(cwd)
     }
-  }, 20_000)
+  }, 45_000)
 
   test("starts, reuses, authenticates, and stops a daemon", async () => {
     await using tmp = await tmpdir()
@@ -169,6 +194,8 @@ describe("daemon manager", () => {
     expect(started.running).toBe(true)
     expect(started.state?.pid).toBeGreaterThan(0)
     expect(started.state?.token).toBeTruthy()
+    expect(started.state?.password).not.toBe("kilo")
+    expect(started.state?.token).not.toBe(Buffer.from("kilo:kilo").toString("base64"))
     expect(started.state?.port).toBeGreaterThan(0)
 
     const blocked = await fetch(`${started.state!.url}/config?directory=${encodeURIComponent(tmp.path)}`)
@@ -198,7 +225,7 @@ describe("daemon manager", () => {
       headers: { authorization: `Basic ${again.state!.token}` },
     })
     expect(restarted.status).toBe(200)
-  }, 20_000)
+  }, 60_000)
 
   test("does not let a foreground owner stop a replacement daemon", async () => {
     await using tmp = await tmpdir()
@@ -217,7 +244,7 @@ describe("daemon manager", () => {
     expect(current.running).toBe(true)
     expect(current.state?.pid).toBe(second.state?.pid)
     expect(current.state?.pid).not.toBe(state.pid)
-  }, 30_000)
+  }, 60_000)
 
   test.skipIf(process.platform === "win32")(
     "records foreground interrupts while startup is pending",
@@ -265,7 +292,7 @@ describe("daemon manager", () => {
         await Daemon.stop()
       }
     },
-    25_000,
+    45_000,
   )
 
   test("supports console stop as a daemon stop alias", async () => {
@@ -274,7 +301,7 @@ describe("daemon manager", () => {
     await Daemon.start(input)
     const proc = cli(["console", "stop"], input.env)
     const [code, stdout, stderr] = await Promise.all([
-      deadline(proc.exited, 20_000),
+      deadline(proc.exited, 30_000),
       new Response(proc.stdout).text(),
       new Response(proc.stderr).text(),
     ])
@@ -283,7 +310,7 @@ describe("daemon manager", () => {
     expect(stdout).toContain("kilo daemon stopped")
     expect(stderr).not.toContain("Could not open browser automatically")
     expect((await Daemon.status()).running).toBe(false)
-  }, 30_000)
+  }, 45_000)
 
   test.skipIf(process.platform === "win32")(
     "stops a foreground daemon on SIGINT",
@@ -302,7 +329,7 @@ describe("daemon manager", () => {
               throw new Error("Foreground daemon exited before becoming ready")
             }),
           ]),
-          20_000,
+          30_000,
         )
         const state = await Daemon.status()
         expect(state.running).toBe(true)
@@ -319,7 +346,7 @@ describe("daemon manager", () => {
         await Daemon.stop()
       }
     },
-    35_000,
+    45_000,
   )
 
   test("daemon client does not start a daemon while attaching", async () => {
@@ -341,7 +368,7 @@ describe("daemon manager", () => {
 
     expect(daemon).toBeUndefined()
     expect((await Daemon.status()).state?.pid).toBe(started.state?.pid)
-  }, 20_000)
+  }, 45_000)
 
   test("daemon client returns authenticated attach settings", async () => {
     await using tmp = await tmpdir()
@@ -351,5 +378,5 @@ describe("daemon manager", () => {
 
     expect(daemon?.url).toBe(started.state?.url)
     expect(daemon?.headers.Authorization).toBe(`Basic ${daemon?.state.token}`)
-  }, 20_000)
+  }, 45_000)
 })

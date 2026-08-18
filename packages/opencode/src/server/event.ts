@@ -1,10 +1,10 @@
-import { BusEvent } from "@/bus/bus-event"
 import { Schema } from "effect"
+import { ServerEvent } from "@opencode-ai/schema/server-event"
 
-export const Event = {
-  Connected: BusEvent.define("server.connected", Schema.Struct({})),
-  Disposed: BusEvent.define("global.disposed", Schema.Struct({})),
-  // kilocode_change start — emitted when config is updated without a full dispose
-  ConfigUpdated: BusEvent.define("global.config.updated", Schema.Struct({})),
-  // kilocode_change end
-}
+export const Event = ServerEvent
+
+export const InstanceDisposed = Schema.Struct({
+  id: Schema.String,
+  type: Schema.Literal("server.instance.disposed"),
+  properties: Schema.Struct({ directory: Schema.String }),
+}).annotate({ identifier: "Event.server.instance.disposed" })

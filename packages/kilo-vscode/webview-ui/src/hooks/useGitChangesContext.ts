@@ -18,7 +18,7 @@ interface VSCodeContext {
 
 export interface GitChangesContext {
   pending: Accessor<boolean>
-  resolveAttachment: (text: string, sessionID?: string) => Promise<FileAttachment | undefined>
+  resolveAttachment: (text: string, sessionID?: string, context?: string) => Promise<FileAttachment | undefined>
 }
 
 export function useGitChangesContext(
@@ -61,7 +61,7 @@ export function useGitChangesContext(
     setPending(false)
   })
 
-  const request = (sessionID?: string) =>
+  const request = (sessionID?: string, scope?: string) =>
     new Promise<string>((resolve, reject) => {
       counter++
       const requestId = `git-changes-context-${counter}`
@@ -71,14 +71,19 @@ export function useGitChangesContext(
 
       requests.set(requestId, { resolve, reject, timer })
       setPending(true)
-      vscode.postMessage({ type: "requestGitChangesContext", requestId, sessionID, agentManagerContext: context?.() })
+      vscode.postMessage({
+        type: "requestGitChangesContext",
+        requestId,
+        sessionID,
+        agentManagerContext: scope ?? context?.(),
+      })
     })
 
-  const resolveAttachment = async (text: string, sessionID?: string) => {
+  const resolveAttachment = async (text: string, sessionID?: string, scope?: string) => {
     if (!hasGitChangesMention(text)) return undefined
     if (git?.() === false) return undefined
 
-    const content = await request(sessionID)
+    const content = await request(sessionID, scope)
     return buildGitChangesAttachment(text, content)
   }
 

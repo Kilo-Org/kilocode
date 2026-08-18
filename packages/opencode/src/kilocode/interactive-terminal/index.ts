@@ -3,14 +3,15 @@ import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
 import { makeRuntime } from "@/effect/run-service"
 import { appendTerminalOutput } from "@/kilocode/interactive-terminal/output"
+import { model as modelEnv } from "@/kilocode/process/env"
 import { Identifier } from "@/id/id"
 import { Instance, type InstanceContext } from "@/kilocode/instance"
 import { SessionID } from "@/session/schema"
-import { Shell } from "@/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { NonNegativeInt, PositiveInt, optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
 import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
-import type { Disp, Proc } from "#pty"
+import type { Disp, Proc } from "@opencode-ai/core/pty/driver"
 import { Context, Effect, Layer, Schema, Types } from "effect"
 import path from "path"
 import stripAnsi from "strip-ansi"
@@ -220,14 +221,10 @@ export namespace InteractiveTerminal {
   }
 
   function environment(input: NodeJS.ProcessEnv) {
-    const env = Object.fromEntries(
-      Object.entries(input).filter((entry): entry is [string, string] => entry[1] !== undefined),
-    )
+    const env = modelEnv(input)
     env.TERM = "xterm-256color"
     env.KILO_TERMINAL = "1"
     env.KILO_INTERACTIVE_TERMINAL = "1"
-    delete env.KILO_SERVER_PASSWORD
-    delete env.KILO_SERVER_USERNAME
     if (process.platform === "win32") {
       env.LC_ALL = "C.UTF-8"
       env.LC_CTYPE = "C.UTF-8"
@@ -301,7 +298,7 @@ export namespace InteractiveTerminal {
     const cols = Math.max(1, input.cols ?? DEFAULT_COLS)
     const rows = Math.max(1, input.rows ?? DEFAULT_ROWS)
     const args = Shell.args(input.shell, gate(input.shell, input.command), cwd)
-    const { spawn } = await import("#pty")
+    const { spawn } = await import("@opencode-ai/core/pty/driver")
     const proc = spawn(input.shell, args, {
       name: "xterm-256color",
       cols,

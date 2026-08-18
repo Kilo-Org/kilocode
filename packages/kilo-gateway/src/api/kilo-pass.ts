@@ -32,13 +32,9 @@ export async function fetchKiloPassState(token: string): Promise<KiloPassState |
     const response = await fetch(`${KILO_API_BASE}/api/trpc/kiloPass.getState?${params}`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...buildKiloHeaders() },
     })
-    if (!response.ok) {
-      console.warn(`Failed to fetch Kilo Pass: ${response.status}`)
-      return null
-    }
+    if (!response.ok) return null
     return parseKiloPassState(await response.json())
-  } catch (err) {
-    console.warn("Error fetching Kilo Pass:", err)
+  } catch {
     return null
   }
 }

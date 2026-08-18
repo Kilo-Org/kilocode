@@ -5,6 +5,7 @@ import { current } from "./context"
 import { assertProcessNetwork, networkEnvironment } from "./network"
 import type { Profile } from "./profile"
 import { seatbelt } from "./seatbelt"
+import { currentProxy, type ProxyRuntime } from "./proxy"
 
 export interface Launch {
   readonly command: string
@@ -24,6 +25,7 @@ export interface Backend {
   readonly prepare: (
     profile: Profile,
     launch: Launch,
+    proxy?: ProxyRuntime,
   ) => Effect.Effect<Launch, PlatformError.PlatformError, Scope.Scope>
 }
 
@@ -49,23 +51,25 @@ function select(): Backend {
 
 const backend = select()
 
-function environment(profile: Profile, launch: Launch) {
+function environment(profile: Profile, launch: Launch, proxy?: ProxyRuntime) {
   const source = { ...launch.environment, ...profile.environment.set }
   const denied = new Set(profile.environment.deny)
   const entries = Object.entries(source).filter(
     (entry): entry is [string, string] => entry[1] !== undefined && !denied.has(entry[0]),
   )
-  return networkEnvironment(profile, Object.fromEntries(entries))
+  return networkEnvironment(profile, Object.fromEntries(entries), proxy)
 }
 
 export function prepare(launch: Launch) {
   return Effect.gen(function* () {
     const profile = yield* current
     if (!profile) return launch
-    const next = { ...launch, environment: environment(profile, launch) }
+    const proxy = yield* currentProxy
+    const next = { ...launch, environment: environment(profile, launch, proxy) }
     yield* assertProcessNetwork(profile, launch.command)
-    if (!backend.support().available) return next
-    return yield* backend.prepare(profile, next)
+    const support = backend.support(profile.network)
+    if (!support.available) return yield* Effect.fail(unsupported(launch.command, "prepare", support))
+    return yield* backend.prepare(profile, next, proxy)
   })
 }
 
@@ -81,11 +85,12 @@ function unsupported(command: string, method: string, support: Support) {
 
 export function confine(profile: Profile, launch: Launch) {
   return Effect.gen(function* () {
-    const next = { ...launch, environment: environment(profile, launch) }
+    const proxy = yield* currentProxy
+    const next = { ...launch, environment: environment(profile, launch, proxy) }
     yield* assertProcessNetwork(profile, launch.command)
     const support = backend.support(profile.network)
     if (!support.available) return yield* Effect.fail(unsupported(launch.command, "confine", support))
-    return yield* backend.prepare(profile, next)
+    return yield* backend.prepare(profile, next, proxy)
   })
 }
 

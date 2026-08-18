@@ -9,7 +9,7 @@
 import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
-import { DEFAULT_VECTOR_STORE } from "@kilocode/kilo-indexing/config"
+import { DEFAULT_VECTOR_STORE, isFileExtension, parseFileExtensions } from "@kilocode/kilo-indexing/config"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { createEffect, createMemo, createResource, createSignal, Show } from "solid-js"
@@ -580,6 +580,12 @@ export function DialogIndexing(props: DialogIndexingProps) {
         description: mark(storeLabel, [["vectorStore"]]),
       },
       {
+        value: "fileExtensions",
+        title: "File Extensions",
+        category: "Advanced",
+        description: mark(indexing.fileExtensions?.join(", ") ?? "built-in defaults", [["fileExtensions"]]),
+      },
+      {
         value: "tuning",
         title: "Tuning Parameters",
         category: "Advanced",
@@ -680,6 +686,33 @@ export function DialogIndexing(props: DialogIndexingProps) {
               <VectorStoreSelect useSDK={props.useSDK} scope={scope()} indexing={indexing} raw={raw} />
             ))
             break
+          case "fileExtensions": {
+            const result = await DialogPrompt.show(dialog, "File Extensions", {
+              value: indexing.fileExtensions?.join(", ") ?? "",
+              placeholder: ".php, .js, .css (empty uses built-in defaults)",
+            })
+            if (result !== null) {
+              const values = result
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean)
+              const invalid = values.find((item) => !isFileExtension(item))
+              if (invalid) {
+                toast.show({ message: `Invalid file extension: "${invalid}"`, variant: "error" })
+              } else {
+                await saveScopedIndexing(
+                  sdk,
+                  sync,
+                  scope(),
+                  raw,
+                  { ...raw, fileExtensions: parseFileExtensions(result) },
+                  toast,
+                )
+              }
+            }
+            dialog.replace(() => <DialogIndexing useSDK={props.useSDK} scope={scope()} />)
+            break
+          }
           case "tuning":
             dialog.replace(() => (
               <TuningMenu useSDK={props.useSDK} scope={scope()} indexing={indexing} raw={raw} global={globalCfg()} />

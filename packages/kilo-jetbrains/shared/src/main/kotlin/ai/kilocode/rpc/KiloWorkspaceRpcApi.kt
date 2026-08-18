@@ -1,6 +1,7 @@
 package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
@@ -48,20 +49,34 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
     /** Resolve [path] to matching files, scoped primarily to [directory]. */
     suspend fun files(directory: String, path: String): List<WorkspaceFileDto>
 
-    /** Fuzzy file/folder search via the backend IDE index. */
+    /** Fuzzy file/folder search via Kilo Core. */
     suspend fun searchFiles(directory: String, query: String, limit: Int = 50): FileSearchResultDto
 
     /** Current uncommitted git changes as a unified diff for @git-changes mentions. */
     suspend fun gitChanges(directory: String): String?
 
+    /**
+     * Committed branch changes compared with the default branch merge-base.
+     *
+     * [patches] = false returns file stats only (additions/deletions/status) and skips materializing
+     * the full patch text — used by the header badge, which only needs counts.
+     */
+    suspend fun branchDiff(directory: String, patches: Boolean = true): List<DiffFileDto>
+
+    /** Current git branch name for branch-scoped UI labels. */
+    suspend fun branchName(directory: String): String?
+
     /** Open an absolute backend file path in the IDE. */
-    suspend fun openFile(path: String): Boolean
+    suspend fun openFile(path: String, line: Int? = null, column: Int? = null, endLine: Int? = null): Boolean
 
     /** Resolve the editable local config target. */
     suspend fun localConfigTarget(directory: String): ConfigTargetDto
 
     /** Resolve the editable global config target. */
     suspend fun globalConfigTarget(): ConfigTargetDto
+
+    /** Refresh local and global config files after external CLI writes. */
+    suspend fun refreshConfigFiles(directory: String)
 
     /** Open or create the local config file in the IDE. */
     suspend fun openLocalConfig(directory: String): Boolean

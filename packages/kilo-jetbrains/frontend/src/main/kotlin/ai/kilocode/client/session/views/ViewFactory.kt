@@ -1,12 +1,16 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionDiffOpener
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.views.base.GenericView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.question.QuestionResultView
+import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
 import ai.kilocode.client.session.views.tool.ShellToolView
+import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.model.Compaction
@@ -30,28 +34,38 @@ import ai.kilocode.client.session.views.todo.TodoWriteView
 object ViewFactory {
     fun create(
         content: Content,
-        openFile: (String) -> Unit,
+        openFile: SessionFileOpener,
     ): PartView = create(content, openFile, openUrl = {}, selection = null, repo = null)
 
     fun create(
         content: Content,
-        openFile: (String) -> Unit,
+        openFile: SessionFileOpener,
+        openUrl: (String) -> Unit,
+    ): PartView = create(content, openFile, openUrl = openUrl, selection = null, repo = null)
+
+    fun create(
+        content: Content,
+        openFile: SessionFileOpener,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
         repo: String? = null,
         openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
+        openDiff: SessionDiffOpener = { _, _, _ -> },
+        sessionId: String? = null,
     ): PartView = when (content) {
-        is Text -> TextView(content, openUrl = openUrl, selection = selection)
-        is Reasoning -> ReasoningView(content, openUrl = openUrl, selection = selection)
+        is Text -> TextView(content, openFile = openFile, openUrl = openUrl, selection = selection)
+        is Reasoning -> ReasoningView(content, openFile = openFile, openUrl = openUrl, selection = selection)
         is FileAttachment -> AttachmentView(content, openAttachment)
         is Tool -> when {
             TodoWriteView.canRender(content) -> TodoWriteView(content)
-            PlanExitView.canRender(content) -> PlanExitView(content, openFile, selection)
+            PlanExitView.canRender(content) -> PlanExitView(content, openFile, openUrl, selection)
             QuestionResultView.canRender(content) -> QuestionResultView(content, selection)
             ShellToolView.canRender(content) -> ShellToolView(content, selection = selection)
             GlobToolView.canRender(content) -> GlobToolView(content, selection = selection, repo = repo)
             SearchToolView.canRender(content) -> SearchToolView(content, selection = selection, repo = repo)
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
+            EditToolView.canRender(content) -> EditToolView(content, openFile, selection, openDiff, sessionId)
+            TaskToolView.canRender(content) -> TaskToolView(content, selection = selection)
             else -> ToolView(content, selection = selection)
         }
         is Compaction -> CompactionView(content)
@@ -61,20 +75,28 @@ object ViewFactory {
 
     fun createUser(
         content: Content,
-        openFile: (String) -> Unit,
+        openFile: SessionFileOpener,
     ): PartView = createUser(content, openFile, openUrl = {}, selection = null, repo = null)
 
     fun createUser(
         content: Content,
-        openFile: (String) -> Unit,
+        openFile: SessionFileOpener,
+        openUrl: (String) -> Unit,
+    ): PartView = createUser(content, openFile, openUrl = openUrl, selection = null, repo = null)
+
+    fun createUser(
+        content: Content,
+        openFile: SessionFileOpener,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
         repo: String? = null,
         mentions: List<PromptMention> = emptyList(),
         openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
+        openDiff: SessionDiffOpener = { _, _, _ -> },
+        sessionId: String? = null,
     ): PartView = when (content) {
         is Text -> PromptView(content, openFile = openFile, openAttachment = openAttachment, openUrl = openUrl, selection = selection, mentions = mentions)
-        else -> create(content, openFile, openUrl, selection, repo, openAttachment)
+        else -> create(content, openFile, openUrl, selection, repo, openAttachment, openDiff, sessionId)
     }
 
     /**
@@ -97,6 +119,10 @@ object ViewFactory {
         if (view !is SearchToolView && SearchToolView.canRender(content)) return true
         if (view is ReadToolView) return !ReadToolView.canRender(content) || QuestionResultView.canRender(content)
         if (view is ToolView && ReadToolView.canRender(content)) return true
+        if (view is EditToolView) return !EditToolView.canRender(content) || QuestionResultView.canRender(content)
+        if (view is ToolView && EditToolView.canRender(content)) return true
+        if (view is TaskToolView) return !TaskToolView.canRender(content) || QuestionResultView.canRender(content)
+        if (view !is TaskToolView && TaskToolView.canRender(content)) return true
         if (view is ToolView) return QuestionResultView.canRender(content)
         return false
     }

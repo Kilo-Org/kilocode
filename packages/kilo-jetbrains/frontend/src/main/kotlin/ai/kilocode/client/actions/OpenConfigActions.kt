@@ -3,7 +3,6 @@ package ai.kilocode.client.actions
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.rpc.dto.ConfigTargetDto
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -37,21 +36,23 @@ class OpenLocalConfigAction : ConfigAction(
     description = KiloBundle.message("action.Kilo.OpenLocalConfig.description"),
 ) {
     override fun update(e: AnActionEvent) {
-        val dir = directory(e)
+        val dir = e.workspaceDirectory()
+        val service = service<KiloWorkspaceService>()
+        val target = dir?.let { service.localConfig[it] }
         e.presentation.isEnabled = dir != null
-        e.presentation.text = text(dir?.let { service<KiloWorkspaceService>().localConfig[it] })
+        e.presentation.text = text(target)
+
+        if (dir != null && target == null) {
+            service.refreshLocalConfigTarget(dir)
+        }
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        val dir = directory(e) ?: return
+        val dir = e.workspaceDirectory() ?: return
         Telemetry.send("Config Opened", mapOf("surface" to "tool_window", "scope" to "local"))
         service<KiloWorkspaceService>().openLocalConfig(dir) { ok ->
             if (!ok) failed()
         }
-    }
-
-    private fun directory(e: AnActionEvent): String? {
-        return e.getData(SessionManager.WORKSPACE_KEY)?.directory ?: e.project?.basePath
     }
 }
 
@@ -62,7 +63,13 @@ class OpenGlobalConfigAction : ConfigAction(
     description = KiloBundle.message("action.Kilo.OpenGlobalConfig.description"),
 ) {
     override fun update(e: AnActionEvent) {
-        e.presentation.text = text(service<KiloWorkspaceService>().globalConfig)
+        val service = service<KiloWorkspaceService>()
+        val target = service.globalConfig
+        e.presentation.text = text(target)
+
+        if (target == null) {
+            service.refreshGlobalConfigTarget()
+        }
     }
 
     override fun actionPerformed(e: AnActionEvent) {

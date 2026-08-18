@@ -8,6 +8,7 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -183,7 +184,9 @@ class KiloSessionService internal constructor(
 
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, dir: String) {
+        log.info("${ChatLogSummary.sid(id)} kind=abort ${ChatLogSummary.dir(dir)}")
         call { abort(id, dir) }
+        log.info("${ChatLogSummary.sid(id)} kind=abort ok=true")
     }
 
     /** Summarize/compact a session. */
@@ -191,10 +194,33 @@ class KiloSessionService internal constructor(
         call { compact(id, dir, model) }
     }
 
+    suspend fun revert(id: String, dir: String, message: String, part: String?) {
+        log.info(
+            "${ChatLogSummary.sid(id)} kind=revert ${ChatLogSummary.dir(dir)} " +
+                "message=$message part=${part ?: "none"}",
+        )
+        call { revert(id, dir, message, part) }
+        log.info("${ChatLogSummary.sid(id)} kind=revert ok=true")
+    }
+
+    suspend fun deleteMessage(id: String, dir: String, message: String): Boolean =
+        call { deleteMessage(id, dir, message) }
+
+    suspend fun unrevert(id: String, dir: String) {
+        call { unrevert(id, dir) }
+    }
+
     /** Load message history for a session. */
     suspend fun messages(id: String, dir: String): List<MessageWithPartsDto> =
         call { messages(id, dir) }
             .also { log.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(it)} ${ChatLogSummary.dir(dir)}" } }
+
+    // Errors propagate so the diff editor can distinguish a real failure (retry link) from "no changes".
+    suspend fun diff(id: String, dir: String): List<DiffFileDto> =
+        call { diff(id, dir) }
+
+    suspend fun diffSides(sessionId: String?, dir: String, file: DiffFileDto, messageId: String?): DiffFileDto? =
+        call { diffSides(sessionId, dir, file, messageId) }
 
     suspend fun attachmentPart(id: String, dir: String, message: String, part: String, key: String?): PartDto? =
         call { attachmentPart(id, dir, message, part, key) }

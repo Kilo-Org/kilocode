@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Cause, Effect, Exit } from "effect"
-import { ConfigAgent } from "@/config/agent"
+import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ConfigParse } from "@/config/parse"
 import * as AgentRequirements from "@/kilocode/agent-requirements"
 import type { MCP } from "@/mcp"
@@ -291,7 +291,7 @@ describe("agent requirements", () => {
 
   test("keeps requirements out of agent options", () => {
     const agent = ConfigParse.schema(
-      ConfigAgent.Info,
+      ConfigAgentV1.Info,
       {
         name: "demo",
         requirements: { skills: ["needed"] },

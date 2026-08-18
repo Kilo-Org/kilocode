@@ -60,6 +60,10 @@
   text-decoration: none;
 }
 
+.kilo-console .profile-primary-link[data-component="button"][data-variant="primary"] [data-slot="icon-svg"] {
+  color: var(--primary-foreground);
+}
+
 .kilo-console .profile-connect-card {
   display: grid;
   min-height: 18rem;
@@ -420,7 +424,7 @@
 
 .kilo-console .profile-login-code small {
   color: var(--muted-foreground);
-  font-family: var(--font-family-sans, system-ui, sans-serif);
+  font-family: var(--font-family-sans);
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0;

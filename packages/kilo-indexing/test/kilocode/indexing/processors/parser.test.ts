@@ -71,6 +71,21 @@ describe("CodeParser", () => {
       expect(result).toEqual([])
     })
 
+    test("uses fallback chunking for configured custom extensions", async () => {
+      const custom = new CodeParser([".custom"])
+      const result = await custom.parseFile("test.custom", { content: "custom source line ".repeat(20) })
+
+      expect(result.length).toBeGreaterThan(0)
+      expect(result[0]?.type).toBe("fallback_chunk")
+    })
+
+    test("excludes built-in extensions outside a configured allowlist", async () => {
+      const custom = new CodeParser([".php"])
+      const result = await custom.parseFile("test.js", { content: "const value = 1;".repeat(20) })
+
+      expect(result).toEqual([])
+    })
+
     test("should use provided content instead of reading file when options.content is provided", async () => {
       const content = `/* This is a long test content string that exceeds 100 characters to properly test the parser's behavior with large inputs.
 			It includes multiple lines and various JavaScript constructs to simulate real-world code.

@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Config } from "@/config/config"
@@ -9,21 +10,24 @@ import { Agent } from "@/agent/agent"
 import { ShellTool } from "@/tool/shell"
 import { Truncate } from "@/tool/truncate"
 import { MessageID, SessionID } from "@/session/schema"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Database } from "@opencode-ai/core/database/database"
 import { run as runSandbox, type Profile } from "@kilocode/sandbox"
 import { TestConfig } from "../../fixture/config"
-import { provideInstance, tmpdirScoped } from "../../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fixture/fixture"
 
 const base = Layer.mergeAll(
-  CrossSpawnSpawner.defaultLayer,
-  AppFileSystem.defaultLayer,
-  Plugin.defaultLayer,
-  Truncate.defaultLayer,
-  Agent.defaultLayer,
-  RuntimeFlags.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  AppNodeBuilder.build(FSUtil.node),
+  AppNodeBuilder.build(Plugin.node),
+  AppNodeBuilder.build(Truncate.node),
+  AppNodeBuilder.build(Agent.node),
+  AppNodeBuilder.build(RuntimeFlags.node),
+  testInstanceStoreLayer,
+  AppNodeBuilder.build(Database.node),
 )
-const layer = Layer.mergeAll(base, Config.defaultLayer)
+const layer = Layer.mergeAll(base, AppNodeBuilder.build(Config.node))
 
 function configured(restrict: boolean) {
   return Layer.mergeAll(
@@ -31,10 +35,7 @@ function configured(restrict: boolean) {
     TestConfig.layer({
       get: () =>
         Effect.succeed({
-          experimental: {
-            sandbox: true,
-            sandbox_restrict_network: restrict,
-          },
+          sandbox: { enabled: true, network: restrict ? "deny" : "allow" },
         }),
     }),
   )
@@ -135,7 +136,7 @@ describe("model shell network integration", () => {
   )
 
   test.skipIf(process.platform !== "darwin" && process.platform !== "linux")(
-    "keeps spawned shell network denied without authenticated server control",
+    "honors configured shell network access without authenticated server control",
     async () => {
       const effect = Effect.gen(function* () {
         const root = yield* tmpdirScoped()
@@ -156,15 +157,15 @@ describe("model shell network integration", () => {
           provideInstance(root),
           Effect.provide(configured(true)),
         )
-        expect(allow.output).not.toContain("model-shell-network-ok")
-        expect(allow.metadata.exit).not.toBe(0)
-        expect(allowed.accepted()).toBe(0)
+        expect(allow.output).toContain("model-shell-network-ok")
+        expect(allow.metadata.exit).toBe(0)
+        expect(allowed.accepted()).toBe(1)
         expect(deny.output).not.toContain("model-shell-network-ok")
         expect(deny.metadata.exit).not.toBe(0)
         expect(denied.accepted()).toBe(0)
       })
 
-      await Effect.runPromise(Effect.scoped(effect.pipe(Effect.provide(CrossSpawnSpawner.defaultLayer))))
+      await Effect.runPromise(Effect.scoped(effect.pipe(Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node)))))
     },
   )
 })

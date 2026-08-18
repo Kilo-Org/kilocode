@@ -1,7 +1,9 @@
 import { APICallError } from "ai"
 import { STATUS_CODES } from "http"
 import { iife } from "@/util/iife"
-import type { ProviderID } from "./schema"
+import * as KiloError from "@/kilocode/provider/error" // kilocode_change
+import type { ProviderV2 } from "@opencode-ai/core/provider"
+import { isContextOverflow } from "@opencode-ai/llm"
 
 export class HeaderTimeoutError extends Error {
   public override readonly name = "ProviderHeaderTimeoutError"
@@ -19,30 +21,6 @@ export class ResponseStreamError extends Error {
   }
 }
 
-// Adapted from overflow detection patterns in:
-// https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/utils/overflow.ts
-const OVERFLOW_PATTERNS = [
-  /prompt is too long/i, // Anthropic
-  /input is too long for requested model/i, // Amazon Bedrock
-  /exceeds the context window/i, // OpenAI (Completions + Responses API message text)
-  /input token count.*exceeds the maximum/i, // Google (Gemini)
-  /maximum prompt length is \d+/i, // xAI (Grok)
-  /reduce the length of the messages/i, // Groq
-  /maximum context length is \d+ tokens/i, // OpenRouter, DeepSeek, vLLM
-  /exceeds the limit of \d+/i, // GitHub Copilot
-  /exceeds the available context size/i, // llama.cpp server
-  /greater than the context length/i, // LM Studio
-  /context window exceeds limit/i, // MiniMax
-  /exceeded model token limit/i, // Kimi For Coding, Moonshot
-  /context[_ ]length[_ ]exceeded/i, // Generic fallback
-  /request entity too large/i, // HTTP 413
-  /context length is only \d+ tokens/i, // vLLM
-  /input length.*exceeds.*context length/i, // vLLM
-  /prompt too long; exceeded (?:max )?context length/i, // Ollama explicit overflow error
-  /too large for model with \d+ maximum context length/i, // Mistral
-  /model_context_window_exceeded/i, // z.ai non-standard finish_reason surfaced as error text
-]
-
 function isOpenAiErrorRetryable(e: APICallError) {
   const status = e.statusCode
   if (!status) return e.isRetryable
@@ -52,17 +30,10 @@ function isOpenAiErrorRetryable(e: APICallError) {
 
 // Providers not reliably handled in this function:
 // - z.ai: can accept overflow silently (needs token-count/context-window checks)
-function isOverflow(message: string) {
-  if (OVERFLOW_PATTERNS.some((p) => p.test(message))) return true
-
-  // Providers/status patterns handled outside of regex list:
-  // - Cerebras: often returns "400 (no body)" / "413 (no body)"
-  // - Mistral: often returns "400 (no body)" / "413 (no body)"
-  return /^4(00|13)\s*(status code)?\s*\(no body\)/i.test(message)
-}
-
-function message(providerID: ProviderID, e: APICallError) {
+function message(providerID: ProviderV2.ID, e: APICallError) {
   return iife(() => {
+    const hint = KiloError.hint(providerID, e) // kilocode_change
+    if (hint) return hint // kilocode_change
     // kilocode_change start - surface a branded reauth hint for expired Copilot tokens
     if (providerID.includes("github-copilot") && e.statusCode === 403) {
       return "Please reauthenticate with the copilot provider to ensure your credentials work properly with Kilo."
@@ -138,10 +109,13 @@ export type ParsedStreamError =
 
 export function parseStreamError(input: unknown): ParsedStreamError | undefined {
   const raw = json(input)
-  const body = typeof raw?.message === "string" ? (json(raw.message) ?? raw) : raw
-  if (!body) return
+  // kilocode_change start - unwrap response.failed frames and bare provider error objects before the envelope gate
+  const original = typeof raw?.message === "string" ? (json(raw.message) ?? raw) : raw
+  if (!original) return
 
-  const responseBody = JSON.stringify(body)
+  const responseBody = JSON.stringify(original)
+  const body = KiloError.frame(original)
+  // kilocode_change end
   if (body.type !== "error") return
 
   switch (body?.error?.code) {
@@ -193,6 +167,7 @@ export function parseStreamError(input: unknown): ParsedStreamError | undefined 
         responseBody,
       }
   }
+  return KiloError.fallback(body, responseBody) // kilocode_change - render unlisted provider error codes as clean messages
 }
 
 export type ParsedAPICallError =
@@ -211,10 +186,10 @@ export type ParsedAPICallError =
       metadata?: Record<string, string>
     }
 
-export function parseAPICallError(input: { providerID: ProviderID; error: APICallError }): ParsedAPICallError {
+export function parseAPICallError(input: { providerID: ProviderV2.ID; error: APICallError }): ParsedAPICallError {
   const m = message(input.providerID, input.error)
   const body = json(input.error.responseBody)
-  if (isOverflow(m) || input.error.statusCode === 413 || body?.error?.code === "context_length_exceeded") {
+  if (isContextOverflow(m) || input.error.statusCode === 413 || body?.error?.code === "context_length_exceeded") {
     return {
       type: "context_overflow",
       message: m,

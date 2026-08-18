@@ -19,6 +19,7 @@ on:
 jobs:
   analyze:
     name: Analyze (java-kotlin)
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode'
     runs-on: ubuntu-latest
     permissions:
       security-events: write
@@ -38,6 +39,12 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+
+      - name: Free disk space for CodeQL
+        shell: bash
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost
+          docker system prune --all --force || true
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4

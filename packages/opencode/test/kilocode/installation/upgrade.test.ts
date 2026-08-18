@@ -6,6 +6,9 @@ import { InstallationChannel } from "@opencode-ai/core/installation/version"
 import { AppProcess } from "@opencode-ai/core/process"
 import { Installation } from "../../../src/installation"
 import { testEffect } from "../../lib/effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 
 const encoder = new TextEncoder()
 
@@ -48,8 +51,10 @@ function layer(
   handler: (cmd: string, args: readonly string[]) => string,
   request?: (request: HttpClientRequest.HttpClientRequest) => Response,
 ) {
-  const proc = AppProcess.layer.pipe(Layer.provide(spawner(handler)))
-  return Installation.layer.pipe(Layer.provide(http(request)), Layer.provide(proc))
+  return AppNodeBuilder.build(Installation.node, [
+    [LayerNodePlatform.httpClient, http(request)],
+    [CrossSpawnSpawner.node, spawner(handler)],
+  ])
 }
 
 describe("Kilo installation upgrade", () => {
@@ -59,14 +64,14 @@ describe("Kilo installation upgrade", () => {
       () => "",
       (request) => {
         release.push(request.url)
-        return json({ tag_name: "v8.8.8" })
+        return json({ version: "8.8.8" })
       },
     ),
-  ).effect("reads fallback versions from Kilo GitHub releases", () =>
+  ).effect("reads fallback versions from the Kilo npm registry", () =>
     Effect.gen(function* () {
       const result = yield* Installation.Service.use((svc) => svc.latest("unknown"))
       expect(result).toBe("8.8.8")
-      expect(release).toContain("https://api.github.com/repos/Kilo-Org/kilocode/releases/latest")
+      expect(release).toContain(`https://registry.npmjs.org/@kilocode%2fcli/${InstallationChannel}`)
     }),
   )
 
@@ -215,7 +220,7 @@ describe("Kilo installation upgrade", () => {
     Effect.gen(function* () {
       yield* Installation.Service.use((svc) => svc.upgrade("curl", "9.9.9"))
       expect(curl).toContain("https://kilo.ai/cli/install")
-      expect(curl).toContain("bash")
+      expect(curl).toContain("sh")
     }),
   )
 })

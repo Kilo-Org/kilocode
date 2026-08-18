@@ -57,7 +57,10 @@ export namespace MemoryBudget {
       const foot = `${lines[close]}\n`
       // This branch always truncates, so reserve room for a note telling the model how to list the
       // rest — but never at tiny budgets where the note would displace actual memory.
-      const note = "note: index truncated; call kilo_memory_recall mode=typed query=<topic> to search omitted memory"
+      // Truncation can shed typed facts, session digests, or both, so the note names every recall mode
+      // (typed for facts, digest for sessions, search for either) rather than only mode=typed.
+      const note =
+        "note: index truncated; call kilo_memory_recall mode=typed|digest|search query=<topic> to search omitted memory"
       const reserve = max >= 1024 ? Buffer.byteLength(`${note}\n`) : 0
       const kept = [lines[0]]
       let bytes = Buffer.byteLength(`${lines[0]}\n`) + Buffer.byteLength(foot) + reserve

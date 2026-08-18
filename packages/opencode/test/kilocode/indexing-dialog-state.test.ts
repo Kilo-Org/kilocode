@@ -107,6 +107,15 @@ describe("indexing dialog state", () => {
     expect(indexingInheritance("project", global, project, [["searchMinScore"]])).toBe("inherited")
   })
 
+  test("replaces inherited file extensions with a project allowlist", () => {
+    const global: IndexingConfig = { fileExtensions: [".ts", ".tsx"] }
+    const project: IndexingConfig = { fileExtensions: [".php"] }
+
+    expect(mergeIndexingConfig(global, project).fileExtensions).toEqual([".php"])
+    expect(indexingInheritance("project", global, {}, [["fileExtensions"]])).toBe("inherited")
+    expect(indexingInheritance("project", global, project, [["fileExtensions"]])).toBe("none")
+  })
+
   test("isolates global auth config from project indexing values", () => {
     const project: IndexingConfig = { kilo: { apiKey: "project-key", baseUrl: "https://project.test" } }
     const inherited: IndexingConfig = { enabled: true }

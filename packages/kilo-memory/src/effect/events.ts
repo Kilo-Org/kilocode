@@ -27,6 +27,8 @@ export namespace MemoryEvents {
     duplicateOf: Schema.optional(Schema.String),
     tokens: Schema.optional(Schema.Number),
     operationCount: Schema.optional(Schema.Number),
+    added: Schema.optional(Schema.Number),
+    removed: Schema.optional(Schema.Number),
     skippedCount: Schema.optional(Schema.Number),
     sources: Schema.optional(Schema.Array(Schema.String)),
     files: Schema.optional(Schema.Array(Schema.String)),
@@ -84,7 +86,7 @@ export namespace MemoryEvents {
     consolidation?: Status["consolidation"]
     detail?: Status["detail"]
   }): Status {
-    const updated = latest(input.state.stats.lastInjectedAt, input.state.stats.lastConsolidatedAt)
+    const updated = latest(input.state.stats.lastInjectedAt, input.state.stats.lastTypedConsolidationAt)
     const current = metric(input.index, updated)
     return {
       directory: input.root,

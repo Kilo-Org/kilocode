@@ -1,12 +1,14 @@
 package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.CliServer
+import ai.kilocode.backend.cli.CliDownload
 import ai.kilocode.backend.app.ConnectionState
 import ai.kilocode.backend.app.KiloConnectionService
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.log.KiloLog
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Request
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
@@ -33,6 +36,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class KiloConnectionServiceTest {
+
+    private companion object {
+        const val WAIT_MS = 15_000L
+    }
 
     private val mock = MockCliServer()
     private val fake = FakeCliServer(mock)
@@ -76,6 +83,47 @@ class KiloConnectionServiceTest {
             svc.state.first { it is ConnectionState.Connected }
         }
         assertTrue(svc.api != null)
+    }
+
+    @Test
+    fun `connect reports downloading then connecting before ready`() = runBlocking {
+        val resolved = CompletableDeferred<Unit>()
+        val ready = CompletableDeferred<Unit>()
+        val server = object : CliServer {
+            override var forceExtract = false
+            override fun process(): Process? = null
+            override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit): CliServer.State {
+                onProgress(CliDownload(42, "1.2.3", "darwin-arm64"))
+                resolved.await()
+                onResolved()
+                ready.await()
+                return CliServer.State.Ready(mock.start(), mock.password)
+            }
+            override fun exited(proc: Process) {}
+            override fun stop() {}
+            override fun dispose() {}
+        }
+        val svc = KiloConnectionService(scope, server, {}, log)
+        val job = scope.launch { svc.connect() }
+
+        val downloading = withTimeout(WAIT_MS) {
+            svc.state.first { it is ConnectionState.Downloading }
+        }
+        assertEquals(ConnectionState.Downloading(42, "1.2.3", "darwin-arm64"), downloading)
+
+        resolved.complete(Unit)
+        withTimeout(WAIT_MS) {
+            svc.state.first { it == ConnectionState.Connecting }
+        }
+
+        ready.complete(Unit)
+        val connected = withTimeoutOrNull(WAIT_MS) {
+            svc.state.first { it is ConnectionState.Connected }
+        }
+        if (connected == null) {
+            error("Timed out waiting for Connected after CLI ready; state=${svc.state.value}; logs=${log.messages.joinToString("\n")}")
+        }
+        job.join()
     }
 
     @Test
@@ -189,7 +237,7 @@ class KiloConnectionServiceTest {
         val failing = object : CliServer {
             override var forceExtract = false
             override fun process(): Process? = null
-            override suspend fun init() = CliServer.State.Error("binary not found", "stderr line 1\nstderr line 2")
+            override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit) = CliServer.State.Error("binary not found", "stderr line 1\nstderr line 2")
             override fun exited(proc: Process) {}
             override fun stop() {}
             override fun dispose() {}
@@ -234,6 +282,35 @@ class KiloConnectionServiceTest {
 
         svc.dispose()
         assertEquals(ConnectionState.Disconnected, svc.state.value)
+    }
+
+    @Test
+    fun `dispose prevents reconnect on late SSE callbacks`() = runBlocking {
+        val reconnects = AtomicInteger(0)
+        val svc = KiloConnectionService(scope, fake, { reconnects.incrementAndGet() }, log)
+        svc.connect()
+        mock.awaitSseConnection()
+
+        withTimeout(5_000) {
+            svc.state.first { it is ConnectionState.Connected }
+        }
+
+        svc.dispose()
+
+        // Simulate a late SSE close/failure arriving after teardown. The stale source must be
+        // ignored so shutdown neither resurrects the connection nor schedules a reconnect.
+        val field = KiloConnectionService::class.java.getDeclaredField("listener")
+        field.isAccessible = true
+        val listener = field.get(svc) as EventSourceListener
+        val stale = object : EventSource {
+            override fun request(): Request = Request.Builder().url("http://127.0.0.1/global/event").build()
+            override fun cancel() {}
+        }
+        listener.onFailure(stale, RuntimeException("late failure"), null)
+        listener.onClosed(stale)
+
+        assertEquals(ConnectionState.Disconnected, svc.state.value)
+        assertEquals(0, reconnects.get())
     }
 
     // ------ Reconnect & health ------

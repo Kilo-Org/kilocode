@@ -1,10 +1,13 @@
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Effect, Schema } from "effect"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import type { JSONSchema7 } from "@ai-sdk/provider"
 import type { MessageV2 } from "../session/message-v2"
 import type { Permission } from "../permission"
 import type { SessionID, MessageID } from "../session/schema"
 import * as Truncate from "./truncate"
 import { Agent } from "@/agent/agent"
+import { format } from "@/kilocode/tool/tool" // kilocode_change
 
 interface Metadata {
   [key: string]: any
@@ -38,16 +41,16 @@ export type Context<M extends Metadata = Metadata> = {
   abort: AbortSignal
   callID?: string
   extra?: { [key: string]: unknown }
-  messages: MessageV2.WithParts[]
+  messages: SessionV1.WithParts[]
   metadata(input: { title?: string; metadata?: M }): Effect.Effect<void>
-  ask(input: Omit<Permission.Request, "id" | "sessionID" | "tool">): Effect.Effect<void>
+  ask(input: Omit<PermissionV1.Request, "id" | "sessionID" | "tool">): Effect.Effect<void>
 }
 
 export interface ExecuteResult<M extends Metadata = Metadata> {
   title: string
   metadata: M
   output: string
-  attachments?: Omit<MessageV2.FilePart, "id" | "sessionID" | "messageID">[]
+  attachments?: Omit<SessionV1.FilePart, "id" | "sessionID" | "messageID">[]
 }
 
 export interface Def<
@@ -116,15 +119,20 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
           ...(ctx.callID ? { "tool.call_id": ctx.callID } : {}),
         }
         return Effect.gen(function* () {
-          const decoded = yield* decode(args).pipe(
+          // kilocode_change start
+          const decoded = yield* decode(
+            args,
+            { errors: "all" },
+          ).pipe(
             Effect.mapError(
               (error) =>
                 new InvalidArgumentsError({
                   tool: id,
-                  detail: toolInfo.formatValidationError ? toolInfo.formatValidationError(error) : String(error),
+                  detail: toolInfo.formatValidationError ? toolInfo.formatValidationError(error) : format(error),
                 }),
             ),
           )
+          // kilocode_change end
           const result = yield* execute(decoded as Schema.Schema.Type<Parameters>, ctx)
           if (result.metadata.truncated !== undefined) {
             return result

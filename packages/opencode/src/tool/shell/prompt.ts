@@ -15,7 +15,6 @@ const descriptions = {
   cmd: 'Recommended: a clear, concise description of what this command does in 5-10 words. Examples:\nInput: dir\nOutput: Lists current directory\n\nInput: if exist "package.json" type "package.json"\nOutput: Prints package.json when it exists\n\nInput: mkdir tmp\nOutput: Creates directory tmp',
 }
 // kilocode_change end
-
 export type Limits = {
   maxLines: number
   maxBytes: number

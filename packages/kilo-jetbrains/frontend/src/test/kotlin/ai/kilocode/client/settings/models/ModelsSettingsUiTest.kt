@@ -121,6 +121,19 @@ class ModelsSettingsUiTest : BasePlatformTestCase() {
         edt { assertSelected(panel, "kilo/new") }
     }
 
+    fun `test stale config update result keeps applied selection visible`() {
+        val panel = requireUi()
+        rpc.configUpdateReturnStale = true
+
+        edt {
+            select(panel, "new")
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() && !edt { panel.modified() } }
+        edt { assertSelected(panel, "kilo/new") }
+    }
+
     fun `test pickers are disabled during pending save`() {
         val panel = requireUi()
         rpc.configUpdateGate = CompletableDeferred()
@@ -310,13 +323,21 @@ class ModelsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test settings picker keeps model attachment metadata`() {
+        val panel = requireUi()
+
+        edt {
+            assertTrue(pickers(panel).first().selectedForTest()?.attachment == true)
+        }
+    }
+
     private fun providers(): ProvidersDto = ProvidersDto(
         providers = listOf(
             ProviderDto(
                 id = "kilo",
                 name = "Kilo",
                 models = mapOf(
-                    "old" to ModelDto(id = "old", name = "Old"),
+                    "old" to ModelDto(id = "old", name = "Old", attachment = true),
                     "new" to ModelDto(id = "new", name = "New"),
                 ),
             ),
@@ -352,8 +373,8 @@ class ModelsSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
-        repeat(20) {
-            delay(100)
+        repeat(200) {
+            delay(10)
             edt { UIUtil.dispatchAllInvocationEvents() }
             if (done()) return@runBlocking
         }

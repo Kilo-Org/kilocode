@@ -8,6 +8,10 @@ sealed class SessionState {
 
     data class Busy(val text: String) : SessionState()
 
+    data class Reverting(val text: String, val kind: Kind, val message: String? = null) : SessionState() {
+        enum class Kind { ROLLBACK, REDO }
+    }
+
     data class AwaitingQuestion(val question: Question) : SessionState()
 
     data class AwaitingPermission(val permission: Permission) : SessionState()

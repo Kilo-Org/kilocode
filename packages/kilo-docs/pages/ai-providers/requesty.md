@@ -20,7 +20,7 @@ Kilo Code supports accessing models through the [Requesty](https://www.requesty.
 {% tabs %}
 {% tab label="VSCode" %}
 
-Open **Settings** (gear icon) and go to the **Providers** tab to add Requesty and enter your API key.
+Open **Settings** (gear icon) inside the Kilo Code extension and go to the **Providers** tab to add Requesty and enter your API key. If you don't see Requesty listed, click **Show more providers**.
 
 The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 

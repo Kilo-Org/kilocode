@@ -6,7 +6,16 @@ import { CustomSelect, type SelectOption } from "../../components/CustomSelect"
 import { loadEmbeddingModels } from "../../client"
 import { useConfig } from "../../context/config"
 import { ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
-import { clean, clone, merge, providerPatch, removed, shouldSync, validate } from "./state/indexing"
+import {
+  clean,
+  clone,
+  merge,
+  parseFileExtensions,
+  providerPatch,
+  removed,
+  shouldSync,
+  validate,
+} from "./state/indexing"
 
 type Provider = NonNullable<IndexingConfig["provider"]>
 type ProviderValue = Provider | ""
@@ -111,6 +120,7 @@ export function IndexingRoute() {
   const [draft, setDraft] = createSignal<IndexingConfig>({})
   const [source, setSource] = createSignal("")
   const [dirty, setDirty] = createSignal(false)
+  const [extensionText, setExtensionText] = createSignal("")
   const scope = () => ctx.query()?.scope ?? "global"
   const [selected, setSelected] = createSignal(scope())
   const project = () => scope() === "project"
@@ -149,6 +159,8 @@ export function IndexingRoute() {
     setSelected(current)
     setSource(key)
     setDraft(clone(next))
+    const extensions = project() ? merge(global(), next).fileExtensions : next.fileExtensions
+    setExtensionText(extensions?.join(", ") ?? "")
     setDirty(false)
   })
 
@@ -478,6 +490,28 @@ export function IndexingRoute() {
               </div>
             </header>
             <div class="ui-form agent-builder-form">
+              <FieldCard
+                label="File extensions"
+                description="Comma-separated allowlist. Leave empty to use the built-in defaults."
+                actions={
+                  <SourceBadge
+                    source={field("fileExtensions")?.source}
+                    inherited={field("fileExtensions")?.inherited}
+                    overridden={field("fileExtensions")?.overridden}
+                  />
+                }
+              >
+                <input
+                  value={extensionText()}
+                  placeholder=".php, .js, .css"
+                  disabled={Boolean(ctx.saving())}
+                  onInput={(event) => {
+                    const value = event.currentTarget.value
+                    setExtensionText(value)
+                    update({ fileExtensions: parseFileExtensions(value) })
+                  }}
+                />
+              </FieldCard>
               <FieldCard
                 label="Minimum search score"
                 description="Similarity threshold from 0 to 1. Default is model-specific or 0.4."

@@ -40,6 +40,7 @@ import javax.swing.JPanel
  */
 class BaseQuestionView(
     private val selection: SessionSelection? = null,
+    private val focus: (() -> Unit)? = null,
 ) : RoundedContentPanel(
     UiStyle.Gap.pad(),
     UiStyle.Gap.pad(),
@@ -76,7 +77,7 @@ class BaseQuestionView(
 
     private val text = Stack.vertical()
 
-    private val header = object : JPanel(BorderLayout(UiStyle.Gap.sm(), 0)) {
+    private val header = object : JPanel(BorderLayout(UiStyle.Gap.md(), 0)) {
         override fun getMaximumSize(): Dimension {
             val size = preferredSize
             return Dimension(Int.MAX_VALUE, size.height)
@@ -91,8 +92,10 @@ class BaseQuestionView(
         isVisible = false
     }
 
-    private val headerText: JBTextArea = makeText("", UiStyle.Colors.fg(), bold = true)
-    private val descriptionText: JBTextArea = makeText("", UiStyle.Colors.weak(), bold = false)
+    private val headerText: JBTextArea = makeText("", SessionUiStyle.Colors.foreground(), bold = true)
+    private val descriptionText: JBTextArea = makeText("", SessionUiStyle.Text.Secondary.foreground(), bold = false).apply {
+        isVisible = false
+    }
 
     private var top: JComponent? = null
     private var content: JComponent? = null
@@ -130,6 +133,7 @@ class BaseQuestionView(
     fun setHeader(text: String, description: String? = null) {
         headerText.text = text
         setDescription(description)
+        syncNorth()
     }
 
     /**
@@ -140,6 +144,7 @@ class BaseQuestionView(
     fun setDescription(text: String?) {
         descriptionText.text = text ?: ""
         descriptionText.isVisible = !text.isNullOrBlank()
+        syncNorth()
     }
 
     // ---- public slot API ----
@@ -169,8 +174,7 @@ class BaseQuestionView(
         if (icon == null && attached) header.remove(this.icon)
         this.icon.revalidate()
         this.icon.repaint()
-        header.revalidate()
-        header.repaint()
+        syncNorth()
     }
 
     /**
@@ -296,11 +300,13 @@ class BaseQuestionView(
     private fun syncNorth() {
         north.removeAll()
         top?.let { north.next(it) }
-        north.next(header)
+        if (hasHeader()) north.next(header)
         if (content != null) north.fill(gap)
         north.revalidate()
         north.repaint()
     }
+
+    private fun hasHeader() = icon.icon != null || headerText.text.isNotBlank() || descriptionText.isVisible
 
     private fun syncFooter() {
         val layout = footer.layout as BorderLayout
@@ -330,7 +336,8 @@ class BaseQuestionView(
 
     private fun makeText(value: String, color: Color, bold: Boolean): JBTextArea {
         val area = object : JBTextArea(value) {
-            override fun getPreferredSize() = withWidth(super.getPreferredSize().height)
+            override fun getPreferredSize() =
+                withWidth(super.getPreferredSize().height)
 
             override fun getMaximumSize(): Dimension {
                 val size = preferredSize
@@ -379,26 +386,23 @@ class BaseQuestionView(
     }
 
     private fun applyFont(area: JBTextArea, bold: Boolean) {
-        val font = if (bold) style.headerFont else style.hintFont
+        val font = if (bold) style.headerFont else SessionUiStyle.Text.Secondary.font(style)
         if (area.font != font) area.font = font
     }
 
     private fun makeButton(id: String, text: String): JButton {
-        val btn = object : JButton(text) {
-            init {
-                syncBackground()
-            }
-
-            override fun updateUI() {
-                super.updateUI()
-                syncBackground()
-            }
-
-            private fun syncBackground() {
-                background = SessionUiStyle.View.Surface.bgColor()
-            }
+        // Standard platform buttons: primary uses DEFAULT_STYLE_KEY (accent), the rest render as
+        // ordinary secondary buttons. DarculaButtonUI paints the rounded fill and border itself
+        // via isContentAreaFilled, so the button must be non-opaque. If it stays opaque, Swing
+        // first fills the rectangular bounds with the component background; in the Islands Light
+        // theme that color differs from the card surface and leaks as a stray frame around the
+        // rounded button (other themes happen to match, so they look fine).
+        val btn = JButton(text)
+        btn.isOpaque = false
+        btn.addActionListener {
+            actionHandlers[id]?.invoke()
+            focus?.invoke()
         }
-        btn.addActionListener { actionHandlers[id]?.invoke() }
         return btn
     }
 }

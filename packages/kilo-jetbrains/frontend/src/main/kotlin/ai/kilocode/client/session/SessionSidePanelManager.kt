@@ -104,6 +104,11 @@ class SessionSidePanelManager(
         current?.syncActivity()
     }
 
+    @RequiresEdt
+    override fun focusPrompt() {
+        focus(current?.promptFocusedComponent)
+    }
+
     private fun create(ref: SessionRef): SessionUi {
         val workspace = when (ref) {
             is SessionRef.Local -> ref.session?.directory?.let(resolve) ?: root

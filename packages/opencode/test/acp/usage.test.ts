@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import type { SessionNotification } from "@agentclientprotocol/sdk"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { UsageService } from "@/acp/usage"
-import { ModelID, ProviderID } from "@/provider/schema"
 import { Provider } from "@/provider/provider"
 import { Effect, Layer } from "effect"
 import { it } from "../lib/effect"
@@ -41,7 +43,7 @@ const assistantWithoutProvider = (): UsageService.SessionMessage => ({
   },
 })
 
-const model = (providerID: ProviderID, modelID: ModelID, context: number): Provider.Model => ({
+const model = (providerID: ProviderV2.ID, modelID: ModelV2.ID, context: number): Provider.Model => ({
   id: modelID,
   providerID,
   api: {
@@ -75,9 +77,9 @@ const model = (providerID: ProviderID, modelID: ModelID, context: number): Provi
   release_date: "2026-01-01",
 })
 
-const providers = (context = 128_000): Record<ProviderID, Provider.Info> => {
-  const providerID = ProviderID.make("anthropic")
-  const modelID = ModelID.make("claude-sonnet")
+const providers = (context = 128_000): Record<ProviderV2.ID, Provider.Info> => {
+  const providerID = ProviderV2.ID.make("anthropic")
+  const modelID = ModelV2.ID.make("claude-sonnet")
   return {
     [providerID]: {
       id: providerID,
@@ -94,26 +96,28 @@ const providers = (context = 128_000): Record<ProviderID, Provider.Info> => {
 
 const fakeLayer = (input: {
   readonly messages?: Effect.Effect<readonly UsageService.SessionMessage[], unknown>
-  readonly providers?: (directory: string) => Effect.Effect<Record<ProviderID, Provider.Info>, unknown>
+  readonly providers?: (directory: string) => Effect.Effect<Record<ProviderV2.ID, Provider.Info>, unknown>
 }) =>
-  UsageService.layer.pipe(
-    Layer.provide(
-      Layer.mergeAll(
-        Layer.succeed(
-          UsageService.MessageLoader,
-          UsageService.MessageLoader.of({
-            messages: () => input.messages ?? Effect.succeed([]),
-          }),
-        ),
-        Layer.succeed(
-          UsageService.ContextLimitLoader,
-          UsageService.ContextLimitLoader.of({
-            providers: input.providers ?? (() => Effect.succeed(providers())),
-          }),
-        ),
+  LayerNode.compile(UsageService.node, [
+    [
+      UsageService.messageLoaderNode,
+      Layer.succeed(
+        UsageService.MessageLoader,
+        UsageService.MessageLoader.of({
+          messages: () => input.messages ?? Effect.succeed([]),
+        }),
       ),
-    ),
-  )
+    ],
+    [
+      UsageService.contextLimitLoaderNode,
+      Layer.succeed(
+        UsageService.ContextLimitLoader,
+        UsageService.ContextLimitLoader.of({
+          providers: input.providers ?? (() => Effect.succeed(providers())),
+        }),
+      ),
+    ],
+  ])
 
 const connection = (updates: SessionNotification[]) => ({
   sessionUpdate(params: SessionNotification) {
@@ -178,13 +182,13 @@ describe("acp usage", () => {
       const usage = yield* UsageService.Service
       const first = yield* usage.contextLimit({
         directory: "/workspace",
-        providerID: ProviderID.make("anthropic"),
-        modelID: ModelID.make("claude-sonnet"),
+        providerID: ProviderV2.ID.make("anthropic"),
+        modelID: ModelV2.ID.make("claude-sonnet"),
       })
       const second = yield* usage.contextLimit({
         directory: "/workspace",
-        providerID: ProviderID.make("anthropic"),
-        modelID: ModelID.make("claude-sonnet"),
+        providerID: ProviderV2.ID.make("anthropic"),
+        modelID: ModelV2.ID.make("claude-sonnet"),
       })
 
       expect(first).toBe(200_000)

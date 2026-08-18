@@ -162,6 +162,68 @@ describe("sanitizeCustomProviderConfig", () => {
     })
   })
 
+  it("preserves opaque options on existing variants", () => {
+    const variant = {
+      thinking: { type: "adaptive", display: "summarized" },
+      reasoningEffort: "max",
+      reasoningSummary: "auto",
+      include: ["reasoning.encrypted_content"],
+      customOption: { enabled: true },
+    }
+    const result = sanitizeCustomProviderConfig({
+      name: "Thinking Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          variants: { high: variant },
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Thinking Provider",
+        options: { baseURL: "https://example.com/v1" },
+        models: { "model-1": { name: "Model One", variants: { high: variant } } },
+      },
+    })
+  })
+
+  it("preserves core custom model modalities", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "Media Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          modalities: {
+            input: ["text", "audio", "image", "video", "pdf"],
+            output: ["text", "audio"],
+          },
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Media Provider",
+        options: { baseURL: "https://example.com/v1" },
+        models: {
+          "model-1": {
+            name: "Model One",
+            modalities: {
+              input: ["text", "audio", "image", "video", "pdf"],
+              output: ["text", "audio"],
+            },
+          },
+        },
+      },
+    })
+  })
+
   it("rejects unknown fields", () => {
     const result = sanitizeCustomProviderConfig({
       name: "Bad Provider",

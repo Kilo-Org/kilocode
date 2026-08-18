@@ -206,6 +206,27 @@ describe("saveCustomProvider", () => {
     expect(calls.set).toEqual([{ providerID: "myprovider", auth: { type: "api", key: "sk-test" } }])
   })
 
+  it("preserves opaque existing variant options through the save boundary", async () => {
+    const variant = {
+      thinking: { type: "adaptive", display: "summarized" },
+      reasoningEffort: "custom",
+      reasoningSummary: "auto",
+      include: ["reasoning.encrypted_content"],
+      customOption: { enabled: true },
+    }
+    const saved = {
+      ...createSavedProvider(),
+      models: { "model-1": { name: "Model One", reasoning: true, variants: { high: variant } } },
+    }
+    const existing = { disabled_providers: [], provider: { myprovider: saved } }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await saveCustomProvider(ctx, "req", "myprovider", saved, undefined, false, null, setCachedConfig)
+
+    const provider = (calls.config[0]?.config.provider as Record<string, typeof saved>).myprovider
+    expect(provider.models["model-1"].variants.high).toEqual(variant)
+  })
+
   // Regression tests for https://github.com/Kilo-Org/kilocode/issues/9186
   //
   // The CLI's config.update endpoint deep-merges its payload with the existing

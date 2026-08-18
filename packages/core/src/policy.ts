@@ -1,5 +1,6 @@
 export * as Policy from "./policy"
 
+import { makeLocationNode } from "./effect/app-node"
 import { Context, Effect as EffectRuntime, Layer, Schema } from "effect"
 import { Wildcard } from "./util/wildcard"
 import { Location } from "./location"
@@ -16,11 +17,12 @@ export class Info extends Schema.Class<Info>("Policy.Info")({
 export interface Interface {
   readonly load: (statements: Info[]) => EffectRuntime.Effect<void>
   readonly evaluate: (action: string, resource: string, fallback: Effect) => EffectRuntime.Effect<Effect>
+  readonly hasStatements: () => boolean
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/Policy") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   EffectRuntime.gen(function* () {
     let statements: Info[] = []
@@ -30,6 +32,7 @@ export const layer = Layer.effect(
       load: EffectRuntime.fn("Policy.load")(function* (input) {
         statements = input
       }),
+      hasStatements: () => statements.length > 0,
       evaluate: EffectRuntime.fn("Policy.evaluate")(function* (action, resource, fallback) {
         return (
           statements.findLast(
@@ -41,4 +44,6 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer
+export const locationLayer = layer
+
+export const node = makeLocationNode({ service: Service, layer, deps: [Location.node] })

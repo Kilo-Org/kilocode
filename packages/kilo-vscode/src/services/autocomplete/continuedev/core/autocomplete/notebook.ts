@@ -2,9 +2,10 @@
 // https://github.com/continuedev/continue/blob/d0a3c0b626b5bebc3bef4742eec05a0242be0bab/extensions/vscode/src/autocomplete/completionProvider.ts#L226-L263
 // Copyright 2023 Continue
 // Licensed under the Apache License, Version 2.0.
-// Modified by Kilo Code for notebook paths, cursor positions, and cache scoping.
+// Modified by Kilo Code for notebook paths, cursor positions, multilingual context, and cache scoping.
 
 import * as vscode from "vscode"
+import { languageForId } from "./constants/AutocompleteLanguageInfo"
 
 export interface NotebookContext {
   contents: string
@@ -53,7 +54,7 @@ export function notebookUri(uri: vscode.Uri): vscode.Uri | undefined {
 export function supportsNotebook(document: vscode.TextDocument): boolean {
   if (document.uri.scheme !== "vscode-notebook-cell") return true
   const resolved = resolveNotebook(document.uri)
-  return resolved?.cell.kind === vscode.NotebookCellKind.Code && document.languageId === "python"
+  return resolved?.cell.kind === vscode.NotebookCellKind.Code && !!languageForId(document.languageId)
 }
 
 export function autocompleteScope(document: vscode.TextDocument): string {
@@ -64,7 +65,7 @@ export function autocompleteScope(document: vscode.TextDocument): string {
   const siblings = resolved.cells
     .filter((_, index) => index !== resolved.index)
     .map((cell) => [cell.document.uri.toString(), cell.kind, cell.document.languageId, cell.document.version])
-  return JSON.stringify([id, resolved.notebook.uri.toString(), resolved.index, siblings])
+  return JSON.stringify([id, document.languageId, resolved.notebook.uri.toString(), resolved.index, siblings])
 }
 
 export function getNotebookContext(
@@ -77,13 +78,24 @@ export function getNotebookContext(
   if (!resolved) return
 
   const cells = resolved.cells
+  const lang = languageForId(document.languageId)
+  if (!lang) return
+
+  const json = document.languageId === "json" || document.languageId === "jsonc"
+  const marker = json ? undefined : lang.singleLineComment
+  const comment = (text: string, label: string) =>
+    text
+      .split("\n")
+      .map((line, index) => (marker ? `${marker} ${index === 0 ? `[${label}] ` : ""}${line}` : ""))
+      .join("\n")
+
   const contents = cells
-    .map((cell) => {
+    .map((cell, index) => {
       const text = cell.document.getText()
-      if (cell.kind === vscode.NotebookCellKind.Markup) {
-        return `"""${text}"""`
-      }
-      return text
+      if (index === resolved.index) return text
+      if (cell.kind === vscode.NotebookCellKind.Markup) return comment(text, "markdown")
+      if (!json && languageForId(cell.document.languageId) === lang) return text
+      return comment(text, cell.document.languageId)
     })
     .join("\n\n")
 

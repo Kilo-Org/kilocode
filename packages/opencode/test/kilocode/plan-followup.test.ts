@@ -4,13 +4,18 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "../../src/agent/agent"
-import { Bus } from "../../src/bus"
-import { TuiEvent } from "../../src/cli/cmd/tui/event"
+import { GlobalBus } from "../../src/bus/global"
+import { TuiEvent } from "../../src/server/tui-event"
 import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { EventV2 } from "@opencode-ai/core/event"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/kilocode/instance"
+import * as KiloInstance from "../../src/kilocode/instance"
 import { Provider } from "../../src/provider/provider"
 import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
@@ -21,10 +26,23 @@ import { SessionStatus } from "../../src/session/status"
 import { Todo } from "../../src/session/todo"
 import path from "path"
 import fs from "fs/promises"
-import { provideTestInstance, tmpdir } from "../fixture/fixture"
+import { provideTestInstance, tmpdir, withTestInstance } from "../fixture/fixture"
 
 Log.init({ print: false })
 process.env.KILO_CLIENT = "cli"
+
+function subscribe<D extends EventV2.Definition>(
+  definition: D,
+  callback: (event: { properties: EventV2.Data<D> }) => void,
+) {
+  const directory = Instance.directory
+  const handler = (event: { directory?: string; payload?: { type?: string; properties?: unknown } }) => {
+    if (event.directory !== directory || event.payload?.type !== definition.type) return
+    callback({ properties: event.payload.properties as EventV2.Data<D> })
+  }
+  GlobalBus.on("event", handler)
+  return () => GlobalBus.off("event", handler)
+}
 
 const runtime = makeRuntime(Question.Service, Question.defaultLayer)
 const question = {
@@ -51,34 +69,33 @@ const todo = {
   },
 }
 
+const session = makeRuntime(
+  Session.Service,
+  LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node])),
+)
 const store = {
-  create: (input?: Parameters<Session.Interface["create"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
-  get: (id: SessionID) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.get(id)).pipe(Effect.provide(Session.defaultLayer))),
-  messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
-  updateMessage: <T extends MessageV2.Info>(msg: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
-  updatePart: <T extends MessageV2.Part>(part: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
+  create: (input?: Parameters<Session.Interface["create"]>[0]) => session.runPromise((svc) => svc.create(input)),
+  get: (id: SessionID) => session.runPromise((svc) => svc.get(id)),
+  messages: (input: Parameters<Session.Interface["messages"]>[0]) => session.runPromise((svc) => svc.messages(input)),
+  updateMessage: <T extends MessageV2.Info>(msg: T) => session.runPromise((svc) => svc.updateMessage(msg)),
+  updatePart: <T extends MessageV2.Part>(part: T) => session.runPromise((svc) => svc.updatePart(part)),
 }
 
 const model = {
-  providerID: ProviderID.make("openai"),
-  modelID: ModelID.make("gpt-4"),
+  providerID: ProviderV2.ID.make("openai"),
+  modelID: ModelV2.ID.make("gpt-4"),
 }
 
 const saved = {
-  providerID: ProviderID.make("openai"),
-  modelID: ModelID.make("gpt-5"),
+  providerID: ProviderV2.ID.make("openai"),
+  modelID: ModelV2.ID.make("gpt-5"),
 }
 
 const savedVar = "high"
 
 const config = {
-  providerID: ProviderID.make("openai"),
-  modelID: ModelID.make("gpt-4.1"),
+  providerID: ProviderV2.ID.make("openai"),
+  modelID: ModelV2.ID.make("gpt-4.1"),
 }
 
 const configVar = "max"
@@ -90,6 +107,14 @@ const savedKey = `${saved.providerID}/${saved.modelID}`
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
   await fs.rm(statePath, { force: true }).catch(() => {})
+  const provide = spyOn(KiloInstance, "provide").mockImplementation((input) =>
+    withTestInstance({ directory: input.directory, fn: input.fn }),
+  )
+  using _provide = {
+    [Symbol.dispose]() {
+      provide.mockRestore()
+    },
+  }
   await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
@@ -200,7 +225,7 @@ async function latestUser(sessionID: SessionID) {
 }
 
 async function sessions() {
-  return AppRuntime.runPromise(Session.Service.use((svc) => svc.list()))
+  return session.runPromise((svc) => svc.list())
 }
 
 async function waitQuestion(sessionID: string) {
@@ -252,15 +277,14 @@ function mockHandoverDeps(text: string, opts?: { agent?: Agent.Info | null }) {
   const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(
     (opts?.agent === null ? undefined : (opts?.agent ?? fakeAgent)) as any,
   )
-  const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+  const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockResolvedValue(fakeModel)
   const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockResolvedValue(text)
   return {
     agentSpy,
-    modelSpy,
     handoverSpy,
     [Symbol.dispose]() {
       agentSpy.mockRestore()
-      modelSpy.mockRestore()
+      availableSpy.mockRestore()
       handoverSpy.mockRestore()
     },
   }
@@ -339,10 +363,8 @@ describe("plan follow-up", () => {
       const refineOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_KEEP_REFINING)
       expect(refineOpt?.mode).toBe("plan")
 
-      // Start new session should not carry a mode (it opens a new session — the
-      // current picker is irrelevant once the session switches).
       const newOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_NEW_SESSION)
-      expect(newOpt?.mode).toBeUndefined()
+      expect(newOpt?.mode).toBe("code")
 
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
@@ -439,11 +461,11 @@ describe("plan follow-up", () => {
         }
         return undefined as any
       })
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(savedConfigFull)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockResolvedValue(savedConfigFull)
       using _ = {
         [Symbol.dispose]() {
           get.mockRestore()
-          modelSpy.mockRestore()
+          availableSpy.mockRestore()
         },
       }
       const seeded = await seed({ text: "1. Build\n2. Test" })
@@ -613,8 +635,8 @@ describe("plan follow-up", () => {
             created: Date.now(),
           },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: {
@@ -635,7 +657,7 @@ describe("plan follow-up", () => {
         },
         parts: [],
       })
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockImplementation(
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
         async (providerID: string, modelID: string) => {
           if (providerID === saved.providerID && modelID === saved.modelID) return savedConfigFull
           return fakeModel
@@ -647,7 +669,7 @@ describe("plan follow-up", () => {
       using _mocks = {
         handoverSpy,
         [Symbol.dispose]() {
-          modelSpy.mockRestore()
+          availableSpy.mockRestore()
           handoverSpy.mockRestore()
         },
       }
@@ -670,7 +692,7 @@ describe("plan follow-up", () => {
 
       const before = await sessions()
       const created: SessionID[] = []
-      const unsub = Bus.subscribe(TuiEvent.SessionSelect, (event) => {
+      const unsub = subscribe(TuiEvent.SessionSelect, (event) => {
         created.push(event.properties.sessionID)
       })
 
@@ -737,7 +759,7 @@ describe("plan follow-up", () => {
     withInstance(async () => {
       await using other = await tmpdir({ git: true })
       const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async () => undefined as any)
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockResolvedValue(fakeModel)
       const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockResolvedValue("")
       const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
         info: {
@@ -746,8 +768,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -765,7 +787,7 @@ describe("plan follow-up", () => {
       using _mocks = {
         [Symbol.dispose]() {
           get.mockRestore()
-          modelSpy.mockRestore()
+          availableSpy.mockRestore()
           handoverSpy.mockRestore()
           loop.mockRestore()
         },
@@ -845,7 +867,7 @@ describe("plan follow-up", () => {
         }
         return undefined as any
       })
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockImplementation(
+      const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
         async (providerID: string, modelID: string) => {
           if (providerID === saved.providerID && modelID === saved.modelID) return savedFull
           if (providerID === config.providerID && modelID === config.modelID) return configFull
@@ -883,9 +905,12 @@ describe("plan follow-up", () => {
       expect(user.info.model).toEqual({ ...saved, variant: savedVar })
     }))
 
-  test("ask - falls back to configured code model when saved CLI code model is unavailable", () =>
+  test("ask - uses saved CLI code model even when catalog lookup fails", () =>
     withInstance(async () => {
-      await writeState({ model: { code: { providerID: ProviderID.make("missing"), modelID: ModelID.make("ghost") } } })
+      await writeState({
+        model: { code: saved },
+        variant: { [savedKey]: savedVar },
+      })
       const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
         if (name === "code") {
           return {
@@ -899,12 +924,120 @@ describe("plan follow-up", () => {
         }
         return undefined as any
       })
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockImplementation(
+      const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(async () => {
+        throw new Error("catalog unavailable")
+      })
+      using _ = {
+        [Symbol.dispose]() {
+          get.mockRestore()
+          modelSpy.mockRestore()
+        },
+      }
+      const seeded = await seed({ text: "1. Build\n2. Test" })
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_CONTINUE]],
+      })
+
+      await expect(pending).resolves.toBe("continue")
+
+      const user = await latestUser(seeded.sessionID)
+      expect(user?.info.role).toBe("user")
+      if (!user || user.info.role !== "user") return
+      expect(user.info.agent).toBe("code")
+      expect(user.info.model).toEqual({ ...saved, variant: savedVar })
+      const current = await store.get(seeded.sessionID)
+      expect(current.agent).toBe("code")
+      expect(current.model).toEqual({
+        id: saved.modelID,
+        providerID: saved.providerID,
+        variant: savedVar,
+      })
+    }))
+
+  test("ask - falls back to configured code model when saved CLI code model is missing", () =>
+    withInstance(async () => {
+      await writeState({
+        model: { code: { providerID: ProviderV2.ID.make("missing"), modelID: ModelV2.ID.make("ghost") } },
+      })
+      const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
+        if (name === "code") {
+          return {
+            name: "code",
+            mode: "primary",
+            permission: [],
+            options: {},
+            model: config,
+            variant: configVar,
+          } as any
+        }
+        return undefined as any
+      })
+      const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
         async (providerID: string, modelID: string) => {
-          if (providerID === "missing" && modelID === "ghost") throw new Error("missing model")
+          if (providerID === "missing" && modelID === "ghost") return undefined
           return configFull
         },
       )
+      using _ = {
+        [Symbol.dispose]() {
+          get.mockRestore()
+          modelSpy.mockRestore()
+        },
+      }
+      const seeded = await seed({ text: "1. Build\n2. Test" })
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_CONTINUE]],
+      })
+
+      await expect(pending).resolves.toBe("continue")
+
+      const user = await latestUser(seeded.sessionID)
+      expect(user?.info.role).toBe("user")
+      if (!user || user.info.role !== "user") return
+      expect(user.info.agent).toBe("code")
+      expect(user.info.model).toEqual({ ...config, variant: configVar })
+    }))
+
+  test("ask - uses configured code model even when catalog lookup fails", () =>
+    withInstance(async () => {
+      const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
+        if (name === "code") {
+          return {
+            name: "code",
+            mode: "primary",
+            permission: [],
+            options: {},
+            model: config,
+            variant: configVar,
+          } as any
+        }
+        return undefined as any
+      })
+      const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(async () => {
+        throw new Error("catalog unavailable")
+      })
       using _ = {
         [Symbol.dispose]() {
           get.mockRestore()
@@ -972,6 +1105,90 @@ describe("plan follow-up", () => {
       expect(user.info.model).toEqual({ ...model, variant: planVar })
     }))
 
+  test("ask - new session uses saved code model even when catalog lookup fails", () =>
+    withInstance(async () => {
+      await writeState({
+        model: { code: saved },
+        variant: { [savedKey]: savedVar },
+      })
+      const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
+        if (name === "compaction") return fakeAgent as any
+        return undefined as any
+      })
+      const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(async () => {
+        throw new Error("catalog unavailable")
+      })
+      const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockResolvedValue("")
+      const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
+        info: {
+          id: MessageID.make("msg_test"),
+          role: "assistant",
+          sessionID: SessionID.make("ses_test"),
+          time: { created: Date.now() },
+          parentID: MessageID.make("msg_parent"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
+          mode: "code",
+          agent: "code",
+          path: { cwd: "/tmp", root: "/tmp" },
+          cost: 0,
+          tokens: {
+            total: 0,
+            input: 0,
+            output: 0,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          },
+        },
+        parts: [],
+      })
+      using _ = {
+        [Symbol.dispose]() {
+          get.mockRestore()
+          modelSpy.mockRestore()
+          handoverSpy.mockRestore()
+          loop.mockRestore()
+        },
+      }
+      const seeded = await seed({ text: "1. Add API\n2. Add tests" })
+      const before = await sessions()
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_NEW_SESSION]],
+      })
+
+      await expect(pending).resolves.toBe("break")
+
+      const after = await sessions()
+      const prev = new Set(before.map((item) => item.id))
+      const added = after.filter((item) => !prev.has(item.id))
+      expect(added).toHaveLength(1)
+      const next = added[0]
+      if (!next) throw new Error("expected follow-up session")
+      expect(next.agent).toBe("code")
+      expect(next.model).toEqual({
+        id: saved.modelID,
+        providerID: saved.providerID,
+        variant: savedVar,
+      })
+
+      const messages = await store.messages({ sessionID: next.id })
+      const user = messages.find((item) => item.info.role === "user")
+      if (!user || user.info.role !== "user") throw new Error("expected user message")
+      expect(user.info.agent).toBe("code")
+      expect(user.info.model).toEqual({ ...saved, variant: savedVar })
+    }))
+
   test("ask - new session omits handover section when LLM returns empty", () =>
     withInstance(async () => {
       const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
@@ -981,8 +1198,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -1005,7 +1222,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Add API\n2. Add tests" })
       const created: SessionID[] = []
-      const unsub = Bus.subscribe(TuiEvent.SessionSelect, (event) => {
+      const unsub = subscribe(TuiEvent.SessionSelect, (event) => {
         created.push(event.properties.sessionID)
       })
 
@@ -1052,8 +1269,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -1100,7 +1317,7 @@ describe("plan follow-up", () => {
 
       const messages = await store.messages({ sessionID: seeded.sessionID })
       const created: SessionID[] = []
-      const unsub = Bus.subscribe(TuiEvent.SessionSelect, (event) => {
+      const unsub = subscribe(TuiEvent.SessionSelect, (event) => {
         created.push(event.properties.sessionID)
       })
       using _bus = {
@@ -1156,7 +1373,7 @@ describe("plan follow-up", () => {
 
       let createdAt: number | undefined
       let handoverResolvedAt: number | undefined
-      const unsub = Bus.subscribe(Session.Event.Created, (event) => {
+      const unsub = subscribe(Session.Event.Created, (event) => {
         // Ignore the seeded planning session; we only care about the follow-up.
         if (event.properties.info.id === seeded.sessionID) return
         if (createdAt === undefined) createdAt = performance.now()
@@ -1164,7 +1381,7 @@ describe("plan follow-up", () => {
 
       const deferred = Promise.withResolvers<string>()
       const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(fakeAgent as any)
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockResolvedValue(fakeModel)
       const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockImplementation(() =>
         deferred.promise.then((text) => {
           handoverResolvedAt = performance.now()
@@ -1178,8 +1395,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -1197,7 +1414,7 @@ describe("plan follow-up", () => {
       using _ = {
         [Symbol.dispose]() {
           agentSpy.mockRestore()
-          modelSpy.mockRestore()
+          availableSpy.mockRestore()
           handoverSpy.mockRestore()
           loop.mockRestore()
           unsub()
@@ -1245,14 +1462,14 @@ describe("plan follow-up", () => {
       const seeded = await seed({ text: "1. Build" })
 
       let followup: SessionID | undefined
-      const unsub = Bus.subscribe(Session.Event.Created, (event) => {
+      const unsub = subscribe(Session.Event.Created, (event) => {
         if (event.properties.info.id === seeded.sessionID) return
         if (!followup) followup = event.properties.info.id
       })
 
       const deferred = Promise.withResolvers<string>()
       const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(fakeAgent as any)
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockResolvedValue(fakeModel)
       const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockImplementation(() => deferred.promise)
       const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
         info: {
@@ -1261,8 +1478,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -1274,7 +1491,7 @@ describe("plan follow-up", () => {
       using _ = {
         [Symbol.dispose]() {
           agentSpy.mockRestore()
-          modelSpy.mockRestore()
+          availableSpy.mockRestore()
           handoverSpy.mockRestore()
           loop.mockRestore()
           unsub()
@@ -1343,17 +1560,17 @@ describe("plan follow-up", () => {
 
       let followup: SessionID | undefined
       const states: Array<{ sessionID: SessionID; type: string }> = []
-      const created = Bus.subscribe(Session.Event.Created, (event) => {
+      const created = subscribe(Session.Event.Created, (event) => {
         if (event.properties.info.id === seeded.sessionID) return
         if (!followup) followup = event.properties.info.id
       })
-      const status = Bus.subscribe(SessionStatus.Event.Status, (event) => {
+      const status = subscribe(SessionStatus.Event.Status, (event) => {
         states.push({ sessionID: event.properties.sessionID, type: event.properties.status.type })
       })
 
       const deferred = Promise.withResolvers<string>()
       const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(fakeAgent as any)
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockResolvedValue(fakeModel)
       const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockImplementation(() => deferred.promise)
       const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
         info: {
@@ -1362,8 +1579,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -1375,7 +1592,7 @@ describe("plan follow-up", () => {
       using _ = {
         [Symbol.dispose]() {
           agentSpy.mockRestore()
-          modelSpy.mockRestore()
+          availableSpy.mockRestore()
           handoverSpy.mockRestore()
           loop.mockRestore()
           created()
@@ -1512,12 +1729,12 @@ describe("plan follow-up", () => {
   test("generateHandover - returns empty string on LLM stream failure", () =>
     withInstance(async () => {
       const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(fakeAgent)
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockResolvedValue(fakeModel)
       const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockRejectedValue(new Error("provider unavailable"))
       using _ = {
         [Symbol.dispose]() {
           agentSpy.mockRestore()
-          modelSpy.mockRestore()
+          availableSpy.mockRestore()
           handoverSpy.mockRestore()
         },
       }
@@ -1529,12 +1746,12 @@ describe("plan follow-up", () => {
   test("generateHandover - returns empty string on text stream rejection", () =>
     withInstance(async () => {
       const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(fakeAgent)
-      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockResolvedValue(fakeModel)
       const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockRejectedValue(new Error("stream aborted"))
       using _ = {
         [Symbol.dispose]() {
           agentSpy.mockRestore()
-          modelSpy.mockRestore()
+          availableSpy.mockRestore()
           handoverSpy.mockRestore()
         },
       }
@@ -1560,5 +1777,53 @@ describe("plan follow-up", () => {
       const result = await generateHandover({ messages: seeded.messages, model })
       expect(result).toBe("## Discoveries\n\nKey finding here")
       expect(mocks.handoverSpy).toHaveBeenCalledTimes(1)
+    }))
+
+  test("generateHandover - returns empty string when model lookup fails", () =>
+    withInstance(async () => {
+      const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue({
+        ...fakeAgent,
+        model,
+      } as any)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockRejectedValue(new Error("catalog unavailable"))
+      const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockResolvedValue("should not run")
+      using _ = {
+        [Symbol.dispose]() {
+          agentSpy.mockRestore()
+          availableSpy.mockRestore()
+          handoverSpy.mockRestore()
+        },
+      }
+      const seeded = await seed({ text: "1. Build\n2. Test" })
+      const result = await generateHandover({ messages: seeded.messages, model })
+      expect(result).toBe("")
+      expect(handoverSpy).not.toHaveBeenCalled()
+    }))
+
+  test("generateHandover - uses the plan model when the compaction model is missing", () =>
+    withInstance(async () => {
+      const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue({
+        ...fakeAgent,
+        model: saved,
+      } as any)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
+        async (providerID: string, modelID: string) => {
+          if (providerID === saved.providerID && modelID === saved.modelID) return undefined
+          if (providerID === model.providerID && modelID === model.modelID) return fakeModel
+          return undefined
+        },
+      )
+      const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockResolvedValue("## Discoveries\n\nFrom plan model")
+      using _ = {
+        [Symbol.dispose]() {
+          agentSpy.mockRestore()
+          availableSpy.mockRestore()
+          handoverSpy.mockRestore()
+        },
+      }
+      const seeded = await seed({ text: "1. Build\n2. Test" })
+      const result = await generateHandover({ messages: seeded.messages, model })
+      expect(result).toBe("## Discoveries\n\nFrom plan model")
+      expect(handoverSpy).toHaveBeenCalledTimes(1)
     }))
 })

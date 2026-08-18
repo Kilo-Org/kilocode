@@ -14,4 +14,5 @@ class Workspace(
     val directory: String,
     val state: StateFlow<KiloWorkspaceStateDto>,
     val reload: () -> Unit,
+    val refreshConfigFiles: () -> Unit = {},
 )

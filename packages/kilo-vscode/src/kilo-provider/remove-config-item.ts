@@ -19,10 +19,6 @@ export function createMarketplaceRemover(): MarketplaceRemoveContext["remove"] {
   return (item, scope, project) => installer.remove(item, scope, project)
 }
 
-export async function removeAgent(ctx: RemoveConfigItemContext, name: string): Promise<boolean> {
-  return remove(ctx, { id: name, type: "agent" })
-}
-
 export async function removeMcp(ctx: RemoveConfigItemContext, name: string): Promise<boolean> {
   return remove(ctx, { id: name, type: "mcp" })
 }

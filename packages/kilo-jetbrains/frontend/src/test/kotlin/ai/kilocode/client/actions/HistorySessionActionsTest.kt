@@ -14,6 +14,7 @@ import ai.kilocode.client.session.history.HistorySource
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -28,16 +29,13 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
 @Suppress("UnstableApiUsage")
 class HistorySessionActionsTest : BasePlatformTestCase() {
-    private lateinit var scope: CoroutineScope
+    private lateinit var coroutines: TestCoroutines
     private lateinit var rpc: FakeSessionRpcApi
     private lateinit var sessions: KiloSessionService
     private lateinit var workspace: Workspace
@@ -49,20 +47,20 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        scope = CoroutineScope(SupervisorJob())
+        coroutines = TestCoroutines()
         rpc = FakeSessionRpcApi()
-        sessions = KiloSessionService(project, scope, rpc)
-        val workspaces = KiloWorkspaceService(scope, FakeWorkspaceRpcApi().also {
+        sessions = KiloSessionService(project, coroutines.scope, rpc)
+        val workspaces = KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(status = KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
-        controller = HistoryController(sessions, workspace, scope, deleted = { deleteCount++ })
+        controller = HistoryController(sessions, workspace, coroutines.scope, deleted = { deleteCount++ })
         manager = FakeManager()
     }
 
     override fun tearDown() {
         try {
-            scope.cancel()
+            coroutines.close(::pump)
         } finally {
             super.tearDown()
         }
@@ -123,7 +121,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
     fun `test open action performs opens local item`() {
         val opened = mutableListOf<String>()
-        val ctrl = HistoryController(sessions, workspace, scope, open = { ref ->
+        val ctrl = HistoryController(sessions, workspace, coroutines.scope, open = { ref ->
             when (ref) {
                 is SessionRef.Local -> opened.add(ref.id)
                 is SessionRef.Cloud -> opened.add("cloud:${ref.id}")
@@ -141,7 +139,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
     fun `test open action performs opens cloud item`() {
         val opened = mutableListOf<String>()
-        val ctrl = HistoryController(sessions, workspace, scope, open = { ref ->
+        val ctrl = HistoryController(sessions, workspace, coroutines.scope, open = { ref ->
             when (ref) {
                 is SessionRef.Local -> opened.add(ref.id)
                 is SessionRef.Cloud -> opened.add("cloud:${ref.id}")
@@ -474,11 +472,10 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         waitFor { deleteCount >= n }
     }
 
-    private fun flush() = runBlocking {
-        repeat(10) {
-            delay(100)
-            ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
-        }
+    private fun flush() = coroutines.drain(::pump)
+
+    private fun pump() {
+        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
     }
 
     private fun waitFor(done: () -> Boolean) = runBlocking {

@@ -1,4 +1,4 @@
-import { TuiKeybind } from "@/cli/cmd/tui/config/keybind"
+import { TuiKeybind } from "@opencode-ai/tui/config/keybind"
 import { Schema } from "effect"
 
 export namespace KilocodeKeybinds {

@@ -117,6 +117,17 @@ class BaseSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test apply uses change result when saved predicate diverges`() {
+        val view = create { base, draft -> base.value.first() == draft.value.first() }
+
+        edt {
+            view.edit("other")
+            assertFalse(view.modified())
+            view.applyDraft()
+            assertEquals(1, view.pendingSaves())
+        }
+    }
+
     fun `test failed save after dispose calls failure hook`() {
         val view = create()
 
@@ -148,8 +159,11 @@ class BaseSettingsUiTest : BasePlatformTestCase() {
         edt { assertFalse(text(view).contains("Sign in to Kilo Code")) }
     }
 
-    private fun create(login: Boolean = true): FakePanel {
-        val view = edt { FakePanel(scope, app, workspaces, login) }
+    private fun create(
+        login: Boolean = true,
+        saved: (Draft, Draft) -> Boolean = { base, draft -> base == draft },
+    ): FakePanel {
+        val view = edt { FakePanel(scope, app, workspaces, login, saved) }
         panel = view
         return view
     }
@@ -196,6 +210,7 @@ class BaseSettingsUiTest : BasePlatformTestCase() {
         app: KiloAppService,
         workspaces: KiloWorkspaceService,
         login: Boolean,
+        private val saved: (Draft, Draft) -> Boolean,
     ) : BaseSettingsUi<FakeContent, Draft, Change, Draft, Unit>(cs, Draft("old"), app, workspaces, loginBanner = login) {
         private val callbacks = mutableListOf<(Draft?) -> Unit>()
         var disposedFailures = 0
@@ -213,6 +228,8 @@ class BaseSettingsUiTest : BasePlatformTestCase() {
 
         fun fail() = callbacks.removeAt(0)(null)
 
+        fun pendingSaves(): Int = callbacks.size
+
         fun banner(login: Boolean) = syncLoginBanner(login) { top.hideBanner() }
 
         override fun change(from: Draft, to: Draft): Change? = if (from == to) null else Change(to.value)
@@ -222,6 +239,8 @@ class BaseSettingsUiTest : BasePlatformTestCase() {
         }
 
         override fun base(result: Draft): Draft = result
+
+        override fun saved(base: Draft, draft: Draft): Boolean = saved.invoke(base, draft)
 
         override fun draft(state: KiloAppStateDto): Draft = draft
 

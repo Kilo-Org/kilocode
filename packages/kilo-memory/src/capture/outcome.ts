@@ -1,14 +1,18 @@
-import { MemoryOperations } from "./ops"
+import { MemoryOperations } from "./operations"
 import { MemoryRedact } from "./redact"
 import { MemoryShared } from "../recall/shared"
+import { TRANSIENT } from "../schema"
 import type { MemoryFiles } from "../storage/store"
 import type { CaptureSkip } from "./parse"
+
+export { TRANSIENT }
 
 export type CaptureSourceItem = {
   id: string
   text: string
   file?: MemoryOperations.Add["file"]
   section?: string
+  key?: string
 }
 
 export type CaptureDetail = {
@@ -68,14 +72,75 @@ export function errorReason(err: unknown) {
   return MemoryShared.brief(MemoryRedact.text(parts.join(" ")), 500)
 }
 
-export function guardReason(input: string) {
-  const value = input.toLowerCase()
-  if (/\b(429|rate[_ -]?limit|too many requests)\b/.test(value)) return "rate_limit_guard"
-  if (/\b(insufficient[_ -]?quota|quota exceeded|exceeded your quota|billing|credits?|credit balance)\b/.test(value))
+const RATE_TEXT = /\b(429|rate[_ -]?limit|too many requests)\b/
+const QUOTA_TEXT = /\b(insufficient[_ -]?quota|quota exceeded|exceeded your quota|billing|credits?|credit balance)\b/
+const TIMEOUT_TEXT =
+  /\b(timeouterror|etimedout|deadline[ _-]?exceeded|timed out|(connect|headers|body|gateway)[ _-]?time[ -]?out)\b|^timeout$/
+const TIMEOUT_CODES = new Set(["ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT", "UND_ERR_HEADERS_TIMEOUT", "UND_ERR_BODY_TIMEOUT"])
+
+/** Structural timeout detection over an error's name/status/code, its message text, and its nested
+ * cause/errors chains (cycle-safe). Message matching is limited to `message` — never the serialized
+ * body/data blobs — so response payloads that merely mention "timeout" cannot classify as transient. */
+function timedOut(item: unknown, seen = new WeakSet<object>()): boolean {
+  if (!item || typeof item !== "object" || seen.has(item)) return false
+  seen.add(item)
+  const err = item as {
+    name?: unknown
+    code?: unknown
+    status?: unknown
+    statusCode?: unknown
+    message?: unknown
+    cause?: unknown
+    errors?: unknown
+  }
+  if (err.name === "TimeoutError") return true
+  if (err.status === 504 || err.statusCode === 504) return true
+  if (typeof err.code === "string" && TIMEOUT_CODES.has(err.code)) return true
+  if (typeof err.message === "string" && TIMEOUT_TEXT.test(err.message.toLowerCase())) return true
+  if (timedOut(err.cause, seen)) return true
+  return Array.isArray(err.errors) && err.errors.some((entry) => timedOut(entry, seen))
+}
+
+function rateGuarded(item: unknown, seen = new WeakSet<object>()): boolean {
+  if (!item || typeof item !== "object" || seen.has(item)) return false
+  seen.add(item)
+  const err = item as {
+    status?: unknown
+    statusCode?: unknown
+    message?: unknown
+    cause?: unknown
+    errors?: unknown
+  }
+  if (err.status === 429 || err.statusCode === 429) return true
+  if (typeof err.message === "string" && RATE_TEXT.test(err.message.toLowerCase())) return true
+  if (rateGuarded(err.cause, seen)) return true
+  return Array.isArray(err.errors) && err.errors.some((entry) => rateGuarded(entry, seen))
+}
+
+function quotaGuarded(item: unknown, seen = new WeakSet<object>()): boolean {
+  if (!item || typeof item !== "object" || seen.has(item)) return false
+  seen.add(item)
+  const err = item as {
+    message?: unknown
+    cause?: unknown
+    errors?: unknown
+  }
+  if (typeof err.message === "string" && QUOTA_TEXT.test(err.message.toLowerCase())) return true
+  if (quotaGuarded(err.cause, seen)) return true
+  return Array.isArray(err.errors) && err.errors.some((entry) => quotaGuarded(entry, seen))
+}
+
+export function guardReason(input: unknown) {
+  const value = (typeof input === "string" ? input : errorReason(input)).toLowerCase()
+  if (typeof input === "string" ? RATE_TEXT.test(value) : rateGuarded(input) || RATE_TEXT.test(value))
+    return "rate_limit_guard"
+  if (typeof input === "string" ? QUOTA_TEXT.test(value) : quotaGuarded(input) || QUOTA_TEXT.test(value))
     return "quota_guard"
+  if (typeof input === "string" ? TIMEOUT_TEXT.test(value) : timedOut(input)) return TRANSIENT
   return undefined
 }
 
+/** @deprecated Memory audit persistence was removed. */
 export function skipped(input: { sessionID: string; reason: string }): MemoryFiles.Decision {
   return {
     kind: "typed",
@@ -93,6 +158,7 @@ export function skipped(input: { sessionID: string; reason: string }): MemoryFil
   }
 }
 
+/** @deprecated Memory audit persistence was removed. */
 export function auditOps(ops: MemoryOperations.Op[]) {
   return MemoryShared.audit(ops)
 }
@@ -157,6 +223,7 @@ export function duplicateOps(input: {
   items: CaptureSourceItem[]
 }) {
   const skipped = [...input.skipped]
+  const existing = new Set(input.items.map((item) => item.id))
   const ops = input.ops.filter((item) => {
     if (item.action !== "add") return true
     const rejected = MemoryOperations.reject(item)
@@ -164,6 +231,9 @@ export function duplicateOps(input: {
       skipped.push(rejected)
       return false
     }
+    // Exact-key upsert: same file/section/key as an existing entry is an update, not a duplicate —
+    // route it to apply (which updates the line in place) instead of dropping it here.
+    if (item.file && existing.has(MemoryOperations.id(item))) return true
     const source = duplicate({
       text: `${item.key} ${item.text}`,
       items: input.items,
@@ -199,7 +269,8 @@ export function notice(input: {
   skipped: CaptureSkip[]
   tokens: number
 }): CaptureDetail | undefined {
-  const references = MemoryShared.refs(input.ops)
+  const ops = input.ops.filter((item) => item.action !== "add" || !MemoryOperations.secret(item))
+  const references = MemoryShared.refs(ops)
   if (input.count > 0) {
     return {
       type: "saved",
@@ -207,7 +278,7 @@ export function notice(input: {
       tokens: input.tokens,
       operationCount: input.count,
       sources: references,
-      files: MemoryShared.files(input.ops),
+      files: MemoryShared.files(ops),
     }
   }
   return {
@@ -217,6 +288,6 @@ export function notice(input: {
     operationCount: 0,
     skippedCount: input.skipped.length,
     sources: references,
-    files: MemoryShared.files(input.ops),
+    files: MemoryShared.files(ops),
   }
 }

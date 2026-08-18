@@ -27,6 +27,14 @@ This is especially useful for complex configuration like custom model definition
 
 ## Managing Settings
 
+Kilo reads JSONC config from a **global** location (`~/.config/kilo/kilo.jsonc`) and from your **project** (`kilo.jsonc`, or `.kilo/kilo.jsonc`). All clients — CLI, VS Code, and JetBrains — read the same files.
+
+If `kilo.json` or the legacy `opencode.json`, `opencode.jsonc`, or `config.json` files exist in the same locations, Kilo reads and deep-merges them as well. Clearing a setting in the Settings UI (for example, setting a model back to "Not set") removes it from every config file that contains it.
+
+{% callout type="warning" %}
+**Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
+{% /callout %}
+
 {% tabs %}
 {% tab label="VSCode" %}
 
@@ -97,6 +105,10 @@ Valid values are `expanded` and `collapsed`.
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
 
+### Web Search
+
+See [Web Search Availability](/docs/automate/tools#web-search-availability) for how to enable the `websearch` tool for models from all providers.
+
 ### Export and Import
 
 You can export and import settings from the **About Kilo Code** tab in the Settings UI:
@@ -155,6 +167,12 @@ For **session** export and import, use the CLI commands:
 {% /tab %}
 {% /tabs %}
 
+## Sandbox
+
+On macOS and Linux, the VS Code extension includes a dedicated **Sandboxing** settings tab. The sandbox is disabled by default. When enabled, it limits agent filesystem writes and can block outbound network access from model-originated tools. Windows users do not see these settings because Windows sandboxing is not supported.
+
+See [Sandboxing](/docs/getting-started/settings/sandboxing) for setup instructions, the exact filesystem and network boundaries, and platform limitations.
+
 ## Experimental Features
 
 {% tabs %}
@@ -169,14 +187,12 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
-- **Sandbox** - confine agent shell commands and file writes to the project and Kilo state directories, with optional outbound network blocking. See [Sandboxing](/docs/getting-started/settings/sandboxing).
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
 
 ```json
 {
   "experimental": {
-    "codebase_search": true,
     "batch_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,

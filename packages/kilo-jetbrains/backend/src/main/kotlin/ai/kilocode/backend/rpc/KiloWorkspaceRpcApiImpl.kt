@@ -13,7 +13,9 @@ import ai.kilocode.backend.workspace.KiloWorkspaceState
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
+import ai.kilocode.rpc.isManagedWorktreeStorage
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -21,33 +23,24 @@ import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
-import com.intellij.ide.actions.searcheverywhere.FoundItemDescriptor
-import com.intellij.ide.util.gotoByName.ChooseByNameInScopeItemProvider
-import com.intellij.ide.util.gotoByName.ChooseByNamePopup
-import com.intellij.ide.util.gotoByName.ChooseByNameViewModel
-import com.intellij.ide.util.gotoByName.GotoFileModel
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.application.readAction
 import com.intellij.openapi.components.service
-import com.intellij.openapi.progress.EmptyProgressIndicator
-import com.intellij.openapi.project.DumbService
-import com.intellij.openapi.project.IndexNotReadyException
+import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.platform.project.ProjectId
 import com.intellij.platform.project.findProjectOrNull
-import com.intellij.navigation.NavigationItem
-import com.intellij.psi.PsiFileSystemItem
-import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.util.indexing.FindSymbolParameters
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -55,6 +48,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import okhttp3.Request
 import java.net.URI
 import java.net.URLDecoder
@@ -63,6 +58,10 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import kotlin.io.path.fileSize
+import kotlin.io.path.inputStream
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.readBytes
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 
@@ -73,7 +72,9 @@ import kotlin.coroutines.resume
  * for the given directory. Project lookup is only used to resolve the
  * calling frontend project to the correct backend directory.
  */
-class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
+class KiloWorkspaceRpcApiImpl internal constructor(
+    private val svc: KiloBackendAppService? = null,
+) : KiloWorkspaceRpcApi {
     companion object {
         private val LOG = KiloLog.create(KiloWorkspaceRpcApiImpl::class.java)
         private const val SCHEMA = "https://app.kilo.ai/config.json"
@@ -81,15 +82,17 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         private val LEGACY = listOf("opencode.jsonc", "opencode.json")
         private val GLOBAL = MODERN + LEGACY + "config.json"
         private val LOCAL_DIRS = listOf(".kilo", ".kilocode", ".opencode")
-        private const val SEARCH_CAP = 2_000
         private const val DIFF_CAP = 200_000
+        private const val BRANCH_DIFF_CAP = 8 * 1024 * 1024
+        private const val LARGE_FILE = 2 * 1024 * 1024L
+        private val JSON = Json { ignoreUnknownKeys = true }
         private val CONFIG = """{
   "${'$'}schema": "$SCHEMA"
 }
 """
     }
 
-    private val app: KiloBackendAppService get() = service()
+    private val app: KiloBackendAppService get() = svc ?: service()
 
     private val gitCache = ConcurrentHashMap<String, Boolean>()
 
@@ -181,17 +184,11 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
     override suspend fun files(directory: String, path: String): List<WorkspaceFileDto> {
         val item = clean(path) ?: return emptyList()
         val file = file(item) ?: return emptyList()
-        val bases = listOf(directory) + ProjectManager.getInstance().openProjects
-            .asSequence()
-            .filter { !it.isDefault }
-            .mapNotNull { it.basePath }
-            .filter { it != directory }
-            .toList()
-        val paths = if (file.isAbsolute) listOf(file) else bases.mapNotNull { base ->
-            file(base)?.resolve(file)?.normalize()
-        }
+        val base = file(clean(directory) ?: directory) ?: return emptyList()
+        val paths = if (file.isAbsolute) listOf(file) else listOf(base.resolve(file).normalize())
         val found = linkedMapOf<String, WorkspaceFileDto>()
         for (target in paths) {
+            relativeWithinWorkspace(base, target) ?: continue
             val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(target.toString()) ?: continue
             found[vf.path] = WorkspaceFileDto(vf.path, vf.name, vf.isDirectory)
         }
@@ -201,17 +198,54 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
     override suspend fun searchFiles(directory: String, query: String, limit: Int): FileSearchResultDto {
         val base = file(clean(directory) ?: directory) ?: return FileSearchResultDto()
         val git = withContext(Dispatchers.IO) { gitAvailable(base) }
-        val project = project(base) ?: return FileSearchResultDto(git = git)
-        if (DumbService.getInstance(project).isDumb) return FileSearchResultDto(indexing = true, git = git)
+        LOG.debug { "workspace file search directory=$directory query=$query limit=$limit" }
+        return searchKilo(directory, query, limit, git)
+    }
+
+    private suspend fun searchKilo(directory: String, query: String, limit: Int, git: Boolean): FileSearchResultDto {
         return try {
-            val files = readAction { search(project, base, query, limit.coerceIn(1, 200)) }
-            FileSearchResultDto(files = files, git = git)
-        } catch (e: IndexNotReadyException) {
-            FileSearchResultDto(indexing = true, git = git)
-        } catch (e: LinkageError) {
-            LOG.warn("file search API unavailable; returning no suggestions", e)
+            val cap = limit.coerceIn(1, 200)
+            val (files, dirs) = coroutineScope {
+                val files = async { kiloResults(directory, query, "file", cap, false) }
+                val dirs = async { kiloResults(directory, query, "directory", cap, true) }
+                files.await() to dirs.await()
+            }
+            val found = linkedMapOf<String, WorkspaceFileDto>()
+            (dirs + files).forEach { file -> found.putIfAbsent(file.path, file) }
+            FileSearchResultDto(files = found.values.take(cap), git = git)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Kilo Core file search failed for directory=$directory query=$query", e)
             FileSearchResultDto(git = git)
         }
+    }
+
+    private suspend fun kiloResults(
+        directory: String,
+        query: String,
+        type: String,
+        limit: Int,
+        dir: Boolean,
+    ): List<WorkspaceFileDto> {
+        val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
+        val raw = withContext(Dispatchers.IO) {
+            val request = Request.Builder()
+                .url("http://127.0.0.1:${app.port}/find/file?directory=${encode(directory)}&query=${encode(query)}&type=$type&limit=$limit")
+                .get()
+                .build()
+            http.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) throw RuntimeException("HTTP ${response.code}: $body")
+                body
+            }
+        }
+        return JSON.decodeFromString<List<String>>(raw)
+            .asSequence()
+            .map { it.trimEnd('/') }
+            .filter { it.isNotBlank() && !isManagedWorktreeStorage(it) }
+            .map { WorkspaceFileDto(it, it.substringAfterLast('/'), dir) }
+            .toList()
     }
 
     override suspend fun gitChanges(directory: String): String? = withContext(Dispatchers.IO) {
@@ -223,7 +257,40 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         text.takeIf { it.isNotBlank() }?.take(DIFF_CAP)
     }
 
-    override suspend fun openFile(path: String): Boolean {
+    override suspend fun branchDiff(directory: String, patches: Boolean): List<DiffFileDto> = withContext(Dispatchers.IO) {
+        val base = file(clean(directory) ?: directory) ?: return@withContext emptyList()
+        if (!gitAvailable(base)) return@withContext emptyList()
+        val anc = mergeBase(base)
+        // --relative scopes diff output to the opened directory and emits project-relative paths, so
+        // tracked entries match the untracked list (ls-files is already cwd-relative) in monorepos.
+        val stats = parseNumstat(git(base, "-c", "core.quotepath=false", "diff", "--numstat", "--relative", "--no-color", "--no-renames", anc))
+        val status = parseNameStatus(git(base, "-c", "core.quotepath=false", "diff", "--name-status", "--relative", "--no-color", "--no-renames", anc))
+        val untrackedPaths = git(base, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .toList()
+        // Stats-only DTOs (empty patch); the badge path stops here. untracked() streams a line
+        // count on this path instead of materializing each file as a String.
+        val files = stats.map { DiffFileDto(it.path, it.additions, it.deletions, "", status[it.path] ?: "modified") } +
+            untrackedPaths.map { untracked(base, it, withPatch = false) }
+        if (!patches) return@withContext files
+        // Fetch patches lazily and stop once the running total reaches BRANCH_DIFF_CAP, so a branch with
+        // hundreds of changed files doesn't spawn a git subprocess (or read a file) per entry.
+        capDiff(files, BRANCH_DIFF_CAP) { file ->
+            if (file.status == "untracked") untracked(base, file.file, withPatch = true).patch.orEmpty()
+            else fileDiff(base, anc, file.file)
+        }
+    }
+
+    override suspend fun branchName(directory: String): String? = withContext(Dispatchers.IO) {
+        val base = file(clean(directory) ?: directory) ?: return@withContext null
+        if (!gitAvailable(base)) return@withContext null
+        git(base, "branch", "--show-current").trim().ifBlank {
+            git(base, "rev-parse", "--short", "HEAD").trim()
+        }.ifBlank { null }
+    }
+
+    override suspend fun openFile(path: String, line: Int?, column: Int?, endLine: Int?): Boolean {
         val item = clean(path) ?: return false
         val target = file(item)?.takeIf { it.isAbsolute } ?: return false
         val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(target.toString()) ?: return false
@@ -231,7 +298,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
             LOG.warn("No project available to open file: $path")
             return false
         }
-        navigate(project, vf)
+        navigate(project, vf, line, column, endLine)
         return true
     }
 
@@ -241,6 +308,13 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
 
     override suspend fun globalConfigTarget(): ConfigTargetDto = withContext(Dispatchers.IO) {
         target(globalConfig())
+    }
+
+    override suspend fun refreshConfigFiles(directory: String) {
+        val files = withContext(Dispatchers.IO) {
+            listOf(localConfig(directory), globalConfig()).map { it.toFile() }
+        }
+        LocalFileSystem.getInstance().refreshIoFiles(files, true, true, null)
     }
 
     override suspend fun openLocalConfig(directory: String): Boolean = openConfig(withContext(Dispatchers.IO) {
@@ -302,96 +376,48 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         null
     }
 
-    private suspend fun navigate(project: Project, file: VirtualFile) = suspendCancellableCoroutine { cont ->
+    private suspend fun navigate(project: Project, file: VirtualFile, line: Int? = null, column: Int? = null, endLine: Int? = null) = suspendCancellableCoroutine { cont ->
         ApplicationManager.getApplication().invokeLater({
-            OpenFileDescriptor(project, file).navigate(true)
+            if (line != null && endLine != null) {
+                val editor = FileEditorManager.getInstance(project).openTextEditor(
+                    OpenFileDescriptor(project, file, (line - 1).coerceAtLeast(0), 0),
+                    true,
+                )
+                val doc = editor?.document
+                if (editor != null && doc != null && doc.lineCount > 0) {
+                    val start = (line - 1).coerceIn(0, doc.lineCount - 1)
+                    val end = (endLine - 1).coerceIn(start, doc.lineCount - 1)
+                    val from = doc.getLineStartOffset(start)
+                    val to = doc.getLineEndOffset(end)
+                    editor.selectionModel.setSelection(from, to)
+                    editor.caretModel.moveToOffset(from)
+                    editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
+                }
+                if (cont.isActive) cont.resume(Unit)
+                return@invokeLater
+            }
+            val descriptor = if (line == null) {
+                OpenFileDescriptor(project, file)
+            } else {
+                OpenFileDescriptor(
+                    project,
+                    file,
+                    (line - 1).coerceAtLeast(0),
+                    (column?.minus(1))?.coerceAtLeast(0) ?: 0,
+                )
+            }
+            descriptor.navigate(true)
             if (cont.isActive) cont.resume(Unit)
-        }, ModalityState.any())
+        }, ModalityState.nonModal())
     }
 
     private fun project(path: Path): Project? {
+        if (ApplicationManager.getApplication() == null) return null
         val projects = ProjectManager.getInstance().openProjects.filter { !it.isDefault }
         return projects.firstOrNull { item ->
             val base = item.basePath?.let(::file) ?: return@firstOrNull false
             path.startsWith(base)
         } ?: projects.firstOrNull()
-    }
-
-    // Uses the IDE Go-to-File engine (com.intellij.ide.util.gotoByName.*). These are public but
-    // unstable lang-impl classes (not @ApiStatus.Internal) -- the same engine behind Search Everywhere,
-    // chosen for proven large-repo performance. searchFiles() degrades gracefully on LinkageError.
-    @Suppress("UnstableApiUsage")
-    private fun search(project: Project, base: Path, query: String, limit: Int): List<WorkspaceFileDto> {
-        val text = query.trim()
-        if (text.isBlank()) return roots(project, base, limit)
-        val scope = GlobalSearchScope.projectScope(project)
-        val model = object : GotoFileModel(project) {
-            override fun acceptItem(item: NavigationItem): Boolean {
-                val psi = item as? PsiFileSystemItem ?: return false
-                val path = file(psi.virtualFile.path) ?: return false
-                return path.startsWith(base) && super.acceptItem(item)
-            }
-
-            override fun loadInitialCheckBoxState(): Boolean = false
-
-            override fun saveInitialCheckBoxState(state: Boolean) {}
-        }
-        val view = object : ChooseByNameViewModel {
-            override fun getProject(): Project = project
-
-            override fun getModel() = model
-
-            override fun isSearchInAnyPlace(): Boolean = model.useMiddleMatching()
-
-            override fun transformPattern(pattern: String): String = ChooseByNamePopup.getTransformedPattern(pattern, model)
-
-            override fun canShowListForEmptyPattern(): Boolean = false
-
-            override fun getMaximumListSizeLimit(): Int = limit
-        }
-        val provider = model.getItemProvider(null)
-        val params = FindSymbolParameters.wrap(text, scope)
-        val found = mutableListOf<FoundItemDescriptor<*>>()
-        val indicator = EmptyProgressIndicator()
-        if (provider is ChooseByNameInScopeItemProvider) {
-            provider.filterElementsWithWeights(view, params, indicator) { item ->
-                found += item
-                found.size < SEARCH_CAP
-            }
-        } else {
-            provider.filterElements(view, text, false, indicator) { item ->
-                found += FoundItemDescriptor(item, 0)
-                found.size < SEARCH_CAP
-            }
-        }
-        return found.asSequence()
-            .sortedByDescending { it.weight }
-            .mapNotNull { item -> (item.item as? PsiFileSystemItem)?.virtualFile }
-            .mapNotNull { vf -> fileDto(base, vf) }
-            .distinctBy { it.path }
-            .take(limit)
-            .toList()
-    }
-
-    private fun roots(project: Project, base: Path, limit: Int): List<WorkspaceFileDto> {
-        val root = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(base) ?: return emptyList()
-        val index = ProjectFileIndex.getInstance(project)
-        return root.children.asSequence()
-            .filter { it.name != ".git" }
-            .filterNot { index.isExcluded(it) }
-            .mapNotNull { fileDto(base, it) }
-            .sortedWith(
-                compareByDescending<WorkspaceFileDto> { it.directory }
-                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name },
-            )
-            .take(limit)
-            .toList()
-    }
-
-    private fun fileDto(base: Path, vf: VirtualFile): WorkspaceFileDto? {
-        val path = file(vf.path) ?: return null
-        val rel = relativeWithinBase(base, path) ?: return null
-        return WorkspaceFileDto(rel, vf.name, vf.isDirectory)
     }
 
     private fun gitAvailable(base: Path): Boolean {
@@ -400,6 +426,55 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
 
     private fun git(base: Path, vararg args: String): String {
         return runWorkspaceGit(base, *args)
+    }
+
+    /** Merge-base of the resolved default branch and HEAD, or HEAD when no base can be determined. */
+    private fun mergeBase(base: Path): String {
+        val ref = defaultBranch(base) ?: return "HEAD"
+        return git(base, "merge-base", ref, "HEAD").trim().ifBlank { "HEAD" }
+    }
+
+    /**
+     * Resolve the base branch ref, preferring the remote's declared default (origin HEAD), then the
+     * common origin and local main or master branches, so repos whose default is develop or trunk —
+     * or worktrees where only the remote branch exists locally — still resolve. Fully-qualified refs
+     * are used so a tag named "main" can't be mistaken for the branch.
+     */
+    private fun defaultBranch(base: Path): String? {
+        git(base, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD").trim()
+            .removePrefix("refs/remotes/")
+            .takeIf { it.isNotBlank() }
+            ?.let { return it }
+        return listOf(
+            "refs/remotes/origin/main" to "origin/main",
+            "refs/remotes/origin/master" to "origin/master",
+            "refs/heads/main" to "main",
+            "refs/heads/master" to "master",
+        ).firstOrNull { git(base, "rev-parse", "--verify", "--quiet", it.first).isNotBlank() }?.second
+    }
+
+    private fun fileDiff(base: Path, anc: String, path: String): String =
+        git(base, "-c", "core.quotepath=false", "diff", "--relative", "--no-color", "--no-ext-diff", "--no-renames", "--unified=2147483647", anc, "--", path)
+
+    private fun untracked(base: Path, rel: String, withPatch: Boolean): DiffFileDto {
+        return runCatching {
+            val path = base.resolve(rel).normalize()
+            if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > LARGE_FILE) return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
+            if (!withPatch) {
+                // Badge path (runs on every turn end / revert): count lines by streaming bytes rather
+                // than allocating the whole file. null = binary (NUL byte), reported as 0/0.
+                val count = countLines(path) ?: return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
+                return@runCatching DiffFileDto(rel, count, 0, "", "untracked")
+            }
+            val bytes = path.readBytes()
+            if (bytes.any { it == 0.toByte() }) return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
+            val text = bytes.toString(StandardCharsets.UTF_8)
+            val additions = lines(text).size
+            DiffFileDto(rel, additions, 0, untrackedPatch(rel, text, additions), "untracked")
+        }.getOrElse { err ->
+            LOG.debug { "Failed to read untracked file for branch diff: $rel (${err.message})" }
+            DiffFileDto(rel, 0, 0, "", "untracked")
+        }
     }
 
     private fun agent(a: Agent) = AgentInfo(
@@ -461,6 +536,106 @@ internal fun resolveProjectDirectoryHint(hint: String, bases: List<String>): Str
     return bases.firstOrNull() ?: hint
 }
 
+/**
+ * Assemble capped diff DTOs. [fetch] lazily produces each file's full-context patch. Oversized
+ * patches are skipped, but a single generated/large file should not blank every later small file;
+ * after a bounded number of misses, stop fetching so large branches still don't run a git subprocess
+ * (or read a file) per entry only to discard the output. Files past the cap keep their stats but
+ * carry an empty patch, which the client renders from stats alone.
+ */
+internal fun capDiff(files: List<DiffFileDto>, cap: Int, fetch: (DiffFileDto) -> String): List<DiffFileDto> {
+    var used = 0
+    var misses = 0
+    var full = false
+    return files.map { file ->
+        if (full) return@map file.copy(patch = "")
+        val text = fetch(file)
+        when {
+            text.isBlank() -> file.copy(patch = "")
+            used + text.length <= cap -> {
+                used += text.length
+                if (used >= cap) full = true
+                file.copy(patch = text)
+            }
+            else -> {
+                misses++
+                full = misses >= MAX_OVERSIZED_PATCHES || used >= cap
+                file.copy(patch = "")
+            }
+        }
+    }
+}
+
+private const val MAX_OVERSIZED_PATCHES = 3
+
+private fun untrackedPatch(path: String, text: String, additions: Int): String = buildString {
+    appendLine("diff --git a/$path b/$path")
+    appendLine("new file mode 100644")
+    appendLine("--- /dev/null")
+    appendLine("+++ b/$path")
+    appendLine("@@ -0,0 +1,$additions @@")
+    lines(text).forEach { line -> appendLine("+$line") }
+    if (text.isNotEmpty() && !text.endsWith("\n")) appendLine("\\ No newline at end of file")
+}.removeSuffix("\n")
+
+private fun lines(text: String): List<String> {
+    if (text.isEmpty()) return emptyList()
+    return text.removeSuffix("\n").split('\n')
+}
+
+/**
+ * Count lines the way [lines] does (trailing newline ignored, empty file = 0) by streaming bytes,
+ * so the stats-only untracked path doesn't allocate the whole file. Returns null for binary content
+ * (a NUL byte), matching the with-patch path's binary guard.
+ */
+private fun countLines(path: Path): Int? {
+    var newlines = 0
+    var last = 0
+    var any = false
+    path.inputStream().buffered().use { input ->
+        val buf = ByteArray(8192)
+        while (true) {
+            val n = input.read(buf)
+            if (n <= 0) break
+            any = true
+            for (i in 0 until n) {
+                val b = buf[i].toInt()
+                if (b == 0) return null
+                if (b == '\n'.code) newlines++
+            }
+            last = buf[n - 1].toInt()
+        }
+    }
+    if (!any) return 0
+    return if (last == '\n'.code) newlines else newlines + 1
+}
+
+internal data class DiffStat(val path: String, val additions: Int, val deletions: Int)
+
+internal fun parseNameStatus(text: String): Map<String, String> = text.lineSequence()
+    .mapNotNull { line ->
+        val parts = line.split('\t')
+        if (parts.size < 2) return@mapNotNull null
+        val path = parts.drop(1).joinToString("\t").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        val status = when (parts[0].firstOrNull()) {
+            'A' -> "added"
+            'D' -> "deleted"
+            'M' -> "modified"
+            else -> null
+        } ?: return@mapNotNull null
+        path to status
+    }
+    .toMap()
+
+internal fun parseNumstat(text: String): List<DiffStat> = text.lineSequence()
+    .mapNotNull { line ->
+        val parts = line.split('\t')
+        if (parts.size < 3) return@mapNotNull null
+        val path = parts.drop(2).joinToString("\t").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        DiffStat(path, parts[0].toIntOrNull() ?: 0, parts[1].toIntOrNull() ?: 0)
+    }
+    .toList()
+
 internal fun workspaceGitAvailable(base: Path, cache: ConcurrentHashMap<String, Boolean> = ConcurrentHashMap()): Boolean {
     if (Files.exists(base.resolve(".git"))) return true
     return cache.getOrPut(base.toString()) {
@@ -487,4 +662,10 @@ internal fun relativeWithinBase(base: Path, target: Path): String? {
     if (!path.startsWith(base)) return null
     val rel = base.relativize(path).toString().replace('\\', '/')
     return rel.ifBlank { null }
+}
+
+internal fun relativeWithinWorkspace(base: Path, target: Path): String? {
+    val rel = relativeWithinBase(base, target) ?: return null
+    if (isManagedWorktreeStorage(rel)) return null
+    return rel
 }

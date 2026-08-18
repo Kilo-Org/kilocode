@@ -1,7 +1,7 @@
 import { execFile } from "child_process"
 import type { DeviceAuthInitiateResponse, DeviceAuthPollResponse } from "../types.js"
 import { poll } from "./polling.js"
-import { getKiloProfile, getKiloDefaultModel } from "../api/profile.js"
+import { getKiloProfile, getKiloDefaultModel, defaultOrganizationId } from "../api/profile.js"
 import { KILO_API_BASE, POLL_INTERVAL_MS } from "../api/constants.js"
 import type { AuthOuathResult } from "@kilocode/plugin"
 
@@ -127,13 +127,14 @@ export async function authenticateWithDeviceAuthTUI(inputs?: Record<string, stri
 
       const token = result.token
 
-      // For TUI version, complete with personal account by default
-      // Organization selection is handled by TUI after this callback completes
-      // The TUI will fetch the profile separately and show organization dialog if needed
-      const organizationId = undefined
+      // Apply the cloud-selected organization as the login-time default.
+      // After this, the stored accountId is authoritative; the user can switch
+      // freely and profile fetches never re-derive it from the cloud.
+      const profile = await getKiloProfile(token).catch(() => undefined)
+      const organizationId = profile ? defaultOrganizationId(profile) : undefined
 
       // Fetch default model
-      const model = await getKiloDefaultModel(token, organizationId)
+      await getKiloDefaultModel(token, organizationId)
 
       // Return success with OAuth credentials
       return {
@@ -142,6 +143,7 @@ export async function authenticateWithDeviceAuthTUI(inputs?: Record<string, stri
         refresh: token,
         access: token,
         expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1 year
+        ...(organizationId && { accountId: organizationId }),
       }
     },
   }

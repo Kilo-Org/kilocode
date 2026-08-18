@@ -5,7 +5,8 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import type { SessionModelUsage } from "../../types/messages"
-import { groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
+import { cacheRate, groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
+import { formatCompactCount } from "../../utils/format"
 
 interface TaskUsageProps {
   tokens: TokenSummary
@@ -27,24 +28,14 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
       }),
   )
 
-  const number = (value: number) => {
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-    if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
-    return String(value)
-  }
+  const number = formatCompactCount
   const count = (value: number) => value.toLocaleString(language.locale())
   const cost = (input: number) => {
     const value = Math.max(0, Number.isFinite(input) ? input : 0)
     if (value > 0 && value < 0.000001) return "<$0.000001"
     return money().format(value)
   }
-  const rate = (model: SessionModelUsage["models"][number]) => {
-    const total = model.tokens.input + model.tokens.cache.read
-    if (total === 0) return "-"
-    return `${((model.tokens.cache.read / total) * 100).toFixed(1)}%`
-  }
-
-  const Summary = () => (
+  const renderSummary = () => (
     <>
       <span class="task-header-tokens-label">Tokens</span>
       <Show when={props.tokens.input > 0}>
@@ -53,35 +44,26 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
           {number(props.tokens.input)}
         </span>
       </Show>
+      <Show when={props.tokens.cached > 0}>
+        <span class="task-header-tokens-value">
+          <Icon name="arrow-up" size="small" />
+          cache {number(props.tokens.cached)}
+        </span>
+      </Show>
       <Show when={props.tokens.output > 0}>
         <span class="task-header-tokens-value">
           <Icon name="arrow-down-to-line" size="small" />
           {number(props.tokens.output)}
         </span>
       </Show>
-      <Show when={props.tokens.cached > 0}>
-        <span class="task-header-tokens-value">
-          <Icon name="arrow-down-to-line" size="small" />
-          cache {number(props.tokens.cached)}
-        </span>
-      </Show>
     </>
   )
 
   return (
-    <Show
-      when={props.usage?.models.length}
-      fallback={
-        <div class="task-header-tokens">
-          <Summary />
-        </div>
-      }
-    >
+    <Show when={props.usage?.models.length} fallback={<div class="task-header-tokens">{renderSummary()}</div>}>
       <Collapsible variant="ghost" class="task-header-usage tool-collapsible" defaultOpen={props.defaultOpen}>
         <Collapsible.Trigger class="task-header-usage-trigger">
-          <span class="task-header-tokens">
-            <Summary />
-          </span>
+          <span class="task-header-tokens">{renderSummary()}</span>
           <Collapsible.Arrow />
         </Collapsible.Trigger>
         <Collapsible.Content>
@@ -105,7 +87,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
                         </div>
                         <div class="task-header-usage-meta">
                           Cache R {count(model.tokens.cache.read)} · W {count(model.tokens.cache.write)} · Hit Rate{" "}
-                          {rate(model)}
+                          {cacheRate(model)}
                         </div>
                       </div>
                     )}

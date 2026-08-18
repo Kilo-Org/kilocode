@@ -39,7 +39,15 @@ export namespace KiloLLM {
 
   /**
    * Caps `maxOutputTokens` to fit within the model's context window after
-   * accounting for the actual estimated input tokens (messages + tool schemas).
+   * accounting for the context the outgoing request will consume.
+   *
+   * Like opencode, the provider is the source of truth: when the last finished
+   * turn reported usage, `reported` carries that provider-tokenized context size
+   * (input + output + cache), which already accounts for image/vision input the
+   * client cannot see. The client-side media-normalized estimate (encoded bytes
+   * excluded) is used as a floor so newly added text or tool schemas still cap
+   * output, and as the sole basis on the first turn before any usage is reported.
+   * The larger of the two is used so the cap never under-counts.
    *
    * Many small models (e.g. qwen 7B, 32K context) ship with a default
    * max_output of 32K, leaving no room for input once tools are included.
@@ -51,14 +59,18 @@ export namespace KiloLLM {
     messages: ModelMessage[]
     tools: Record<string, { description?: string; inputSchema?: unknown }>
     configured: number | undefined
-    tokens?: number
+    usage?: ReturnType<typeof KiloSessionOverflow.measure>
+    reported?: number
   }): number | undefined {
     if (input.configured == null) return input.configured
     if (input.configured <= 0) return undefined
     const { context } = input.model.limit
     if (!context) return input.configured
 
-    const tokens = input.tokens ?? KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools }).raw
+    const estimated =
+      input.usage?.normalized ??
+      KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools }).normalized
+    const tokens = Math.max(input.reported ?? 0, estimated)
     const available = context - tokens - SAFETY
     // If available is ≤0 the input alone exceeds context — return the original
     // value so the provider returns a natural overflow error which triggers

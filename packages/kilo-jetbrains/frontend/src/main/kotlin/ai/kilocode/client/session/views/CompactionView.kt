@@ -29,7 +29,7 @@ class CompactionView(@Suppress("UNUSED_PARAMETER") compaction: Compaction) : Par
 
     override val contentId: String = compaction.id
     private val text = JBLabel(KiloBundle.message("session.part.compaction")).apply {
-        foreground = UiStyle.Colors.weak()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
         horizontalAlignment = SwingConstants.CENTER
         border = JBUI.Borders.empty(0, UiStyle.Gap.lg())
     }
@@ -37,12 +37,13 @@ class CompactionView(@Suppress("UNUSED_PARAMETER") compaction: Compaction) : Par
     init {
         layout = BorderLayout()
         isOpaque = false
+        border = JBUI.Borders.empty(UiStyle.Gap.md(), 0)
         applyStyle(SessionEditorStyle.current())
 
         val line = { JPanel().apply {
             background = SessionUiStyle.View.Outline.color()
             isOpaque = true
-            preferredSize = JBDimension(0, JBUI.scale(1))
+            preferredSize = JBDimension(0, 1)
         } }
 
         val row = JPanel(GridBagLayout()).apply {

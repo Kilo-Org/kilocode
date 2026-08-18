@@ -12,28 +12,35 @@ const isPotentialScrollInput = (event: Event) => {
 export const createUserActivity = (options: UserActivityOptions) => {
   let marked = false
   let time = 0
+  let scroll: HTMLElement | undefined
 
   // Mark input that may cause the next scroll so layout-driven scroll events
   // do not get mistaken for the user leaving auto-follow mode.
   const mark = (event: Event) => {
     if (!isPotentialScrollInput(event)) return
+    if (scroll && scroll.scrollHeight - scroll.clientHeight <= 1) return
     marked = true
     time = performance.now()
   }
 
   const handleWheel = (event: WheelEvent) => {
-    if (event.deltaY >= 0) return
+    if (!isPotentialScrollInput(event)) return
+    if (!scroll || scroll.scrollHeight - scroll.clientHeight <= 1) return
+    if (event.deltaY >= 0 || scroll.scrollTop <= 0) return
+    mark(event)
     options.onWheelUp()
   }
 
   return {
     listen: (el: HTMLElement) => {
+      scroll = el
       el.addEventListener("wheel", handleWheel, { passive: true, capture: true })
       el.addEventListener("pointerdown", mark, { passive: true })
       el.addEventListener("keydown", mark, { passive: true })
       el.addEventListener("touchstart", mark, { passive: true })
 
       return () => {
+        if (scroll === el) scroll = undefined
         el.removeEventListener("wheel", handleWheel, { capture: true })
         el.removeEventListener("pointerdown", mark)
         el.removeEventListener("keydown", mark)

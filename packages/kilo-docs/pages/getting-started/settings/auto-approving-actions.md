@@ -9,7 +9,11 @@ description: "Configure automatic approval settings for Kilo Code operations"
 **Security Warning:** Auto-approve settings bypass confirmation prompts, giving Kilo Code direct access to your system. This can result in data loss, file corruption, or worse. Command line access is particularly dangerous, as it can potentially execute harmful operations that could damage your system or compromise security. Only enable auto-approval for actions you fully trust.
 {% /callout %}
 
-Auto-approve settings speed up your workflow by eliminating repetitive confirmation prompts, but they significantly increase security risks. The VS Code extension and CLI share the same permission model; choose the tab that matches how you configure Kilo Code.
+Auto-approve settings speed up your workflow by eliminating repetitive confirmation prompts, but they significantly increase security risks. The VS Code extension, JetBrains plugin, and CLI share the same permission model; choose the tab that matches how you configure Kilo Code. In the JetBrains plugin, the same rules are configured under **Settings → Tools → Kilo Code → Auto-Approve**.
+
+{% callout type="note" %}
+**Editing project config while a session is running:** Kilo caches project-level `kilo.jsonc` / `kilo.json` (in `.kilo/`) when it first loads a workspace, and does not re-read it on every prompt. If you add, change, or remove a project permission rule while the backend is already running, reload the VS Code window (or start a fresh CLI session) for the change to take effect. Until then, Kilo keeps using the previously loaded rules — so an auto-approved call may still cite a project rule you just edited. Global config (`~/.config/kilo/`) is reloaded automatically.
+{% /callout %}
 
 {% tabs %}
 {% tab label="VSCode" %}
@@ -45,7 +49,7 @@ The Auto Approve tab lists the following tool-specific permissions. Some tools a
 | `glob` | File pattern matching / searching by name |
 | `grep` | Searching file contents by regex |
 | `task` | Launching sub-agents |
-| `agent_manager` | Starting Agent Manager local or worktree sessions |
+| `agent_manager` | Starting Agent Manager sessions, inspecting managed sessions, and prompting an existing managed session |
 | `skill` | Loading specialized skills |
 | `lsp` | Language server protocol operations |
 | `todoread` / `todowrite` | Reading and updating the todo list |
@@ -66,7 +70,7 @@ Use the shield button in the prompt controls to toggle runtime auto-approve for 
 
 Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
 
-For the `agent_manager` tool, runtime approvals use the requested mode as the pattern: `worktree` or `local`.
+For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, or `prompt`. Prompting an existing managed session always requires an explicit `prompt` approval the first time, even when a broad Agent Manager allow rule already exists.
 
 ## MCP Tool Permissions
 

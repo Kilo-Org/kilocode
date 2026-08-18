@@ -5,6 +5,9 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionContextMenu
 import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionTargetResolver
+import ai.kilocode.client.session.views.MessageToolbar
+import ai.kilocode.client.session.views.MessageView
+import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.test.CopyProviderSink
@@ -21,12 +24,14 @@ import com.intellij.ui.components.JBScrollPane
 import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
+import java.awt.Dimension
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
 import java.awt.Point
 import java.awt.image.BufferedImage
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import javax.swing.text.JTextComponent
 
 @Suppress("UnstableApiUsage")
@@ -173,11 +178,65 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         assertFalse(overlay.isVisible)
     }
 
+    fun `test user prompt toolbar appears in hover overlay`() {
+        showMessages()
+        emit(ChatEventDto.MessageUpdated("ses_test", message("u1")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("p1", "u1", "text", "hello")))
+        val root = find<SessionRootPanel>(ui)
+        val message = find<MessageView>(ui)
+        val target = components(message).filterIsInstance<SessionCopyTarget>().single { it.copyToolbar != null }
+        val overlay = find<SessionHoverCopyOverlay>(ui)
+        val anchor = target.copyAnchor
+        val toolbar = target.copyToolbar as MessageToolbar
+
+        assertFalse(components(ui).any { it === toolbar })
+        assertNull(toolbar.parent)
+
+        show(overlay, target)
+        layout()
+
+        assertTrue(overlay.isVisible)
+        assertSame(root.overlay, overlay.parent)
+        val shown = overlay.components.single() as MessageToolbar
+        assertSame(toolbar, shown)
+        assertEquals(anchor.preferredSize.width, shown.preferredSize.width)
+        assertTrue(anchor.preferredSize.height > shown.preferredSize.height)
+        assertInside(shown, shown.copyButton())
+
+        shown.copyButton().doClick()
+
+        assertEquals("hello", CopyPasteManager.getInstance().getContents(DataFlavor.stringFlavor))
+    }
+
+    fun `test assistant response toolbar appears in hover overlay`() {
+        showText(" response ")
+        val root = find<SessionRootPanel>(ui)
+        val target = components(ui).filterIsInstance<TextView>().first { it.markdown().contains("response") }
+        val overlay = find<SessionHoverCopyOverlay>(ui)
+        val toolbar = target.copyToolbar as MessageToolbar
+
+        assertTrue(target.hasCopyToolbar())
+        assertFalse(components(ui).any { it === toolbar })
+        assertNull(toolbar.parent)
+
+        show(overlay, target)
+        layout()
+
+        assertTrue(overlay.isVisible)
+        assertSame(root.overlay, overlay.parent)
+        val shown = overlay.components.single() as MessageToolbar
+        assertSame(toolbar, shown)
+        assertInside(shown, shown.copyButton())
+        shown.copyButton().doClick()
+
+        assertEquals("response", CopyPasteManager.getInstance().getContents(DataFlavor.stringFlavor))
+    }
+
     fun `test hover copy overlay ignores mouse events after disposal`() {
         val root = ShowingPanel()
         val parent = Disposer.newDisposable("overlay-test")
         val target = TargetPanel("alpha")
-        val overlay = SessionHoverCopyOverlay(root, parent)
+        val overlay = SessionHoverCopyOverlay(root, root, parent)
         root.setBounds(0, 0, 100, 100)
         target.setBounds(10, 10, 80, 80)
         root.add(target)
@@ -187,6 +246,55 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         target.dispatchEvent(MouseEvent(target, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, 1, 1, 0, false))
 
         assertFalse(overlay.isVisible)
+    }
+
+    fun `test hover copy overlay bounds stay inside scroll area`() {
+        val root = ShowingPanel()
+        val area = ShowingPanel()
+        val parent = Disposer.newDisposable("overlay-test")
+        val target = TargetPanel("alpha")
+        val overlay = SessionHoverCopyOverlay(root, area, parent)
+        root.setBounds(0, 0, 200, 200)
+        area.setBounds(0, 0, 200, 100)
+        target.setBounds(170, 90, 20, 20)
+        area.add(target)
+        root.add(area)
+        root.add(overlay)
+
+        try {
+            show(overlay, target)
+            val bounds = overlay.bounds(root, overlay.components.single() as JComponent)
+
+            assertTrue("copy overlay should stay above the prompt/status area", bounds.y + bounds.height <= area.y + area.height)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test hover toolbar centers on a zero-height inline anchor but bottom-aligns a footer anchor`() {
+        val root = ShowingPanel().also { it.setBounds(0, 0, 300, 300) }
+        val area = ShowingPanel().also { it.setBounds(0, 0, 300, 300) }
+        val toolbar = JPanel().also { it.preferredSize = Dimension(24, 24) }
+        root.add(area)
+
+        val inline = InlineTarget(fixed(24, 0), toolbar)
+        val footer = InlineTarget(fixed(24, 40), toolbar)
+        listOf(inline.copyAnchor, footer.copyAnchor).forEach { it.setBounds(100, 50, 24, 40); area.add(it) }
+        val parent = Disposer.newDisposable("overlay-center")
+        val overlay = SessionHoverCopyOverlay(root, area, parent)
+        root.add(overlay)
+
+        try {
+            show(overlay, inline)
+            // Zero-height anchor => inline header control: centered in the 40px row.
+            assertEquals(50 + (40 - 24) / 2, overlay.bounds(root, toolbar).y)
+
+            show(overlay, footer)
+            // Real-height anchor => footer row: button hugs the bottom.
+            assertEquals(50 + 40 - 24, overlay.bounds(root, toolbar).y)
+        } finally {
+            Disposer.dispose(parent)
+        }
     }
 
     fun `test session context menu can reinstall after parent disposal`() {
@@ -229,6 +337,24 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
 
     private fun rgb(color: java.awt.Color): Int = color.rgb and RGB_MASK
 
+    private fun assertInside(parent: JComponent, child: JComponent) {
+        if (parent.width == 0 || parent.height == 0) {
+            parent.setBounds(0, 0, parent.preferredSize.width, parent.preferredSize.height)
+            parent.doLayout()
+        }
+        val pt = SwingUtilities.convertPoint(child.parent, child.location, parent)
+        assertTrue(pt.x >= 0)
+        assertTrue(pt.y >= 0)
+        assertTrue(pt.x + child.width <= parent.width)
+        assertTrue(pt.y + child.height <= parent.height)
+    }
+
+    private fun show(overlay: SessionHoverCopyOverlay, target: SessionCopyTarget) {
+        val method = SessionHoverCopyOverlay::class.java.getDeclaredMethod("show", SessionCopyTarget::class.java)
+        method.isAccessible = true
+        method.invoke(overlay, target)
+    }
+
     fun `test hover overlay keeps current target while pointer remains inside anchor`() {
         val overlay = find<SessionHoverCopyOverlay>(ui)
         val target = TargetPanel("alpha")
@@ -267,7 +393,7 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
 
     private fun showText(text: String) {
         if (controller().id == null) showMessages()
-        emit(ChatEventDto.MessageUpdated("ses_test", message("msg_text")))
+        emit(ChatEventDto.MessageUpdated("ses_test", message("msg_text").copy(role = "assistant")))
         emit(ChatEventDto.PartUpdated("ses_test", part("part_text", "msg_text", "text", text)))
         layout()
     }
@@ -309,6 +435,13 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         }
     }
 
+    private fun components(root: Component): Sequence<Component> = sequence {
+        yield(root)
+        if (root is Container) {
+            for (child in root.components) yieldAll(components(child))
+        }
+    }
+
     private fun ancestors(component: Component): Sequence<Component> = sequence {
         var comp: Component? = component
         while (comp != null) {
@@ -345,7 +478,20 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         override fun copyText() = value
     }
 
-    private class ShowingPanel : JPanel(null) {
+    private class InlineTarget(
+        private val anchor: JComponent,
+        private val toolbar: JComponent,
+    ) : JPanel(), SessionCopyTarget {
+        override val copyAnchor: JComponent get() = anchor
+        override val copyToolbar: JComponent get() = toolbar
+        override fun copyText(): String? = null
+    }
+
+    private fun fixed(width: Int, height: Int): JComponent = object : ShowingPanel() {
+        override fun getPreferredSize() = Dimension(width, height)
+    }
+
+    private open class ShowingPanel : JPanel(null) {
         override fun isShowing() = true
     }
 }

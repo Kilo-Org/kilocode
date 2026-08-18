@@ -47,6 +47,17 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         assertEquals(listOf("/test/.kilo/plans/a.md"), rpc.opened)
     }
 
+    fun `test openPath passes line and column to backend`() = runBlocking {
+        rpc.fileMatches = listOf(WorkspaceFileDto("/test/src/Foo.kt", "Foo.kt"))
+
+        val ok = withContext(Dispatchers.Default) {
+            service.openPath("/test", "src/Foo.kt", line = 12, column = 3)
+        }
+
+        assertTrue(ok)
+        assertEquals(listOf(FakeWorkspaceRpcApi.Opened("/test/src/Foo.kt", 12, 3)), rpc.openedFiles)
+    }
+
     fun `test openPath returns false when no match exists`() = runBlocking {
         val ok = withContext(Dispatchers.Default) {
             service.openPath("/test", ".kilo/plans/missing.md")
@@ -85,5 +96,25 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
 
         assertEquals(err.message, seen?.message)
         assertEquals(listOf("dep"), rpc.searchQueries)
+    }
+
+    fun `test refreshConfigFiles logs backend failure and completes`() = runBlocking {
+        rpc.refreshConfigThrows = IllegalStateException("backend unavailable")
+
+        val job = service.refreshConfigFiles("/test")
+        job.join()
+
+        assertTrue(job.isCompleted)
+        assertEquals(listOf("/test"), rpc.refreshedConfigs.toList())
+        assertEquals(0, rpc.localConfigPathCalls)
+        assertEquals(0, rpc.globalConfigPathCalls)
+    }
+
+    fun `test searchFiles sends query to RPC`() = runBlocking {
+        withContext(Dispatchers.Default) {
+            service.searchFiles("/test", "src")
+        }
+
+        assertEquals(listOf("src"), rpc.searchQueries)
     }
 }

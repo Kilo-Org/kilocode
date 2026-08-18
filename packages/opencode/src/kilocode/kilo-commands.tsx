@@ -11,6 +11,8 @@ import { useRoute } from "@tui/context/route"
 import { useDialog } from "@tui/ui/dialog"
 import { useToast } from "@tui/ui/toast"
 import { DialogAlert } from "@tui/ui/dialog-alert"
+import { DialogConfirm } from "@tui/ui/dialog-confirm"
+import { reconcile } from "solid-js/store"
 import type { Organization } from "@kilocode/kilo-gateway"
 import type { ClawStatus } from "./claw/types.js"
 import { DialogKiloTeamSelect } from "./components/dialog-kilo-team-select.js"
@@ -137,6 +139,15 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
         hidden: !isKiloConnected(),
         run: async () => {
           try {
+            if (sync.data.config.privacy_mode === true || sync.data.globalConfig.privacy_mode === true) {
+              const confirmed = await DialogConfirm.show(
+                dialog,
+                "Privacy Mode Enabled",
+                "Privacy mode is on. Revealing your profile will display your email, name, balance, and team on screen.",
+              )
+              if (confirmed !== true) return
+            }
+
             // Fetch profile and balance using server endpoint
             const response = await sdk.client.kilo.profile()
 
@@ -175,6 +186,53 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             },
           ]
         : []),
+
+      // /privacy command
+      {
+        name: "kilo.privacy",
+        get title() {
+          const active = sync.data.config.privacy_mode === true || sync.data.globalConfig.privacy_mode === true
+          return active ? "Disable privacy mode" : "Enable privacy mode"
+        },
+        desc: "Blur PII (balance, email, etc.) and confirm before showing profile",
+        category: "Kilo",
+        slashName: "privacy",
+        run: async () => {
+          const active = sync.data.config.privacy_mode === true || sync.data.globalConfig.privacy_mode === true
+          const next = !active
+          const updates = [
+            sdk.client.config.overlayUpdate({
+              scope: "global",
+              set: { privacy_mode: next },
+            }),
+          ]
+          if (!next && sync.data.config.privacy_mode === true) {
+            updates.push(
+              sdk.client.config.overlayUpdate({
+                scope: "project",
+                unset: [["privacy_mode"]],
+              }),
+            )
+          }
+          const responses = await Promise.all(updates)
+          const failed = responses.find((r) => r.error)
+          if (failed) {
+            const status = failed.response?.status ?? "?"
+            toast.show({ message: `Failed to update privacy mode (${status})`, variant: "error" })
+            return
+          }
+          const [cfg, global] = await Promise.all([
+            sdk.client.config.get({}),
+            sdk.client.global.config.get({}),
+          ])
+          if (cfg.data) sync.set("config", reconcile(cfg.data))
+          if (global.data) sync.set("globalConfig", reconcile(global.data))
+          toast.show({
+            message: next ? "Privacy mode enabled" : "Privacy mode disabled",
+            variant: "success",
+          })
+        },
+      },
 
       // /teams command
       {
@@ -218,6 +276,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
               <DialogKiloTeamSelect
                 organizations={profile.organizations!}
                 currentOrgId={currentOrgId}
+                hasPersonalAccount={profile.hasPersonalAccount !== false}
                 onSelect={async (orgId) => {
                   try {
                     // Switch to team immediately using server endpoint

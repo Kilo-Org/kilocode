@@ -1,7 +1,7 @@
 import { MemoryFiles } from "./storage/store"
 import { MemoryIndexer } from "./recall/indexer"
 import { MemoryNotice } from "./memory-notice"
-import { MemoryOperations } from "./capture/ops"
+import { MemoryOperations } from "./capture/operations"
 import { MemoryPaths } from "./storage/paths"
 import { MemoryRecall } from "./recall/recall"
 import { MemorySchema } from "./schema"
@@ -30,6 +30,8 @@ export namespace Memory {
       type: "saved"
       message: string
       operationCount: number
+      added: number
+      removed: number
       sources: string[]
       files: string[]
     }
@@ -94,7 +96,6 @@ export namespace Memory {
       const state = await MemoryFiles.readState(input.root)
       const next = { ...state, enabled: false }
       await MemoryFiles.writeState(input.root, next)
-      await MemoryFiles.append(input.root, `disable ${next.scope} source=command`)
       return { root: input.root, state: next }
     })
   }
@@ -111,24 +112,16 @@ export namespace Memory {
 
   export async function configure(input: {
     root: string
-    settings: Partial<Pick<MemorySchema.State, "autoConsolidate">>
+    settings: Partial<Pick<MemorySchema.State, "autoConsolidate" | "verbose">>
   }) {
     return MemoryFiles.queue(input.root, async () => {
       const state = await MemoryFiles.readState(input.root)
       const next = {
         ...state,
         ...(input.settings.autoConsolidate === undefined ? {} : { autoConsolidate: input.settings.autoConsolidate }),
+        ...(input.settings.verbose === undefined ? {} : { verbose: input.settings.verbose }),
       }
       await MemoryFiles.writeState(input.root, next)
-      await MemoryFiles.append(
-        input.root,
-        [
-          `settings ${next.scope}`,
-          input.settings.autoConsolidate === undefined ? "" : `autoConsolidate=${next.autoConsolidate}`,
-        ]
-          .filter(Boolean)
-          .join(" "),
-      )
       return { root: input.root, state: next }
     })
   }
@@ -197,27 +190,20 @@ export namespace Memory {
   }): Promise<Apply> {
     const trigger = input.trigger ?? "explicit"
     const inputOps = trigger === "explicit" ? input.ops : input.ops.filter((item) => item.action !== "remove")
+    const accepted = inputOps.filter((item) => item.action !== "add" || !MemoryOperations.secret(item))
     const result = await MemoryOperations.apply({ root: input.root, ops: inputOps })
+    // Auto-capture skips a secret-like op and applies the rest. An explicit save whose only effect
+    // was rejecting secret content must fail loudly rather than silently drop it; a mixed explicit
+    // batch that still applied something keeps the skip as a record.
+    if (
+      trigger === "explicit" &&
+      result.operationCount === 0 &&
+      result.skipped.some((item) => item.reason === "secret")
+    ) {
+      throw new Error("memory operation rejected secret-like content")
+    }
     const state = await MemoryFiles.readState(input.root)
     const ok = MemoryNotice.saved({ added: result.added, removed: result.removed })
-    if (trigger === "explicit") {
-      await MemoryFiles.decide(input.root, {
-        kind: "typed",
-        trigger,
-        sessionID: input.sessionID,
-        result: ok ? "saved" : "skipped",
-        llm: false,
-        parsed: true,
-        fallback: false,
-        tokens: input.tokens ?? 0,
-        operationCount: result.operationCount,
-        skippedCount: result.skipped.length || (ok ? 0 : 1),
-        skipped: MemoryNotice.skip(result.skipped),
-        operations: MemoryNotice.ops({ ops: inputOps, skipped: result.skipped }),
-        files: MemoryShared.files(inputOps),
-        summary: MemoryNotice.summary({ added: result.added, removed: result.removed, count: result.operationCount }),
-      })
-    }
     return {
       root: input.root,
       state,
@@ -228,14 +214,16 @@ export namespace Memory {
             detail: {
               type: "saved" as const,
               message: MemoryNotice.message({
-                ops: inputOps,
+                ops: accepted,
                 added: result.added,
                 removed: result.removed,
                 count: result.operationCount,
               }),
               operationCount: result.operationCount,
-              sources: MemoryShared.refs(inputOps),
-              files: MemoryShared.files(inputOps),
+              added: result.added,
+              removed: result.removed,
+              sources: MemoryShared.refs(accepted),
+              files: MemoryShared.files(accepted),
             },
           }
         : {}),
@@ -296,36 +284,10 @@ export namespace Memory {
       query: input.query,
       state,
       currentSessionID: input.sessionID,
-      force: true,
     })
     const hits = result?.hits ?? []
     const files = [...new Set(hits.map((hit) => hit.source))]
     const topics = [...new Set(hits.flatMap((hit) => (hit.topics?.length ? hit.topics : [hit.kind])))]
-    await MemoryFiles.decide(input.root, {
-      kind: "recall",
-      trigger: "targeted-recall",
-      sessionID: input.sessionID,
-      result: result ? "recalled" : "skipped",
-      llm: false,
-      parsed: false,
-      fallback: false,
-      reason: result ? undefined : "no_matches",
-      query: MemoryShared.brief(input.query, 240),
-      topics,
-      files,
-      tokens: result?.tokens ?? 0,
-      operationCount: hits.length,
-      skippedCount: result ? 0 : 1,
-      summary: result ? `targeted recall matched ${hits.length} memories` : "targeted recall found no matches",
-    })
-    if (result) {
-      await MemoryFiles.queue(input.root, async () => {
-        await MemoryFiles.append(
-          input.root,
-          `recall session=${input.sessionID ?? ""} hits=${result.hits.length} tokens=${result.tokens} files=${files.join(",")}`,
-        )
-      })
-    }
     return { root: input.root, state, result, hits, files, topics }
   }
 
@@ -336,6 +298,7 @@ export namespace Memory {
     summary: string
     time?: number
     tokens?: number
+    fallback?: boolean
   }) {
     return MemoryFiles.queue(input.root, async () => {
       const state = await MemoryFiles.readState(input.root)
@@ -344,15 +307,12 @@ export namespace Memory {
         sessionID: input.sessionID,
         topic: input.topic,
         summary: input.summary,
-        max: state.limits.maxSessionLineChars,
+        max: MemorySchema.maxStoredDigestSummary,
         time: input.time,
+        fallback: input.fallback,
       })
       await MemoryFiles.pruneSessions(input.root, state.limits.maxSessionFiles)
       const index = await MemoryIndexer.rebuild({ root: input.root, state })
-      await MemoryFiles.append(
-        input.root,
-        `session digest session=${input.sessionID} tokens=${input.tokens ?? 0} indexTokens=${index.tokens}`,
-      )
       return { root: input.root, state, skipped: false as const, index }
     })
   }

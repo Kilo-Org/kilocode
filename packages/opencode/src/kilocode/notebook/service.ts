@@ -3,6 +3,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { Identifier } from "@/id/id"
 import { Deferred, Duration, Effect, Layer, Schema, Context } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { ErrorCode, Event, type Failure, type Request, RequestID, type Result } from "./protocol"
 
 const log = Log.create({ service: "notebook-host" })
@@ -47,6 +48,7 @@ function matches(request: Request, result: Result) {
 export interface Interface {
   readonly request: (input: Input) => Effect.Effect<Result, HostError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
+  readonly cancelSession: (sessionID: Request["sessionID"]) => Effect.Effect<void>
   readonly reply: (input: {
     requestID: RequestID
     result: Result
@@ -121,6 +123,14 @@ export function layer(timeout: Duration.Input = "10 minutes") {
         return Array.from((yield* InstanceState.get(state)).pending.values(), (entry) => entry.info)
       })
 
+      const cancelSession: Interface["cancelSession"] = Effect.fn("Notebook.cancelSession")(function* (sessionID) {
+        const pending = (yield* InstanceState.get(state)).pending
+        const ids = Array.from(pending.values())
+          .filter((entry) => entry.info.sessionID === sessionID)
+          .map((entry) => entry.info.id)
+        yield* Effect.forEach(ids, (id) => cancel(id, "cancelled"), { discard: true })
+      })
+
       const reply: Interface["reply"] = Effect.fn("Notebook.reply")(function* (input) {
         const pending = (yield* InstanceState.get(state)).pending
         const entry = pending.get(input.requestID)
@@ -153,10 +163,11 @@ export function layer(timeout: Duration.Input = "10 minutes") {
         )
       })
 
-      return Service.of({ request, list, reply, reject })
+      return Service.of({ request, list, cancelSession, reply, reject })
     }),
   )
 }
 
 export const defaultLayer = layer().pipe(Layer.provide(Bus.layer))
+export const node = LayerNode.make({ service: Service, layer: layer(), deps: [Bus.node] })
 export * as Notebook from "./service"

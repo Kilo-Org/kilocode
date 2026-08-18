@@ -4,10 +4,15 @@ import ai.kilocode.backend.workspace.CommandInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
+import ai.kilocode.rpc.dto.CompactionPatchDto
+import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.EditorContextDto
+import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
+import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.PartSourceDto
@@ -15,11 +20,14 @@ import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
+import ai.kilocode.rpc.dto.SkillsPatchDto
+import ai.kilocode.rpc.dto.WatcherPatchDto
 import org.junit.jupiter.api.Nested
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -79,7 +87,10 @@ class KiloCliDataParserTest {
                             "id": "msg_1",
                             "sessionID": "ses_123",
                             "role": "assistant",
-                            "time": { "created": 1000.0 }
+                            "time": { "created": 1000.0 },
+                            "summary": {
+                                "diffs": [{"file": "src/A.kt", "additions": 3, "deletions": 1, "patch": "@@ ..."}]
+                            }
                         }
                     }
                 }
@@ -91,6 +102,11 @@ class KiloCliDataParserTest {
             assertEquals("ses_123", result.sessionID)
             assertEquals("msg_1", result.info.id)
             assertEquals("assistant", result.info.role)
+            val diff = result.info.summary?.diffs?.single()
+            assertEquals("src/A.kt", diff?.file)
+            assertEquals(3, diff?.additions)
+            assertEquals(1, diff?.deletions)
+            assertEquals("@@ ...", diff?.patch)
         }
 
         @Test
@@ -113,6 +129,7 @@ class KiloCliDataParserTest {
             assertTrue(result is ChatEventDto.MessageUpdated)
             assertEquals("ses_456", result.sessionID)
             assertEquals("user", result.info.role)
+            assertNull(result.info.summary)
         }
 
         // ---- parseChatEvent — specific event types ----
@@ -645,6 +662,19 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseChatEvent - session queue changed`() {
+            val data = globalEvent("""
+                "type": "session.queue.changed",
+                "properties": { "sessionID": "ses_1", "queued": ["msg2", "msg3"] }
+            """)
+            val result = KiloCliDataParser.parseChatEvent("session.queue.changed", data)
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.SessionQueueChanged)
+            assertEquals("ses_1", result.sessionID)
+            assertEquals(listOf("msg2", "msg3"), result.queued)
+        }
+
+        @Test
         fun `parseChatEvent - session updated`() {
             val data = globalEvent("""
                 "type": "session.updated",
@@ -657,7 +687,13 @@ class KiloCliDataParserTest {
                         "title": "Updated title",
                         "version": "1",
                         "time": { "created": 1.0, "updated": 2.0 },
-                        "summary": { "additions": 3, "deletions": 1, "files": 2 }
+                        "summary": { "additions": 3, "deletions": 1, "files": 2 },
+                        "revert": {
+                            "messageID": "msg_rollback",
+                            "partID": "prt_rollback",
+                            "snapshot": "snap_rollback",
+                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone"
+                        }
                     }
                 }
             """)
@@ -668,6 +704,15 @@ class KiloCliDataParserTest {
             assertEquals("ses_1", result.sessionID)
             assertEquals("Updated title", result.session.title)
             assertEquals(2, result.session.summary?.files)
+            assertEquals("msg_rollback", result.session.revert?.messageID)
+            assertEquals("prt_rollback", result.session.revert?.partID)
+            assertEquals(2, result.session.revert?.diffs?.size)
+            assertEquals("src/A.kt", result.session.revert?.diffs?.get(0)?.file)
+            assertEquals(2, result.session.revert?.diffs?.get(0)?.additions)
+            assertEquals(1, result.session.revert?.diffs?.get(0)?.deletions)
+            assertEquals("modified", result.session.revert?.diffs?.get(0)?.status)
+            assertEquals("src/Old.kt", result.session.revert?.diffs?.get(1)?.file)
+            assertEquals("deleted", result.session.revert?.diffs?.get(1)?.status)
         }
 
         @Test
@@ -1075,6 +1120,205 @@ class KiloCliDataParserTest {
     @Nested
     inner class HttpResponses {
 
+        // ---- parseConfig ----
+
+        @Test
+        fun `parseConfig - local mcp server`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"sample":{"type":"local","command":["node","s.js"],"environment":{"TOKEN":"x"},"enabled":false,"timeout":12000}}}"""
+            )
+            val mcp = cfg.mcp["sample"]
+
+            assertEquals("local", mcp?.type)
+            assertEquals(listOf("node", "s.js"), mcp?.command)
+            assertEquals(mapOf("TOKEN" to "x"), mcp?.environment)
+            assertEquals(false, mcp?.enabled)
+            assertEquals(12000L, mcp?.timeout)
+        }
+
+        @Test
+        fun `parseConfig - remote mcp server`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","headers":{"Authorization":"Bearer t"},"enabled":true,"timeout":5000}}}"""
+            )
+            val mcp = cfg.mcp["remote"]
+
+            assertEquals("remote", mcp?.type)
+            assertEquals("https://mcp.example.test", mcp?.url)
+            assertEquals(mapOf("Authorization" to "Bearer t"), mcp?.headers)
+            assertEquals(true, mcp?.enabled)
+            assertEquals(5000L, mcp?.timeout)
+        }
+
+        @Test
+        fun `parseConfig - mcp env alias`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"sample":{"type":"local","command":["node"],"env":{"TOKEN":"x"}}}}"""
+            )
+
+            assertEquals(mapOf("TOKEN" to "x"), cfg.mcp["sample"]?.environment)
+        }
+
+        @Test
+        fun `parseConfig - disabled mcp form remains present`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"mcp":{"sample":{"enabled":false}}}""")
+            val mcp = cfg.mcp["sample"]
+
+            assertNotNull(mcp)
+            assertNull(mcp.type)
+            assertEquals(false, mcp.enabled)
+        }
+
+        @Test
+        fun `parseConfig - multiple mcp server shapes`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"local":{"type":"local","command":["node","s.js"]},"remote":{"type":"remote","url":"https://mcp.example.test"},"off":{"enabled":false}}}"""
+            )
+
+            assertEquals(setOf("local", "remote", "off"), cfg.mcp.keys)
+            assertEquals(listOf("node", "s.js"), cfg.mcp["local"]?.command)
+            assertEquals("https://mcp.example.test", cfg.mcp["remote"]?.url)
+            assertEquals(false, cfg.mcp["off"]?.enabled)
+        }
+
+        @Test
+        fun `parseConfig - scalars instructions and skills`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{
+                    "model":"openai/gpt",
+                    "small_model":"openai/small",
+                    "subagent_model":"anthropic/claude",
+                    "subagent_variant":"high",
+                    "default_agent":"build",
+                    "instructions":["one","two"],
+                    "skills":{"paths":[".kilo/skills"],"urls":["https://example.test/skill.md"]}
+                }"""
+            )
+
+            assertEquals("openai/gpt", cfg.model)
+            assertEquals("openai/small", cfg.smallModel)
+            assertEquals("anthropic/claude", cfg.subagentModel)
+            assertEquals("high", cfg.subagentVariant)
+            assertEquals("build", cfg.defaultAgent)
+            assertEquals(listOf("one", "two"), cfg.instructions)
+            assertEquals(listOf(".kilo/skills"), cfg.skills?.paths)
+            assertEquals(listOf("https://example.test/skill.md"), cfg.skills?.urls)
+        }
+
+        @Test
+        fun `parseConfig - context settings`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{
+                    "watcher":{"ignore":["**/dist/**","tmp/**"]},
+                    "compaction":{"auto":true,"threshold_percent":75.5,"prune":false}
+                }"""
+            )
+
+            assertEquals(listOf("**/dist/**", "tmp/**"), cfg.watcher?.ignore)
+            assertEquals(true, cfg.compaction?.auto)
+            assertEquals(75.5, cfg.compaction?.threshold_percent)
+            assertEquals(false, cfg.compaction?.prune)
+        }
+
+        @Test
+        fun `parseConfig - malformed compaction fields do not discard config`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{
+                    "model":"openai/gpt",
+                    "watcher":{"ignore":["tmp/**"]},
+                    "compaction":{"auto":{},"threshold_percent":[],"prune":false}
+                }"""
+            )
+
+            assertEquals("openai/gpt", cfg.model)
+            assertEquals(listOf("tmp/**"), cfg.watcher?.ignore)
+            assertNull(cfg.compaction?.auto)
+            assertNull(cfg.compaction?.threshold_percent)
+            assertEquals(false, cfg.compaction?.prune)
+        }
+
+        @Test
+        fun `parseConfig - agent overrides and permissions`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"agent":{"build":{"model":"x","variant":"high","prompt":"p","description":"d","mode":"subagent","hidden":"true","disable":false,"temperature":0.2,"top_p":0.8,"steps":12,"permission":{"edit":"ask","bash":{"git *":"allow"},"webfetch":null}}}}"""
+            )
+            val agent = cfg.agent["build"]
+            val edit = agent?.permission?.get("edit")
+            val bash = agent?.permission?.get("bash")
+            val webfetch = agent?.permission?.get("webfetch")
+
+            assertEquals("x", agent?.model)
+            assertEquals("high", agent?.variant)
+            assertEquals("p", agent?.prompt)
+            assertEquals("d", agent?.description)
+            assertEquals("subagent", agent?.mode)
+            assertEquals(true, agent?.hidden)
+            assertEquals(false, agent?.disable)
+            assertEquals(0.2, agent?.temperature)
+            assertEquals(0.8, agent?.top_p)
+            assertEquals(12L, agent?.steps)
+            assertIs<PermissionRuleDto.Level>(edit)
+            assertEquals("ask", edit.value)
+            assertIs<PermissionRuleDto.Patterns>(bash)
+            assertEquals(mapOf("git *" to "allow"), bash.map)
+            assertIs<PermissionRuleDto.Level>(webfetch)
+            assertNull(webfetch.value)
+        }
+
+        @Test
+        fun `parseConfig - top-level permission map`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"permission":{"bash":"ask","read":{"*":"allow","*.env":"deny"},"webfetch":null}}"""
+            )
+            val bash = cfg.permission?.get("bash")
+            val read = cfg.permission?.get("read")
+            val webfetch = cfg.permission?.get("webfetch")
+
+            assertIs<PermissionRuleDto.Level>(bash)
+            assertEquals("ask", bash.value)
+            assertIs<PermissionRuleDto.Patterns>(read)
+            assertEquals(mapOf("*" to "allow", "*.env" to "deny"), read.map)
+            assertIs<PermissionRuleDto.Level>(webfetch)
+            assertNull(webfetch.value)
+        }
+
+        @Test
+        fun `parseConfig - empty and missing blocks`() {
+            val cfg = KiloCliDataParser.parseConfig("{}")
+
+            assertNull(cfg.model)
+            assertTrue(cfg.mcp.isEmpty())
+            assertTrue(cfg.agent.isEmpty())
+            assertNull(cfg.skills)
+        }
+
+        @Test
+        fun `parseConfig - malformed body returns empty config`() {
+            assertEquals(ConfigDto(), KiloCliDataParser.parseConfig("not json"))
+            assertEquals(ConfigDto(), KiloCliDataParser.parseConfig("[]"))
+        }
+
+        @Test
+        fun `parseConfig - realistic mcp payload is non-empty`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{
+                    "model":"test/model",
+                    "mcp":{
+                        "sample":{
+                            "type":"local",
+                            "command":["node",".kilo/mcp/sample-server.js"],
+                            "environment":{"TOKEN":"x"},
+                            "enabled":true,
+                            "timeout":12000
+                        }
+                    }
+                }"""
+            )
+
+            assertEquals(1, cfg.mcp.size)
+            assertEquals("local", cfg.mcp["sample"]?.type)
+        }
+
         // ---- parseSession ----
 
         @Test
@@ -1131,11 +1375,14 @@ class KiloCliDataParserTest {
         fun `parseMessages - user and assistant messages`() {
             val raw = """[
                 {
-                    "info": { "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 } },
+                    "info": {
+                        "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 },
+                        "summary": { "diffs": [{"file": "src/A.kt", "additions": 2, "deletions": 1, "patch": "@@ patch"}] }
+                    },
                     "parts": [{ "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "Hello" }]
                 },
                 {
-                    "info": { "id": "m2", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 } },
+                    "info": { "id": "m2", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 }, "summary": true },
                     "parts": [{ "id": "p2", "sessionID": "s1", "messageID": "m2", "type": "text", "text": "Hi there" }]
                 }
             ]"""
@@ -1143,8 +1390,11 @@ class KiloCliDataParserTest {
             val result = KiloCliDataParser.parseMessages(raw)
             assertEquals(2, result.size)
             assertEquals("user", result[0].info.role)
+            assertEquals("src/A.kt", result[0].info.summary?.diffs?.single()?.file)
+            assertEquals("@@ patch", result[0].info.summary?.diffs?.single()?.patch)
             assertEquals("Hello", result[0].parts[0].text)
             assertEquals("assistant", result[1].info.role)
+            assertNull(result[1].info.summary)
             assertEquals("Hi there", result[1].parts[0].text)
         }
 
@@ -1369,6 +1619,67 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseProviders - maps model preview metadata`() {
+            val raw = """{
+                "all": [{
+                    "id": "kilo", "name": "Kilo", "source": "api", "env": [], "options": {},
+                    "models": {
+                        "auto": {
+                            "id": "auto",
+                            "name": "Kilo Auto",
+                            "inputPrice": 0.25,
+                            "outputPrice": 1.5,
+                            "contextLength": 256000,
+                            "release_date": "2026-06-01",
+                            "capabilities": {
+                                "reasoning": true,
+                                "input": {"text": true, "image": true, "audio": false, "video": true, "pdf": true}
+                            },
+                            "cost": {"input": 0.25, "output": 1.5, "cache": {"read": 0.05, "write": 0.2}},
+                            "options": {"description": "Fast routed model"},
+                            "autoRouting": {"models": ["openai/gpt", "anthropic/claude"]},
+                            "terminalBench": {"overallScore": 0.73, "avgAttemptCostUsd": 1.25}
+                        }
+                    }
+                }],
+                "default": {}, "connected": []
+            }"""
+
+            val model = KiloCliDataParser.parseProviders(raw).providers.single().models.getValue("auto")
+
+            assertEquals(0.25, model.inputPrice)
+            assertEquals(1.5, model.outputPrice)
+            assertEquals(256000L, model.contextLength)
+            assertEquals("2026-06-01", model.releaseDate)
+            assertNull(model.latest)
+            assertEquals(0.05, model.cost?.cache?.read)
+            assertEquals(true, model.capabilities?.reasoning)
+            assertEquals(true, model.capabilities?.input?.image)
+            assertEquals(false, model.capabilities?.input?.audio)
+            assertEquals("Fast routed model", model.options?.description)
+            assertEquals(listOf("openai/gpt", "anthropic/claude"), model.autoRouting?.models)
+            assertEquals(0.73, model.terminalBench?.overallScore)
+            assertEquals(1.25, model.terminalBench?.avgAttemptCostUsd)
+        }
+
+        @Test
+        fun `parseProviders - malformed optional preview metadata is ignored`() {
+            val raw = """{
+                "all": [{
+                    "id": "p", "name": "P", "source": "api", "env": [], "options": {},
+                    "models": {"m": {"capabilities": "bad", "cost": {"input": "bad"}, "terminalBench": []}}
+                }],
+                "default": {}, "connected": []
+            }"""
+
+            val model = KiloCliDataParser.parseProviders(raw).providers.single().models.getValue("m")
+
+            assertFalse(model.reasoning)
+            assertNull(model.cost)
+            assertNull(model.terminalBench)
+        }
+
+        @Test
         fun `parseProviders - orders variants by effort rank then name`() {
             val raw = """{
                 "all": [{
@@ -1514,7 +1825,7 @@ class KiloCliDataParserTest {
         @Test
         fun `parseCommands - maps name, description, source, and hints`() {
             val raw = """[
-                {"name":"init","description":"guided AGENTS.md setup","template":"static body","hints":["${'$'}ARGUMENTS"],"source":"command"},
+                {"name":"init","description":"guided AGENTS.md setup","agent":"reviewer","model":"anthropic/claude-sonnet-4-6","variant":"high","template":"static body","hints":["${'$'}ARGUMENTS"],"source":"command","subtask":true},
                 {"name":"mcp-tool","template":"","hints":["${'$'}1","${'$'}2"],"source":"mcp"}
             ]"""
 
@@ -1523,8 +1834,12 @@ class KiloCliDataParserTest {
             assertEquals(2, result.size)
             assertEquals("init", result[0].name)
             assertEquals("guided AGENTS.md setup", result[0].description)
+            assertEquals("reviewer", result[0].agent)
+            assertEquals("anthropic/claude-sonnet-4-6", result[0].model)
+            assertEquals("high", result[0].variant)
             assertEquals("command", result[0].source)
             assertEquals(listOf("\$ARGUMENTS"), result[0].hints)
+            assertEquals(true, result[0].subtask)
             assertEquals("mcp", result[1].source)
             assertEquals(listOf("\$1", "\$2"), result[1].hints)
         }
@@ -1575,6 +1890,8 @@ class KiloCliDataParserTest {
         fun `parsePathState - extracts state from valid path response`() {
             val raw = """{"home":"/home/user","state":"/home/user/.local/state/kilo","config":"/home/user/.config/kilo","worktree":"/project","directory":"/project"}"""
             assertEquals("/home/user/.local/state/kilo", KiloCliDataParser.parsePathState(raw))
+            assertEquals("/home/user/.config/kilo", KiloCliDataParser.parsePathConfig(raw))
+            assertEquals("/home/user", KiloCliDataParser.parsePathHome(raw))
         }
 
         @Test
@@ -1640,6 +1957,25 @@ class KiloCliDataParserTest {
             )
             val result = KiloCliDataParser.buildPromptJson(prompt)
             assertEquals("""{"parts":[{"type":"text","text":"Hi"}],"noReply":true}""", result)
+        }
+
+        @Test
+        fun `buildPromptJson - with editor context`() {
+            val prompt = PromptDto(
+                parts = listOf(PromptPartDto("text", "Hi")),
+                editorContext = EditorContextDto(
+                    activeFile = "src/App.kt",
+                    visibleFiles = listOf("src/App.kt"),
+                    openTabs = listOf("src/App.kt", "src/Other.kt"),
+                ),
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"Hi"}],"editorContext":{"visibleFiles":["src/App.kt"],"openTabs":["src/App.kt","src/Other.kt"],"activeFile":"src/App.kt"}}""",
+                result,
+            )
         }
 
         @Test
@@ -1806,6 +2142,26 @@ class KiloCliDataParserTest {
             assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", result)
         }
 
+        // ---- buildRevertJson ----
+
+        @Test
+        fun `buildRevertJson - writes message only`() {
+            val result = KiloCliDataParser.buildRevertJson("m1", null)
+            assertEquals("""{"messageID":"m1"}""", result)
+        }
+
+        @Test
+        fun `buildRevertJson - writes message and part`() {
+            val result = KiloCliDataParser.buildRevertJson("m1", "p1")
+            assertEquals("""{"messageID":"m1","partID":"p1"}""", result)
+        }
+
+        @Test
+        fun `buildRevertJson - escapes ids`() {
+            val result = KiloCliDataParser.buildRevertJson("m\"\\1", "p\"\\1")
+            assertEquals("""{"messageID":"m\"\\1","partID":"p\"\\1"}""", result)
+        }
+
         // ---- buildConfigPartial ----
 
         @Test
@@ -1855,8 +2211,108 @@ class KiloCliDataParserTest {
 
         @Test
         fun `buildConfigPatch - per-agent model clear emits null`() {
-            val patch = ConfigPatchDto(agents = linkedMapOf("code" to AgentConfigPatchDto(model = null)))
+            val patch = ConfigPatchDto(agents = linkedMapOf("code" to AgentConfigPatchDto(clear = listOf("model"))))
             assertEquals("{\"agent\":{\"code\":{\"model\":null}}}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - per-agent description patch does not clear model`() {
+            val patch = ConfigPatchDto(agents = linkedMapOf("code" to AgentConfigPatchDto(description = "New description")))
+            assertEquals("{\"agent\":{\"code\":{\"description\":\"New description\"}}}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - agent behavior top-level fields`() {
+            val patch = ConfigPatchDto(
+                values = linkedMapOf("default_agent" to "build"),
+                instructions = listOf("AGENTS.md"),
+                skills = SkillsPatchDto(paths = listOf(".kilo/skills"), urls = listOf("https://example.com/skill")),
+            )
+
+            assertEquals(
+                "{\"default_agent\":\"build\",\"instructions\":[\"AGENTS.md\"],\"skills\":{\"paths\":[\".kilo/skills\"],\"urls\":[\"https://example.com/skill\"]}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - context watcher and compaction fields`() {
+            val patch = ConfigPatchDto(
+                watcher = WatcherPatchDto(ignore = listOf("**/dist/**", "tmp/**")),
+                compaction = CompactionPatchDto(auto = false, threshold_percent = 75.5, prune = false),
+            )
+
+            assertEquals(
+                "{\"watcher\":{\"ignore\":[\"**/dist/**\",\"tmp/**\"]},\"compaction\":{\"auto\":false,\"threshold_percent\":75.5,\"prune\":false}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - context threshold clear emits null`() {
+            val patch = ConfigPatchDto(compaction = CompactionPatchDto(clear = listOf("threshold_percent")))
+
+            assertEquals(
+                "{\"compaction\":{\"threshold_percent\":null}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp upsert and delete`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "local" to McpConfigDto(
+                    type = "local",
+                    command = listOf("node", "server.js"),
+                    environment = mapOf("TOKEN" to "x"),
+                    headers = mapOf("X-Test" to "1"),
+                    enabled = false,
+                    timeout = 12000L,
+                ),
+                "old" to null,
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"local\":{\"type\":\"local\",\"command\":[\"node\",\"server.js\"],\"environment\":{\"TOKEN\":\"x\"},\"headers\":{\"X-Test\":\"1\"},\"enabled\":false,\"timeout\":12000},\"old\":null}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - full agent permission object`() {
+            val patch = ConfigPatchDto(agents = linkedMapOf("custom" to AgentConfigPatchDto(
+                model = "kilo/gpt-5",
+                mode = "primary",
+                hidden = false,
+                disable = null,
+                temperature = 0.2,
+                top_p = 0.9,
+                steps = 12,
+                permission = linkedMapOf(
+                    "bash" to PermissionRuleDto.Patterns(linkedMapOf("*" to "ask", "npm test" to "allow")),
+                    "read" to PermissionRuleDto.Level(null),
+                ),
+            )))
+
+            assertEquals(
+                "{\"agent\":{\"custom\":{\"model\":\"kilo/gpt-5\",\"mode\":\"primary\",\"hidden\":false,\"temperature\":0.2,\"top_p\":0.9,\"steps\":12,\"permission\":{\"bash\":{\"*\":\"ask\",\"npm test\":\"allow\"},\"read\":null}}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - full top-level permission object with null deletes`() {
+            val patch = ConfigPatchDto(
+                permission = linkedMapOf(
+                    "bash" to PermissionRuleDto.Patterns(linkedMapOf("*" to "ask", "npm test" to "allow")),
+                    "read" to PermissionRuleDto.Level(null),
+                ),
+            )
+
+            assertEquals(
+                "{\"permission\":{\"bash\":{\"*\":\"ask\",\"npm test\":\"allow\"},\"read\":null}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
         }
 
         @Test
@@ -1889,6 +2345,21 @@ class KiloCliDataParserTest {
             val result = KiloCliDataParser.buildPermissionReplyJson(PermissionReplyDto(reply = "always", message = "approved"))
             assertTrue(result.contains(""""reply":"always""""))
             assertTrue(result.contains(""""message":"approved""""))
+        }
+
+        @Test
+        fun `buildPermissionReplyJson - interactive reply serializes interactive true`() {
+            // Wire contract the CLI server checks (permission/index.ts requires interactive
+            // === true to accept a non-reject reply to a skill-shell batch); a serialization
+            // regression here would silently break the entire approval flow.
+            val result = KiloCliDataParser.buildPermissionReplyJson(PermissionReplyDto(reply = "once", interactive = true))
+            assertEquals("""{"reply":"once","interactive":true}""", result)
+        }
+
+        @Test
+        fun `buildPermissionReplyJson - non-interactive reply omits the interactive field`() {
+            val result = KiloCliDataParser.buildPermissionReplyJson(PermissionReplyDto(reply = "once", interactive = false))
+            assertFalse(result.contains("interactive"), "interactive must be omitted for a machine (non-interactive) reply, got: $result")
         }
 
         // ---- buildPermissionAlwaysRulesJson ----
@@ -2025,6 +2496,110 @@ class KiloCliDataParserTest {
         val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
         assertEquals("git status --short", asked.request.command)
         assertEquals("git status --short", asked.request.metadata["command"])
+    }
+
+    @Test
+    fun `parsePermissionRequest - skill shell commands and skill name extracted`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_skill",
+                "sessionID": "ses_1",
+                "permission": "bash",
+                "patterns": ["git status"],
+                "always": [],
+                "metadata": {"skillShell": true, "skill": "git-status", "commands": ["git status", "printf hi"]}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
+        // verbatim commands are parsed as a list for the prompt to display
+        assertEquals(listOf("git status", "printf hi"), asked.request.skillCommands)
+        // skillShell + skill name survive the flat metadata map for card attribution
+        assertEquals("true", asked.request.metadata["skillShell"])
+        assertEquals("git-status", asked.request.metadata["skill"])
+    }
+
+    @Test
+    fun `parsePermissionRequest - parses rule decisions`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_rules",
+                "sessionID": "ses_1",
+                "permission": "bash",
+                "patterns": ["git add ."],
+                "always": ["git *", "git add *", "git add ."],
+                "metadata": {
+                    "rules": [
+                        {"pattern": "git *", "decision": "approved", "defaultAction": "ask"},
+                        {"pattern": "git add *", "action": "deny", "defaultDecision": "allow"},
+                        "git add ."
+                    ]
+                }
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
+        assertEquals(listOf("git *", "git add *", "git add ."), asked.request.rules)
+        assertEquals(asked.request.rules, asked.request.ruleDecisions.map { it.pattern })
+        assertEquals("git *", asked.request.ruleDecisions[0].pattern)
+        assertEquals("approved", asked.request.ruleDecisions[0].decision)
+        assertEquals("pending", asked.request.ruleDecisions[0].defaultDecision)
+        assertEquals("git add *", asked.request.ruleDecisions[1].pattern)
+        assertEquals("denied", asked.request.ruleDecisions[1].decision)
+        assertEquals("approved", asked.request.ruleDecisions[1].defaultDecision)
+        assertEquals("git add .", asked.request.ruleDecisions[2].pattern)
+        assertEquals("pending", asked.request.ruleDecisions[2].decision)
+        assertEquals("pending", asked.request.ruleDecisions[2].defaultDecision)
+    }
+
+    @Test
+    fun `parsePermissionRequest - uses always when metadata rules are absent`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_always",
+                "sessionID": "ses_1",
+                "permission": "bash",
+                "patterns": ["git add ."],
+                "always": ["git add *"],
+                "metadata": {}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
+        assertEquals(emptyList(), asked.request.rules)
+        assertEquals(listOf("git add *"), asked.request.ruleDecisions.map { it.pattern })
+        assertEquals(listOf("pending"), asked.request.ruleDecisions.map { it.decision })
+    }
+
+    @Test
+    fun `parsePermissionRequest - uses always when metadata rules are empty`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_empty_rules",
+                "sessionID": "ses_1",
+                "permission": "bash",
+                "patterns": ["git add ."],
+                "always": ["git add *"],
+                "metadata": {"rules": []}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
+        assertEquals(emptyList(), asked.request.rules)
+        assertEquals(listOf("git add *"), asked.request.ruleDecisions.map { it.pattern })
+        assertEquals(listOf("pending"), asked.request.ruleDecisions.map { it.decision })
     }
 
     @Test

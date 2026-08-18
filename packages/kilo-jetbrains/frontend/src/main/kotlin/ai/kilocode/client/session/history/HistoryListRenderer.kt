@@ -2,6 +2,7 @@ package ai.kilocode.client.session.history
 
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
@@ -13,7 +14,6 @@ import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
-import java.awt.FlowLayout
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.Component
@@ -68,11 +68,11 @@ internal open class HistoryRenderer<T : HistoryItem>(
         verticalAlignment = SwingConstants.CENTER
         border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
     }
-    private val head = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-        add(title)
-        add(badge)
+    private val head = JPanel(BorderLayout(UiStyle.Gap.xs(), 0)).apply {
+        add(title, BorderLayout.CENTER)
+        add(badge, BorderLayout.EAST)
     }
-    private val main = JPanel(BorderLayout()).apply {
+    private val main = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(head, BorderLayout.CENTER)
         add(time, BorderLayout.EAST)
     }
@@ -86,7 +86,12 @@ internal open class HistoryRenderer<T : HistoryItem>(
     init {
         isOpaque = true
         top.isOpaque = true
-        row.border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg())
+        row.border = JBUI.Borders.empty(
+            UiStyle.Gap.lg(),
+            UiStyle.Gap.lg(),
+            UiStyle.Gap.lg(),
+            UiStyle.Gap.lg(),
+        )
         UiStyle.Components.transparent(row, main, head, title, badge, time, del)
         wrap.setContent(row)
         add(top, BorderLayout.NORTH)
@@ -102,7 +107,7 @@ internal open class HistoryRenderer<T : HistoryItem>(
     ): JPanel {
         val focused = selected || list.hasFocus() || focus
         val fg = UIUtil.getListForeground(selected, focused)
-        val weak = if (selected) fg else UIUtil.getContextHelpForeground()
+        val secondary = if (selected) fg else SessionUiStyle.Text.Secondary.foreground()
 
         background = list.background
         top.background = list.background
@@ -118,7 +123,7 @@ internal open class HistoryRenderer<T : HistoryItem>(
             SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg),
         )
         time.text = value?.let(HistoryTime::relative).orEmpty()
-        time.foreground = weak
+        time.foreground = secondary
         badge.setKind(value?.id?.let(activity()::get))
         if (deletable) del.icon = if (selected) icon else empty
 
@@ -144,7 +149,7 @@ internal open class HistoryRenderer<T : HistoryItem>(
         fun setKind(value: SessionActivityKind?) {
             kind = value
             isVisible = value != null
-            icon = value?.let { FilledBadgeIcon(it.label(), it.bg(), it.fg()) }
+            icon = value?.let { FilledBadgeIcon(it.label(), it.style()) }
         }
     }
 }

@@ -2,9 +2,10 @@ package ai.kilocode.client.session.ui.mode
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
-import com.intellij.ui.RoundedLineBorder
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
@@ -35,7 +36,9 @@ internal class ModePickerRenderer(
     }
     private val title = SimpleColoredComponent()
     private val desc = SimpleColoredComponent()
-    private val badge = JBLabel(KiloBundle.message("mode.picker.deprecated"))
+    private val badge = JBLabel(FilledBadgeIcon(KiloBundle.message("mode.picker.deprecated"), UiStyle.Badge.Alert)).apply {
+        border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
+    }
     private val head = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         add(title)
         add(badge)
@@ -70,8 +73,7 @@ internal class ModePickerRenderer(
     ): JPanel {
         val focus = selected || list.hasFocus() || focused
         val fg = UIUtil.getListForeground(selected, focus)
-        val weak = if (selected) fg else UiStyle.Colors.weak()
-        val warn = if (selected) fg else UiStyle.Colors.warningLabelForeground()
+        val secondary = if (selected) fg else SessionUiStyle.Text.Secondary.foreground()
 
         background = list.background
         wrap.update(list, selected, focus)
@@ -80,17 +82,9 @@ internal class ModePickerRenderer(
         desc.clear()
         desc.isVisible = value.description?.isNotBlank() == true
         value.description?.takeIf { it.isNotBlank() }?.let {
-            desc.append(it, SimpleTextAttributes(SimpleTextAttributes.STYLE_SMALLER, weak))
+            desc.append(it, SimpleTextAttributes(SimpleTextAttributes.STYLE_SMALLER, secondary))
         }
         badge.isVisible = value.deprecated
-        badge.foreground = warn
-        badge.border = JBUI.Borders.compound(
-            JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap()),
-            JBUI.Borders.compound(
-                RoundedLineBorder(warn, UiStyle.Gap.sm()),
-                JBUI.Borders.empty(0, UiStyle.Gap.md()),
-            ),
-        )
         icon.icon = icon(value)
         return this
     }
@@ -102,7 +96,7 @@ internal class ModePickerRenderer(
 
     internal fun badgeVisible(): Boolean = badge.isVisible
 
-    internal fun badgeText(): String = badge.text
+    internal fun badgeText(): String? = (badge.icon as? FilledBadgeIcon)?.text ?: badge.text
 
     internal fun detailsVisible(): Boolean = desc.isVisible
 }

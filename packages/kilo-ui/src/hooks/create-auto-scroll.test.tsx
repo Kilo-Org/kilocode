@@ -77,12 +77,12 @@ globalThis.WheelEvent = FakeWheelEvent as unknown as typeof WheelEvent
 
 const { createAutoScroll } = await import("./create-auto-scroll")
 
-function setup(options?: { interacted?: () => void }) {
+function setup(options?: { interacted?: () => void; working?: boolean }) {
   const el = new FakeElement()
   const root = createRoot((dispose) => ({
     dispose,
     scroll: createAutoScroll({
-      working: () => false,
+      working: () => options?.working ?? false,
       onUserInteracted: options?.interacted,
     }),
   }))
@@ -158,15 +158,81 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.dispose()
   })
 
-  test("does not pause for an upward wheel on short content", () => {
+  test("does not pause when content overflows after an upward wheel on short content", () => {
     let interactions = 0
-    const ctx = setup({ interacted: () => interactions++ })
+    const ctx = setup({ interacted: () => interactions++, working: true })
     const event = new FakeWheelEvent(-20, ctx.el)
+
+    ctx.el.fire("wheel", event as unknown as Event)
+    ctx.el.scrollHeight = 300
+    ctx.resize()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(300)
+    expect(interactions).toBe(0)
+    ctx.dispose()
+  })
+
+  test("does not pause for an upward wheel at the top", () => {
+    const ctx = setup()
+    ctx.el.scrollHeight = 300
+    const event = new FakeWheelEvent(-5, ctx.el)
 
     ctx.el.fire("wheel", event as unknown as Event)
 
     expect(ctx.scroll.userScrolled()).toBe(false)
-    expect(interactions).toBe(0)
+    ctx.dispose()
+  })
+
+  test("does not reattach after an upward wheel within the bottom threshold", () => {
+    const ctx = setup()
+    ctx.el.scrollHeight = 300
+    ctx.el.scrollTop = 195
+    const event = new FakeWheelEvent(-5, ctx.el)
+
+    ctx.el.fire("wheel", event as unknown as Event)
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(195)
+
+    ctx.el.scrollTop = 200
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    ctx.dispose()
+  })
+
+  test("continues following streaming growth after a downward wheel at the bottom", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+
+    ctx.el.fire("wheel", new FakeWheelEvent(50, ctx.el) as unknown as Event)
+    ctx.el.scrollHeight = 1048
+    ctx.resize(0)
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(1048)
+    ctx.dispose()
+  })
+
+  test("continues following when streaming reflow emits scroll before resize", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+
+    ctx.el.scrollHeight = 1108
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+
+    ctx.resize(0)
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(1108)
     ctx.dispose()
   })
 
@@ -181,6 +247,71 @@ describe("createAutoScroll non-scrollable layouts", () => {
 
     expect(ctx.scroll.userScrolled()).toBe(false)
     expect(ctx.el.scrollTop).toBe(300)
+    ctx.dispose()
+  })
+
+  test("does not snap to bottom on content resize after user scrolls up while idle", () => {
+    const ctx = setup({ working: false })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800 // at bottom
+
+    // User wheels up
+    const event = new FakeWheelEvent(-50, ctx.el)
+    ctx.el.fire("wheel", event as unknown as Event)
+    ctx.el.scrollTop = 750
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    // Virtual list re-measures / resizes content
+    ctx.el.scrollHeight = 1100
+    ctx.resize()
+
+    // Must NOT snap to bottom (1100), must remain at user scroll position (750)
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(750)
+    ctx.dispose()
+  })
+
+  test("does not snap to bottom when dragging scrollbar up while idle", () => {
+    const ctx = setup({ working: false })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800 // at bottom
+
+    // User presses pointerdown on scrollbar and drags up
+    ctx.el.fire("pointerdown", new Event("pointerdown"))
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    // Content resize during drag
+    ctx.el.scrollHeight = 1050
+    ctx.resize()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(600)
+    ctx.dispose()
+  })
+
+  test("pauses when a native scrollbar drag changes scroll position without input events", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+    ctx.scroll.handleScroll()
+
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    ctx.el.scrollHeight = 1050
+    ctx.resize()
+
+    expect(ctx.el.scrollTop).toBe(600)
     ctx.dispose()
   })
 })

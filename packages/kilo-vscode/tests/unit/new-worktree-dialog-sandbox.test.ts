@@ -18,9 +18,12 @@ describe("NewWorktreeDialog sandbox toggle", () => {
       'vscode.postMessage({ type: "setSandboxDefault", enabled: next, requestID: sandboxRequestID })',
     )
     expect(src).toContain("sandbox: sandboxVisible() ? sandboxOverride() : undefined")
-    expect(src).toContain("const sandboxVisible = () => features().sandboxControls")
+    expect(src).toContain("const { config, globalConfig, features, settings } = useConfig()")
+    expect(src).toContain(
+      "const sandboxVisible = () => features().sandboxControls && globalConfig().sandbox?.enabled === true",
+    )
     expect(provider).toContain("await this.fetchAndSendSandboxDefault(message.contextDirectory, message.requestID)")
-    expect(src).not.toContain("createSignal(config().experimental?.sandbox === true)")
+    expect(src).not.toContain("createSignal(config().sandbox?.enabled === true)")
     expect(src).not.toContain("visible as isSandboxVisible")
   })
 })

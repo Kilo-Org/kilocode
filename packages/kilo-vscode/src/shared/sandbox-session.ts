@@ -18,7 +18,7 @@ export async function sandboxDefault(preference: SandboxPreference | undefined, 
   const explicit = preference?.explicit()
   if (explicit !== undefined) return explicit
   const { data } = await client.config.get({ directory }, { throwOnError: true })
-  return data.experimental?.sandbox === true
+  return data.sandbox?.enabled === true
 }
 
 export async function sandboxSessionMetadata(

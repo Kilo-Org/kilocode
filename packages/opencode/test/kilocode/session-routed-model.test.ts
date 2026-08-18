@@ -3,7 +3,8 @@ import { Effect } from "effect"
 import type { Part, StepFinishPart } from "@kilocode/sdk/v2"
 import { RoutedModelMeta } from "../../src/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { KiloRoutedModel } from "../../src/kilocode/session/routed-model"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { LLMAISDK } from "../../src/session/llm/ai-sdk"
 
 describe("session routed model", () => {
@@ -174,23 +175,23 @@ describe("session routed model", () => {
 
     expect(
       KiloRoutedModel.readAuto(meta, {
-        providerID: ProviderID.kilo,
+        providerID: ProviderV2.ID.kilo,
         modelID: "kilo-auto/efficient",
       }),
     ).toEqual({
-      providerID: ProviderID.kilo,
-      modelID: ModelID.make("openai/gpt-5.5-20260423"),
+      providerID: ProviderV2.ID.kilo,
+      modelID: ModelV2.ID.make("openai/gpt-5.5-20260423"),
     })
 
     expect(
       KiloRoutedModel.readAuto(meta, {
-        providerID: ProviderID.kilo,
+        providerID: ProviderV2.ID.kilo,
         modelID: "openai/gpt-5.5",
       }),
     ).toBeUndefined()
     expect(
       KiloRoutedModel.readAuto(meta, {
-        providerID: ProviderID.openai,
+        providerID: ProviderV2.ID.openai,
         modelID: "gpt-5.5",
       }),
     ).toBeUndefined()

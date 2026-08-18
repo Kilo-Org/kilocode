@@ -6,6 +6,7 @@ import {
   For,
   Match,
   onCleanup,
+  onMount,
   Show,
   Switch,
   type JSX,
@@ -28,10 +29,12 @@ import {
   QuestionInfo,
 } from "@kilocode/sdk/v2"
 import { useData } from "../context"
+import { checkFile } from "../file-link-validator"
 import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
+import { useClipboard } from "../context/clipboard"
 import { type UiI18n, useI18n } from "../context/i18n"
-import { GenericTool, BasicTool } from "./basic-tool"
+import { BasicTool, useToolApprovalLine } from "./basic-tool"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { Card } from "./card"
@@ -47,6 +50,8 @@ import { checksum } from "@opencode-ai/core/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
+import { ToolApprovalProvider, resolveToolApproval, useToolApproval } from "./tool-approval"
+export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
 import { busy, createThrottledValue, useToolFade, useContextToolPending } from "./tool-utils"
@@ -54,7 +59,7 @@ import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
 import { reasoningHeading } from "./reasoning-heading"
-import { extractFilePathFromHref } from "../file-path"
+import { extractFilePathFromHref } from "@opencode-ai/ui/file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
 import { escapeHtml } from "../util/escape-html"
@@ -142,6 +147,14 @@ export interface MessagePartProps {
   message: MessageType
   hideDetails?: boolean
   defaultOpen?: boolean
+  /** True when this part contains the transcript search's current match —
+   * forces a collapsed tool/reasoning block open so the user can see the
+   * highlighted match without manually expanding it first. */
+  forceOpen?: boolean
+  /** For a multi-file apply_patch part, the specific file path (matching
+   * that file's `filePath`) whose accordion contains the current match —
+   * lets that one nested item open instead of every file in the patch. */
+  forceOpenFile?: string
   reasoningAutoCollapse?: boolean
   showAssistantCopyPartID?: string | null
   showTurnDiffSummary?: boolean
@@ -149,6 +162,7 @@ export interface MessagePartProps {
   animate?: boolean
   working?: boolean
   feedback?: MessageFeedbackControls
+  throughput?: JSX.Element
 }
 
 export type PartComponent = Component<MessagePartProps>
@@ -346,15 +360,15 @@ function renderable(part: PartType, showReasoningSummaries = true) {
   return !!PART_MAPPING[part.type]
 }
 
-function toolDefaultOpen(tool: string, shell = false, edit = false) {
-  if (tool === "bash") return shell
-  if (tool === "edit" || tool === "write") return edit
-  if (tool === "apply_patch") return edit
+function toolDefaultOpen(tool: string, shell = false, edit = false, mcp?: boolean) {
+  if (tool === "bash" || tool === "background_process") return shell
+  if (tool === "edit" || tool === "write" || tool === "apply_patch") return edit
+  if (mcp !== undefined && !ToolRegistry.render(tool)) return mcp
 }
 
-function partDefaultOpen(part: PartType, shell = false, edit = false) {
+function partDefaultOpen(part: PartType, shell = false, edit = false, mcp?: boolean) {
   if (part.type !== "tool") return
-  return toolDefaultOpen(part.tool, shell, edit)
+  return toolDefaultOpen(part.tool, shell, edit, mcp)
 }
 
 function PartGrow(props: {
@@ -409,6 +423,7 @@ export function AssistantParts(props: {
   reasoningAutoCollapse?: boolean
   shellToolDefaultOpen?: boolean
   editToolDefaultOpen?: boolean
+  mcpToolDefaultOpen?: boolean
   animate?: boolean
 }) {
   const data = useData()
@@ -669,6 +684,7 @@ export function AssistantParts(props: {
                               entry().part,
                               props.shellToolDefaultOpen,
                               props.editToolDefaultOpen,
+                              props.mcpToolDefaultOpen,
                             )}
                             reasoningAutoCollapse={props.reasoningAutoCollapse}
                             hideDetails={false}
@@ -735,12 +751,14 @@ export function UserMessageDisplay(props: {
   text?: string
   copyText?: string
   header?: JSX.Element
+  onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
 }) {
   const data = useData()
   const dialog = useDialog()
   const i18n = useI18n()
+  const clipboard = useClipboard()
   const [copied, setCopied] = createSignal(false)
 
   const textPart = createMemo(
@@ -803,10 +821,29 @@ export function UserMessageDisplay(props: {
   const handleCopy = async () => {
     const content = props.copyText ?? text()
     if (!content) return
-    await navigator.clipboard.writeText(content)
+    await clipboard.write(content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const Delete = () => (
+    <Show when={props.onDelete}>
+      <Tooltip value={i18n.t("ui.message.deleteQueued")} placement="right" gutter={4}>
+        <IconButton
+          data-slot="user-message-delete"
+          icon="close-small"
+          size="normal"
+          variant="ghost"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={(event) => {
+            event.stopPropagation()
+            props.onDelete?.()
+          }}
+          aria-label={i18n.t("ui.message.deleteQueued")}
+        />
+      </Tooltip>
+    </Show>
+  )
 
   return (
     <GrowBox animate={!!props.animate} fade class="w-full min-w-0 self-stretch max-w-full">
@@ -844,18 +881,25 @@ export function UserMessageDisplay(props: {
             </For>
           </div>
         </Show>
+        <Show when={!text() && !props.header && props.queued}>
+          <div data-slot="user-message-queued-indicator">
+            <TextShimmer text={i18n.t("ui.message.queued")} />
+            <Delete />
+          </div>
+        </Show>
         <Show when={text() || props.header}>
           <>
             <div data-slot="user-message-body">
               {props.header}
               <Show when={text()}>
-                <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
+                <div data-slot="user-message-text" dir="auto" data-queued={props.queued ? "" : undefined}>
                   <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
                 </div>
               </Show>
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
+                  <Delete />
                 </div>
               </GrowBox>
             </div>
@@ -942,9 +986,23 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
 
   const data = useData()
 
+  const session = (segment: HighlightSegment) => {
+    const ref = props.references.find((ref) => ref.source?.text?.value === segment.text)
+    const url = (ref as { url?: unknown } | undefined)?.url
+    if (typeof url !== "string" || !url.startsWith("session:")) return
+    return url.slice("session:".length)
+  }
+
   const click = (segment: HighlightSegment, e: MouseEvent) => {
-    if (segment.type !== "file" || !data.openFile) return
+    if (segment.type !== "file") return
     e.preventDefault()
+    // Past-chat mentions carry a session: URL — open that session instead of a file.
+    const id = session(segment)
+    if (id) {
+      data.navigateToSession?.(id)
+      return
+    }
+    if (!data.openFile) return
     const path = segment.text.replace(/^@/, "")
     if (path) data.openFile(path)
   }
@@ -954,7 +1012,9 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
       {(segment) => (
         <span
           data-highlight={segment.type}
-          data-clickable={segment.type === "file" && data.openFile ? "" : undefined}
+          data-clickable={
+            segment.type === "file" && (session(segment) ? data.navigateToSession : data.openFile) ? "" : undefined
+          }
           onClick={[click, segment]}
         >
           {segment.text}
@@ -974,6 +1034,8 @@ export function Part(props: MessagePartProps) {
         message={props.message}
         hideDetails={props.hideDetails}
         defaultOpen={props.defaultOpen}
+        forceOpen={props.forceOpen}
+        forceOpenFile={props.forceOpenFile}
         reasoningAutoCollapse={props.reasoningAutoCollapse}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
@@ -981,6 +1043,7 @@ export function Part(props: MessagePartProps) {
         animate={props.animate}
         working={props.working}
         feedback={props.feedback}
+        throughput={props.throughput}
       />
     </Show>
   )
@@ -995,9 +1058,13 @@ export interface ToolProps {
   callID?: string
   output?: string
   status?: string
+  attachments?: FilePart[]
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
+  /** For a multi-file apply_patch part, the specific file path whose
+   * accordion contains the current transcript search match. */
+  forceOpenFile?: string
   locked?: boolean
   animate?: boolean
   reveal?: boolean
@@ -1085,7 +1152,7 @@ function McpTool(props: ToolProps) {
         if (typeof value === "boolean") return [`${key}=${value}`]
         return []
       })
-      .slice(0, 3)
+      .slice(0, 1)
   }
 
   const formatted = createMemo(() => {
@@ -1158,6 +1225,12 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   const i18n = useI18n()
   const part = props.part as ToolPart
   const hideQuestion = createMemo(() => part.tool === "question" && busy(part.state.status))
+  const isDismissedQuestionError = createMemo(() => {
+    if (part.tool !== "question") return false
+    if (part.state.status !== "error" || !part.state.error) return false
+    const errStr = typeof part.state.error === "string" ? part.state.error : ""
+    return errStr.includes("dismissed this question")
+  })
 
   const emptyInput: Record<string, any> = {}
   const emptyMetadata: Record<string, any> = {}
@@ -1176,13 +1249,25 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
               const cleaned = error().replace("Error: ", "")
-              if (part.tool === "question" && cleaned.includes("dismissed this question")) {
+              if (isDismissedQuestionError()) {
                 return (
-                  <div style="width: 100%; display: flex; justify-content: flex-end;">
-                    <span class="text-13-regular text-text-weak cursor-default">
-                      {i18n.t("ui.messagePart.questions.dismissed")}
-                    </span>
-                  </div>
+                  <Dynamic
+                    component={render()}
+                    input={input()}
+                    tool={part.tool}
+                    partID={part.id}
+                    callID={part.callID}
+                    metadata={meta()}
+                    partMetadata={top()}
+                    // @ts-expect-error
+                    output={part.state.output}
+                    status={part.state.status}
+                    hideDetails={props.hideDetails}
+                    defaultOpen={props.defaultOpen}
+                    forceOpen={props.forceOpen}
+                    animate
+                    reveal={props.animate}
+                  />
                 )
               }
               const hint =
@@ -1232,22 +1317,35 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
             }}
           </Match>
           <Match when={true}>
-            <Dynamic
-              component={render()}
-              input={input()}
-              tool={part.tool}
-              partID={part.id}
-              callID={part.callID}
-              metadata={meta()}
-              partMetadata={top()}
-              // @ts-expect-error
-              output={part.state.output}
-              status={part.state.status}
-              hideDetails={props.hideDetails}
-              defaultOpen={props.defaultOpen}
-              animate
-              reveal={props.animate}
-            />
+            <ToolApprovalProvider
+              value={() =>
+                resolveToolApproval(
+                  meta(),
+                  i18n.t as (k: string, p?: Record<string, string | number | boolean>) => string,
+                )
+              }
+            >
+              <Dynamic
+                component={render()}
+                input={input()}
+                tool={part.tool}
+                partID={part.id}
+                callID={part.callID}
+                metadata={meta()}
+                partMetadata={top()}
+                // @ts-expect-error
+                output={part.state.output}
+                status={part.state.status}
+                // @ts-expect-error
+                attachments={part.state.attachments}
+                hideDetails={props.hideDetails}
+                defaultOpen={props.defaultOpen}
+                forceOpen={props.forceOpen}
+                forceOpenFile={props.forceOpenFile}
+                animate
+                reveal={props.animate}
+              />
+            </ToolApprovalProvider>
           </Match>
         </Switch>
       </div>
@@ -1273,6 +1371,7 @@ PART_MAPPING["compaction"] = function CompactionPartDisplay() {
 PART_MAPPING["text"] = function TextPartDisplay(props) {
   const data = useData()
   const i18n = useI18n()
+  const clipboard = useClipboard()
   const part = () => props.part as TextPart
 
   const displayText = () => (part().text ?? "").trim()
@@ -1311,16 +1410,155 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const handleCopy = async () => {
     const content = displayText()
     if (!content) return
-    await navigator.clipboard.writeText(content)
+    await clipboard.write(content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  // Post-render: validate file-link candidates against the filesystem.
+  // Candidates that exist as files get promoted to .file-link; others stay
+  // plain code. Caching, in-flight de-duplication, and cross-request batching
+  // all live in file-link-validator.ts's module-level singleton rather than
+  // here — a per-component cache would be discarded every time virtualization
+  // unmounts and remounts this row.
+  let bodyRef: HTMLDivElement | undefined
+
+  const promote = (el: HTMLElement, path: string, exists: boolean) => {
+    if (!exists) {
+      el.classList.remove("file-link-candidate")
+      el.classList.remove("file-link")
+      el.removeAttribute("data-file-candidate")
+      el.removeAttribute("data-file-path")
+      el.removeAttribute("data-file-line")
+      el.removeAttribute("data-file-col")
+      return
+    }
+    // Strip ./ prefix for the click handler — VS Code resolves relative
+    // paths against the workspace root, so "./LICENSE" → "LICENSE".
+    const clean = path.startsWith("./") ? path.slice(2) : path
+    el.classList.remove("file-link-candidate")
+    el.classList.add("file-link")
+    el.setAttribute("data-file-path", clean)
+    el.removeAttribute("data-file-candidate")
+  }
+
+  const dispatch = (el: HTMLElement, p: string) => {
+    if (!data.validateFiles) return
+    void checkFile(props.message.sessionID, p, data.validateFiles).then((exists) => {
+      // `undefined` means validation could not be confirmed (e.g. every retry
+      // timed out) — leave the candidate untouched so a later pass can retry it
+      // instead of demoting a possibly-real file to plain text.
+      if (exists === undefined) return
+      // Guard against a stale response racing a newer candidate: morphdom can
+      // rewrite this same <code> node in place during streaming (e.g. "src/fo"
+      // -> "src/foo.ts"), so only apply the result if the element is still
+      // mounted and still represents the path we validated.
+      if (!el.isConnected) return
+      if (!el.classList.contains("file-link-candidate")) return
+      if (el.getAttribute("data-file-candidate") !== p) return
+      promote(el, p, exists)
+    })
+  }
+
+  // The Markdown component writes its DOM asynchronously (rAF-coalesced
+  // morphdom), so scanning for candidates synchronously misses them. Drive
+  // validation from a MutationObserver, coalescing bursts into one pass per
+  // frame. Links are created *during* streaming, but a candidate is only probed
+  // once its path has settled: because morphdom keeps the same <code> node as a
+  // streamed path grows (`src/fo` -> `src/foo.ts`), we track a per-element
+  // debounce and re-arm it whenever that element's path changes. Intermediate
+  // partials are superseded (their timer cleared) before they ever hit the
+  // filesystem, so a growing token costs one probe for its final value, not one
+  // per frame — while settled paths behind the streaming frontier light up
+  // without waiting for the whole message. On completion we flush immediately.
+  onMount(() => {
+    if (!bodyRef) return
+    const SETTLE_MS = 400
+    const pending = new Map<HTMLElement, { path: string; timer: ReturnType<typeof setTimeout> }>()
+
+    // Arm (or flush) validation for one candidate. `immediate` skips the
+    // settle delay — used once the message is no longer streaming, so completed
+    // history and just-finished messages validate without a 400ms lag.
+    const arm = (el: HTMLElement, p: string, immediate: boolean) => {
+      const prior = pending.get(el)
+      if (immediate) {
+        if (prior) clearTimeout(prior.timer)
+        pending.delete(el)
+        dispatch(el, p)
+        return
+      }
+      // Already counting down for this exact path — don't reset, or a candidate
+      // behind the streaming frontier would never settle while others mutate.
+      if (prior && prior.path === p) return
+      if (prior) clearTimeout(prior.timer)
+      pending.set(el, {
+        path: p,
+        timer: setTimeout(() => {
+          pending.delete(el)
+          dispatch(el, p)
+        }, SETTLE_MS),
+      })
+    }
+
+    const scan = (immediate: boolean) => {
+      if (!bodyRef || !data.validateFiles) return
+      for (const el of bodyRef.querySelectorAll<HTMLElement>("code.file-link-candidate")) {
+        const p = el.getAttribute("data-file-candidate") ?? ""
+        if (p) arm(el, p, immediate)
+      }
+    }
+
+    let scheduled = false
+    let frame: number | undefined
+    const schedule = () => {
+      if (scheduled) return
+      scheduled = true
+      frame = requestAnimationFrame(() => {
+        scheduled = false
+        frame = undefined
+        scan(!streaming())
+      })
+    }
+    // Ignore mutations promote() causes itself: a promoted/demoted node loses
+    // the file-link-candidate class, so an attribute-only change on a node
+    // that's no longer a candidate is our own write and must not schedule
+    // another (no-op) pass. Real new/changed candidates arrive via childList
+    // or characterData, or as attribute changes on still-candidate nodes.
+    const observer = new MutationObserver((records) => {
+      const relevant = records.some(
+        (r) =>
+          r.type !== "attributes" ||
+          (r.target instanceof HTMLElement && r.target.classList.contains("file-link-candidate")),
+      )
+      if (relevant) schedule()
+    })
+    observer.observe(bodyRef, {
+      attributes: true,
+      attributeFilter: ["class", "data-file-candidate", "data-file-line", "data-file-col"],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    })
+    schedule()
+    // When streaming stops, flush any still-pending candidate immediately (and
+    // validate on mount for completed history). Also rescues a candidate left
+    // "unknown" after a mid-render validation timeout once mutations stop.
+    createEffect(() => {
+      if (!streaming()) schedule()
+    })
+    onCleanup(() => {
+      observer.disconnect()
+      if (frame !== undefined) cancelAnimationFrame(frame)
+      for (const entry of pending.values()) clearTimeout(entry.timer)
+      pending.clear()
+    })
+  })
 
   const handleMarkdownClick = (e: MouseEvent) => {
     if (!data.openFile) return
     const target = e.target
     if (!(target instanceof HTMLElement)) return
-    // Handle .file-link code spans (e.g. `src/foo.ts:42`)
+    // Handle .file-link code spans (confirmed by filesystem validation)
     const fileLink = target.closest(".file-link[data-file-path]")
     if (fileLink) {
       const path = fileLink.getAttribute("data-file-path")
@@ -1329,7 +1567,9 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
       const colAttr = fileLink.getAttribute("data-file-col")
       const line = lineAttr ? parseInt(lineAttr, 10) : undefined
       const column = colAttr ? parseInt(colAttr, 10) : undefined
-      data.openFile(path, line, column)
+      // Scope the open to the session this message was rendered for, matching
+      // how the candidate was validated — see checkFile / validateFiles.
+      data.openFile(path, line, column, props.message.sessionID)
       return
     }
     // Handle markdown links whose href looks like a relative file path
@@ -1337,17 +1577,17 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (anchor) {
       const href = anchor.getAttribute("href")
       if (!href) return
-      const filePath = extractFilePathFromHref(href)
-      if (!filePath) return
+      const result = extractFilePathFromHref(href)
+      if (!result) return
       e.preventDefault()
-      data.openFile(filePath)
+      data.openFile(result.path, result.line, result.column, props.message.sessionID)
     }
   }
 
   return (
     <Show when={throttledText() && showSyntheticPart()}>
       <div data-component="text-part">
-        <div data-slot="text-part-body">
+        <div data-slot="text-part-body" ref={bodyRef}>
           <Markdown text={throttledText()} cacheKey={part().id} streaming={streaming()} onClick={handleMarkdownClick} />
         </div>
         <Show when={showCopy()}>
@@ -1412,6 +1652,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
                 />
               </Tooltip>
             </Show>
+            <Show when={props.throughput}>{(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}</Show>
           </div>
         </Show>
         <Show when={summary()}>
@@ -1461,6 +1702,14 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const display = createThrottledValue(text)
   const view = createMemo(() => reasoningHeading(display()))
 
+  const Header = () => (
+    <div data-slot="reasoning-header">
+      <Icon name="brain" size="small" />
+      <span data-slot="reasoning-label">{i18n.t("ui.reasoning.label" as never)}</span>
+      <Show when={view().title}>{(title) => <span data-slot="reasoning-title">{title()}</span>}</Show>
+    </div>
+  )
+
   // time.end is set by the processor on reasoning-end.
   // v1 parts lack time entirely → treat as historical.
   const done = () => {
@@ -1490,6 +1739,18 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     else rememberReasoningState(userCollapsed, id)
     setOpen(value)
   }
+
+  // Reasoning has no built-in "force open" hook (unlike BasicTool's forceOpen
+  // ratchet) — mirror that one-way-open behavior here so jumping a chat
+  // search match to a collapsed reasoning block reveals it, the same as it
+  // does for tool calls. Recorded into userOpened/userCollapsed the same way
+  // a manual open would be, so it stays open across remounts/re-renders.
+  createEffect(() => {
+    if (!props.forceOpen || open()) return
+    if (props.reasoningAutoCollapse) rememberReasoningState(userOpened, id)
+    else userCollapsed.delete(id)
+    setOpen(true)
+  })
 
   createEffect(() => {
     if (!props.reasoningAutoCollapse) return
@@ -1529,29 +1790,34 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   })
 
   return (
-    <Show when={display()}>
+    <Show when={view().title || view().body}>
       <div
         data-component="reasoning-part"
         data-streaming={!done() ? "" : undefined}
         data-auto-collapse={props.reasoningAutoCollapse ? "" : undefined}
       >
-        <Collapsible open={open()} onOpenChange={track} class="tool-collapsible">
-          <Collapsible.Trigger>
-            <div data-slot="reasoning-header">
-              <Icon name="brain" size="small" />
-              <span data-slot="reasoning-label">{i18n.t("ui.reasoning.label" as never)}</span>
-              <Show when={view().title}>{(title) => <span data-slot="reasoning-title">{title()}</span>}</Show>
+        <Show
+          when={view().body}
+          fallback={
+            <div data-slot="collapsible-trigger" data-static="">
+              <Header />
             </div>
-            <Collapsible.Arrow />
-          </Collapsible.Trigger>
-          <Collapsible.Content>
-            <div data-slot="reasoning-details">
-              <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-                <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+          }
+        >
+          <Collapsible open={open()} onOpenChange={track} class="tool-collapsible">
+            <Collapsible.Trigger>
+              <Header />
+              <Collapsible.Arrow />
+            </Collapsible.Trigger>
+            <Collapsible.Content>
+              <div data-slot="reasoning-details">
+                <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
+                  <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+                </div>
               </div>
-            </div>
-          </Collapsible.Content>
-        </Collapsible>
+            </Collapsible.Content>
+          </Collapsible>
+        </Show>
       </div>
     </Show>
   )
@@ -1625,6 +1891,14 @@ function ToolText(props: { text: string; delay?: number; animate?: boolean }) {
       {props.text}
     </span>
   )
+}
+
+function swePruned(metadata: Record<string, unknown>) {
+  const value = metadata["swePruner"]
+  if (typeof value !== "object" || value === null) return undefined
+  const info = value as { kept?: unknown; total?: unknown }
+  if (typeof info.kept !== "number" || typeof info.total !== "number") return undefined
+  return { kept: info.kept, total: info.total }
 }
 
 function ToolLoadedFile(props: { text: string; animate?: boolean; onClick?: () => void }) {
@@ -1715,12 +1989,12 @@ function ToolMetaLine(props: {
   )
 }
 
-function ToolChanges(props: { changes: DiffValue; animate?: boolean }) {
+function ToolChanges(props: { changes: DiffValue; animate?: boolean; slot?: string }) {
   let ref: HTMLDivElement | undefined
   useToolFade(() => ref, { delay: 0.04, animate: props.animate })
 
   return (
-    <div ref={ref}>
+    <div ref={ref} data-slot={props.slot}>
       <DiffChanges changes={props.changes} />
     </div>
   )
@@ -1746,6 +2020,7 @@ ToolRegistry.register({
   render(props) {
     const data = useData()
     const i18n = useI18n()
+    const dialog = useDialog()
     const args: string[] = []
     if (props.input.offset) args.push("offset=" + props.input.offset)
     if (props.input.limit) args.push("limit=" + props.input.limit)
@@ -1754,11 +2029,17 @@ ToolRegistry.register({
       if (!value || !Array.isArray(value)) return []
       return value.filter((p): p is string => typeof p === "string")
     })
+    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
+    const images = createMemo(() => (props.attachments ?? []).filter((f) => f.mime.startsWith("image/") && f.url))
+    const preview = (url: string, alt?: string) => dialog.show(() => <ImagePreview src={url} alt={alt} />)
+    // Read is high-frequency and low-risk, so details stay hidden unless the target was outside
+    // the workspace, in which case the approval reason explains what looks like an "agent escape".
+    const approval = useToolApproval()
     return (
       <>
         <BasicTool
-          hideDetails
+          hideDetails={!approval()?.approval.outsideWorkspace}
           {...props}
           icon="glasses"
           onSubtitleClick={
@@ -1783,6 +2064,26 @@ ToolRegistry.register({
             />
           )}
         </For>
+        <Show when={images().length > 0}>
+          <div data-slot="tool-read-images">
+            <For each={images()}>
+              {(file) => (
+                <div data-slot="tool-read-image" onClick={() => preview(file.url, file.filename)}>
+                  <img
+                    data-slot="tool-read-image-img"
+                    src={file.url}
+                    alt={file.filename ?? i18n.t("ui.message.attachment.alt")}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
+        <Show when={pruned()}>
+          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
+        </Show>
       </>
     )
   },
@@ -1856,29 +2157,35 @@ ToolRegistry.register({
     const args: string[] = []
     if (props.input.pattern) args.push("pattern=" + props.input.pattern)
     if (props.input.include) args.push("include=" + props.input.include)
+    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
     return (
-      <BasicTool
-        {...props}
-        icon="magnifying-glass-menu"
-        trigger={
-          <ToolTriggerRow
-            title={i18n.t("ui.tool.grep")}
-            pending={pending()}
-            subtitle={getDirectory(props.input.path)}
-            args={args}
-            animate={props.reveal}
-          />
-        }
-      >
-        <Show when={props.output}>
-          {(output) => (
-            <div data-component="tool-output" data-variant="preview" data-scrollable>
-              <Markdown text={output()} />
-            </div>
-          )}
+      <>
+        <BasicTool
+          {...props}
+          icon="magnifying-glass-menu"
+          trigger={
+            <ToolTriggerRow
+              title={i18n.t("ui.tool.grep")}
+              pending={pending()}
+              subtitle={getDirectory(props.input.path)}
+              args={args}
+              animate={props.reveal}
+            />
+          }
+        >
+          <Show when={props.output}>
+            {(output) => (
+              <div data-component="tool-output" data-variant="preview" data-scrollable>
+                <Markdown text={output()} />
+              </div>
+            )}
+          </Show>
+        </BasicTool>
+        <Show when={pruned()}>
+          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
         </Show>
-      </BasicTool>
+      </>
     )
   },
 })
@@ -2021,6 +2328,8 @@ ToolRegistry.register({
       }, 50)
     }
 
+    const approvalLine = useToolApprovalLine()
+
     const trigger = () => (
       <div data-slot="basic-tool-tool-info-structured">
         <div data-slot="basic-tool-tool-info-main">
@@ -2039,11 +2348,22 @@ ToolRegistry.register({
               </Match>
             </Switch>
           </Show>
+          {/* Keep the auto-approve line attached to the subagent card instead of forcing a collapsible body. */}
+          {approvalLine()}
         </div>
       </div>
     )
 
-    return <BasicTool hideDetails icon="task" status={props.status} trigger={trigger()} animated />
+    return (
+      <BasicTool
+        hideDetails
+        approvalPlacement="hidden"
+        icon="task"
+        status={props.status}
+        trigger={trigger()}
+        animated
+      />
+    )
   },
 })
 
@@ -2159,6 +2479,7 @@ ToolRegistry.register({
   name: "bash",
   render(props) {
     const i18n = useI18n()
+    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const subtitle = () => props.input.description ?? props.metadata.description
@@ -2166,8 +2487,15 @@ ToolRegistry.register({
     const [open, setOpen] = createSignal(readToolOpen(key(), props.defaultOpen ?? true) ?? true)
     const [mounted, setMounted] = createSignal(open())
 
+    // BasicTool's `initialOpen()` forces its own open state to true whenever
+    // forceOpen is set, but that's an initial value, not a transition — if
+    // it's already mounted open (e.g. after a virtualized remount), there's
+    // no open/close change for `onOpenChange={setOpen}` below to fire, so
+    // this local `open`/`mounted` pair (seeded independently from
+    // readToolOpen) can stay stale and out of sync, leaving the accordion
+    // visibly expanded with no output mounted inside it.
     createEffect(() => {
-      if (open() || pending()) setMounted(true)
+      if (open() || pending() || props.forceOpen) setMounted(true)
     })
 
     // also apply processCarriageReturns for Windows CLI tools
@@ -2184,28 +2512,38 @@ ToolRegistry.register({
     const out = createMemo(() => processCarriageReturns(stripAnsi(rawOutput())))
 
     return (
-      <BasicTool
-        {...props}
-        icon="console"
-        hasDetails
-        defaultOpen={props.defaultOpen ?? true}
-        onOpenChange={setOpen}
-        allowPendingToggle
-        trigger={
-          <div data-slot="basic-tool-tool-info-structured">
-            <div data-slot="basic-tool-tool-info-main">
-              <span data-slot="basic-tool-tool-title">
-                <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
-              </span>
-              <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
+      <>
+        <BasicTool
+          {...props}
+          icon="console"
+          hasDetails
+          defaultOpen={props.defaultOpen ?? true}
+          onOpenChange={setOpen}
+          allowPendingToggle
+          trigger={
+            <div data-slot="basic-tool-tool-info-structured">
+              <div data-slot="basic-tool-tool-info-main">
+                <span data-slot="basic-tool-tool-title">
+                  <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
+                </span>
+                <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
+              </div>
             </div>
-          </div>
-        }
-      >
-        <Show when={mounted()}>
-          <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+          }
+        >
+          <Show when={mounted()}>
+            <BashHighlightedOutput
+              cmd={cmd()}
+              output={out()}
+              outputPath={props.metadata.outputPath}
+              active={open() || !!props.forceOpen}
+            />
+          </Show>
+        </BasicTool>
+        <Show when={pruned()}>
+          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
         </Show>
-      </BasicTool>
+      </>
     )
   },
 })
@@ -2511,6 +2849,31 @@ ToolRegistry.register({
       seeded = true
       setExpanded(list.filter((f) => f.type !== "delete").map((f) => f.filePath))
     })
+    // Deleted files start collapsed above; a chat search match could be
+    // inside one. `forceOpenFile` (from MessageList's per-chunk file
+    // attribution) names exactly which file's accordion to open. This is
+    // tracked separately from the user's own manual toggles: replacing it
+    // on every navigation (rather than appending to `expanded`, which never
+    // shrinks) closes the previously force-opened file again, so its Pierre
+    // diff instance unmounts instead of accumulating one per visited match.
+    const [searchOpenFile, setSearchOpenFile] = createSignal<string | undefined>()
+    createEffect(() => {
+      if (props.forceOpenFile) {
+        setSearchOpenFile(props.forceOpenFile)
+        return
+      }
+      // Defensive fallback for forceOpen without a known file (MessageList
+      // always attributes apply_patch matches to a specific file today):
+      // expand everything rather than nothing.
+      setSearchOpenFile(undefined)
+      if (!props.forceOpen) return
+      setExpanded(files().map((f) => f.filePath))
+    })
+    const allExpanded = createMemo(() => {
+      const search = searchOpenFile()
+      if (!search) return expanded()
+      return expanded().includes(search) ? expanded() : [...expanded(), search]
+    })
     const subtitle = createMemo(() => {
       const count = files().length
       if (count === 0) return ""
@@ -2549,7 +2912,16 @@ ToolRegistry.register({
                       />
                     )}
                   </Show>
-                  <Show when={!single() && subtitle()}>{(text) => <ToolText text={text()} animate={reveal()} />}</Show>
+                  <Show when={!single() && subtitle()}>
+                    {(text) => (
+                      <>
+                        <ToolText text={text()} animate={reveal()} />
+                        <Show when={files().some((file) => file.additions > 0 || file.deletions > 0)}>
+                          <ToolChanges changes={files()} animate={reveal()} slot="message-part-tool-changes" />
+                        </Show>
+                      </>
+                    )}
+                  </Show>
                 </div>
               </div>
             </div>
@@ -2563,23 +2935,21 @@ ToolRegistry.register({
                   multiple
                   data-scope="apply-patch"
                   style={{ "--sticky-accordion-offset": "37px" }}
-                  value={expanded()}
-                  onChange={(value) => setExpanded(Array.isArray(value) ? value : value ? [value] : [])}
+                  value={allExpanded()}
+                  onChange={(value) => {
+                    const next = Array.isArray(value) ? value : value ? [value] : []
+                    // The user explicitly closed the search-forced file —
+                    // stop treating it as force-open so it doesn't reopen
+                    // itself out of `allExpanded()` on the next render.
+                    if (searchOpenFile() && !next.includes(searchOpenFile()!)) setSearchOpenFile(undefined)
+                    setExpanded(next.filter((path) => path !== searchOpenFile()))
+                  }}
                 >
                   <For each={files()}>
                     {(file) => {
-                      const active = createMemo(() => expanded().includes(file.filePath))
-                      const [visible, setVisible] = createSignal(false)
-                      createEffect(() => {
-                        if (!active()) {
-                          setVisible(false)
-                          return
-                        }
-                        requestAnimationFrame(() => {
-                          if (!active()) return
-                          setVisible(true)
-                        })
-                      })
+                      // Diff defers its own expensive render; mounting the container
+                      // here avoids dropping the last item during batch expansion.
+                      const active = createMemo(() => allExpanded().includes(file.filePath))
 
                       return (
                         <Accordion.Item value={file.filePath} data-type={file.type}>
@@ -2633,7 +3003,7 @@ ToolRegistry.register({
                             </Accordion.Trigger>
                           </StickyAccordionHeader>
                           <Accordion.Content>
-                            <Show when={visible() && view(file)}>
+                            <Show when={active() && view(file)}>
                               {(diff) => (
                                 <div data-component="apply-patch-file-diff">
                                   <Dynamic
@@ -2731,6 +3101,7 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         defaultOpen
+        approvalPlacement="hidden"
         icon="checklist"
         trigger={
           <ToolTriggerRow
@@ -2786,12 +3157,15 @@ ToolRegistry.register({
     const i18n = useI18n()
     const questions = createMemo(() => (props.input.questions ?? []) as QuestionInfo[])
     const answers = createMemo(() => (props.metadata.answers ?? []) as QuestionAnswer[])
+    const dismissed = createMemo(() => props.metadata.dismissed === true || props.status === "error")
     const completed = createMemo(() => answers().length > 0)
     const pending = createMemo(() => busy(props.status))
+    const hasContent = createMemo(() => completed() || dismissed())
 
     const subtitle = createMemo(() => {
       const count = questions().length
       if (count === 0) return ""
+      if (dismissed()) return i18n.t("ui.question.subtitle.dismissed", { count })
       if (completed()) return i18n.t("ui.question.subtitle.answered", { count })
       return `${count} ${i18n.t(count > 1 ? "ui.common.question.other" : "ui.common.question.one")}`
     })
@@ -2810,15 +3184,19 @@ ToolRegistry.register({
           />
         }
       >
-        <Show when={completed()}>
-          <div data-component="question-answers">
+        <Show when={hasContent()}>
+          <div data-component="question-answers" data-dismissed={dismissed() ? "" : undefined}>
             <For each={questions()}>
               {(q, i) => {
                 const answer = () => answers()[i()] ?? []
+                const answerText = () => {
+                  if (dismissed()) return i18n.t("ui.question.answer.dismissed")
+                  return answer().join(", ") || i18n.t("ui.question.answer.none")
+                }
                 return (
                   <div data-slot="question-answer-item">
                     <div data-slot="question-text">{q.question}</div>
-                    <div data-slot="answer-text">{answer().join(", ") || i18n.t("ui.question.answer.none")}</div>
+                    <div data-slot="answer-text">{answerText()}</div>
                   </div>
                 )
               }}
@@ -2857,4 +3235,10 @@ ToolRegistry.register({
       />
     )
   },
+})
+
+import { ChartTool } from "./chart"
+ToolRegistry.register({
+  name: "chart",
+  render: ChartTool,
 })

@@ -32,6 +32,7 @@ export interface AutocompleteInput {
   isUntitledFile: boolean
   completionId: string
   filepath: string
+  languageId?: string
   pos: Position
   recentlyVisitedRanges: AutocompleteCodeSnippet[]
   recentlyEditedRanges: RecentlyEditedRange[]
@@ -201,6 +202,7 @@ export function contextToAutocompleteInput(context: AutocompleteSuggestionContex
     isUntitledFile: context.document.isUntitled,
     completionId: crypto.randomUUID(),
     filepath: context.document.uri.fsPath,
+    languageId: context.document.languageId,
     pos: { line: position.line, character: position.character },
     recentlyVisitedRanges,
     recentlyEditedRanges,

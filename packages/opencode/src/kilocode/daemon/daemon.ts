@@ -2,6 +2,7 @@ import path from "path"
 import { existsSync } from "fs"
 import { spawn } from "child_process"
 import { createServer } from "net"
+import { randomUUID } from "node:crypto"
 import { open, readFile, rm, mkdir } from "fs/promises"
 import z from "zod"
 import { Global } from "@opencode-ai/core/global"
@@ -179,6 +180,7 @@ export namespace Daemon {
   }
 
   export function matches(state: State, input: Options, explicit: readonly NetworkOption[]) {
+    if (state.password === "kilo") return false
     const options = Network.parse(input)
     return explicit.every((name) => {
       if (name === "hostname") return state.hostname === options.hostname
@@ -204,7 +206,7 @@ export namespace Daemon {
           if (alive(current.state.pid)) await terminate(current.state.pid, true)
         }
         await clear()
-        const password = "kilo"
+        const password = randomUUID()
         const token = auth(password)
         const out = log()
         await mkdir(path.dirname(out), { recursive: true })

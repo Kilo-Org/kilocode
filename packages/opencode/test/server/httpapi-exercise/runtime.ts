@@ -2,6 +2,7 @@ export type Runtime = {
   PublicApi: (typeof import("../../../src/server/routes/instance/httpapi/public"))["PublicApi"]
   HttpApiApp: (typeof import("../../../src/server/routes/instance/httpapi/server"))["HttpApiApp"]
   AppLayer: (typeof import("../../../src/effect/app-runtime"))["AppLayer"]
+  memoMap: import("effect").Layer.MemoMap
   InstanceRef: (typeof import("../../../src/effect/instance-ref"))["InstanceRef"]
   InstanceStore: (typeof import("../../../src/project/instance-store"))["InstanceStore"]
   Session: (typeof import("../../../src/session/session"))["Session"]
@@ -13,6 +14,14 @@ export type Runtime = {
   tmpdir: (typeof import("../../fixture/fixture"))["tmpdir"]
 }
 
+// kilocode_change start - coverage only needs the OpenAPI group; bypass the full runtime import to keep
+// static route-coverage checks sub-second on CI
+export async function publicApi() {
+  const publicApiModule = await import("../../../src/server/routes/instance/httpapi/public")
+  return publicApiModule.PublicApi
+}
+// kilocode_change end
+
 let runtimePromise: Promise<Runtime> | undefined
 
 export function runtime() {
@@ -20,6 +29,7 @@ export function runtime() {
     const publicApi = await import("../../../src/server/routes/instance/httpapi/public")
     const httpApiServer = await import("../../../src/server/routes/instance/httpapi/server")
     const appRuntime = await import("../../../src/effect/app-runtime")
+    const { Layer } = await import("effect")
     const instanceRef = await import("../../../src/effect/instance-ref")
     const instanceStore = await import("../../../src/project/instance-store")
     const session = await import("../../../src/session/session")
@@ -32,6 +42,7 @@ export function runtime() {
       PublicApi: publicApi.PublicApi,
       HttpApiApp: httpApiServer.HttpApiApp,
       AppLayer: appRuntime.AppLayer,
+      memoMap: Layer.makeMemoMapUnsafe(),
       InstanceRef: instanceRef.InstanceRef,
       InstanceStore: instanceStore.InstanceStore,
       Session: session.Session,

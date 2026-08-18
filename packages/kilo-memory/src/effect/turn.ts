@@ -5,14 +5,15 @@ import { MemoryLog } from "./log"
 import type { MemoryPorts } from "./ports"
 import { MemoryService } from "./service"
 import { MemoryTimers } from "./timers"
+import { MemoryRedact } from "../capture/redact"
 
 function brief(cause: Cause.Cause<unknown>) {
   const err = Cause.squash(cause)
-  return (err instanceof Error ? err.message : String(err)).slice(0, 200)
+  return MemoryRedact.text(err instanceof Error ? err.message : String(err)).slice(0, 200)
 }
 
 function message(err: unknown) {
-  return (err instanceof Error ? err.message : String(err)).slice(0, 200)
+  return MemoryRedact.text(err instanceof Error ? err.message : String(err)).slice(0, 200)
 }
 
 export namespace MemoryTurn {

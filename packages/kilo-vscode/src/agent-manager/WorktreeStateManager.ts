@@ -12,6 +12,22 @@
 import * as path from "path"
 import * as fs from "fs"
 import { normalizePath } from "./git-import"
+import type { SidebarTarget } from "./project/route"
+
+/** Accept a persisted sidebar target only when its shape matches a known kind. */
+function validTarget(value: unknown): SidebarTarget | undefined {
+  if (!value || typeof value !== "object") return undefined
+  const target = value as Record<string, unknown>
+  if (typeof target.projectId !== "string") return undefined
+  if (target.kind === "local") return { projectId: target.projectId, kind: "local" }
+  if (target.kind === "worktree" && typeof target.worktreeId === "string") {
+    return { projectId: target.projectId, kind: "worktree", worktreeId: target.worktreeId }
+  }
+  if (target.kind === "session" && typeof target.sessionId === "string") {
+    return { projectId: target.projectId, kind: "session", sessionId: target.sessionId }
+  }
+  return undefined
+}
 
 export interface Worktree {
   id: string
@@ -32,9 +48,14 @@ export interface Worktree {
   prUrl?: string
   /** Cached PR state for correct badge color on reload (open/merged/closed/draft). */
   prState?: string
-  /** Original branch created with the worktree, used for cleanup on deletion.
-   *  Set automatically when `branch` is updated via live sync. */
+  /** Original branch created with the worktree, used for cleanup after a manual branch change. */
   originalBranch?: string
+  /** Whether Agent Manager created and may safely clean up this branch. Undefined preserves legacy behavior. */
+  branchOwned?: boolean
+  /** Initial session whose prompts may name this placeholder branch once. */
+  autoNameSessionId?: string
+  /** Number of prompts observed for the armed session; bounds rename attempts. */
+  autoNamePromptCount?: number
   /** Section this worktree belongs to, or undefined for ungrouped. */
   sectionId?: string
 }
@@ -74,6 +95,7 @@ interface StateFile {
   sidebarCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   defaultBaseBranch?: string
+  activeTarget?: SidebarTarget
 }
 
 export type StateLoadStatus = "loaded" | "missing" | "failed"
@@ -103,6 +125,7 @@ export class WorktreeStateManager {
   private sidebar = false
   private reviewDiffStyle: "unified" | "split" = "unified"
   private defaultBase: string | undefined
+  private activeTarget: SidebarTarget | undefined
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
   private dirty = false
@@ -176,6 +199,7 @@ export class WorktreeStateManager {
     remote?: string
     groupId?: string
     label?: string
+    branchOwned?: boolean
   }): Worktree {
     const id = generateId("wt")
     const wt: Worktree = {
@@ -188,6 +212,7 @@ export class WorktreeStateManager {
     if (params.remote) wt.remote = params.remote
     if (params.groupId) wt.groupId = params.groupId
     if (params.label) wt.label = params.label
+    if (params.branchOwned !== undefined) wt.branchOwned = params.branchOwned
     this.worktrees.set(id, wt)
     this.setNormalizedWorktreeOrder(this.worktreeOrder)
     this.log(
@@ -225,9 +250,49 @@ export class WorktreeStateManager {
   updateWorktreeBranch(id: string, branch: string): boolean {
     const wt = this.worktrees.get(id)
     if (!wt || wt.branch === branch) return false
-    if (!wt.originalBranch) wt.originalBranch = wt.branch
+    if (!wt.originalBranch && wt.branchOwned !== false) wt.originalBranch = wt.branch
     this.log(`Updated worktree ${id} branch: ${wt.branch} → ${branch}`)
     wt.branch = branch
+    wt.autoNameSessionId = undefined
+    wt.autoNamePromptCount = undefined
+    void this.save()
+    return true
+  }
+
+  armAutoName(id: string, sessionId: string): void {
+    const wt = this.worktrees.get(id)
+    if (!wt || wt.branchOwned !== true) return
+    wt.autoNameSessionId = sessionId
+    wt.autoNamePromptCount = 0
+    void this.save()
+  }
+
+  clearAutoName(id: string): void {
+    const wt = this.worktrees.get(id)
+    if (!wt?.autoNameSessionId) return
+    wt.autoNameSessionId = undefined
+    wt.autoNamePromptCount = undefined
+    void this.save()
+  }
+
+  /** Increment the prompt counter for an armed worktree and return the new
+   *  count, or undefined when the worktree is no longer armed. */
+  incrementAutoNameCount(id: string): number | undefined {
+    const wt = this.worktrees.get(id)
+    if (!wt?.autoNameSessionId) return undefined
+    wt.autoNamePromptCount = (wt.autoNamePromptCount ?? 0) + 1
+    void this.save()
+    return wt.autoNamePromptCount
+  }
+
+  renameOwnedBranch(id: string, current: string, branch: string): boolean {
+    const wt = this.worktrees.get(id)
+    if (!wt || wt.branch !== current || wt.branchOwned !== true) return false
+    wt.branch = branch
+    wt.originalBranch = undefined
+    wt.autoNameSessionId = undefined
+    wt.autoNamePromptCount = undefined
+    this.log(`Automatically renamed worktree ${id} branch: ${current} → ${branch}`)
     void this.save()
     return true
   }
@@ -276,6 +341,11 @@ export class WorktreeStateManager {
   addSession(sessionId: string, worktreeId: string | null): ManagedSession {
     const session: ManagedSession = { id: sessionId, worktreeId, createdAt: new Date().toISOString() }
     this.sessions.set(sessionId, session)
+    const worktree = worktreeId ? this.worktrees.get(worktreeId) : undefined
+    if (worktree?.autoNameSessionId && worktreeId && this.getSessions(worktreeId).length > 1) {
+      worktree.autoNameSessionId = undefined
+      worktree.autoNamePromptCount = undefined
+    }
     this.log(`Added session ${sessionId} to worktree ${worktreeId ?? "local"}`)
     void this.save()
     return session
@@ -285,7 +355,17 @@ export class WorktreeStateManager {
   moveSession(sessionId: string, worktreeId: string | null): void {
     const session = this.sessions.get(sessionId)
     if (!session) return
+    const previous = session.worktreeId ? this.worktrees.get(session.worktreeId) : undefined
+    if (previous?.autoNameSessionId === sessionId) {
+      previous.autoNameSessionId = undefined
+      previous.autoNamePromptCount = undefined
+    }
     session.worktreeId = worktreeId
+    const worktree = worktreeId ? this.worktrees.get(worktreeId) : undefined
+    if (worktree?.autoNameSessionId) {
+      worktree.autoNameSessionId = undefined
+      worktree.autoNamePromptCount = undefined
+    }
     this.log(`Moved session ${sessionId} to ${worktreeId ?? "local"}`)
     void this.save()
   }
@@ -320,6 +400,23 @@ export class WorktreeStateManager {
 
   removeTabOrder(key: string): void {
     delete this.tabOrder[key]
+    void this.save()
+  }
+
+  /** Last selected sidebar target (Local/worktree/session) for seamless restore. */
+  getActiveTarget(): SidebarTarget | undefined {
+    return this.activeTarget
+  }
+
+  setActiveTarget(target: SidebarTarget | undefined): void {
+    const cur = this.activeTarget
+    const same =
+      cur?.kind === target?.kind &&
+      cur?.projectId === target?.projectId &&
+      (cur?.kind !== "worktree" || target?.kind !== "worktree" || cur.worktreeId === target.worktreeId) &&
+      (cur?.kind !== "session" || target?.kind !== "session" || cur.sessionId === target.sessionId)
+    if (same) return
+    this.activeTarget = target
     void this.save()
   }
 
@@ -657,6 +754,7 @@ export class WorktreeStateManager {
       this.reviewDiffStyle = "split"
     }
     this.defaultBase = data.defaultBaseBranch
+    this.activeTarget = validTarget(data.activeTarget)
     this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
     if (pruned > 0 || repaired) {
       if (pruned > 0) this.log(`Pruned ${pruned} orphaned sessions`)
@@ -764,6 +862,9 @@ export class WorktreeStateManager {
     }
     if (this.defaultBase) {
       data.defaultBaseBranch = this.defaultBase
+    }
+    if (this.activeTarget) {
+      data.activeTarget = this.activeTarget
     }
 
     const tmp = `${this.file}.${process.pid}.${Date.now()}.tmp`

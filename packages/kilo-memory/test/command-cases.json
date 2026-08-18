@@ -5,33 +5,58 @@
     "result": "none"
   },
   {
-    "name": "empty memory command opens inspect",
+    "name": "empty memory command opens help",
     "input": "/memory",
-    "result": "inspect"
+    "result": "help"
   },
   {
-    "name": "mem alias opens inspect",
+    "name": "mem alias opens show",
     "input": "/mem show",
-    "result": "inspect"
+    "result": "show"
   },
   {
-    "name": "project scope inspect",
+    "name": "project scope show",
     "input": "/memory project show",
-    "result": "inspect"
+    "result": "show"
   },
   {
-    "name": "status opens inspect",
+    "name": "show preserves trailing text",
+    "input": "/memory show draft notes",
+    "result": "show",
+    "rest": "draft notes"
+  },
+  {
+    "name": "status operation",
     "input": "/memory status",
-    "result": "inspect"
+    "result": "operation",
+    "operation": "status"
   },
   {
-    "name": "enable operation",
+    "name": "inspect operation",
+    "input": "/memory inspect",
+    "result": "operation",
+    "operation": "inspect"
+  },
+  {
+    "name": "on operation",
+    "input": "/memory on",
+    "result": "operation",
+    "operation": "enable"
+  },
+  {
+    "name": "off operation",
+    "input": "/memory off",
+    "result": "operation",
+    "operation": "disable"
+  },
+  {
+    "name": "enable alias",
     "input": "/memory enable",
     "result": "operation",
     "operation": "enable"
   },
   {
-    "name": "disable operation",
+    "name": "disable alias",
     "input": "/memory disable",
     "result": "operation",
     "operation": "disable"
@@ -41,6 +66,27 @@
     "input": "/memory rebuild",
     "result": "operation",
     "operation": "rebuild"
+  },
+  {
+    "name": "rebuild keeps trailing text",
+    "input": "/memory rebuild hello",
+    "result": "operation",
+    "operation": "rebuild",
+    "rest": "hello"
+  },
+  {
+    "name": "enable keeps trailing text",
+    "input": "/memory on hello",
+    "result": "operation",
+    "operation": "enable",
+    "rest": "hello"
+  },
+  {
+    "name": "project scope rebuild keeps trailing text",
+    "input": "/memory project rebuild hello",
+    "result": "operation",
+    "operation": "rebuild",
+    "rest": "hello"
   },
   {
     "name": "purge requires confirmation",
@@ -56,11 +102,10 @@
     "confirm": true
   },
   {
-    "name": "auto status operation",
+    "name": "auto status usage",
     "input": "/memory auto status",
-    "result": "operation",
-    "operation": "auto",
-    "mode": "status"
+    "result": "usage",
+    "reason": "Missing auto mode"
   },
   {
     "name": "auto on operation",

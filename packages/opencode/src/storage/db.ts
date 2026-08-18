@@ -5,6 +5,7 @@ export * from "drizzle-orm"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { LocalContext } from "@/util/local-context"
 import { Global } from "@opencode-ai/core/global"
+import { DbPreflight } from "@opencode-ai/core/kilocode/db-preflight" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log"
 import { NamedError } from "@opencode-ai/core/util/error"
 import path from "path"
@@ -14,6 +15,7 @@ import { InstallationChannel } from "@opencode-ai/core/installation/version"
 import { EffectBridge } from "@/effect/bridge"
 import { init } from "#db"
 import { Effect, Schema } from "effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 declare const KILO_MIGRATIONS: { sql: string; timestamp: number; name: string }[] | undefined
 
@@ -26,7 +28,7 @@ const log = Log.create({ service: "db" })
 type DatabaseFlags = Pick<RuntimeFlags.Info, "disableChannelDb" | "skipMigrations">
 
 const readRuntimeFlags = () =>
-  Effect.runSync(RuntimeFlags.Service.useSync((flags) => flags).pipe(Effect.provide(RuntimeFlags.defaultLayer)))
+  Effect.runSync(RuntimeFlags.Service.useSync((flags) => flags).pipe(Effect.provide(AppNodeBuilder.build(RuntimeFlags.node))))
 
 export function getChannelPath(flags: Pick<DatabaseFlags, "disableChannelDb"> = readRuntimeFlags()) {
   if (["latest", "beta", "prod"].includes(InstallationChannel) || flags.disableChannelDb)
@@ -102,6 +104,7 @@ export const Client = Object.assign(
     const dbPath = getPath(flags)
     log.info("opening database", { path: dbPath })
 
+    DbPreflight.assertWritable(dbPath) // kilocode_change - actionable error (and self-heal for kilo-owned files) instead of an opaque wal_checkpoint crash on read-only db files
     const db = init(dbPath)
 
     db.run("PRAGMA journal_mode = WAL")

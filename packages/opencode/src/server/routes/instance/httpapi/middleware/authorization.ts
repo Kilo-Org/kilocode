@@ -4,11 +4,17 @@ import { HttpEffect, HttpRouter, HttpServerRequest, HttpServerResponse } from "e
 import { HttpApiError, HttpApiMiddleware } from "effect/unstable/httpapi"
 import { hasPtyConnectTicketURL } from "@/server/shared/pty-ticket"
 import { isPublicUIPath } from "@/server/shared/public-ui"
-import { UnauthorizedError } from "../errors"
+export {
+  Authorization as ServerAuthorization,
+  authorizationLayer as serverAuthorizationLayer,
+} from "@opencode-ai/server/middleware/authorization"
 
 const AUTH_TOKEN_QUERY = "auth_token"
 const UNAUTHORIZED = 401
 const WWW_AUTHENTICATE = 'Basic realm="Secure Area"'
+// kilocode_change start - require auth for high-risk permission toggles even when global auth is optional
+const REQUIRED_AUTH_PATHS = new Set(["/permission/allow-everything"])
+// kilocode_change end
 
 // Avoid HttpApiSecurity alternatives here: Effect security middleware wraps the
 // full handler, so a downstream failure can make the next auth alternative run
@@ -17,13 +23,6 @@ export class Authorization extends HttpApiMiddleware.Service<Authorization>()(
   "@opencode/ExperimentalHttpApiAuthorization",
   {
     error: HttpApiError.UnauthorizedNoContent,
-  },
-) {}
-
-export class V2Authorization extends HttpApiMiddleware.Service<V2Authorization>()(
-  "@opencode/ExperimentalHttpApiV2Authorization",
-  {
-    error: UnauthorizedError,
   },
 ) {}
 
@@ -45,9 +44,10 @@ function validateCredential<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   credential: ServerAuth.DecodedCredentials,
   config: ServerAuth.Info,
+  force = ServerAuth.required(config), // kilocode_change - allow endpoint-specific required auth
 ) {
   return Effect.gen(function* () {
-    if (!ServerAuth.required(config)) return yield* effect
+    if (!force) return yield* effect // kilocode_change
     if (!ServerAuth.authorized(credential, config)) {
       yield* HttpEffect.appendPreResponseHandler((_request, response) =>
         Effect.succeed(HttpServerResponse.setHeader(response, "www-authenticate", WWW_AUTHENTICATE)),
@@ -57,6 +57,12 @@ function validateCredential<A, E, R>(
     return yield* effect
   })
 }
+
+// kilocode_change start - fail closed for high-risk unauthenticated endpoints
+function guarded(url: URL, config: ServerAuth.Info) {
+  return ServerAuth.required(config) || REQUIRED_AUTH_PATHS.has(url.pathname)
+}
+// kilocode_change end
 
 function decodeCredential(input: string) {
   return Effect.fromResult(Encoding.decodeBase64String(input)).pipe(
@@ -123,12 +129,13 @@ export const authorizationLayer = Layer.effect(
   Authorization,
   Effect.gen(function* () {
     const config = yield* ServerAuth.Config
-    if (!ServerAuth.required(config)) return Authorization.of((effect) => effect)
     return Authorization.of((effect) =>
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest
+        const url = new URL(request.url, "http://localhost") // kilocode_change - inspect endpoint-specific auth policy
+        if (!guarded(url, config)) return yield* effect // kilocode_change
         return yield* credentialFromRequest(request).pipe(
-          Effect.flatMap((credential) => validateCredential(effect, credential, config)),
+          Effect.flatMap((credential) => validateCredential(effect, credential, config, true)), // kilocode_change
         )
       }),
     )
@@ -147,30 +154,6 @@ export const ptyConnectAuthorizationLayer = Layer.effect(
         if (hasPtyConnectTicketURL(url)) return yield* effect
         return yield* credentialFromURL(url, request).pipe(
           Effect.flatMap((credential) => validateCredential(effect, credential, config)),
-        )
-      }),
-    )
-  }),
-)
-
-export const v2AuthorizationLayer = Layer.effect(
-  V2Authorization,
-  Effect.gen(function* () {
-    const config = yield* ServerAuth.Config
-    if (!ServerAuth.required(config)) return V2Authorization.of((effect) => effect)
-    return V2Authorization.of((effect) =>
-      Effect.gen(function* () {
-        const request = yield* HttpServerRequest.HttpServerRequest
-        return yield* credentialFromRequest(request).pipe(
-          Effect.flatMap((credential) =>
-            Effect.gen(function* () {
-              if (ServerAuth.authorized(credential, config)) return yield* effect
-              yield* HttpEffect.appendPreResponseHandler((_request, response) =>
-                Effect.succeed(HttpServerResponse.setHeader(response, "www-authenticate", WWW_AUTHENTICATE)),
-              )
-              return yield* new UnauthorizedError({ message: "Authentication required" })
-            }),
-          ),
         )
       }),
     )

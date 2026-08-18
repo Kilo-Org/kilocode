@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -135,7 +136,7 @@ class BaseSettingsUiWorkspaceTest : BasePlatformTestCase() {
         workspaces,
         hint,
     ) {
-        val roots = mutableListOf<String>()
+        val roots = CopyOnWriteArrayList<String>()
         var unavailable = 0
             private set
         var favoriteCount = 0

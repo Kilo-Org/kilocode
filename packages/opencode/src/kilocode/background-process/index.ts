@@ -5,9 +5,10 @@ import { makeRuntime } from "@/effect/run-service"
 import { Identifier } from "@/id/id"
 import { Instance, type InstanceContext } from "@/kilocode/instance"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
+import { model as modelEnv } from "@/kilocode/process/env"
 import { SessionID } from "@/session/schema"
-import { Shell } from "@/shell/shell"
-import { ProjectID } from "@/project/schema"
+import { Shell } from "@opencode-ai/core/shell"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { Process } from "@/util/process"
 import { NonNegativeInt, PositiveInt, optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
 import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
@@ -194,7 +195,7 @@ export namespace BackgroundProcess {
   ) {}
 
   function scoped(ctx: InstanceContext) {
-    const root = ctx.project.id === ProjectID.global ? ctx.directory : ctx.project.worktree
+    const root = ctx.project.id === ProjectV2.ID.global ? ctx.directory : ctx.project.worktree
     const hash = Hash.fast(`${ctx.project.id}\0${Filesystem.resolve(root)}`)
     return { key: `scope:${hash}`, dir: `scope-${hash}` }
   }
@@ -380,7 +381,7 @@ export namespace BackgroundProcess {
   }
 
   function eventscope(active: Active) {
-    if (active.info.lifetime === "persistent" && active.ctx.project.id !== ProjectID.global) {
+    if (active.info.lifetime === "persistent" && active.ctx.project.id !== ProjectV2.ID.global) {
       return active.ctx.project.worktree
     }
     return active.ctx.directory
@@ -574,14 +575,11 @@ export namespace BackgroundProcess {
   }
 
   function env(id?: ID, token?: string) {
-    const result: NodeJS.ProcessEnv = {
-      ...process.env,
+    const result: NodeJS.ProcessEnv = modelEnv({
       TERM: "dumb",
       ...(id ? { KILO_BACKGROUND_PROCESS_ID: id } : {}),
       ...(token ? { KILO_BACKGROUND_PROCESS_TOKEN: token } : {}),
-    }
-    delete result.KILO_SERVER_PASSWORD
-    delete result.KILO_SERVER_USERNAME
+    })
     delete result.KILO_BACKGROUND_PROCESS_PORTS
     return result
   }
@@ -653,6 +651,7 @@ export namespace BackgroundProcess {
     if (!pid || !token) return "unknown"
     const out = await Process.text(["ps", "eww", "-axo", "pid=,pgid=,command="], {
       nothrow: true,
+      abort: AbortSignal.timeout(2_000),
       timeout: 2_000,
     })
     if (out.code !== 0) return "unknown"
@@ -672,6 +671,7 @@ export namespace BackgroundProcess {
     const query = `$p=Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}"; if ($p) { [Console]::Out.Write($p.CommandLine) }`
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
+      abort: AbortSignal.timeout(2_000),
       timeout: 2_000,
     })
     if (out.code !== 0) return "unknown"

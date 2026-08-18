@@ -1,21 +1,21 @@
 import type { Session as SDKSession, Message, Part } from "@kilocode/sdk/v2"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Session } from "@/session/session"
-import { MessageV2 } from "../../session/message-v2"
 import { CliError, effectCmd } from "../effect-cmd"
-import { Database } from "@/storage/db"
-import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
+import { Database } from "@opencode-ai/core/database/database"
+import { SessionTable, MessageTable, PartTable } from "@opencode-ai/core/session/sql"
 import { InstanceRef } from "@/effect/instance-ref"
 import { EOL } from "os"
 import path from "path"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import type { InstanceContext } from "@/project/instance-context"
 
 const log = Log.create({ service: "import" }) // kilocode_change
 
-const decodeMessageInfo = Schema.decodeUnknownSync(MessageV2.Info)
-const decodePart = Schema.decodeUnknownSync(MessageV2.Part)
+const decodeMessageInfo = Schema.decodeUnknownSync(SessionV1.Info)
+const decodePart = Schema.decodeUnknownSync(SessionV1.Part)
 
 /** Discriminated union returned by the ShareNext API (GET /api/shares/:id/data) */
 export type ShareData =
@@ -39,6 +39,17 @@ export function shouldAttachShareAuthHeaders(shareUrl: string, accountBaseUrl: s
   } catch {
     return false
   }
+}
+
+export function formatImportFileError(file: string, error: FSUtil.Error) {
+  if (error._tag === "PlatformError") {
+    if (error.reason._tag === "NotFound") return `File not found: ${file}`
+    if (error.reason._tag === "PermissionDenied") return `Failed to read file: Permission denied`
+    return `Failed to read file: ${error.message}`
+  }
+
+  const detail = error.cause instanceof Error ? error.cause.message : error.message
+  return `Invalid JSON in ${file}: ${detail}`
 }
 
 /**
@@ -138,7 +149,8 @@ export const ImportCommand = effectCmd({
 })
 
 const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: InstanceContext) {
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
+  const { db } = yield* Database.Service
 
   let exportData: ExportData | undefined
 
@@ -182,14 +194,9 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     exportData = data
     // kilocode_change end
   } else {
-    exportData = (yield* fs.readJson(file).pipe(Effect.orElseSucceed(() => undefined))) as
-      | NonNullable<typeof exportData>
-      | undefined
-    if (!exportData) {
-      process.stdout.write(`File not found: ${file}`)
-      process.stdout.write(EOL)
-      return
-    }
+    exportData = (yield* fs
+      .readJson(file)
+      .pipe(Effect.mapError((error) => new CliError({ message: formatImportFileError(file, error) })))) as ExportData
   }
 
   if (!exportData) {
@@ -205,48 +212,45 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     path: path.relative(path.resolve(ctx.worktree), ctx.directory).replaceAll("\\", "/"),
   }) as Session.Info
   const row = Session.toRow(info)
-  Database.use((db) =>
-    db
-      .insert(SessionTable)
-      .values(row)
-      .onConflictDoUpdate({
-        target: SessionTable.id,
-        set: { project_id: row.project_id, directory: row.directory, path: row.path },
-      })
-      .run(),
-  )
+  yield* db
+    .insert(SessionTable)
+    .values(row)
+    .onConflictDoUpdate({
+      target: SessionTable.id,
+      set: { project_id: row.project_id, directory: row.directory, path: row.path },
+    })
+    .run()
+    .pipe(Effect.orDie)
 
   for (const msg of exportData.messages) {
-    const msgInfo = decodeMessageInfo(msg.info) as MessageV2.Info
+    const msgInfo = decodeMessageInfo(msg.info) as SessionV1.Info
     const { id, sessionID: _, ...msgData } = msgInfo
-    Database.use((db) =>
-      db
-        .insert(MessageTable)
-        .values({
-          id,
-          session_id: row.id,
-          time_created: msgInfo.time?.created ?? Date.now(),
-          data: msgData,
-        })
-        .onConflictDoNothing()
-        .run(),
-    )
+    yield* db
+      .insert(MessageTable)
+      .values({
+        id,
+        session_id: row.id,
+        time_created: msgInfo.time?.created ?? Date.now(),
+        data: msgData as never,
+      })
+      .onConflictDoNothing()
+      .run()
+      .pipe(Effect.orDie)
 
     for (const part of msg.parts) {
-      const partInfo = decodePart(part) as MessageV2.Part
+      const partInfo = decodePart(part) as SessionV1.Part
       const { id: partId, sessionID: _s, messageID, ...partData } = partInfo
-      Database.use((db) =>
-        db
-          .insert(PartTable)
-          .values({
-            id: partId,
-            message_id: messageID,
-            session_id: row.id,
-            data: partData,
-          })
-          .onConflictDoNothing()
-          .run(),
-      )
+      yield* db
+        .insert(PartTable)
+        .values({
+          id: partId,
+          message_id: messageID,
+          session_id: row.id,
+          data: partData,
+        })
+        .onConflictDoNothing()
+        .run()
+        .pipe(Effect.orDie)
     }
   }
 

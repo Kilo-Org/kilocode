@@ -1,12 +1,12 @@
 import WebSocket from "ws"
-import * as Log from "@opencode-ai/core/util/log"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { ProviderError } from "@/provider/error"
 import { isRecord } from "@/util/record"
 import { OpenAIWebSocket } from "./ws"
 
 export const TITLE_HEADER = "x-kilo-title"
 
-const log = Log.create({ service: "plugin.openai.ws" })
+const log = Log.create({ service: "plugin.openai.ws" }) // kilocode_change
 
 export interface CreateWebSocketFetchOptions {
   httpFetch?: typeof globalThis.fetch
@@ -63,13 +63,11 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
     })()
     if (!body?.stream) return httpFetch(input, httpInit)
     if (internalHeaders[TITLE_HEADER] === "true") {
-      log.debug("http fallback", { reason: "title" })
       return httpFetch(input, httpInit)
     }
 
     const sessionID = internalHeaders["x-session-affinity"] ?? internalHeaders["session-id"]
     if (!sessionID) {
-      log.debug("http fallback", { reason: "missing_session" })
       return httpFetch(input, httpInit)
     }
     const key = `${sessionID}:conversation`
@@ -78,11 +76,9 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
     pool.set(key, entry)
 
     if (entry.fallback) {
-      log.debug("http fallback", { key, reason: "fallback_active" })
       return httpFetch(input, httpInit)
     }
     if (entry.busy) {
-      log.debug("http fallback", { key, reason: "busy" })
       return httpFetch(input, httpInit)
     }
 
@@ -97,9 +93,9 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
         maxConnectionAge,
         init?.signal,
       )
-      let resolveFirstEvent: (started: boolean) => void = () => {}
+      let resolveFirstEvent: (event: boolean | OpenAIWebSocket.WrappedError) => void = () => {}
       let rejectFirstEvent: (error: Error) => void = () => {}
-      const firstEvent = new Promise<boolean>((resolve, reject) => {
+      const firstEvent = new Promise<boolean | OpenAIWebSocket.WrappedError>((resolve, reject) => {
         resolveFirstEvent = resolve
         rejectFirstEvent = reject
       })
@@ -108,25 +104,23 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
         body,
         idleTimeout,
         signal: init?.signal ?? undefined,
-        onFirstEvent: () => resolveFirstEvent(true),
+        onFirstEvent: (error) => resolveFirstEvent(error ?? true),
         onTerminal: (event) => {
           entry.busy = false
           entry.lastUsedAt = Date.now()
           entry.streamFailures = 0
           if (event.type !== "response.completed" && event.type !== "response.done") {
-            log.warn("websocket terminal failure", { key, type: event.type })
             invalidate(entry)
           }
         },
         onConnectionInvalid: (error) => {
-          log.warn("websocket invalidated", { key, error: error.message })
           entry.busy = false
+          entry.lastUsedAt = Date.now()
           if (!entry.fallback) recordStreamFailure(entry)
           invalidate(entry)
           resolveFirstEvent(false)
         },
         onAbort: (error) => {
-          log.debug("websocket aborted", { key })
           entry.busy = false
           entry.lastUsedAt = Date.now()
           entry.streamFailures = 0
@@ -136,11 +130,17 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
         onRetryableTerminal: async (event) => {
           const error = connectionLimitError(event)
           if (!error) return undefined
-          log.warn("websocket connection limit reached", { key })
           throw error
         },
       })
-      if (await firstEvent) return response
+      const first = await firstEvent
+      if (first !== false) {
+        if (first === true || first.status < 200 || first.status > 599) return response
+        return new Response(first.body, {
+          status: first.status,
+          headers: { "content-type": "application/json", ...first.headers },
+        })
+      }
       if (!entry.fallback) return response
       discard(response) // kilocode_change
       log.debug("http fallback", { key, reason: "websocket_retries_exhausted" })
@@ -155,11 +155,6 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
       }
 
       recordStreamFailure(entry)
-      log.warn("websocket setup failed", {
-        key,
-        error: error instanceof Error ? error.message : String(error),
-        fallback: entry.fallback ? "http" : undefined,
-      })
       invalidate(entry)
       if (entry.fallback) return httpFetch(input, httpInit)
       return failedResponse(
@@ -180,21 +175,28 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
     const now = Date.now()
     for (const [key, entry] of pool) {
       if (entry.busy) continue
+      if (entry.fallback) continue
       if (now - entry.lastUsedAt < idleTimeout) continue
-      log.debug("websocket idle prune", { key })
       invalidate(entry)
       pool.delete(key)
     }
   }
 
   function close() {
-    log.debug("websocket pool close", { count: pool.size })
     clearInterval(pruneTimer)
     for (const entry of pool.values()) invalidate(entry)
     pool.clear()
   }
 
-  return Object.assign(websocketFetch, { close })
+  function remove(sessionID: string) {
+    const key = `${sessionID}:conversation`
+    const entry = pool.get(key)
+    if (!entry) return
+    invalidate(entry)
+    pool.delete(key)
+  }
+
+  return Object.assign(websocketFetch, { close, remove })
 }
 
 function connectionLimitError(event: Record<string, unknown>) {

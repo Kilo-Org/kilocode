@@ -1,12 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway надає доступ до добірки надійних оптимізованих моделей для агентів кодування.",
-  "provider.connect.kiloGateway.line2":
-    "За допомогою одного API-ключа ви отримаєте доступ до таких моделей, як Claude, GPT, Gemini, GLM та інших.",
-  "provider.connect.kiloGateway.visit.prefix": "Відвідайте ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " щоб отримати свій API-ключ.",
   "provider.connect.kiloGateway.byok.prefix": "Для отримання додаткової статистики використання використовуйте ",
   "provider.connect.kiloGateway.byok.link": "BYOK через Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
@@ -24,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "Єдиний доступ до моделей ШІ з розумною маршрутизацією",
 
   // Reasoning block label
-  "ui.permission.run": "Виконати",
   "ui.reasoning.label": "Міркування",
 
   // Marketplace
-  "marketplace.tab.skills": "Навички",
-  "marketplace.tab.mcpServers": "MCP-сервери",
-  "marketplace.category.all": "Усі",
-  "marketplace.placeholder": "Буде реалізовано",
   "marketplace.card.installed": "Встановлено",
   "marketplace.card.install": "Встановити",
   "marketplace.card.remove": "Видалити",
@@ -49,8 +37,7 @@ export const dict = {
   "marketplace.install.destination": "Місце встановлення",
   "marketplace.install.about.mcp":
     "MCP-сервер надає Kilo додаткові інструменти для роботи із зовнішніми сервісами або локальними програмами.",
-  "marketplace.install.about.agent":
-    "Агент додає багаторазову роль із власними інструкціями та дозволами.",
+  "marketplace.install.about.agent": "Агент додає багаторазову роль із власними інструкціями та дозволами.",
   "marketplace.install.about.skill":
     "Навичка додає інструкції та ресурси для певних завдань, які Kilo може завантажити за потреби.",
   "marketplace.install.mcp.warning":
@@ -60,8 +47,7 @@ export const dict = {
   "marketplace.install.learnMore": "Дізнайтеся, як працює встановлення з Marketplace",
   "marketplace.install.learnMcp": "Докладніше про MCP",
   "marketplace.install.installedAt": "Встановлено в {{path}}",
-  "marketplace.intro":
-    "Встановлюйте багаторазових агентів, навички та інструменти MCP для одного або всіх проєктів.",
+  "marketplace.intro": "Встановлюйте багаторазових агентів, навички та інструменти MCP для одного або всіх проєктів.",
   "marketplace.intro.learnMore": "Про Marketplace",
   "marketplace.install.prerequisites": "Передумови",
   "marketplace.install.installing": "Встановлення...",
@@ -75,8 +61,6 @@ export const dict = {
     "Ви впевнені, що хочете видалити цей {{type}}? Це видалить його з вашої конфігурації {{scope}}.",
   "marketplace.remove.cancel": "Скасувати",
   "marketplace.remove.confirm.button": "Видалити",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "Агенти",
   "marketplace.search": "Пошук...",
   "marketplace.filter.all": "Усі елементи",
   "marketplace.filter.notInstalled": "Не встановлено",
@@ -84,12 +68,10 @@ export const dict = {
   "marketplace.empty": "Елементів не знайдено",
   "marketplace.empty.relevant": "Для цього робочого простору не знайдено відповідних елементів маркетплейсу.",
   "marketplace.badge.mcpServer": "MCP-сервер",
-  "marketplace.badge.mode": "Режим",
   "marketplace.card.by": "від {{author}}",
   "marketplace.install.method": "Метод встановлення",
   "marketplace.install.parameters": "Параметри",
   "marketplace.install.optional": "(необов'язково)",
-  "marketplace.install.required": "{{name}} є обов'язковим",
   "marketplace.scope.project": "проєкт",
   "marketplace.scope.global": "глобально",
   "marketplace.remove.type.mcp": "MCP-сервер",
@@ -131,8 +113,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Відкрити в переглядачі відмінностей",
-  "ui.messagePart.shell.command": "Команда",
-  "ui.messagePart.shell.output": "Вивід",
   "ui.messagePart.openInEditor": "Відкрити в редакторі",
 
   // Message feedback (thumbs up/down per assistant response)

@@ -60,6 +60,67 @@ describe("WorktreeStateManager", () => {
     it("returns empty array when removing nonexistent worktree", () => {
       expect(manager.removeWorktree("nonexistent")).toHaveLength(0)
     })
+
+    it("tracks one automatic rename without changing branch ownership", () => {
+      const wt = manager.addWorktree({
+        branch: "quiet-river",
+        path: "/tmp/wt",
+        parentBranch: "main",
+        branchOwned: true,
+      })
+      manager.addSession("session-1", wt.id)
+      manager.armAutoName(wt.id, "session-1")
+
+      expect(manager.getWorktree(wt.id)?.autoNameSessionId).toBe("session-1")
+      expect(manager.renameOwnedBranch(wt.id, "quiet-river", "fix-token-refresh")).toBe(true)
+      expect(manager.getWorktree(wt.id)).toMatchObject({
+        branch: "fix-token-refresh",
+        branchOwned: true,
+        autoNameSessionId: undefined,
+        originalBranch: undefined,
+      })
+    })
+
+    it("treats an observed branch change as manual and cancels automatic naming", () => {
+      const wt = manager.addWorktree({
+        branch: "quiet-river",
+        path: "/tmp/wt",
+        parentBranch: "main",
+        branchOwned: true,
+      })
+      manager.armAutoName(wt.id, "session-1")
+
+      expect(manager.updateWorktreeBranch(wt.id, "my-manual-name")).toBe(true)
+      expect(manager.getWorktree(wt.id)).toMatchObject({
+        branch: "my-manual-name",
+        originalBranch: "quiet-river",
+        autoNameSessionId: undefined,
+      })
+    })
+
+    it("cancels automatic naming when a worktree gains another session", () => {
+      const wt = manager.addWorktree({
+        branch: "quiet-river",
+        path: "/tmp/wt",
+        parentBranch: "main",
+        branchOwned: true,
+      })
+      manager.addSession("session-1", wt.id)
+      manager.armAutoName(wt.id, "session-1")
+      manager.addSession("session-2", wt.id)
+      expect(manager.getWorktree(wt.id)?.autoNameSessionId).toBeUndefined()
+    })
+
+    it("never arms imported branches for automatic naming", () => {
+      const wt = manager.addWorktree({
+        branch: "existing-feature",
+        path: "/tmp/wt",
+        parentBranch: "main",
+        branchOwned: false,
+      })
+      manager.armAutoName(wt.id, "session-1")
+      expect(manager.getWorktree(wt.id)?.autoNameSessionId).toBeUndefined()
+    })
   })
 
   describe("session CRUD", () => {

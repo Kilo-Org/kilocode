@@ -1,13 +1,13 @@
-import { Effect, Layer, Context, Schema, Stream, Scope } from "effect"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { Effect, Layer, Context, Schema, Scope } from "effect"
 import { formatPatch, structuredPatch } from "diff"
-import { Bus } from "@/bus"
-import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
-import { FileWatcher } from "@/file/watcher"
+import { Watcher } from "@opencode-ai/core/filesystem/watcher"
 import { Git } from "@/git"
-import * as Log from "@opencode-ai/core/util/log"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventV2 } from "@opencode-ai/core/event"
+import { VcsEvent } from "@opencode-ai/schema/vcs-event"
 
-const log = Log.create({ service: "vcs" })
 const PATCH_CONTEXT_LINES = 2_147_483_647
 const MAX_PATCH_BYTES = 10_000_000
 const MAX_TOTAL_PATCH_BYTES = 10_000_000
@@ -107,7 +107,6 @@ const batchPatches = Effect.fnUntraced(function* (
     context: options?.context ?? PATCH_CONTEXT_LINES,
     maxOutputBytes: MAX_TOTAL_PATCH_BYTES,
   })
-  if (result.truncated) log.warn("batched patch exceeded byte limit", { max: MAX_TOTAL_PATCH_BYTES })
 
   return {
     patches: splitGitPatch(result).reduce((acc, patch, index) => {
@@ -139,13 +138,11 @@ const nativePatch = Effect.fnUntraced(function* (
         })
   if (!result.truncated && result.text) return result.text
 
-  if (result.truncated) log.warn("patch exceeded byte limit", { file: item.file, max: MAX_PATCH_BYTES })
   return emptyPatch(item.file)
 })
 
 const totalPatch = (file: string, patch: string, total: number) => {
   if (total + Buffer.byteLength(patch) <= MAX_TOTAL_PATCH_BYTES) return { patch, capped: false }
-  log.warn("total patch budget exceeded", { file, max: MAX_TOTAL_PATCH_BYTES })
   return { patch: emptyPatch(file), capped: true }
 }
 
@@ -238,14 +235,7 @@ const track = Effect.fnUntraced(function* (
 export const Mode = Schema.Literals(["git", "branch"])
 export type Mode = Schema.Schema.Type<typeof Mode>
 
-export const Event = {
-  BranchUpdated: BusEvent.define(
-    "vcs.branch.updated",
-    Schema.Struct({
-      branch: Schema.optional(Schema.String),
-    }),
-  ),
-}
+export const Event = VcsEvent
 
 export const Info = Schema.Struct({
   branch: Schema.optional(Schema.String),
@@ -305,11 +295,11 @@ interface State {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Vcs") {}
 
-export const layer: Layer.Layer<Service, never, Git.Service | Bus.Service> = Layer.effect(
+const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const git = yield* Git.Service
-    const bus = yield* Bus.Service
+    const events = yield* EventV2Bridge.Service
     const scope = yield* Scope.Scope
 
     const state = yield* InstanceState.make<State>(
@@ -325,22 +315,21 @@ export const layer: Layer.Layer<Service, never, Git.Service | Bus.Service> = Lay
           concurrency: 2,
         })
         const value = { current, root }
-        log.info("initialized", { branch: value.current, default_branch: value.root?.name })
 
-        yield* (yield* bus.subscribe(FileWatcher.Event.Updated)).pipe(
-          Stream.filter((evt) => evt.properties.file.endsWith("HEAD")),
-          Stream.runForEach((_evt) =>
-            Effect.gen(function* () {
-              const next = yield* get()
-              if (next !== value.current) {
-                log.info("branch changed", { from: value.current, to: next })
-                value.current = next
-                yield* bus.publish(Event.BranchUpdated, { branch: next })
-              }
-            }),
-          ),
-          Effect.forkScoped,
-        )
+        const unsubscribe = yield* events.listen((event) => {
+          if (event.type !== Watcher.Event.Updated.type || event.location?.directory !== ctx.directory)
+            return Effect.void
+          const data = event.data as EventV2.Data<typeof Watcher.Event.Updated>
+          if (!data.file.endsWith("HEAD")) return Effect.void
+          return Effect.gen(function* () {
+            const next = yield* get()
+            if (next !== value.current) {
+              value.current = next
+              yield* events.publish(Event.BranchUpdated, { branch: next })
+            }
+          })
+        })
+        yield* Effect.addFinalizer(() => unsubscribe)
 
         return value
       }),
@@ -429,6 +418,6 @@ export const layer: Layer.Layer<Service, never, Git.Service | Bus.Service> = Lay
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Git.defaultLayer), Layer.provide(Bus.layer))
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [Git.node, EventV2Bridge.node] })
 
 export * as Vcs from "./vcs"

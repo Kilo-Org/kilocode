@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * App-level frontend service for Kilo CLI interaction.
+ * App-level frontend service for Kilo Core interaction.
  *
  * Communicates with the backend via [KiloAppRpcApi]. All operations
  * are app-scoped — no project context is needed.
@@ -47,10 +47,34 @@ class KiloAppService internal constructor(
 
     private val started = AtomicBoolean(false)
 
-    /** CLI version string from the last successful health check, or null if unknown. */
+    /** Core version and platform from the backend, or null if unknown. */
     @Volatile
-    var version: String? = null
-        private set
+    private var info: CoreInfo? = null
+    private val coreLock = Any()
+    private val coreDone = mutableListOf<(CoreInfo?) -> Unit>()
+    private var coreJob: Job? = null
+
+    val core: CoreInfo? get() = info
+
+    val version: String? get() = info?.version
+
+    /**
+     * Whether the running Core is bundled in the plugin (true) or downloaded (false).
+     * Null until fetched. This is a static property of the plugin build, so it is
+     * fetched once via RPC independently of the download-progress state.
+     */
+    @Volatile
+    private var bundledFlag: Boolean? = null
+    private val bundledLock = Any()
+    private var bundledJob: Job? = null
+
+    val bundled: Boolean? get() = bundledFlag
+
+    /**
+     * App-lifetime scope for fire-and-forget work that must outlive transient UIs such as the
+     * settings dialog (whose own scope is cancelled the moment it closes on OK).
+     */
+    internal val scope: CoroutineScope get() = cs
 
     internal val _state = MutableStateFlow(init)
     val state: StateFlow<KiloAppStateDto> = _state.asStateFlow()
@@ -79,6 +103,9 @@ class KiloAppService internal constructor(
     }
 
     private fun onState(state: KiloAppStateDto) {
+        val version = state.downloadVersion
+        val platform = state.downloadPlatform
+        if (version != null && platform != null) info = CoreInfo(version, platform)
         _state.value = state
         if (state.status == KiloAppStatusDto.READY) refreshModelFavoritesAsync()
     }
@@ -96,20 +123,20 @@ class KiloAppService internal constructor(
         call { retry() }
     }
 
-    /** Kill the CLI process and restart it. */
+    /** Kill the Core process and restart it. */
     suspend fun restart() {
         LOG.info("restart: resetting state and sending RPC")
         started.set(false)
-        version = null
+        info = null
         call { restart() }
         LOG.info("restart: RPC returned — backend restart complete")
     }
 
-    /** Kill the CLI process, re-extract the binary, and restart. */
+    /** Kill the Core process, re-download the binary, and restart. */
     suspend fun reinstall() {
         LOG.info("reinstall: resetting state and sending RPC")
         started.set(false)
-        version = null
+        info = null
         call { reinstall() }
         LOG.info("reinstall: RPC returned — backend reinstall complete")
     }
@@ -131,17 +158,78 @@ class KiloAppService internal constructor(
         cs.launch { reinstall() }
     }
 
-    /** Fetch the CLI version and cache it. Call once after connection is established. */
-    fun fetchVersionAsync() {
-        cs.launch {
-            LOG.info("fetchVersion: requesting health check")
-            val dto = health()
-            if (dto == null) {
-                LOG.warn("fetchVersion: health check returned null — version not available")
-                return@launch
+    suspend fun coreInfo(): CoreInfo? = try {
+        val next = CoreInfo(
+            version = call { cliVersion() },
+            platform = call { cliPlatform() },
+        )
+        info = next
+        bundledFlag = call { cliBundled() }
+        next
+    } catch (e: Exception) {
+        LOG.warn("core info failed", e)
+        null
+    }
+
+    /** Fetch the pinned Core version and platform and cache it. */
+    fun fetchCoreInfoAsync(done: (CoreInfo?) -> Unit = {}) {
+        val cached = info
+        if (cached != null) {
+            done(cached)
+            return
+        }
+
+        synchronized(coreLock) {
+            val current = info
+            if (current != null) {
+                done(current)
+                return
             }
-            version = dto.version
-            LOG.info("fetchVersion: CLI version is ${dto.version}")
+            coreDone.add(done)
+            if (coreJob != null) return
+            coreJob = cs.launch {
+                fetchCoreInfo()
+            }
+        }
+    }
+
+    private suspend fun fetchCoreInfo() {
+        LOG.info("fetchCoreInfo: requesting Core version and platform")
+        val next = coreInfo()
+        val list = synchronized(coreLock) {
+            val items = coreDone.toList()
+            coreDone.clear()
+            coreJob = null
+            items
+        }
+        list.forEach { it(next) }
+        if (next != null) {
+            LOG.info("fetchCoreInfo: Core version is ${next.version} (${next.platform})")
+        }
+    }
+
+    /** Fetch the pinned Core version and cache it. */
+    fun fetchVersionAsync(done: (String?) -> Unit = {}) {
+        fetchCoreInfoAsync { done(it?.version) }
+    }
+
+    /** Fetch whether the running Core is bundled and cache it. Deduped and fetched once. */
+    fun fetchBundledAsync() {
+        if (bundledFlag != null) return
+        synchronized(bundledLock) {
+            if (bundledFlag != null || bundledJob != null) return
+            bundledJob = cs.launch {
+                val value = try {
+                    call { cliBundled() }
+                } catch (e: Exception) {
+                    LOG.warn("core bundled check failed", e)
+                    null
+                }
+                synchronized(bundledLock) {
+                    if (value != null) bundledFlag = value
+                    bundledJob = null
+                }
+            }
         }
     }
 
@@ -298,7 +386,7 @@ class KiloAppService internal constructor(
     fun watch(fn: (KiloAppStateDto) -> Unit): Job {
         return cs.launch {
             state.collect { next ->
-                if (next.status == KiloAppStatusDto.READY) fetchVersionAsync()
+                if (next.status == KiloAppStatusDto.READY) fetchCoreInfoAsync()
                 fn(next)
             }
         }
@@ -313,7 +401,10 @@ class KiloAppService internal constructor(
     }
 }
 
+data class CoreInfo(val version: String, val platform: String)
+
 private fun summary(patch: ConfigPatchDto): String {
     val values = patch.values.keys.sorted().joinToString(",").ifEmpty { "none" }
-    return "values=$values agents=${patch.agents.size}"
+    val permission = if (patch.permission != null) " permission" else ""
+    return "values=$values agents=${patch.agents.size}$permission"
 }

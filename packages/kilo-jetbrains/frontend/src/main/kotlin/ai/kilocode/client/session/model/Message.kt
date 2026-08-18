@@ -73,15 +73,21 @@ class FileAttachment(id: String) : Content(id) {
     var url: String = ""
     var filename: String? = null
     var source: PartSourceDto? = null
+    var startLine: Int? = null
+    var endLine: Int? = null
 }
 
 /** Tool invocation with lifecycle state. */
 class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
+    /** Owning message id. The CLI scopes authoritative snapshot diffs by message, not part, id. */
+    var messageID: String? = null
     var state: ToolExecState = ToolExecState.PENDING
     var callId: String? = null
     var title: String? = null
     var input: Map<String, String> = emptyMap()
     var metadata: Map<String, String> = emptyMap()
+    var childSessionId: String? = null
+    var childTools: List<Tool> = emptyList()
     var output: String? = null
     var error: String? = null
     var time: PartTimeDto? = null
@@ -109,7 +115,7 @@ enum class ToolExecState { PENDING, RUNNING, COMPLETED, ERROR }
 
 enum class ToolKind { READ, WRITE, GENERIC }
 
-private val READ_TOOLS = setOf("read", "glob", "grep", "find", "ls", "diagnostics", "warpgrep")
+private val READ_TOOLS = setOf("read", "glob", "grep", "find", "ls", "diagnostics")
 private val WRITE_TOOLS = setOf("edit", "write", "patch", "multi_edit", "multiedit", "apply_patch")
 
 fun toolKind(name: String?): ToolKind = when (name?.lowercase()) {

@@ -39,13 +39,22 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** One-shot health check against /global/health. */
     suspend fun health(): HealthDto
 
+    /** Pinned Core version bundled in backend resources. */
+    suspend fun cliVersion(): String
+
+    /** Core platform downloaded by the backend process. */
+    suspend fun cliPlatform(): String
+
+    /** Whether the running Core is bundled in the plugin (true) or downloaded (false). */
+    suspend fun cliBundled(): Boolean
+
     /** Retry app connection or loading after a failure. */
     suspend fun retry()
 
-    /** Kill the CLI process and restart it. */
+    /** Kill the Core process and restart it. */
     suspend fun restart()
 
-    /** Kill the CLI process, re-extract the binary, and restart. */
+    /** Kill the Core process, re-download the binary, and restart. */
     suspend fun reinstall()
 
     /** Load persisted CLI model state such as favorites. */

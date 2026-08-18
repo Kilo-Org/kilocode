@@ -1,6 +1,6 @@
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { Tool } from "@/tool/tool"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { containsPath } from "@/project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
@@ -168,7 +168,7 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
         const cwd = path.resolve(inst.directory, params.workdir ?? inst.directory)
         if (!containsPath(cwd, inst)) {
           const pattern =
-            process.platform === "win32" ? AppFileSystem.normalizePathPattern(path.join(cwd, "*")) : path.join(cwd, "*")
+            process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(cwd, "*")) : path.join(cwd, "*")
           yield* ctx.ask({
             permission: "external_directory",
             patterns: [pattern],

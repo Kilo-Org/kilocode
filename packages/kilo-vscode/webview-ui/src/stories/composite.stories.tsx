@@ -8,7 +8,7 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
+import type { AssistantMessage as SDKAssistantMessage, ReasoningPart, TextPart, ToolPart } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
 import { VscodeSessionTurn } from "../components/chat/VscodeSessionTurn"
@@ -43,6 +43,15 @@ const baseAssistantMessage: SDKAssistantMessage = {
   path: { cwd: "/project", root: "/project" },
   cost: 0.0023,
   tokens: { total: 512, input: 256, output: 256, reasoning: 0, cache: { read: 0, write: 0 } },
+}
+
+const titleOnlyReasoning: ReasoningPart = {
+  id: "part-reasoning-title-only",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "reasoning",
+  text: "**Assessing search behavior**\n\n<!-- -->",
+  time: { start: now - 7000, end: now - 6500 },
 }
 
 // ---------------------------------------------------------------------------
@@ -289,6 +298,22 @@ const dockPermission: PermissionRequest = {
   always: ["*"],
   args: {},
   // No `tool` field — this is a non-tool (dock) permission
+}
+
+const skillShellPermission: PermissionRequest = {
+  id: "perm-skill-shell-001",
+  sessionID: SESSION_ID,
+  toolName: "bash",
+  // patterns are the decomposed sub-commands (for authorization); the prompt displays the
+  // verbatim per-placeholder commands from args.commands, and names the skill via args.skill.
+  patterns: ["git rev-parse --abbrev-ref HEAD", "printf INJECTED_OK"],
+  always: [],
+  args: {
+    skillShell: true,
+    skill: "git-status",
+    commands: ["git rev-parse --abbrev-ref HEAD", "printf INJECTED_OK"],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-skill-shell-001" },
 }
 
 // ---------------------------------------------------------------------------
@@ -559,6 +584,30 @@ export const BashWithPermission: Story = {
 }
 
 // ---------------------------------------------------------------------------
+// 2b. Permission dock — skill shell batch (command list, Allow/Reject, no rules)
+// ---------------------------------------------------------------------------
+
+export const PermissionDockSkillShell: Story = {
+  name: "Permission Dock — skill shell commands",
+  render: () => {
+    const perms = [skillShellPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "300px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
 // 3. Permission dock — write with file patterns (above chatbox)
 // ---------------------------------------------------------------------------
 
@@ -638,6 +687,37 @@ export const ToolCards: Story = {
   name: "Tool Cards",
   render: () => {
     const data = dataWith([readCompleted, globCompleted, grepCompleted, lsCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const TimelineHighlightedTool: Story = {
+  name: "Task Timeline — highlighted tool",
+  render: () => {
+    const data = dataWith([readCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <div class="vscode-session-turn" data-row="assistant">
+          <div class="vscode-session-turn-assistant">
+            <AssistantMessage
+              message={baseAssistantMessage}
+              highlight={() => ({ msgId: ASST_MSG_ID, partId: readCompleted.id })}
+            />
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TitleOnlyReasoning: Story = {
+  name: "Reasoning - title only",
+  render: () => {
+    const data = dataWith([titleOnlyReasoning, textPart])
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />
@@ -1159,6 +1239,7 @@ print(f"Entries with audio_file set: {found_audio}")
 print(f"Missing audio_file: {len(expected) - found_audio}")
 EOF`,
     rules: ["python3 *"],
+    heredoc: true,
   },
   tool: { messageID: ASST_MSG_ID, callID: "call-heredoc-001" },
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { clean, merge, providerPatch, removed, shouldSync, validate } from "./indexing"
+import { clean, merge, parseFileExtensions, providerPatch, removed, shouldSync, validate } from "./indexing"
 
 describe("indexing config state", () => {
   test("merges project settings over nested global settings", () => {
@@ -57,6 +57,15 @@ describe("indexing config state", () => {
       "Search minimum score must be between 0 and 1.",
       "Search maximum results must be a positive integer.",
       "Embedding batch size must be a positive integer.",
+    ])
+  })
+
+  test("parses and cleans file extension allowlists", () => {
+    expect(parseFileExtensions(" PHP, , .JS, js, C++, c++ ")).toEqual([".c++", ".js", ".php"])
+    expect(parseFileExtensions(" , , ")).toBeUndefined()
+    expect(clean({ fileExtensions: [] })).toEqual({})
+    expect(validate({ fileExtensions: ["*.js", ".d.ts", "src/php"] })).toEqual([
+      "File extensions must contain only a name with an optional leading dot.",
     ])
   })
 })

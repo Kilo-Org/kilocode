@@ -25,6 +25,8 @@ export async function fetchProfile(token: string): Promise<KilocodeProfile> {
     email?: string
     name?: string
     organizations?: Organization[]
+    selectedOrganizationId?: string | null
+    hasPersonalAccount?: boolean | null
   }
   // Backend returns { user: { email, name, ... }, organizations }
   // Transform to flat KilocodeProfile structure
@@ -32,6 +34,8 @@ export async function fetchProfile(token: string): Promise<KilocodeProfile> {
     email: data.user?.email ?? data.email ?? "",
     name: data.user?.name ?? data.name,
     organizations: data.organizations,
+    selectedOrganizationId: data.selectedOrganizationId ?? undefined,
+    hasPersonalAccount: data.hasPersonalAccount ?? undefined,
   }
 }
 
@@ -39,6 +43,21 @@ export async function fetchProfile(token: string): Promise<KilocodeProfile> {
  * Alias for compatibility with existing code
  */
 export const getKiloProfile = fetchProfile
+
+/**
+ * Resolve the organization a fresh login should default to.
+ *
+ * Applied once at login time (not on every profile fetch): prefer the cloud's
+ * validated `selectedOrganizationId`, and fall back to the first organization
+ * when the account has no personal account to sit on. Returns `undefined` to
+ * mean "personal account".
+ */
+export function defaultOrganizationId(profile: KilocodeProfile): string | undefined {
+  const orgs = profile.organizations ?? []
+  const selected = profile.selectedOrganizationId
+  const valid = selected && orgs.some((org) => org.id === selected) ? selected : undefined
+  return valid ?? (profile.hasPersonalAccount === false ? orgs[0]?.id : undefined)
+}
 
 /**
  * Fetch user balance from Kilo API

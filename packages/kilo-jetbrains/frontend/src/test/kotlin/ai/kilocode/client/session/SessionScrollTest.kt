@@ -1,21 +1,26 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.SessionMessageListPanel
+import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.tool.ShellToolView
+import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.ToolRefDto
-import ai.kilocode.client.session.ui.prompt.PromptPanel
-import ai.kilocode.client.session.views.tool.ShellToolView
-import ai.kilocode.client.session.views.tool.ToolView
-import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBRadioButton
@@ -343,6 +348,57 @@ class SessionScrollTest : SessionUiTestBase() {
         assertEquals(value, bar.value)
     }
 
+    fun `test expanding modified files at bottom preserves clicked header position`() {
+        val mid = "modified_expand_bottom"
+        val pid = "modified_expand_bottom_part"
+        rpc.history.addAll(history(23) + modifiedHistory(mid, pid) + historyRange(1, start = 23))
+        ui = newUi(id = "ses_test")
+        settle()
+        drainScroll()
+        val bar = scrollBar()
+        setBottom(bar)
+        drainScroll()
+        val view = modifiedView()
+        assertFalse(view.bodyVisible())
+        val y = visibleY(view)
+        val value = bar.value
+
+        view.toggle()
+        drainScroll()
+
+        assertTrue(view.bodyVisible())
+        assertEquals(y, visibleY(view))
+        assertEquals(value, bar.value)
+    }
+
+    fun `test preserve re-enables tail when viewport is near bottom`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        val messages = find<SessionMessageListPanel>(ui)
+        setBottom(bar)
+        drainScroll()
+        val anchor = messages.components.filterIsInstance<JComponent>().first()
+
+        val value = bottom(bar) - JBUI.scale(16)
+        setValue(bar, value)
+        drainScroll()
+        assertEquals(value, bar.value)
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+
+        ui.scroll.preserve(anchor) {}
+        drainScroll()
+
+        assertFalse(jumpButton().isVisible)
+        assertTrue(ui.scroll.following())
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("preserve_shrink_tail")))
+        drainScroll()
+
+        assertBottom(bar)
+    }
+
     fun `test expanding tool in middle preserves clicked header position`() {
         val mid = "tool_expand_middle"
         val pid = "tool_expand_middle_part"
@@ -440,6 +496,61 @@ class SessionScrollTest : SessionUiTestBase() {
 
         assertBottom(bar)
         assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test turn close after modified files keeps pending tail follow`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setBottom(bar)
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        drainScroll()
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        val id = "modified_close_tail"
+        val pid = "modified_close_part"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(id).copy(summary = MessageSummaryDto(listOf(modifiedFile())))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, id, "text", "tail line\n".repeat(160))), flush = false)
+        forceFlushWithoutDispatch()
+
+        emit(ChatEventDto.TurnClose("ses_test", "completed"))
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+
+        findAll<EditorTextField>(ui).first().text = "next prompt"
+        find<PromptPanel>(ui).send()
+        settleShort(100)
+        val text = rpc.prompts.last().third.parts.single().text
+        val next = "modified_close_next"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(next)), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("modified_close_next_part", next, "text", text)), flush = false)
+        forceFlush()
+        drainScroll()
+
+        assertBottom(bar)
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test turn close after modified files preserves user scroll position`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        emit(ChatEventDto.TurnOpen("ses_test"), flush = false)
+        emit(ChatEventDto.MessageUpdated("ses_test", message("modified_close_middle").copy(summary = MessageSummaryDto(listOf(modifiedFile())))), flush = false)
+        emit(ChatEventDto.TurnClose("ses_test", "completed"), flush = false)
+        forceFlush()
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
     }
 
     fun `test prompt editor growth preserves middle scroll position`() {
@@ -1059,11 +1170,79 @@ class SessionScrollTest : SessionUiTestBase() {
         assertTrue(jumpButton().isVisible)
     }
 
+    fun `test rollback click does not scroll before marker update`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+        assertTrue(jumpButton().isVisible)
+
+        rollback("msg_36").doClick()
+        settle()
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test rollback scrolls after marker shows banner`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+
+        rollback("msg_36").doClick()
+        settle()
+        drainScroll()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("msg_36"))))
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test redo scrolls to restored message bottom`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("msg_36"))))
+        drainScroll()
+        setValue(bar, 0)
+
+        button(KiloBundle.message("revert.banner.redo")).doClick()
+        settle()
+        drainScroll()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("msg_37"))))
+        drainScroll()
+
+        val expected = messageBottomValue("msg_36")
+        assertTrue("expected=$expected bottom=${bottom(bar)}", expected < bottom(bar))
+        assertTrue("value=${bar.value} expected=$expected", kotlin.math.abs(bar.value - expected) <= 1)
+    }
+
     // ------ helpers ------
 
     private fun button(text: String): JButton = findAll<JButton>(ui).first { it.text == text }
 
     private fun icon(text: String): JButton = findAll<JButton>(ui).first { it.toolTipText == text }
+
+    private fun rollback(id: String): JButton {
+        val message = find<SessionMessageListPanel>(ui).findMessage(id) ?: error("missing message $id")
+        return findAll<SessionCopyTarget>(message)
+            .mapNotNull { it.copyToolbar }
+            .flatMap { findAll(it, JButton::class.java) }
+            .first { it.toolTipText == KiloBundle.message("revert.message.rollback") }
+    }
+
+    private fun messageBottomValue(id: String): Int {
+        val pane = scrollComponent() as JBScrollPane
+        val messages = find<SessionMessageListPanel>(ui)
+        val message = messages.findMessage(id) ?: error("missing message $id")
+        val point = SwingUtilities.convertPoint(message, Point(0, message.height.coerceAtLeast(1)), messages)
+        return (point.y - pane.viewport.extentSize.height).coerceIn(0, bottom(scrollBar()))
+    }
 
     private inline fun <reified T> option(label: String): T where T : AbstractButton =
         findAll<T>(ui).first { it.actionCommand == label }
@@ -1077,6 +1256,12 @@ class SessionScrollTest : SessionUiTestBase() {
             else -> null
         }
             ?: error("missing tool $mid/$pid\n${messages.dumpDetailed()}")
+    }
+
+    private fun modifiedView(): ModifiedFilesView {
+        val messages = find<SessionMessageListPanel>(ui)
+        return findAll<ModifiedFilesView>(messages).singleOrNull()
+            ?: error("missing modified files card\n${messages.dumpDetailed()}")
     }
 
     private fun bodyVisible(view: JComponent): Boolean = when (view) {
@@ -1206,6 +1391,25 @@ class SessionScrollTest : SessionUiTestBase() {
     private fun toolHistory(mid: String, pid: String) = MessageWithPartsDto(
         message(mid).copy(role = "assistant"),
         listOf(toolPart(pid, mid)),
+    )
+
+    private fun modifiedHistory(mid: String, pid: String) = MessageWithPartsDto(
+        message(mid).copy(summary = MessageSummaryDto(listOf(modifiedFile()))),
+        listOf(part(pid, mid, "text", text(0))),
+    )
+
+    private fun modifiedFile() = DiffFileDto(
+        file = "src/Changed.kt",
+        additions = 80,
+        deletions = 80,
+        patch = buildString {
+            appendLine("diff --git a/src/Changed.kt b/src/Changed.kt")
+            appendLine("--- a/src/Changed.kt")
+            appendLine("+++ b/src/Changed.kt")
+            appendLine("@@ -1,80 +1,80 @@")
+            repeat(80) { i -> appendLine("-old line $i") }
+            repeat(80) { i -> appendLine("+new line $i") }
+        },
     )
 
     private fun historyRange(count: Int, start: Int) = List(count) { offset ->

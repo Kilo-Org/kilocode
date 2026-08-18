@@ -1,5 +1,5 @@
 import { Process } from "@/util/process"
-import { Shell } from "@/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { Effect, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import type { ChildProcessHandle } from "effect/unstable/process/ChildProcessSpawner"

@@ -12,6 +12,7 @@ const cache = process.env.KILO_BWRAP_CACHE ?? path.join(os.tmpdir(), "kilo-bubbl
 const capability = `#pragma once
 #include <errno.h>
 #include <linux/capability.h>
+#include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -28,8 +29,10 @@ static inline int capset(cap_user_header_t header, const cap_user_data_t data) {
 }
 
 static inline int cap_from_name(const char *name, cap_value_t *cap) {
-  (void) name;
-  (void) cap;
+  if (strcmp(name, "cap_sys_admin") == 0) {
+    *cap = CAP_SYS_ADMIN;
+    return 0;
+  }
   errno = EINVAL;
   return -1;
 }
@@ -90,6 +93,12 @@ function muslLicense(zig: string) {
 }
 
 async function compile(arch: "x64" | "arm64") {
+  const zig = process.env.ZIG ?? Bun.which("zig")
+  if (!zig) {
+    throw new Error(
+      "Building Linux CLI artifacts requires Zig to compile the bundled Bubblewrap helper. Install Zig, set $ZIG, or use --single when building on macOS or Windows.",
+    )
+  }
   const sourceTree = await source()
   const out = path.join(cache, `bwrap-${arch}`)
   const include = path.join(cache, "include", "sys")
@@ -99,7 +108,6 @@ async function compile(arch: "x64" | "arm64") {
   await Bun.write(path.join(include, "capability.h"), capability)
   await Bun.write(path.join(generated, "config.h"), config)
 
-  const zig = process.env.ZIG ?? "zig"
   const args = [
     zig,
     "cc",

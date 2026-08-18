@@ -4,6 +4,14 @@ export type PermissionPatch = PermissionConfig
 
 const RESTRICTION_ORDER: Record<PermissionLevel, number> = { allow: 0, ask: 1, deny: 2 }
 
+// Keep wildcard defaults aligned with the CLI's base rules and Kilo Bash policy.
+export const DEFAULT_RULES: PermissionRuleItem[] = [
+  { permission: "*", pattern: "*", action: "allow" },
+  { permission: "external_directory", pattern: "*", action: "ask" },
+  { permission: "bash", pattern: "*", action: "ask" },
+  { permission: "doom_loop", pattern: "*", action: "ask" },
+]
+
 function matchTool(tool: string, pattern: string): boolean {
   if (pattern === tool || pattern === "*") return true
   if (!pattern.includes("*")) return false
@@ -18,6 +26,21 @@ export function effectiveRuleLevel(rules: PermissionRuleItem[] | undefined, tool
     if (item.pattern === "*" && matchTool(tool, item.permission)) return item.action
   }
   return "ask"
+}
+
+export function ruleset(config: PermissionConfig): PermissionRuleItem[] {
+  const result: PermissionRuleItem[] = []
+  for (const [permission, rule] of Object.entries(config)) {
+    if (rule === null || rule === undefined) continue
+    if (typeof rule === "string") {
+      result.push({ permission, pattern: "*", action: rule })
+      continue
+    }
+    for (const [pattern, action] of Object.entries(rule)) {
+      if (action !== null) result.push({ permission, pattern, action })
+    }
+  }
+  return result
 }
 
 export function mostRestrictive(levels: PermissionLevel[]): PermissionLevel {

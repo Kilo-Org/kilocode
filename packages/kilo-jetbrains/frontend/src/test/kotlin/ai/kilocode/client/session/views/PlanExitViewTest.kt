@@ -4,6 +4,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.md.MdView
 import com.intellij.openapi.editor.colors.CodeInsightColors
@@ -21,14 +22,24 @@ class PlanExitViewTest : BasePlatformTestCase() {
             metadata = mapOf("plan" to ".kilo/plans/x.md")
         }
 
-        val view = PlanExitView(tool) {}
+        val view = PlanExitView(tool, openFile = { _, _ -> })
 
         assertEquals("Plan is ready [.kilo/plans/x.md](.kilo/plans/x.md)", view.markdown())
     }
 
+    fun `test plan exit is indented to the regular header leading edge`() {
+        val view = PlanExitView(tool(ToolExecState.COMPLETED), openFile = { _, _ -> })
+
+        val ins = view.border.getBorderInsets(view)
+        assertEquals(SessionUiStyle.View.Header.left(), ins.left)
+        assertEquals(0, ins.top)
+        assertEquals(0, ins.bottom)
+        assertEquals(0, ins.right)
+    }
+
     fun `test view factory replaces running tool with plan exit view when completed`() {
         val running = tool(ToolExecState.RUNNING)
-        val existing = ViewFactory.create(running, {}) {}
+        val existing = ViewFactory.create(running, { _, _ -> }) {}
         assertTrue(existing is ToolView)
 
         val done = tool(ToolExecState.COMPLETED).apply {
@@ -36,7 +47,7 @@ class PlanExitViewTest : BasePlatformTestCase() {
         }
 
         assertTrue(ViewFactory.shouldReplace(existing, done))
-        assertTrue(ViewFactory.create(done, {}) {} is PlanExitView)
+        assertTrue(ViewFactory.create(done, { _, _ -> }) {} is PlanExitView)
     }
 
     fun `test clicking plan link opens href`() {
@@ -45,14 +56,14 @@ class PlanExitViewTest : BasePlatformTestCase() {
             metadata = mapOf("plan" to ".kilo/plans/my%20plan.md")
         }
 
-        val view = PlanExitView(tool) { opened.add(it) }
+        val view = PlanExitView(tool, openFile = { href, _ -> opened.add(href) })
         view.simulateLink(".kilo/plans/my%20plan.md")
 
         assertEquals(listOf(".kilo/plans/my%20plan.md"), opened)
     }
 
     fun `test applyStyle refreshes nested markdown role colors`() {
-        val view = PlanExitView(tool(ToolExecState.COMPLETED)) {}
+        val view = PlanExitView(tool(ToolExecState.COMPLETED), openFile = { _, _ -> })
         val scheme = EditorColorsManager.getInstance().globalScheme.clone() as EditorColorsScheme
         scheme.setAttributes(
             CodeInsightColors.HYPERLINK_ATTRIBUTES,

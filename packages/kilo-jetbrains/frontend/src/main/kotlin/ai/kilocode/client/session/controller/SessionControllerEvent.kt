@@ -63,6 +63,10 @@ sealed class SessionControllerEvent {
             override fun toString() = "ConnectionChanged connecting"
         }
 
+        data class ShowDownloading(val percent: Int, val version: String? = null, val platform: String? = null) : ConnectionChanged() {
+            override fun toString() = "ConnectionChanged downloading $percent"
+        }
+
         data class ShowError(val summary: String, val detail: String?, val source: String = "app") : ConnectionChanged() {
             override fun toString() = "ConnectionChanged error $source"
         }

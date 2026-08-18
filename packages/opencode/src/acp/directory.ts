@@ -1,16 +1,19 @@
 import { Agent } from "@/agent/agent"
 import { Command } from "@/command"
 import { InstanceRef } from "@/effect/instance-ref"
+import { InstanceBootstrap } from "@/project/bootstrap"
 import { InstanceStore } from "@/project/instance-store"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "@/provider/provider"
 import { Context, Effect, Layer, SynchronizedRef } from "effect"
 import type * as ACPError from "./error"
 
 export type ModelOption = {
-  readonly providerID: ProviderID
+  readonly providerID: ProviderV2.ID
   readonly providerName: string
-  readonly modelID: ModelID
+  readonly modelID: ModelV2.ID
   readonly modelName: string
 }
 
@@ -23,13 +26,13 @@ export type ModeOption = {
 export type ModelVariants = NonNullable<Provider.Model["variants"]>
 
 export type DefaultModel = {
-  readonly providerID: ProviderID
-  readonly modelID: ModelID
+  readonly providerID: ProviderV2.ID
+  readonly modelID: ModelV2.ID
 }
 
 export type Snapshot = {
   readonly directory: string
-  readonly providers: Record<ProviderID, Provider.Info>
+  readonly providers: Record<ProviderV2.ID, Provider.Info>
   readonly modelOptions: readonly ModelOption[]
   readonly variantsByModel: Readonly<Record<string, ModelVariants>>
   readonly availableModes: readonly ModeOption[]
@@ -58,7 +61,7 @@ export const variants = (snapshot: Snapshot, model: DefaultModel) => snapshot.va
 
 export const build = (input: {
   readonly directory: string
-  readonly providers: Record<ProviderID, Provider.Info>
+  readonly providers: Record<ProviderV2.ID, Provider.Info>
   readonly modes: readonly ModeOption[]
   readonly defaultModeID: string
   readonly commands: readonly Command.Info[]
@@ -138,7 +141,7 @@ export const loaderLayer = Layer.effect(
   }),
 )
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const loader = yield* Loader
@@ -198,12 +201,12 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(loaderLayer),
-  Layer.provide(Provider.defaultLayer),
-  Layer.provide(Agent.defaultLayer),
-  Layer.provide(Command.defaultLayer),
-  Layer.provide(InstanceStore.defaultLayer),
-)
+export const loaderNode = LayerNode.make({
+  service: Loader,
+  layer: loaderLayer,
+  deps: [Provider.node, Agent.node, Command.node, InstanceStore.node],
+})
+
+export const node = LayerNode.make({ service: Service, layer, deps: [loaderNode] })
 
 export * as Directory from "./directory"

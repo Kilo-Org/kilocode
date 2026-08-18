@@ -14,6 +14,7 @@ Use the previous digest plus the latest completed turn. Preserve useful continui
 - blockers or failed checks
 
 Do not copy transcript text, command output, logs, secrets, raw failure output, or large code snippets.
+Write a narrative handoff summary. Never echo the transcript or use the `User:` / `Result:` evidence format.
 Preserve transient failure details only when they remain a real blocker or next step.
 Do not summarize branch names, git status, latest commits, current working directory, or untracked files as handoff state unless the user's actual task is about git/rebase/commit history and there is a concrete next step.
 If the latest turn only reconciles current repo status against memory, keep the previous digest. If there is no previous digest, return an empty summary.

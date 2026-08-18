@@ -1,13 +1,13 @@
-import { Bus } from "@/bus"
-import * as Log from "@opencode-ai/core/util/log"
-import { Effect } from "effect"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { InstanceState } from "@/effect/instance-state"
+import { GlobalBus, type GlobalEvent } from "@/bus/global"
+import { EventV2 } from "@opencode-ai/core/event"
+import { Effect, Queue } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import * as Sse from "effect/unstable/encoding/Sse"
 import { EventApi } from "../groups/event"
-
-const log = Log.create({ service: "server" })
 
 function eventData(data: unknown): Sse.Event {
   return {
@@ -18,28 +18,44 @@ function eventData(data: unknown): Sse.Event {
   }
 }
 
-function eventResponse(bus: Bus.Interface) {
+function eventID() {
+  return EventV2.ID.create()
+}
+
+function eventResponse(events: EventV2.Interface) {
+  void events
   return Effect.gen(function* () {
-    // Subscribe eagerly: the bus subscription is acquired in the request scope
-    // at this yield, so any publish from now on is queued for the body-pump
-    // fiber to drain — closing the race where Stream.concat(server.connected,
-    // lazy-subscribe) used to drop publishes in the prefix-consume window.
-    const events = (yield* bus.subscribeAll()).pipe(
-      Stream.takeUntil((event) => event.type === Bus.InstanceDisposed.type),
+    const instance = yield* InstanceState.context
+    const workspaceID = yield* InstanceState.workspaceID
+    // kilocode_change start - GlobalBus includes encoded EventV2 events, sync envelopes, and Kilo's legacy
+    // Bus events. EventV2.listen would silently drop the latter two groups. Register eagerly to avoid gaps.
+    const queue = yield* Queue.unbounded<GlobalEvent["payload"]>()
+    const listener = (event: GlobalEvent) => {
+      if (event.directory !== instance.directory) return
+      if (event.workspace !== undefined && event.workspace !== workspaceID) return
+      Queue.offerUnsafe(queue, event.payload)
+    }
+    yield* Effect.acquireRelease(
+      Effect.sync(() => GlobalBus.on("event", listener)),
+      () => Effect.sync(() => void GlobalBus.off("event", listener)),
     )
+    const output = Stream.fromQueue(queue).pipe(
+      Stream.takeUntil((event) => event?.type === "server.instance.disposed"),
+    )
+    // kilocode_change end
     const heartbeat = Stream.tick("10 seconds").pipe(
       Stream.drop(1),
-      Stream.map(() => ({ id: Bus.createID(), type: "server.heartbeat", properties: {} })),
+      Stream.map(() => ({ id: eventID(), type: "server.heartbeat", properties: {} })),
     )
 
-    log.info("event connected")
+    yield* Effect.logInfo("event connected")
     return HttpServerResponse.stream(
-      Stream.make({ id: Bus.createID(), type: "server.connected", properties: {} }).pipe(
-        Stream.concat(events.pipe(Stream.merge(heartbeat, { haltStrategy: "left" }))),
+      Stream.make({ id: eventID(), type: "server.connected", properties: {} }).pipe(
+        Stream.concat(output.pipe(Stream.merge(heartbeat, { haltStrategy: "left" }))),
         Stream.map(eventData),
         Stream.pipeThroughChannel(Sse.encode()),
         Stream.encodeText,
-        Stream.ensuring(Effect.sync(() => log.info("event disconnected"))),
+        Stream.ensuring(Effect.logInfo("event disconnected")),
       ),
       {
         contentType: "text/event-stream",
@@ -55,11 +71,11 @@ function eventResponse(bus: Bus.Interface) {
 
 export const eventHandlers = HttpApiBuilder.group(EventApi, "event", (handlers) =>
   Effect.gen(function* () {
-    const bus = yield* Bus.Service
+    const events = yield* EventV2Bridge.Service
     return handlers.handleRaw(
       "subscribe",
       Effect.fn("EventHttpApi.subscribe")(function* () {
-        return yield* eventResponse(bus)
+        return yield* eventResponse(events)
       }),
     )
   }),

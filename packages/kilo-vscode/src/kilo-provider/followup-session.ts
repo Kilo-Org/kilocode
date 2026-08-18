@@ -14,7 +14,13 @@ export function recordFollowup(input: { answers: string[][]; dir: string; now: n
   return { dir: input.dir, time: input.now }
 }
 
-export function matchFollowup(input: { pending: Followup | null; dir: string; now: number }): boolean {
+export function matchFollowup(input: {
+  pending: Followup | null
+  dir: string
+  now: number
+  parentID?: string | null
+}): boolean {
+  if (input.parentID !== undefined && input.parentID !== null) return false
   const item = input.pending
   if (!item) return false
   if (input.now - item.time > TTL) return false

@@ -6,7 +6,10 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { useImageModels } from "../../context/image-models"
 import type { ExtensionMessage } from "../../types/messages"
+import { parseModelString } from "../../../../src/shared/provider-model"
+import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
 
 interface ShareOption {
@@ -21,8 +24,9 @@ const SHARE_OPTIONS: ShareOption[] = [
 ]
 
 const ExperimentalTab: Component = () => {
-  const { config, features, updateConfig } = useConfig()
+  const { config, settings, updateConfig, applySetting } = useConfig()
   const language = useLanguage()
+  const imageModels = useImageModels()
   const vscode = useVSCode()
   const [active, setActive] = createSignal(false)
 
@@ -142,17 +146,39 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.codebaseSearch.title")}
-          description={language.t("settings.experimental.codebaseSearch.description")}
+          title={language.t("settings.experimental.imageGeneration.title")}
+          description={language.t("settings.experimental.imageGeneration.description")}
         >
           <Switch
-            checked={experimental().codebase_search ?? false}
-            onChange={(checked) => updateExperimental("codebase_search", checked)}
+            checked={experimental().image_generation ?? false}
+            onChange={(checked) => updateExperimental("image_generation", checked)}
             hideLabel
           >
-            {language.t("settings.experimental.codebaseSearch.title")}
+            {language.t("settings.experimental.imageGeneration.title")}
           </Switch>
         </SettingsRow>
+
+        <Show when={experimental().image_generation}>
+          <SettingsRow
+            title={language.t("settings.experimental.imageGenerationModel.title")}
+            description={language.t("settings.experimental.imageGenerationModel.description")}
+          >
+            <Select
+              options={imageModels.models().map((m) => ({ value: m.id, label: m.name }))}
+              current={imageModels
+                .models()
+                .map((m) => ({ value: m.id, label: m.name }))
+                .find((m) => m.value === experimental().image_generation_model)}
+              value={(item) => item.value}
+              label={(item) => item.label}
+              onSelect={(item) => updateExperimental("image_generation_model", item?.value ?? undefined)}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              placeholder={language.t("settings.experimental.imageGenerationModel.placeholder")}
+            />
+          </SettingsRow>
+        </Show>
 
         <SettingsRow
           title={language.t("settings.experimental.nativeNotebookTools.title")}
@@ -180,11 +206,56 @@ const ExperimentalTab: Component = () => {
           </Switch>
         </SettingsRow>
 
+        <SettingsRow
+          title={language.t("settings.experimental.swePruner.title")}
+          description={language.t("settings.experimental.swePruner.description")}
+        >
+          <Switch
+            checked={experimental().swe_pruner ?? false}
+            onChange={(checked) => updateExperimental("swe_pruner", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.swePruner.title")}
+          </Switch>
+        </SettingsRow>
+
+        <Show when={experimental().swe_pruner}>
+          <SettingsRow
+            title={language.t("settings.experimental.swePrunerModel.title")}
+            description={language.t("settings.experimental.swePrunerModel.description")}
+          >
+            <ModelSelectorBase
+              value={parseModelString(experimental().swe_pruner_model ?? undefined)}
+              onSelect={(providerID, modelID) =>
+                updateExperimental("swe_pruner_model", providerID && modelID ? `${providerID}/${modelID}` : null)
+              }
+              placement="bottom-start"
+              allowClear
+              clearLabel={language.t("settings.providers.notSet")}
+              label={language.t("settings.experimental.swePrunerModel.title")}
+              description={language.t("settings.experimental.swePrunerModel.description")}
+            />
+          </SettingsRow>
+        </Show>
+
+        <SettingsRow
+          title={language.t("settings.experimental.multiProject.title")}
+          description={language.t("settings.experimental.multiProject.description")}
+        >
+          <Switch
+            checked={settings().multiProject === true}
+            onChange={(checked) => applySetting("multiProject", checked, "experimental.multiProject")}
+            hideLabel
+          >
+            {language.t("settings.experimental.multiProject.title")}
+          </Switch>
+        </SettingsRow>
+
         {/* MCP timeout */}
         <SettingsRow
           title={language.t("settings.experimental.mcpTimeout.title")}
           description={language.t("settings.experimental.mcpTimeout.description")}
-          last={!features().sandboxControls}
+          last
         >
           <TextField
             value={String(experimental().mcp_timeout ?? 60000)}
@@ -196,22 +267,6 @@ const ExperimentalTab: Component = () => {
             }}
           />
         </SettingsRow>
-
-        <Show when={features().sandboxControls}>
-          <SettingsRow
-            title={language.t("settings.experimental.sandbox.title")}
-            description={language.t("settings.experimental.sandbox.description")}
-            last
-          >
-            <Switch
-              checked={experimental().sandbox ?? false}
-              onChange={(checked) => updateExperimental("sandbox", checked)}
-              hideLabel
-            >
-              {language.t("settings.experimental.sandbox.title")}
-            </Switch>
-          </SettingsRow>
-        </Show>
       </Card>
 
       {/* Tool toggles */}

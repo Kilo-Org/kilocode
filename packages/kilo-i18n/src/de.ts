@@ -1,12 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway bietet Ihnen Zugang zu einer kuratierten Auswahl zuverlässiger, optimierter Modelle für Coding-Agenten.",
-  "provider.connect.kiloGateway.line2":
-    "Mit einem einzigen API-Schlüssel erhalten Sie Zugang zu Modellen wie Claude, GPT, Gemini, GLM und mehr.",
-  "provider.connect.kiloGateway.visit.prefix": "Besuchen Sie ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": ", um Ihren API-Schlüssel zu erhalten.",
   "provider.connect.kiloGateway.byok.prefix": "Für weitere Nutzungsstatistiken ",
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": " nutzen.",
@@ -24,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "Einheitlicher Zugriff auf KI-Modelle mit intelligentem Routing",
 
   // Reasoning block label
-  "ui.permission.run": "Ausführen",
   "ui.reasoning.label": "Denken",
 
   // Marketplace
-  "marketplace.tab.skills": "Skills",
-  "marketplace.tab.mcpServers": "MCP-Server",
-  "marketplace.category.all": "Alle",
-  "marketplace.placeholder": "Noch nicht implementiert",
   "marketplace.card.installed": "Installiert",
   "marketplace.card.install": "Installieren",
   "marketplace.card.remove": "Entfernen",
@@ -75,8 +63,6 @@ export const dict = {
     "Sind Sie sicher, dass Sie diese {{type}} entfernen möchten? Dadurch wird sie aus Ihrer {{scope}}-Konfiguration entfernt.",
   "marketplace.remove.cancel": "Abbrechen",
   "marketplace.remove.confirm.button": "Entfernen",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "Agenten",
   "marketplace.search": "Suchen...",
   "marketplace.filter.all": "Alle Elemente",
   "marketplace.filter.notInstalled": "Nicht installiert",
@@ -84,12 +70,10 @@ export const dict = {
   "marketplace.empty": "Keine Elemente gefunden",
   "marketplace.empty.relevant": "Keine relevanten Marketplace-Elemente für diesen Arbeitsbereich gefunden.",
   "marketplace.badge.mcpServer": "MCP-Server",
-  "marketplace.badge.mode": "Modus",
   "marketplace.card.by": "von {{author}}",
   "marketplace.install.method": "Installationsmethode",
   "marketplace.install.parameters": "Parameter",
   "marketplace.install.optional": "(optional)",
-  "marketplace.install.required": "{{name}} ist erforderlich",
   "marketplace.scope.project": "Projekt",
   "marketplace.scope.global": "Global",
   "marketplace.remove.type.mcp": "MCP-Server",
@@ -131,8 +115,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Im Diff-Viewer öffnen",
-  "ui.messagePart.shell.command": "Befehl",
-  "ui.messagePart.shell.output": "Ausgabe",
   "ui.messagePart.openInEditor": "Im Editor öffnen",
 
   // Message feedback (thumbs up/down per assistant response)

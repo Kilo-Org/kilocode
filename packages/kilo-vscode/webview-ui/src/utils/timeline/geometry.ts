@@ -23,15 +23,19 @@ const shape = (x: number, width: number, height: number, max: number) => {
 
 export function geometry(bars: TimelineGeometryBar[], max: number, gap = 1): TimelineGeometry {
   const paths = new Map<string, string[]>()
-  const items: TimelineGeometryItem[] = []
+  const len = bars.length
+  const items: TimelineGeometryItem[] = new Array(len)
   let x = 0
 
-  for (const [idx, bar] of bars.entries()) {
-    const item = { ...bar, idx, x }
-    items.push(item)
-    const path = paths.get(bar.bg) ?? []
-    path.push(shape(x, bar.width, bar.height, max))
-    paths.set(bar.bg, path)
+  for (let idx = 0; idx < len; idx++) {
+    const bar = bars[idx]!
+    items[idx] = { bg: bar.bg, width: bar.width, height: bar.height, idx, x }
+    let list = paths.get(bar.bg)
+    if (!list) {
+      list = []
+      paths.set(bar.bg, list)
+    }
+    list.push(shape(x, bar.width, bar.height, max))
     x += bar.width + gap
   }
 

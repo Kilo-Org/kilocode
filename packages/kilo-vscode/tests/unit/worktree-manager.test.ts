@@ -4,7 +4,12 @@ import path from "node:path"
 import fs from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
-import { generateBranchName, sanitizeBranchName, versionedName } from "../../src/agent-manager/branch-name"
+import {
+  generateBranchName,
+  sanitizeBranchName,
+  semanticBranchName,
+  versionedName,
+} from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import simpleGit from "simple-git"
 
@@ -19,17 +24,24 @@ afterEach(async () => {
   )
 })
 
+function gitExec(args: string[]) {
+  const res = Bun.spawnSync(args, { stdout: "ignore", stderr: "pipe" })
+  if (res.exitCode !== 0) {
+    const err = Buffer.from(res.stderr).toString("utf8")
+    throw new Error(`git command failed (${args.join(" ")}): ${err}`)
+  }
+}
+
 /** Create a temp git repo with an initial commit (required for worktrees). */
 async function createTempRepo(): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-"))
   tempDirs.push(dir)
-  const git = simpleGit(dir)
-  await git.init()
-  await git.addConfig("user.email", "test@test.com")
-  await git.addConfig("user.name", "Test")
+  gitExec(["git", "init", "-b", "main", dir])
+  gitExec(["git", "-C", dir, "config", "user.email", "test@test.com"])
+  gitExec(["git", "-C", dir, "config", "user.name", "Test"])
   await fs.writeFile(path.join(dir, "README.md"), "init")
-  await git.add(".")
-  await git.commit("initial commit")
+  gitExec(["git", "-C", dir, "add", "."])
+  gitExec(["git", "-C", dir, "commit", "-m", "initial commit"])
   return dir
 }
 
@@ -46,31 +58,18 @@ async function changedFiles(cwd: string): Promise<string[]> {
 
 /** Create a temp repo with a bare origin remote so origin/<branch> refs exist. */
 async function createTempRepoWithOrigin(): Promise<{ bare: string; clone: string }> {
-  // Use a non-bare seed repo to control the initial branch name, then clone bare
-  const seed = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-seed-"))
-  tempDirs.push(seed)
-  const seedGit = simpleGit(seed)
-  await seedGit.init()
-  await seedGit.addConfig("user.email", "test@test.com")
-  await seedGit.addConfig("user.name", "Test")
-  await fs.writeFile(path.join(seed, "README.md"), "init")
-  await seedGit.add(".")
-  await seedGit.commit("initial commit")
-  // Ensure branch is named "main" regardless of system default
-  const seedBranch = (await seedGit.revparse(["--abbrev-ref", "HEAD"])).trim()
-  if (seedBranch !== "main") await seedGit.raw(["branch", "-m", seedBranch, "main"])
-
-  // Clone to bare, then clone again as working copy
   const bare = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-bare-"))
-  tempDirs.push(bare)
-  await simpleGit().clone(seed, bare, ["--bare"])
-
   const clone = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-clone-"))
-  tempDirs.push(clone)
-  await simpleGit().clone(bare, clone)
-  const cloneGit = simpleGit(clone)
-  await cloneGit.addConfig("user.email", "test@test.com")
-  await cloneGit.addConfig("user.name", "Test")
+  tempDirs.push(bare, clone)
+
+  gitExec(["git", "init", "--bare", "-b", "main", bare])
+  gitExec(["git", "clone", bare, clone])
+  gitExec(["git", "-C", clone, "config", "user.email", "test@test.com"])
+  gitExec(["git", "-C", clone, "config", "user.name", "Test"])
+  await fs.writeFile(path.join(clone, "README.md"), "init")
+  gitExec(["git", "-C", clone, "add", "."])
+  gitExec(["git", "-C", clone, "commit", "-m", "initial commit"])
+  gitExec(["git", "-C", clone, "push", "-u", "origin", "main"])
 
   return { bare, clone }
 }
@@ -114,6 +113,24 @@ describe("generateBranchName", () => {
 // ---------------------------------------------------------------------------
 // sanitizeBranchName
 // ---------------------------------------------------------------------------
+
+describe("semanticBranchName", () => {
+  it("creates a branch slug from a generated session title", () => {
+    expect(semanticBranchName("Fix token refresh race")).toBe("fix-token-refresh-race")
+  })
+
+  it("normalizes a user prefix and keeps branch separators", () => {
+    expect(semanticBranchName("Add billing alerts", "marius/features/")).toBe("marius/features/add-billing-alerts")
+  })
+
+  it("reserves the length limit for the prefix", () => {
+    expect(semanticBranchName("a".repeat(100), "team/").length).toBeLessThanOrEqual(50)
+  })
+
+  it("returns empty when the title has no usable characters", () => {
+    expect(semanticBranchName("修复登录")).toBe("")
+  })
+})
 
 describe("sanitizeBranchName", () => {
   it("replaces spaces with hyphens", () => {
@@ -715,6 +732,47 @@ describe("WorktreeManager.ensureGitExclude", () => {
     const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
     const count = content.split(".kilo/worktrees/").length - 1
     expect(count).toBe(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- automatic branch rename
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.renameBranch", () => {
+  it("renames a local-only branch without moving or cleaning the worktree", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const created = await mgr.createWorktree({ branchName: "quiet-river" })
+    await fs.writeFile(path.join(created.path, "draft.txt"), "keep me")
+
+    const branch = await mgr.renameBranch(created.path, created.branch, "fix-token-refresh")
+
+    expect(branch).toBe("fix-token-refresh")
+    expect((await simpleGit(created.path).revparse(["--abbrev-ref", "HEAD"])).trim()).toBe(branch)
+    expect(await fs.readFile(path.join(created.path, "draft.txt"), "utf-8")).toBe("keep me")
+    expect((await simpleGit(root).branch()).all).not.toContain(created.branch)
+  })
+
+  it("suffixes a generated name that already exists", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const created = await mgr.createWorktree({ branchName: "quiet-river" })
+    await simpleGit(root).branch(["fix-auth"])
+
+    expect(await mgr.renameBranch(created.path, created.branch, "fix-auth")).toBe("fix-auth-2")
+  })
+
+  it("does not rename a branch that exists on a remote", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const created = await mgr.createWorktree({ branchName: "quiet-river" })
+    const hash = (await simpleGit(root).revparse(["HEAD"])).trim()
+    await simpleGit(root).raw(["update-ref", `refs/remotes/origin/${created.branch}`, hash])
+
+    await expect(mgr.renameBranch(created.path, created.branch, "fix-auth")).rejects.toThrow(
+      "already exists on a remote",
+    )
   })
 })
 

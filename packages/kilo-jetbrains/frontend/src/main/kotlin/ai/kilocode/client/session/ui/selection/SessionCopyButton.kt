@@ -1,32 +1,35 @@
 package ai.kilocode.client.session.ui.selection
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.ui.HoverIcon
-import com.intellij.icons.AllIcons
+import ai.kilocode.client.ui.ToolbarButtonAction
+import ai.kilocode.client.ui.toolbarButton
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import java.awt.Cursor
 import java.awt.Point
 import java.awt.datatransfer.StringSelection
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.Icon
 
 internal class SessionCopyButton(
     fill: Boolean = false,
+    tooltip: String = KiloBundle.message("session.copy.hover"),
     private val text: () -> String?,
 ) {
     private var balloon: Balloon? = null
-    val button = HoverIcon(fill = fill).apply {
-        icon = AllIcons.Actions.Copy
-        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        toolTipText = KiloBundle.message("session.copy.hover")
-    }
+    val button = toolbarButton(
+        ToolbarButtonAction(
+            COPY_ICON,
+            tooltip,
+        ) { copy() },
+        fill,
+    )
 
     init {
-        button.addActionListener { copy() }
         button.addMouseListener(object : MouseAdapter() {
             override fun mouseExited(e: MouseEvent) {
                 dismiss()
@@ -52,5 +55,9 @@ internal class SessionCopyButton(
                 item.setAnimationEnabled(false)
                 item.show(RelativePoint(button, Point(button.width / 2, 0)), Balloon.Position.above)
             }
+    }
+
+    companion object {
+        private val COPY_ICON: Icon = IconLoader.getIcon("/icons/copy.svg", SessionCopyButton::class.java)
     }
 }

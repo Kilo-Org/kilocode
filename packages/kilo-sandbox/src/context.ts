@@ -1,6 +1,7 @@
 import { Context, Effect, PlatformError } from "effect"
 import { canonicalize, canonicalizeEntry, matches, normalize } from "./path"
 import type { Profile } from "./profile"
+import { withProxy } from "./proxy"
 
 export const CurrentProfile = Context.Reference<Profile | undefined>("@kilocode/sandbox/CurrentProfile", {
   defaultValue: () => undefined,
@@ -18,7 +19,7 @@ export function run<A, E, R>(
 ): Effect.Effect<A, E | PlatformError.PlatformError, R> {
   return Effect.gen(function* () {
     const value = yield* normalize(profile)
-    return yield* effect.pipe(Effect.provideService(CurrentProfile, value))
+    return yield* withProxy(value, effect.pipe(Effect.provideService(CurrentProfile, value)))
   })
 }
 

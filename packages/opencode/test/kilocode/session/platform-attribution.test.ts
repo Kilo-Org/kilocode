@@ -9,8 +9,8 @@ import { AppRuntime, type AppServices } from "../../../src/effect/app-runtime"
 import { KiloSession } from "../../../src/kilocode/session"
 import { provideTestInstance } from "../../fixture/fixture"
 import { MessageID, type SessionID } from "../../../src/session/schema"
-import { ModelID, ProviderID } from "../../../src/provider/schema"
-
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 const projectRoot = path.join(__dirname, "../../..")
 void Log.init({ print: false })
 
@@ -31,7 +31,7 @@ function seed(id: SessionID) {
           role: "user",
           sessionID: id,
           agent: "build",
-          model: { modelID: ModelID.make("test-model"), providerID: ProviderID.make("test") },
+          model: { modelID: ModelV2.ID.make("test-model"), providerID: ProviderV2.ID.make("test") },
           time: { created: Date.now() },
         })
         yield* svc.updateMessage({
@@ -44,8 +44,8 @@ function seed(id: SessionID) {
           cost: 0,
           path: { cwd: projectRoot, root: projectRoot },
           tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          modelID: ModelID.make("test-model"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test-model"),
+          providerID: ProviderV2.ID.make("test"),
           time: { created: Date.now() },
           finish: "stop",
         })
@@ -107,13 +107,9 @@ describe("session platform attribution", () => {
         expect(KiloSession.resolveParent(child.id)).toBeUndefined()
 
         const closed = Promise.withResolvers<SessionID | undefined>()
-        const unsubscribe = await run(
-          Bus.Service.use((bus) =>
-            bus.subscribeCallback(KiloSession.Event.TurnClose, (event) => {
-              if (event.properties.sessionID === child.id) closed.resolve(event.properties.parentID)
-            }),
-          ),
-        )
+        const unsubscribe = Bus.subscribe(KiloSession.Event.TurnClose, (event) => {
+          if (event.properties.sessionID === child.id) closed.resolve(event.properties.parentID)
+        })
 
         await run(SessionPrompt.Service.use((prompt) => prompt.loop({ sessionID: child.id })))
         expect(await closed.promise).toBe(root.id)

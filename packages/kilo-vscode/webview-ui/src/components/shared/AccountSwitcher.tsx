@@ -24,8 +24,9 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
 
   const profile = () => server.profileData()
   const orgs = () => profile()?.profile.organizations ?? []
+  const personal = () => profile()?.profile.hasPersonalAccount !== false
   const visible = () => !!profile() && orgs().length > 0
-  const current = () => profile()?.currentOrgId ?? PERSONAL
+  const current = () => profile()?.currentOrgId ?? (personal() ? PERSONAL : (orgs()[0]?.id ?? PERSONAL))
 
   const selected = createMemo(() => {
     const id = current()
@@ -119,15 +120,17 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
 
         <Show when={open() && !switching()}>
           <div class="account-switcher-dropdown" role="listbox" aria-label="Account">
-            <button
-              type="button"
-              role="option"
-              aria-selected={current() === PERSONAL}
-              class="account-switcher-item"
-              onClick={() => pick(null)}
-            >
-              <span class="account-switcher-item-name">{language.t("profile.personalAccount")}</span>
-            </button>
+            <Show when={personal()}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={current() === PERSONAL}
+                class="account-switcher-item"
+                onClick={() => pick(null)}
+              >
+                <span class="account-switcher-item-name">{language.t("profile.personalAccount")}</span>
+              </button>
+            </Show>
             <For each={orgs()}>
               {(org) => (
                 <button

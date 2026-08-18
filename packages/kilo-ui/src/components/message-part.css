@@ -1,5 +1,17 @@
 /* Kilo Message Part overrides */
 
+/* Message action rows (copy, fork, revert, feedback, delete queued)
+   share one compact icon-button size. */
+[data-component="text-part"] [data-slot="text-part-copy-wrapper"][data-is-turn-copy],
+[data-component="text-part"] [data-slot="assistant-copy-wrapper"],
+[data-component="user-message"] [data-slot="user-message-copy-wrapper"],
+[data-component="user-message"] [data-slot="user-message-queued-indicator"] {
+  [data-component="icon-button"] {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 [data-component="text-part"] {
   margin-top: 8px;
 
@@ -13,11 +25,6 @@
 
   [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
     display: flex;
-
-    [data-component="icon-button"] {
-      width: 20px;
-      height: 20px;
-    }
   }
 
   [data-slot="assistant-copy-wrapper"] {
@@ -27,15 +34,18 @@
     gap: 2px;
     margin-top: 2px;
 
-    [data-component="icon-button"] {
-      width: 20px;
-      height: 20px;
-    }
-
     /* Thumbs up/down: fill the outline on hover to preview the rated state. */
     [data-component="icon-button"][data-icon="thumbs-up"]:hover [data-slot="icon-svg"] path,
     [data-component="icon-button"][data-icon="thumbs-down"]:hover [data-slot="icon-svg"] path {
       fill: currentColor;
+    }
+
+    /* Throughput badge sits to the right of the copy/feedback buttons,
+       beside them rather than beneath the message. */
+    [data-slot="assistant-throughput-inline"] {
+      margin-left: 6px;
+      display: flex;
+      align-items: center;
     }
   }
 }
@@ -392,6 +402,9 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 
   [data-slot="user-message-text"] {
+    unicode-bidi: plaintext; /* Match the prompt input */
+    background-color: color-mix(in srgb, var(--text-base) 7%, transparent);
+    border: 1px solid transparent;
     transition: opacity 0.3s ease;
 
     &[data-queued] {
@@ -400,6 +413,9 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 
   [data-slot="user-message-queued-indicator"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     margin-top: 6px;
     margin-right: 2px;
     font-size: var(--font-size-small);
@@ -408,8 +424,42 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 }
 
+body.vscode-high-contrast [data-component="user-message"] [data-slot="user-message-text"],
+body.vscode-high-contrast-light [data-component="user-message"] [data-slot="user-message-text"] {
+  border-color: var(--border-weak-base);
+}
+
 [data-component="tool-output"] {
   margin-bottom: 0px;
+}
+
+[data-slot="tool-read-images"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 8px;
+  max-width: min(100%, 64ch);
+}
+
+[data-slot="tool-read-image"] {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+  border: 1px solid var(--border-weak-base);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--border-strong-base);
+  }
+}
+
+[data-slot="tool-read-image-img"] {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
 }
 
 [data-component="todos"] {
@@ -465,11 +515,6 @@ html[data-theme="kilo-vscode"] [data-component="todos"] {
     [data-slot="user-message-meta-wrap"] {
       display: none;
     }
-
-    [data-component="icon-button"] {
-      width: 20px;
-      height: 20px;
-    }
   }
 }
 
@@ -523,6 +568,14 @@ html[data-theme="kilo-vscode"] [data-component="todos"] {
 
     &:hover {
       background-color: var(--surface-inset-base-hover, var(--vscode-list-hoverBackground));
+    }
+
+    &[data-static] {
+      cursor: default;
+    }
+
+    &[data-static]:hover {
+      background-color: var(--surface-inset-base);
     }
   }
 
@@ -638,6 +691,10 @@ html[data-theme="kilo-vscode"] [data-component="reasoning-part"] {
     &:hover {
       background-color: var(--vscode-list-hoverBackground, var(--surface-raised-base-hover));
     }
+
+    &[data-static]:hover {
+      background-color: transparent;
+    }
   }
 
   [data-slot="collapsible-arrow"] {
@@ -669,7 +726,7 @@ html[data-theme="kilo-vscode"] [data-component="reasoning-part"] {
     color: var(--text-weak);
   }
 
-  [data-slot="collapsible-trigger"]:hover {
+  [data-slot="collapsible-trigger"]:not([data-static]):hover {
     [data-slot="reasoning-label"],
     [data-slot="reasoning-title"] {
       color: var(--vscode-list-hoverForeground, var(--vscode-foreground, var(--text-strong)));

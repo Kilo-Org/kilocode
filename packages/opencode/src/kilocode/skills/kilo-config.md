@@ -143,7 +143,7 @@ Scalar form applies to all patterns. Object form maps glob patterns to actions. 
 
 Actions: `"allow"`, `"ask"`, `"deny"`. Set `null` to delete an inherited key.
 
-Tool permissions: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfetch`, `websearch`, `semantic_search`, `lsp`, `skill`, `external_directory`, `todowrite`, `todoread`, `question`, `doom_loop`.
+Tool permissions: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfetch`, `websearch`, `semantic_search`, `kilo_memory_save`, `kilo_memory_recall`, `lsp`, `skill`, `external_directory`, `todowrite`, `todoread`, `question`, `doom_loop`.
 
 ## MCP Servers
 
@@ -318,7 +318,7 @@ Custom themes: place JSON files in `~/.config/kilo/themes/` or `.kilo/themes/`.
 
 Toggle animations, Toggle diff wrapping, Toggle sidebar (`<leader>b`), Toggle thinking (`/thinking`), Toggle tool details, Toggle timestamps (`/timestamps`), Toggle scrollbar, Toggle header, Toggle code concealment (`<leader>h`).
 
-Notification settings are managed through `kilo console` under **Settings > CLI > Notifications**, or through `attention` in `tui.json` / `tui.jsonc`. There is no notification slash command or command-palette toggle.
+Notification settings are managed through `attention` in `tui.json` / `tui.jsonc`. There is no notification slash command or command-palette toggle.
 
 ### System
 

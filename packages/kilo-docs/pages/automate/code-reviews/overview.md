@@ -45,8 +45,7 @@ Before enabling Code Reviews:
 4. Select a **Review Style** — Strict, Balanced, or Lenient.
 5. Choose which **repositories** should receive automatic reviews.
 6. Optionally select **Focus Areas** such as security, performance, bugs, style, testing, or documentation.
-7. Set a **maximum review time** (5–30 minutes).
-8. Optionally enable **Use REVIEW.md** and add a `REVIEW.md` file at the repository root to shape how the agent reviews your code.
+7. Optionally enable **Use REVIEW.md** and add a `REVIEW.md` file at the repository root to shape how the agent reviews your code.
 
 Once configured, the Review Agent runs automatically on PR/MR events. For platform-specific setup, see:
 
@@ -154,10 +153,13 @@ When a pull request or merge request is opened or updated:
    - Summary findings
    - Suggested fixes
    - Risk and severity tagging
-5. Reviews respect the **maximum time limit** you set.
-6. Only repositories you’ve selected will trigger automatic analysis.
+5. Only repositories you’ve selected will trigger automatic analysis.
 
 Reviews are posted directly in your platform (GitHub or GitLab) as if coming from a team reviewer.
+
+{% callout type="info" title="Bot-generated PRs are ignored by default" %}
+Kilo does not automatically review pull or merge requests opened by bots, such as Dependabot, Renovate, or other automation accounts. This keeps review credits and notifications focused on human-authored changes.
+{% /callout %}
 
 ## Review Styles
 
@@ -231,8 +233,9 @@ The Review Agent is ideal for:
 
 ## Limitations and Guidance
 
-- Reviews can run for **up to 30 minutes** depending on your setting.
+- Reviews are subject to a fixed time limit — consider splitting very large PRs into smaller ones.
 - The agent reviews **only the changed files**, not the entire repository.
 - Some highly dynamic or domain-specific code may require additional context in `REVIEW.md`.
 - The agent will only run on **selected repositories**.
 - During beta, review capacity may be throttled for extremely large PRs.
+- PRs/MRs opened by bots (e.g. Dependabot, Renovate) are ignored by default.

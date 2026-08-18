@@ -1,13 +1,14 @@
 import { describe, expect, beforeAll, beforeEach, afterAll } from "bun:test"
 import { Effect, Layer, Ref } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/unstable/http"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
-import { EventV2 } from "@opencode-ai/core/event"
 import { it } from "./lib/effect"
-import { rm, writeFile, utimes, mkdir } from "fs/promises"
+import { readFile, rm, writeFile, utimes, mkdir } from "fs/promises"
 import path from "path"
 
 // test/preload.ts pins KILO_MODELS_PATH to a fixture so other tests can
@@ -17,16 +18,22 @@ import path from "path"
 // bun process.
 const ORIGINAL_MODELS_PATH = Flag.KILO_MODELS_PATH
 const ORIGINAL_DISABLE_FETCH = Flag.KILO_DISABLE_MODELS_FETCH
+// kilocode_change start - isolate the mutable cache fixture from parallel package test processes
+const original = Global.Path.cache
+const root = path.join(Global.Path.tmp, `models-test-${process.pid}-${Math.random().toString(36).slice(2)}`)
+// kilocode_change end
 beforeAll(() => {
   Flag.KILO_MODELS_PATH = undefined
   Flag.KILO_DISABLE_MODELS_FETCH = true
+  Global.Path.cache = root // kilocode_change
 })
 afterAll(() => {
   Flag.KILO_MODELS_PATH = ORIGINAL_MODELS_PATH
   Flag.KILO_DISABLE_MODELS_FETCH = ORIGINAL_DISABLE_FETCH
+  Global.Path.cache = original // kilocode_change
 })
 
-const cacheFile = path.join(Global.Path.cache, "models.json")
+const cacheFile = path.join(root, "models.json") // kilocode_change
 
 const fixture: Record<string, ModelsDev.Provider> = {
   acme: {
@@ -87,24 +94,26 @@ const makeMockClient = (state: Ref.Ref<MockState>) =>
   )
 
 const buildLayer = (state: Ref.Ref<MockState>) =>
-  // Layer.fresh is required: ModelsDev.layer is a module-level Layer constant,
+  // Layer.fresh is required because the ModelsDev implementation is a module-level Layer constant,
   // and Effect.provide uses a process-global MemoMap by default — without fresh,
   // every test would reuse the cachedInvalidateWithTTL state from the first run.
-  Layer.fresh(ModelsDev.layer).pipe(
-    Layer.provide(Layer.succeed(HttpClient.HttpClient, makeMockClient(state))),
-    Layer.provide(AppFileSystem.defaultLayer),
-    Layer.provide(EventV2.defaultLayer),
+  Layer.fresh(
+    AppNodeBuilder.build(ModelsDev.node, [
+      [LayerNodePlatform.httpClient, Layer.succeed(HttpClient.HttpClient, makeMockClient(state))],
+    ]),
   )
 
-const writeCache = (data: object, mtimeMs?: number) =>
+const writeCacheText = (text: string, mtimeMs?: number) =>
   Effect.promise(async () => {
     await mkdir(Global.Path.cache, { recursive: true })
-    await writeFile(cacheFile, JSON.stringify(data))
+    await writeFile(cacheFile, text)
     if (mtimeMs !== undefined) {
       const t = mtimeMs / 1000
       await utimes(cacheFile, t, t)
     }
   })
+
+const writeCache = (data: object, mtimeMs?: number) => writeCacheText(JSON.stringify(data), mtimeMs)
 
 const provided = <A, E>(state: Ref.Ref<MockState>, eff: Effect.Effect<A, E, ModelsDev.Service>) =>
   eff.pipe(Effect.provide(buildLayer(state)))
@@ -114,7 +123,7 @@ beforeEach(async () => {
 })
 
 afterAll(async () => {
-  await rm(cacheFile, { force: true })
+  await rm(root, { recursive: true, force: true }) // kilocode_change
 })
 
 const initialState: MockState = {
@@ -148,6 +157,28 @@ describe("ModelsDev Service", () => {
       expect(result).toEqual({})
       const final = yield* Ref.get(state)
       expect(final.calls).toEqual([])
+    }),
+  )
+
+  it.live("get() recovers from a corrupted cache file by fetching a fresh catalog", () =>
+    Effect.gen(function* () {
+      yield* writeCacheText("{")
+      const state = yield* Ref.make({ ...initialState, body: JSON.stringify(fixture2) })
+      const context = yield* Layer.build(buildLayer(state))
+      const result = yield* Effect.acquireUseRelease(
+        Effect.sync(() => {
+          Flag.KILO_DISABLE_MODELS_FETCH = false
+        }),
+        () => ModelsDev.Service.use((s) => s.get()).pipe(Effect.provide(context)),
+        () =>
+          Effect.sync(() => {
+            Flag.KILO_DISABLE_MODELS_FETCH = true
+          }),
+      )
+      expect(result).toEqual(fixture2)
+      expect(yield* Effect.promise(() => readFile(cacheFile, "utf8"))).toBe(JSON.stringify(fixture2))
+      const final = yield* Ref.get(state)
+      expect(final.calls.length).toBe(1)
     }),
   )
 

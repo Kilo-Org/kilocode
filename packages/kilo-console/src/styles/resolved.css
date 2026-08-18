@@ -118,7 +118,7 @@
 }
 
 .kilo-console .default-model-value strong {
-  font-family: var(--font-family-sans, Inter, system-ui, sans-serif);
+  font-family: var(--font-family-sans);
 }
 
 .kilo-console .default-model-value .default-model-id {

@@ -9,13 +9,20 @@ import ai.kilocode.backend.workspace.ModelInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.backend.workspace.SkillInfo
+import ai.kilocode.rpc.dto.ModelAutoRoutingDto
+import ai.kilocode.rpc.dto.ModelCacheCostDto
+import ai.kilocode.rpc.dto.ModelCapabilitiesDto
+import ai.kilocode.rpc.dto.ModelCostDto
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.KiloWorkspaceLoadProgressDto
 import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ModelInputCapabilitiesDto
 import ai.kilocode.rpc.dto.ModelLimitDto
+import ai.kilocode.rpc.dto.ModelOptionsDto
+import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.SkillDto
@@ -49,14 +56,20 @@ internal object KiloWorkspaceDtoMapper {
     fun command(c: CommandInfo) = CommandDto(
         name = c.name,
         description = c.description,
+        agent = c.agent,
+        model = c.model,
+        variant = c.variant,
         source = c.source,
         hints = c.hints,
+        subtask = c.subtask,
     )
 
     fun skill(s: SkillInfo) = SkillDto(
         name = s.name,
         description = s.description,
         location = s.location,
+        content = s.content,
+        editable = false,
     )
 
     private fun provider(p: ProviderInfo) = ProviderDto(
@@ -69,6 +82,11 @@ internal object KiloWorkspaceDtoMapper {
     private fun model(m: ModelInfo) = ModelDto(
         id = m.id,
         name = m.name,
+        inputPrice = m.inputPrice,
+        outputPrice = m.outputPrice,
+        contextLength = m.contextLength,
+        releaseDate = m.releaseDate,
+        latest = m.latest,
         attachment = m.attachment,
         reasoning = m.reasoning,
         temperature = m.temperature,
@@ -79,6 +97,22 @@ internal object KiloWorkspaceDtoMapper {
         recommendedIndex = m.recommendedIndex,
         variants = m.variants,
         limit = m.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
+        cost = m.cost?.let { cost ->
+            ModelCostDto(
+                input = cost.input,
+                output = cost.output,
+                cache = cost.cache?.let { ModelCacheCostDto(it.read, it.write) },
+            )
+        },
+        capabilities = m.capabilities?.let { cap ->
+            ModelCapabilitiesDto(
+                reasoning = cap.reasoning,
+                input = cap.input?.let { ModelInputCapabilitiesDto(it.text, it.image, it.audio, it.video, it.pdf) },
+            )
+        },
+        options = m.options?.let { ModelOptionsDto(it.description) },
+        autoRouting = m.autoRouting?.let { ModelAutoRoutingDto(it.models) },
+        terminalBench = m.terminalBench?.let { ModelTerminalBenchDto(it.overallScore, it.avgAttemptCostUsd) },
         mayTrainOnYourPrompts = m.mayTrainOnYourPrompts,
     )
 

@@ -2,11 +2,12 @@ import { chmod, mkdir, readFile, rename, stat as statFile, writeFile } from "fs/
 import { createWriteStream, existsSync, statSync } from "fs"
 import { realpathSync } from "fs"
 // kilocode_change start - harden containment checks
-import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep, win32 } from "path"
+import { dirname, isAbsolute, join, resolve as pathResolve, win32 } from "path"
 // kilocode_change end
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
 import { Glob } from "@opencode-ai/core/util/glob"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 
 // Fast sync version for metadata checks
@@ -23,7 +24,13 @@ export async function isDir(p: string): Promise<boolean> {
 }
 
 export function stat(p: string): ReturnType<typeof statSync> | undefined {
-  return statSync(p, { throwIfNoEntry: false }) ?? undefined
+  // kilocode_change start - also treat ENOTDIR/EACCES as absent, every caller expects undefined
+  try {
+    return statSync(p, { throwIfNoEntry: false }) ?? undefined
+  } catch {
+    return undefined
+  }
+  // kilocode_change end
 }
 
 export async function statAsync(p: string): Promise<ReturnType<typeof statSync> | undefined> {
@@ -59,6 +66,21 @@ function isEnoent(e: unknown): e is { code: "ENOENT" } {
   return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "ENOENT"
 }
 
+// kilocode_change start - Windows transient locked-file errors on atomic rename
+// Defender/indexer and concurrent writers (e.g. background plugin install) can
+// briefly hold the temp file, making MoveFileEx fail with EPERM/EACCES/EBUSY.
+// Retry with a short backoff instead of surfacing a 500; POSIX renames are atomic
+// so the retry path only fires under contention and never changes success semantics.
+function isLocked(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    "code" in e &&
+    ["EBUSY", "EACCES", "EPERM"].includes(String((e as { code: string }).code))
+  )
+}
+// kilocode_change end
+
 export async function write(p: string, content: string | Buffer | Uint8Array, mode?: number): Promise<void> {
   // kilocode_change start - atomic write via temp-file + rename to avoid partial reads on concurrent saves
   // Include a random suffix so that concurrent writes to the same path never share a temp file,
@@ -72,15 +94,23 @@ export async function write(p: string, content: string | Buffer | Uint8Array, mo
     }
     await rename(tmp, p)
   }
-  try {
-    await doWrite()
-  } catch (e) {
-    if (isEnoent(e)) {
-      await mkdir(dirname(p), { recursive: true })
+  const attempts = process.platform === "win32" ? 8 : 1
+  for (let attempt = 1; ; attempt++) {
+    try {
       await doWrite()
       return
+    } catch (e) {
+      if (isEnoent(e)) {
+        await mkdir(dirname(p), { recursive: true })
+        await doWrite()
+        return
+      }
+      if (isLocked(e) && attempt < attempts) {
+        await Bun.sleep(50 * attempt)
+        continue
+      }
+      throw e
     }
-    throw e
   }
   // kilocode_change end
 }
@@ -170,16 +200,11 @@ export function windowsPath(p: string): string {
   )
 }
 export function overlaps(a: string, b: string) {
-  const relA = relative(a, b)
-  const relB = relative(b, a)
-  return !relA || !relA.startsWith("..") || !relB || !relB.startsWith("..")
+  return FSUtil.overlaps(a, b)
 }
 
 export function contains(parent: string, child: string) {
-  // kilocode_change start - reject cross-drive and escaped relative paths
-  const rel = relative(parent, child)
-  return rel === "" || (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`))
-  // kilocode_change end
+  return FSUtil.contains(parent, child)
 }
 
 export async function findUp(

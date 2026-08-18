@@ -13,39 +13,48 @@ export function capturePlan(input: {
   reason?: CaptureReason
   summary: string
   echo: boolean
-  durable: boolean
+  substantial: boolean
+  edited: boolean
   priorTime: number
   now: number
   minIntervalMs: number
-  lastConsolidatedAt: number | null | undefined
+  lastTypedConsolidationAt: number | null | undefined
   bypassInterval?: boolean
   autoConsolidate: boolean
 }) {
   const completed = !input.reason || input.reason === "completed"
-  const session = input.autoConsolidate && completed && !input.echo && Boolean(input.summary)
+  const base = input.autoConsolidate && completed && Boolean(input.summary)
+  // Echo only suppresses session digests; lookup answers should not create digest noise.
+  const session = base && !input.echo
+  // Typed capture trusts the prompt as the content filter and remains bounded by the interval throttle.
+  const typedSession = base
+  const trivial = Boolean(input.summary) && !input.edited && input.summary.length < 80
   const digestDue =
     session &&
+    !trivial &&
     (!input.priorTime ||
       !Number.isFinite(input.priorTime) ||
       input.now - input.priorTime >= input.minIntervalMs ||
-      input.durable)
+      input.substantial)
   const interval = Boolean(
     !input.bypassInterval &&
-      input.lastConsolidatedAt &&
-      input.now - input.lastConsolidatedAt < input.minIntervalMs &&
-      !input.durable,
+      input.lastTypedConsolidationAt &&
+      input.now - input.lastTypedConsolidationAt < input.minIntervalMs &&
+      !input.substantial,
   )
   const typed = typedCapture({ reason: input.reason, interval })
-  const typedCall = input.autoConsolidate && typed.call && session
-  const typedWork = input.autoConsolidate && typed.work && session
+  const typedCall = input.autoConsolidate && typed.call && typedSession
+  const typedWork = input.autoConsolidate && typed.work && typedSession
+  // Interrupted/error closes never call the model, but a non-LLM fallback digest still leaves a trace.
+  const fallbackDigest = input.autoConsolidate && !completed && Boolean(input.summary) && !trivial
   const skipReason =
-    !digestDue && !typedWork
-      ? input.echo && completed
-        ? "memory_echo"
+    digestDue || typedWork
+      ? undefined
+      : trivial
+        ? "trivial"
         : interval && (input.reason === undefined || input.reason === "completed")
           ? "interval"
-          : "no_work"
-      : undefined
+        : "no_work"
   return {
     completed,
     session,
@@ -53,6 +62,7 @@ export function capturePlan(input: {
     interval,
     typedCall,
     typedWork,
+    fallbackDigest,
     skipReason,
     idleFlush: skipReason === "interval" && session,
   }

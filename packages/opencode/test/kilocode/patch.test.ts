@@ -6,6 +6,7 @@
 // These round-trip through the apply_patch tool so the Kilo encoding layer is
 // exercised with the upstream patch parser.
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
@@ -14,22 +15,25 @@ import iconv from "iconv-lite"
 import { Effect, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Format } from "../../src/format"
 import { LSP } from "../../src/lsp/lsp"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { ApplyPatchTool } from "../../src/tool/apply_patch"
 import { Tool } from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
-import { provideInstance } from "../fixture/fixture"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { provideInstance, testInstanceStoreLayer } from "../fixture/fixture"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 
 const layer = Layer.mergeAll(
-  Agent.defaultLayer,
-  AppFileSystem.defaultLayer,
+  AppNodeBuilder.build(Agent.node),
+  AppNodeBuilder.build(FSUtil.node),
   Bus.layer,
-  Format.defaultLayer,
-  LSP.defaultLayer,
-  Truncate.defaultLayer,
+  AppNodeBuilder.build(Format.node),
+  AppNodeBuilder.build(LSP.node),
+  AppNodeBuilder.build(Truncate.node),
+  testInstanceStoreLayer,
+  AppNodeBuilder.build(EventV2Bridge.node),
 )
 
 const apply = (dir: string, patchText: string) =>

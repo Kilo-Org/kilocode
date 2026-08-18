@@ -2,7 +2,8 @@ import { Config } from "@/config/config"
 // kilocode_change start - preserve Kilo API default model overlay
 import { fetchDefaultModel } from "@kilocode/kilo-gateway"
 import { Auth } from "@/auth"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { filterPromptTrainingModels, nonEmptyProviders } from "@/kilocode/provider/model-filter"
 // kilocode_change end
 import { Provider } from "@/provider/provider"
@@ -44,13 +45,13 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       // kilocode_change end
 
       // kilocode_change start - Fetch default model from Kilo API when the kilo provider is available.
-      if (providers[ProviderID.kilo]) {
+      if (providers[ProviderV2.ID.kilo]) {
         const auth = yield* Auth.Service
         const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({}))) // kilocode_change
         const token = info?.type === "oauth" ? info.access : info?.key
         const organizationId = info?.type === "oauth" ? info.accountId : undefined
         const model = yield* Effect.promise(() => fetchDefaultModel(token, organizationId))
-        if (model && providers[ProviderID.kilo]?.models[model]) defaults[ProviderID.kilo] = ModelID.make(model)
+        if (model && providers[ProviderV2.ID.kilo]?.models[model]) defaults[ProviderV2.ID.kilo] = ModelV2.ID.make(model)
       }
       // kilocode_change end
 

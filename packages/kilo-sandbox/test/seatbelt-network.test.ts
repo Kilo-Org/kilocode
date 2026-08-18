@@ -3,21 +3,23 @@ import { Effect } from "effect"
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { createServer } from "node:net"
 import { prepare, type Launch } from "../src/backend"
 import { run } from "../src/context"
 import type { Profile } from "../src/profile"
+import { CurrentProxyFactory, startProxy, type ProxyFactory } from "../src/proxy"
 
 const mac = process.platform === "darwin" ? test : test.skip
 const roots: string[] = []
 
-function profile(root: string, mode: Profile["network"]["mode"]): Profile {
+function profile(root: string, mode: Profile["network"]["mode"], allowedHosts: ReadonlyArray<string> = []): Profile {
   return {
     filesystem: {
       allowWrite: [{ path: root, kind: "subtree" }],
       denyWrite: [],
       denyNames: [".protected"],
     },
-    network: { mode, allowedHosts: [] },
+    network: { mode, allowedHosts },
     environment: { deny: [], set: {} },
   }
 }
@@ -27,7 +29,20 @@ function prepareLaunch(profile: Profile, input: Launch) {
 }
 
 async function launch(profile: Profile, input: Launch) {
-  const target = await prepareLaunch(profile, input)
+  return Effect.runPromise(
+    Effect.scoped(
+      run(
+        profile,
+        Effect.gen(function* () {
+          const target = yield* prepare(input)
+          return yield* Effect.promise(() => spawn(target))
+        }),
+      ),
+    ),
+  )
+}
+
+async function spawn(target: Launch) {
   const child = Bun.spawn([target.command, ...target.args], {
     cwd: target.cwd,
     env: target.environment,
@@ -40,6 +55,20 @@ async function launch(profile: Profile, input: Launch) {
     new Response(child.stderr).text(),
   ])
   return { code, stdout, stderr }
+}
+
+function proxied(profile: Profile, input: Launch, factory: ProxyFactory) {
+  return Effect.runPromise(
+    Effect.scoped(
+      run(
+        profile,
+        Effect.gen(function* () {
+          const target = yield* prepare(input)
+          return yield* Effect.promise(() => spawn(target))
+        }),
+      ).pipe(Effect.provideService(CurrentProxyFactory, factory)),
+    ),
+  )
 }
 
 function server(hostname: string) {
@@ -195,6 +224,86 @@ describe("macOS Seatbelt network integration", () => {
       expect(denied.requests()).toBe(0)
     } finally {
       await Promise.all([allowed.server.stop(true), denied.server.stop(true)])
+    }
+  })
+
+  mac("allows only the configured proxy destination and denies direct bypasses", async () => {
+    const dir = await root()
+    const allowed = http()
+    const blocked = http()
+    const port = allowed.server.port!
+    const factory: ProxyFactory = (hosts) =>
+      startProxy(hosts, "darwin", async (dest) => {
+        if (dest.port !== port) throw new Error("unexpected port")
+        return { address: "127.0.0.1", family: 4 }
+      })
+    const policy = profile(dir, "proxy", [`allowed.test:${port}`])
+    try {
+      const allow = await proxied(
+        policy,
+        { command: "/usr/bin/curl", args: ["-fsS", `http://allowed.test:${port}/allowed`], cwd: dir },
+        factory,
+      )
+      const deny = await proxied(
+        policy,
+        { command: "/usr/bin/curl", args: ["-fsS", `http://blocked.test:${port}/blocked`], cwd: dir },
+        factory,
+      )
+      const direct = await proxied(
+        policy,
+        {
+          command: "/usr/bin/curl",
+          args: ["--noproxy", "*", "-fsS", `http://127.0.0.1:${blocked.server.port}/direct`],
+          cwd: dir,
+        },
+        factory,
+      )
+      expect(allow.code).toBe(0)
+      expect(allow.stdout).toBe("sandbox-http-ok")
+      expect(deny.code).not.toBe(0)
+      expect(direct.code).not.toBe(0)
+      expect(allowed.requests()).toBe(1)
+      expect(blocked.requests()).toBe(0)
+    } finally {
+      await Promise.all([allowed.server.stop(true), blocked.server.stop(true)])
+    }
+  })
+
+  mac("denies host Unix socket bypasses in proxy mode", async () => {
+    const dir = await root()
+    const socket = join(await root(), "escape.sock")
+    let accepted = 0
+    const listener = createServer((client) => {
+      accepted++
+      client.end("escaped")
+    })
+    await new Promise<void>((resolve, reject) => {
+      listener.once("error", reject)
+      listener.listen(socket, () => {
+        listener.off("error", reject)
+        resolve()
+      })
+    })
+    const factory: ProxyFactory = (hosts) =>
+      startProxy(hosts, "darwin", async () => ({ address: "127.0.0.1", family: 4 }))
+    const policy = profile(dir, "proxy", ["allowed.test:443"])
+    const script = [
+      'const net = require("node:net")',
+      `const socket = net.connect({ path: ${JSON.stringify(socket)} })`,
+      "socket.on('connect', () => process.exit(2))",
+      "socket.on('error', () => process.exit(0))",
+      "setTimeout(() => process.exit(4), 1000)",
+    ].join("\n")
+    try {
+      const result = await proxied(
+        policy,
+        { command: process.execPath, args: ["-e", script], cwd: dir },
+        factory,
+      )
+      expect(result.code).toBe(0)
+      expect(accepted).toBe(0)
+    } finally {
+      await new Promise<void>((resolve) => listener.close(() => resolve()))
     }
   })
 

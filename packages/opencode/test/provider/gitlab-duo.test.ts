@@ -6,7 +6,7 @@ export {}
 // import { test, expect, describe } from "bun:test"
 // import path from "path"
 
-// import { ProviderID, ModelID } from "../../src/provider/schema"
+// import { ProviderV2 } from "@opencode-ai/core/provider"
 // import { tmpdir, withTestInstance } from "../fixture/fixture"
 // import { Provider } from "@/provider/provider"
 // import { Env } from "../../src/env"
@@ -31,8 +31,8 @@ export {}
 //     },
 //     fn: async () => {
 //       const providers = await list()
-//       expect(providers[ProviderID.gitlab]).toBeDefined()
-//       expect(providers[ProviderID.gitlab].key).toBe("test-gitlab-token")
+//       expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
+//       expect(providers[ProviderV2.ID.gitlab].key).toBe("test-gitlab-token")
 //     },
 //   })
 // })
@@ -63,8 +63,8 @@ export {}
 //     },
 //     fn: async () => {
 //       const providers = await list()
-//       expect(providers[ProviderID.gitlab]).toBeDefined()
-//       expect(providers[ProviderID.gitlab].options?.instanceUrl).toBe("https://gitlab.example.com")
+//       expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
+//       expect(providers[ProviderV2.ID.gitlab].options?.instanceUrl).toBe("https://gitlab.example.com")
 //     },
 //   })
 // })
@@ -101,7 +101,7 @@ export {}
 //     },
 //     fn: async () => {
 //       const providers = await list()
-//       expect(providers[ProviderID.gitlab]).toBeDefined()
+//       expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
 //     },
 //   })
 // })
@@ -136,8 +136,8 @@ export {}
 //     },
 //     fn: async () => {
 //       const providers = await list()
-//       expect(providers[ProviderID.gitlab]).toBeDefined()
-//       expect(providers[ProviderID.gitlab].key).toBe("glpat-test-pat-token")
+//       expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
+//       expect(providers[ProviderV2.ID.gitlab].key).toBe("glpat-test-pat-token")
 //     },
 //   })
 // })
@@ -168,8 +168,8 @@ export {}
 //     },
 //     fn: async () => {
 //       const providers = await list()
-//       expect(providers[ProviderID.gitlab]).toBeDefined()
-//       expect(providers[ProviderID.gitlab].options?.instanceUrl).toBe("https://gitlab.company.internal")
+//       expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
+//       expect(providers[ProviderV2.ID.gitlab].options?.instanceUrl).toBe("https://gitlab.company.internal")
 //     },
 //   })
 // })
@@ -199,7 +199,7 @@ export {}
 //     },
 //     fn: async () => {
 //       const providers = await list()
-//       expect(providers[ProviderID.gitlab]).toBeDefined()
+//       expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
 //     },
 //   })
 // })
@@ -222,8 +222,8 @@ export {}
 //     },
 //     fn: async () => {
 //       const providers = await list()
-//       expect(providers[ProviderID.gitlab]).toBeDefined()
-//       expect(providers[ProviderID.gitlab].options?.aiGatewayHeaders?.["anthropic-beta"]).toContain(
+//       expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
+//       expect(providers[ProviderV2.ID.gitlab].options?.aiGatewayHeaders?.["anthropic-beta"]).toContain(
 //         "context-1m-2025-08-07",
 //       )
 //     },
@@ -258,9 +258,9 @@ export {}
 //     },
 //     fn: async () => {
 //       const providers = await list()
-//       expect(providers[ProviderID.gitlab]).toBeDefined()
-//       expect(providers[ProviderID.gitlab].options?.featureFlags).toBeDefined()
-//       expect(providers[ProviderID.gitlab].options?.featureFlags?.duo_agent_platform_agentic_chat).toBe(true)
+//       expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
+//       expect(providers[ProviderV2.ID.gitlab].options?.featureFlags).toBeDefined()
+//       expect(providers[ProviderV2.ID.gitlab].options?.featureFlags?.duo_agent_platform_agentic_chat).toBe(true)
 //     },
 //   })
 // })
@@ -283,8 +283,8 @@ export {}
 //     },
 //     fn: async () => {
 //       const providers = await list()
-//       expect(providers[ProviderID.gitlab]).toBeDefined()
-//       const models = Object.keys(providers[ProviderID.gitlab].models)
+//       expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
+//       const models = Object.keys(providers[ProviderV2.ID.gitlab].models)
 //       expect(models.length).toBeGreaterThan(0)
 //       expect(models).toContain("duo-chat-haiku-4-5")
 //       expect(models).toContain("duo-chat-sonnet-4-5")
@@ -307,11 +307,11 @@ export {}
 //       },
 //       fn: async () => {
 //         const providers = await list()
-//         const gitlab = providers[ProviderID.gitlab]
+//         const gitlab = providers[ProviderV2.ID.gitlab]
 //         expect(gitlab).toBeDefined()
 //         gitlab.models["duo-workflow-sonnet-4-6"] = {
-//           id: ModelID.make("duo-workflow-sonnet-4-6"),
-//           providerID: ProviderID.make("gitlab"),
+//           id: ModelV2.ID.make("duo-workflow-sonnet-4-6"),
+//           providerID: ProviderV2.ID.make("gitlab"),
 //           name: "Agent Platform (Claude Sonnet 4.6)",
 //           family: "",
 //           api: { id: "duo-workflow-sonnet-4-6", url: "https://gitlab.com", npm: "gitlab-ai-provider" },
@@ -332,7 +332,7 @@ export {}
 //           release_date: "",
 //           variants: {},
 //         }
-//         const model = await getModel(ProviderID.gitlab, ModelID.make("duo-workflow-sonnet-4-6"))
+//         const model = await getModel(ProviderV2.ID.gitlab, ModelV2.ID.make("duo-workflow-sonnet-4-6"))
 //         expect(model).toBeDefined()
 //         expect(model.options?.workflowRef).toBe("claude_sonnet_4_6")
 //         const language = await getLanguage(model)
@@ -355,8 +355,8 @@ export {}
 //       },
 //       fn: async () => {
 //         const providers = await list()
-//         expect(providers[ProviderID.gitlab]).toBeDefined()
-//         const model = await getModel(ProviderID.gitlab, ModelID.make("duo-chat-sonnet-4-5"))
+//         expect(providers[ProviderV2.ID.gitlab]).toBeDefined()
+//         const model = await getModel(ProviderV2.ID.gitlab, ModelV2.ID.make("duo-chat-sonnet-4-5"))
 //         expect(model).toBeDefined()
 //         const language = await getLanguage(model)
 //         expect(language).toBeDefined()
@@ -378,9 +378,9 @@ export {}
 //       },
 //       fn: async () => {
 //         const providers = await list()
-//         const gitlab = providers[ProviderID.gitlab]
+//         const gitlab = providers[ProviderV2.ID.gitlab]
 //         expect(gitlab.options?.featureFlags).toBeDefined()
-//         const model = await getModel(ProviderID.gitlab, ModelID.make("duo-chat-sonnet-4-5"))
+//         const model = await getModel(ProviderV2.ID.gitlab, ModelV2.ID.make("duo-chat-sonnet-4-5"))
 //         expect(model).toBeDefined()
 //         expect(model.options).toBeDefined()
 //       },
@@ -402,7 +402,7 @@ export {}
 //       },
 //       fn: async () => {
 //         const providers = await list()
-//         const models = Object.keys(providers[ProviderID.gitlab].models)
+//         const models = Object.keys(providers[ProviderV2.ID.gitlab].models)
 //         expect(models).toContain("duo-chat-haiku-4-5")
 //         expect(models).toContain("duo-chat-sonnet-4-5")
 //         expect(models).toContain("duo-chat-opus-4-5")

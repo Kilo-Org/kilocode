@@ -265,6 +265,16 @@ class LegacyMigrationOrchestrationTest {
     }
 
     @Test
+    fun `cleanup - legacy settings file target does not mark completed`() {
+        val (eng, fixture, _) = setup {
+            providerProfiles = """{"currentApiConfigName":"p","apiConfigs":{}}"""
+        }
+        eng.cleanup(LegacyCleanupTargets(legacySettingsFile = true))
+        fixture.refresh()
+        assertNull(fixture.migrationStatus)
+    }
+
+    @Test
     fun `cleanup - data target preserves legacy settings file`() {
         val (eng, fixture, _) = setup {
             providerProfiles = """{"currentApiConfigName":"p","apiConfigs":{}}"""

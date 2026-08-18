@@ -1,8 +1,23 @@
-export const MEMORY_USAGE =
-  "/memory [project] enable|status|show|inspect|auto status|auto on|auto off|remember <text>|correct <text>|forget <query>|purge confirm|rebuild|disable"
+export const MEMORY_COMMAND_CATALOG = [
+  { usage: "on", description: "Enable project memory" },
+  { usage: "off", description: "Disable project memory" },
+  { usage: "status", description: "Storage location and stored memory overview" },
+  { usage: "show", description: "Stored project memory overview" },
+  { usage: "remember <text>", description: "Save a project memory note" },
+  { usage: "correct <text>", description: "Save a correction to project memory" },
+  { usage: "forget <query>", description: "Remove matching project memory" },
+  { usage: "auto on|off", description: "Turn automatic memory saves on or off" },
+  { usage: "inspect", description: "Reveal the project memory folder" },
+  { usage: "rebuild", description: "Rebuild the memory index from source files" },
+  { usage: "purge confirm", description: "Delete all project memory files" },
+] as const
+
+export const MEMORY_USAGE = `/memory [project] ${MEMORY_COMMAND_CATALOG.map((item) => item.usage).join("|")}`
 
 export const MEMORY_OPERATIONS = [
   "enable",
+  "status",
+  "inspect",
   "disable",
   "rebuild",
   "remember",
@@ -11,21 +26,19 @@ export const MEMORY_OPERATIONS = [
   "purge",
   "auto",
 ] as const
-export const MEMORY_PROMPT_OPERATIONS = ["remember", "forget"] as const
-
 export type MemoryOperation = (typeof MEMORY_OPERATIONS)[number]
-export type MemoryPromptOperation = (typeof MEMORY_PROMPT_OPERATIONS)[number]
 
 export function isMemoryOperation(input: unknown): input is MemoryOperation {
   return typeof input === "string" && (MEMORY_OPERATIONS as readonly string[]).includes(input)
 }
 
-export function isMemoryPromptOperation(input: unknown): input is MemoryPromptOperation {
-  return typeof input === "string" && (MEMORY_PROMPT_OPERATIONS as readonly string[]).includes(input)
+type Help = {
+  kind: "help"
 }
 
-type Inspect = {
-  kind: "inspect"
+type Show = {
+  kind: "show"
+  rest?: string
 }
 
 type Operation =
@@ -42,7 +55,7 @@ type Operation =
   | {
       kind: "operation"
       operation: "auto"
-      mode: "status" | "on" | "off"
+      mode: "on" | "off"
     }
   | {
       kind: "operation"
@@ -52,6 +65,7 @@ type Operation =
   | {
       kind: "operation"
       operation: Exclude<MemoryOperation, "remember" | "correct" | "forget" | "purge" | "auto">
+      rest?: string
     }
 
 type Usage = {
@@ -59,7 +73,7 @@ type Usage = {
   reason: string
 }
 
-export type ParsedMemoryCommand = Inspect | Operation | Usage
+export type ParsedMemoryCommand = Help | Show | Operation | Usage
 
 function split(input: string) {
   const match = input.trim().match(/^(\S+)(?:\s+([\s\S]*))?$/)
@@ -81,8 +95,10 @@ function usage(reason: string): ParsedMemoryCommand {
 }
 
 function operation(verb: string, text: string): ParsedMemoryCommand | undefined {
-  if (verb === "enable" || verb === "disable" || verb === "rebuild") {
-    return { kind: "operation", operation: verb }
+  if (verb === "on" || verb === "enable") return { kind: "operation", operation: "enable", rest: text }
+  if (verb === "off" || verb === "disable") return { kind: "operation", operation: "disable", rest: text }
+  if (verb === "status" || verb === "inspect" || verb === "rebuild") {
+    return { kind: "operation", operation: verb, rest: text }
   }
   if (verb === "purge") {
     if (text.toLowerCase() === "confirm") return { kind: "operation", operation: "purge", confirm: true }
@@ -90,8 +106,8 @@ function operation(verb: string, text: string): ParsedMemoryCommand | undefined 
   }
   if (verb === "auto" || verb === "auto-consolidate") {
     const mode = text.toLowerCase()
-    if (mode === "status" || mode === "on" || mode === "off") return { kind: "operation", operation: "auto", mode }
-    return usage("Missing auto mode.")
+    if (mode === "on" || mode === "off") return { kind: "operation", operation: "auto", mode }
+    return usage("Missing auto mode. Run /memory auto on or /memory auto off.")
   }
   if (verb === "remember") {
     if (text) return { kind: "operation", operation: "remember", text }
@@ -117,14 +133,14 @@ export function parseMemoryCommand(input: string): ParsedMemoryCommand | undefin
   const match = input.trim().match(/^\/(?:memory|mem)(?:\s+([\s\S]*))?$/i)
   if (!match) return
   const body = (match[1] ?? "").trim()
-  if (!body) return { kind: "inspect" }
+  if (!body) return { kind: "help" }
 
   const picked = target(body)
   if (picked.error) return usage(picked.error)
   const parts = split(picked.rest)
   const verb = parts.head
-  if (!verb) return { kind: "inspect" }
-  if (verb === "status" || verb === "show" || verb === "inspect") return { kind: "inspect" }
+  if (!verb) return { kind: "help" }
+  if (verb === "show") return { kind: "show", rest: parts.tail }
 
   const op = operation(verb, parts.tail)
   if (op) return op

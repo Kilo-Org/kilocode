@@ -56,19 +56,25 @@ export function formatProfileInfo(
 export function getOrganizationOptions(
   organizations: Organization[],
   currentOrgId?: string,
+  hasPersonalAccount = true,
 ): Array<{
   title: string
   value: string | null
   description?: string
   category: string
 }> {
+  const personal = hasPersonalAccount || organizations.length === 0
   return [
-    {
-      title: "Personal Account",
-      value: null,
-      description: !currentOrgId ? "→ (current)" : undefined,
-      category: "Accounts",
-    },
+    ...(personal
+      ? [
+          {
+            title: "Personal Account",
+            value: null,
+            description: !currentOrgId ? "→ (current)" : undefined,
+            category: "Accounts",
+          },
+        ]
+      : []),
     ...organizations.map((org) => ({
       title: org.name,
       value: org.id,

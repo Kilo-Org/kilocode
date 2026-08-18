@@ -1,5 +1,7 @@
 package ai.kilocode.backend.migration.session
 
+import ai.kilocode.backend.migration.LegacyHistoryItem
+import ai.kilocode.backend.migration.LegacyMigrationJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -8,14 +10,16 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import ai.kilocode.backend.migration.LegacyHistoryItem
 
 /**
  * Part conversion for legacy conversation history.
  *
- * Port of packages/kilo-vscode/src/legacy-migration/sessions/lib/parts/
+ * Based on packages/kilo-vscode/src/legacy-migration/sessions/lib/parts/, with JetBrains-owned
+ * part IDs and assistant-owned tool parts for correct transcript rendering.
  */
 object LegacySessionParts {
+
+    private val TODO = Regex("^(?:-\\s*)?\\[\\s*([ xX\\-~])\\s*]\\s+(.+)$")
 
     fun parseParts(
         conversation: List<LegacyApiMessage>,
@@ -39,12 +43,13 @@ object LegacySessionParts {
         val sessionId = LegacySessionIds.createSessionId(id)
         val created = entry.ts ?: item?.ts ?: 0L
         val parts = mutableListOf<JsonObject>()
+        fun pid() = LegacySessionIds.createOrderedPartId(id, index, parts.size)
 
         // Simple string content
         if (entry.content is String) {
             val content = entry.content
             if (isEnvironmentDetails(content)) return emptyList()
-            parts.add(toText(LegacySessionIds.createPartId(id, index, 0), messageId, sessionId, created, content))
+            parts.add(toText(pid(), messageId, sessionId, created, content))
             return parts
         }
 
@@ -52,29 +57,28 @@ object LegacySessionParts {
 
         // Reasoning entry (type=reasoning with text field)
         if (entry.type == "reasoning" && entry.text != null) {
-            parts.add(toReasoning(LegacySessionIds.createExtraPartId(id, index, "reasoning"), messageId, sessionId, created, entry.text))
+            parts.add(toReasoning(pid(), messageId, sessionId, created, entry.text))
         }
 
         // Provider-specific reasoning (reasoning_content or reasoning_details)
         if (entry.type != "reasoning") {
             val reasoning = extractReasoningText(entry)
             if (reasoning != null) {
-                parts.add(toReasoning(LegacySessionIds.createExtraPartId(id, index, "provider-reasoning"), messageId, sessionId, created, reasoning))
+                parts.add(toReasoning(pid(), messageId, sessionId, created, reasoning))
             }
         }
 
-        contentList.forEachIndexed { partIndex, part ->
-            val partId = LegacySessionIds.createPartId(id, index, partIndex)
-            val elem = part as? Map<*, *> ?: return@forEachIndexed
+        contentList.forEach { part ->
+            val elem = part as? Map<*, *> ?: return@forEach
 
             val type = elem["type"] as? String
 
             // Text block
             if (type == "text") {
-                val text = elem["text"] as? String ?: return@forEachIndexed
-                if (isEnvironmentDetails(text)) return@forEachIndexed
-                parts.add(toText(partId, messageId, sessionId, created, text))
-                return@forEachIndexed
+                val text = elem["text"] as? String ?: return@forEach
+                if (isEnvironmentDetails(text)) return@forEach
+                parts.add(toText(pid(), messageId, sessionId, created, text))
+                return@forEach
             }
 
             // attempt_completion result → visible text
@@ -82,32 +86,26 @@ object LegacySessionParts {
                 val input = elem["input"] as? Map<*, *>
                 val result = input?.get("result") as? String
                 if (!result.isNullOrBlank()) {
-                    parts.add(toText(partId, messageId, sessionId, created, result))
+                    parts.add(toText(pid(), messageId, sessionId, created, result))
                 }
-                return@forEachIndexed
+                return@forEach
             }
 
-            // tool_use without matching result
+            // tool_use belongs to this assistant message. The matching result lives on a later user entry.
             if (type == "tool_use") {
                 val toolId = elem["id"] as? String
-                if (thereIsNoToolResult(conversation, toolId)) {
-                    parts.add(toTool(partId, messageId, sessionId, created, elem))
-                }
-                return@forEachIndexed
+                val spec = toolSpec(elem)
+                val output = findToolResultText(conversation, toolId) ?: spec.output
+                parts.add(toTool(pid(), messageId, sessionId, created, elem, output))
+                return@forEach
             }
 
-            // tool_result — extract feedback and merge with matching tool_use
+            // tool_result can include real user feedback, but does not emit a tool part.
             if (type == "tool_result") {
                 val feedback = getFeedbackText(elem["content"])
                 if (feedback != null) {
-                    parts.add(toText(
-                        LegacySessionIds.createExtraPartId(id, index, "feedback-$partIndex"),
-                        messageId, sessionId, created, feedback,
-                    ))
+                    parts.add(toText(pid(), messageId, sessionId, created, feedback))
                 }
-                val toolId = elem["tool_use_id"] as? String
-                val merged = mergeToolUseAndResult(partId, messageId, sessionId, created, conversation, elem, toolId)
-                if (merged != null) parts.add(merged)
             }
         }
 
@@ -150,44 +148,14 @@ object LegacySessionParts {
             })
         }
 
-    fun toTool(partId: String, messageId: String, sessionId: String, created: Long, elem: Map<*, *>): JsonObject {
-        val tool = elem["name"] as? String ?: "unknown"
+    fun toTool(partId: String, messageId: String, sessionId: String, created: Long, elem: Map<*, *>, output: String): JsonObject {
+        val spec = toolSpec(elem)
         val callId = elem["id"] as? String ?: partId
-        return buildJsonObject {
-            put("id", partId)
-            put("messageID", messageId)
-            put("sessionID", sessionId)
-            put("timeCreated", created)
-            put("data", buildJsonObject {
-                put("type", "tool")
-                put("callID", callId)
-                put("tool", tool)
-                put("state", buildJsonObject {
-                    put("status", "completed")
-                    put("input", mapToJsonObject(elem["input"]))
-                    put("output", tool)
-                    put("title", tool)
-                    put("metadata", JsonObject(emptyMap()))
-                    put("time", buildJsonObject { put("start", created); put("end", created) })
-                })
-            })
+        val metadata = if (spec.name == "todowrite") {
+            spec.input["todos"]?.let { JsonObject(mapOf("todos" to it)) } ?: JsonObject(emptyMap())
+        } else {
+            JsonObject(emptyMap())
         }
-    }
-
-    private fun mergeToolUseAndResult(
-        partId: String,
-        messageId: String,
-        sessionId: String,
-        created: Long,
-        conversation: List<LegacyApiMessage>,
-        result: Map<*, *>,
-        toolId: String?,
-    ): JsonObject? {
-        val toolUse = findToolUseInConversation(conversation, toolId) ?: return null
-        val tool = toolUse["name"] as? String ?: "unknown"
-        val callId = toolUse["id"] as? String ?: partId
-        val output = getTextFromContent(result["content"]) ?: tool
-
         return buildJsonObject {
             put("id", partId)
             put("messageID", messageId)
@@ -196,13 +164,13 @@ object LegacySessionParts {
             put("data", buildJsonObject {
                 put("type", "tool")
                 put("callID", callId)
-                put("tool", tool)
+                put("tool", spec.name)
                 put("state", buildJsonObject {
                     put("status", "completed")
-                    put("input", mapToJsonObject(toolUse["input"]))
+                    put("input", JsonObject(spec.input))
                     put("output", output)
-                    put("title", tool)
-                    put("metadata", JsonObject(emptyMap()))
+                    put("title", spec.title)
+                    put("metadata", metadata)
                     put("time", buildJsonObject { put("start", created); put("end", created) })
                 })
             })
@@ -213,23 +181,16 @@ object LegacySessionParts {
     // Utilities
     // -----------------------------------------------------------------------
 
-    private fun findToolUseInConversation(conversation: List<LegacyApiMessage>, id: String?): Map<*, *>? {
+    private fun findToolResultText(conversation: List<LegacyApiMessage>, id: String?): String? {
         if (id == null) return null
         for (entry in conversation) {
             val list = entry.content as? List<*> ?: continue
             val match = list.filterIsInstance<Map<*, *>>()
-                .firstOrNull { it["type"] == "tool_use" && it["id"] == id }
-            if (match != null) return match
+                .firstOrNull { it["type"] == "tool_result" && it["tool_use_id"] == id }
+            val text = getTextFromContent(match?.get("content"))
+            if (text != null) return text
         }
         return null
-    }
-
-    fun thereIsNoToolResult(conversation: List<LegacyApiMessage>, id: String?): Boolean {
-        if (id == null) return true
-        return conversation.none { entry ->
-            (entry.content as? List<*>)?.filterIsInstance<Map<*, *>>()
-                ?.any { it["type"] == "tool_result" && it["tool_use_id"] == id } == true
-        }
     }
 
     fun extractReasoningText(entry: LegacyApiMessage): String? {
@@ -270,23 +231,145 @@ object LegacySessionParts {
             .joinToString("\n").trim().takeIf { it.isNotEmpty() }
     }
 
+    private data class ToolSpec(
+        val name: String,
+        val title: String,
+        val input: Map<String, JsonElement>,
+        val output: String,
+    )
+
+    private fun toolSpec(elem: Map<*, *>): ToolSpec {
+        val legacy = elem["name"] as? String ?: "unknown"
+        val input = elem["input"] as? Map<*, *> ?: emptyMap<Any, Any>()
+        val mapped = when (legacy) {
+            "read_file" -> "read"
+            "list_files" -> "list"
+            "write_to_file" -> "write"
+            "apply_diff", "replace_in_file" -> "edit"
+            "execute_command" -> "bash"
+            "search_files" -> "grep"
+            "glob" -> "glob"
+            "update_todo_list" -> "todowrite"
+            else -> legacy
+        }
+        val data = toolInput(mapped, input)
+        val title = when (mapped) {
+            "read" -> "Read"
+            "list" -> "List"
+            "write" -> "Write"
+            "edit" -> "Edit"
+            "bash" -> "Shell"
+            "grep" -> "Search"
+            "todowrite" -> "Update todos"
+            else -> legacy.replace('_', ' ').replaceFirstChar { it.titlecase() }
+        }
+        // No output is known at spec time; the caller fills it from the matching tool_result.
+        // Fall back to an empty string (never the tool name) when no result is found.
+        return ToolSpec(mapped, title, data, "")
+    }
+
+    private fun toolInput(tool: String, input: Map<*, *>): Map<String, JsonElement> {
+        fun str(key: String) = scalar(input[key])?.takeIf { it.isNotBlank() }?.let { JsonPrimitive(it) }
+        return when (tool) {
+            "read" -> mapOfNotNull("filePath" to str("path"), "offset" to str("start_line"), "limit" to str("end_line"))
+            "list" -> mapOfNotNull("path" to str("path"))
+            "write" -> mapOfNotNull("filePath" to str("path"), "content" to str("content"))
+            "edit" -> {
+                val patch = str("diff") ?: str("content")
+                mapOfNotNull("filePath" to str("path"), "patch" to patch)
+            }
+            "bash" -> mapOfNotNull("command" to str("command"))
+            "grep" -> {
+                val pattern = str("regex") ?: str("pattern")
+                mapOfNotNull("pattern" to pattern, "path" to str("path"), "include" to str("file_pattern"))
+            }
+            "glob" -> mapOfNotNull("pattern" to str("pattern"), "path" to str("path"))
+            "todowrite" -> {
+                val todos = todoInput(input["todos"] ?: input["content"])
+                mapOfNotNull("todos" to todos)
+            }
+            else -> input.entries.mapNotNull { (k, v) ->
+                val key = k as? String ?: return@mapNotNull null
+                val value = valueToJsonElement(v) ?: return@mapNotNull null
+                key to value
+            }.toMap()
+        }
+    }
+
+    private fun todoInput(raw: Any?): JsonElement? {
+        val elem = valueToJsonElement(raw) ?: return null
+        if (elem is JsonArray) return normalizeTodos(elem)
+        val text = (elem as? JsonPrimitive)?.jsonPrimitive?.content?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        LegacyMigrationJson.parseArray(text)?.let { return normalizeTodos(it) }
+        return parseMarkdownTodos(text)
+    }
+
+    private fun parseMarkdownTodos(raw: String): JsonArray? {
+        val items = raw.split(Regex("\\r?\\n"))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .mapNotNull { line ->
+                val match = TODO.matchEntire(line) ?: return@mapNotNull null
+                val marker = match.groupValues[1]
+                val status = when (marker) {
+                    "x", "X" -> "completed"
+                    "-" -> "cancelled"
+                    "~" -> "in_progress"
+                    else -> "pending"
+                }
+                todo(match.groupValues[2].trim(), status, "medium")
+            }
+        return items.takeIf { it.isNotEmpty() }?.let { JsonArray(it) }
+    }
+
+    private fun normalizeTodos(raw: JsonArray): JsonArray? {
+        val items = raw.mapNotNull { elem ->
+            val obj = elem as? JsonObject ?: return@mapNotNull null
+            val content = field(obj, "content")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            todo(content, field(obj, "status") ?: "pending", field(obj, "priority") ?: "medium")
+        }
+        return items.takeIf { it.isNotEmpty() }?.let { JsonArray(it) }
+    }
+
+    private fun todo(content: String, status: String, priority: String) = buildJsonObject {
+        put("content", content)
+        put("status", status)
+        put("priority", priority)
+    }
+
+    private fun field(obj: JsonObject, key: String): String? =
+        runCatching { obj[key]?.jsonPrimitive?.content }.getOrNull()
+
+    private fun scalar(value: Any?): String? = when (value) {
+        is String -> value
+        is JsonPrimitive -> value.jsonPrimitive.content
+        null -> null
+        else -> value.toString()
+    }
+
     private fun mapToJsonObject(input: Any?): JsonObject {
-        if (input == null || input !is Map<*, *>) return JsonObject(emptyMap())
+        if (input !is Map<*, *>) return JsonObject(emptyMap())
         return JsonObject(
             input.entries.mapNotNull { (k, v) ->
                 val key = k as? String ?: return@mapNotNull null
-                key to (valueToJsonElement(v) ?: return@mapNotNull null)
+                val value = valueToJsonElement(v) ?: return@mapNotNull null
+                key to value
             }.toMap()
         )
     }
 
-    private fun valueToJsonElement(v: Any?): JsonElement? = when (v) {
+    private fun mapOfNotNull(vararg pairs: Pair<String, JsonElement?>): Map<String, JsonElement> =
+        pairs.mapNotNull { (k, v) -> v?.let { k to it } }.toMap()
+
+    private fun valueToJsonElement(value: Any?): JsonElement? = when (value) {
         null -> null
-        is String -> JsonPrimitive(v)
-        is Number -> JsonPrimitive(v.toDouble())
-        is Boolean -> JsonPrimitive(v)
-        is Map<*, *> -> mapToJsonObject(v)
-        is List<*> -> JsonArray(v.mapNotNull { valueToJsonElement(it) })
-        else -> JsonPrimitive(v.toString())
+        is JsonElement -> value
+        is String -> JsonPrimitive(value)
+        is Number -> JsonPrimitive(value)
+        is Boolean -> JsonPrimitive(value)
+        is Map<*, *> -> mapToJsonObject(value)
+        is List<*> -> JsonArray(value.mapNotNull { valueToJsonElement(it) })
+        else -> JsonPrimitive(value.toString())
     }
+
 }

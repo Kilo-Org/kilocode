@@ -27,27 +27,26 @@ export const CollaborateNav: NavSection[] = [
       },
       { href: "/collaborate/teams/billing", children: "Billing" },
       { href: "/collaborate/teams/analytics", children: "Analytics" },
+    ],
+  },
+  {
+    title: "AI Adoption Dashboard",
+    links: [
       {
         href: "/collaborate/adoption-dashboard/overview",
-        children: "AI Adoption Dashboard",
-        subLinks: [
-          {
-            href: "/collaborate/adoption-dashboard/overview",
-            children: "Overview",
-          },
-          {
-            href: "/collaborate/adoption-dashboard/understanding-your-score",
-            children: "Understanding Your Score",
-          },
-          {
-            href: "/collaborate/adoption-dashboard/improving-your-score",
-            children: "Improving Your Score",
-          },
-          {
-            href: "/collaborate/adoption-dashboard/for-team-leads",
-            children: "For Team Leads",
-          },
-        ],
+        children: "Overview",
+      },
+      {
+        href: "/collaborate/adoption-dashboard/understanding-your-score",
+        children: "Understanding Your Score",
+      },
+      {
+        href: "/collaborate/adoption-dashboard/improving-your-score",
+        children: "Improving Your Score",
+      },
+      {
+        href: "/collaborate/adoption-dashboard/for-team-leads",
+        children: "For Team Leads",
       },
     ],
   },
@@ -59,6 +58,7 @@ export const CollaborateNav: NavSection[] = [
         href: "/collaborate/enterprise/model-access-controls",
         children: "Model Access Controls",
       },
+      { href: "/collaborate/enterprise/groups", children: "Groups" },
       { href: "/collaborate/enterprise/audit-logs", children: "Audit Logs" },
       { href: "/collaborate/enterprise/migration", children: "Migration" },
     ],

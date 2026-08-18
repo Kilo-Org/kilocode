@@ -1,22 +1,23 @@
 import * as path from "path"
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
-import { Bus } from "../bus"
-import { FileWatcher } from "../file/watcher"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { Watcher } from "@opencode-ai/core/filesystem/watcher"
 import { InstanceState } from "@/effect/instance-state"
 import { Patch } from "../patch"
 import { createTwoFilesPatch, diffLines } from "diff"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { trimDiff } from "./edit"
 import { LSP } from "@/lsp/lsp"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import DESCRIPTION from "./apply_patch.txt"
-import { File } from "../file"
+import { FileSystem } from "@opencode-ai/core/filesystem"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import { Format } from "../format"
 import * as Bom from "@/util/bom"
+import { assertMutablePath } from "../kilocode/agent-manager/protection" // kilocode_change
 
 export const Parameters = Schema.Struct({
   patchText: Schema.String.annotate({ description: "The full patch text that describes all changes to be made" }),
@@ -26,9 +27,9 @@ export const ApplyPatchTool = Tool.define(
   "apply_patch",
   Effect.gen(function* () {
     const lsp = yield* LSP.Service
-    const afs = yield* AppFileSystem.Service
+    const afs = yield* FSUtil.Service
     const format = yield* Format.Service
-    const bus = yield* Bus.Service
+    const events = yield* EventV2Bridge.Service
 
     const run = Effect.fn("ApplyPatchTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
@@ -75,6 +76,7 @@ export const ApplyPatchTool = Tool.define(
 
       for (const hunk of hunks) {
         const filePath = path.resolve(instance.directory, hunk.path)
+        assertMutablePath(filePath) // kilocode_change
         yield* assertExternalDirectoryEffect(ctx, filePath)
 
         switch (hunk.type) {
@@ -275,13 +277,13 @@ export const ApplyPatchTool = Tool.define(
           if (yield* format.file(edited)) {
             yield* EncodedIO.sync(afs, edited, change.bom, change.encoding)
           }
-          yield* bus.publish(File.Event.Edited, { file: edited })
+          yield* events.publish(FileSystem.Event.Edited, { file: edited })
         }
       }
 
       // Publish file change events
       for (const update of updates) {
-        yield* bus.publish(FileWatcher.Event.Updated, update)
+        yield* events.publish(Watcher.Event.Updated, update)
       }
 
       // Notify LSP of file changes and collect diagnostics
@@ -308,13 +310,13 @@ export const ApplyPatchTool = Tool.define(
       // kilocode_change start
       const changedPaths = fileChanges
         .filter((c) => c.type !== "delete")
-        .map((c) => AppFileSystem.normalizePath(c.movePath ?? c.filePath))
+        .map((c) => FSUtil.normalizePath(c.movePath ?? c.filePath))
       // kilocode_change end
 
       for (const change of fileChanges) {
         if (change.type === "delete") continue
         const target = change.movePath ?? change.filePath
-        const block = LSP.Diagnostic.report(target, diagnostics[AppFileSystem.normalizePath(target)] ?? [])
+        const block = LSP.Diagnostic.report(target, diagnostics[FSUtil.normalizePath(target)] ?? [])
         if (!block) continue
         const rel = path.relative(instance.worktree, target).replaceAll("\\", "/")
         output += `\n\nLSP errors detected in ${rel}, please fix:\n${block}`
