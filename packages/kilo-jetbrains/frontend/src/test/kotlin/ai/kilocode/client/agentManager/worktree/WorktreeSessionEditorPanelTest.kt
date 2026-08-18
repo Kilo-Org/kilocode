@@ -3,6 +3,10 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.migration.FakeMigrationUiController
+import ai.kilocode.client.migration.MigrationUiState
+import ai.kilocode.client.migration.ui.MigrationOverlayPanel
+import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
@@ -19,6 +23,8 @@ import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.rpc.dto.LegacyMigrationDetectionDto
+import ai.kilocode.rpc.dto.MigrationProviderInfoDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -481,6 +487,58 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertSame(workspace, sink.workspace)
     }
 
+    fun `test migration wizard shows and closes with shared state`() {
+        val fake = FakeMigrationUiController()
+        val view = edt {
+            WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace, migration = fake, cs = coroutines.scope)
+        }
+        edt { view.setSize(800, 600); view.doLayout() }
+        val layered = edt { UIUtil.findComponentOfType(view, LayeredOverlayPanel::class.java)!! }
+
+        assertFalse(edt { layered.blocker.isVisible })
+
+        fake._state.value = MigrationUiState.Needed(detection = detection())
+        flush()
+
+        assertTrue(edt { layered.blocker.isVisible })
+        assertNotNull(edt { UIUtil.findComponentOfType(view, MigrationOverlayPanel::class.java) })
+
+        fake._state.value = MigrationUiState.Hidden
+        flush()
+
+        assertFalse(edt { layered.blocker.isVisible })
+        assertNull(edt { UIUtil.findComponentOfType(view, MigrationOverlayPanel::class.java) })
+    }
+
+    fun `test migration wizard actions delegate to controller`() {
+        val fake = FakeMigrationUiController()
+        val view = edt {
+            WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace, migration = fake, cs = coroutines.scope)
+        }
+        edt { view.setSize(800, 600); view.doLayout() }
+        fake._state.value = MigrationUiState.Needed(detection = detection())
+        flush()
+
+        val overlay = edt { UIUtil.findComponentOfType(view, MigrationOverlayPanel::class.java)!! }
+        edt { overlay.onSkip?.invoke() }
+        edt { overlay.onLater?.invoke() }
+        edt { overlay.onDone?.invoke() }
+
+        assertEquals(1, fake.skips.size)
+        assertEquals(1, fake.laters.size)
+        assertEquals(1, fake.finishes.size)
+    }
+
+    private fun detection() = LegacyMigrationDetectionDto(
+        providers = listOf(MigrationProviderInfoDto("profile1", "anthropic", "claude-3", true, true, "anthropic")),
+        mcpServers = emptyList(),
+        customModes = emptyList(),
+        sessions = emptyList(),
+        defaultModel = null,
+        settings = null,
+        hasData = true,
+    )
+
     private fun session(id: String, updated: Double) = SessionDto(
         id = id,
         projectID = "proj_test",
@@ -545,6 +603,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         create = { _, _, _, _, _ -> error("unused") },
         request = {},
         cs = coroutines.scope,
+        migration = FakeMigrationUiController(),
         adopt = { _, _, _ -> RenameWorktreeResultDto() },
     ) {
         var newCount = 0

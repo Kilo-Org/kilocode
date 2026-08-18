@@ -25,8 +25,19 @@ import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.migration.KiloMigrationService
+import ai.kilocode.client.migration.MigrationUiController
+import ai.kilocode.client.migration.MigrationUiState
+import ai.kilocode.client.migration.ui.MigrationOverlayPanel
+import ai.kilocode.client.session.SessionUiFactory
+import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.KiloLog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -81,6 +92,8 @@ class WorktreeSessionEditorPanel(
     private val confirm: ((RelativePoint, ActiveListDeleteOptions, () -> Unit) -> Unit)? = null,
     private val edit: ((RelativePoint, ActiveListEditOptions, (String) -> Unit) -> Unit)? = null,
     private val openWorktree: ((String) -> Unit)? = null,
+    private val migration: MigrationUiController = service<KiloMigrationService>(),
+    private val cs: CoroutineScope = service<SessionUiFactory>().scope(),
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val add = NewAction()
     private val rename = RenameAction()
@@ -107,6 +120,16 @@ class WorktreeSessionEditorPanel(
     )
     private val prHeader = WorktreePrHeaderView(openWorktree = ::openInNewFrame, openEnabled = worktree.directory.isNotBlank(), openDiff = ::openBranchDiff, openTerminal = ::openTerminal)
     private val splitter = OnePixelSplitter(false, 0.25f)
+    private val overlayContent = BorderLayoutPanel()
+    private val layered = LayeredOverlayPanel(content = overlayContent)
+    private val migrationOverlay = MigrationOverlayPanel().apply {
+        onSkip = { migration.skip() }
+        onLater = { migration.later() }
+        onDone = { migration.finish() }
+        onContinueFromError = { migration.finish() }
+        onStart = { selections -> migration.start(selections) }
+    }
+    private var migrationJob: Job? = null
     private var started = false
     private var stats: WorktreeStatsDto? = null
     private var pr: WorktreePrDto? = null
@@ -122,8 +145,9 @@ class WorktreeSessionEditorPanel(
         list.installPopup(group)
         splitter.firstComponent = list
         splitter.secondComponent = manager.component
-        addToTop(top())
-        addToCenter(splitter)
+        overlayContent.addToTop(top())
+        overlayContent.addToCenter(splitter)
+        addToCenter(layered)
         syncExpanded(KiloPluginSettings.getWorktreeSessionListExpanded())
         bindModel()
         manager.onPresent = { key -> select(key) }
@@ -142,10 +166,36 @@ class WorktreeSessionEditorPanel(
             }
         }
         bindStatus()
+        bindMigration()
         sync()
     }
 
     override fun getBackground(): Color = activeListToolWindowBackground()
+
+    /**
+     * Show the migration wizard on this worktree editor whenever the app-level migration state is
+     * active, and close it as soon as migration finishes anywhere. The state is shared across every
+     * session UI via [KiloMigrationService], so completing migration in one surface auto-closes the
+     * wizard in all the others.
+     */
+    private fun bindMigration() {
+        migrationJob = cs.launch {
+            migration.state.collect { state ->
+                withContext(Dispatchers.Main) { applyMigrationState(state) }
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun applyMigrationState(state: MigrationUiState) {
+        when (state) {
+            is MigrationUiState.Hidden -> layered.setModalContent(null)
+            is MigrationUiState.Needed -> {
+                migrationOverlay.update(state)
+                layered.setModalContent(migrationOverlay)
+            }
+        }
+    }
 
     @RequiresEdt
     fun preferredFocus(): JComponent = if (expanded()) list.preferredFocus() else manager.component
@@ -479,6 +529,7 @@ class WorktreeSessionEditorPanel(
     }
 
     override fun dispose() {
+        migrationJob?.cancel()
         manager.onPresent = null
         manager.onListChanged = null
     }
