@@ -30,10 +30,12 @@ jobs:
             javascript:
               - '**'
               - '!.changeset/**'
+              - '!.kilo/plans/**'
               - '!packages/kilo-jetbrains/**'
             jetbrains:
               - '**'
               - '!.changeset/**'
+              - '!.kilo/plans/**'
               - '!packages/kilo-vscode/**'
               - '!packages/kilo-docs/**'
   # kilocode_change end
