@@ -14,6 +14,9 @@ const DEFAULT_ADDRESS = "localhost:19530"
 const REQUEST_TIMEOUT_MS = 120_000
 const FLUSH_RETRY_DELAY_MS = 11_000
 const FLUSH_RETRIES = 2
+const CREATE_COLLECTION_MAX_ATTEMPTS = 3
+const CREATE_COLLECTION_INITIAL_DELAY_MS = 1_000
+const CREATE_COLLECTION_MAX_DELAY_MS = 4_000
 const DROP_COLLECTION_TIMEOUT_MS = 30_000
 const DROP_COLLECTION_MAX_ATTEMPTS = 4
 const DROP_COLLECTION_VERIFY_POLLS_PER_ATTEMPT = 8
@@ -367,27 +370,57 @@ export class MilvusVectorStore implements IVectorStore {
       { fieldName: KEY.dimension, dataType: "Int64" },
     ]
 
-    const result = await this.client.createCollection(
-      this.collectionReq({
-        schema: {
-          autoID: false,
-          enabledDynamicField: false,
-          fields,
+    const request = this.collectionReq({
+      schema: {
+        autoID: false,
+        enabledDynamicField: false,
+        fields,
+      },
+      indexParams: [
+        {
+          fieldName: VECTOR_FIELD,
+          indexName: `${VECTOR_FIELD}_idx`,
+          metricType: "COSINE",
+          params: { index_type: "AUTOINDEX" },
         },
-        indexParams: [
-          {
-            fieldName: VECTOR_FIELD,
-            indexName: `${VECTOR_FIELD}_idx`,
-            metricType: "COSINE",
-            params: { index_type: "AUTOINDEX" },
-          },
-        ],
-        params: {
-          consistencyLevel: "Session",
-        },
-      }),
-    )
-    this.ensureSuccess(result, "Create Milvus collection")
+      ],
+      params: {
+        consistencyLevel: "Session",
+      },
+    })
+    let ready = false
+    let retryDelay = CREATE_COLLECTION_INITIAL_DELAY_MS
+    let lastError: unknown
+
+    for (let attempt = 1; attempt <= CREATE_COLLECTION_MAX_ATTEMPTS; attempt++) {
+      try {
+        const result = await this.client.createCollection(request)
+        this.ensureSuccess(result, "Create Milvus collection")
+        ready = true
+        break
+      } catch (error) {
+        lastError = error
+        if (!this.isRetryableCollectionError(error)) throw error
+
+        if (await this.collectionExists()) {
+          ready = true
+          break
+        }
+        if (attempt >= CREATE_COLLECTION_MAX_ATTEMPTS) break
+
+        log.warn("Retrying ambiguous Milvus createCollection failure", {
+          collection: this.collectionName,
+          attempt,
+          status: this.errorStatus(error),
+          errorClass: this.errorClass(error),
+          error: this.errorMessage(error),
+        })
+        await this.sleep(retryDelay)
+        retryDelay = Math.min(retryDelay * 2, CREATE_COLLECTION_MAX_DELAY_MS)
+      }
+    }
+
+    if (!ready) throw lastError
     await this.loadCollection()
     this.createdEmptyCollection = true
   }
@@ -425,7 +458,7 @@ export class MilvusVectorStore implements IVectorStore {
     return error instanceof Error ? error.message : String(error)
   }
 
-  private isAmbiguousDropError(error: unknown): boolean {
+  private isRetryableCollectionError(error: unknown): boolean {
     const status = this.errorStatus(error)
     if (status === 401 || status === 403) return false
     if (status === 408 || status === 429 || (status !== undefined && status >= 500)) return true
@@ -466,7 +499,7 @@ export class MilvusVectorStore implements IVectorStore {
         this.ensureSuccess(result, "Drop Milvus collection")
       } catch (error) {
         lastError = error
-        if (!this.isAmbiguousDropError(error)) throw error
+        if (!this.isRetryableCollectionError(error)) throw error
         log.warn("Ambiguous Milvus dropCollection failure; verifying collection absence", {
           collection: this.collectionName,
           attempt,
