@@ -125,9 +125,20 @@ internal class FileLog(cls: Class<*>) : KiloLog {
             val dir = resolveLogDir()
             val path = dir.resolve("kilo.log")
             IntellijLog(FileLog::class.java).info("Kilo diagnostic log directory: $dir")
+            deleteLegacyLogs(dir)
             val h = RotatingLogHandler(path, LIMIT, ROTATIONS)
             h.formatter = KiloFormatter()
             h
+        }
+
+        internal fun deleteLegacyLogs(dir: Path) {
+            runCatching {
+                Files.newDirectoryStream(dir, "kilo-dev.log*").use { files ->
+                    files.forEach { Files.deleteIfExists(it) }
+                }
+            }.onFailure {
+                IntellijLog(FileLog::class.java).warn("Could not delete legacy Kilo diagnostic logs in $dir", it)
+            }
         }
 
         private fun resolveLogDir(): Path {
