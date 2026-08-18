@@ -103,7 +103,7 @@ describe("MiniMax usage normalization", () => {
       native({
         current_weekly_remaining_percent: 100,
         current_weekly_status: 1,
-        weekly_boost_permill: 1500,
+        weekly_boost_permille: 1500,
       }),
       options,
     )
@@ -129,6 +129,187 @@ describe("MiniMax usage normalization", () => {
     )
 
     expect(item.windows[0]?.resetAt).toBe("2026-06-19T05:00:00.000Z")
+  })
+})
+
+describe("MiniMax usage window calculations", () => {
+  test("clamps used at zero when the remaining count exceeds the total", () => {
+    const item = normalize(
+      native({
+        current_interval_total_count: 1500,
+        current_interval_usage_count: 1600,
+        current_interval_status: 1,
+      }),
+      options,
+    )
+
+    expect(item.windows[0]).toMatchObject({
+      orientation: "count",
+      remaining: 1600,
+      used: 0,
+      limit: 1500,
+      state: "active",
+    })
+  })
+
+  test("marks count windows exhausted when nothing remains or the status flags it", () => {
+    const drained = normalize(
+      native({
+        current_interval_total_count: 1500,
+        current_interval_usage_count: 0,
+        current_interval_status: 1,
+      }),
+      options,
+    )
+    expect(drained.windows[0]).toMatchObject({ remaining: 0, used: 1500, state: "exhausted" })
+
+    const flagged = normalize(
+      native({
+        current_interval_total_count: 1500,
+        current_interval_usage_count: 800,
+        current_interval_status: 2,
+      }),
+      options,
+    )
+    expect(flagged.windows[0]).toMatchObject({ remaining: 0, used: 1500, state: "exhausted" })
+  })
+
+  test("treats an exhausted status as authoritative over lagging percent fields", () => {
+    const item = normalize(native({ current_interval_remaining_percent: 12, current_interval_status: 2 }), options)
+
+    expect(item.windows[0]).toMatchObject({ remaining: 0, used: 100, limit: 100, state: "exhausted" })
+  })
+
+  test("reads weekly count windows from the weekly fields", () => {
+    const item = normalize(
+      native({
+        current_weekly_total_count: 6000,
+        current_weekly_usage_count: 4500,
+        current_weekly_status: 1,
+      }),
+      options,
+    )
+
+    expect(item.windows).toHaveLength(1)
+    expect(item.windows[0]).toMatchObject({
+      id: "general-weekly",
+      orientation: "count",
+      remaining: 4500,
+      used: 1500,
+      limit: 6000,
+      period: { unit: "week", value: 1 },
+    })
+  })
+
+  test("rejects out-of-range percent values like the cloud schema does", () => {
+    expect(() => native({ current_interval_remaining_percent: 150 })).toThrow()
+    expect(() => native({ current_weekly_remaining_percent: -1 })).toThrow()
+  })
+
+  test("accepts the permille boost spelling and falls back to plain percent without a boost", () => {
+    const boosted = normalize(
+      native({
+        current_interval_remaining_percent: 50,
+        current_interval_status: 1,
+        interval_boost_permille: 2000,
+      }),
+      options,
+    )
+    expect(boosted.windows[0]).toMatchObject({
+      unit: "standard_units",
+      orientation: "amount",
+      remaining: 100,
+      used: 100,
+      limit: 200,
+    })
+
+    const plain = normalize(native({ current_interval_remaining_percent: 50, current_interval_status: 1 }), options)
+    expect(plain.windows[0]).toMatchObject({
+      unit: "percent",
+      orientation: "remaining_percent",
+      remaining: 50,
+      used: 50,
+      limit: 100,
+    })
+  })
+
+  test("marks percent windows exhausted when nothing remains", () => {
+    const item = normalize(native({ current_interval_remaining_percent: 0, current_interval_status: 1 }), options)
+
+    expect(item.windows[0]).toMatchObject({ remaining: 0, used: 100, state: "exhausted" })
+  })
+
+  test("derives the period from the window span when it is a round unit", () => {
+    const start = 1_781_827_200_000
+    const item = normalize(
+      native({
+        current_interval_remaining_percent: 80,
+        current_interval_status: 1,
+        start_time: start,
+        end_time: start + 14 * 24 * 60 * 60 * 1000,
+      }),
+      options,
+    )
+
+    expect(item.windows[0]?.period).toEqual({ unit: "week", value: 2 })
+    expect(item.windows[0]?.durationMs).toBe(14 * 24 * 60 * 60 * 1000)
+  })
+
+  test("omits the period when the span is not a round hour, day, or week", () => {
+    const start = 1_781_827_200_000
+    const item = normalize(
+      native({
+        current_interval_remaining_percent: 80,
+        current_interval_status: 1,
+        start_time: start,
+        end_time: start + 90 * 60 * 1000,
+      }),
+      options,
+    )
+
+    expect(item.windows[0]?.period).toBeUndefined()
+    expect(item.windows[0]?.durationMs).toBe(90 * 60 * 1000)
+  })
+
+  test("omits the duration and period when the window timestamps are inverted", () => {
+    const start = 1_781_827_200_000
+    const item = normalize(
+      native({
+        current_interval_remaining_percent: 80,
+        current_interval_status: 1,
+        start_time: start,
+        end_time: start,
+      }),
+      options,
+    )
+
+    expect(item.windows[0]?.durationMs).toBeUndefined()
+    expect(item.windows[0]?.period).toBeUndefined()
+  })
+
+  test("falls back to remains_time when end_time is missing or zero", () => {
+    const item = normalize(
+      native({
+        current_interval_remaining_percent: 80,
+        current_interval_status: 1,
+        end_time: 0,
+        remains_time: 3_600_000,
+      }),
+      options,
+    )
+    expect(item.windows[0]?.resetAt).toBe("2026-06-19T01:00:00.000Z")
+
+    const none = normalize(native({ current_interval_remaining_percent: 80, current_interval_status: 1 }), options)
+    expect(none.windows[0]?.resetAt).toBeUndefined()
+  })
+
+  test("omits windows with no usage signals and keeps status-only windows as unknown", () => {
+    const empty = normalize(native({}), options)
+    expect(empty.windows).toEqual([])
+
+    const item = normalize(native({ current_interval_status: 1 }), options)
+    expect(item.windows).toHaveLength(1)
+    expect(item.windows[0]).toMatchObject({ unit: "unknown", orientation: "amount", state: "unknown" })
   })
 })
 

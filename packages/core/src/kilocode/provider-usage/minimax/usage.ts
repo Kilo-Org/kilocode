@@ -131,9 +131,7 @@ function window(
   const start = weekly ? row.weekly_start_time : row.start_time
   const end = weekly ? row.weekly_end_time : row.end_time
   const remains = weekly ? row.weekly_remains_time : row.remains_time
-  const boost = weekly
-    ? (row.weekly_boost_permille ?? row.weekly_boost_permill)
-    : (row.interval_boost_permille ?? row.interval_boost_permill)
+  const boost = weekly ? row.weekly_boost_permille : row.interval_boost_permille
   const span = duration(start, end)
   const base = {
     id: `${row.model_name}-${kind}`,
@@ -148,7 +146,8 @@ function window(
   if (percent !== undefined) {
     const factor = boost !== undefined && boost > 0 ? boost / 1000 : 1
     const cap = 100 * factor
-    const remaining = percent * factor
+    // The status flag is authoritative: an exhausted window has zero remaining even when the percent field lags.
+    const remaining = status === 2 ? 0 : percent * factor
     return {
       ...base,
       unit: factor === 1 ? "percent" : "standard_units",
@@ -161,14 +160,16 @@ function window(
   }
 
   if (total !== undefined && total > 0 && count !== undefined && count >= 0) {
+    // Despite the name, MiniMax's *_usage_count fields report the remaining quota, not the consumed amount.
+    const remaining = status === 2 ? 0 : count
     return {
       ...base,
       unit: "count",
       orientation: "count",
-      used: Math.max(0, total - count),
-      remaining: count,
+      used: Math.max(0, total - remaining),
+      remaining,
       limit: total,
-      state: status === 2 || count === 0 ? "exhausted" : "active",
+      state: status === 2 || remaining === 0 ? "exhausted" : "active",
     }
   }
 
