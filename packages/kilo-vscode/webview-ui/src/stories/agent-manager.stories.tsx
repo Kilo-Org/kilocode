@@ -1389,6 +1389,7 @@ const projectSession = (
 ): ProjectSessionInfo => ({
   id,
   worktreeId,
+  parentID: null,
   title,
   createdAt: "2026-07-19T09:00:00Z",
   updatedAt,
