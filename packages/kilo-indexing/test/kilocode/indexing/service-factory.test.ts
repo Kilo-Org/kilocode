@@ -117,7 +117,7 @@ describe("CodeIndexServiceFactory", () => {
   })
 
   test("uses explicit LanceDB directory when configured", () => {
-    const dir = "/tmp/custom-lancedb"
+    const dir = path.join(process.cwd(), "tmp", "custom-lancedb")
     const factory = createFactory({ vectorStoreProvider: "lancedb", lancedbVectorStoreDirectory: dir })
 
     const store = factory.createVectorStore() as unknown as { dbPath: string }

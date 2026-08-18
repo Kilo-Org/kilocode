@@ -2,6 +2,7 @@ export * as ConfigAgent from "./agent"
 
 import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
+import { Exit, Schema } from "effect"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { configEntryNameFromPath } from "./entry-name"
@@ -23,7 +24,7 @@ export async function load(
   warnings?: Warning[],
   trusted = false,
   fileScope?: ConfigVariable.FileScope,
-  sourceScope?: ConfigVariable.FileScope,
+  sourceScope?: ConfigVariable.FileScope | readonly ConfigVariable.FileScope[],
 ) {
   // kilocode_change end
   const result: Record<string, ConfigAgentV1.Info> = {}

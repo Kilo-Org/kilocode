@@ -243,7 +243,11 @@ class KiloConnectionService(
         // doesn't fire against a stale timestamp from the old connection.
         lastEvent.set(System.currentTimeMillis())
         val src = factory.newEventSource(request, listener)
-        source.set(src)
+        source.compareAndSet(null, src)
+        if (source.get() !== src) {
+            src.cancel()
+            return
+        }
         log.info("SSE: connecting to port $port")
         timeoutJob?.cancel()
         timeoutJob = cs.launch {
@@ -258,6 +262,7 @@ class KiloConnectionService(
 
     private val listener = object : EventSourceListener() {
         override fun onOpen(src: EventSource, response: Response) {
+            source.compareAndSet(null, src)
             if (source.get() !== src) return
             if (response.request.url.port != port) return
             timeoutJob?.cancel()

@@ -74,6 +74,9 @@ class SessionModel {
 
     private var revert: SessionRevertDto? = null
 
+    var queued: Set<String> = emptySet()
+        private set
+
     var header: SessionHeaderSnapshot = emptyHeader()
         private set
 
@@ -124,6 +127,9 @@ class SessionModel {
         val pos = entries.keys.indexOf(id)
         return idx >= 0 && pos >= idx
     }
+
+    @RequiresEdt
+    fun isQueued(id: String): Boolean = id in queued
 
     @RequiresEdt
     fun turn(id: String): Turn? = turnEntries[id]
@@ -296,6 +302,13 @@ class SessionModel {
     }
 
     @RequiresEdt
+    fun setQueued(ids: Set<String>) {
+        if (queued == ids) return
+        queued = ids
+        fire(SessionModelEvent.QueueChanged(ids))
+    }
+
+    @RequiresEdt
     fun setDiff(diff: List<DiffFileDto>) {
         this.diff = diff
         fire(SessionModelEvent.DiffUpdated(diff))
@@ -329,6 +342,7 @@ class SessionModel {
         hiddenText.clear()
         session = null
         revert = null
+        queued = emptySet()
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()
@@ -363,6 +377,7 @@ class SessionModel {
         hiddenText.clear()
         session = null
         revert = null
+        queued = emptySet()
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()
@@ -483,6 +498,9 @@ class SessionModel {
                 existing.url = dto.url ?: ""
                 existing.filename = dto.filename
                 existing.source = dto.source
+                val range = range(existing.url)
+                existing.startLine = range?.first
+                existing.endLine = range?.last
             }
             is Tool -> {
                 val old = existing.childSessionId
@@ -537,8 +555,12 @@ class SessionModel {
                 url = dto.url ?: ""
                 filename = dto.filename
                 source = dto.source
+                val range = range(url)
+                startLine = range?.first
+                endLine = range?.last
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
+                messageID = dto.messageID
                 state = parseToolState(dto.state)
                 callId = dto.callID
                 title = dto.title
@@ -563,6 +585,20 @@ class SessionModel {
 
     private fun fire(event: SessionModelEvent) {
         for (l in listeners) l.onEvent(event)
+    }
+
+    private fun range(url: String): IntRange? {
+        val query = runCatching { java.net.URI.create(url).rawQuery }.getOrNull() ?: return null
+        val args = query.split('&')
+            .mapNotNull {
+                val index = it.indexOf('=')
+                if (index < 0) return@mapNotNull null
+                it.substring(0, index) to it.substring(index + 1)
+            }
+            .toMap()
+        val start = args["start"]?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+        val end = args["end"]?.toIntOrNull()?.takeIf { it >= start } ?: start
+        return start..end
     }
 
     private fun trackChild(messageId: String, content: Content) {

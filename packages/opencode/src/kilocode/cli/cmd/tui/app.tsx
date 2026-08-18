@@ -8,7 +8,7 @@
 import { createEffect, createMemo, on, onCleanup } from "solid-js"
 import { useKeyboard, useRenderer } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
-import * as Clipboard from "@tui/util/clipboard"
+import * as Clipboard from "@tui/clipboard"
 import { useBindings } from "@tui/keymap"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
@@ -34,6 +34,7 @@ export { KiloTerminalTitle } from "./terminal-title"
 // Hot reload TUI-local settings (keybinds/theme/ui) when changed from the Kilo Console.
 // Called from the App body (below SDKProvider and the TuiConfig provider).
 export { useTuiConfigHotReload } from "@/kilocode/cli/cmd/tui/context/tui-config-hot-reload"
+export { KiloTuiConfig } from "@/kilocode/cli/cmd/tui/context/tui-config"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -278,10 +279,15 @@ export function init() {
         name: "permission.allow_everything",
         get title() {
           return isAllowEverything(sync.data.config.permission)
-            ? "Disable auto-approve mode"
-            : "Enable auto-approve mode"
+            ? "Disable saved auto-approve"
+            : "Enable saved auto-approve"
         },
+        // kilocode_change - the saved rule is server side, so it also stops VS Code, JetBrains and
+        // headless runs from prompting
+        desc: "Toggle auto-approve for all permission prompts, saved to global config and shared with every client",
         category: "System",
+        slashName: "auto-approve",
+        slashAliases: ["autoapprove", "approve-all", "approveall"],
         run: async () => {
           const enabled = isAllowEverything(sync.data.config.permission)
           const result = await sdk.client.permission.allowEverything({ enable: !enabled })

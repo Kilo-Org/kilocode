@@ -157,6 +157,7 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 - CLI process spawning, download, extraction, and lifecycle belong in `backend`.
 - By default, the plugin does not bundle CLI binaries. At connect time the backend downloads the GitHub Release asset for the version pinned in `packages/kilo-jetbrains/package.json`; `backend` resources include `kilo.properties` with `cli.version` and `cli.pinned` for split-mode RPC and runtime use.
+- Bundled release builds pass `-Pkilo.cli.bundled=true` while keeping `kilo.cli.pinned=true`. This build-only flag stages all pinned CLI release assets into `kilo-cli.zip`; runtime detects that resource and extracts only the current platform instead of downloading. Do not add a `cli.bundled` key to `kilo.properties` or repurpose `kilo.cli.pinned=false` for public bundled releases.
 - For release questions, use the `release-jetbrains` skill and reference `.kilo/skills/release-jetbrains/SKILL.md`; it verifies the CLI pin before creating immutable `jetbrains/v*` tags.
 - For OS and environment checks, prefer IntelliJ Platform classes over raw JVM APIs such as `System.getProperty(...)` or `System.getenv(...)`.
 - Detect architecture with `com.intellij.util.system.CpuArch.CURRENT`, not `System.getProperty("os.arch")`.
@@ -168,6 +169,8 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 ### CLI Pinning, Unpinning, and Bumping
 
 The JetBrains plugin has two independent CLI controls. Use the commands below directly when asked to change either one; do not hand-edit versions by guesswork.
+
+For a one-shot pin/unpin/regen that also cleans every leftover CLI binary and build artifact in the current worktree, use the `jetbrains-cli-pin` skill (`.kilo/skills/jetbrains-cli-pin/SKILL.md`): `bun .kilo/skills/jetbrains-cli-pin/script/cli-pin.ts <pin|unpin|regen|clean>`.
 
 **Pin mode** (`kilo.cli.pinned` in `packages/kilo-jetbrains/gradle.properties`) controls release CLI vs local repo CLI.
 
@@ -288,6 +291,28 @@ Rules:
 - Put user-visible strings in `*.properties` files.
 - Do not add decorative helper functions, wrappers, or defensive UI code unless they materially improve clarity or correctness.
 
+### Session UI Background Strategy
+
+The chat session UI intentionally uses a single-backdrop model. Do not make every
+container paint `SessionUiStyle.Colors.sessionBackground()` just because it sits
+inside the session. This avoids fragile component-hierarchy coupling and prevents
+theme-specific artifacts in transparent/rounded Swing painting.
+
+- `SessionRootPanel` is the primary opaque backdrop. It overrides `getBackground()` and returns `SessionUiStyle.Colors.sessionBackground()`.
+- `sessionBackground()` follows the panel background, but when that equals the raised editor surface (`codeBlockBackground()`) — e.g. Islands Dark/Darcula, where panel and editor backgrounds are identical — it shifts by `SESSION_DELTA` via `UiStyle.Colors.contrast` (lighter in dark themes, darker in light) so the prompt bubble/input and other raised surfaces stay visible. This is a universal fallback, not a per-theme override.
+- `SessionRootPanel.Blocker` is the only other session-background opaque panel. It also overrides `getBackground()` with `sessionBackground()` for modal blocking.
+- Scroll panes, viewports, transcript layout panels, message lists, turn containers, wrapper panels, and card bodies should be non-opaque unless they intentionally paint a distinct surface.
+- `applyStyle(style)` must not assign session-background colors. It may update fonts, foregrounds, editor colors, and other non-background styling. Background colors that must be dynamic should come from `getBackground()` or custom painting.
+- Transcript card header hover is `getBackground()`-driven: keep an `isHovered` flag on the hover row/header, set or clear it from mouse enter/exit, and repaint only that row/header. Do not assign `row.background` or `header.background` on hover.
+- Primary/secondary transcript card bodies are transparent by default. The actual content inside a body (code blocks, todo list, shell/tool output) is the raised surface: make that content component opaque and paint `SessionUiStyle.Colors.codeBlockBackground()` (the editor background), using its own insets so the fill covers the whole content. For `MdView`-backed bodies set `md.opaque = false` so the prose/body stays transparent while the code/output panes remain the opaque editor surface — do not make the whole body opaque.
+- Rounded cards that paint their own surface (for example `RoundedContentPanel`-based question/login cards) should do that in custom painting or a `contentColor()` override, not by making every nested panel opaque.
+- Standard platform buttons placed on custom-painted session cards should not force the card background. If a button sits on a rounded/custom-painted card, make it non-opaque when needed so Swing does not fill its rectangular bounds behind `DarculaButtonUI`'s rounded paint (notably visible in Islands Light).
+
+When adding a new session view, start with transparent containers and add opaque
+painting only for components that are actual visual surfaces. If a component's
+background must react to hover/theme state, prefer an override such as
+`getBackground()` over writing `background = ...` during setup or `applyStyle`.
+
 ### Swing Component Lifecycle
 
 Swing is retained-mode UI. For dynamic Swing surfaces such as session cards, transcript parts, hover rows, and collapsible panels, build a stable component tree once and then mutate existing components in response to model or interaction changes.
@@ -300,6 +325,7 @@ Swing is retained-mode UI. For dynamic Swing surfaces such as session cards, tra
 - Derive expanded state from containment (e.g. `scroll.parent === root`) rather than maintaining an `open` boolean.
 - Derive hover state from the current header background or other component property rather than maintaining a `hover` boolean.
 - Expand/collapse should attach or detach the existing body component and update controls only if attachment changed.
+- Expandable session cards extend `AbstractSessionPartView`, which binds click-to-toggle and hover across the whole header subtree automatically (including children added later). Do not re-bind header parts per view. A header control that must not toggle the card (file link, copy button, toolbar action) simply owns its own mouse listener and is skipped automatically.
 - Hover should update only the affected component (usually the header background) and repaint only that component when the effective color changed.
 - Lazy-create expensive bodies such as `JBTextArea`, `JBScrollPane`, markdown panes, and HTML panes on first expansion or first direct access.
 - Parent containers should refresh for add/remove/reorder operations, not automatically after every delegated child update or streaming delta.
@@ -573,29 +599,23 @@ child.align(HAlign.TRACK, VAlign.TRACK)   // fill all available space
 
 ### Icons and SVG Assets
 
-Official references:
-- [IntelliJ Platform UI Guidelines](https://jetbrains.design/intellij/)
-- [User Interface Components](https://plugins.jetbrains.com/docs/intellij/user-interface-components.html)
-- [UI FAQ (colors, borders, icons)](https://plugins.jetbrains.com/docs/intellij/ui-faq.html)
+The `icon-jetbrains` skill (`.kilo/skills/icon-jetbrains/SKILL.md`) is the single source of truth for SVG icon authoring: canvas sizes, palette colors, dark variants, composition rules, placement, and validation. Always load that skill when creating, modifying, or reviewing icon assets. Do not duplicate its guidance here.
+
+This section covers only the Kotlin/runtime integration side:
 
 - For compact icon-only actions, use `ai.kilocode.client.ui.HoverIcon` so the control gets the standard 24×24 hover treatment. Do not create `JButton(icon)` or wrap a bare icon in a button just to make it clickable.
 - **Reuse platform icons**: browse at https://intellij-icons.jetbrains.design. Access via `AllIcons.*` constants.
 - Custom icons: SVG files in `resources/icons/`. Load via `IconLoader.getIcon("/icons/foo.svg", MyClass::class.java)`.
 - Organize in an `icons` package or a `*Icons` object with `@JvmField` on each constant.
-- **Sizing**: actions/nodes = 16×16, tool window = 13×13 (classic) or 20×20 + 16×16 compact (New UI), editor gutter = 12×12 (classic) / 14×14 (New UI).
-- **Dark variants**: `icon.svg` + `icon_dark.svg`. HiDPI: `icon@2x.svg` + `icon@2x_dark.svg`.
-- **New UI support**: place New UI icons in `expui/` directory, create `*IconMappings.json`, register via `com.intellij.iconMapper` extension point. New UI icon colors: light `#6C707E`, dark `#CED0D6`.
+- **Sizing, dark variants, and filename patterns**: see the `icon-jetbrains` skill for the authoritative Icon roles table, canvas sizes, filename patterns, and dark variant conventions. Do not duplicate sizing or palette values here.
 
 IntelliJ does not theme SVG icons with `currentColor`, CSS classes, CSS variables, `<style>` blocks, or inherited styles. `SVGLoader` patches icon colors by matching literal hex values in `fill` and `stroke` attributes against the active theme palette. Use hardcoded palette hex values in SVG assets and provide dark variants. This exception applies to icon asset files only; runtime Swing UI code must still derive colors from theme APIs.
 
-| Do | Do not |
-|---|---|
-| `fill="#6E6E6E"` | `fill="currentColor"` |
-| `stroke="#3574F0"` | CSS variables or classes |
-| `icon.svg` plus `icon_dark.svg` | `<style>` blocks for theming |
-| `fill-opacity="0.5"` | Inherited styling |
-
 Themes can override palette colors through `icons.ColorPalette` in the theme JSON.
+
+Official references:
+- [IntelliJ Platform UI Guidelines](https://jetbrains.design/intellij/)
+- [UI FAQ (colors, borders, icons)](https://plugins.jetbrains.com/docs/intellij/ui-faq.html)
 
 ### Before Returning UI Code
 

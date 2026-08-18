@@ -1,9 +1,10 @@
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { afterEach, describe, expect } from "bun:test"
 import path from "path"
-import { pathToFileURL } from "url"
 import type { Permission } from "../../src/permission"
 import type { Tool } from "@/tool/tool"
 import { SkillTool } from "../../src/tool/skill"
@@ -26,9 +27,7 @@ afterEach(async () => {
   await disposeAllInstances()
 })
 
-const node = CrossSpawnSpawner.defaultLayer
-
-const it = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, node))
+const it = testEffect(LayerNode.compile(LayerNode.group([ToolRegistry.node, CrossSpawnSpawner.node, Ripgrep.node])))
 
 // kilocode_change - skip on windows: address windows ci failures #9496
 const unix = process.platform !== "win32" ? it.instance : it.instance.skip
@@ -71,6 +70,9 @@ Use this skill.
       })).find((tool) => tool.id === SkillTool.id)
       if (!tool) throw new Error("Skill tool not found")
 
+      expect(tool.description).toContain("tool-skill") // kilocode_change - include concise available-skill context
+      expect(tool.description).toContain("Skill for tool tests.") // kilocode_change
+
       const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
       const ctx: Tool.Context = {
         ...baseCtx,
@@ -89,7 +91,7 @@ Use this skill.
       expect(requests[0].always).toContain("tool-skill")
       expect(result.metadata.dir).toBe(skill)
       expect(result.output).toContain(`<skill_content name="tool-skill">`)
-      expect(result.output).toContain(`Base directory for this skill: ${pathToFileURL(skill).href}`)
+      expect(result.output).toContain(`Base directory for this skill: ${skill}`)
       expect(result.output).toContain(`<file>${file}</file>`)
     }),
   )
@@ -134,7 +136,7 @@ Use this skill.
   )
 
   // kilocode_change start
-  it.live("built-in kilo-config includes named command lookup guidance", () =>
+  it.live("built-in kilo-config keeps rendered shell examples inert", () =>
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
@@ -155,9 +157,13 @@ Use this skill.
           })).find((t) => t.id === SkillTool.id)
           if (!tool) throw new Error("Skill tool not found")
 
+          const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
           const ctx: Tool.Context = {
             ...baseCtx,
-            ask: () => Effect.void,
+            ask: (req) =>
+              Effect.sync(() => {
+                requests.push(req)
+              }),
           }
 
           const result = yield* tool.execute({ name: "kilo-config" }, ctx)
@@ -168,6 +174,9 @@ Use this skill.
           expect(result.output).toContain("~/.kilocode/")
           expect(result.output).toContain("**/command/")
           expect(result.output).toContain("explicit search")
+          expect(result.output).toContain("`` !`cmd` ``")
+          expect(result.output).not.toContain("[skill shell command failed]")
+          expect(requests.map((request) => request.permission)).toEqual(["skill"])
         }),
       { git: true },
     ),

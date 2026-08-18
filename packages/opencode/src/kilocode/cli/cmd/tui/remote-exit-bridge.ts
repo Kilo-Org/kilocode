@@ -1,4 +1,4 @@
-import type { Exit } from "@/cli/cmd/tui/context/exit"
+import type { Exit } from "@opencode-ai/tui/context/exit"
 import { RemoteExitRpc } from "@/kilocode/cli/cmd/tui/remote-exit-rpc"
 import { withTimeout } from "@/util/timeout"
 
@@ -8,8 +8,11 @@ export type RemoteExitBridgeClient = {
 }
 
 export function createParentRemoteExitBridge(client: RemoteExitBridgeClient, exit: Exit) {
+  let exiting = false
   const unsubscribe = client.on(RemoteExitRpc.Event, () => {
-    void exit()
+    if (exiting) return
+    exiting = true
+    exit()
   })
   let disposed = false
 

@@ -20,16 +20,22 @@
     "result": "show"
   },
   {
+    "name": "show preserves trailing text",
+    "input": "/memory show draft notes",
+    "result": "show",
+    "rest": "draft notes"
+  },
+  {
     "name": "status operation",
     "input": "/memory status",
     "result": "operation",
     "operation": "status"
   },
   {
-    "name": "edit operation",
-    "input": "/memory edit",
+    "name": "inspect operation",
+    "input": "/memory inspect",
     "result": "operation",
-    "operation": "edit"
+    "operation": "inspect"
   },
   {
     "name": "on operation",
@@ -60,6 +66,27 @@
     "input": "/memory rebuild",
     "result": "operation",
     "operation": "rebuild"
+  },
+  {
+    "name": "rebuild keeps trailing text",
+    "input": "/memory rebuild hello",
+    "result": "operation",
+    "operation": "rebuild",
+    "rest": "hello"
+  },
+  {
+    "name": "enable keeps trailing text",
+    "input": "/memory on hello",
+    "result": "operation",
+    "operation": "enable",
+    "rest": "hello"
+  },
+  {
+    "name": "project scope rebuild keeps trailing text",
+    "input": "/memory project rebuild hello",
+    "result": "operation",
+    "operation": "rebuild",
+    "rest": "hello"
   },
   {
     "name": "purge requires confirmation",
@@ -95,26 +122,6 @@
     "mode": "off"
   },
   {
-    "name": "verbose mode usage",
-    "input": "/memory verbose",
-    "result": "usage",
-    "reason": "Missing verbose mode"
-  },
-  {
-    "name": "verbose on operation",
-    "input": "/memory verbose on",
-    "result": "operation",
-    "operation": "verbose",
-    "mode": "on"
-  },
-  {
-    "name": "verbose off operation",
-    "input": "/memory verbose off",
-    "result": "operation",
-    "operation": "verbose",
-    "mode": "off"
-  },
-  {
     "name": "remember operation keeps text",
     "input": "/memory remember use bun test from packages/opencode",
     "result": "operation",
@@ -147,12 +154,6 @@
     "result": "operation",
     "operation": "auto",
     "mode": "off"
-  },
-  {
-    "name": "inspect action is unknown",
-    "input": "/memory inspect",
-    "result": "usage",
-    "reason": "Unknown memory action"
   },
   {
     "name": "unknown action",

@@ -1,7 +1,8 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import * as Config from "@/config/config" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
-import * as Log from "@opencode-ai/core/util/log"
 import { Wildcard } from "@opencode-ai/core/util/wildcard"
 import { Deferred, Effect, Layer, Context } from "effect"
 import os from "os"
@@ -10,7 +11,6 @@ import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Database } from "@opencode-ai/core/database/database" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { EventV2 } from "@opencode-ai/core/event"
 import { SessionID } from "@/session/schema" // kilocode_change - used by AllowEverythingInput
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
@@ -21,19 +21,7 @@ import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // 
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
 // kilocode_change end
 
-const log = Log.create({ service: "permission" })
-
-export const Event = {
-  Asked: EventV2.define({ type: "permission.asked", schema: PermissionV1.Request.fields }),
-  Replied: EventV2.define({
-    type: "permission.replied",
-    schema: {
-      sessionID: PermissionV1.Request.fields.sessionID,
-      requestID: PermissionV1.ID,
-      reply: PermissionV1.Reply,
-    },
-  }),
-}
+export const Event = PermissionV1.Event
 // kilocode_change start - upstream moved these types into PermissionV1; re-export them here so existing
 // Kilo callers that import off `Permission.*` keep working without a repo-wide rewrite
 export const Rule = PermissionV1.Rule
@@ -75,8 +63,17 @@ export const AllowEverythingInput = z.object({
 })
 // kilocode_change end
 
+// kilocode_change start - describe why a call was allowed so clients can explain auto-approval
+export interface AskOutcome {
+  /** true when the user was prompted and replied; false when a rule auto-approved. */
+  manual: boolean
+  /** The winning rule (carries an optional `source` marker set at ruleset-build time). */
+  rule?: Rule
+}
+// kilocode_change end
+
 export interface Interface {
-  readonly ask: (input: AskInput) => Effect.Effect<void, Error>
+  readonly ask: (input: AskInput) => Effect.Effect<AskOutcome, Error> // kilocode_change - was Effect<void>; returns the decision
   readonly reply: (input: ReplyInput) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
   // kilocode_change start
@@ -148,6 +145,8 @@ function subset(permission: string, ruleset: Ruleset) {
 
 function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
+  if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
+  if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -157,7 +156,7 @@ function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Permission") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const events = yield* EventV2Bridge.Service
@@ -193,6 +192,7 @@ export const layer = Layer.effect(
       const local = s.session[request.sessionID] ?? []
       // kilocode_change end
       let needsAsk = false
+      let approvedRule: Rule | undefined // kilocode_change - remember the rule that auto-approved
 
       // kilocode_change start - protect config access while honoring explicit global skill trust
       const isProtected = ConfigProtection.isRequest(request)
@@ -213,26 +213,35 @@ export const layer = Layer.effect(
         : false
       // kilocode_change end
 
+      const forceAsk = request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true // kilocode_change
       for (const pattern of request.patterns) {
-        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change - include session-scoped rules
-        log.info("evaluated", { permission: request.permission, pattern, action: rule })
-        // kilocode_change start - saved/session approvals cannot override hard Ask/Plan denials
+        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
+        // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
           return yield* new DeniedError({ ruleset: subset(request.permission, hardRuleset ?? []) })
         }
         // kilocode_change end
         if (rule.action === "deny") {
-          return yield* new DeniedError({
-            ruleset: subset(request.permission, ruleset), // kilocode_change
-          })
+          // kilocode_change - carry the deciding rule (not just the permission subset) for provenance
+          return yield* new DeniedError({ ruleset: rule })
         }
+        // kilocode_change start - skill shell forces a prompt instead of honoring an allow/auto-approve rule
+        if (forceAsk) {
+          needsAsk = true
+          continue
+        }
+        // kilocode_change end
         // kilocode_change start - override "allow" to "ask" for protected config paths
-        if (rule.action === "allow" && (!isProtected || trusted)) continue
+        if (rule.action === "allow" && (!isProtected || trusted)) {
+          approvedRule = rule // remember the winning rule so callers can explain the auto-approval
+          continue
+        }
         // kilocode_change end
         needsAsk = true
       }
 
-      if (!needsAsk) return
+      if (!needsAsk) return { manual: false, rule: approvedRule } // kilocode_change - report auto-approval
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
@@ -258,23 +267,42 @@ export const layer = Layer.effect(
         always: skill ? [skill] : request.always, // kilocode_change - persist only the exact global skill subtree
         tool: request.tool,
       }
-      log.info("asking", { id, permission: info.permission, patterns: info.patterns })
+      yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
       pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
-      return yield* Effect.ensuring(
+      // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
+      yield* Effect.ensuring(
         Deferred.await(deferred),
         Effect.sync(() => {
           pending.delete(id)
         }),
       )
+      return { manual: true } // the user was prompted and replied
+      // kilocode_change end
     })
 
     const reply = Effect.fn("Permission.reply")(function* (input: PermissionV1.ReplyInput) {
       const { approved, pending } = yield* InstanceState.get(state)
       const existing = pending.get(input.requestID)
       if (!existing) return yield* new PermissionV1.NotFoundError({ requestID: input.requestID })
+
+      // kilocode_change start - skill-shell batches must be answered by a human; ignore machine approvals
+      // (auto-approve/YOLO clients omit `interactive`) so the prompt stays pending for a real decision.
+      // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
+      // means an auto-approver tried to answer — the request intentionally stays pending for a human.
+      if (
+        (existing.info.metadata?.["skillShell"] === true || existing.info.metadata?.["sandboxEscalation"] === true) &&
+        input.reply !== "reject" &&
+        input.interactive !== true
+      ) {
+        yield* Effect.logWarning("sensitive permission approval refused: requires an interactive human reply", {
+          id: input.requestID,
+        })
+        return
+      }
+      // kilocode_change end
 
       pending.delete(input.requestID)
       yield* events.publish(Event.Replied, {
@@ -476,22 +504,17 @@ export function merge(...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule[] 
 
 export function disabled(tools: string[], ruleset: PermissionV1.Ruleset): Set<string> {
   const edits = ["edit", "write", "apply_patch"]
+  const reads = ["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]
   return new Set(
     tools.filter((tool) => {
-      const permission = edits.includes(tool) ? "edit" : tool
+      const permission = edits.includes(tool) ? "edit" : reads.includes(tool) ? "read" : tool
       const rule = ruleset.findLast((rule) => Wildcard.match(permission, rule.permission))
       return rule?.pattern === "*" && rule.action === "deny"
     }),
   )
 }
 
-// kilocode_change start - Kilo permission persistence and headless ancestry dependencies
-export const defaultLayer = layer.pipe(
-  Layer.provide(EventV2Bridge.defaultLayer),
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(Database.defaultLayer),
-)
-// kilocode_change end
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBuilder.build(node)) // kilocode_change - build from the LayerNode graph
 
 // kilocode_change start — inverse of fromConfig: convert rules back to config format
 const SCALAR_ONLY_PERMISSIONS = new Set(["todowrite", "todoread", "question", "webfetch", "websearch", "doom_loop"])
@@ -519,5 +542,16 @@ export function toConfig(rules: Ruleset): ConfigPermissionV1.Info {
   return result
 }
 // kilocode_change end
+
+export function visibleTools<T>(tools: Record<string, T>, ruleset: PermissionV1.Ruleset): Record<string, T> {
+  const hidden = disabled(Object.keys(tools), ruleset)
+  return Object.fromEntries(Object.entries(tools).filter(([name]) => !hidden.has(name)))
+}
+
+export const node = LayerNode.make({
+  service: Service,
+  layer,
+  deps: [EventV2Bridge.node, Config.node, Database.node], // kilocode_change
+})
 
 export * as Permission from "."

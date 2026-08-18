@@ -20,6 +20,7 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   disableChannelDb: bool("KILO_DISABLE_CHANNEL_DB"), // kilocode_change
   disableEmbeddedWebUi: bool("KILO_DISABLE_EMBEDDED_WEB_UI"),
   disableExternalSkills: bool("KILO_DISABLE_EXTERNAL_SKILLS"),
+  disableSkillShell: bool("KILO_DISABLE_SKILL_SHELL"), // kilocode_change - disable shell injection in skill bodies
   disableLspDownload: bool("KILO_DISABLE_LSP_DOWNLOAD"),
   skipMigrations: bool("KILO_SKIP_MIGRATIONS"), // kilocode_change
   disableClaudeCodePrompt: Config.all({
@@ -41,14 +42,16 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   }).pipe(Config.map((flags) => flags.enabled || flags.legacy)),
   enableExperimentalModels: bool("KILO_ENABLE_EXPERIMENTAL_MODELS"),
   enableQuestionTool: bool("KILO_ENABLE_QUESTION_TOOL"),
-  experimentalScout: enabledByExperimental("KILO_EXPERIMENTAL_SCOUT"),
+  experimentalScout: enabledByExperimental("KILO_EXPERIMENTAL_SCOUT"), // kilocode_change
   experimentalReferences: enabledByExperimental("KILO_EXPERIMENTAL_REFERENCES"),
   experimentalBackgroundSubagents: enabledByExperimental("KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS"),
   experimentalLspTy: bool("KILO_EXPERIMENTAL_LSP_TY"),
   experimentalLspTool: enabledByExperimental("KILO_EXPERIMENTAL_LSP_TOOL"),
   experimentalOxfmt: enabledByExperimental("KILO_EXPERIMENTAL_OXFMT"),
   experimentalPlanMode: enabledByExperimental("KILO_EXPERIMENTAL_PLAN_MODE"),
+  experimentalCodeMode: enabledByExperimental("KILO_EXPERIMENTAL_CODE_MODE"),
   experimentalEventSystem: enabledByExperimental("KILO_EXPERIMENTAL_EVENT_SYSTEM"),
+  experimentalSessionSwitcher: enabledByExperimental("KILO_EXPERIMENTAL_SESSION_SWITCHER"), // kilocode_change
   experimentalWorkspaces: enabledByExperimental("KILO_EXPERIMENTAL_WORKSPACES"),
   experimentalIconDiscovery: enabledByExperimental("KILO_EXPERIMENTAL_ICON_DISCOVERY"),
   outputTokenMax: positiveInteger("KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX"),
@@ -60,7 +63,7 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
 
 export type Info = Context.Service.Shape<typeof Service>
 
-const emptyConfigLayer = Service.defaultLayer.pipe(
+const emptyConfigLayer = Service.layer.pipe(
   Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown({}))),
   Layer.orDie,
 )
@@ -74,6 +77,7 @@ export const layer = (overrides: Partial<Info> = {}) =>
     }),
   ).pipe(Layer.provide(emptyConfigLayer))
 
-export const defaultLayer = Service.defaultLayer.pipe(Layer.orDie)
+export const node = LayerNode.make({ service: Service, layer: Service.layer.pipe(Layer.orDie), deps: [] })
 
 export * as RuntimeFlags from "./runtime-flags"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"

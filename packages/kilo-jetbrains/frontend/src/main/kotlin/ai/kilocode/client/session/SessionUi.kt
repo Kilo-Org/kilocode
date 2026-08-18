@@ -4,6 +4,10 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.KiloInlineDiffStore
+import ai.kilocode.client.diff.diffParams
+import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.migration.KiloMigrationService
 import ai.kilocode.client.migration.MigrationUiController
 import ai.kilocode.client.migration.MigrationUiState
@@ -43,6 +47,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.permission.PermissionView
@@ -55,6 +60,7 @@ import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.dto.ModelLimitDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
@@ -82,8 +88,10 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.util.function.Predicate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -93,7 +101,6 @@ import java.nio.file.Path
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
-import javax.swing.UIManager
 
 /**
  * Top-level session UI composition root.
@@ -148,7 +155,7 @@ class SessionUi(
         condense = Registry.`is`("kilo.session.condense", true),
         displayMs = displayMs,
         open = { item -> manager?.openSession(item) },
-        beforeUpdate = { if (opening) false else scroll.atBottom() },
+        beforeUpdate = { if (opening) false else scroll.following() },
         afterUpdate = { if (!opening) scroll.followBottom(it) },
         loaded = ::onSessionLoaded,
         openProfileAction = ::openProfileSettings,
@@ -200,8 +207,11 @@ class SessionUi(
             return listOf(text)
         }
     }
-    private var editorTheme = style.editorScheme
-    private var colorTheme = UIManager.getLookAndFeel()
+    private var wasBusy = false
+    // Kept separate so a background stat refresh (turn end / revert) can supersede another refresh
+    // but never cancel an in-flight user-initiated open.
+    private var refreshJob: Job? = null
+    private var openJob: Job? = null
     private var disposed = false
 
     init {
@@ -214,6 +224,7 @@ class SessionUi(
         bindStyle()
         bindMigration()
         onStateChanged(controller.model.state)
+        refreshBranchChanges()
         loaded?.let(::finishOpen)
     }
 
@@ -288,6 +299,7 @@ class SessionUi(
 
     private fun buildUi() {
         root = SessionRootPanel()
+        // Containers stay transparent over the single self-rendered session root backdrop.
         fileLinks = SessionFileLinks(workspace.directory, workspaces, cs, root, ::openUrl)
         SessionContextMenu.install(root, this)
 
@@ -321,14 +333,9 @@ class SessionUi(
             )
         }
 
-        overlay = SessionHoverCopyOverlay(root, this)
-        root.addOverlay(overlay) { pane, child ->
-            overlay.bounds(pane, child)
-        }
+        sessionContent = JPanel(BorderLayout()).apply { isOpaque = false }
 
-        sessionContent = JPanel(BorderLayout())
-
-        blankBody = JPanel(BorderLayout())
+        blankBody = JPanel(BorderLayout()).apply { isOpaque = false }
 
         load = LoadingPanel()
         progressBody = load
@@ -343,7 +350,7 @@ class SessionUi(
             focus = focus,
         )
         permission = PermissionView(
-            reply = { id, dto -> controller.replyPermission(id, dto) },
+            reply = { id, dto, rules -> controller.replyPermission(id, dto, rules) },
             selection = selection,
             focus = focus,
         )
@@ -367,13 +374,20 @@ class SessionUi(
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
             revert = ::revert,
             cancelRevert = ::cancelRevert,
+            deleteQueued = { id -> controller.deleteQueuedMessage(id) },
             banner = RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
         ).also {
+            it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this)
+        header = SessionHeaderPanel(controller, this) { openBranchChanges() }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
+        overlay = SessionHoverCopyOverlay(root, scroll.component, this)
+        root.addOverlay(overlay) { pane, child ->
+            overlay.bounds(pane, child)
+        }
+        messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
         scroll.onScroll = {
             overlay.clear()
             popup.hideAll()
@@ -543,6 +557,8 @@ class SessionUi(
 
                 is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
 
+                is SessionModelEvent.QueueChanged -> Unit
+
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
@@ -604,11 +620,7 @@ class SessionUi(
     private fun bindStyle() {
         addHierarchyListener { event ->
             if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
-            if (!isShowing) {
-                popup.hideAll()
-                return@addHierarchyListener
-            }
-            applyStyleIfThemeChanged()
+            if (!isShowing) popup.hideAll()
         }
 
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
@@ -656,6 +668,7 @@ class SessionUi(
         if (width <= 0 || height <= 0) return
         if (body(controller.model.state) !== messageBody) return
         pending = false
+        messageBody.reflow()
         scroll.openBottom {
             opening = false
         }
@@ -663,17 +676,8 @@ class SessionUi(
 
     private fun sendPrompt(text: String, files: List<PromptPartDto>) {
         if (text.isBlank() && files.isEmpty()) return
-        val parts = buildList {
-            text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
-            addAll(files)
-        }
-        LOG.debug {
-            val agent = controller.model.agent ?: "none"
-            val model = controller.model.model ?: "none"
-            "${ChatLogSummary.prompt(PromptDto(parts = parts))} agent=$agent model=$model ready=${controller.ready}"
-        }
         prompt.clear()
-        val follow = scroll.atBottom()
+        val follow = scroll.following()
         val action = completion.clientAction(text)
         if (action != null) {
             action.action()
@@ -686,7 +690,20 @@ class SessionUi(
             scroll.followBottom(follow)
             return
         }
-        controller.prompt(text, files)
+        // Only the prompt path uses editor context; gather after the command branches so slash
+        // commands and client actions don't pay the editor-context cost or hit its failure modes.
+        val editor = EditorContextGatherer.gather(project, workspace.directory)
+        val allFiles = files + listOfNotNull(editor.selection)
+        LOG.debug {
+            val parts = buildList {
+                text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+                addAll(allFiles)
+            }
+            val agent = controller.model.agent ?: "none"
+            val model = controller.model.model ?: "none"
+            "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
+        }
+        controller.prompt(text, allFiles, editor.context)
         scroll.followBottom(follow)
     }
 
@@ -713,6 +730,7 @@ class SessionUi(
 
     @RequiresEdt
     private fun onRevertChanged(revert: SessionRevertDto?) {
+        refreshBranchChanges()
         syncPromptRevert()
         val rollback = pendingRollback
         if (rollback != null) {
@@ -801,6 +819,76 @@ class SessionUi(
         BrowserUtil.browse(url)
     }
 
+    private fun openInlineDiff(files: List<DiffFileDto>, title: String, key: String) {
+        val dir = controller.sessionDirectory
+        cs.launch {
+            val branch = workspaces.branchName(dir)
+            val label = branch?.let { KiloBundle.message("diff.editor.inline.title.named", title, it) } ?: title
+            LOG.info("open inline diff session=${controller.id ?: "pending"} dir=${ChatLogSummary.dir(dir)} files=${files.size}")
+            withContext(Dispatchers.Main) {
+                ensureDiffEditorKind()
+                project.service<KiloInlineDiffStore>().put(key, files)
+                project.service<KiloVfsManager>().open(
+                    KiloDiffEditorKind.ID,
+                    diffParams("inline", dir, controller.id, label, token = key),
+                )
+                Telemetry.send("Diff Editor Opened", mapOf("source" to "inline"))
+            }
+        }
+    }
+
+    /** Badge-only refresh: fetches stats (no patch text) and updates the header count. */
+    private fun refreshBranchChanges() {
+        refreshJob?.cancel()
+        refreshJob = cs.launch {
+            val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("branch changes badge refresh failed dir=${workspace.directory}", it)
+                    return@launch
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                header.setBranchChanges(files)
+            }
+        }
+    }
+
+    /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
+    private fun openBranchChanges() {
+        openJob?.cancel()
+        openJob = cs.launch {
+            val dir = workspace.directory
+            val branch = workspaces.branchName(dir)
+            val files = runCatching { workspaces.branchDiff(dir, patches = false) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("branch changes open failed dir=$dir", it)
+                    emptyList()
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                header.setBranchChanges(files)
+                openBranchDiff(branch)
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun openBranchDiff(branch: String?) {
+        // No store seeding: the diff editor's fetch recomputes branchDiff authoritatively, so a
+        // re-open or Refresh always reflects the current worktree (and nothing is retained for its life).
+        ensureDiffEditorKind()
+        val dir = workspace.directory
+        val title = branch?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
+            ?: KiloBundle.message("diff.editor.branch.title")
+        project.service<KiloVfsManager>().open(
+            KiloDiffEditorKind.ID,
+            diffParams("branch", dir, null, title, branch),
+        )
+        Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
+    }
+
     private fun openAttachment(messageId: String, item: FileAttachment) {
         val url = item.url.takeIf { it.isNotBlank() } ?: run {
             LOG.info("kind=attachment-open skipped=true reason=blank-url message=$messageId part=${item.id} name=${attachmentName(item)} mime=${item.mime}")
@@ -828,12 +916,13 @@ class SessionUi(
             return
         }
         if (uri.scheme == "file") {
-            val path = runCatching { Path.of(uri).toString() }.getOrNull() ?: run {
+            val path = runCatching { Path.of(cleanAttachmentUri(uri)).toString() }.getOrNull() ?: run {
                 LOG.info("kind=attachment-open skipped=true reason=invalid-file-uri message=$messageId part=${item.id} url=${attachmentUrl(url)}")
                 return
             }
-            LOG.info("kind=attachment-open route=file session=${controller.id ?: "none"} message=$messageId part=${item.id} path=$path")
-            fileLinks.open(path, null)
+            val target = attachmentHref(path, item)
+            LOG.info("kind=attachment-open route=file session=${controller.id ?: "none"} message=$messageId part=${item.id} path=$target")
+            fileLinks.open(target, null)
             return
         }
         LOG.info("kind=attachment-open route=browser session=${controller.id ?: "none"} message=$messageId part=${item.id} url=${attachmentUrl(url)}")
@@ -844,6 +933,14 @@ class SessionUi(
         ?: item.url.substringBefore(',').substringAfterLast('/').takeIf { it.isNotBlank() }
         ?: "attachment"
 
+    private fun attachmentHref(path: String, item: FileAttachment): String {
+        val start = item.startLine ?: return path
+        val end = item.endLine ?: start
+        return "$path:$start-$end"
+    }
+
+    private fun cleanAttachmentUri(uri: URI): URI = URI(uri.scheme, uri.authority, uri.path, null, null)
+
     private fun attachmentUrl(url: String): String {
         val scheme = url.substringBefore(':', missingDelimiterValue = "none")
         return "scheme=$scheme chars=${url.length} embedded=${isEmbeddedAttachment(url)}"
@@ -851,12 +948,15 @@ class SessionUi(
 
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
+        val busy = state.isBusy()
+        if (wasBusy && state is SessionState.Idle) refreshBranchChanges()
+        wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()
         if (state is SessionState.Error) {
             pendingRollback = null
             pendingRedo = null
         }
-        prompt.setBusy(state.isBusy())
+        prompt.setBusy(busy)
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))
@@ -879,27 +979,13 @@ class SessionUi(
         if (disposed) return
         this.style = style
         selection.applyStyle(style)
-        editorTheme = style.editorScheme
-        colorTheme = UIManager.getLookAndFeel()
-        background = style.editorBackground
-        root.background = style.editorBackground
-        root.content.background = style.editorBackground
-        sessionContent.background = style.editorBackground
-        blankBody.background = style.editorBackground
         load.applyStyle(style)
         header.applyStyle(style)
         prompt.applyStyle(style)
         connection.applyStyle(style)
         scroll.applyStyle(style)
+        empty?.applyStyle(style)
         refresh()
-    }
-
-    private fun applyStyleIfThemeChanged() {
-        if (disposed) return
-        val next = SessionEditorStyle.current()
-        val laf = UIManager.getLookAndFeel()
-        if (editorTheme === next.editorScheme && colorTheme == laf) return
-        applyStyle(next)
     }
 
     private fun openProfileSettings() {
@@ -924,6 +1010,8 @@ class SessionUi(
 
     override fun dispose() {
         disposed = true
+        refreshJob?.cancel()
+        openJob?.cancel()
         hide.stop()
         popup.hideAll()
         modalFocus = null

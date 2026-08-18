@@ -1,7 +1,9 @@
 import { describe, it, expect } from "bun:test"
 import {
+  cycleAgent,
   createDraftAgentSeed,
   draftAgentSelection,
+  resolvePromptAgent,
   resolveSessionAgent,
 } from "../../webview-ui/src/context/session-agent"
 import type { Message } from "../../webview-ui/src/types/messages"
@@ -78,6 +80,83 @@ describe("resolveSessionAgent", () => {
     )
 
     expect(result).toBeUndefined()
+  })
+})
+
+describe("cycleAgent", () => {
+  const agents = [
+    { name: "ask", mode: "primary" },
+    { name: "plan", mode: "primary" },
+    { name: "task", mode: "subagent" },
+    { name: "hidden", mode: "primary", hidden: true },
+    { name: "code", mode: "primary" },
+  ]
+
+  function cycle(current: string, direction: 1 | -1, scope = "pending-1") {
+    const calls: Array<[string, string | undefined]> = []
+    const name = cycleAgent({
+      agents,
+      scope,
+      direction,
+      selected: (id) => {
+        expect(id).toBe(scope)
+        return current
+      },
+      select: (agent, id) => calls.push([agent, id]),
+    })
+    return { name, calls }
+  }
+
+  it("cycles the same pending scope read by the visible selector", () => {
+    expect(cycle("ask", 1)).toEqual({ name: "plan", calls: [["plan", "pending-1"]] })
+    expect(cycle("ask", -1)).toEqual({ name: "code", calls: [["code", "pending-1"]] })
+  })
+
+  it("wraps and starts from the first agent when the selection is unknown", () => {
+    expect(cycle("code", 1).name).toBe("ask")
+    expect(cycle("missing", 1).name).toBe("ask")
+  })
+
+  it("does nothing when there is no alternative", () => {
+    const selected: string[] = []
+    expect(
+      cycleAgent({
+        agents: [{ name: "code" }],
+        direction: 1,
+        selected: () => "code",
+        select: (name) => selected.push(name),
+      }),
+    ).toBeUndefined()
+    expect(selected).toEqual([])
+  })
+})
+
+describe("resolvePromptAgent", () => {
+  it("sends Code after an explicit Ask to Code selection", () => {
+    expect(
+      resolvePromptAgent({
+        sessionID: "ses_1",
+        selections: { ses_1: "code" },
+        pending: "ask",
+      }),
+    ).toBe("code")
+  })
+
+  it("sends an explicit pending Code selection on a new draft", () => {
+    expect(resolvePromptAgent({ selections: {}, pending: "code" })).toBe("code")
+  })
+
+  it("honors an explicit pending selection for a draft scope with no per-session entry", () => {
+    expect(resolvePromptAgent({ sessionID: "draft-1", selections: {}, pending: "ask" })).toBe("ask")
+  })
+
+  it("does not fall back to pending for a real server session with no per-session entry", () => {
+    expect(resolvePromptAgent({ sessionID: "ses_1", selections: {}, pending: "ask" })).toBeUndefined()
+  })
+
+  it("omits the agent when there is no explicit selection", () => {
+    expect(resolvePromptAgent({ sessionID: "ses_1", selections: {}, pending: null })).toBeUndefined()
+    expect(resolvePromptAgent({ selections: {}, pending: null })).toBeUndefined()
   })
 })
 

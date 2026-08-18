@@ -1,13 +1,11 @@
 import path from "path"
-import { Effect, Option, Schema } from "effect"
-import * as Stream from "effect/Stream"
+import { Effect, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
-import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./glob.txt"
 import * as Tool from "./tool"
-import { Reference } from "@/reference/reference"
 
 // kilocode_change start — support absolute glob patterns (e.g. ~/.config/kilo/command/*.md)
 function normalize(p: string) {
@@ -37,10 +35,8 @@ export const Parameters = Schema.Struct({
 export const GlobTool = Tool.define(
   "glob",
   Effect.gen(function* () {
-    const rg = yield* Ripgrep.Service
     const fs = yield* FSUtil.Service
-    const reference = yield* Reference.Service
-
+    const ripgrep = yield* Ripgrep.Service
     return {
       description: DESCRIPTION,
       parameters: Parameters,
@@ -62,56 +58,38 @@ export const GlobTool = Tool.define(
           const base = absolute?.dir ?? params.path ?? ins.directory
           const search = path.isAbsolute(base) ? base : path.resolve(ins.directory, base)
           // kilocode_change end
-          yield* reference.ensure(search)
           const info = yield* fs.stat(search).pipe(Effect.catch(() => Effect.succeed(undefined)))
           if (info?.type === "File") {
             throw new Error(`glob path must be a directory: ${search}`)
           }
           yield* assertExternalDirectoryEffect(ctx, search, {
-            bypass: yield* reference.contains(search),
+            bypass: false,
             kind: "directory",
           })
 
           const limit = 100
-          let truncated = false
-          // kilocode_change start
-          const files = yield* rg
-            .files({ cwd: search, glob: [absolute?.pattern ?? params.pattern], signal: ctx.abort })
-            .pipe(
-              Stream.mapEffect((file) =>
-                Effect.gen(function* () {
-                  const full = path.resolve(search, file)
-                  const info = yield* fs.stat(full).pipe(Effect.catch(() => Effect.succeed(undefined)))
-                  const mtime =
-                    info?.mtime.pipe(
-                      Option.map((date) => date.getTime()),
-                      Option.getOrElse(() => 0),
-                    ) ?? 0
-                  return { path: full, mtime }
-                }),
-              ),
-              Stream.take(limit + 1),
-              Stream.runCollect,
-              Effect.map((chunk) => [...chunk]),
-            )
+          // kilocode_change start - retain bounded-search metadata from Core ripgrep.
+          const result = yield* ripgrep.glob({
+            cwd: search,
+            pattern: absolute?.pattern ?? params.pattern, // kilocode_change - absolute patterns are split into cwd + relative glob
+            limit,
+            signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
+          })
+          const files = result.items
+          const truncated = result.truncated
           // kilocode_change end
-
-          if (files.length > limit) {
-            truncated = true
-            files.length = limit
-          }
-          files.sort((a, b) => b.mtime - a.mtime)
 
           const output = []
           if (files.length === 0) output.push("No files found")
           if (files.length > 0) {
-            output.push(...files.map((file) => file.path))
+            output.push(...files.map((file) => path.resolve(search, file.path)))
             if (truncated) {
               output.push("")
               output.push(
                 `(Results are truncated: showing first ${limit} results. Consider using a more specific path or pattern.)`,
               )
             }
+            if (result.partial) output.push("", "(Some discovered files could not be read.)") // kilocode_change
           }
 
           return {

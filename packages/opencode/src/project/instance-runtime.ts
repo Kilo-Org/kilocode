@@ -10,6 +10,10 @@ export const load = (input: LoadInput) => AppRuntime.runPromise(InstanceStore.Se
 export const disposeInstance = (ctx: InstanceContext) =>
   AppRuntime.runPromise(InstanceStore.Service.use((store) => store.dispose(ctx)))
 export const disposeAllInstances = () => AppRuntime.runPromise(InstanceStore.Service.use((store) => store.disposeAll()))
+// kilocode_change start - test fixtures dispose a directory's instance before deleting the directory
+export const disposeDirectory = (directory: string) =>
+  AppRuntime.runPromise(InstanceStore.Service.use((store) => store.disposeDirectory(directory)))
+// kilocode_change end
 export const reloadInstance = (input: LoadInput) =>
   AppRuntime.runPromise(InstanceStore.Service.use((store) => store.reload(input)))
 

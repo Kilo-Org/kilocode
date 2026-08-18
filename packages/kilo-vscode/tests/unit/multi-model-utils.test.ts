@@ -7,6 +7,7 @@ import {
   remaining,
   toggleModel,
   setAllocationCount,
+  setAllocationVariant,
   maxAllocationCount,
   MAX_MULTI_VERSIONS,
 } from "../../webview-ui/agent-manager/multi-model-utils"
@@ -39,6 +40,24 @@ describe("multi-model-utils", () => {
     expect(arr).toHaveLength(2)
     expect(arr).toContainEqual({ providerID: "a", modelID: "m1", count: 2 })
     expect(arr).toContainEqual({ providerID: "b", modelID: "m2", count: 1 })
+  })
+
+  test("allocationsToArray includes variant when set", () => {
+    const alloc = setAllocationVariant(make(["a", "m1", "Model 1", 1]), "a", "m1", "high")
+    expect(allocationsToArray(alloc)).toContainEqual({ providerID: "a", modelID: "m1", count: 1, variant: "high" })
+  })
+
+  test("setAllocationVariant sets and clears the variant", () => {
+    const alloc = make(["a", "m1", "Model 1", 1])
+    const set = setAllocationVariant(alloc, "a", "m1", "high")
+    expect(set.get("a/m1")?.variant).toBe("high")
+    expect(setAllocationVariant(set, "a", "m1", undefined).get("a/m1")?.variant).toBeUndefined()
+  })
+
+  test("setAllocationVariant preserves count and does nothing for unknown models", () => {
+    const alloc = make(["a", "m1", "Model 1", 2])
+    expect(setAllocationVariant(alloc, "a", "m1", "high").get("a/m1")?.count).toBe(2)
+    expect(setAllocationVariant(alloc, "b", "m2", "high")).toBe(alloc)
   })
 
   test("remaining returns slots left", () => {

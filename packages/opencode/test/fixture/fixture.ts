@@ -1,5 +1,5 @@
 import { $ } from "bun"
-import * as Observability from "@opencode-ai/core/effect/observability"
+import * as Observability from "@opencode-ai/core/observability"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import * as fs from "fs/promises"
 import os from "os"
@@ -12,8 +12,10 @@ import { Database } from "@opencode-ai/core/database/database" // kilocode_chang
 import { ProjectV2 } from "@opencode-ai/core/project" // kilocode_change
 import { ProjectTable } from "@opencode-ai/core/project/sql" // kilocode_change
 import { AbsolutePath } from "@opencode-ai/core/schema" // kilocode_change
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import type { Config } from "@/config/config"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { InstanceBootstrap } from "../../src/project/bootstrap-service"
 import { context as instanceContext, type InstanceContext } from "../../src/project/instance-context" // kilocode_change
@@ -23,9 +25,10 @@ import { TestLLMServer } from "../lib/llm-server"
 import { remove as cleanup } from "../kilocode/cleanup" // kilocode_change
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
-export const testInstanceStoreLayer = InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap))
-const makeTestRuntime = () =>
-  ManagedRuntime.make(testInstanceStoreLayer.pipe(Layer.provideMerge(Observability.layer)))
+export const testInstanceStoreLayer = LayerNode.compile(InstanceStore.node, [
+  [InstanceStore.bootstrapNode, noopBootstrap],
+])
+const makeTestRuntime = () => ManagedRuntime.make(testInstanceStoreLayer.pipe(Layer.provideMerge(Observability.layer)))
 let testRuntime: ReturnType<typeof makeTestRuntime> | undefined
 const runtime = () => (testRuntime ??= makeTestRuntime())
 
@@ -68,6 +71,15 @@ export async function reloadTestInstance(input: { directory: string }) {
 export async function disposeAllInstances() {
   await Promise.all([InstanceRuntime.disposeAllInstances(), runTestInstanceStore((store) => store.disposeAll())])
 }
+
+// kilocode_change start - dispose a directory's instance (and its watchers) before the directory is deleted
+async function disposeInstancesFor(directory: string) {
+  await Promise.allSettled([
+    InstanceRuntime.disposeDirectory(directory),
+    runTestInstanceStore((store) => store.disposeDirectory(directory)),
+  ])
+}
+// kilocode_change end
 
 // Strip null bytes from paths (defensive fix for CI environment issues)
 function sanitizePath(p: string): string {
@@ -123,6 +135,7 @@ export async function tmpdir<T>(options?: TmpDirOptions<T>) {
       try {
         await options?.dispose?.(realpath)
       } finally {
+        await disposeInstancesFor(realpath) // kilocode_change - see disposeInstancesFor
         if (options?.git) await stop(realpath).catch(() => undefined)
         await clean(realpath).catch(() => undefined)
       }
@@ -147,6 +160,7 @@ export function tmpdirScoped<E = never, R = never>(options?: {
 
     yield* Effect.addFinalizer(() =>
       Effect.promise(async () => {
+        await disposeInstancesFor(dir) // kilocode_change - see disposeInstancesFor
         if (options?.git) await stop(dir).catch(() => undefined)
         await clean(dir).catch(() => undefined)
       }),
@@ -249,7 +263,7 @@ export const withTmpdirInstance =
     Effect.gen(function* () {
       const directory = yield* tmpdirScoped(options)
       return yield* self.pipe(Effect.provideService(TestInstance, { directory }), provideInstanceEffect(directory))
-    }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer))
+    }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 export function provideTmpdirServer<A, E, R>(
   self: (input: { dir: string; llm: TestLLMServer["Service"] }) => Effect.Effect<A, E, R>,

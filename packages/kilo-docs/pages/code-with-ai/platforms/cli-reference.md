@@ -29,7 +29,7 @@ Options:
 manage MCP (Model Context Protocol) servers
 
 Commands:
-  kilo mcp add            add an MCP server
+  kilo mcp add [name]     add an MCP server
   kilo mcp list           list MCP servers and their status  [aliases: ls]
   kilo mcp auth [name]    authenticate with an OAuth-enabled MCP server
   kilo mcp logout [name]  remove OAuth credentials for an MCP server
@@ -45,9 +45,15 @@ Options:
 ```
 add an MCP server
 
+Positionals:
+  name  name of the MCP server  [string]
+
 Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
+  --url      URL for a remote MCP server  [string]
+  --env      environment variable for a local MCP server (KEY=VALUE)  [array]
+  --header   HTTP header for a remote MCP server (KEY=VALUE)  [array]
 ```
 
 ### kilo mcp list
@@ -121,20 +127,25 @@ Positionals:
   project  path to start kilo in  [string]
 
 Options:
-      --help         Show help  [boolean]
-      --version      Show version number  [boolean]
-      --port         port to listen on  [number] [default: 0]
-      --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
-      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
-      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
-      --cors         additional domains to allow for CORS  [array] [default: []]
-  -m, --model        model to use in the format of provider/model  [string]
-  -c, --continue     continue the last session  [boolean]
-  -s, --session      session id to continue  [string]
-      --fork         fork the session when continuing (use with --continue or --session)  [boolean]
-      --cloud-fork   fetch session from cloud and continue locally (use with --session)  [boolean]
-      --prompt       prompt to use  [string]
-      --agent        agent to use  [string]
+      --help          Show help  [boolean]
+      --version       Show version number  [boolean]
+      --port          port to listen on  [number] [default: 0]
+      --hostname      hostname to listen on  [string] [default: "127.0.0.1"]
+      --mdns          enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+      --mdns-domain   custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+      --cors          additional domains to allow for CORS  [array] [default: []]
+  -m, --model         model to use in the format of provider/model  [string]
+  -c, --continue      continue the last session  [boolean]
+  -s, --session       session id to continue  [string]
+      --fork          fork the session when continuing (use with --continue or --session)  [boolean]
+      --cloud-fork    fetch session from cloud and continue locally (use with --session)  [boolean]
+      --worktree      create (or reuse) a git worktree with this name and start kilo there  [string]
+      --prompt        prompt to use  [string]
+      --agent         agent to use  [string]
+      --auto          auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
+      --mini          start the minimal interactive interface  [boolean] [default: false]
+      --no-replay     disable mini session history replay on resume and after resize  [boolean]
+      --replay-limit  cap visible mini replay to the newest N messages  [number]
 ```
 
 ## kilo attach
@@ -146,15 +157,18 @@ Positionals:
   url  http://localhost:4096  [string]
 
 Options:
-      --help        Show help  [boolean]
-      --version     Show version number  [boolean]
-      --dir         directory to run in  [string]
-  -c, --continue    continue the last session  [boolean]
-  -s, --session     session id to continue  [string]
-      --fork        fork the session when continuing (use with --continue or --session)  [boolean]
-      --cloud-fork  fetch session from cloud and continue locally (use with --session)  [boolean]
-  -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
-  -u, --username    basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
+      --help          Show help  [boolean]
+      --version       Show version number  [boolean]
+      --dir           directory to run in  [string]
+  -c, --continue      continue the last session  [boolean]
+  -s, --session       session id to continue  [string]
+      --fork          fork the session when continuing (use with --continue or --session)  [boolean]
+      --cloud-fork    fetch session from cloud and continue locally (use with --session)  [boolean]
+  -p, --password      basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -u, --username      basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
+      --mini          start the minimal interactive interface  [boolean] [default: false]
+      --no-replay     disable mini session history replay on resume and after resize  [boolean]
+      --replay-limit  cap visible mini replay to the newest N messages  [number]
 ```
 
 ## kilo run
@@ -166,32 +180,28 @@ Positionals:
   message  message to send  [string] [default: []]
 
 Options:
-      --help                          Show help  [boolean]
-      --version                       Show version number  [boolean]
-      --command                       the command to run, use message for args  [string]
-  -c, --continue                      continue the last session  [boolean]
-  -s, --session                       session id to continue  [string]
-      --fork                          fork the session before continuing (requires --continue or --session)  [boolean]
-      --cloud-fork                    fetch session from cloud and continue locally (use with --session)  [boolean]
-      --share                         share the session  [boolean]
-  -m, --model                         model to use in the format of provider/model  [string]
-      --agent                         agent to use  [string]
-      --format                        format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
-  -f, --file                          file(s) to attach to message  [array]
-      --title                         title for the session (uses truncated prompt if no value provided)  [string]
-      --attach                        attach to a running kilo server (e.g., http://localhost:4096)  [string]
-  -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
-  -u, --username                      basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
-      --dir                           directory to run in, path on remote server if attaching  [string]
-      --port                          port for the local server (defaults to random port if no value provided)  [number]
-      --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
-      --thinking                      show thinking blocks  [boolean]
-      --replay                        replay interactive session history on resume and after resize (use --no-replay to disable)  [boolean] [default: true]
-      --replay-limit                  cap visible interactive replay to the newest N messages  [number]
-  -i, --interactive                   run in direct interactive split-footer mode  [boolean] [default: false]
-      --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
-      --auto                          auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
-      --demo                          enable direct interactive demo slash commands; pass one as the message to run it immediately  [boolean] [default: false]
+      --help         Show help  [boolean]
+      --version      Show version number  [boolean]
+      --command      the command to run, use message for args  [string]
+  -c, --continue     continue the last session  [boolean]
+  -s, --session      session id to continue  [string]
+      --fork         fork the session before continuing (requires --continue or --session)  [boolean]
+      --cloud-fork   fetch session from cloud and continue locally (use with --session)  [boolean]
+      --share        share the session  [boolean]
+  -m, --model        model to use in the format of provider/model  [string]
+      --agent        agent to use  [string]
+      --format       format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
+  -f, --file         file(s) to attach to message  [array]
+      --title        title for the session (uses truncated prompt if no value provided)  [string]
+      --attach       attach to a running kilo server (e.g., http://localhost:4096)  [string]
+  -p, --password     basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -u, --username     basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
+      --dir          directory to run in, path on remote server if attaching  [string]
+      --port         port for the local server (defaults to random port if no value provided)  [number]
+      --variant      model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
+      --thinking     show thinking blocks  [boolean]
+  -i, --interactive  run in direct interactive split-footer mode  [boolean] [default: false]
+      --auto         auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
 ```
 
 ## kilo debug
@@ -289,24 +299,12 @@ Options:
 ripgrep debugging utilities
 
 Commands:
-  kilo debug rg tree              show file tree using ripgrep
   kilo debug rg files             list files using ripgrep
   kilo debug rg search <pattern>  search file contents using ripgrep
 
 Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
-```
-
-### kilo debug rg tree
-
-```
-show file tree using ripgrep
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-  --limit  [number]
 ```
 
 ### kilo debug rg files
@@ -346,7 +344,6 @@ Commands:
   kilo debug file read <path>     read file contents as JSON
   kilo debug file list <path>     list files in a directory
   kilo debug file search <query>  search files by query
-  kilo debug file tree [dir]      show directory tree
 
 Options:
   --help     Show help  [boolean]
@@ -386,19 +383,6 @@ search files by query
 
 Positionals:
   query  Search query  [string]
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-```
-
-### kilo debug file tree
-
-```
-show directory tree
-
-Positionals:
-  dir  Directory to tree  [string] [default: "."]
 
 Options:
   --help     Show help  [boolean]
@@ -547,9 +531,9 @@ Options:
 manage AI providers and credentials
 
 Commands:
-  kilo auth list         list providers and credentials  [aliases: ls]
-  kilo auth login [url]  log in to a provider
-  kilo auth logout       log out from a configured provider
+  kilo auth list               list providers and credentials  [aliases: ls]
+  kilo auth login [url]        log in to a provider
+  kilo auth logout [provider]  log out from a configured provider
 
 Options:
   --help     Show help  [boolean]
@@ -585,6 +569,9 @@ Options:
 
 ```
 log out from a configured provider
+
+Positionals:
+  provider  provider id or name to log out from  [string]
 
 Options:
   --help     Show help  [boolean]
@@ -662,21 +649,6 @@ Options:
 
 ```
 starts a headless kilo server
-
-Options:
-  --help         Show help  [boolean]
-  --version      Show version number  [boolean]
-  --port         port to listen on  [number] [default: 0]
-  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
-  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
-  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
-  --cors         additional domains to allow for CORS  [array] [default: []]
-```
-
-## kilo web
-
-```
-start kilo server and open web interface
 
 Options:
   --help         Show help  [boolean]
@@ -813,10 +785,59 @@ Options:
 ## kilo pr
 
 ```
+manage pull requests
+
+Commands:
+  kilo pr checkout <number>  fetch and checkout a GitHub PR branch, then run kilo
+  kilo pr link <url>         link the current worktree to a pull request
+  kilo pr unlink             clear the linked pull request
+  kilo pr status             show the linked pull request
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr checkout
+
+```
 fetch and checkout a GitHub PR branch, then run kilo
 
 Positionals:
   number  PR number to checkout  [number]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr link
+
+```
+link the current worktree to a pull request
+
+Positionals:
+  url  PR URL to link  [string]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr unlink
+
+```
+clear the linked pull request
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr status
+
+```
+show the linked pull request
 
 Options:
   --help     Show help  [boolean]
@@ -957,10 +978,10 @@ Options:
 ## kilo console
 
 ```
-open or stop the local Kilo Console
+open or stop the local Kilo Console (deprecated)
 
 Commands:
-  kilo console       open the local Kilo Console  [default]
+  kilo console       open the local Kilo Console (deprecated)  [default]
   kilo console stop  stop the local kilo daemon
 
 Options:
@@ -983,6 +1004,76 @@ Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
   --json     print daemon details as JSON  [boolean]
+```
+
+## kilo cloud
+
+```
+run Cloud Agent tasks
+
+Commands:
+  kilo cloud start   start a Cloud Agent task
+  kilo cloud send    send a follow-up prompt to a Cloud Agent task
+  kilo cloud status  show Cloud Agent task status
+  kilo cloud result  show a Cloud Agent task result
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo cloud start
+
+```
+start a Cloud Agent task
+
+Options:
+  --help       Show help  [boolean]
+  --version    Show version number  [boolean]
+  --prompt     prompt for the Cloud Agent  [string] [required]
+  --repo       repository shorthand or URL  [string]
+  --repo-type  repository provider type  [string] [choices: "github", "gitlab", "git"]
+  --branch     repository branch  [string]
+  --model      Cloud Agent model  [string]
+  --mode       Cloud Agent mode  [string]
+  --org-id     Kilo organization ID  [string]
+  --stream     connect to the WebSocket stream and print events as JSONL  [boolean]
+```
+
+### kilo cloud send
+
+```
+send a follow-up prompt to a Cloud Agent task
+
+Options:
+  --help        Show help  [boolean]
+  --version     Show version number  [boolean]
+  --session-id  Cloud Agent session ID  [string] [required]
+  --prompt      follow-up prompt for the Cloud Agent  [string] [required]
+```
+
+### kilo cloud status
+
+```
+show Cloud Agent task status
+
+Options:
+  --help        Show help  [boolean]
+  --version     Show version number  [boolean]
+  --session-id  Cloud Agent session ID  [string] [required]
+  --message-id  Cloud Agent message ID  [string] [required]
+```
+
+### kilo cloud result
+
+```
+show a Cloud Agent task result
+
+Options:
+  --help        Show help  [boolean]
+  --version     Show version number  [boolean]
+  --session-id  Cloud Agent session ID  [string] [required]
+  --message-id  Cloud Agent message ID  [string] [required]
 ```
 
 ## kilo db

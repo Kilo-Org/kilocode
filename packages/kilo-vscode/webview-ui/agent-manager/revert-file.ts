@@ -12,7 +12,9 @@ interface Toast {
 }
 
 export function createRevertFile(
-  currentDiffSessionId: Accessor<string | undefined>,
+  diffScopeId: Accessor<string | undefined>,
+  ctx: Accessor<string | undefined>,
+  scope: Accessor<string>,
   vscode: VsCode,
   showToast: (t: Toast) => void,
   t: (key: string) => string,
@@ -20,20 +22,21 @@ export function createRevertFile(
   const [files, setFiles] = createSignal<Record<string, Set<string>>>({})
 
   const reverting = createMemo(() => {
-    const sessionId = currentDiffSessionId()
-    if (!sessionId) return new Set<string>()
-    return files()[sessionId] ?? new Set<string>()
+    const id = diffScopeId()
+    if (!id) return new Set<string>()
+    return files()[id] ?? new Set<string>()
   })
 
   function revert(file: string) {
-    const sessionId = currentDiffSessionId()
-    if (!sessionId) return
+    const id = diffScopeId()
+    const context = ctx()
+    if (!id || !context) return
     setFiles((prev) => {
-      const set = new Set(prev[sessionId] ?? [])
+      const set = new Set(prev[id] ?? [])
       set.add(file)
-      return { ...prev, [sessionId]: set }
+      return { ...prev, [id]: set }
     })
-    vscode.postMessage({ type: "agentManager.revertWorktreeFile", sessionId, file })
+    vscode.postMessage({ type: "agentManager.revertWorktreeFile", sessionId: context, file, scope: scope() })
   }
 
   function onResult(ev: AgentManagerRevertWorktreeFileResultMessage) {

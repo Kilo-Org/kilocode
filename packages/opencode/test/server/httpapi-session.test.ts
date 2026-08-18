@@ -7,47 +7,45 @@ import path from "node:path"
 import { Cause, Config, Effect, Exit, Layer } from "effect"
 import { HttpClient, HttpClientRequest, HttpClientResponse, HttpRouter, HttpServer } from "effect/unstable/http"
 import { layerWebSocketConstructorGlobal } from "effect/unstable/socket/Socket"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { registerAdapter } from "../../src/control-plane/adapters"
 import type { WorkspaceAdapter } from "../../src/control-plane/types"
 import { Workspace } from "../../src/control-plane/workspace"
 
-import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { InstanceBootstrap as InstanceBootstrapService } from "../../src/project/bootstrap-service"
 import { InstanceStore } from "../../src/project/instance-store"
 import { Project } from "../../src/project/project"
 import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
 import * as HttpSessionError from "../../src/server/routes/instance/httpapi/handlers/session-errors"
+import { ExperimentalPaths } from "../../src/server/routes/instance/httpapi/groups/experimental"
 import { SessionPaths } from "../../src/server/routes/instance/httpapi/groups/session"
 import { Session } from "@/session/session"
 import { MessageID, PartID, SessionID, type SessionID as SessionIDType } from "../../src/session/schema"
-import { MessageV2 } from "../../src/session/message-v2"
 import { Database } from "@opencode-ai/core/database/database"
 import { SessionInputTable, SessionMessageTable, SessionTable } from "@opencode-ai/core/session/sql"
 import { SessionMessage } from "@opencode-ai/core/session/message"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import * as DateTime from "effect/DateTime"
-import * as Log from "@opencode-ai/core/util/log"
 import { eq } from "drizzle-orm"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, provideInstanceEffect, TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { TestLLMServer } from "../lib/llm-server"
 import { testProviderConfig } from "../lib/test-provider"
-import { testEffect } from "../lib/effect"
-
-void Log.init({ print: false })
+import { pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
 
 const originalWorkspaces = Flag.KILO_EXPERIMENTAL_WORKSPACES
-const workspaceLayer = Workspace.defaultLayer.pipe(
-  Layer.provide(InstanceStore.defaultLayer),
-  Layer.provide(InstanceBootstrap.defaultLayer),
+const noopBootstrapLayer = Layer.succeed(
+  InstanceBootstrapService.Service,
+  InstanceBootstrapService.Service.of({ run: Effect.void }),
 )
-const instanceStoreLayer = InstanceStore.defaultLayer.pipe(
-  Layer.provide(
-    Layer.succeed(InstanceBootstrapService.Service, InstanceBootstrapService.Service.of({ run: Effect.void })),
-  ),
+const appLayer = AppNodeBuilder.build(
+  LayerNode.group([InstanceStore.node, Project.node, Session.node, Workspace.node, Database.node, Ripgrep.node]),
+  [[InstanceStore.bootstrapNode, noopBootstrapLayer]],
 )
 const servedRoutes: Layer.Layer<never, Config.ConfigError, HttpServer.HttpServer> = HttpRouter.serve(
   HttpApiApp.routes,
@@ -61,16 +59,7 @@ const httpApiLayer = servedRoutes.pipe(
   Layer.provideMerge(NodeHttpServer.layerTest),
   Layer.provideMerge(NodeServices.layer),
 )
-const it = testEffect(
-  Layer.mergeAll(
-    instanceStoreLayer,
-    Project.defaultLayer,
-    Session.defaultLayer,
-    workspaceLayer,
-    Database.defaultLayer,
-    httpApiLayer,
-  ),
-)
+const it = testEffect(Layer.mergeAll(appLayer, httpApiLayer))
 
 function pathFor(path: string, params: Record<string, string>) {
   return Object.entries(params).reduce((result, [key, value]) => result.replace(`:${key}`, value), path)
@@ -131,7 +120,7 @@ const createLocalWorkspace = (input: { projectID: Project.Info["id"]; type: stri
 
 const insertLegacyAssistantMessage = (sessionID: SessionIDType, seq = 1, time = seq) =>
   Effect.gen(function* () {
-    const message = new SessionMessage.Assistant({
+    const message = SessionMessage.Assistant.make({
       id: SessionMessage.ID.create(),
       type: "assistant",
       agent: "build",
@@ -165,6 +154,45 @@ const insertLegacyAssistantMessage = (sessionID: SessionIDType, seq = 1, time = 
       .pipe(Effect.orDie)
     return message
   })
+
+// kilocode_change start - released V2 clients persisted media-shaped tool content
+const insertLegacyToolMessage = (sessionID: SessionIDType) =>
+  Effect.gen(function* () {
+    const id = SessionMessage.ID.create()
+    const { db } = yield* Database.Service
+    yield* db
+      .insert(SessionMessageTable)
+      .values({
+        id,
+        session_id: sessionID,
+        type: "assistant",
+        seq: 1,
+        time_created: 1,
+        data: {
+          agent: "build",
+          model: { id: "model", providerID: "provider" },
+          content: [
+            {
+              type: "tool",
+              id: "tool",
+              name: "read",
+              state: {
+                status: "completed",
+                input: {},
+                content: [{ type: "media", mediaType: "image/png", data: "AAAA", filename: "image.png" }],
+                structured: {},
+              },
+              time: { created: 1, completed: 1 },
+            },
+          ],
+          time: { created: 1, completed: 1 },
+        } as NonNullable<(typeof SessionMessageTable.$inferInsert)["data"]>,
+      })
+      .run()
+      .pipe(Effect.orDie)
+    return id
+  })
+// kilocode_change end
 
 const insertCorruptV2Message = (sessionID: SessionIDType, time = 1) =>
   Effect.gen(function* () {
@@ -435,7 +463,7 @@ describe("session HttpApi", () => {
         cwd: sessionDirectory,
         root: sessionDirectory,
       })
-    }).pipe(Effect.provide(TestLLMServer.layer), Effect.provide(CrossSpawnSpawner.defaultLayer)),
+    }).pipe(Effect.provide(TestLLMServer.layer), Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node))),
   )
 
   it.instance(
@@ -532,6 +560,36 @@ describe("session HttpApi", () => {
     { git: true, config: { formatter: false, lsp: false } },
   )
 
+  // kilocode_change start - protect mixed-version session database compatibility
+  it.instance(
+    "normalizes released tool content on paginated v2 message reads",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const session = yield* createSession({ title: "legacy tool content" })
+        const id = yield* insertLegacyToolMessage(session.id)
+        const response = yield* request(`/api/session/${session.id}/message`, {
+          headers: { "x-kilo-directory": test.directory },
+        })
+        expect(response.status).toBe(200)
+        const body = yield* json<{ data: SessionMessage.Message[] }>(response)
+        expect(body.data).toEqual([
+          expect.objectContaining({
+            id,
+            content: [
+              expect.objectContaining({
+                state: expect.objectContaining({
+                  content: [{ type: "file", uri: "data:image/png;base64,AAAA", mime: "image/png", name: "image.png" }],
+                }),
+              }),
+            ],
+          }),
+        ])
+      }),
+    { git: true, config: { formatter: false, lsp: false } },
+  )
+  // kilocode_change end
+
   it.instance(
     "returns v2 public not found errors for missing sessions",
     () =>
@@ -584,7 +642,7 @@ describe("session HttpApi", () => {
           request(`/api/session/${session.id}/prompt`, {
             method: "POST",
             headers: { ...headers, "content-type": "application/json" },
-            body: JSON.stringify({ id: "msg_http_prompt", prompt: { text: "hello" } }),
+            body: JSON.stringify({ id: "msg_http_prompt", prompt: { text: "hello" }, resume: false }),
           })
         const first = yield* recordPrompt()
         const retried = yield* recordPrompt()
@@ -627,6 +685,22 @@ describe("session HttpApi", () => {
           message: "Prompt message ID conflicts with an existing durable record: msg_http_prompt",
           resource: "msg_http_prompt",
         })
+
+        const wakeID = SessionMessage.ID.make("msg_http_wake")
+        const wake = yield* request(`/api/session/${session.id}/prompt`, {
+          method: "POST",
+          headers: { ...headers, "content-type": "application/json" },
+          body: JSON.stringify({ id: wakeID, prompt: { text: "hello again" } }),
+        })
+        expect(wake.status).toBe(200)
+        const message = yield* pollWithTimeout(
+          requestJson<{ data: SessionMessage.Message[] }>(`/api/session/${session.id}/message`, { headers }).pipe(
+            Effect.map(({ data }) => data.find((message) => message.id === wakeID)),
+          ),
+          "V2 prompt was not promoted after wake",
+          "10 seconds",
+        )
+        expect(message).toMatchObject({ id: wakeID, type: "user" })
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )
@@ -643,16 +717,16 @@ describe("session HttpApi", () => {
         expect(compact.status).toBe(503)
         expect(yield* responseJson(compact)).toEqual({
           _tag: "ServiceUnavailableError",
-          message: "V2 session compact is not available yet",
-          service: "v2.session.compact",
+          message: "Session compact is not available yet",
+          service: "session.compact",
         })
 
         const wait = yield* request(`/api/session/${session.id}/wait`, { method: "POST", headers })
         expect(wait.status).toBe(503)
         expect(yield* responseJson(wait)).toEqual({
           _tag: "ServiceUnavailableError",
-          message: "V2 session wait is not available yet",
-          service: "v2.session.wait",
+          message: "Session wait is not available yet",
+          service: "session.wait",
         })
       }),
     { git: true, config: { formatter: false, lsp: false } },
@@ -855,7 +929,7 @@ describe("session HttpApi", () => {
               pathSession: yield* createSession(),
               pathlessSession: yield* createSession(),
             }
-          }).pipe(Effect.provideService(TestInstance, { directory: currentDir }), Effect.provide(Session.defaultLayer)),
+          }).pipe(Effect.provideService(TestInstance, { directory: currentDir })),
         )
         yield* clearSessionPath(pathlessSession.id)
 
@@ -873,6 +947,78 @@ describe("session HttpApi", () => {
         expect(sessions).not.toContain(pathlessSession.id)
       }),
     { git: true, config: { formatter: false, lsp: false } },
+  )
+
+  it.instance(
+    "lists sessions created through an equivalent directory hint",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const hint = test.directory + path.sep
+        const headers = { "x-kilo-directory": hint, "content-type": "application/json" }
+        const created = yield* requestJson<Session.Info>(SessionPaths.create, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ title: "hinted" }),
+        })
+
+        const query = new URLSearchParams({ directory: hint, roots: "true" })
+        const listed = yield* requestJson<Session.Info[]>(`${SessionPaths.list}?${query}`, { headers })
+        expect(listed.map((item) => item.id)).toContain(created.id)
+
+        const globalQuery = new URLSearchParams({ directory: hint })
+        const global = yield* requestJson<Session.Info[]>(`${ExperimentalPaths.session}?${globalQuery}`, { headers })
+        expect(global.map((item) => item.id)).toContain(created.id)
+      }),
+    { git: true, config: { formatter: false, lsp: false, share: "disabled" } },
+  )
+
+  it.instance(
+    "lists Windows sessions for equivalent directory spellings",
+    () =>
+      Effect.gen(function* () {
+        if (process.platform !== "win32") return
+        const test = yield* TestInstance
+        const headers = { "x-kilo-directory": test.directory, "content-type": "application/json" }
+        const created = yield* requestJson<Session.Info>(SessionPaths.create, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ title: "windows spelling" }),
+        })
+
+        const forwardSlashes = test.directory.replaceAll("\\", "/")
+        const lowercaseDrive = test.directory.replace(/^[A-Z]:/, (drive) => drive.toLowerCase())
+        const trailingSeparator = `${test.directory}\\`
+        for (const spelling of [forwardSlashes, lowercaseDrive, trailingSeparator]) {
+          const query = new URLSearchParams({ directory: spelling, roots: "true" })
+          const listed = yield* requestJson<Session.Info[]>(`${SessionPaths.list}?${query}`, { headers })
+          expect({ spelling, ids: listed.map((item) => item.id) }).toEqual({ spelling, ids: [created.id] })
+        }
+      }),
+    { git: true, config: { formatter: false, lsp: false, share: "disabled" } },
+    { timeout: 15000 },
+  )
+
+  it.instance(
+    "lists Windows sessions created through the global worktree sentinel",
+    () =>
+      Effect.gen(function* () {
+        if (process.platform !== "win32") return
+        const globalWorktreeSentinel = "/"
+        const headers = { "x-kilo-directory": globalWorktreeSentinel, "content-type": "application/json" }
+        const driveRootSession = yield* requestJson<Session.Info>(SessionPaths.create, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ title: "created at drive root" }),
+        })
+        expect(driveRootSession.directory).toMatch(/^[A-Za-z]:\\$/)
+
+        const query = new URLSearchParams({ directory: globalWorktreeSentinel, roots: "true" })
+        const listed = yield* requestJson<Session.Info[]>(`${SessionPaths.list}?${query}`, { headers })
+        expect(listed.map((item) => item.id)).toContain(driveRootSession.id)
+      }),
+    { git: true, config: { formatter: false, lsp: false, share: "disabled" } },
+    { timeout: 15000 },
   )
 
   it.instance(
@@ -939,6 +1085,65 @@ describe("session HttpApi", () => {
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )
+
+  // kilocode_change start - deleting a prompt that already started is a successful no-op
+  it.live(
+    "returns false when an active prompt wins the deletion race",
+    () => {
+      const release = Promise.withResolvers<void>()
+      return Effect.gen(function* () {
+        const llm = yield* TestLLMServer
+        yield* llm.hold("done", release.promise)
+
+        const dir = yield* tmpdirScoped({ git: true, config: testProviderConfig(llm.url) })
+        const session = yield* createSession({ title: "Active delete race" }).pipe(provideInstanceEffect(dir))
+        const messageID = MessageID.ascending()
+        const headers = { "x-kilo-directory": dir, "content-type": "application/json" }
+
+        const prompt = yield* request(pathFor(SessionPaths.promptAsync, { sessionID: session.id }), {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            messageID,
+            agent: "build",
+            model: { providerID: "test", modelID: "test-model" },
+            parts: [{ type: "text", text: "keep running" }],
+          }),
+        })
+        expect(prompt.status).toBe(204)
+        yield* llm.wait(1)
+
+        expect(
+          yield* requestJson<boolean>(pathFor(SessionPaths.deleteMessage, { sessionID: session.id, messageID }), {
+            method: "DELETE",
+            headers,
+          }),
+        ).toBe(false)
+
+        release.resolve()
+        yield* pollWithTimeout(
+          requestJson<Record<string, unknown>>(SessionPaths.status, { headers }).pipe(
+            Effect.map((statuses) => (statuses[session.id] ? undefined : true)),
+          ),
+          "Timed out waiting for active prompt to finish",
+        )
+
+        const messages = yield* Session.use
+          .messages({ sessionID: session.id })
+          .pipe(provideInstanceEffect(dir), Effect.orDie)
+        expect(messages.some((message) => message.info.id === messageID)).toBe(true)
+        expect(
+          messages.some((message) => message.info.role === "assistant" && message.info.parentID === messageID),
+        ).toBe(true)
+      }).pipe(
+        Effect.ensuring(Effect.sync(() => release.resolve())),
+        Effect.provide(TestLLMServer.layer),
+        Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node)),
+      )
+    },
+    30_000, // kilocode_change - windows CI needs headroom beyond 10s
+  )
+  // kilocode_change end
 
   it.instance(
     "rejects part updates whose path and body ids disagree",

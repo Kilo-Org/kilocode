@@ -5,14 +5,16 @@ import { MEMORY_COMMAND_CATALOG } from "@kilocode/kilo-memory/commands"
 import { MemoryToken } from "@kilocode/kilo-memory/token"
 import { Global } from "@opencode-ai/core/global"
 import { createMemo, createResource, For, Match, Show, Switch } from "solid-js"
-import { relativeTime } from "@/cli/cmd/tui/feature-plugins/session/util"
-import { useProject } from "@/cli/cmd/tui/context/project"
-import { useSDK } from "@/cli/cmd/tui/context/sdk"
-import { useTheme } from "@/cli/cmd/tui/context/theme"
-import { useTuiConfig } from "@/cli/cmd/tui/context/tui-config"
-import { useBindings } from "@/cli/cmd/tui/keymap"
-import { useDialog, type DialogContext } from "@/cli/cmd/tui/ui/dialog"
-import { getScrollAcceleration } from "@/cli/cmd/tui/util/scroll"
+import { relativeTime } from "@/kilocode/cli/cmd/tui/relative-time"
+import { useProject } from "@tui/context/project"
+import { useSDK } from "@tui/context/sdk"
+import { useTheme } from "@tui/context/theme"
+import { useTuiConfig } from "@tui/config"
+import { useBindings } from "@tui/keymap"
+import { useDialog, type DialogContext } from "@tui/ui/dialog"
+import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
+import { useToast } from "@tui/ui/toast"
+import { getScrollAcceleration } from "@tui/util/scroll"
 import { route } from "@/kilocode/cli/cmd/tui/memory-command"
 import { errorMessage } from "@/util/error"
 
@@ -41,9 +43,14 @@ export function showMemoryDialog(dialog: DialogContext, input?: { workspace?: st
   dialog.replace(() => <DialogMemory workspace={input?.workspace} directory={input?.directory} />)
 }
 
-export function showMemoryHelpDialog(dialog: DialogContext, reason?: string) {
+export function showMemoryHelpDialog(
+  dialog: DialogContext,
+  input?: { workspace?: string; directory?: string; reason?: string },
+) {
   dialog.setSize("large")
-  dialog.replace(() => <DialogMemoryHelp reason={reason} />)
+  dialog.replace(() => (
+    <DialogMemoryHelp workspace={input?.workspace} directory={input?.directory} reason={input?.reason} />
+  ))
 }
 
 export function showMemoryStatusDialog(dialog: DialogContext, input?: { workspace?: string; directory?: string }) {
@@ -99,32 +106,6 @@ function MemorySourcesInfo(props: {
   )
 }
 
-function MemoryActivityInfo(props: {
-  state: {
-    autoInject: boolean
-    stats: MemoryAutosaveStatus.Stats & {
-      lastInjectedTokens: number
-      lastRecallCount: number
-    }
-  }
-}) {
-  const { theme } = useTheme()
-  return (
-    <box>
-      <text fg={theme.text}>Activity</text>
-      <text fg={theme.textMuted}>
-        startup context {props.state.autoInject ? "on" : "off"}
-        {props.state.stats.lastInjectedTokens > 0
-          ? ` · last injected ${fmt(props.state.stats.lastInjectedTokens)} tokens`
-          : ""}
-      </text>
-      <Show when={props.state.stats.lastRecallCount > 0}>
-        <text fg={theme.textMuted}>last recall {fmt(props.state.stats.lastRecallCount)} items</text>
-      </Show>
-    </box>
-  )
-}
-
 function MemoryItemsInfo(props: { items: string }) {
   const { theme } = useTheme()
   return (
@@ -137,36 +118,42 @@ function MemoryItemsInfo(props: { items: string }) {
   )
 }
 
-export function DialogMemoryHelp(props: { reason?: string }) {
+function draft(usage: string) {
+  const head = usage.split(" ")[0]
+  if (usage.includes("<") || usage.includes("|")) return `${head} `
+  return usage
+}
+
+export function DialogMemoryHelp(props: { workspace?: string; directory?: string; reason?: string }) {
+  const sdk = useSDK()
+  const project = useProject()
   const dialog = useDialog()
   const { theme } = useTheme()
+  const toast = useToast()
+  const options: DialogSelectOption<string>[] = MEMORY_COMMAND_CATALOG.map((item) => ({
+    title: item.description,
+    footer: `/memory ${item.usage}`,
+    category: "Memory",
+    value: item.usage,
+  }))
 
   return (
-    <box paddingLeft={2} paddingRight={2} gap={1} paddingBottom={1}>
-      <box flexDirection="row" justifyContent="space-between">
-        <text fg={theme.text} attributes={TextAttributes.BOLD}>
-          Memory
-        </text>
-        <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
-          esc
-        </text>
-      </box>
-      <Show when={props.reason}>{(reason) => <text fg={theme.error}>{reason()}</text>}</Show>
-      <box gap={0}>
-        <For each={MEMORY_COMMAND_CATALOG}>
-          {(item) => (
-            <box flexDirection="row" gap={2}>
-              <text fg={theme.text} flexShrink={0}>
-                /memory {item.usage}
-              </text>
-              <text fg={theme.textMuted} wrapMode="word">
-                {item.description}
-              </text>
-            </box>
-          )}
-        </For>
-      </box>
-    </box>
+    <DialogSelect
+      title="Memory"
+      options={options}
+      flat
+      footer={<Show when={props.reason}>{(reason) => <text fg={theme.error}>{reason()}</text>}</Show>}
+      onSelect={async (option) => {
+        dialog.clear()
+        const workspace = props.workspace ?? project.workspace.current()
+        const result = await sdk.client.tui.appendPrompt({
+          ...route({ workspace, directory: props.directory }),
+          text: `/memory ${draft(option.value)}`,
+        })
+        if (!result.error) return
+        toast.show({ variant: "error", message: `Memory menu failed: ${errorMessage(result.error)}` })
+      }}
+    />
   )
 }
 
@@ -218,14 +205,6 @@ function DialogMemoryStatus(props: { workspace?: string; directory?: string }) {
                   Auto-save sends best-effort-redacted turn context to your configured model provider; disable with /memory auto off.
                 </text>
               </box>
-              <box>
-                <text fg={theme.text}>Verbose</text>
-                <text fg={theme.textMuted}>{item().state.verbose ? "on" : "off"}</text>
-                <text fg={theme.textMuted} wrapMode="word">
-                  Verbose shows recall and save details; toggle with /memory verbose on|off.
-                </text>
-              </box>
-              <MemoryActivityInfo state={item().state} />
               <MemorySourcesInfo sources={item().sources} />
               <MemoryItemsInfo items={item().items} />
               <box>
@@ -307,7 +286,6 @@ export function DialogMemory(props: { workspace?: string; directory?: string }) 
                 <box>
                   <MemoryHeaderInfo root={item().root} state={item().state} />
                 </box>
-                <MemoryActivityInfo state={item().state} />
                 <MemorySourcesInfo sources={item().sources} />
                 <MemoryItemsInfo items={item().items} />
               </box>

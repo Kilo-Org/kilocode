@@ -14,15 +14,33 @@ import { Effect, Schema } from "effect"
 import { matchesQuery } from "./model-search"
 import DESCRIPTION from "./agent-manager.txt"
 
+function strict<const Fields extends Schema.Struct.Fields>(fields: Fields) {
+  const target = Schema.Struct(fields)
+  // Preserve unknown keys long enough for the branch check to reject mixed operations.
+  const source = Schema.StructWithRest(target, [Schema.Record(Schema.String, Schema.Unknown)]).check(
+    Schema.makeFilter((value) => {
+      const extra = Object.keys(value).find((key) => !Object.hasOwn(fields, key))
+      return extra === undefined ? undefined : `Unexpected Agent Manager parameter: ${extra}`
+    }),
+  )
+  return source.pipe(Schema.decodeTo(target))
+}
+
 const Task = Schema.Struct({
-  prompt: Schema.optional(Schema.String).annotate({ description: "Initial prompt to send to the new session" }),
-  name: Schema.optional(Schema.String).annotate({ description: "Short display name for the Agent Manager card" }),
-  branchName: Schema.optional(Schema.String).annotate({ description: "Git branch name seed for worktree mode" }),
-  model: Schema.optional(Schema.String).annotate({
+  prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description: "Initial prompt to send to the new session",
+  }),
+  name: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description: "Short display name for the Agent Manager card",
+  }),
+  branchName: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description: "Git branch name seed for worktree mode",
+  }),
+  model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "Optional model override from agent_manager_models (e.g. 'Claude Opus 4.1'). Omit unless the user requests a different model. Agent Manager otherwise inherits the current turn's model. A qualified provider/model ID is also accepted to force a specific provider.",
   }),
-  variant: Schema.optional(Schema.String).annotate({
+  variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "Optional reasoning variant override from agent_manager_models. Specify it without model to override the inherited model's variant. Omit both to inherit the current turn's selection.",
   }),
@@ -40,11 +58,39 @@ const Task = Schema.Struct({
   ),
 )
 
-const StartParams = Schema.Struct({
+function wireSchema() {
+  const schema = structuredClone(ToolJsonSchema.fromSchema(Params))
+
+  // llama.cpp rejects the prefix-only SessionID pattern. Keep the runtime brand
+  // check, but omit that provider-incompatible hint from the advertised schema.
+  function strip(value: unknown): void {
+    if (Array.isArray(value)) {
+      value.forEach(strip)
+      return
+    }
+    if (!value || typeof value !== "object") return
+    const item = value as Record<string, unknown>
+    if (item.type === "object" && item.additionalProperties === undefined) {
+      item.additionalProperties = false
+    }
+    if (item.properties && typeof item.properties === "object") {
+      const properties = item.properties as Record<string, unknown>
+      if (properties.sessionID && typeof properties.sessionID === "object") {
+        delete (properties.sessionID as Record<string, unknown>).pattern
+      }
+    }
+    Object.values(item).forEach(strip)
+  }
+
+  strip(schema)
+  return schema
+}
+
+const StartParams = strict({
   mode: Schema.Literals(["worktree", "local"]).annotate({
     description: "Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions",
   }),
-  versions: Schema.optional(Schema.Boolean).annotate({
+  versions: Schema.optional(Schema.NullOr(Schema.Boolean)).annotate({
     description:
       "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
   }),
@@ -53,44 +99,55 @@ const StartParams = Schema.Struct({
     .annotate({ description: "Agent Manager sessions to start" }),
 })
 
-const ListParams = Schema.Struct({
-  action: Schema.Literal("list"),
+const ListParams = strict({
+  action: Schema.Literal("list").annotate({
+    description:
+      "Read the current Agent Manager sections, worktrees, and sessions before any assignment. This is the source of truth for section and session IDs.",
+  }),
   filter: Schema.optional(
-    Schema.Struct({
-      sectionIDs: Schema.optional(Schema.Array(Schema.String).check(Schema.isMaxLength(100))),
-      states: Schema.optional(
-        Schema.Array(Schema.Literals(["idle", "busy", "retry", "offline", "waiting"])).check(
-          Schema.isMaxLength(5),
+    Schema.NullOr(
+      strict({
+        sectionIDs: Schema.optional(Schema.Array(Schema.String).check(Schema.isMaxLength(100))),
+        states: Schema.optional(
+          Schema.Array(Schema.Literals(["idle", "busy", "retry", "offline", "waiting"])).check(Schema.isMaxLength(5)),
         ),
-      ),
-    }),
-  ),
+      }),
+    ),
+  ).annotate({
+    description: "Optional list filter. Omit this for an unfiltered overview when discovering assignments.",
+  }),
 })
 
-const PromptParams = Schema.Struct({
+const PromptParams = strict({
   action: Schema.Literal("prompt"),
-  sessionID: SessionID,
+  sessionID: SessionID.annotate({
+    description: "Session ID returned by action=list. Do not use a worktree name, branch, or section name.",
+  }),
   prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)).check(
     Schema.makeFilter((value) => (value.trim() ? undefined : "Prompt must not be empty")),
   ),
 })
 
-const StopParams = Schema.Struct({
+const StopParams = strict({
   action: Schema.Literal("stop"),
-  sessionID: SessionID,
+  sessionID: SessionID.annotate({
+    description: "Session ID returned by action=list. Do not use a worktree name, branch, or section name.",
+  }),
 })
 
-export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams])
-
-const WireParams = Schema.Struct({
-  mode: Schema.optional(StartParams.fields.mode),
-  versions: Schema.optional(StartParams.fields.versions),
-  tasks: Schema.optional(StartParams.fields.tasks),
-  action: Schema.optional(Schema.Literals(["list", "prompt", "stop"])),
-  filter: Schema.optional(ListParams.fields.filter),
-  sessionID: Schema.optional(PromptParams.fields.sessionID),
-  prompt: Schema.optional(PromptParams.fields.prompt),
+const MoveParams = strict({
+  action: Schema.Literal("move").annotate({
+    description: "Move exactly one managed worktree by targeting one of its session IDs returned by action=list.",
+  }),
+  sessionID: SessionID.annotate({
+    description: "Session ID returned by action=list. Do not use a worktree name, branch, or section name.",
+  }),
+  sectionID: Schema.NullOr(Schema.String).annotate({
+    description: "Section ID returned by action=list. Use null to unassign the worktree from its current section.",
+  }),
 })
+
+export const Params = Schema.Union([StartParams, ListParams, PromptParams, MoveParams, StopParams])
 
 type Input = Schema.Schema.Type<typeof Task>
 type Selected = { task?: AgentManagerTask; error?: string }
@@ -169,9 +226,9 @@ function select(
   index: number,
 ): Selected {
   const base = {
-    ...(task.prompt !== undefined ? { prompt: task.prompt } : {}),
-    ...(task.name !== undefined ? { name: task.name } : {}),
-    ...(task.branchName !== undefined ? { branchName: task.branchName } : {}),
+    ...(task.prompt != null ? { prompt: task.prompt } : {}),
+    ...(task.name != null ? { name: task.name } : {}),
+    ...(task.branchName != null ? { branchName: task.branchName } : {}),
   }
   const value = task.model?.trim()
   const variant = task.variant?.trim()
@@ -241,7 +298,7 @@ function select(
 
 export const AgentManagerTool = Tool.define<
   typeof Params,
-  { action: "start" | "list" | "prompt" | "stop"; requestID?: string; count?: number; sessionID?: string },
+  { action: "start" | "list" | "prompt" | "stop" | "move"; requestID?: string; count?: number; sessionID?: string },
   AgentManager.Service | Bus.Service | Provider.Service,
   "agent_manager"
 >(
@@ -253,7 +310,7 @@ export const AgentManagerTool = Tool.define<
     return {
       description: DESCRIPTION,
       parameters: Params,
-      jsonSchema: ToolJsonSchema.fromSchema(WireParams),
+      jsonSchema: wireSchema(),
       execute: (params, ctx) =>
         Effect.gen(function* () {
           if ("action" in params) {
@@ -265,7 +322,7 @@ export const AgentManagerTool = Tool.define<
                 metadata: { action: "list" },
               })
               const result = yield* run(
-                host.request({ operation: "overview", sessionID: ctx.sessionID, filter: params.filter }),
+                host.request({ operation: "overview", sessionID: ctx.sessionID, filter: params.filter ?? undefined }),
                 ctx.abort,
               )
               if (result.operation !== "overview")
@@ -276,7 +333,15 @@ export const AgentManagerTool = Tool.define<
                 result.overview.sections.reduce((sum, section) => sum + section.worktrees.length, 0)
               return {
                 title: "Agent Manager overview",
-                output: JSON.stringify(result.overview),
+                output: JSON.stringify(
+                  {
+                    instructions:
+                      "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit .kilo/agent-manager.json.",
+                    ...result.overview,
+                  },
+                  null,
+                  2,
+                ),
                 metadata: { action: "list", count },
               }
             }
@@ -304,26 +369,50 @@ export const AgentManagerTool = Tool.define<
                 metadata: { action: "prompt", sessionID: result.sessionID },
               }
             }
+            if (params.action === "stop") {
+              yield* ctx.ask({
+                permission: "agent_manager",
+                patterns: ["stop"],
+                always: ["stop"],
+                metadata: { action: "stop", sessionID: params.sessionID },
+              })
+              const result = yield* run(
+                host.request({
+                  operation: "stop",
+                  sessionID: ctx.sessionID,
+                  targetSessionID: params.sessionID,
+                }),
+                ctx.abort,
+              )
+              if (result.operation !== "stop")
+                return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+              return {
+                title: "Session stopped",
+                output: `Stopped Agent Manager session ${result.sessionID} and removed it from Agent Manager.`,
+                metadata: { action: "stop", sessionID: result.sessionID },
+              }
+            }
             yield* ctx.ask({
               permission: "agent_manager",
-              patterns: ["stop"],
-              always: ["stop"],
-              metadata: { action: "stop", sessionID: params.sessionID },
+              patterns: ["move"],
+              always: ["move"],
+              metadata: { action: "move", sessionID: params.sessionID, sectionID: params.sectionID },
             })
             const result = yield* run(
               host.request({
-                operation: "stop",
+                operation: "move",
                 sessionID: ctx.sessionID,
                 targetSessionID: params.sessionID,
+                sectionID: params.sectionID,
               }),
               ctx.abort,
             )
-            if (result.operation !== "stop")
+            if (result.operation !== "move")
               return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
             return {
-              title: "Session stopped",
-              output: `Stopped Agent Manager session ${result.sessionID} and removed it from Agent Manager.`,
-              metadata: { action: "stop", sessionID: result.sessionID },
+              title: "Session moved",
+              output: `Moved Agent Manager session ${result.sessionID} to ${result.sectionID ?? "Ungrouped"}.`,
+              metadata: { action: "move", sessionID: result.sessionID, sectionID: result.sectionID },
             }
           }
 
@@ -380,7 +469,7 @@ export const AgentManagerTool = Tool.define<
             sessionID: ctx.sessionID,
             sandboxInheritanceToken,
             mode: params.mode,
-            versions: params.versions,
+            ...(params.versions != null ? { versions: params.versions } : {}),
             tasks,
           })
 

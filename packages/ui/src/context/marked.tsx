@@ -1,4 +1,4 @@
-import { marked } from "marked"
+import { marked, type MarkedExtension, type Tokens, type TokenizerAndRendererExtension } from "marked"
 // kilocode_change: marked-shiki highlighted code blocks synchronously during
 // parse, freezing the main thread on session switches with many code blocks
 // (issue #6221 / PR #7102). We render plain <pre><code data-lang="..."> here
@@ -6,14 +6,18 @@ import { marked } from "marked"
 // This import was re-added by an upstream merge; removing it restores the
 // two-pass rendering design.
 import katex from "katex"
-// kilocode_change start: import types for double-dollar math extension
-import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
-// kilocode_change end
 import { bundledLanguages, type BundledLanguage } from "shiki"
-import { parseFilePath } from "../file-path" // kilocode_change
+import {
+  extractSuffix,
+  normalizeCandidatePath,
+  extractFilePathFromHref,
+  looksLikeCandidate,
+  escapeAttribute,
+} from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
-import { getSharedHighlighter } from "@pierre/diffs" // kilocode_change
-import { ensureKiloDiffTheme } from "../pierre/kilo-diff-theme" // kilocode_change
+import { markedCodeSpanBoundary } from "./marked-code-span"
+import { getSharedHighlighter, type ThemeRegistrationResolved } from "@pierre/diffs" // kilocode_change
+import { ensureKiloDiffTheme, KILO_DIFF_THEME } from "../pierre/kilo-diff-theme" // kilocode_change
 
 // kilocode_change start: the "Kilo" diff/highlight theme registration moved to
 // ../pierre/kilo-diff-theme so the diff worker pool can register it without
@@ -22,6 +26,382 @@ import { ensureKiloDiffTheme } from "../pierre/kilo-diff-theme" // kilocode_chan
 // registerCustomTheme("OpenCode", …) block here — do not restore it on merges;
 // route registration through ensureKiloDiffTheme() instead.
 ensureKiloDiffTheme()
+// kilocode_change end
+
+// kilocode_change start: theme object consumed by the streaming Shiki worker
+// (markdown-worker.ts sends it via postMessage on worker init). Registration
+// with Pierre is handled by ensureKiloDiffTheme() above; this export only
+// provides the raw theme data to the worker.
+export const KiloTheme = {
+  name: KILO_DIFF_THEME,
+  bg: "var(--color-background-stronger)",
+  fg: "var(--text-base)",
+  colors: {
+    "editor.background": "var(--color-background-stronger)",
+    "editor.foreground": "var(--text-base)",
+    "gitDecoration.addedResourceForeground": "var(--syntax-diff-add)",
+    "gitDecoration.deletedResourceForeground": "var(--syntax-diff-delete)",
+    "gitDecoration.modifiedResourceForeground": "var(--syntax-diff-unknown)",
+    // "gitDecoration.conflictingResourceForeground": "#ffca00",
+    // "gitDecoration.modifiedResourceForeground": "#1a76d4",
+    // "gitDecoration.untrackedResourceForeground": "#00cab1",
+    // "gitDecoration.ignoredResourceForeground": "#84848A",
+    // "terminal.titleForeground": "#adadb1",
+    // "terminal.titleInactiveForeground": "#84848A",
+    // "terminal.background": "#141415",
+    // "terminal.foreground": "#adadb1",
+    // "terminal.ansiBlack": "#141415",
+    // "terminal.ansiRed": "#ff2e3f",
+    // "terminal.ansiGreen": "#0dbe4e",
+    // "terminal.ansiYellow": "#ffca00",
+    // "terminal.ansiBlue": "#008cff",
+    // "terminal.ansiMagenta": "#c635e4",
+    // "terminal.ansiCyan": "#08c0ef",
+    // "terminal.ansiWhite": "#c6c6c8",
+    // "terminal.ansiBrightBlack": "#141415",
+    // "terminal.ansiBrightRed": "#ff2e3f",
+    // "terminal.ansiBrightGreen": "#0dbe4e",
+    // "terminal.ansiBrightYellow": "#ffca00",
+    // "terminal.ansiBrightBlue": "#008cff",
+    // "terminal.ansiBrightMagenta": "#c635e4",
+    // "terminal.ansiBrightCyan": "#08c0ef",
+    // "terminal.ansiBrightWhite": "#c6c6c8",
+  },
+  tokenColors: [
+    {
+      scope: ["comment", "punctuation.definition.comment", "string.comment"],
+      settings: {
+        foreground: "var(--syntax-comment)",
+      },
+    },
+    {
+      scope: ["entity.other.attribute-name"],
+      settings: {
+        foreground: "var(--syntax-property)", // maybe attribute
+      },
+    },
+    {
+      scope: ["constant", "entity.name.constant", "variable.other.constant", "variable.language", "entity"],
+      settings: {
+        foreground: "var(--syntax-constant)",
+      },
+    },
+    {
+      scope: ["entity.name", "meta.export.default", "meta.definition.variable"],
+      settings: {
+        foreground: "var(--syntax-type)",
+      },
+    },
+    {
+      scope: ["meta.object.member"],
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: [
+        "variable.parameter.function",
+        "meta.jsx.children",
+        "meta.block",
+        "meta.tag.attributes",
+        "entity.name.constant",
+        "meta.embedded.expression",
+        "meta.template.expression",
+        "string.other.begin.yaml",
+        "string.other.end.yaml",
+      ],
+      settings: {
+        foreground: "var(--syntax-punctuation)",
+      },
+    },
+    {
+      scope: ["entity.name.function", "support.type.primitive"],
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: ["support.class.component"],
+      settings: {
+        foreground: "var(--syntax-type)",
+      },
+    },
+    {
+      scope: "keyword",
+      settings: {
+        foreground: "var(--syntax-keyword)",
+      },
+    },
+    {
+      scope: [
+        "keyword.operator",
+        "storage.type.function.arrow",
+        "punctuation.separator.key-value.css",
+        "entity.name.tag.yaml",
+        "punctuation.separator.key-value.mapping.yaml",
+      ],
+      settings: {
+        foreground: "var(--syntax-operator)",
+      },
+    },
+    {
+      scope: ["storage", "storage.type"],
+      settings: {
+        foreground: "var(--syntax-keyword)",
+      },
+    },
+    {
+      scope: ["storage.modifier.package", "storage.modifier.import", "storage.type.java"],
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: [
+        "string",
+        "punctuation.definition.string",
+        "string punctuation.section.embedded source",
+        "entity.name.tag",
+      ],
+      settings: {
+        foreground: "var(--syntax-string)",
+      },
+    },
+    {
+      scope: "support",
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: ["support.type.object.module", "variable.other.object", "support.type.property-name.css"],
+      settings: {
+        foreground: "var(--syntax-object)",
+      },
+    },
+    {
+      scope: "meta.property-name",
+      settings: {
+        foreground: "var(--syntax-property)",
+      },
+    },
+    {
+      scope: "variable",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: "variable.other",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: [
+        "invalid.broken",
+        "invalid.illegal",
+        "invalid.unimplemented",
+        "invalid.deprecated",
+        "message.error",
+        "markup.deleted",
+        "meta.diff.header.from-file",
+        "punctuation.definition.deleted",
+        "brackethighlighter.unmatched",
+        "token.error-token",
+      ],
+      settings: {
+        foreground: "var(--syntax-critical)",
+      },
+    },
+    {
+      scope: "carriage-return",
+      settings: {
+        foreground: "var(--syntax-keyword)",
+      },
+    },
+    {
+      scope: "string source",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: "string variable",
+      settings: {
+        foreground: "var(--syntax-constant)",
+      },
+    },
+    {
+      scope: [
+        "source.regexp",
+        "string.regexp",
+        "string.regexp.character-class",
+        "string.regexp constant.character.escape",
+        "string.regexp source.ruby.embedded",
+        "string.regexp string.regexp.arbitrary-repitition",
+        "string.regexp constant.character.escape",
+      ],
+      settings: {
+        foreground: "var(--syntax-regexp)",
+      },
+    },
+    {
+      scope: "support.constant",
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: "support.variable",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: "meta.module-reference",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "punctuation.definition.list.begin.markdown",
+      settings: {
+        foreground: "var(--syntax-punctuation)",
+      },
+    },
+    {
+      scope: ["markup.heading", "markup.heading entity.name"],
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "markup.quote",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "markup.italic",
+      settings: {
+        fontStyle: "italic",
+        // foreground: "",
+      },
+    },
+    {
+      scope: "markup.bold",
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--text-strong)",
+      },
+    },
+    {
+      scope: [
+        "markup.raw",
+        "markup.inserted",
+        "meta.diff.header.to-file",
+        "punctuation.definition.inserted",
+        "markup.changed",
+        "punctuation.definition.changed",
+        "markup.ignored",
+        "markup.untracked",
+      ],
+      settings: {
+        foreground: "var(--text-base)",
+      },
+    },
+    {
+      scope: "meta.diff.range",
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.diff.header",
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.separator",
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.output",
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.export.default",
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: [
+        "brackethighlighter.tag",
+        "brackethighlighter.curly",
+        "brackethighlighter.round",
+        "brackethighlighter.square",
+        "brackethighlighter.angle",
+        "brackethighlighter.quote",
+      ],
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: ["constant.other.reference.link", "string.other.link"],
+      settings: {
+        fontStyle: "underline",
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "token.info-token",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "token.warn-token",
+      settings: {
+        foreground: "var(--syntax-warning)",
+      },
+    },
+    {
+      scope: "token.debug-token",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+  ],
+  semanticTokenColors: {
+    comment: "var(--syntax-comment)",
+    string: "var(--syntax-string)",
+    number: "var(--syntax-constant)",
+    regexp: "var(--syntax-regexp)",
+    keyword: "var(--syntax-keyword)",
+    variable: "var(--syntax-variable)",
+    parameter: "var(--syntax-variable)",
+    property: "var(--syntax-property)",
+    function: "var(--syntax-primitive)",
+    method: "var(--syntax-primitive)",
+    type: "var(--syntax-type)",
+    class: "var(--syntax-type)",
+    namespace: "var(--syntax-type)",
+    enumMember: "var(--syntax-primitive)",
+    "variable.constant": "var(--syntax-constant)",
+    "variable.defaultLibrary": "var(--syntax-unknown)",
+  },
+} as unknown as ThemeRegistrationResolved
 // kilocode_change end
 
 // kilocode_change start: double-dollar-only math rules for marked.
@@ -56,9 +436,55 @@ function renderMathInText(text: string): string {
 
   // kilocode_change: removed single-dollar inline math ($...$) rendering.
   // Single $ is far more common as a currency symbol in agent responses
-  // (e.g. $93K, $307K) than as a LaTeX delimiter. Only $$...$$ is supported.
+  // (e.g. $93K, $307K) than as a LaTeX delimiter. Upstream's \(...\)
+  // delimiter remains supported because it is unambiguous.
+  // Inline math: \(...\)
+  const inlineMathRegex = /\\\(((?:\\.|[^\\\n])*?)\\\)/g
+  result = result.replace(inlineMathRegex, (_, math) => {
+    try {
+      return renderKatex(math, {
+        displayMode: false,
+        throwOnError: false,
+      })
+    } catch {
+      return `\\(${math}\\)`
+    }
+  })
 
   return result
+}
+
+const inlineMathRegex = /^\\\(((?:\\.|[^\\\n])*?)\\\)/
+const inlineKatexExtension: MarkedExtension = {
+  extensions: [
+    {
+      name: "inlineKatex",
+      level: "inline",
+      start(src) {
+        const index = src.indexOf("\\(")
+        if (index === -1) return
+        return index
+      },
+      tokenizer(src) {
+        const match = src.match(inlineMathRegex)
+        if (!match) return
+        return {
+          type: "inlineKatex",
+          raw: match[0],
+          text: match[1].trim(),
+          displayMode: false,
+        }
+      },
+      renderer: renderKatexToken,
+    },
+  ],
+}
+
+function renderKatexToken(token: Tokens.Generic) {
+  return renderKatex(typeof token.text === "string" ? token.text : "", {
+    displayMode: token.displayMode === true,
+    throwOnError: false,
+  })
 }
 
 function renderMathExpressions(html: string): string {
@@ -119,8 +545,6 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 }
 
 export type NativeMarkdownParser = (markdown: string) => Promise<string>
-
-// kilocode_change: parseFilePath imported from ../file-path
 
 // kilocode_change start: highlight cache for deferred highlighting
 
@@ -282,27 +706,56 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
   // Code blocks render as plain <pre><code data-lang="..."> immediately.
   // The Markdown component calls deferredHighlight() after DOM paint.
   const parser = marked.use(
+    markedCodeSpanBoundary,
     {
       renderer: {
         link({ href, title, text }) {
-          const titleAttr = title ? ` title="${title}"` : ""
-          return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+          // kilocode_change start: escape href/title for the attribute context —
+          // both come from raw model output, so a stray `"` must not break out of
+          // the attribute (defense-in-depth alongside the DOMPurify pass). The
+          // browser decodes the entities back, so the click handler still reads
+          // the original href.
+          const safeHref = href ? escapeAttribute(href) : ""
+          const titleAttr = title ? ` title="${escapeAttribute(title)}"` : ""
+          // file-path links get a distinct class for styling. Keep target/rel so
+          // the shared (opencode) consumer's navigation and security behavior is
+          // unchanged — Kilo's click handler intercepts these via preventDefault
+          // and opens the file instead.
+          const isFile = href ? extractFilePathFromHref(href) : undefined
+          if (isFile) {
+            return `<a href="${safeHref}"${titleAttr} class="external-link file-path-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+          }
+          return `<a href="${safeHref}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+          // kilocode_change end
         },
-        // kilocode_change start
+        // kilocode_change start — every code span is a file-link candidate.
+        // Post-render validation (via filesystem stat) will strip the class
+        // from candidates that don't correspond to real files.
         codespan({ text }) {
-          const file = parseFilePath(text)
           const escaped = text
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#39;")
-          if (file) {
-            const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
-            const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
-            return `<code class="file-link" dir="auto" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
+          // Skip obvious non-paths: contains spaces, URLs, or is empty
+          if (!text || text.includes(" ") || text.includes("://")) {
+            return `<code dir="auto">${escaped}</code>`
           }
-          return `<code dir="auto">${escaped}</code>`
+          const { candidate, line, column } = extractSuffix(text)
+          // A candidate just needs to be a bare token (no code punctuation) —
+          // extensionless files (`install`, `run-script`) qualify too. The
+          // post-render filesystem check is authoritative, so non-files like
+          // `useState` are validated away; see looksLikeCandidate.
+          if (!looksLikeCandidate(candidate)) {
+            return `<code dir="auto">${escaped}</code>`
+          }
+          // Escape the candidate for the attribute — it's derived from raw
+          // model output, so a stray `"` must not break out of the attribute.
+          const normalized = escapeAttribute(normalizeCandidatePath(candidate))
+          const lineAttr = line ? ` data-file-line="${line}"` : ""
+          const colAttr = column ? ` data-file-col="${column}"` : ""
+          return `<code class="file-link-candidate" dir="auto" data-file-candidate="${normalized}"${lineAttr}${colAttr}>${escaped}</code>`
         },
         code({ text, lang }) {
           const escaped = text
@@ -321,12 +774,24 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
         },
         // kilocode_change end
       },
+      // kilocode_change start: Marked accepts a tilde preceded by an opening
+      // parenthesis as the closing delimiter. It is left-flanking there, so
+      // preserve it literally instead of corrupting text such as "(~1 GB)".
+      tokenizer: {
+        del(src) {
+          const match = this.rules.inline.del.exec(src)
+          if (match?.[0].at(-2) === "(") return
+          return false
+        },
+      },
+      // kilocode_change end
     },
-    // kilocode_change start: enable only double-dollar math.
+    inlineKatexExtension,
+    // kilocode_change start: enable double-dollar math without single-dollar math.
     // Single $ is far more common as a currency symbol in agent responses
     // (e.g. $93K, $307K) than as a LaTeX delimiter. Avoid registering the
-    // marked-katex-extension inline tokenizer because Marked falls through
-    // to later tokenizers when an override returns undefined.
+    // marked-katex-extension's single-dollar tokenizer because Marked falls
+    // through to later tokenizers when an override returns undefined.
     {
       extensions: [
         {

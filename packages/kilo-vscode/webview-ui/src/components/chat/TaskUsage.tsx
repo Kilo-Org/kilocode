@@ -5,7 +5,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import type { SessionModelUsage } from "../../types/messages"
-import { groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
+import { cacheRate, groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
 import { formatCompactCount } from "../../utils/format"
 
 interface TaskUsageProps {
@@ -35,13 +35,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
     if (value > 0 && value < 0.000001) return "<$0.000001"
     return money().format(value)
   }
-  const rate = (model: SessionModelUsage["models"][number]) => {
-    const total = model.tokens.input + model.tokens.cache.read
-    if (total === 0) return "-"
-    return `${((model.tokens.cache.read / total) * 100).toFixed(1)}%`
-  }
-
-  const Summary = () => (
+  const renderSummary = () => (
     <>
       <span class="task-header-tokens-label">Tokens</span>
       <Show when={props.tokens.input > 0}>
@@ -66,19 +60,10 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
   )
 
   return (
-    <Show
-      when={props.usage?.models.length}
-      fallback={
-        <div class="task-header-tokens">
-          <Summary />
-        </div>
-      }
-    >
+    <Show when={props.usage?.models.length} fallback={<div class="task-header-tokens">{renderSummary()}</div>}>
       <Collapsible variant="ghost" class="task-header-usage tool-collapsible" defaultOpen={props.defaultOpen}>
         <Collapsible.Trigger class="task-header-usage-trigger">
-          <span class="task-header-tokens">
-            <Summary />
-          </span>
+          <span class="task-header-tokens">{renderSummary()}</span>
           <Collapsible.Arrow />
         </Collapsible.Trigger>
         <Collapsible.Content>
@@ -102,7 +87,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
                         </div>
                         <div class="task-header-usage-meta">
                           Cache R {count(model.tokens.cache.read)} · W {count(model.tokens.cache.write)} · Hit Rate{" "}
-                          {rate(model)}
+                          {cacheRate(model)}
                         </div>
                       </div>
                     )}

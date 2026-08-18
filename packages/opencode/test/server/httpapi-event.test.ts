@@ -1,13 +1,11 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Layer, Queue, Schema, Stream } from "effect"
 import * as Sse from "effect/unstable/encoding/Sse" // kilocode_change - decode the legacy SSE wire format
-import * as Log from "@opencode-ai/core/util/log"
 import { EventPaths } from "../../src/server/routes/instance/httpapi/groups/event"
 // kilocode_change start - verify transformed EventV2 values at the legacy SSE boundary
 import { Catalog } from "@opencode-ai/core/catalog"
 import { EventV2 } from "@opencode-ai/core/event"
-import { ModelV2 } from "@opencode-ai/core/model"
-import { ProviderV2 } from "@opencode-ai/core/provider"
 import { SessionEvent } from "@opencode-ai/core/session/event"
 import { Prompt } from "@opencode-ai/core/session/prompt"
 import { DateTime, Fiber } from "effect"
@@ -18,14 +16,12 @@ import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { GlobalPaths } from "../../src/server/routes/instance/httpapi/groups/global"
 import { SessionID } from "../../src/session/schema"
 import { Server } from "../../src/server/server"
-import { SessionMessageID } from "@opencode-ai/core/session/message-id"
+import { SessionMessage } from "@opencode-ai/core/session/message"
 // kilocode_change end
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect, testEffectShared } from "../lib/effect"
 import { httpApiLayer, requestInDirectory } from "./httpapi-layer"
-
-void Log.init({ print: false })
 
 const EventData = Schema.Struct({
   id: Schema.optional(Schema.String),
@@ -187,7 +183,7 @@ describe("event HttpApi", () => {
   )
 
   // kilocode_change start - transformed EventV2 data is numeric on legacy SSE while domain data stays decoded
-  const v2 = testEffectShared(Layer.mergeAll(Bus.defaultLayer, EventV2Bridge.defaultLayer))
+  const v2 = testEffectShared(Layer.mergeAll(AppNodeBuilder.build(Bus.node), AppNodeBuilder.build(EventV2Bridge.node)))
 
   v2.instance(
     "encodes catalog and session EventV2 data on the global event stream",
@@ -202,26 +198,21 @@ describe("event HttpApi", () => {
         expect(yield* readGlobal(reader)).toMatchObject({ payload: { type: "server.connected", properties: {} } })
         yield* ready(count)
         const events = yield* EventV2Bridge.Service
-        const released = DateTime.makeUnsafe(1_750_000_000_123)
-        const model = new ModelV2.Info({
-          ...ModelV2.Info.empty(ProviderV2.ID.make("test"), ModelV2.ID.make("model")),
-          time: { released },
-        })
         const catalogID = EventV2.ID.create()
         const catalog = yield* readGlobalUntil(reader, (event) => event.payload.id === catalogID).pipe(
           Effect.forkChild({ startImmediately: true }),
         )
-        const catalogDomain = yield* events.publish(Catalog.Event.ModelUpdated, { model }, { id: catalogID })
+        const catalogDomain = yield* events.publish(Catalog.Event.Updated, {}, { id: catalogID })
 
-        expect(DateTime.isDateTime(catalogDomain.data.model.time.released)).toBe(true)
-        expect(properties(yield* Fiber.join(catalog)).model.time.released).toBe(1_750_000_000_123)
+        expect(catalogDomain.data).toEqual({})
+        expect(properties(yield* Fiber.join(catalog))).toEqual({})
 
         const globalID = EventV2.ID.create()
         const global = yield* readGlobalUntil(reader, (event) => event.payload.id === globalID).pipe(
           Effect.forkChild({ startImmediately: true }),
         )
         yield* events
-          .publish(Catalog.Event.ModelUpdated, { model }, { id: globalID })
+          .publish(Catalog.Event.Updated, {}, { id: globalID })
           .pipe(Effect.provideService(InstanceRef, undefined))
         expect((yield* Fiber.join(global)).directory).toBe("global")
 
@@ -245,7 +236,7 @@ describe("event HttpApi", () => {
         const sessionDomain = yield* events.publish(SessionEvent.Text.Delta, {
           sessionID,
           timestamp,
-          assistantMessageID: SessionMessageID.ID.create(),
+          assistantMessageID: SessionMessage.ID.create(),
           textID: "text-event-encoding",
           delta: "hello",
         })
@@ -260,9 +251,9 @@ describe("event HttpApi", () => {
         yield* events.publish(SessionEvent.Prompted, {
           sessionID,
           timestamp,
-          messageID: SessionMessageID.ID.create(),
+          messageID: SessionMessage.ID.create(),
           delivery: "queue",
-          prompt: new Prompt({ text: "hello", files: [], agents: [], references: [] }), // kilocode_change - upstream made prompt a Prompt class
+          prompt: Prompt.make({ text: "hello", files: [], agents: [] }), // kilocode_change - Prompt is a struct
         })
         expect(properties(yield* Fiber.join(prompted))).toMatchObject({
           timestamp: 1_234,

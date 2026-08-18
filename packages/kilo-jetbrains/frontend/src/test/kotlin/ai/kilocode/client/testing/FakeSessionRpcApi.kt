@@ -5,6 +5,7 @@ import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -47,6 +48,8 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Message history returned by [messages]. */
     val history = mutableListOf<MessageWithPartsDto>()
     val histories = mutableMapOf<String, MutableList<MessageWithPartsDto>>()
+    val diffs = mutableMapOf<String, MutableList<DiffFileDto>>()
+    val diffSides = mutableMapOf<String, DiffFileDto>()
     var historyGate: CompletableDeferred<Unit>? = null
     var historyCalls = 0
         private set
@@ -96,6 +99,8 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val aborts = mutableListOf<Pair<String, String>>()
     val compacts = mutableListOf<Triple<String, String, ModelSelectionDto>>()
     val reverts = mutableListOf<RevertCall>()
+    val messageDeletes = mutableListOf<MessageDeleteCall>()
+    var messageDeleteResult = true
     val unreverts = mutableListOf<Pair<String, String>>()
     val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
@@ -117,6 +122,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
     data class CommandCall(val id: String, val directory: String, val command: String, val arguments: String, val prompt: PromptDto)
     data class RevertCall(val id: String, val directory: String, val message: String, val part: String?)
+    data class MessageDeleteCall(val id: String, val directory: String, val message: String)
 
     // --- Implementation ---
 
@@ -229,6 +235,12 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         reverts.add(RevertCall(id, directory, messageID, partID))
     }
 
+    override suspend fun deleteMessage(id: String, directory: String, messageID: String): Boolean {
+        assertNotEdt("deleteMessage")
+        messageDeletes.add(MessageDeleteCall(id, directory, messageID))
+        return messageDeleteResult
+    }
+
     override suspend fun unrevert(id: String, directory: String) {
         assertNotEdt("unrevert")
         unrevertGate?.await()
@@ -241,6 +253,16 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         historyCalls++
         historyGate?.await()
         return histories[id]?.toList() ?: history.toList()
+    }
+
+    override suspend fun diff(id: String, directory: String): List<DiffFileDto> {
+        assertNotEdt("diff")
+        return diffs[id]?.toList().orEmpty()
+    }
+
+    override suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
+        assertNotEdt("diffSides")
+        return diffSides[file.file]
     }
 
     override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? {
@@ -267,8 +289,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         configs.add(directory to config)
     }
 
+    var replyPermissionThrows: Exception? = null
+
     override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
         assertNotEdt("replyPermission")
+        replyPermissionThrows?.let { throw it }
         permissionReplies.add(Triple(requestId, directory, reply))
     }
 

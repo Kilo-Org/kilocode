@@ -33,7 +33,9 @@ class KiloAgentBehaviorService internal constructor(
 
     suspend fun agents(directory: String): List<AgentDetailDto> = safe(emptyList()) { call { agents(directory) } }
 
-    suspend fun skills(directory: String): List<SkillDto> = safe(emptyList()) { call { skills(directory) } }
+    suspend fun loadSkills(directory: String): List<SkillDto> = call { skills(directory) }
+
+    suspend fun refreshSkills(directory: String, fallback: List<SkillDto>): List<SkillDto> = safe(fallback) { call { skills(directory) } }
 
     suspend fun commands(directory: String): List<CommandDto> = safe(emptyList()) { call { commands(directory) } }
 
@@ -51,6 +53,11 @@ class KiloAgentBehaviorService internal constructor(
         safe(false) { call { saveMcp(directory, name, scope, config) } }
 
     suspend fun removeSkill(directory: String, location: String): Boolean = safe(false) { call { removeSkill(directory, location) } }
+
+    suspend fun reloadSkills(directory: String): Boolean = safe(false) { call { reloadSkills(directory) } }
+
+    suspend fun saveSkills(directory: String, edits: Map<String, String>): Boolean =
+        safe(false) { call { saveSkills(directory, edits) } }
 
     suspend fun removeAgent(directory: String, name: String): Boolean = safe(false) { call { removeAgent(directory, name) } }
 

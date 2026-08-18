@@ -9,6 +9,7 @@ import type { AgentManagerOutMessage, PRStatus } from "./types"
 import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
+import { resolveComment, unresolveComment } from "./pr/PRActions"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
@@ -31,6 +32,7 @@ export class PRStatusBridge {
   readonly poller: PRStatusPoller
   private readonly cache = new Map<string, AgentManagerOutMessage>()
   private readonly host: PRBridgeHost
+  private lastErrorNotified: "gh_missing" | "gh_auth" | "fetch_failed" | undefined
 
   constructor(host: PRBridgeHost) {
     this.host = host
@@ -61,6 +63,8 @@ export class PRStatusBridge {
   /** Replay cached PR statuses to a freshly-connected webview. */
   replay(): void {
     this.cache.forEach((msg) => this.host.postToWebview(msg))
+    if (this.lastErrorNotified === "gh_auth" || this.lastErrorNotified === "gh_missing")
+      this.host.postToWebview({ type: "agentManager.prError", error: this.lastErrorNotified } as AgentManagerOutMessage)
   }
 
   snapshot(): Map<string, PRStatus> {
@@ -78,8 +82,51 @@ export class PRStatusBridge {
       return true
     }
     if (m.type === "agentManager.openPR") {
-      const wt = this.host.getWorktrees().find((w: Worktree) => w.id === m.worktreeId)
-      if (wt?.prUrl) this.host.openExternal(wt.prUrl)
+      const url = (m.url as string) ?? this.host.getWorktrees().find((w: Worktree) => w.id === m.worktreeId)?.prUrl
+      if (url) this.host.openExternal(url)
+      return true
+    }
+    const isResolve = m.type === "agentManager.resolveComment"
+    const isUnresolve = m.type === "agentManager.unresolveComment"
+    if (isResolve || isUnresolve) {
+      const id = m.worktreeId as string
+      const threadId = m.threadId as string
+      const wt = this.host.getWorktrees().find((w: Worktree) => w.id === id)
+      const cwd = wt?.path ?? this.host.getWorkspaceRoot()
+      const resultType = isResolve ? "agentManager.resolveCommentResult" : "agentManager.unresolveCommentResult"
+      if (!cwd) {
+        this.host.log("resolveComment: no cwd for worktree", id)
+        this.host.postToWebview({
+          type: resultType,
+          worktreeId: id,
+          threadId,
+          success: false,
+        })
+        return true
+      }
+      const action = isResolve ? resolveComment : unresolveComment
+      action(threadId, cwd).then(
+        () => {
+          this.host.postToWebview({
+            type: resultType,
+            worktreeId: id,
+            threadId,
+            success: true,
+          })
+          // Refresh PR data after successful mutation to get updated comment state
+          this.poller.refresh(id)
+        },
+        (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err)
+          this.host.log(`${resultType} failed: ${msg}`)
+          this.host.postToWebview({
+            type: resultType,
+            worktreeId: id,
+            threadId,
+            success: false,
+          })
+        },
+      )
       return true
     }
     return false
@@ -88,6 +135,18 @@ export class PRStatusBridge {
   /** Remove cached status for a deleted worktree. */
   remove(worktreeId: string): void {
     this.cache.delete(worktreeId)
+  }
+
+  reset(): void {
+    this.poller.stop()
+    this.cache.clear()
+    this.lastErrorNotified = undefined
+  }
+
+  notifyError(err: "gh_missing" | "gh_auth" | "fetch_failed"): void {
+    if (this.lastErrorNotified === err) return
+    this.lastErrorNotified = err
+    this.host.postToWebview({ type: "agentManager.prError", error: err } as AgentManagerOutMessage)
   }
 }
 
@@ -110,10 +169,15 @@ function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
             pr: null,
             error: err,
           } as AgentManagerOutMessage)
+        // Always forward auth/missing errors so the webview can show a toast,
+        // regardless of whether prior data exists. Deduplicate per error type
+        // so multiple failing worktrees don't produce multiple toasts.
+        if (err === "gh_auth" || err === "gh_missing") bridge.notifyError(err)
         return
       }
       const msg = { type: "agentManager.prStatus", worktreeId: id, pr, error: err } as AgentManagerOutMessage
       bridge["cache"].set(id, msg)
+      bridge["lastErrorNotified"] = undefined
       host.postToWebview(msg)
       host.updateWorktreePR(id, pr?.number, pr?.url, pr?.state)
     },

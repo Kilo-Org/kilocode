@@ -8,12 +8,19 @@ import { Context, Effect, FileSystem, Layer, Schema } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { Glob } from "./util/glob"
 import { serviceUse } from "./effect/service-use"
+import { makeGlobalNode } from "./effect/app-node"
+import { filesystem } from "./effect/app-node-platform"
 
 export namespace FSUtil {
   export class FileSystemError extends Schema.TaggedErrorClass<FileSystemError>()("FileSystemError", {
     method: Schema.String,
-    cause: Schema.optional(Schema.Defect),
-  }) {}
+    cause: Schema.optional(Schema.Defect()),
+  }) {
+    override get message() {
+      const detail = this.cause instanceof Error ? this.cause.message : this.cause && String(this.cause)
+      return `Filesystem operation failed: ${this.method}${detail ? `: ${detail}` : ""}`
+    }
+  }
 
   export type Error = PlatformError | FileSystemError
 
@@ -32,6 +39,7 @@ export namespace FSUtil {
     readonly ensureDir: (path: string) => Effect.Effect<void, Error>
     readonly writeWithDirs: (path: string, content: string | Uint8Array, mode?: number) => Effect.Effect<void, Error>
     readonly readDirectoryEntries: (path: string) => Effect.Effect<DirEntry[], Error>
+    readonly resolve: (path: string) => Effect.Effect<string>
     readonly findUp: (target: string, start: string, stop?: string) => Effect.Effect<string[], Error>
     readonly up: (options: { targets: string[]; start: string; stop?: string }) => Effect.Effect<string[], Error>
     readonly globUp: (pattern: string, start: string, stop?: string) => Effect.Effect<string[], Error>
@@ -43,7 +51,7 @@ export namespace FSUtil {
 
   export const use = serviceUse(Service)
 
-  export const layer = Layer.effect(
+  const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
       const fs = decorateFileSystem(yield* FileSystem.FileSystem) // kilocode_change
@@ -53,9 +61,10 @@ export namespace FSUtil {
       })
 
       const readFileStringSafe = Effect.fn("FileSystem.readFileStringSafe")(function* (path: string) {
-        return yield* fs
-          .readFileString(path)
-          .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
+        return yield* fs.readFileString(path).pipe(
+          Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)),
+          Effect.catchReason("PlatformError", "PermissionDenied", () => Effect.succeed(undefined)),
+        )
       })
 
       const isDir = Effect.fn("FileSystem.isDir")(function* (path: string) {
@@ -81,6 +90,14 @@ export namespace FSUtil {
           },
           catch: (cause) => new FileSystemError({ method: "readDirectoryEntries", cause }),
         })
+      })
+
+      const resolve = Effect.fn("FileSystem.resolve")(function* (path: string) {
+        const resolved = pathResolve(windowsPath(path))
+        return yield* fs.realPath(resolved).pipe(
+          Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(resolved)),
+          Effect.orDie,
+        )
       })
 
       const readJson = Effect.fn("FileSystem.readJson")(function* (path: string) {
@@ -181,6 +198,7 @@ export namespace FSUtil {
         isDir,
         isFile,
         readDirectoryEntries,
+        resolve,
         readJson,
         writeJson,
         ensureDir,
@@ -194,7 +212,8 @@ export namespace FSUtil {
     }),
   )
 
-  export const defaultLayer = layer.pipe(Layer.provide(NodeFileSystem.layer))
+  export const node = makeGlobalNode({ service: Service, layer: layer, deps: [filesystem] })
+  export const defaultLayer = layer.pipe(Layer.provide(NodeFileSystem.layer)) // kilocode_change - legacy Kilo runtime compatibility
 
   // Pure helpers that don't need Effect (path manipulation, sync operations)
   export function mimeType(p: string): string {

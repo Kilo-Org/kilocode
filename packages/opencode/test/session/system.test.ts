@@ -1,11 +1,15 @@
-import { describe, expect } from "bun:test"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { describe, expect, test } from "bun:test"
 import { Effect, Layer } from "effect"
 import type { Agent } from "../../src/agent/agent"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Skill } from "../../src/skill"
 import { Permission } from "../../src/permission"
+import type { Provider } from "../../src/provider/provider"
 import { SystemPrompt } from "../../src/session/system"
+import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { testEffect } from "../lib/effect"
+import { Config } from "../../src/config/config" // kilocode_change
 
 const skills: Skill.Info[] = [
   {
@@ -41,8 +45,9 @@ const build: Agent.Info = {
 }
 
 const it = testEffect(
-  SystemPrompt.layer.pipe(
-    Layer.provide(
+  AppNodeBuilder.build(SystemPrompt.node, [
+    [
+      Skill.node,
       Layer.succeed(
         Skill.Service,
         Skill.Service.of({
@@ -57,11 +62,17 @@ const it = testEffect(
           available: () => Effect.succeed(skills),
         }),
       ),
-    ),
-  ),
+    ],
+  ]),
 )
 
 describe("session.system", () => {
+  test("selects the Meta prompt for Muse Spark model IDs", () => {
+    expect(SystemPrompt.provider({ api: { id: "meta/muse-spark-preview" } } as Provider.Model)[0]).toContain(
+      "Meta Muse Spark",
+    )
+  })
+
   it.effect("skills output is sorted by name and stable across calls", () =>
     Effect.gen(function* () {
       const prompt = yield* SystemPrompt.Service

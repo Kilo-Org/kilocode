@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
+import { resolveKiloGatewayBaseUrl } from "./url.js"
 import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 export type KiloModelsResult = {
@@ -75,7 +76,7 @@ type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 function parseApiPrice(price: string | null | undefined): number | undefined {
   if (!price) return undefined
   const parsed = parseFloat(price)
-  if (isNaN(parsed)) return undefined
+  if (isNaN(parsed) || parsed < 0) return undefined
   return parsed * 1_000_000 // Convert $/token → $/M tokens
 }
 
@@ -97,13 +98,9 @@ export async function fetchKiloModels(options?: {
   const models: Record<string, any> = {}
 
   for (const model of raw.data) {
-    // Skip image generation models
-    if (model.architecture?.output_modalities?.includes("image")) {
-      continue
-    }
-
-    // Skip models that don't support tools — Kilo requires tool calling
-    if (!model.supported_parameters?.includes("tools")) {
+    // Skip models that explicitly don't support tools — Kilo requires tool calling
+    // Optimistically assume models with a missing supported_parameters array support tools
+    if (model.supported_parameters && !model.supported_parameters.includes("tools")) {
       continue
     }
 
@@ -122,6 +119,16 @@ export type KiloImageModel = {
 
 export type KiloImageModelsResult = {
   models: KiloImageModel[]
+  error?: { kind: "unauthorized" | "network" | "schema" | "http"; status?: number }
+}
+
+export type KiloTranscriptionModel = {
+  id: string
+  name: string
+}
+
+export type KiloTranscriptionModelsResult = {
+  models: KiloTranscriptionModel[]
   error?: { kind: "unauthorized" | "network" | "schema" | "http"; status?: number }
 }
 
@@ -147,6 +154,52 @@ export async function fetchKiloImageModels(options?: {
   }
 
   return { models }
+}
+
+export async function fetchKiloTranscriptionModels(options?: {
+  kilocodeToken?: string
+  kilocodeOrganizationId?: string
+  baseURL?: string
+}): Promise<KiloTranscriptionModelsResult> {
+  const token = options?.kilocodeToken
+  const organizationId = options?.kilocodeOrganizationId
+  const url = new URL("transcription-models", resolveKiloGatewayBaseUrl({ baseURL: options?.baseURL, token }))
+  const response = await fetch(url, {
+    headers: {
+      ...getDefaultHeaders(),
+      ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    signal: AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS),
+  }).catch((err: unknown) => err as Error)
+
+  if (response instanceof Error) return { models: [], error: { kind: "network" } }
+  if (!response.ok) {
+    const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
+    return { models: [], error: { kind, status: response.status } }
+  }
+
+  const json = await response.json().catch(() => null)
+  if (!json || !Array.isArray(json.data)) return { models: [], error: { kind: "schema" } }
+
+  const data: unknown[] = json.data
+  const models = data.filter(isTranscriptionModel).map((model) => ({
+    id: model.id,
+    name: model.name,
+  }))
+  if (models.length === 0) return { models: [], error: { kind: "schema" } }
+  return { models }
+}
+
+type TranscriptionModelResponse = {
+  id: string
+  name: string
+}
+
+function isTranscriptionModel(value: unknown): value is TranscriptionModelResponse {
+  if (!value || typeof value !== "object") return false
+  const model = value as Record<string, unknown>
+  return typeof model.id === "string" && typeof model.name === "string"
 }
 
 /**
@@ -227,7 +280,7 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
 
   // Determine capabilities
   const supportsImages = inputModalities.includes("image")
-  const supportsTools = supportedParameters.includes("tools")
+  const supportsTools = !model.supported_parameters || supportedParameters.includes("tools")
   const supportsReasoning = supportedParameters.includes("reasoning")
   const supportsTemperature = supportedParameters.includes("temperature")
 

@@ -1,9 +1,10 @@
 package ai.kilocode.client.session.ui
 
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Dimension
@@ -30,11 +31,13 @@ class SessionRootPanelTest : BasePlatformTestCase() {
         assertFalse(root.blocker.isVisible)
     }
 
-    fun `test blocker is opaque and uses panel background`() {
+    fun `test blocker is opaque and uses session background`() {
         val root = SessionRootPanel()
 
+        assertTrue(root.isOpaque)
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), root.background)
         assertTrue(root.blocker.isOpaque)
-        assertEquals(UiStyle.Colors.bg(), root.blocker.background)
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), root.blocker.background)
     }
 
     fun `test root layout fills all immediate children`() {
@@ -56,6 +59,21 @@ class SessionRootPanelTest : BasePlatformTestCase() {
         }
 
         assertEquals(Dimension(300, 220), root.preferredSize)
+    }
+
+    fun `test root preferred size is not double scaled by user scale factor`() {
+        val original = JBUIScale.scale(1f)
+        try {
+            JBUIScale.setUserScaleFactorForTest(2f)
+            val root = SessionRootPanel().apply {
+                content.preferredSize = Dimension(300, 120)
+                overlay.preferredSize = Dimension(180, 220)
+            }
+
+            assertEquals(Dimension(300, 220), root.preferredSize)
+        } finally {
+            JBUIScale.setUserScaleFactorForTest(original)
+        }
     }
 
     fun `test addOverlay applies callback bounds and delegates child layout`() {

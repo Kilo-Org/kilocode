@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
 import path from "path"
 import { pathToFileURL } from "node:url"
@@ -10,7 +11,7 @@ import { Global } from "@opencode-ai/core/global"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { Truncate } from "../../../src/tool/truncate"
 import { RepoCloneTool } from "../../../src/tool/repo_clone"
-import { RepositoryCache } from "../../../src/reference/repository-cache"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { disposeAllInstances, provideTmpdirInstance, tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
@@ -31,12 +32,12 @@ const ctx = {
 
 const it = testEffect(
   Layer.mergeAll(
-    Agent.defaultLayer,
-    FSUtil.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Git.defaultLayer,
-    RepositoryCache.defaultLayer,
-    Truncate.defaultLayer,
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(Git.node),
+    AppNodeBuilder.build(RepositoryCache.node),
+    AppNodeBuilder.build(Truncate.node),
   ),
 )
 
@@ -63,6 +64,13 @@ const git = Effect.fn("RepoCloneToolTest.git")(function* (cwd: string, args: str
     return stdout.trim()
   })
 })
+
+const base = (root: string) => {
+  const url = pathToFileURL(root).href
+  return url.endsWith("/") ? url : `${url}/`
+}
+
+const normalize = (value: string) => value.replaceAll("\r\n", "\n")
 
 const githubBase = <A, E, R>(url: string, self: Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(
@@ -96,16 +104,16 @@ describe("tool.repo_clone", () => {
         yield* git(remoteRoot, ["clone", "--bare", source, remoteRepo])
 
         const tool = yield* init()
-        const cloned = yield* githubBase(`file://${remoteRoot}/`, tool.execute({ repository: "owner/repo" }, ctx))
+        const cloned = yield* githubBase(base(remoteRoot), tool.execute({ repository: "owner/repo" }, ctx))
         const cached = yield* githubBase(
-          `file://${remoteRoot}/`,
+          base(remoteRoot),
           tool.execute({ repository: "https://github.com/owner/repo.git" }, ctx),
         )
 
         expect(cloned.metadata.status).toBe("cloned")
         expect(cloned.metadata.localPath).toBe(path.join(Global.Path.repos, "github.com", "owner", "repo"))
         expect(cached.metadata.status).toBe("cached")
-        expect(yield* fs.readFileString(path.join(cloned.metadata.localPath, "README.md"))).toBe("v1\n")
+        expect(normalize(yield* fs.readFileString(path.join(cloned.metadata.localPath, "README.md")))).toBe("v1\n")
       }),
     ),
   )
@@ -130,7 +138,7 @@ describe("tool.repo_clone", () => {
         yield* git(source, ["push", "-u", "origin", `${branch}:${branch}`])
 
         const tool = yield* init()
-        const first = yield* githubBase(`file://${remoteRoot}/`, tool.execute({ repository: "owner/repo" }, ctx))
+        const first = yield* githubBase(base(remoteRoot), tool.execute({ repository: "owner/repo" }, ctx))
 
         yield* Effect.promise(() => Bun.write(path.join(source, "README.md"), "v2\n"))
         yield* git(source, ["add", "."])
@@ -138,13 +146,13 @@ describe("tool.repo_clone", () => {
         yield* git(source, ["push", "origin", `${branch}:${branch}`])
 
         const refreshed = yield* githubBase(
-          `file://${remoteRoot}/`,
+          base(remoteRoot),
           tool.execute({ repository: "owner/repo", refresh: true }, ctx),
         )
 
         expect(first.metadata.status).toBe("cloned")
         expect(refreshed.metadata.status).toBe("refreshed")
-        expect(yield* fs.readFileString(path.join(first.metadata.localPath, "README.md"))).toBe("v2\n")
+        expect(normalize(yield* fs.readFileString(path.join(first.metadata.localPath, "README.md")))).toBe("v2\n")
       }),
     ),
   )
@@ -170,13 +178,13 @@ describe("tool.repo_clone", () => {
 
         const tool = yield* init()
         const result = yield* githubBase(
-          `file://${remoteRoot}/`,
+          base(remoteRoot),
           tool.execute({ repository: "owner/repo", branch: "docs" }, ctx),
         )
 
         expect(result.metadata.status).toBe("cloned")
         expect(result.metadata.branch).toBe("docs")
-        expect(yield* fs.readFileString(path.join(result.metadata.localPath, "DOCS.md"))).toBe("docs\n")
+        expect(normalize(yield* fs.readFileString(path.join(result.metadata.localPath, "DOCS.md")))).toBe("docs\n")
       }),
     ),
   )

@@ -3,12 +3,14 @@ export * as SessionStore from "./store"
 import { and, eq, isNotNull } from "drizzle-orm" // kilocode_change
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "../database/database"
+import { makeGlobalNode } from "../effect/app-node"
 import { SessionHistory } from "./history"
 import { MessageDecodeError } from "./error"
 import { SessionMessage } from "./message"
 import { SessionSchema } from "./schema"
 import { SessionMessageTable, SessionTable } from "./sql"
 import { fromRow } from "./info"
+import { normalize } from "../kilocode/session-message" // kilocode_change
 
 export interface Interface {
   readonly get: (sessionID: SessionSchema.ID) => Effect.Effect<SessionSchema.Info | undefined>
@@ -24,7 +26,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/SessionStore") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const { db } = yield* Database.Service
@@ -51,10 +53,12 @@ export const layer = Layer.effect(
         return row
           ? {
               sessionID: SessionSchema.ID.make(row.session_id),
-              message: yield* decodeMessage({ ...row.data, id: row.id, type: row.type }).pipe(Effect.orDie),
+              message: yield* decodeMessage(normalize({ ...row.data, id: row.id, type: row.type })).pipe(Effect.orDie), // kilocode_change - normalize legacy tool content at the database boundary
             }
           : undefined
       }),
     })
   }),
 )
+
+export const node = makeGlobalNode({ service: Service, layer, deps: [Database.node] })

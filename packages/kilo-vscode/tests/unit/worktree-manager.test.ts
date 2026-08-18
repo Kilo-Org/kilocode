@@ -11,6 +11,7 @@ import {
   versionedName,
 } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+import type { PRInfo } from "../../src/agent-manager/git-import"
 import simpleGit from "simple-git"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
@@ -24,17 +25,24 @@ afterEach(async () => {
   )
 })
 
+function gitExec(args: string[]) {
+  const res = Bun.spawnSync(args, { stdout: "ignore", stderr: "pipe" })
+  if (res.exitCode !== 0) {
+    const err = Buffer.from(res.stderr).toString("utf8")
+    throw new Error(`git command failed (${args.join(" ")}): ${err}`)
+  }
+}
+
 /** Create a temp git repo with an initial commit (required for worktrees). */
 async function createTempRepo(): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-"))
   tempDirs.push(dir)
-  const git = simpleGit(dir)
-  await git.init()
-  await git.addConfig("user.email", "test@test.com")
-  await git.addConfig("user.name", "Test")
+  gitExec(["git", "init", "-b", "main", dir])
+  gitExec(["git", "-C", dir, "config", "user.email", "test@test.com"])
+  gitExec(["git", "-C", dir, "config", "user.name", "Test"])
   await fs.writeFile(path.join(dir, "README.md"), "init")
-  await git.add(".")
-  await git.commit("initial commit")
+  gitExec(["git", "-C", dir, "add", "."])
+  gitExec(["git", "-C", dir, "commit", "-m", "initial commit"])
   return dir
 }
 
@@ -51,31 +59,18 @@ async function changedFiles(cwd: string): Promise<string[]> {
 
 /** Create a temp repo with a bare origin remote so origin/<branch> refs exist. */
 async function createTempRepoWithOrigin(): Promise<{ bare: string; clone: string }> {
-  // Use a non-bare seed repo to control the initial branch name, then clone bare
-  const seed = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-seed-"))
-  tempDirs.push(seed)
-  const seedGit = simpleGit(seed)
-  await seedGit.init()
-  await seedGit.addConfig("user.email", "test@test.com")
-  await seedGit.addConfig("user.name", "Test")
-  await fs.writeFile(path.join(seed, "README.md"), "init")
-  await seedGit.add(".")
-  await seedGit.commit("initial commit")
-  // Ensure branch is named "main" regardless of system default
-  const seedBranch = (await seedGit.revparse(["--abbrev-ref", "HEAD"])).trim()
-  if (seedBranch !== "main") await seedGit.raw(["branch", "-m", seedBranch, "main"])
-
-  // Clone to bare, then clone again as working copy
   const bare = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-bare-"))
-  tempDirs.push(bare)
-  await simpleGit().clone(seed, bare, ["--bare"])
-
   const clone = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-clone-"))
-  tempDirs.push(clone)
-  await simpleGit().clone(bare, clone)
-  const cloneGit = simpleGit(clone)
-  await cloneGit.addConfig("user.email", "test@test.com")
-  await cloneGit.addConfig("user.name", "Test")
+  tempDirs.push(bare, clone)
+
+  gitExec(["git", "init", "--bare", "-b", "main", bare])
+  gitExec(["git", "clone", bare, clone])
+  gitExec(["git", "-C", clone, "config", "user.email", "test@test.com"])
+  gitExec(["git", "-C", clone, "config", "user.name", "Test"])
+  await fs.writeFile(path.join(clone, "README.md"), "init")
+  gitExec(["git", "-C", clone, "add", "."])
+  gitExec(["git", "-C", clone, "commit", "-m", "initial commit"])
+  gitExec(["git", "-C", clone, "push", "-u", "origin", "main"])
 
   return { bare, clone }
 }
@@ -1143,6 +1138,92 @@ describe("WorktreeManager.createWorktree advanced", () => {
     const headParams = await wtGit.log(["-1"])
     const devParams = await git.log(["-1"])
     expect(headParams.latest?.hash).toBe(devParams.latest?.hash)
+  })
+
+  it("creates from a base branch excluded by the remote fetch refspec", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+
+    const result = await createManager(clone).createWorktree({ baseBranch: "topic", prompt: "from topic" })
+    const remoteHead = (await git.revparse(["refs/remotes/origin/topic"])).trim()
+    const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(worktreeHead).toBe(remoteHead)
+    expect(result.parentBranch).toBe("topic")
+  })
+
+  it("creates from a same-repository PR branch excluded by the remote fetch refspec", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+    await git.branch(["-D", "topic"])
+
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    const result = await manager.createFromPR("https://github.com/org/repo/pull/1")
+    const remoteHead = (await git.revparse(["refs/remotes/origin/topic"])).trim()
+    const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(worktreeHead).toBe(remoteHead)
+    expect(result.parentBranch).toBe("topic")
+  })
+
+  it("does not track a deleted PR source branch when using the pull ref fallback", async () => {
+    const { bare, clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    const head = (await git.revparse(["topic"])).trim()
+    await git.checkout("main")
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+    gitExec(["git", "--git-dir", bare, "update-ref", "refs/pull/1/head", head])
+    gitExec(["git", "--git-dir", bare, "update-ref", "-d", "refs/heads/topic"])
+    await git.branch(["-D", "topic"])
+
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    const result = await manager.createFromPR("https://github.com/org/repo/pull/1")
+    const upstream = await git.raw(["config", "--get", "branch.topic.remote"]).catch(() => "")
+    const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(worktreeHead).toBe(head)
+    expect(upstream.trim()).toBe("")
   })
 })
 

@@ -28,6 +28,7 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
@@ -55,18 +56,23 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test session surfaces use session background from initial render`() {
-        val bg = SessionEditorStyle.current().editorBackground
+        val bg = SessionUiStyle.Colors.sessionBackground()
         val root = find<SessionRootPanel>(ui)
         val pane = scrollComponent() as JBScrollPane
 
-        assertEquals(bg, ui.background)
-        assertEquals(bg, root.content.background)
-        assertEquals(bg, pane.background)
-        assertEquals(bg, pane.viewport.background)
+        // One opaque backdrop, self-rendered from the theme at first paint (no applyStyle push).
+        assertTrue(root.isOpaque)
+        assertEquals(bg, root.background)
+        // Intermediate containers stay transparent over that single backdrop.
+        assertFalse(root.content.isOpaque)
+        assertFalse(pane.isOpaque)
+        assertFalse(pane.viewport.isOpaque)
 
         showMessages()
 
-        assertEquals(bg, find<SessionMessageListPanel>(ui).background)
+        val messages = find<SessionMessageListPanel>(ui)
+        assertFalse(messages.isOpaque)
+        assertEquals(bg, root.background)
     }
 
     fun `test prompt is docked and connection is overlaid`() {
@@ -112,6 +118,33 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val drop = find<SessionDropOverlay>(ui)
 
         assertNull(drop.dropTarget)
+    }
+
+    fun `test branch changes badge refreshes on finish and revert`() {
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))
+        val header = find<SessionHeaderPanel>(ui)
+
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertEquals(2 to 1, header.changesStat())
+
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/B.kt", 4, 3))
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertEquals(4 to 3, header.changesStat())
+
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/C.kt", 1, 0))
+        controller().model.setRevert(SessionRevertDto("msg1", "part1", diff = "patch"))
+        settle()
+
+        assertEquals(1 to 0, header.changesStat())
     }
 
     fun `test prompt file drag leave does not immediately hide drop overlay`() {

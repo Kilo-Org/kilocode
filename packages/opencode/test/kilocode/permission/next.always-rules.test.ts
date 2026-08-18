@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect, describe, afterAll } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
@@ -17,14 +18,10 @@ import { testEffect } from "../../lib/effect"
 
 const bus = Bus.layer
 const env = Layer.mergeAll(
-  Permission.layer.pipe(
-    Layer.provide(EventV2Bridge.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Database.defaultLayer),
-  ),
-  Config.defaultLayer,
+  AppNodeBuilder.build(Permission.node),
+  AppNodeBuilder.build(Config.node),
   bus,
-  CrossSpawnSpawner.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
 )
 const it = testEffect(env)
 
@@ -34,7 +31,7 @@ afterAll(async () => {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
   await Effect.runPromise(
-    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(Config.defaultLayer)),
+    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(AppNodeBuilder.build(Config.node))),
   )
   await InstanceRuntime.disposeAllInstances()
 })
@@ -115,7 +112,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -204,7 +201,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
 
         // curl was NOT in rules — still requires permission
         const curlFiber = yield* ask({
@@ -255,7 +252,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -325,7 +322,7 @@ describe("saveAlwaysRules", () => {
             { permission: "bash", pattern: "gh *", action: "ask" },
           ],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -350,7 +347,7 @@ describe("saveAlwaysRules", () => {
           ruleset,
           hardRuleset: ruleset,
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -386,7 +383,7 @@ describe("saveAlwaysRules", () => {
           ],
           hardRuleset: [{ permission: "*", pattern: "*", action: "deny" }],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -448,7 +445,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -486,7 +483,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -522,7 +519,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(allowed).toBeUndefined()
+        expect(allowed.manual).toBe(false)
 
         // "git status" should be denied (only matches broad deny)
         const exit = yield* ask({

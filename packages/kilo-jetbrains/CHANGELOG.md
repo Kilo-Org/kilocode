@@ -1,5 +1,91 @@
 # Changelog
 
+## 7.5.0
+
+### Minor Changes
+
+- [#13015](https://github.com/Kilo-Org/kilocode/pull/13015) [`62923ad`](https://github.com/Kilo-Org/kilocode/commit/62923adb518371d1659ea65e5519768e4abf231b) - Include the active editor file, open files, visible files, and selected text in JetBrains chat context by default, with a Context settings toggle to disable it. Files matched by `.kilocodeignore` (or `.gitignore` plus `.env` files) are excluded, and the default shell is reported to the agent.
+
+- [#12895](https://github.com/Kilo-Org/kilocode/pull/12895) [`a340d61`](https://github.com/Kilo-Org/kilocode/commit/a340d61716b6fdec89943bff438c151b513fd1f3) - Log whether the JetBrains plugin downloads Core or uses the bundled/cached version, and mark the Core version shown in the popup as "Bundled" when it wasn't downloaded.
+
+### Patch Changes
+
+- [#13040](https://github.com/Kilo-Org/kilocode/pull/13040) [`48c4a4a`](https://github.com/Kilo-Org/kilocode/commit/48c4a4af227572011bf44c172ab0ae86e0c2a429) - Ignore negative pricing entries from model catalogs and handle unpriced models gracefully in UI price formatting.
+
+- [#12861](https://github.com/Kilo-Org/kilocode/pull/12861) [`a957cc3`](https://github.com/Kilo-Org/kilocode/commit/a957cc38031823ae923d5bf7cc406543e19124c6) - Avoid GitHub API rate-limit failures when the JetBrains plugin downloads the pinned Kilo CLI.
+
+- [#12869](https://github.com/Kilo-Org/kilocode/pull/12869) [`cee2e36`](https://github.com/Kilo-Org/kilocode/commit/cee2e369f80ac5e8baa949ab7c789dcec831d886) - Fix dropping files into the JetBrains prompt so code files are added as readable file references and drops anywhere in the session panel feed the prompt attachments.
+
+- [#13015](https://github.com/Kilo-Org/kilocode/pull/13015) [`74470aa`](https://github.com/Kilo-Org/kilocode/commit/74470aa8611cdb48e3dc6c2e0deaa027b9af46f9) - Render prompt attachments inside the sent message bubble with file chips, image previews, and selection-aware file opening.
+
+- [#12862](https://github.com/Kilo-Org/kilocode/pull/12862) [`c47cfec`](https://github.com/Kilo-Org/kilocode/commit/c47cfeceebcd6b2ae5c0d416bde00f7e57449df8) - Improve JetBrains session transcript layout, icons, reverted-change summaries, and multi-hunk diff rendering.
+
+- [#12909](https://github.com/Kilo-Org/kilocode/pull/12909) [`5e60473`](https://github.com/Kilo-Org/kilocode/commit/5e60473e768325ce4109ef1c07106e392b49427f) - Improve slash command completion to match separators, camel-case humps, and contained command names.
+
+## 7.4.18
+
+### Patch Changes
+
+- [#12746](https://github.com/Kilo-Org/kilocode/pull/12746) [`1a506a7`](https://github.com/Kilo-Org/kilocode/commit/1a506a712c43d317a5a34b250df16845b641eff8) - Keep the JetBrains prompt send/stop button in sync when attachments are added or removed while a session is busy.
+
+- [#12746](https://github.com/Kilo-Org/kilocode/pull/12746) [`64f0373`](https://github.com/Kilo-Org/kilocode/commit/64f0373056b75546a015816dc0f18b1e380ad93f) - Fix JetBrains diff views to show compact workspace-relative file paths and keep added-file content visible in large branch diffs.
+
+- [#12746](https://github.com/Kilo-Org/kilocode/pull/12746) [`c1f6a75`](https://github.com/Kilo-Org/kilocode/commit/c1f6a75377b438edfc5c3b5dd85ebdc301302e7a) - Fix JetBrains chat transcripts rendering cropped when opening existing sessions.
+
+## 7.5.0
+
+### Minor Changes
+
+- [#12612](https://github.com/Kilo-Org/kilocode/pull/12612) [`a103f4a`](https://github.com/Kilo-Org/kilocode/commit/a103f4abf91c2d3192c11f18d4a56f54b0dafe25) - Improve JetBrains session change tracking: show the files each assistant turn modified with expandable per-file diffs, open inline and branch diffs in a refreshable diff viewer, and surface branch changes in the session header.
+
+## 7.5.0
+
+### Minor Changes
+
+- [#12518](https://github.com/Kilo-Org/kilocode/pull/12518) [`452d0eb`](https://github.com/Kilo-Org/kilocode/commit/452d0eb55f740e951cfd906375e22cf97250144c) - Publish a signed GitHub-hosted JetBrains plugin build with the CLI bundled for offline installation.
+
+### Patch Changes
+
+- [#12571](https://github.com/Kilo-Org/kilocode/pull/12571) [`9950739`](https://github.com/Kilo-Org/kilocode/commit/9950739e36b40a682c0a25173e62f5236e60f81a) - Allow sending prompts while a session is busy and show queued prompts with a remove action.
+
+## 7.4.16
+
+### Patch Changes
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`2b13e7d`](https://github.com/Kilo-Org/kilocode/commit/2b13e7da2a6a776baeb2d797cd5aaeb07a526c0b) - Improve JetBrains diff previews by hiding hunk headers and adding full-path tooltips to clickable file links.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`5c526f1`](https://github.com/Kilo-Org/kilocode/commit/5c526f140b78b13608ad3855532f5215c0b29675) - Render edit tool results with a clickable file target and a highlighted, simplified diff view.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`73942c3`](https://github.com/Kilo-Org/kilocode/commit/73942c3f262dda53030d748e6c08f84db2384253) - Open edit tool file links directly when multiple files share the same name.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`dd31044`](https://github.com/Kilo-Org/kilocode/commit/dd3104400840e1b4641097bf892e25dfccfd592d) - Render multi-file apply_patch edits as a "Patch" with a file-count tag and one section per file, each showing a clickable filename link and its own changes badge aligned with the diff.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`79e606e`](https://github.com/Kilo-Org/kilocode/commit/79e606ebcbb15d20b5fde29d614f07270b1c0b3d) - Smooth out chat scrolling in large JetBrains sessions by only refreshing hover state for the message under the pointer.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`95ae0e0`](https://github.com/Kilo-Org/kilocode/commit/95ae0e0b3b066ec5ab60c36b7bcffb973a942872) - Improve chat scrolling performance in large JetBrains sessions.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`b2a3a8d`](https://github.com/Kilo-Org/kilocode/commit/b2a3a8dc10d5f579396e1bd76e16a0eef696bede) - Size edit and shell preview popovers to their content with a wider maximum width.
+
+## 7.5.0
+
+### Minor Changes
+
+- [#12437](https://github.com/Kilo-Org/kilocode/pull/12437) [`af33ede`](https://github.com/Kilo-Org/kilocode/commit/af33eded9e4ac1988d218e911b5ff0d4e1b9d8b1) - Add Rules settings for instruction files and Claude Code compatibility. Fix cloud session history import failing with an HTTP 400 error.
+
+- [#12416](https://github.com/Kilo-Org/kilocode/pull/12416) [`a9a9b78`](https://github.com/Kilo-Org/kilocode/commit/a9a9b78b97290e855cda3dd7118a429503802396) - Support viewing, opening, editing, deleting, and configuring JetBrains skill sources.
+
+### Patch Changes
+
+- [#12291](https://github.com/Kilo-Org/kilocode/pull/12291) [`0672375`](https://github.com/Kilo-Org/kilocode/commit/067237564a170e84bc60f42b50bcba99ba9fe0c3) - Improve the JetBrains permission dialog with clearer auto-approve rule actions, hints, and command styling.
+
+- [#12291](https://github.com/Kilo-Org/kilocode/pull/12291) [`e9d0af5`](https://github.com/Kilo-Org/kilocode/commit/e9d0af577359e27728d4b47442d861ac2e5c6e1e) - Honor saved JetBrains bash permission rules when running with isolated dev storage.
+
+## 7.4.12
+
+### Patch Changes
+
+- [#12191](https://github.com/Kilo-Org/kilocode/pull/12191) [`4d676b6`](https://github.com/Kilo-Org/kilocode/commit/4d676b68d2d0dd025c7d1a6684f49f3d03e9d12d) - Use Kilo Core for JetBrains @ file completion.
+
 ## 7.4.10
 
 ### Patch Changes
@@ -63,6 +149,308 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.0.16] - 2026-08-14
+
+### Added
+
+### Fixed
+- Improve JetBrains chat readability with refreshed session surfaces, softer spacing, clearer prompt bubbles, and more consistent hover states.
+- Make JetBrains CLI downloads more reliable by retrying transient failures and rate limits, and by avoiding authentication on public CLI asset fetches.
+
+### Changed
+- Update the JetBrains plugin CLI pin to Kilo Core 7.4.22.
+- Refresh Kilo Core with upstream provider, model variant, and session runtime updates.
+
+## [7.0.15] - 2026-08-10
+
+### Added
+
+- Include editor context in JetBrains prompts, including the active file, open and visible files, selected text, and shell context when available.
+- Show selected text and attached files as prompt attachments in user messages, with clickable links back to source files and selections.
+- Add a JetBrains Context setting to enable or disable automatic editor context.
+
+### Fixed
+
+- Avoid JetBrains prompt editor crashes during undo/redo bulk updates.
+- Keep completed question and tool views in the correct JetBrains transcript position.
+- Keep JetBrains chat pinned to the bottom when a turn finishes after modified-file updates.
+
+## [7.0.14] - 2026-08-06
+
+### Fixed
+
+- Improve slash command matching in the JetBrains plugin so typed commands resolve more reliably.
+- Avoid startup crashes when the Kilo CLI database is temporarily locked by another process.
+
+## [7.0.13] - 2026-08-05
+
+### Added
+
+- Show the pinned Kilo Core version and whether JetBrains is using a downloaded or bundled CLI build.
+
+### Fixed
+
+- Avoid GitHub checksum API rate limits when JetBrains verifies downloaded Kilo Core CLI assets.
+- Add dropped files as JetBrains file references so attachments are available to Kilo reliably.
+- Stop eager Kilo Core file watchers when running from JetBrains to reduce unnecessary background work.
+- Improve JetBrains session diff rendering, including full-file editor diffs, multi-hunk diffs, fallback handling, gutter line numbers, and session-scoped diff paths.
+- Speed up local recall searches in Kilo Core.
+- Omit persona details from generated session names.
+- Make invalid tool-argument errors clearer and more actionable to the model.
+- Handle SQLite lock errors more gracefully.
+
+### Changed
+
+- Bump the JetBrains CLI pin to Kilo CLI v7.4.20.
+- Include upstream OpenCode updates through v1.17.13.
+- Adopt upstream reasoning variant metadata from OpenCode v1.18.11.
+
+## [7.0.13-rc.1] - 2026-08-05
+
+### Added
+
+- Show the pinned Kilo Core version and whether JetBrains is using a downloaded or bundled CLI build.
+- Add JetBrains developer tooling for pinning, unpinning, and updating the bundled Kilo Core CLI used by the plugin.
+- Support resuming Claude and Codex sessions through the bundled Kilo Core runtime.
+- Add remote CLI file delivery support for attachment flows.
+
+### Fixed
+
+- Avoid GitHub checksum API rate limits when JetBrains verifies downloaded Kilo Core CLI assets.
+- Add dropped files as JetBrains file references so attachments are available to Kilo reliably.
+- Stop eager Kilo Core file watchers when running from JetBrains to reduce unnecessary background work.
+- Improve JetBrains session diff rendering, including full-file editor diffs, multi-hunk diffs, fallback handling, gutter line numbers, and session-scoped diff paths.
+- Preserve configured subagent routing in Kilo Core.
+- Defer threshold compaction during active tool loops so long-running sessions do not compact at unsafe points.
+- Speed up local recall searches in Kilo Core.
+- Stop inline skill-shell documentation examples from triggering permission prompts.
+- Omit persona details from generated session names.
+- Skip Kilo Core startup work for informational commands.
+- Make invalid tool-argument errors clearer and more actionable to the model.
+- Allow explicit external markdown sources in Kilo Core.
+- Handle SQLite lock errors more gracefully.
+
+### Changed
+
+- Bump the JetBrains CLI pin to Kilo CLI v7.4.20.
+- Include upstream OpenCode updates through v1.17.13.
+- Adopt upstream reasoning variant metadata from OpenCode v1.18.11.
+
+## [7.0.12] - 2026-08-01
+
+### Added
+
+- Support sending another JetBrains prompt while a session is still running. Queued prompts now appear in the conversation and can be removed before Kilo starts processing them.
+- Show verbatim skill commands and the skill name in JetBrains permission prompts so approvals are easier to review.
+- Add improved session changes and diff review, including branch changes in the session header, richer diff navigation, and full-context file diffs.
+- Support executing commands from skill context with batch approval.
+
+### Fixed
+
+- Keep JetBrains permission prompts deterministic, including queued permissions, compacted summaries, escaped skill names, and auto-approve transitions.
+- Improve JetBrains diff review reliability by restoring toolbar actions, aligning file headers, bounding branch-diff patch loading, and preserving promoted permissions.
+- Improve large branch diff performance by capping huge inline diff previews, compacting diff tree paths, and allowing horizontal scrolling for long file names.
+- Reflow existing long chat sessions after they load so transcripts lay out at the correct width without needing to resize the tool window.
+- Keep the prompt send/stop button synchronized when attachments are added, removed, or cleared while a session is busy.
+- Reduce transcript restyling work during streaming so large sessions remain responsive.
+- Prevent CLI agent loops from freezing when a provider stalls after response headers.
+- Enforce permissions for shell commands that cannot be scanned by the parser, and fail closed for untrusted or malformed skill command batches.
+- Keep session reverts atomic and make snapshot diffs more resilient on Windows.
+- Surface provider stream error details more clearly and keep retry handling consistent for rate limits and response stream failures.
+- Handle missing nested config unsets and remove unset config keys from layered config files.
+- Reduce CLI startup time by deferring Kilo module loading and telemetry work.
+
+### Changed
+
+- Bump the JetBrains CLI pin to Kilo CLI v7.4.17.
+- Include upstream OpenCode updates through v1.17.9.
+
+## [7.0.12-rc.4] - 2026-08-01
+
+### Fixed
+
+- Improve large branch diff performance by capping huge inline diff previews, compacting diff tree paths, and allowing horizontal scrolling for long file names.
+- Reflow existing long chat sessions after they load so transcripts lay out at the correct width without needing to resize the tool window.
+- Keep the prompt send/stop button synchronized when attachments are added, removed, or cleared while a session is busy.
+- Reduce transcript restyling work during streaming so large sessions remain responsive.
+- Hide expanded diff folder badges and refresh diff tree layout correctly when folders are toggled.
+
+## [7.0.12-rc.3] - 2026-07-31
+
+### Added
+
+- feat(agent-manager): add embedded side-panel terminal destination by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12598
+- feat(opencode): route websearch Exa through Kilo proxy by @IamCoder18 in https://github.com/Kilo-Org/kilocode/pull/12470
+- feat(agent-manager): reveal jump shortcut badges while modifier is held by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12631
+- feat(vscode): add prompt navigator rail to chat transcript by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12632
+- feat(agent-manager): support multiple side-panel terminals by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12633
+- feat(agent-manager): show worktree name on hover card by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12634
+- feat(tui): make Context and Token Usage sidebar sections collapsible by @IamCoder18 in https://github.com/Kilo-Org/kilocode/pull/11986
+- feat(tui): register `/auto-approve` slash command for toggling auto-approve mode by @IamCoder18 in https://github.com/Kilo-Org/kilocode/pull/12444
+- feat(i18n): mention @ file references in chat input placeholder by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/11984
+- feat(telemetry): include host OS properties by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12641
+- feat(vscode): add Persian (Farsi) UI language by @bsflasher in https://github.com/Kilo-Org/kilocode/pull/12424
+- feat(agent-manager): add diff scope selector by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12681
+- feat(agent-manager): run project scripts in the selected terminal by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12680
+- feat: configure web search availability for all providers by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12369
+- feat(tui): execute cmds in skill context by @bagatao-anaconda in https://github.com/Kilo-Org/kilocode/pull/12604
+- feat(vscode): multi-project Agent Manager by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12566
+- feat(agent-manager): key diff review by selection with per-session scope by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12709
+- feat(agent-manager): run setup scripts in panel terminal by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12703
+- feat(vscode): show verbatim skill commands and skill name in permission prompt by @bagatao-anaconda in https://github.com/Kilo-Org/kilocode/pull/12606
+- feat(jetbrains): show verbatim skill commands and skill name in permission prompt by @bagatao-anaconda in https://github.com/Kilo-Org/kilocode/pull/12724
+- feat(jetbrains): improve session changes and diff review by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12612
+
+### Fixed
+
+- fix(cli): enforce permissions on shell commands the parser fails to scan by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12585
+- fix(ci): docs-sync bot — no errors, no timeouts, no lost PRs by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12580
+- fix(cli): prevent agent-loop freeze when a provider stalls after headers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12588
+- fix(cli): keep session reverts atomic by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12587
+- fix(vscode): avoid eager worktree watchers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12593
+- fix(nix): use the required Bun version for builds by @noobezlol in https://github.com/Kilo-Org/kilocode/pull/12592
+- fix(vscode): show prompt input toggle tooltips instantly by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12591
+- fix: make snapshot diffs resilient on Windows by @noobezlol in https://github.com/Kilo-Org/kilocode/pull/12583
+- fix(cli): include credentials in console URLs printed for headless users by @IamCoder18 in https://github.com/Kilo-Org/kilocode/pull/12333
+- fix(vscode): make message copy buttons reliable by @mjnaderi in https://github.com/Kilo-Org/kilocode/pull/12123
+- fix(ci): authenticate JetBrains OpenAPI codegen GitHub API calls by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12603
+- fix(agent-manager): keep terminal destination consistent across windows by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12629
+- fix(vscode): speed up embedded terminal startup and fix cold-connection race by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12630
+- fix(cli): exclude gpt-5.6 from ChatGPT subscriptions by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12601
+- fix(vscode): stop flashing interruption warning on queued follow-up handoff by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12639
+- fix(cli): promote stable releases to rc by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12647
+- fix(agent-manager): keep terminal cursor visible by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12658
+- fix(ci): docs-sync bot passes --auto, drains its backlog, and reports readable causes; fix(cli): honest exit codes for headless runs by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12605
+- fix(vscode): persist MCP server toggle state by @Hardik180704 in https://github.com/Kilo-Org/kilocode/pull/12624
+- fix(vscode): improve long-session prompt navigation by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12656
+- fix(cli): remove unset config keys from every layered config file by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12687
+- fix(cli): reduce startup time by deferring Kilo module loading and telemetry work by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12682
+- fix(agent-manager): make Cmd+/ terminal toggle reliable and sidebar-safe by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12691
+- fix(vscode): list past chats across the worktree family by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12692
+- fix(core): include underlying reason in ripgrep execution failures by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12684
+- fix(agent-manager): open terminal when switching worktrees by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12689
+- fix(agent-manager): align panel terminal tabs with session tabs by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12693
+- fix(agent-manager): propagate base branch override to active diff source by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12696
+- fix(agent-manager): align Cmd+/ fallback with platform binding and one-shot echo by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12694
+- fix(cli): settle signal-terminated shell commands as 128 + signum by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12698
+- fix(memory): accept extra digest fields by @Hardik180704 in https://github.com/Kilo-Org/kilocode/pull/12675
+- fix: surface provider error details from Responses API stream failures by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12700
+- fix(docs-sync): intercept revert PRs and calibrate prompts by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12708
+- fix(vscode): restore Agent Manager terminals by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12720
+- fix(agent-manager): keep detail pane for unassigned sessions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12722
+- fix(cli): stabilize Windows CI tests and rebalance slow shards by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12723
+- fix(cli): handle missing nested config unsets by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12727
+- fix(indexing): improvements to semantic_search tool description by @shssoichiro in https://github.com/Kilo-Org/kilocode/pull/12227
+- fix(vscode): make cache hit rate write-aware by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12738
+- fix(cli): suppress AI SDK system message warning in TUI by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12739
+
+### Changed
+
+- release(jetbrains): v7.0.12-rc.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12581
+- chore(opencode): merge v1.17.6 through v1.17.9 by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12460
+- refactor(vscode): remove dead code from Agent Manager by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12594
+- refactor(vscode): remove unused webview context APIs and orphaned CSS by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12596
+- chore(vscode): remove unused translation keys by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12602
+- refactor(vscode): extract apply-to-local and worktree diff workflows out of AgentManagerApp by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12636
+- refactor(agent-manager): namespace terminal keys by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12635
+- refactor(vscode): share webview provider shell by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12648
+- refactor(agent-manager): consolidate import transaction by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12651
+- refactor(vscode): deduplicate config snapshots by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12650
+- chore(jetbrains): centralize test dependency versions by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/12608
+- docs(kilo-docs): add documentation for referencing past chats via @ mentions by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/12662
+- docs: document Shift+Tab shortcut for cycling reasoning effort variants by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/12661
+- docs(kilo-docs): mention JetBrains in auto-approve settings by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/12669
+- docs(kilo-docs): document JetBrains plugin settings by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/12668
+- docs: document mobile app remote sessions, PR review, and session cost by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/12667
+- docs(checkpoints): document revert banner warnings and snapshot restoration by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/12663
+- Update the Cerebras provider example by @ryanl-cerebras in https://github.com/Kilo-Org/kilocode/pull/12620
+- docs(agent-manager): document session overview, prompt, and stop by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/12660
+- refactor(cli): remove provably unused kilocode code by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12599
+- docs: add Mixlayer provider page by @sodiumsun in https://github.com/Kilo-Org/kilocode/pull/12500
+- docs(kilo-docs): document kilo cloud CLI usage and skill archives by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/12664
+- docs: add NVIDIA to BYOK providers by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12576
+- chore(jetbrains): bump CLI pin to v7.4.17 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12644
+- docs(cli): deprecate Kilo Console by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12701
+
+## [7.0.12-rc.2] - 2026-07-27
+
+### Added
+
+### Fixed
+
+- Fix the GitHub-hosted bundled JetBrains plugin build so signing uses certificate and private-key files during verification.
+
+### Changed
+
+## [7.0.12-rc.1] - 2026-07-27
+
+### Added
+
+- Support sending another JetBrains prompt while a session is still running. Queued prompts now appear in the conversation and can be removed before Kilo starts processing them.
+
+## [7.0.11] - 2026-07-27
+
+### Added
+
+- Add a signed GitHub-hosted bundled JetBrains plugin build that includes the Kilo CLI for offline or restricted-network installs.
+
+### Fixed
+
+- Load global skills reliably from JetBrains projects that are not inside a Git repository.
+- Support adaptive thinking for Claude Opus and Sonnet 5+ model identifiers across Anthropic, AI Gateway, and Bedrock providers.
+- Flush pending cloud session updates when the Kilo Core runtime shuts down, reducing cases where the final assistant message is missing when a session is reopened elsewhere.
+- Prune stale bundled CLI versions after upgrading bundled JetBrains installs.
+
+### Changed
+
+- Update the JetBrains CLI pin from Kilo Core 7.4.15 to 7.4.16.
+
+## [7.0.10] - 2026-07-24
+
+## [7.0.10] - 2026-07-24
+
+### Added
+
+- Render edit, write, and apply-patch tool results as expandable diff previews with clickable file links, change counts, syntax-highlighted diffs, and clearer multi-file patch sections.
+
+### Fixed
+
+- Improve session performance for large transcripts.
+- Fix Kilo Core failures caused by strict OpenAI-compatible compaction requests, unexpected provider finish reasons, read-only database files at startup, AWS profile credentials, and config files being rewritten just by reading them.
+
+### Changed
+
+- Update the JetBrains CLI pin from Kilo Core 7.4.13 to 7.4.15.
+
+## [7.0.9] - 2026-07-21
+
+### Added
+
+- Add a Rules settings page under Agent Behavior for managing instruction files and Claude Code compatibility.
+
+### Fixed
+
+- Restore importing cloud-only session history by updating the JetBrains CLI pin to Kilo Core 7.4.13.
+
+### Changed
+
+- Improve xAI prompt cache usage in Kilo Core for better cache hit rates.
+
+## [7.0.8] - 2026-07-21
+
+### Added
+
+- Add settings for context controls, including context mentions and ignore patterns.
+- Add settings for skills, including editing local skills and viewing remote skills as read-only.
+- Add auto-approve settings for permission rules, with filters and wildcard labels.
+- Use Kilo Core for JetBrains file mention search so @-mentions match CLI indexing behavior.
+
+### Fixed
+
+### Changed
+
+- Update the JetBrains CLI pin from Kilo Core 7.4.5 to 7.4.11.
 
 ## [7.0.7] - 2026-07-15
 

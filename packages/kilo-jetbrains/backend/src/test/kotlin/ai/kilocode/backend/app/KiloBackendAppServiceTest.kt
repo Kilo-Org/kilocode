@@ -9,7 +9,9 @@ import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
+import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.WatcherPatchDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -220,6 +222,28 @@ class KiloBackendAppServiceTest {
         assertEquals("high", cfg?.subagentVariant)
         assertEquals("google/gemini", cfg?.agent?.get("code")?.model)
         assertEquals("fast", svc.config?.agent?.get("code")?.variant)
+    }
+
+    @Test
+    fun `update config patches context settings and reloads`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(
+            watcher = WatcherPatchDto(ignore = listOf("**/dist/**", "tmp/**")),
+            compaction = CompactionPatchDto(auto = false, threshold_percent = 75.5, prune = false),
+        ))
+
+        assertEquals(
+            "{\"watcher\":{\"ignore\":[\"**/dist/**\",\"tmp/**\"]},\"compaction\":{\"auto\":false,\"threshold_percent\":75.5,\"prune\":false}}",
+            mock.lastConfigPatchBody,
+        )
+        val cfg = appStateDto(state).config
+        assertEquals(listOf("**/dist/**", "tmp/**"), cfg?.watcher?.ignore)
+        assertEquals(false, cfg?.compaction?.auto)
+        assertEquals(75.5, cfg?.compaction?.threshold_percent)
+        assertEquals(false, svc.config?.compaction?.prune)
     }
 
     @Test

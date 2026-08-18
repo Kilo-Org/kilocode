@@ -74,7 +74,7 @@ class PromptView(
 
     override fun styleFont(style: SessionEditorStyle) = style.transcriptFont
 
-    override fun styleBackground(style: SessionEditorStyle) = style.editorBackground
+    override fun styleBackground(style: SessionEditorStyle) = SessionUiStyle.View.Prompt.bgColor(style)
 
     private fun sync() {
         md.set(linkifyMentions(buffer.toString(), mentions))

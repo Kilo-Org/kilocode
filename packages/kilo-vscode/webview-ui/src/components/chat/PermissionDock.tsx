@@ -17,7 +17,13 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import { describePatterns, describeRule, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
+import {
+  describePatterns,
+  describeRule,
+  displaySkillCommand,
+  savedRuleStates,
+  type RuleDecision,
+} from "./permission-dock-utils"
 import { PermissionCommand } from "./PermissionCommand"
 import { PermissionDiff } from "./PermissionDiff"
 import { permissionDiffs } from "./permission-diff-utils"
@@ -37,6 +43,12 @@ export const PermissionDock: Component<{
   const { config } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
+  // Skill shell batches are never persisted, so they show no auto-approve rules. The command
+  // list is only shown for the bash ask; the sibling external_directory ask (same skillShell
+  // metadata) keeps its normal directory rendering.
+  const skillShell = () => props.request.args?.skillShell === true
+  const skillShellCommands = () =>
+    skillShell() && props.request.toolName === "bash" ? (props.request.args?.commands ?? []) : []
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
   const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
@@ -50,6 +62,7 @@ export const PermissionDock: Component<{
   }
   const text = (rule: string) => (command() ? label(rule) : describeRule(props.request.toolName, rule, language.t))
   const external = () => props.request.toolName === "external_directory"
+  const sandboxEscalation = () => props.request.toolName === "sandbox_escalation"
   const cmdDescription = () => {
     const val = props.request.args?.description
     return typeof val === "string" && val.length > 0 ? val : undefined
@@ -69,7 +82,7 @@ export const PermissionDock: Component<{
 
   let root!: HTMLDivElement
 
-  const hasRules = () => rules().length > 0
+  const hasRules = () => rules().length > 0 && !skillShell()
 
   const toggleExpanded = () => {
     const next = !expanded()
@@ -116,8 +129,16 @@ export const PermissionDock: Component<{
     return value
   }
 
-  const title = () =>
-    fromChild() ? language.t("notification.permission.titleSubagent") : language.t("notification.permission.title")
+  const title = () => {
+    if (sandboxEscalation()) return language.t("notification.permission.titleSandboxEscalation")
+    const skill = props.request.args?.skill
+    if (skillShell() && typeof skill === "string" && skill.length > 0)
+      // Escape the untrusted skill name so bidi/control chars can't reorder the header text.
+      return language.t("notification.permission.titleSkillShell", { skill: displaySkillCommand(skill) })
+    return fromChild()
+      ? language.t("notification.permission.titleSubagent")
+      : language.t("notification.permission.title")
+  }
 
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
@@ -268,36 +289,58 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
-        <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
-        <Show when={command()}>{(cmd) => <PermissionCommand command={cmd()} />}</Show>
+        {/* Everything above the buttons scrolls: a long command or a large diff must never
+            push Allow/Deny out of the clipped chat view. */}
+        <div data-slot="permission-scroll">
+          {/* Pierre's virtualizer uses the scroll root's first child as its content
+              container, so keep all variable-height permission content in one wrapper. */}
+          <div data-slot="permission-scroll-content">
+            <Show
+              when={skillShellCommands().length > 0}
+              fallback={
+                <>
+                  <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
+                  <Show when={command()}>
+                    {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
+                  </Show>
 
-        {(() => {
-          const desc = description()
-          if (!desc)
-            return !command() && toolDescription() ? <div data-slot="permission-hint">{toolDescription()}</div> : null
-          if (desc.kind === "single")
-            return (
-              <div
-                data-slot="permission-hint"
-                data-wrap={external() ? "" : undefined}
-                title={external() ? desc.text : undefined}
-              >
-                {desc.text}
+                  {(() => {
+                    const desc = description()
+                    if (!desc)
+                      return !command() && toolDescription() ? (
+                        <div data-slot="permission-hint">{toolDescription()}</div>
+                      ) : null
+                    if (desc.kind === "single")
+                      return (
+                        <div
+                          data-slot="permission-hint"
+                          data-wrap={external() ? "" : undefined}
+                          title={external() ? desc.text : undefined}
+                        >
+                          {desc.text}
+                        </div>
+                      )
+                    return (
+                      <div data-slot="permission-patterns">
+                        <span data-slot="permission-patterns-title">{desc.title}</span>
+                        <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
+                      </div>
+                    )
+                  })()}
+                </>
+              }
+            >
+              {/* Verbatim commands (args.commands), control-char/bidi-escaped so the displayed command matches execution. */}
+              <For each={skillShellCommands()}>{(cmd) => <PermissionCommand command={displaySkillCommand(cmd)} />}</For>
+            </Show>
+
+            <Show when={diffs().length > 0}>
+              <div data-slot="permission-diffs" data-count={diffs().length}>
+                <For each={diffs()}>{(diff) => <PermissionDiff filediff={diff} />}</For>
               </div>
-            )
-          return (
-            <div data-slot="permission-patterns">
-              <span data-slot="permission-patterns-title">{desc.title}</span>
-              <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
-            </div>
-          )
-        })()}
-
-        <Show when={diffs().length > 0}>
-          <div data-slot="permission-diffs" data-count={diffs().length}>
-            <For each={diffs()}>{(diff) => <PermissionDiff filediff={diff} />}</For>
+            </Show>
           </div>
-        </Show>
+        </div>
 
         <div data-slot="permission-actions">
           <Button

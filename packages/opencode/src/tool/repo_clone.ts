@@ -1,8 +1,9 @@
 import { Effect, Schema } from "effect"
 import DESCRIPTION from "./repo_clone.txt"
 import * as Tool from "./tool"
-import { repositoryCachePath } from "@/util/repository"
-import { RepositoryCache } from "@/reference/repository-cache"
+import { Global } from "@opencode-ai/core/global" // kilocode_change
+import { Repository } from "@opencode-ai/core/repository" // kilocode_change
+import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 
 export const Parameters = Schema.Struct({
   repository: Schema.String.annotate({
@@ -36,12 +37,12 @@ export const RepoCloneTool = Tool.define<typeof Parameters, Metadata, Repository
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
-          const reference = yield* RepositoryCache.parseRemoteReference(params.repository)
+          const reference = yield* RepositoryCache.parseRemote(params.repository)
           if (params.branch) yield* RepositoryCache.validateBranch(params.branch)
 
           const repository = reference.label
           const remote = reference.remote
-          const localPath = repositoryCachePath(reference)
+          const localPath = Repository.cachePath(Global.Path.repos, reference)
 
           yield* ctx.ask({
             permission: "repo_clone",

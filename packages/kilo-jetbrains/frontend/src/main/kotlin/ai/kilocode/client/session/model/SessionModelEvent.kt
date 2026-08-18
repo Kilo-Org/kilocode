@@ -60,6 +60,9 @@ sealed class SessionModelEvent {
     data class RevertChanged(val revert: SessionRevertDto?) : SessionModelEvent() {
         override fun toString() = "RevertChanged ${revert?.messageID ?: "none"}"
     }
+    data class QueueChanged(val queued: Set<String>) : SessionModelEvent() {
+        override fun toString() = "QueueChanged [${queued.sorted().joinToString(", ")}]"
+    }
     data class HeaderUpdated(val header: SessionHeaderSnapshot) : SessionModelEvent() {
         override fun toString() = "HeaderUpdated visible=${header.visible}"
     }

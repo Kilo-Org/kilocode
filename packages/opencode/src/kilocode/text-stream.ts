@@ -62,11 +62,6 @@ export function abortable(stream: Readable, signal?: AbortSignal) {
   return signal ? addAbortSignal(signal, stream) : stream
 }
 
-/** UTF-8 text stream backed by an already-open file. */
-export function openUtf8(open: () => Readable, signal?: AbortSignal): Readable {
-  return utf8(open, signal).stream
-}
-
 export function safeSlice(text: string, end: number) {
   const sliced = text.slice(0, end)
   const last = sliced.charCodeAt(sliced.length - 1)

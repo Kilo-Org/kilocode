@@ -3,15 +3,15 @@ import { UI } from "@/cli/ui"
 import type { NetworkOptions } from "@/cli/network"
 import { ServerAuth } from "@/server/auth"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { errorMessage } from "@/util/error"
-import { TuiConfig } from "@/cli/cmd/tui/config/tui"
-import { validateSession } from "@/cli/cmd/tui/validate-session"
-import { importCloudSession } from "@/kilocode/cloud-session"
+import { errorMessage } from "@opencode-ai/tui/util/error"
+import { TuiConfig } from "@/config/tui"
+import { validateSession } from "@/cli/tui/validate-session"
+import { importCloudSession, reportCloudImportError } from "@/kilocode/cloud-session"
 import { DaemonClient } from "@/kilocode/daemon/client"
 import { createKiloClient } from "@kilocode/sdk/v2"
 
-type TuiInput = Parameters<typeof import("@/cli/cmd/tui/app").tui>[0]
-export type StartInput = Omit<TuiInput, "renderer">
+type TuiInput = import("@opencode-ai/tui").TuiInput
+export type StartInput = Omit<TuiInput, "pluginHost">
 
 type Args = NetworkOptions & {
   prompt?: string
@@ -39,12 +39,14 @@ async function session(input: Input, daemon: DaemonClient.Connection) {
     directory: input.cwd,
     headers: daemon.headers,
   })
-  const id = await importCloudSession(client, input.args.session).catch(() => undefined)
-  if (id) return { ok: true as const, id }
-
-  UI.error("Failed to import session from cloud")
-  process.exitCode = 1
-  return { ok: false as const }
+  try {
+    const id = await importCloudSession(client, input.args.session)
+    return { ok: true as const, id }
+  } catch (err) {
+    reportCloudImportError(err)
+    process.exitCode = 1
+    return { ok: false as const }
+  }
 }
 
 export namespace KiloTuiThreadDaemon {

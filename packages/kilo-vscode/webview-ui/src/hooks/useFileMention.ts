@@ -1,20 +1,45 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
-import type { FileAttachment, WebviewMessage, ExtensionMessage } from "../types/messages"
+import type {
+  FileAttachment,
+  FileSearchItem,
+  SessionSearchItem,
+  WebviewMessage,
+  ExtensionMessage,
+} from "../types/messages"
 import {
   AT_PATTERN,
   syncMentionedPaths as _syncMentionedPaths,
   buildFileAttachments,
   buildMentionResults,
+  buildSessionAttachments,
   filterMentionResults,
   isCursorAtMentionEnd,
   getMentionRemovalRange,
   findMentionRange,
+  sessionMentionText,
+  sessionMentionToken,
+  syncMentionedSessions as _syncMentionedSessions,
   FILE_PICKER_RESULT,
   type MentionResult,
 } from "./file-mention-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
+const FILE_SEARCH_CACHE_MS = 5000
+const FILE_SEARCH_CACHE_LIMIT = 8
+
+type FileSearchCache = {
+  items: Array<FileSearchItem | string>
+  updated: number
+  revision: number
+}
+
+type FileSearchRequest = {
+  id: string
+  query: string
+  scope: string
+  revision: number
+}
 
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
@@ -23,6 +48,12 @@ interface VSCodeContext {
 
 export interface FileMention {
   mentionedPaths: Accessor<Set<string>>
+  /** Mentioned past chats, keyed by their `@title` token in the text. */
+  mentionedSessions: Accessor<Map<string, SessionSearchItem>>
+  /** Whether the past-chat session picker (AM-style search) is open. */
+  sessionPicker: Accessor<boolean>
+  /** Directory-scoped past chats shown in the session picker. */
+  sessionCandidates: Accessor<SessionSearchItem[]>
   mentionResults: Accessor<MentionResult[]>
   mentionIndex: Accessor<number>
   showMention: Accessor<boolean>
@@ -75,6 +106,18 @@ export interface FileMention {
    * cannot correctly rediscover paths containing spaces from raw text alone.
    */
   seedFromParts: (paths: string[], text: string) => void
+  /**
+   * Seed mentioned past chats (e.g. from a reverted message's session
+   * attachments), then prune against `text`.
+   */
+  seedSessions: (sessions: SessionSearchItem[], text: string) => void
+  /** Insert a session picked from the past-chat picker as an @-mention. */
+  selectSession: (
+    session: SessionSearchItem,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) => void
 }
 
 export function useFileMention(
@@ -83,17 +126,29 @@ export function useFileMention(
   git?: Accessor<boolean>,
 ): FileMention {
   const [mentionedPaths, setMentionedPaths] = createSignal<Set<string>>(new Set())
+  const [mentionedSessions, setMentionedSessions] = createSignal<Map<string, SessionSearchItem>>(new Map())
   const [mentionQuery, setMentionQuery] = createSignal<string | null>(null)
   const [mentionResults, setMentionResults] = createSignal<MentionResult[]>([])
   const [mentionIndex, setMentionIndex] = createSignal(0)
+  const [sessionPicker, setSessionPicker] = createSignal(false)
+  const [sessionCandidates, setSessionCandidates] = createSignal<SessionSearchItem[]>([])
   let workspaceDir = ""
+  const cache = new Map<string, FileSearchCache>()
+  const dirs = new Map<string, string>()
   // Accumulates every path ever mentioned so syncMentionedPaths can
   // rediscover them after a native undo restores the text.
   const knownPaths = new Set<string>()
+  // Same accumulation for past-chat mentions, keyed by their exact visible
+  // token. Duplicate titles receive a numeric suffix so they cannot overwrite.
+  const knownSessions = new Map<string, SessionSearchItem>()
 
   let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
   let fileSearchCounter = 0
+  let fileSearchRevision = 0
+  let fileSearchRequest: FileSearchRequest | undefined
+  let prewarmRequest: FileSearchRequest | undefined
   let filePickerCounter = 0
+  let sessionSearchCounter = 0
   let pickerState: {
     requestId: string
     textarea: HTMLTextAreaElement
@@ -105,19 +160,121 @@ export function useFileMention(
   let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
 
   const showMention = () => mentionQuery() !== null
+  const scope = () => sessionID?.() ?? ""
+  let activeScope = scope()
+
+  const syncScope = () => {
+    const value = scope()
+    if (value === activeScope) return value
+    activeScope = value
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRevision++
+    fileSearchRequest = undefined
+    prewarmRequest = undefined
+    workspaceDir = dirs.get(value) ?? ""
+    setMentionResults([])
+    setMentionIndex(0)
+    return value
+  }
+
+  const readCache = (dir: string): Array<FileSearchItem | string> => {
+    if (!dir) return []
+    const entry = cache.get(dir)
+    if (!entry) return []
+    if (Date.now() - entry.updated <= FILE_SEARCH_CACHE_MS) return entry.items
+    cache.delete(dir)
+    return []
+  }
+
+  const writeCache = (dir: string, items: Array<FileSearchItem | string>, revision: number) => {
+    if (!dir) return
+    const entry = cache.get(dir)
+    if (entry && entry.revision > revision) return
+    cache.delete(dir)
+    cache.set(dir, { items, updated: Date.now(), revision })
+    while (cache.size > FILE_SEARCH_CACHE_LIMIT) {
+      const oldest = cache.keys().next().value
+      if (!oldest) return
+      cache.delete(oldest)
+    }
+  }
+
+  const writeDir = (id: string, dir: string) => {
+    dirs.delete(id)
+    dirs.set(id, dir)
+    while (dirs.size > FILE_SEARCH_CACHE_LIMIT) {
+      const oldest = dirs.keys().next().value
+      if (oldest === undefined) return
+      dirs.delete(oldest)
+    }
+  }
+
+  const replaceResults = (items: MentionResult[]) => {
+    const index = mentionIndex()
+    const selected = mentionResults()[index]
+    setMentionResults(items)
+    if (!selected) {
+      setMentionIndex(0)
+      return
+    }
+    const next = items.findIndex((item) => item.type === selected.type && item.value === selected.value)
+    setMentionIndex(next >= 0 ? next : Math.min(index, Math.max(items.length - 1, 0)))
+  }
 
   createEffect(() => {
     if (!showMention()) setMentionIndex(0)
   })
 
+  createEffect(() => {
+    const id = syncScope()
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRequest = undefined
+    setMentionQuery(null)
+    setMentionResults([])
+    setMentionIndex(0)
+    const revision = ++fileSearchRevision
+    const requestId = `file-search-prewarm-${revision}`
+    prewarmRequest = { id: requestId, query: "", scope: id, revision }
+    vscode.postMessage({
+      type: "requestFileSearch",
+      query: "",
+      requestId,
+      ...(id ? { sessionID: id } : {}),
+    })
+  })
+
   const unsubscribe = vscode.onMessage((message) => {
-    if (message.type !== "fileSearchResult") return
-    if (message.requestId === `file-search-${fileSearchCounter}`) {
-      const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
-      workspaceDir = message.dir
-      setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
-      setMentionIndex(0)
+    if (message.type === "sessionSearchResult") {
+      if (message.requestId !== `session-search-${sessionSearchCounter}`) return
+      // Most recently updated first; with a query the List re-ranks by fuzzy score.
+      setSessionCandidates(
+        message.sessions
+          .map((session) => ({ ...session, title: sessionMentionText(session.title) }))
+          .filter((session) => session.title)
+          .sort((a, b) => b.updated - a.updated),
+      )
+      return
     }
+    if (message.type !== "fileSearchResult") return
+    const request =
+      message.requestId === fileSearchRequest?.id
+        ? fileSearchRequest
+        : message.requestId === prewarmRequest?.id
+          ? prewarmRequest
+          : undefined
+    if (!request || request.scope !== scope()) return
+    if (request === fileSearchRequest) fileSearchRequest = undefined
+    if (request === prewarmRequest) prewarmRequest = undefined
+    if (request.revision < fileSearchRevision) return
+
+    const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
+    if (message.dir) {
+      writeDir(request.scope, message.dir)
+      workspaceDir = message.dir
+    }
+    if (!request.query) writeCache(message.dir, items, request.revision)
+    if (!showMention() || request.query !== mentionQuery()) return
+    replaceResults(buildMentionResults(request.query, items, git?.() ?? true))
   })
 
   onCleanup(() => {
@@ -128,25 +285,59 @@ export function useFileMention(
 
   const requestFileSearch = (query: string) => {
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
-    fileSearchTimer = setTimeout(() => {
-      fileSearchCounter++
-      const id = sessionID?.()
+    const revision = ++fileSearchRevision
+    const request = {
+      id: `file-search-${++fileSearchCounter}`,
+      query,
+      scope: syncScope(),
+      revision,
+    }
+    fileSearchRequest = request
+    const send = () => {
       vscode.postMessage({
         type: "requestFileSearch",
         query,
-        requestId: `file-search-${fileSearchCounter}`,
-        ...(id ? { sessionID: id } : {}),
+        requestId: request.id,
+        ...(request.scope ? { sessionID: request.scope } : {}),
       })
-    }, FILE_SEARCH_DEBOUNCE_MS)
+    }
+    if (!query) {
+      send()
+      return
+    }
+    fileSearchTimer = setTimeout(send, FILE_SEARCH_DEBOUNCE_MS)
   }
 
   const closeMention = () => {
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRevision++
+    fileSearchRequest = undefined
     setMentionQuery(null)
     setMentionResults([])
+    setSessionPicker(false)
+  }
+
+  const closeSessionPicker = () => {
+    setSessionPicker(false)
   }
 
   const syncMentionedPaths = (text: string) => {
     setMentionedPaths(() => _syncMentionedPaths(knownPaths, text))
+    setMentionedSessions(() => _syncMentionedSessions(knownSessions, text))
+  }
+
+  // The past-chat picker searches a directory-scoped session list client-side
+  // (fuzzysort via the kilo-ui List component, same as the Agent Manager
+  // session search). Candidates are refetched each time the picker opens.
+  const openSessionPicker = () => {
+    setSessionPicker(true)
+    sessionSearchCounter++
+    const id = sessionID?.()
+    vscode.postMessage({
+      type: "requestSessionSearch",
+      requestId: `session-search-${sessionSearchCounter}`,
+      ...(id ? { sessionID: id } : {}),
+    })
   }
 
   const selectMention = (
@@ -172,10 +363,18 @@ export function useFileMention(
       return
     }
 
+    if (result.type === "past-chats") {
+      // Switch the dropdown into the AM-style session search; the actual
+      // insertion happens when a session is picked there.
+      openSessionPicker()
+      return
+    }
+
     // Add to knownPaths BEFORE execCommand so syncMentionedPaths (triggered
     // by the input event) can discover the new path.
     if (result.type === "file" || result.type === "folder" || result.type === "opened-file")
       knownPaths.add(result.value)
+    if (result.type === "session") knownSessions.set(result.value, result.session)
 
     // Replace the @query with the selected @path via execCommand so the
     // change lands on the browser's native undo stack. AT_PATTERN is
@@ -184,6 +383,10 @@ export function useFileMention(
     const prefix = /^\s/.test(match[0]) ? 1 : 0
     const atPos = match.index! + prefix
     const suffix = /^\s/.test(after) ? "" : " "
+    // Restore focus before execCommand: pickers (session search, native file
+    // dialog) move focus away from the textarea, which makes execCommand
+    // silently no-op.
+    textarea.focus()
     suppress = true
     try {
       textarea.setSelectionRange(atPos, cursor)
@@ -196,23 +399,47 @@ export function useFileMention(
 
     if (result.type === "file" || result.type === "folder" || result.type === "opened-file")
       setMentionedPaths((prev) => new Set([...prev, result.value]))
+    if (result.type === "session") setMentionedSessions((prev) => new Map(prev).set(result.value, result.session))
     closeMention()
     onSelect?.()
   }
+
+  const selectSession = (
+    session: SessionSearchItem,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) =>
+    selectMention(
+      { type: "session", value: sessionMentionToken(session, knownSessions), session },
+      textarea,
+      setText,
+      onSelect,
+    )
 
   // When true, onInput skips dropdown logic (used during execCommand changes)
   let suppress = false
 
   const onInput = (val: string, cursor: number) => {
+    syncScope()
     syncMentionedPaths(val)
     if (suppress) return
+    closeSessionPicker()
     const before = val.substring(0, cursor)
     const match = before.match(AT_PATTERN)
     if (match) {
       const query = match[1] ?? ""
       setMentionQuery(query)
+      const items = readCache(workspaceDir)
+      if (!query) {
+        setMentionResults(buildMentionResults("", items, git?.() ?? true))
+        setMentionIndex(0)
+        requestFileSearch("")
+        return
+      }
       setMentionResults((prev) => {
-        const next = filterMentionResults(query, prev)
+        const base = prev.length ? prev : buildMentionResults("", items, git?.() ?? true)
+        const next = filterMentionResults(query, base)
         if (next.length) return next
         return buildMentionResults(query, [], git?.() ?? true)
       })
@@ -269,8 +496,14 @@ export function useFileMention(
     })
   }
 
-  const parseFileAttachments = (text: string): FileAttachment[] =>
-    buildFileAttachments(text, mentionedPaths(), workspaceDir)
+  // Mention tokens that count as atomic units for cursor movement, deletion
+  // and selection snapping: file paths plus past-chat title tokens.
+  const mentionTokens = () => new Set([...mentionedPaths(), ...mentionedSessions().keys()])
+
+  const parseFileAttachments = (text: string): FileAttachment[] => [
+    ...buildFileAttachments(text, mentionedPaths(), workspaceDir),
+    ...buildSessionAttachments(text, mentionedSessions()),
+  ]
 
   const handleBackspace = (
     e: KeyboardEvent,
@@ -286,12 +519,12 @@ export function useFileMention(
 
     const charBefore = val[cursor - 1]
     if (charBefore !== " " && charBefore !== "\n") return false
-    if (!isCursorAtMentionEnd(val, cursor - 1, mentionedPaths())) return false
+    if (!isCursorAtMentionEnd(val, cursor - 1, mentionTokens())) return false
 
     // Cursor is on the space right after a mention — remove the entire
     // mention + trailing space in one step via execCommand so the change
     // lands on the browser's native undo stack.
-    const range = getMentionRemovalRange(val, cursor - 1, mentionedPaths())
+    const range = getMentionRemovalRange(val, cursor - 1, mentionTokens())
     if (!range) return false
 
     e.preventDefault()
@@ -319,7 +552,7 @@ export function useFileMention(
 
     if (start === pending.prevPosition) return
 
-    const range = findMentionRange(pending.prevValue, start, mentionedPaths())
+    const range = findMentionRange(pending.prevValue, start, mentionTokens())
     if (!range) return
 
     const pos = start > pending.prevPosition ? range.end : range.start
@@ -363,7 +596,7 @@ export function useFileMention(
     }
 
     const val = textarea.value
-    const paths = mentionedPaths()
+    const paths = mentionTokens()
     let snapped = start
     let snappedEnd = end
 
@@ -450,8 +683,19 @@ export function useFileMention(
     syncMentionedPaths(text)
   }
 
+  const seedSessions = (sessions: SessionSearchItem[], text: string) => {
+    for (const session of sessions) {
+      const token = sessionMentionText(session.title)
+      if (token) knownSessions.set(token, { ...session, title: token })
+    }
+    syncMentionedPaths(text)
+  }
+
   return {
     mentionedPaths,
+    mentionedSessions,
+    sessionPicker,
+    sessionCandidates,
     mentionResults,
     mentionIndex,
     showMention,
@@ -468,5 +712,7 @@ export function useFileMention(
     seedFromText,
     insertFilePickerResult,
     seedFromParts,
+    seedSessions,
+    selectSession,
   }
 }

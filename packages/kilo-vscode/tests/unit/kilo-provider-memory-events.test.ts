@@ -28,18 +28,6 @@ function status(root: string) {
   }
 }
 
-function show(root: string) {
-  return {
-    root: `${root}/.kilo/memory`,
-    state: status(root).state,
-    sources: { project: "", environment: "", corrections: "" },
-    index: "",
-    items: "",
-    changes: "",
-    decisions: "",
-  }
-}
-
 describe("KiloProvider memory events", () => {
   it("routes tracked background memory events to their session directory", async () => {
     const calls: string[] = []
@@ -139,6 +127,43 @@ describe("KiloProvider memory events", () => {
     expect(calls).toEqual(["/repo", "/repo"])
   })
 
+  it("refreshes status without forwarding transient memory errors", async () => {
+    const calls: string[] = []
+    const posts: unknown[] = []
+    const client = {
+      memory: {
+        status: async (input: { directory: string }) => {
+          calls.push(input.directory)
+          return { data: status(input.directory) }
+        },
+      },
+    } as unknown as KiloClient
+    const provider = new KiloProvider(
+      {} as never,
+      {
+        getClient: () => client,
+      } as never,
+    )
+    const item = provider as unknown as Internals
+    item.webview = { postMessage: async (message) => posts.push(message) }
+    item.currentSession = { id: "ses_active" }
+    item.trackedSessionIds.add("ses_active")
+    provider.setSessionDirectory("ses_active", "/repo")
+
+    item.handleEvent(
+      {
+        type: "memory.error",
+        properties: { sessionID: "ses_active", reason: "transient" },
+      },
+      "/repo",
+    )
+    await item.memory.idle()
+
+    expect(posts).not.toContainEqual(expect.objectContaining({ type: "memoryEvent" }))
+    expect(posts).toContainEqual(expect.objectContaining({ type: "memoryLoaded", sessionID: "ses_active" }))
+    expect(calls).toEqual(["/repo"])
+  })
+
   it("uses the project directory when toggling memory", async () => {
     const calls: unknown[] = []
     const client = {
@@ -150,10 +175,6 @@ describe("KiloProvider memory events", () => {
         disable: async (input: { directory: string }) => {
           calls.push(["disable", input.directory])
           return { data: { root: `${input.directory}/.kilo/memory`, state: status(input.directory).state } }
-        },
-        show: async (input: { directory: string }) => {
-          calls.push(["show", input.directory])
-          return { data: show(input.directory) }
         },
       },
     } as unknown as KiloClient
@@ -176,7 +197,6 @@ describe("KiloProvider memory events", () => {
       ["status", "/repo/project"],
       ["disable", "/repo/project"],
       ["status", "/repo/project"],
-      ["show", "/repo/project"],
     ])
     expect(posts).toContainEqual(expect.objectContaining({ type: "memoryLoaded", sessionID: "ses_active" }))
   })

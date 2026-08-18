@@ -1,11 +1,11 @@
 // kilocode_change - new file
 import { EOL } from "os"
-import { Config } from "../../config/config"
-import { AppRuntime } from "../../effect/app-runtime"
-import { bootstrap } from "../bootstrap"
 import { cmd } from "./cmd"
 import { UI } from "../ui"
 
+// Keep the top-level import graph light: this module is registered eagerly at CLI
+// startup, so implementation dependencies are imported inside the handler (same
+// deferral pattern as upstream opencode#30453).
 export const ConfigCommand = cmd({
   command: "config",
   describe: "configuration tools",
@@ -15,6 +15,9 @@ export const ConfigCommand = cmd({
         command: "check",
         describe: "check configuration for warnings and errors",
         async handler() {
+          const { bootstrap } = await import("../bootstrap")
+          const { AppRuntime } = await import("../../effect/app-runtime")
+          const { Config } = await import("../../config/config")
           await bootstrap(process.cwd(), async () => {
             const list = await AppRuntime.runPromise(Config.Service.use((svc) => svc.warnings()))
             if (list.length === 0) {

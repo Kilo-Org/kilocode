@@ -242,6 +242,7 @@ type ProviderInternals = {
   fetchAndSendSandboxDefault: (directory?: string, requestID?: string) => Promise<void>
   handleSetSandboxDefault: (enabled: boolean, requestID: string, directory?: string) => Promise<void>
   handleToggleSandbox: (input: { sessionID: string; requestID: string }) => Promise<void>
+  refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
 }
@@ -811,6 +812,39 @@ describe("KiloProvider revert ordering", () => {
 })
 
 describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
+  it("recovers the session Git directory from loaded tool history", async () => {
+    const client = createClient({
+      messagesData: [
+        {
+          ...mkMessage("m1", "assistant", 1),
+          parts: [
+            {
+              type: "tool",
+              tool: "edit",
+              state: {
+                status: "completed",
+                input: { filePath: "/repo/frontend/src/app.ts" },
+                metadata: { filediff: { file: "/repo/frontend/src/app.ts" } },
+              },
+            },
+          ],
+        },
+      ],
+    })
+    const { internal } = makeProvider(client)
+    const calls: Array<{ directory?: string; sessionID?: string }> = []
+    const recovered = defer<void>()
+    internal.refreshGitStatus = async (directory, sessionID) => {
+      calls.push({ directory, sessionID })
+      if (directory === "/repo/frontend/src") recovered.resolve()
+    }
+
+    await internal.handleLoadMessages("s1")
+    await recovered.promise
+
+    expect(calls).toContainEqual({ directory: "/repo/frontend/src", sessionID: "s1" })
+  })
+
   it("stops background processes for the previous session when switching sessions", async () => {
     const client = createClient({
       sessionData: { id: "s2", directory: "/repo/worktree", time: { created: 1, updated: 1 } },

@@ -19,17 +19,25 @@
 // different return shape — see the TODO at the bottom of OpencodeCli.
 import { test, type TestOptions } from "bun:test"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppProcess } from "@opencode-ai/core/process"
-import { Deferred, Duration, Effect, Layer, Queue, Scope, Stream } from "effect"
+import { Deferred, Duration, Effect, Layer, Queue, Schedule, Scope, Stream } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/unstable/http"
 import { ChildProcess } from "effect/unstable/process"
 import path from "node:path"
 import { TestLLMServer } from "./llm-server"
 import { testProviderConfig } from "./test-provider"
 import { it } from "./effect"
+import { TestCli } from "../../script/kilocode/test-cli" // kilocode_change
 
 const opencodeRoot = path.resolve(import.meta.dir, "../../")
 const cliEntry = path.join(opencodeRoot, "src/index.ts")
+// kilocode_change start - reuse the runner's once-built CLI graph instead of transpiling it in every child
+const cliArgs = process.env[TestCli.ENV]
+  ? ["run", process.env[TestCli.ENV]]
+  : ["run", "--conditions=browser", "--preload=@opentui/solid/preload", cliEntry]
+// kilocode_change end
 
 export const testModelID = "test/test-model"
 
@@ -82,6 +90,11 @@ export type RunResult = {
   readonly durationMs: number
 }
 
+export type RunHandle = {
+  readonly interrupt: () => void
+  readonly result: Effect.Effect<RunResult>
+}
+
 export type SpawnOpts = { readonly timeoutMs?: number; readonly env?: Record<string, string> }
 
 // Typed equivalent of constructing argv for `opencode run`. New flags should
@@ -92,6 +105,7 @@ export type RunOpts = SpawnOpts & {
   readonly format?: "default" | "json"
   readonly command?: string
   readonly printLogs?: boolean
+  readonly permission?: Record<string, "ask" | "allow" | "deny">
   readonly extraArgs?: string[]
 }
 
@@ -147,6 +161,7 @@ export type AcpHandle = {
 export type OpencodeCli = {
   // High-level: run a single prompt against the test model. Short-lived.
   readonly run: (message: string, opts?: RunOpts) => Effect.Effect<RunResult>
+  readonly startRun: (message: string, opts?: RunOpts) => Effect.Effect<RunHandle, never, Scope.Scope>
   // Spawn `opencode serve` and wait until it's listening. Long-lived: the
   // returned handle is killed when the caller's Scope closes. Fails if the
   // listening line doesn't appear within `readyTimeoutMs`.
@@ -185,25 +200,29 @@ export function withCliFixture<A, E>(
     const fs = yield* FSUtil.Service
     const appProc = yield* AppProcess.Service
 
-    // FileSystem.makeTempDirectoryScoped handles both creation and scope-tied
-    // cleanup — replaces the old mkdir + addFinalizer pair.
-    const home = yield* fs.makeTempDirectoryScoped({ prefix: "oc-cli-" })
+    const home = yield* fs.makeTempDirectory({ prefix: "oc-cli-" })
+    yield* Effect.addFinalizer(() =>
+      fs
+        .remove(home, { recursive: true })
+        .pipe(Effect.retry(Schedule.spaced("50 millis").pipe(Schedule.both(Schedule.recurs(20)))), Effect.ignore),
+    )
 
     const configJson = JSON.stringify(testProviderConfig(llm.url))
     const env = isolatedEnv(home, configJson)
 
     const spawn = Effect.fn("opencode.spawn")(function* (args: string[], opts?: SpawnOpts) {
       const start = Date.now()
-      const timeoutMs = opts?.timeoutMs ?? 30_000
+      const timeoutMs = opts?.timeoutMs ?? 45_000 // kilocode_change - current full CLI startup leaves less than 30s for multi-step runs
       // stdin: "ignore" so the child doesn't see a piped stdin and block
       // on `Bun.stdin.text()` (see src/cli/cmd/run.ts — non-TTY stdin is
       // consumed as the prompt). The old Process.run wrapper defaulted to
       // ignore; ChildProcess.make defaults to pipe, so we set it explicitly.
-      const command = ChildProcess.make("bun", ["run", "--conditions=browser", cliEntry, ...args], {
+      const command = ChildProcess.make("bun", [...cliArgs, ...args], {
         cwd: home,
         env: { ...env, ...opts?.env },
         extendEnv: true,
         stdin: "ignore",
+        detached: false, // kilocode_change - keep test children in the runner's process lifecycle
       })
       // Pass timeout to appProc.run rather than wrapping with
       // Effect.timeoutOrElse externally: AppProcess.run is itself scoped, so
@@ -230,13 +249,13 @@ export function withCliFixture<A, E>(
       )
       return {
         exitCode: result.exitCode,
-        stdout: result.stdout.toString(),
-        stderr: result.stderr.toString(),
+        stdout: normalizeLines(result.stdout.toString()),
+        stderr: normalizeLines(result.stderr.toString()),
         durationMs: Date.now() - start,
       }
     })
 
-    const run = (message: string, opts?: RunOpts): Effect.Effect<RunResult> => {
+    const runArgs = (message: string, opts?: RunOpts) => {
       const argv: string[] = ["run"]
       if (opts?.printLogs) argv.push("--print-logs")
       argv.push("--model", opts?.model ?? testModelID)
@@ -245,8 +264,60 @@ export function withCliFixture<A, E>(
       if (opts?.command) argv.push("--command", opts.command)
       if (opts?.extraArgs) argv.push(...opts.extraArgs)
       argv.push(message)
-      return spawn(argv, opts)
+      return argv
     }
+
+    const runOpts = (opts?: RunOpts): SpawnOpts | undefined => {
+      if (!opts?.permission) return opts
+      return {
+        ...opts,
+        env: {
+          ...opts.env,
+          KILO_CONFIG_CONTENT: JSON.stringify({
+            ...testProviderConfig(llm.url),
+            permission: opts.permission,
+          }),
+        },
+      }
+    }
+
+    const run = (message: string, opts?: RunOpts): Effect.Effect<RunResult> => {
+      return spawn(runArgs(message, opts), runOpts(opts))
+    }
+
+    const startRun = Effect.fn("opencode.startRun")(function* (message: string, opts?: RunOpts) {
+      const start = Date.now()
+      const options = runOpts(opts)
+      const proc = yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          Bun.spawn(["bun", ...cliArgs, ...runArgs(message, opts)], {
+            // kilocode_change - cliArgs carries the solid preload
+            cwd: home,
+            env: { ...process.env, ...env, ...options?.env },
+            stdin: "ignore",
+            stdout: "pipe",
+            stderr: "pipe",
+          }),
+        ),
+        (child) =>
+          Effect.promise(() => {
+            child.kill()
+            return child.exited
+          }).pipe(Effect.ignore),
+      )
+      const stdout = new Response(proc.stdout).text()
+      const stderr = new Response(proc.stderr).text()
+
+      return {
+        interrupt: () => proc.kill("SIGINT"),
+        result: Effect.promise(async () => ({
+          exitCode: await proc.exited,
+          stdout: normalizeLines(await stdout),
+          stderr: normalizeLines(await stderr),
+          durationMs: Date.now() - start,
+        })),
+      } satisfies RunHandle
+    })
 
     const serve = Effect.fn("opencode.serve")(function* (opts?: ServeOpts) {
       const argv = ["serve"]
@@ -261,11 +332,12 @@ export function withCliFixture<A, E>(
       // as a finalizer error during test teardown.
       const proc = yield* Effect.acquireRelease(
         Effect.sync(() =>
-          Bun.spawn(["bun", "run", "--conditions=browser", cliEntry, ...argv], {
+          Bun.spawn(["bun", ...cliArgs, ...argv], {
             cwd: home,
             env: { ...process.env, ...env, ...opts?.env },
             stdout: "pipe",
             stderr: "pipe",
+            windowsHide: true, // kilocode_change
           }),
         ),
         (p) =>
@@ -332,12 +404,13 @@ export function withCliFixture<A, E>(
       // Either way we await proc.exited so the test scope doesn't leak.
       const proc = yield* Effect.acquireRelease(
         Effect.sync(() =>
-          Bun.spawn(["bun", "run", "--conditions=browser", cliEntry, ...argv], {
+          Bun.spawn(["bun", ...cliArgs, ...argv], {
             cwd: opts?.cwd ?? home,
             env: { ...process.env, ...env, ...opts?.env },
             stdin: "pipe",
             stdout: "pipe",
             stderr: "pipe",
+            windowsHide: true, // kilocode_change
           }),
         ),
         (p) =>
@@ -401,14 +474,18 @@ export function withCliFixture<A, E>(
       } satisfies AcpHandle
     })
 
-    const opencode: OpencodeCli = { run, serve, acp, spawn, expectExit, parseJsonEvents }
+    const opencode: OpencodeCli = { run, startRun, serve, acp, spawn, expectExit, parseJsonEvents }
 
     return yield* fn({ llm, home, opencode })
     // FetchHttpClient is provided so test bodies can `yield* HttpClient.HttpClient`
     // and hit endpoints on `opencode.serve()` without rolling their own fetch.
   }).pipe(
     Effect.provide(
-      Layer.mergeAll(TestLLMServer.layer, FetchHttpClient.layer, FSUtil.defaultLayer, AppProcess.defaultLayer),
+      Layer.mergeAll(
+        TestLLMServer.layer,
+        FetchHttpClient.layer,
+        AppNodeBuilder.build(LayerNode.group([FSUtil.node, AppProcess.node])),
+      ),
     ),
   )
 }
@@ -419,6 +496,10 @@ function parseJsonEvents(stdout: string): Array<Record<string, unknown>> {
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .map((line) => JSON.parse(line) as Record<string, unknown>)
+}
+
+function normalizeLines(value: string) {
+  return value.replaceAll("\r\n", "\n")
 }
 
 // Convenience for the common assertion pattern. Dumps stderr/stdout when
@@ -455,5 +536,12 @@ export const cliIt = {
     name: string,
     body: (input: CliFixture) => Effect.Effect<A, E, Scope.Scope | HttpClient.HttpClient>,
     opts?: number | TestOptions,
-  ) => test.concurrent(name, () => Effect.runPromise(Effect.scoped(withCliFixture(body))), opts),
+  ) =>
+    // kilocode_change start - full CLI processes contend heavily during startup after the Effect graph migration
+    test.serial(
+      name,
+      () => Effect.runPromise(Effect.scoped(withCliFixture(body))),
+      opts,
+    ),
+  // kilocode_change end
 }

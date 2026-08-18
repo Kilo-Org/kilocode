@@ -91,6 +91,32 @@ class KiloBackendChatManagerTest {
     }
 
     @Test
+    fun `delete message sends queued message delete request`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        val result = chat.deleteMessage("ses_abc", "/test/project", "msg1")
+
+        assertTrue(result)
+        assertEquals(1, mock.requestCount("/session/ses_abc/message/msg1"))
+        assertTrue(mock.lastMessageDeletePath!!.startsWith("/session/ses_abc/message/msg1?directory="))
+    }
+
+    @Test
+    fun `delete message returns false for queued drop miss`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.messageDeleteResponse = "false"
+
+        val result = chat.deleteMessage("ses_abc", "/test/project", "msg1")
+
+        assertEquals(false, result)
+        assertEquals(1, mock.requestCount("/session/ses_abc/message/msg1"))
+    }
+
+    @Test
     fun `revert failure throws on non successful response`() = runBlocking {
         val port = mock.start()
         val chat = KiloBackendChatManager(scope, TestLog())
@@ -201,5 +227,22 @@ class KiloBackendChatManagerTest {
         assertTrue(event is ChatEventDto.TurnOpen)
         assertEquals("ses_abc", event.sessionID)
         assertTrue(log.messages.any { it.contains("route=chat-events parse=false type=session.error") }, log.messages.joinToString("\n"))
+    }
+
+    @Test
+    fun `global message event type is extracted from payload`() = runBlocking {
+        val port = mock.start()
+        val sse = MutableSharedFlow<SseEvent>(replay = 8)
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, sse)
+
+        val received = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(5_000) { chat.events.first() } }
+        withTimeout(5_000) { sse.subscriptionCount.first { it > 0 } }
+        sse.emit(SseEvent("message", """{"payload":{"type":"session.queue.changed","properties":{"sessionID":"ses_abc","queued":["msg2"]}}}"""))
+
+        val event = received.await()
+        assertTrue(event is ChatEventDto.SessionQueueChanged)
+        assertEquals("ses_abc", event.sessionID)
+        assertEquals(listOf("msg2"), event.queued)
     }
 }

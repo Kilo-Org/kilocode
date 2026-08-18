@@ -1,5 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, describe, expect, test } from "bun:test"
-import { Effect, Exit, Layer } from "effect"
+import { Effect, Exit } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
@@ -14,7 +16,7 @@ import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { BackgroundProcess } from "../../src/kilocode/background-process"
-import { Shell } from "../../src/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import path from "path"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -34,20 +36,23 @@ const ref = {
 }
 
 const it = testEffect(
-  Layer.mergeAll(
-    Agent.defaultLayer,
-    BackgroundJob.defaultLayer,
-    Bus.defaultLayer,
-    Config.defaultLayer,
-    RuntimeFlags.layer(),
-    SessionRunState.defaultLayer,
-    SessionStatus.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Session.defaultLayer,
-    Truncate.defaultLayer,
-    Provider.defaultLayer,
-    ToolRegistry.defaultLayer,
-    Database.defaultLayer,
+  LayerNode.compile(
+    LayerNode.group([
+      Agent.node,
+      BackgroundJob.node,
+      Bus.node,
+      Config.node,
+      RuntimeFlags.node,
+      SessionRunState.node,
+      SessionStatus.node,
+      CrossSpawnSpawner.node,
+      Session.node,
+      SessionProjector.node,
+      Truncate.node,
+      Provider.node,
+      ToolRegistry.node,
+      Database.node,
+    ]),
   ),
 )
 
@@ -138,6 +143,44 @@ function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void 
 }
 
 describe("Kilo task nesting", () => {
+  it.live("treats a missing ancestor row as the root", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { assistant } = yield* seed()
+        const child = yield* sessions.create({ parentID: SessionID.make("ses_missing_ancestor"), title: "Child" })
+        const nested = yield* sessions.updateMessage({
+          ...assistant,
+          id: MessageID.ascending(),
+          parentID: MessageID.ascending(),
+          sessionID: child.id,
+        })
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+
+        const result = yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "explore",
+          },
+          {
+            sessionID: child.id,
+            messageID: nested.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps: stubOps() },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        expect((yield* sessions.get(result.metadata.sessionId)).parentID).toBe(child.id)
+      }),
+    ),
+  )
+
   it.live("allows primary agents to delegate one level to a subagent", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
@@ -275,6 +318,11 @@ describe("Kilo task nesting", () => {
                 action: "deny",
               },
               {
+                permission: "suggest",
+                pattern: "*",
+                action: "deny",
+              },
+              {
                 permission: "interactive_terminal",
                 pattern: "*",
                 action: "deny",
@@ -354,7 +402,9 @@ describe("Kilo task nesting", () => {
             KiloSessionPrompt.guardPermissions({ agent: validator, session: child }),
           )
           expect(child.permission).not.toContainEqual({ permission: "bash", pattern: "*", action: "ask" })
-          expect(child.permission).toContainEqual({ permission: "bash", pattern: "rm -rf *", action: "deny" })
+          // The calling agent's own bash policy is no longer projected onto the subagent as a
+          // ceiling (#11523); the subagent's own `*: deny` policy is what keeps `rm -rf` denied.
+          expect(child.permission).not.toContainEqual({ permission: "bash", pattern: "rm -rf *", action: "deny" })
           expect({
             allowed: Permission.evaluate("bash", "ansible-lint --version", effective).action,
             denied: Permission.evaluate("bash", "rm -rf build", effective).action,

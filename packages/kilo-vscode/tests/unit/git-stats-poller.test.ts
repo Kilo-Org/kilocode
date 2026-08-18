@@ -3,7 +3,8 @@ import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 import { GitStatsPoller, type WorktreePresenceResult } from "../../src/agent-manager/GitStatsPoller"
-import { GitOps } from "../../src/agent-manager/GitOps"
+import { GitOps, type ExecBufferResult } from "../../src/agent-manager/GitOps"
+import type { GitStatsSource } from "../../src/agent-manager/git-stats-snapshot"
 import { Semaphore } from "../../src/agent-manager/semaphore"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
 import type { WorktreeDiffEntry } from "../../src/agent-manager/types"
@@ -53,6 +54,47 @@ function gitOps(handler: (args: string[], cwd: string) => Promise<string>): GitO
   return new GitOps({ log: () => undefined, runGit: handler })
 }
 
+function source(
+  localDiff: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>,
+  branch = "HEAD",
+): GitStatsSource {
+  let sequence = 0
+  return {
+    status: async () => {
+      const fingerprint = String(++sequence)
+      return { branch, dirty: true, head: fingerprint, fingerprint, untracked: [] }
+    },
+    refs: async () => ({ oids: new Map(), upstreams: new Map() }),
+    diff: async (dir, base) => {
+      const entries = await localDiff(dir, base)
+      return {
+        files: entries.length,
+        additions: entries.reduce((sum, item) => sum + item.additions, 0),
+        deletions: entries.reduce((sum, item) => sum + item.deletions, 0),
+      }
+    },
+  }
+}
+
+class RecordingGitOps extends GitOps {
+  readonly commands: Array<{ args: string[]; cwd: string }> = []
+  aheadCalls = 0
+
+  constructor() {
+    super({ log: () => undefined })
+  }
+
+  override execGitBuffer(args: string[], cwd: string): Promise<ExecBufferResult> {
+    this.commands.push({ args, cwd })
+    return super.execGitBuffer(args, cwd)
+  }
+
+  override aheadBehind(cwd: string, base: string): Promise<{ ahead: number; behind: number }> {
+    this.aheadCalls++
+    return super.aheadBehind(cwd, base)
+  }
+}
+
 describe("GitOps", () => {
   it("resolveDefaultBranch returns undefined on cache hit when there is no remote HEAD", async () => {
     let calls = 0
@@ -83,6 +125,180 @@ describe("GitOps", () => {
 })
 
 describe("GitStatsPoller", () => {
+  it("uses only status and shared snapshots on an unchanged second poll", async () => {
+    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "gsp-optimized-"))
+    try {
+      const run = (args: string[]) => {
+        const result = Bun.spawnSync({
+          cmd: ["git", ...args],
+          cwd: root,
+          stdout: "pipe",
+          stderr: "pipe",
+          env: {
+            ...process.env,
+            GIT_AUTHOR_NAME: "Test",
+            GIT_AUTHOR_EMAIL: "test@example.com",
+            GIT_COMMITTER_NAME: "Test",
+            GIT_COMMITTER_EMAIL: "test@example.com",
+          },
+        })
+        if (result.exitCode !== 0) throw new Error(Buffer.from(result.stderr).toString("utf8"))
+      }
+      run(["init", "-b", "main"])
+      await fs.promises.writeFile(path.join(root, "file.txt"), "one\n")
+      run(["add", "."])
+      run(["commit", "-m", "base"])
+      run(["remote", "add", "origin", "."])
+      run(["update-ref", "refs/remotes/origin/main", "HEAD"])
+      run(["branch", "--set-upstream-to=origin/main", "main"])
+
+      const git = new RecordingGitOps()
+      const poller = new GitStatsPoller({
+        getWorktrees: () => [],
+        getWorkspaceRoot: () => root,
+        onStats: () => undefined,
+        onLocalStats: () => undefined,
+        log: () => undefined,
+        intervalMs: 10,
+        git,
+      })
+
+      poller.setEnabled(true)
+      await waitFor(() => git.commands.filter((item) => item.args.includes("--porcelain=v2")).length >= 2, 2_000)
+      const statuses = git.commands
+        .map((item, index) => ({ ...item, index }))
+        .filter((item) => item.args.includes("--porcelain=v2"))
+      const second = git.commands.slice(statuses[1]!.index - 1)
+      expect(second.filter((item) => item.args.includes("diff"))).toHaveLength(0)
+      expect(git.aheadCalls).toBe(1)
+
+      const diffs = git.commands.filter((item) => item.args.includes("diff")).length
+      await fs.promises.writeFile(path.join(root, "file.txt"), "changed and larger\n")
+      await waitFor(() => git.commands.filter((item) => item.args.includes("diff")).length > diffs, 2_000)
+
+      const ahead = git.aheadCalls
+      poller.stop()
+      await poller.snapshot(true)
+      expect(git.aheadCalls).toBe(ahead + 1)
+    } finally {
+      await fs.promises.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("keeps hot worktrees on every tick and rotates clean dormant worktrees", async () => {
+    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "gsp-shard-"))
+    const dirs = ["a", "b", "c"].map((id) => path.join(root, id))
+    try {
+      const run = (cwd: string, args: string[]) => {
+        const result = Bun.spawnSync({
+          cmd: ["git", ...args],
+          cwd,
+          stdout: "pipe",
+          stderr: "pipe",
+          env: {
+            ...process.env,
+            GIT_AUTHOR_NAME: "Test",
+            GIT_AUTHOR_EMAIL: "test@example.com",
+            GIT_COMMITTER_NAME: "Test",
+            GIT_COMMITTER_EMAIL: "test@example.com",
+          },
+        })
+        if (result.exitCode !== 0) throw new Error(Buffer.from(result.stderr).toString("utf8"))
+      }
+      await fs.promises.mkdir(dirs[0]!)
+      run(dirs[0]!, ["init", "-b", "main"])
+      await fs.promises.writeFile(path.join(dirs[0]!, "file.txt"), "one\n")
+      run(dirs[0]!, ["add", "."])
+      run(dirs[0]!, ["commit", "-m", "base"])
+      run(dirs[0]!, ["remote", "add", "origin", "."])
+      run(dirs[0]!, ["update-ref", "refs/remotes/origin/main", "HEAD"])
+      run(dirs[0]!, ["branch", "--set-upstream-to=origin/main", "main"])
+      run(dirs[0]!, ["worktree", "add", "-b", "branch-b", dirs[1]!, "main"])
+      run(dirs[0]!, ["worktree", "add", "-b", "branch-c", dirs[2]!, "main"])
+
+      const git = new RecordingGitOps()
+      const hot = new Set(["a"])
+      const poller = new GitStatsPoller({
+        getWorktrees: () =>
+          dirs.map((dir, index) => ({
+            ...worktree(String.fromCharCode(97 + index)),
+            path: dir,
+            branch: index === 0 ? "main" : `branch-${String.fromCharCode(97 + index)}`,
+          })),
+        getWorkspaceRoot: () => dirs[0],
+        getHotWorktreeIds: () => hot,
+        onStats: () => undefined,
+        onLocalStats: () => undefined,
+        log: () => undefined,
+        intervalMs: 10,
+        dormantIntervalMs: 30,
+        git,
+      })
+
+      poller.setEnabled(true)
+      await waitFor(() => git.commands.filter((item) => item.args.includes("--porcelain=v2")).length >= 15, 3_000)
+      poller.stop()
+      const counts = new Map<string, number>()
+      for (const item of git.commands) {
+        if (!item.args.includes("--porcelain=v2")) continue
+        counts.set(item.cwd, (counts.get(item.cwd) ?? 0) + 1)
+      }
+      expect(counts.get(dirs[0]!)).toBeGreaterThan(counts.get(dirs[1]!) ?? 0)
+      expect(counts.get(dirs[1]!)).toBeGreaterThan(2)
+      expect(counts.get(dirs[2]!)).toBeGreaterThan(2)
+    } finally {
+      await fs.promises.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("keeps mutual exclusion when a stale fetch finishes after a restart", async () => {
+    let calls = 0
+    let running = 0
+    let max = 0
+    let gate: (() => void) | undefined
+    const gated = new Promise<void>((resolve) => {
+      gate = resolve
+    })
+    const localDiff = async () => {
+      calls += 1
+      running += 1
+      max = Math.max(max, running)
+      if (calls === 1) await gated
+      running -= 1
+      return [{ ...diff(1, 0)[0], stamp: `s${calls}` }]
+    }
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [],
+      getWorkspaceRoot: () => "/tmp",
+      source: source(localDiff, "main"),
+      onStats: () => undefined,
+      onLocalStats: () => undefined,
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "rev-parse" && args[2] === "HEAD") return "main"
+        if (args[0] === "symbolic-ref") return "origin/main"
+        if (args[0] === "rev-list") return "0	0"
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => calls === 1)
+    // Restart while the first fetch is in flight, then let it finish. The
+    // stale finally must not clear the busy flag owned by the new poll.
+    poller.stop()
+    poller.setEnabled(true)
+    await waitFor(() => calls === 2)
+    gate?.()
+    await waitFor(() => calls >= 3)
+    poller.stop()
+
+    // The gated first fetch and the restarted poll overlapped by
+    // construction; no further overlap may occur after the restart.
+    expect(max).toBeLessThanOrEqual(2)
+  })
+
   it("does not overlap polling runs", async () => {
     let running = 0
     let max = 0
@@ -100,7 +316,7 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a")],
       getWorkspaceRoot: () => undefined,
-      localDiff,
+      source: source(localDiff),
       onStats: () => undefined,
       onLocalStats: () => undefined,
       log: () => undefined,
@@ -133,7 +349,7 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a")],
       getWorkspaceRoot: () => undefined,
-      localDiff,
+      source: source(localDiff),
       onStats: (stats) => emitted.push(stats),
       onLocalStats: () => undefined,
       log: () => undefined,
@@ -169,9 +385,9 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
       getWorkspaceRoot: () => root,
-      localDiff: async () => {
+      source: source(async () => {
         throw new Error("should not be called when backend unavailable path")
-      },
+      }),
       onStats: () => undefined,
       onLocalStats: () => undefined,
       onWorktreePresence: (result) => presence.push(result),
@@ -206,7 +422,7 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
       getWorkspaceRoot: () => root,
-      localDiff: async () => diff(0, 0),
+      source: source(async () => diff(0, 0)),
       onStats: () => undefined,
       onLocalStats: () => undefined,
       onWorktreePresence: (result) => presence.push(result),
@@ -244,10 +460,10 @@ describe("GitStatsPoller", () => {
         { ...worktree("b"), path: wtBPath },
       ],
       getWorkspaceRoot: () => root,
-      localDiff: async (dir) => {
+      source: source(async (dir) => {
         calls.push(dir)
         return diff(1, 1)
-      },
+      }),
       onStats: (stats) => emitted.push(stats),
       onLocalStats: () => undefined,
       onWorktreePresence: (result) => presence.push(result),
@@ -279,6 +495,57 @@ describe("GitStatsPoller", () => {
     expect(emitted[0]?.map((item) => item.worktreeId)).toEqual(["a"])
   })
 
+  it("treats symlink-aliased worktree paths as present via realpath canonicalization", async () => {
+    // git worktree list --porcelain realpath-resolves worktree registration, so
+    // a worktree registered through a symlink alias (e.g. /tmp -> /private/tmp
+    // on macOS) is reported under its realpath. The probe must canonicalize the
+    // session's lexical alias the same way, or a real worktree is marked missing
+    // and its stats are excluded.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-symlink-"))
+    const real = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-symlink-real-"))
+    const alias = path.join(root, "alias")
+    fs.symlinkSync(real, alias)
+
+    const presence: WorktreePresenceResult[] = []
+    const calls: string[] = []
+    const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number }>> = []
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [{ ...worktree("a"), path: alias }],
+      getWorkspaceRoot: () => root,
+      source: source(async (dir) => {
+        calls.push(dir)
+        return diff(3, 2)
+      }),
+      onStats: (stats) => emitted.push(stats),
+      onLocalStats: () => undefined,
+      onWorktreePresence: (result) => presence.push(result),
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "worktree") {
+          return `worktree ${real}\nbranch refs/heads/branch-a\n`
+        }
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
+        if (args[0] === "rev-list") return "1"
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => presence.length >= 1 && emitted.length >= 1)
+    poller.stop()
+    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(real, { recursive: true, force: true })
+
+    expect(presence[0]).toEqual({
+      worktrees: [{ worktreeId: "a", missing: false, branch: "branch-a" }],
+      degraded: false,
+    })
+    expect(calls.some((dir) => dir === alias)).toBe(true)
+    expect(emitted[0]?.map((item) => item.worktreeId)).toEqual(["a"])
+  })
+
   it("preserves local stats when diff fails after initial success", async () => {
     let diffCalls = 0
     const emitted: Array<{
@@ -299,7 +566,7 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => "/workspace",
-      localDiff,
+      source: source(localDiff, "feature"),
       onStats: () => undefined,
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
@@ -336,7 +603,7 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => "/workspace",
-      localDiff: async () => diff(10, 4),
+      source: source(async () => diff(10, 4), "my-feature"),
       onStats: () => undefined,
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
@@ -380,7 +647,7 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => "/workspace",
-      localDiff: async () => diff(0, 0),
+      source: source(async () => diff(0, 0), "orphan-branch"),
       onStats: () => undefined,
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
@@ -423,7 +690,7 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a", "upstream"), worktree("b", "upstream")],
       getWorkspaceRoot: () => undefined,
-      localDiff: async () => diff(0, 0),
+      source: source(async () => diff(0, 0)),
       onStats: (stats) => emitted.push(stats),
       onLocalStats: () => undefined,
       log: () => undefined,
@@ -444,8 +711,8 @@ describe("GitStatsPoller", () => {
   })
 
   it("runs diffs in parallel without stalling (no extra semaphore layer)", async () => {
-    // localDiff is a synchronous promise — since the poller no longer wraps
-    // it in a semaphore (GitOps.execGit() gates at the child-process layer),
+    // The injected diff source is a synchronous promise. The poller does not
+    // wrap it in a semaphore because GitOps gates at the child-process layer,
     // many worktrees can have their diffs computed concurrently without
     // contending for a dedicated outer gate.
     let running = 0
@@ -456,13 +723,13 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => wts,
       getWorkspaceRoot: () => undefined,
-      localDiff: async () => {
+      source: source(async () => {
         running++
         peak = Math.max(peak, running)
         await sleep(20)
         running--
         return diff(1, 0)
-      },
+      }),
       onStats: () => {
         ticks++
       },
@@ -493,7 +760,7 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => wts,
       getWorkspaceRoot: () => undefined,
-      localDiff: async () => diff(1, 0),
+      source: source(async () => diff(1, 0)),
       onStats: () => {
         ticks++
       },

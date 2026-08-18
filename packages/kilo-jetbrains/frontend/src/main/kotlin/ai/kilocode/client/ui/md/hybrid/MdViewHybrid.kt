@@ -1,8 +1,9 @@
 package ai.kilocode.client.ui.md.hybrid
 
-import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.SessionSurface
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
@@ -32,7 +33,10 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.Point
+import java.awt.RenderingHints
 import java.awt.event.HierarchyEvent
 import java.awt.event.MouseEvent
 import javax.swing.Box
@@ -123,7 +127,11 @@ internal open class MdViewHybrid(
     override fun applyStyle(style: SessionEditorStyle) {
         if (disposed) return
         this.style = style
-        selection?.applyStyle(style)
+        // Selection colors are a session-wide concern applied once by SessionUi.applyStyle via the
+        // shared SessionSelection. Re-applying them here would re-run setColorsScheme on every editor
+        // registered across the whole transcript each time any single block is styled (a popup build,
+        // an inline expand, a streaming delta), which triggers a full gutter reinit per editor and can
+        // freeze the EDT. This view's own editors are styled by syncStyle() below.
         syncStyle()
     }
 
@@ -314,7 +322,7 @@ internal open class MdViewHybrid(
             is Desc.Html -> HtmlView(desc, htmlBlock(desc.body, disposable), disposable)
             is Desc.Table -> TableView(desc, tableBlock(desc.body, disposable), disposable)
             is Desc.Code -> when (val kind = desc.kind) {
-                is Kind.Source -> CodeView(desc, codeBlock(desc.text, kind.file, disposable), disposable)
+                is Kind.Source -> CodeView(desc, codeBlock(desc.text, kind, disposable), disposable)
                 is Kind.Terminal -> TermView(desc, terminalBlock(desc.text, kind, disposable), disposable)
             }
         }
@@ -325,33 +333,44 @@ internal open class MdViewHybrid(
         return object : JBHtmlPane(
             JBHtmlPaneStyleConfiguration {
                 enableInlineCodeBackground = false
-                enableCodeBlocksBackground = true
+                enableCodeBlocksBackground = false
             },
             JBHtmlPaneConfiguration {
                 customStyleSheetProvider { sheet() }
             },
         ), UiDataProvider {
+            // A stationary pointer over scrolling content must keep this pane's hovered link and
+            // cursor fresh, so we replay a synthetic mouse move whenever the enclosing viewport
+            // scrolls. Only the pane under the pointer subscribes — otherwise every prose block in a
+            // large transcript would run a native pointer query + event dispatch on every scroll tick.
             private var viewport: JViewport? = null
+            private var listening = false
             private val scroll = ChangeListener { hover() }
+            private val pointer = object : java.awt.event.MouseAdapter() {
+                override fun mouseEntered(e: MouseEvent) = listen(true)
+                override fun mouseExited(e: MouseEvent) = listen(false)
+            }
             private val hierarchy = java.awt.event.HierarchyListener { event ->
-                if (event.changeFlags and HierarchyEvent.PARENT_CHANGED.toLong() != 0L) attach()
+                if (event.changeFlags and HierarchyEvent.PARENT_CHANGED.toLong() != 0L) retarget()
             }
 
             init {
+                addMouseListener(pointer)
                 addHierarchyListener(hierarchy)
                 Disposer.register(disposable) {
-                    viewport?.removeChangeListener(scroll)
+                    listen(false)
+                    removeMouseListener(pointer)
                     removeHierarchyListener(hierarchy)
                 }
             }
 
             override fun addNotify() {
                 super.addNotify()
-                attach()
+                retarget()
             }
 
             override fun removeNotify() {
-                viewport?.removeChangeListener(scroll)
+                listen(false)
                 viewport = null
                 super.removeNotify()
             }
@@ -360,12 +379,20 @@ internal open class MdViewHybrid(
                 selection?.provideCopy(sink) { document.getText(0, document.length).trim() }
             }
 
-            private fun attach() {
+            // Follow the enclosing viewport as this pane is reparented, keeping any live subscription.
+            private fun retarget() {
                 val next = SwingUtilities.getAncestorOfClass(JViewport::class.java, this) as? JViewport
                 if (viewport === next) return
-                viewport?.removeChangeListener(scroll)
+                if (listening) viewport?.removeChangeListener(scroll)
                 viewport = next
-                next?.addChangeListener(scroll)
+                if (listening) viewport?.addChangeListener(scroll)
+            }
+
+            // Track viewport scrolls only while the pointer is over this pane.
+            private fun listen(on: Boolean) {
+                if (listening == on) return
+                listening = on
+                if (on) viewport?.addChangeListener(scroll) else viewport?.removeChangeListener(scroll)
             }
 
             private fun hover() {
@@ -424,20 +451,20 @@ internal open class MdViewHybrid(
         return pane
     }
 
-    private fun codeBlock(text: String, file: FileType, disposable: Disposable): JBScrollPane {
+    private fun codeBlock(text: String, kind: Kind.Source, disposable: Disposable): JBScrollPane {
         val opts = opts()
-        val value = text.trimEnd('\n')
+        val value = sourceText(text, kind)
         val field = runCatching {
-            codeField(file, opts, text, false, disposable)
+            codeField(kind.file, opts, value, false, disposable)
         }.getOrElse { err ->
             LOG.warn("kind=markdown codeEditor=true failed message=${err.message}", err)
             if (code.opts.editorOnly) runCatching {
-                codeField(PlainTextFileType.INSTANCE, opts, text, false, disposable)
+                codeField(PlainTextFileType.INSTANCE, opts, value, false, disposable)
             }.getOrElse { fallback ->
                 LOG.warn("kind=markdown codeEditor=true fallback=plain failed message=${fallback.message}", fallback)
                 throw fallback
             } else {
-                textArea(text, opts, disposable)
+                textArea(value, opts, disposable)
             }
         }
         sizeCodeField(field, value)
@@ -449,6 +476,12 @@ internal open class MdViewHybrid(
         styleCodePane(pane, opts)
         sizeCodePane(pane, field)
         return pane
+    }
+
+    private fun sourceText(text: String, kind: Kind.Source): String {
+        val value = text.trimEnd('\n')
+        if (kind.highlight == Highlight.DiffPure) return MdDiffHighlight.display(value).text
+        return value
     }
 
     private fun terminalBlock(text: String, kind: Kind.Terminal, disposable: Disposable): JBScrollPane {
@@ -479,18 +512,19 @@ internal open class MdViewHybrid(
             }
             viewportBorder = JBUI.Borders.empty(
                 SessionUiStyle.View.Code.topPadding(),
-                SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
+                code.opts.horizontalPadding,
                 SessionUiStyle.View.Code.VIEWPORT_BOTTOM_PADDING,
-                SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
+                code.opts.horizontalPadding,
             )
-            isOpaque = true
+            // CodePane paints its own (optionally rounded) fill, so the pane stays non-opaque; the
+            // viewport still fills the inner rectangle with the surface color.
             background = opts.preBg
             viewport.isOpaque = true
             viewport.background = opts.preBg
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
             verticalScrollBarPolicy = code.opts.verticalPolicy
             isWheelScrollingEnabled = true
-            setOverlappingScrollBar(false)
+            setOverlappingScrollBar(code.opts.overlapScrollbar)
             horizontalScrollBar.preferredSize = Dimension(0, JBUI.scale(SessionUiStyle.View.Code.SCROLLBAR_HEIGHT))
             horizontalScrollBar.isOpaque = true
             if (code.opts.verticalPolicy == ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER) {
@@ -542,8 +576,10 @@ internal open class MdViewHybrid(
         val pad = pane.viewportBorder.getBorderInsets(pane)
         val text = fieldText(component)
         val content = codeHeight(component, text, code.opts.maxLines)
-        val height = content + pane.insets.top + pane.insets.bottom +
-            pad.top + pad.bottom + pane.horizontalScrollBar.preferredSize.height
+        // An overlapping scrollbar floats over the content, so it reserves no bottom band; only add
+        // the scrollbar height when it takes its own row beneath the content.
+        val scrollbar = if (code.opts.overlapScrollbar) 0 else pane.horizontalScrollBar.preferredSize.height
+        val height = content + pane.insets.top + pane.insets.bottom + pad.top + pad.bottom + scrollbar
         pane.preferredSize = Dimension(0, height)
         pane.minimumSize = Dimension(0, height)
         pane.maximumSize = Dimension(Int.MAX_VALUE, height)
@@ -648,6 +684,29 @@ internal open class MdViewHybrid(
     }
 
     private open inner class CodePane(component: JComponent) : JBScrollPane(component) {
+        // Non-opaque so the surface can round its corners over the backdrop; the fill is painted
+        // below. Bodies that draw their own edge separators (a non-None border, e.g. tool diffs)
+        // keep square corners.
+        override fun isOpaque(): Boolean = false
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.color = background
+                val arc = if (code.opts.border == MdCodeBlockBorder.None) JBUI.scale(SessionUiStyle.View.BLOCK_ARC) else 0
+                if (arc > 0) g2.fillRoundRect(0, 0, width, height, arc, arc) else g2.fillRect(0, 0, width, height)
+            } finally {
+                g2.dispose()
+            }
+            super.paintComponent(g)
+        }
+
+        override fun paintChildren(g: Graphics) {
+            if (code.opts.border != MdCodeBlockBorder.None) return super.paintChildren(g)
+            SessionSurface.clipped(g, width, height) { super.paintChildren(it) }
+        }
+
         override fun doLayout() {
             super.doLayout()
             if (code.opts.verticalPolicy != ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER) return
@@ -718,19 +777,7 @@ internal open class MdViewHybrid(
 
     private fun applyShell(field: CodeField, display: ShellDisplay) {
         val editor = field.getEditor(false) ?: return
-        val size = editor.document.textLength
-        for (range in display.ranges) {
-            val start = range.start.coerceAtMost(size)
-            val end = range.end.coerceAtMost(size)
-            if (start >= end) continue
-            editor.markupModel.addRangeHighlighter(
-                range.key,
-                start,
-                end,
-                HighlighterLayer.SYNTAX + 1,
-                HighlighterTargetArea.EXACT_RANGE,
-            )
-        }
+        MdShellHighlight.apply(editor, display)
     }
 
     private fun dispatch(event: MdView.LinkEvent) {
@@ -835,12 +882,18 @@ internal open class MdViewHybrid(
 
     private inner class CodeView(desc: Desc.Code, private val pane: JBScrollPane, disposable: Disposable) :
         View(desc, pane, disposable) {
+        init {
+            overlay()
+        }
+
         override fun compatible(desc: Desc) = desc is Desc.Code && (this.desc as Desc.Code).kind == desc.kind
 
         override fun update(desc: Desc) {
             if (this.desc == desc) return
             this.desc = desc
-            val value = (desc as Desc.Code).text.trimEnd('\n')
+            val item = desc as Desc.Code
+            val kind = item.kind as? Kind.Source
+            val value = if (kind == null) item.text.trimEnd('\n') else sourceText(item.text, kind)
             val view = pane.viewport.view
             when (view) {
                 is CodeField -> view.text = value
@@ -850,6 +903,20 @@ internal open class MdViewHybrid(
                 sizeCodeField(view, value)
                 sizeCodePane(pane, view)
             }
+            overlay()
+        }
+
+        /** Applies unified-diff coloring on top of a `diff`/`patch` block; a no-op otherwise. */
+        private fun overlay() {
+            val kind = (desc as Desc.Code).kind
+            if (kind !is Kind.Source || kind.highlight == Highlight.None) return
+            val field = pane.viewport.view as? CodeField ?: return
+            val editor = field.getEditor(true) ?: return
+            if (kind.highlight == Highlight.DiffPure) {
+                MdDiffHighlight.applyPure(editor, (desc as Desc.Code).text.trimEnd('\n'))
+                return
+            }
+            MdDiffHighlight.apply(editor, field.text)
         }
 
         override fun grow(delta: String) {
@@ -873,6 +940,7 @@ internal open class MdViewHybrid(
                 sizeCodeField(view, text)
                 sizeCodePane(pane, view)
             }
+            overlay()
         }
     }
 

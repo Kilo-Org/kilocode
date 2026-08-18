@@ -78,6 +78,25 @@ describe("sendCommand dismisses pending tool requests", () => {
   it("rejects questions before sending", () => {
     expect(body).toContain("dismissQuestion")
   })
+
+  it("applies model, agent, and variant overrides when provided by a command", () => {
+    expect(body).toContain("if (overrides?.agent)")
+    expect(body).toContain("selectAgent(overrides.agent, scope)")
+    expect(body).toContain("if (overrides?.model)")
+    expect(body).toContain("selectModel(parsed.providerID, parsed.modelID, scope)")
+    expect(body).toContain("if (overrides?.variant)")
+    expect(body).toContain("selectVariant(overrides.variant, scope)")
+  })
+})
+
+describe("confirmed queued prompts retain optimistic parts", () => {
+  const source = readFile(SESSION_FILE)
+  const body = extractFunctionBody(source, "handleMessageCreated")
+
+  it("does not clear optimistic parts before canonical part events arrive", () => {
+    expect(body).toContain("Keep placeholder parts until their canonical part.updated events arrive")
+    expect(body).not.toContain("delete p[message.id]")
+  })
 })
 
 describe("static command completion contract", () => {
@@ -265,6 +284,19 @@ describe("sendMessage / sendCommand draft id contract", () => {
     expect(body).toMatch(
       /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
     )
+  })
+
+  it("sendMessage and sendCommand post the agent returned by promptAgent", () => {
+    expect(extractFunctionBody(source, "sendMessage")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "sendCommand")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "promptAgent")).toContain("return resolvePromptAgent({")
+  })
+
+  it("createSession and clearCurrentSession do not pin the provisional default agent", () => {
+    expect(extractFunctionBody(source, "createSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "createSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+    expect(extractFunctionBody(source, "clearCurrentSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "clearCurrentSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
   })
 
   it("does not clear a newer pending agent when a seeded draft is promoted", () => {

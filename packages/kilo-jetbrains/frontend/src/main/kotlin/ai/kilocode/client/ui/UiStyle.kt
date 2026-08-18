@@ -1,6 +1,8 @@
 package ai.kilocode.client.ui
 
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
@@ -118,6 +120,10 @@ object UiStyle {
         /** Uses the editor background so chat cards feel native beside editor content. */
         fun editorBackground(): Color = JBColor.lazy { EditorColorsManager.getInstance().globalScheme.defaultBackground }
 
+        /** Background for code fragments when a caller explicitly wants the editor scheme's doc-code style. */
+        fun codeBlockBackground(scheme: EditorColorsScheme): Color =
+            scheme.getAttributes(DefaultLanguageHighlighterColors.DOC_CODE_BLOCK)?.backgroundColor ?: scheme.defaultBackground
+
         /**
          * Contained panel background: follows the active theme's text-field/input surface.
          * Falls back to the panel background when unavailable.
@@ -147,6 +153,16 @@ object UiStyle {
         )
 
         fun errorLabelForeground(): Color = JBColor.namedColor("Label.errorForeground", UIUtil.getErrorForeground())
+
+        fun addedForeground(): Color = JBColor.namedColor(
+            "Kilo.DiffStat.addedForeground",
+            JBColor(Color(0x1f, 0x9d, 0x66), Color(0x35, 0xd4, 0x9a)),
+        )
+
+        fun removedForeground(): Color = JBColor.namedColor(
+            "Kilo.DiffStat.removedForeground",
+            JBColor(Color(0xdb, 0x58, 0x66), Color(0xff, 0x6b, 0x7a)),
+        )
 
         fun warningLabelForeground(): Color = JBColor.lazy {
             UIManager.getColor("Component.warningFocusColor")

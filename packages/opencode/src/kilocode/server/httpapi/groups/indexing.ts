@@ -26,9 +26,13 @@ export const KiloEmbeddingModelCatalog = Schema.Struct({
 }).annotate({ identifier: "KiloEmbeddingModelCatalog" })
 
 const root = "/indexing"
+const IndexingConsent = Schema.Struct({
+  enabled: Schema.Boolean,
+})
 
 export const IndexingPaths = {
   status: `${root}/status`,
+  consent: `${root}/consent`,
   models: `${root}/models`,
   warnings: `${root}/warnings`,
 } as const
@@ -67,6 +71,19 @@ export const IndexingApi = HttpApi.make("indexing")
             identifier: "indexing.models",
             summary: "List Kilo embedding models",
             description: "Retrieve the embedding models available through the active Kilo account.",
+          }),
+        ),
+      )
+      .add(
+        HttpApiEndpoint.put("consent", IndexingPaths.consent, {
+          query: WorkspaceRoutingQuery,
+          payload: IndexingConsent,
+          success: described(IndexingStatusInfo, "Indexing status"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "indexing.consent",
+            summary: "Set indexing consent",
+            description: "Set machine-local code indexing consent for the active project.",
           }),
         ),
       )

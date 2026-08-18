@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui.model
 
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.picker.PickerListRenderer
@@ -67,6 +68,7 @@ internal class ModelPickerRenderer private constructor(
         foreground: java.awt.Color,
         weak: java.awt.Color,
     ) {
+        val secondary = if (selected) weak else SessionUiStyle.Text.Secondary.foreground()
         parts.title.clear()
         val item = value.item
         if (item == null) {
@@ -80,8 +82,8 @@ internal class ModelPickerRenderer private constructor(
         }
         val name = ModelText.parts(item)
         if (name.provider != null) {
-            parts.title.append(name.provider, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
-            parts.title.append(" ", SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
+            parts.title.append(name.provider, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, secondary))
+            parts.title.append(" ", SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, secondary))
         }
         parts.title.append(name.model, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, foreground))
 
@@ -90,7 +92,7 @@ internal class ModelPickerRenderer private constructor(
         parts.byokLabel.isVisible = item.byok
         parts.provider.isVisible = value.favorite
         parts.provider.text = item.providerName
-        parts.provider.foreground = weak
+        parts.provider.foreground = secondary
         parts.provider.border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
 
         val fav = item.key in favorites()

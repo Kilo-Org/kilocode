@@ -44,7 +44,6 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
@@ -56,7 +55,6 @@ import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.markup.TextAttributes
-import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.fileTypes.PlainTextLanguage
@@ -72,6 +70,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.ui.scale.JBUIScale
+import com.intellij.util.DocumentUtil
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -139,11 +138,11 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(style.transcriptFont.size, font.size)
     }
 
-    fun `test prompt input uses editor background`() {
+    fun `test prompt input uses prompt background`() {
         val style = SessionEditorStyle.current()
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
 
-        assertEquals(style.editorScheme.defaultBackground, panel.defaultFocusedComponent.background)
+        assertEquals(SessionUiStyle.View.Prompt.bgColor(style), panel.defaultFocusedComponent.background)
     }
 
     fun `test prompt editor hides floating toolbar`() {
@@ -250,7 +249,12 @@ class PromptPanelTest : BasePlatformTestCase() {
             HighlighterColors.TEXT,
             TextAttributes(Color(0xEA, 0xEA, 0xEA), bg, null, null, Font.PLAIN),
         )
+        scheme.setAttributes(
+            DefaultLanguageHighlighterColors.DOC_CODE_BLOCK,
+            TextAttributes(null, bg, null, null, Font.PLAIN),
+        )
         val style = SessionEditorStyle.create(scheme = scheme)
+        val promptBg = SessionUiStyle.View.Prompt.bgColor(style)
 
         realize(panel, 260, 400)
         val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
@@ -260,11 +264,11 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         panel.applyStyle(style)
 
-        assertEquals(bg, panel.defaultFocusedComponent.background)
-        assertEquals(bg, editor.backgroundColor)
-        assertEquals(bg, editor.scrollPane.background)
-        assertEquals(bg, editor.scrollPane.viewport.background)
-        assertEquals(bg, editor.contentComponent.background)
+        assertEquals(promptBg, panel.defaultFocusedComponent.background)
+        assertEquals(promptBg, editor.backgroundColor)
+        assertEquals(promptBg, editor.scrollPane.background)
+        assertEquals(promptBg, editor.scrollPane.viewport.background)
+        assertEquals(promptBg, editor.contentComponent.background)
     }
 
     fun `test prompt editor grows when lines are added`() {
@@ -455,28 +459,20 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(spans.contains("@unknown" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES))
     }
 
-    fun `test prompt editor exposes file editor for undo redo`() {
+    fun `test prompt editor does not expose file editor for platform undo`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
 
         realize(panel, 260, 400)
         val editor = field.getEditor(false)!!
-        WriteCommandAction.runWriteCommandAction(project) {
-            editor.document.insertString(0, "hello")
-        }
         val sink = TestSink()
         (field as UiDataProvider).uiDataSnapshot(sink)
-        val file = sink.file as? TextEditor ?: error("missing file editor")
 
-        assertNotNull(file)
-        assertSame(editor.document, file.editor.document)
-        UndoManager.getInstance(project).undo(file)
-        assertEquals("", editor.document.text)
-        UndoManager.getInstance(project).redo(file)
-        assertEquals("hello", editor.document.text)
+        assertNull(sink.file)
+        assertSame(true, editor.getUserData(EditorTextField.SUPPLEMENTARY_KEY))
     }
 
-    fun `test prompt editor platform undo redo actions target prompt editor`() {
+    fun `test prompt editor platform undo redo actions do not throw`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
 
@@ -488,13 +484,10 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertSame(true, editor.contentComponent.getClientProperty(UndoRedoAction.IGNORE_SWING_UNDO_MANAGER))
         val sink = TestSink()
         (field as UiDataProvider).uiDataSnapshot(sink)
-        val file = sink.file as? TextEditor ?: error("missing file editor")
-        assertSame(editor.document, file.editor.document)
-        assertTrue("prompt file editor should have undo", UndoManager.getInstance(project).isUndoAvailable(file))
+        assertNull(sink.file)
 
-        invokeAction(IdeActions.ACTION_UNDO, editor.contentComponent, file)
-        assertEquals("", editor.document.text)
-        invokeAction(IdeActions.ACTION_REDO, editor.contentComponent, file)
+        updatePlatformAction(IdeActions.ACTION_UNDO, editor)
+        updatePlatformAction(IdeActions.ACTION_REDO, editor)
         assertEquals("hello", editor.document.text)
     }
 
@@ -511,6 +504,22 @@ class PromptPanelTest : BasePlatformTestCase() {
         invokeComponentAction("Kilo Session Undo", editor)
         assertEquals("", editor.document.text)
         invokeComponentAction("Kilo Session Redo", editor)
+        assertEquals("hello", editor.document.text)
+    }
+
+    fun `test prompt editor height sync skips bulk document updates`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        val editor = field.getEditor(false)!!
+        WriteCommandAction.runWriteCommandAction(project) {
+            DocumentUtil.executeInBulk(editor.document, true) {
+                editor.document.insertString(0, "hello")
+            }
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
         assertEquals("hello", editor.document.text)
     }
 
@@ -979,17 +988,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(1, panel.attachmentCountForTest())
     }
 
-    fun `test frontend file attachment defers data url encoding until send`() {
+    fun `test frontend text file attachment stays file reference`() {
         val file = File.createTempFile("kilo-paste", ".txt")
         file.writeText("hello")
 
         val item = ai.kilocode.client.session.model.PromptAttachmentExtractor.files(listOf(file)).single()
 
+        assertTrue(item.reference)
         assertTrue(item.url.startsWith("file://"))
-        assertTrue(item.part().url.orEmpty().startsWith("data:text/plain;base64,"))
+        assertEquals(item.url, item.part().url)
     }
 
-    fun `test pasted frontend file sends data url payload`() {
+    fun `test pasted frontend file sends reference payload`() {
         var sent: ai.kilocode.rpc.dto.PromptPartDto? = null
         val panel = PromptPanel(project, { _, files -> sent = files.single() }, {}, { _, _ -> })
         val file = File.createTempFile("kilo-paste", ".txt")
@@ -1003,8 +1013,7 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         val item = sent!!
         assertEquals("text/plain", item.mime)
-        assertTrue(item.url.orEmpty().startsWith("data:text/plain;base64,"))
-        assertFalse(item.url.orEmpty().startsWith("file://"))
+        assertEquals(file.toPath().toUri().toString(), item.url)
     }
 
     fun `test raw image paste adds attachment`() {
@@ -1051,6 +1060,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(0, panel.attachmentCountForTest())
     }
 
+    fun `test disabled media model allows file reference attachment`() {
+        val panel = PromptPanel(project, { _, _ -> }, {}, { _, _ -> })
+        val file = File.createTempFile("kilo-paste", ".php")
+        file.writeText("<?php echo 'hello';")
+        val item = ai.kilocode.client.session.model.PromptAttachmentExtractor.files(listOf(file)).single()
+        panel.setAttachmentEnabled(false)
+
+        panel.addAttachmentForTest(item)
+
+        assertEquals(1, panel.attachmentCountForTest())
+    }
+
     fun `test prompt button switches between send and stop state`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
 
@@ -1069,7 +1090,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#0A7BD8\""))
     }
 
-    fun `test busy disables send button`() {
+    fun `test busy allows sending draft`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         panel.setReady(true)
         ApplicationManager.getApplication().invokeAndWait { panel.setText("hello") }
@@ -1078,8 +1099,38 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         panel.setBusy(true)
 
+        assertTrue(panel.isSendEnabled)
+        assertTrue(panel.isStopEnabled)
+        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+    }
+
+    fun `test busy attachment changes sync send and stop button state`() {
+        val item = PromptAttachment("a", "a.png", "image/png", "file:///tmp/a.png")
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        panel.setReady(true)
+        panel.setBusy(true)
+
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+
+        panel.addAttachmentForTest(item)
+
+        assertTrue(panel.isSendEnabled)
+        assertTrue(panel.isStopEnabled)
+        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+
+        attachmentRemoveButton(panel, item).doClick()
+
+        assertFalse(panel.isSendEnabled)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+
+        panel.addAttachmentForTest(item)
+        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+
+        panel.clear()
+
         assertFalse(panel.isSendEnabled)
         assertTrue(panel.isStopEnabled)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
     }
 
     fun `test auto approve button toggles and updates tooltip`() {
@@ -1364,21 +1415,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
     }
 
-    private fun invokeAction(id: String, component: java.awt.Component, file: TextEditor) {
+    private fun updatePlatformAction(id: String, editor: Editor) {
         val action = ActionManager.getInstance().getAction(id) ?: error("missing action $id")
         val ctx = DataContext { data ->
             when (data) {
                 CommonDataKeys.PROJECT.name -> project
-                PlatformCoreDataKeys.CONTEXT_COMPONENT.name -> component
-                PlatformCoreDataKeys.FILE_EDITOR.name -> file
+                CommonDataKeys.EDITOR.name -> editor
+                PlatformCoreDataKeys.CONTEXT_COMPONENT.name -> editor.contentComponent
                 else -> null
             }
         }
         val event = AnActionEvent.createEvent(action, ctx, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
         ActionUtil.updateAction(action, event)
-        assertTrue("action $id should be enabled", event.presentation.isEnabled)
-        ActionUtil.performAction(action, event)
-        UIUtil.dispatchAllInvocationEvents()
     }
 
     private fun waitForLookupItems(editor: Editor): List<String> {

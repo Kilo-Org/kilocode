@@ -15,8 +15,7 @@
 // The tick counter prevents stale idle events from resolving the wrong turn.
 // We also re-check live session status before resolving an idle event so a
 // delayed idle from an older turn cannot complete a newer busy turn.
-import type { GlobalEvent, KiloClient } from "@kilocode/sdk/v2"
-import { event as normalizeEvent, type Event } from "./event"
+import type { Event, GlobalEvent, KiloClient } from "@kilocode/sdk/v2" // kilocode_change - revert to upstream native Event type
 import { Context, Deferred, Effect, Exit, Layer, Scope, Stream } from "effect"
 import { makeRuntime } from "@/effect/run-service"
 import {
@@ -32,7 +31,6 @@ import { replayActiveText, replayLocalRows, replaySession } from "./session-repl
 import {
   bootstrapSubagentCalls,
   bootstrapSubagentData,
-  clearFinishedSubagents,
   createSubagentData,
   listSubagentPermissions,
   listSubagentQuestions,
@@ -58,6 +56,7 @@ import type {
   RunInput,
   RunPrompt,
   RunPromptPart,
+  RunProvider,
   StreamCommit,
 } from "./types"
 
@@ -75,6 +74,7 @@ type StreamInput = {
   replay?: boolean
   replayLimit?: number
   limits: () => Record<string, number>
+  providers?: () => RunProvider[]
   footer: FooterApi
   trace?: Trace
   signal?: AbortSignal
@@ -190,8 +190,10 @@ function globalPayloadEvent(value: unknown): Event | undefined {
     return undefined
   }
 
-  const payload = normalizeEvent(value.payload)
-  return payload && isEvent(payload) ? payload : undefined
+  // kilocode_change start - revert to upstream: ignore sync compatibility copies
+  if (value.payload.type === "sync") return undefined
+  return isEvent(value.payload) ? value.payload : undefined
+  // kilocode_change end
 }
 
 function isMatchingDisposeEvent(value: unknown, directory: string | undefined): boolean {
@@ -723,6 +725,7 @@ function createLayer(input: StreamInput) {
                 questions: sessionQuestions,
                 thinking: input.thinking,
                 limits: input.limits(),
+                providers: input.providers?.(),
               })
             : undefined
           const replay =
@@ -733,6 +736,7 @@ function createLayer(input: StreamInput) {
                   questions: sessionQuestions,
                   thinking: input.thinking,
                   limits: input.limits(),
+                  providers: input.providers?.(),
                 })
               : history
 
@@ -760,7 +764,6 @@ function createLayer(input: StreamInput) {
             permissions,
             questions,
           })
-          clearFinishedSubagents(state.subagent)
 
           for (const request of [
             ...state.data.permissions,
@@ -1035,6 +1038,7 @@ function createLayer(input: StreamInput) {
                 questions: sessionQuestions,
                 thinking: input.thinking,
                 limits: input.limits(),
+                providers: input.providers?.(),
               })
               const activeCommits = replayActiveText(history.data, state.data)
               return {
@@ -1052,6 +1056,7 @@ function createLayer(input: StreamInput) {
                         questions: sessionQuestions,
                         thinking: input.thinking,
                         limits: input.limits(),
+                        providers: input.providers?.(),
                       })
                     : history,
               }
@@ -1202,13 +1207,6 @@ function createLayer(input: StreamInput) {
           if (state.wait) {
             yield* Effect.fail(new Error("prompt already running"))
             return
-          }
-
-          const prev = listSubagentTabs(state.subagent)
-          if (clearFinishedSubagents(state.subagent)) {
-            const snapshot = currentSubagentState()
-            traceTabs(input.trace, prev, snapshot.tabs)
-            syncFooter([], undefined, snapshot)
           }
 
           const item: Wait = {
