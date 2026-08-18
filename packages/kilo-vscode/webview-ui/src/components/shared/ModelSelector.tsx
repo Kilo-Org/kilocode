@@ -159,6 +159,8 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   })
 
   const [open, setOpen] = createSignal(false)
+  // Viewport scroll offset of the list — drives the pinned group header.
+  const [scrollTop, setScrollTop] = createSignal(0)
   // Shared, host-persisted expand/collapse preference (see VSCodeProvider).
   const expanded = vscode.getModelSelectorExpanded
   const setExpanded = vscode.setModelSelectorExpanded
@@ -171,13 +173,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const [previewKey, setPreviewKey] = createSignal<string | null>(null)
   const [previewHeight, setPreviewHeight] = createSignal(500)
   // Per-group collapse state. Not persisted — resets every time the
-  // selector mounts so groups are always expanded on reopen.
+  // selector mounts. Groups start collapsed; only the group holding the
+  // currently selected model is auto-expanded, so large catalogs such as
+  // kilo gateway don't force scrolling.
   const [collapsed, setCollapsed] = createSignal<Set<string>>(new Set())
-  // Snapshot of the active model key captured when the popover opens.
-  // Used to reorder favorites so the current model appears first — but only
-  // based on the state at open-time, not reactively, to avoid list jumps
-  // when the user picks a different model while the popover is still open.
-  const [openSnapshot, setOpenSnapshot] = createSignal<string | null>(null)
+  let collapseInitialized = false
 
   let searchRef: HTMLInputElement | undefined
   let searchWrapperRef: HTMLDivElement | undefined
@@ -231,6 +231,62 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const hasProviders = () => visibleModels().length > 0
   const canOpen = () => hasProviders() || ((props.allowClear ?? false) && !!props.value)
 
+  // Group that actually holds the currently selected model's row (favorites,
+  // auto, recommended, most-used, or its provider group).
+  const groupForActive = () => {
+    const active = activeModel()
+    if (!active) return null
+    const key = modelKey(active.providerID, active.id)
+    for (const g of groups()) {
+      if (g.rows.some((row) => row.model && modelKey(row.model.providerID, row.model.id) === key)) return g.key
+    }
+    return null
+  }
+
+  // Only the single group that actually holds the currently selected model's
+  // row is kept expanded. Favorites is only shown when the current model lives
+  // there — otherwise it stays collapsed like every other group.
+  const activeExpandKeys = () => {
+    const group = groupForActive()
+    if (!group) return new Set<string>()
+    return new Set([group])
+  }
+
+  // On the first open, initialize the collapse state: fold every group —
+  // providers, auto, recommended, most-used and favorites — keeping only the
+  // group holding the currently selected model. Runs against the fully loaded
+  // catalog (the picker only opens once models are shown), so loading timing
+  // can never leave groups expanded. Later opens only re-expand the active
+  // model's group and never fight manual toggles.
+  createEffect(() => {
+    if (!open()) return
+    const keys = activeExpandKeys()
+    const hidden = untrack(collapsed)
+    const next = new Set(hidden)
+    let changed = false
+    if (!collapseInitialized) {
+      const list = visibleModels()
+      if (list.length === 0) return
+      for (const m of list) {
+        if (!next.has(m.providerID)) {
+          next.add(m.providerID)
+          changed = true
+        }
+      }
+      for (const key of [FAVORITES_KEY, AUTO_KEY, RECOMMENDED_KEY, MOST_USED_KEY]) {
+        if (!next.has(key)) {
+          next.add(key)
+          changed = true
+        }
+      }
+      collapseInitialized = true
+    }
+    for (const key of keys) {
+      if (next.delete(key)) changed = true
+    }
+    if (changed) setCollapsed(next)
+  })
+
   // Flat filtered list for keyboard navigation
   const filtered = createMemo(() => {
     const q = search().trim()
@@ -256,17 +312,12 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     if (props.favorites === false) return []
     if (!session || hasSearch()) return []
     const map = new Map(visibleModels().map((m) => [modelKey(m.providerID, m.id), m]))
-    const list = session
+    // Keep the user-defined order — never reorder favorites around the
+    // currently selected model.
+    return session
       .favoriteModels()
       .map((f) => map.get(modelKey(f.providerID, f.modelID)))
       .filter((m): m is EnrichedModel => !!m)
-    const snap = openSnapshot()
-    if (!snap) return list
-    const idx = list.findIndex((m) => modelKey(m.providerID, m.id) === snap)
-    if (idx <= 0) return list
-    const item = list[idx]
-    if (!item) return list
-    return [item, ...list.slice(0, idx), ...list.slice(idx + 1)]
   })
 
   const groups = createMemo<ModelGroup[]>(() => {
@@ -435,6 +486,25 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const nodeMap = createMemo(() => new Map(nodes().map((node) => [node.key, node] as const)))
   const nodeIndex = createMemo(() => new Map(nodes().map((node, i) => [node.key, i] as const)))
   const rowMap = createMemo(() => new Map(rows().map((row) => [row.key, row] as const)))
+  // Pinned group header: the last expanded group whose own header has scrolled
+  // above the viewport top. Lets the user see/collapse the current group while
+  // scrolling through a long list without scrolling back up.
+  const sticky = createMemo<ModelGroup | null>(() => {
+    const handle = virtualizer()
+    const list = nodes()
+    const scroll = scrollTop()
+    if (!handle || list.length === 0) return null
+    let found: ModelGroup | null = null
+    for (let i = 0; i < list.length; i++) {
+      const node = list[i]
+      if (node.kind !== "group" || !node.group) continue
+      const offset = handle.getItemOffset(i)
+      if (offset === undefined || offset >= scroll) break
+      if (!isGroupOpen(node.group.key)) continue
+      found = node.group
+    }
+    return found
+  })
   const mounted = createMemo(() => {
     const map = nodeIndex()
     const indexes = [selectedKey(), preActiveKey(), previewKey()]
@@ -537,12 +607,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   createEffect(() => {
     if (open()) {
-      const active = activeModel()
-      const snap = active ? modelKey(active.providerID, active.id) : null
-      setOpenSnapshot(snap)
       // Defer key resolution to next microtask so favoriteModels/groups/rows
-      // recompute with the snapshot before we try to resolve the key.
+      // recompute before we try to resolve the key.
       queueMicrotask(() => {
+        // Select/scroll the row that lives in an expanded group: the favorites
+        // copy for a favorited model, otherwise its row inside its own group.
         const next = activeKey(activeModel())
         setSelectedKey(next ?? defaultKey())
         setBrowsing(true)
@@ -556,7 +625,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       })
       return
     }
-    setOpenSnapshot(null)
     setBrowsing(false)
     setNavigating(false)
     setSearch("")
@@ -927,15 +995,17 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                   </Tooltip>
                 </div>
 
-                <div
-                  id={listID}
-                  class="model-selector-list"
-                  role="tree"
-                  aria-label={label()}
-                  ref={listRef}
-                  onMouseMove={pointerMove}
-                >
-                  <Show when={groups().length === 0}>
+                <div class="model-selector-list-wrap">
+                  <div
+                    id={listID}
+                    class="model-selector-list"
+                    role="tree"
+                    aria-label={label()}
+                    ref={listRef}
+                    onMouseMove={pointerMove}
+                    onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+                  >
+                    <Show when={groups().length === 0}>
                     <div class="model-selector-empty" role="status" aria-live="polite">
                       {language.t("dialog.model.empty")}
                     </div>
@@ -1114,6 +1184,41 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                         }
                       }
                     </Virtualizer>
+                  </Show>
+                  </div>
+
+                  <Show when={sticky()}>
+                    {(group) => (
+                      <div
+                        class="model-selector-group-label model-selector-sticky"
+                        role="treeitem"
+                        aria-level={1}
+                        aria-expanded="true"
+                        data-key={groupKey(group().key)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        // Pointer over the pinned header must clear any
+                        // row-level hover left by the list beneath it.
+                        onMouseMove={(e) => {
+                          e.stopPropagation()
+                          setPointer(true)
+                          setSelectedKey("")
+                          setPreActiveKey(null)
+                        }}
+                        onClick={() => toggleGroup(group().key)}
+                      >
+                        <svg
+                          class="model-selector-group-chevron"
+                          width="10"
+                          height="10"
+                          viewBox="0 0 16 16"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path d="M4 6l4 5 4-5H4z" />
+                        </svg>
+                        <span>{group().label}</span>
+                      </div>
+                    )}
                   </Show>
                 </div>
 
