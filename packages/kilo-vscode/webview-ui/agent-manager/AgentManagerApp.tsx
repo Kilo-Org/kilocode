@@ -148,7 +148,8 @@ import { PRPanel } from "./pr/PRPanel"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
-import { createWorktreeDiffs, wireDiffId } from "./worktree-diffs"
+import { createWorktreeDiffs } from "./worktree-diffs"
+import { createDiffWatch } from "./diff-watch"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -1674,42 +1675,18 @@ const AgentManagerContent: Component = () => {
     />
   )
 
-  // Start/stop diff watch when the panel opens/closes, the review tab opens,
-  // or the composite id (context, scope, active session) changes.
-  createEffect(() => {
-    const panel = diffOpen()
-    const active = reviewActive()
-    const id = review.id()
-    const projectId = activeProjectId()
-
-    if ((panel || active) && id) {
-      const data = diffDatas()
-      const wired = wireDiffId(id, projectId)
-      const hasCached = Boolean(data[diffs.dataKey(id, projectId)])
-      setDiffLoading(!hasCached)
-      vscode.postMessage({ type: "agentManager.startDiffWatch", ...wired })
-      return
-    }
-
-    setDiffLoading(false)
-    vscode.postMessage({ type: "agentManager.stopDiffWatch" })
-  })
-
-  // Keep only the likely next selections warm; preloading every worktree can
-  // retain large patches and waste Git work for sessions the user never opens.
-  createEffect(() => {
-    const order = sidebarOrder()
-    const sel = selection() ?? LOCAL
-    const projectId = activeProjectId()
-    const idx = order.findIndex((item) => item.id === sel)
-    if (idx === -1) return
-    const ids = order.filter((item) => item.type === "local" || item.type === "wt").map((item) => item.id)
-    const adjacent = [order[idx - 1]?.id, order[idx + 1]?.id].filter((id): id is string =>
-      Boolean(id && ids.includes(id)),
-    )
-    if (adjacent.length > 0) {
-      vscode.postMessage({ type: "agentManager.preloadWorktreeDiffs", projectId, worktreeIds: adjacent })
-    }
+  createDiffWatch({
+    panel: diffOpen,
+    active: reviewActive,
+    id: review.id,
+    project: activeProjectId,
+    data: diffDatas,
+    dataKey: diffs.dataKey,
+    setLoading: setDiffLoading,
+    vscode,
+    order: sidebarOrder,
+    selection,
+    local: LOCAL,
   })
 
   onCleanup(() => {
