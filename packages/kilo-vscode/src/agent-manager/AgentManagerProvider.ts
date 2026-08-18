@@ -1033,7 +1033,6 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  /** Remove a worktree whose session could not be safely initialized. */
   private async removePtys(directory: string): Promise<void> {
     const release = await this.terminalRouter.blockDirectory(directory)
     try {
