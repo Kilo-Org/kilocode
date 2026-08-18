@@ -315,7 +315,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     }
 
     private fun manager(
-        controller: WorktreeSessionListController = WorktreeSessionListController(sessions, DIR, coroutines.scope),
+        controller: WorktreeSessionListController = WorktreeSessionListController(sessions, DIR, coroutines.scope, telemetry = { _, _ -> }),
         adopt: suspend (String, String, String) -> RenameWorktreeResultDto = { _, _, _ -> RenameWorktreeResultDto() },
         onAdopted: (WorktreeDto) -> Unit = {},
     ): WorktreeSessionEditorManager {

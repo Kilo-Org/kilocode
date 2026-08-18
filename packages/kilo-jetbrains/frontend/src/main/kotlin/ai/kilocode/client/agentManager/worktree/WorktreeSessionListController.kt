@@ -51,8 +51,8 @@ class WorktreeSessionListController(
                         .map { model.getElementAt(it) }
                         .filter { it.id != session.id }
                     model.replaceAll(listOf(session) + keep)
-                    capture("Worktree Session Created", mapOf("sessionId" to session.id))
                     done(session)
+                    capture("Worktree Session Created", mapOf("sessionId" to session.id))
                 }
             } catch (e: Exception) {
                 LOG.warn("worktree session create failed dir=$dir message=${e.message}", e)
@@ -71,8 +71,8 @@ class WorktreeSessionListController(
                         .map { model.getElementAt(it) }
                         .filter { it.id != id }
                     model.replaceAll(keep)
-                    capture("Worktree Session Deleted", mapOf("sessionId" to id))
                     done(true, null)
+                    capture("Worktree Session Deleted", mapOf("sessionId" to id))
                 }
                 return@launch
             }
@@ -102,8 +102,8 @@ class WorktreeSessionListController(
             if (updated != null) {
                 edt {
                     index(id).takeIf { it >= 0 }?.let { model.setElementAt(updated, it) }
-                    capture("Worktree Session Renamed", mapOf("sessionId" to id))
                     done(true, null)
+                    capture("Worktree Session Renamed", mapOf("sessionId" to id))
                 }
                 return@launch
             }

@@ -422,7 +422,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         timers.advanceBy(300)
-        flush()
+        waitUntil { row(panel, 0).metrics != null }
 
         val metrics: ActiveListMetrics = row(panel, 0).metrics ?: error("expected metrics")
         assertEquals(5, metrics.additions)
@@ -536,6 +536,10 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flush() = coroutines.drain(::pump)
+
+    private fun waitUntil(block: () -> Boolean) {
+        assertTrue(coroutines.pumpUntil { edt(block) })
+    }
 
     private fun row(panel: AgentManagerPanel, idx: Int): ActiveListItem {
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
