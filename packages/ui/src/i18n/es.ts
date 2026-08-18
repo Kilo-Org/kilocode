@@ -238,6 +238,5 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "Modificado",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} de {{total}} líneas conservadas",
   // kilocode_change end
 }

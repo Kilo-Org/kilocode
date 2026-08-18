@@ -852,12 +852,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسیرهای قابل نوشتن اضافی",
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "فعال‌سازی SWE-Pruner: هرس آگاه از وظیفه برای خروجی‌های بزرگ ابزارهای خواندن، جستجو و پوسته، هدایت‌شده توسط یک سؤال تمرکز از عامل",
-  "settings.experimental.swePrunerModel.title": "مدل SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "مدل مورد استفاده برای مرور سریع خروجی‌های ابزار؛ به‌طور پیش‌فرض از مدل کوچک پیکربندی‌شده استفاده می‌کند",
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
