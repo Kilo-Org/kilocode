@@ -1069,10 +1069,15 @@ export const dict = {
     "Виберіть, чи будуть блоки редагування коду та відмінностей спочатку розгорнутими чи згорнутими.",
   "settings.display.codeEdit.expanded": "Розгорнуті",
   "settings.display.codeEdit.collapsed": "Згорнуті",
+  "settings.display.mcpTool.title": "Блоки MCP та загальних інструментів",
+  "settings.display.mcpTool.description":
+    "Виберіть, чи будуть блоки MCP та загальних інструментів спочатку розгорнутими чи згорнутими.",
+  "settings.display.mcpTool.expanded": "Розгорнуті",
+  "settings.display.mcpTool.collapsed": "Згорнуті",
 
   "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
-    "Показує швидкість генерації тексту (токенів/с) на останньому повідомленні асистента та в заголовку завдання. За замовчуванням приховано, щоб чат залишався охайним.",
+    "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",
   "settings.display.autoApprovalReason.title": "Показувати причину автосхвалення",
   "settings.display.autoApprovalReason.description":
     "Показує рядок біля викликів інструментів, що пояснює, чому їх автоматично схвалено (відповідне правило, стандартне значення агента, режим YOLO тощо).",

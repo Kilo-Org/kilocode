@@ -1115,10 +1115,15 @@ export const dict = {
     "Wybierz, czy bloki edycji kodu i podglądy różnic mają być początkowo rozwinięte czy zwinięte.",
   "settings.display.codeEdit.expanded": "Rozwinięte",
   "settings.display.codeEdit.collapsed": "Zwinięte",
+  "settings.display.mcpTool.title": "Bloki narzędzi MCP i ogólnych",
+  "settings.display.mcpTool.description":
+    "Wybierz, czy bloki narzędzi MCP i ogólnych mają być początkowo rozwinięte czy zwinięte.",
+  "settings.display.mcpTool.expanded": "Rozwinięte",
+  "settings.display.mcpTool.collapsed": "Zwinięte",
 
   "settings.display.tokenThroughput.title": "Pokaż przepustowość tokenów",
   "settings.display.tokenThroughput.description":
-    "Wyświetla szybkość generowania tekstu (tokeny/s) w ostatniej wiadomości asystenta i w nagłówku zadania. Domyślnie skryte, aby czat był przejrzysty.",
+    "Wyświetlaj szybkość generowania tekstu (tokens/sec) w najnowszej wiadomości asystenta i nagłówku zadania. Domyślnie jest wyświetlana; wyłącz to ustawienie, aby w razie potrzeby ją ukryć.",
   "settings.display.autoApprovalReason.title": "Pokaż powód automatycznego zatwierdzenia",
   "settings.display.autoApprovalReason.description":
     "Pokazuje wiersz przy wywołaniach narzędzi wyjaśniający, dlaczego zostały automatycznie zatwierdzone (dopasowana reguła, wartość domyślna agenta, tryb YOLO itp.).",

@@ -1126,10 +1126,15 @@ export const dict = {
     "Elige si los bloques de edición de código y de diferencias aparecen inicialmente expandidos o contraídos.",
   "settings.display.codeEdit.expanded": "Expandidos",
   "settings.display.codeEdit.collapsed": "Contraídos",
+  "settings.display.mcpTool.title": "Bloques de herramientas MCP y genéricas",
+  "settings.display.mcpTool.description":
+    "Elige si los bloques de herramientas MCP y genéricas aparecen inicialmente expandidos o contraídos.",
+  "settings.display.mcpTool.expanded": "Expandidos",
+  "settings.display.mcpTool.collapsed": "Contraídos",
 
   "settings.display.tokenThroughput.title": "Mostrar rendimiento de tokens",
   "settings.display.tokenThroughput.description":
-    "Muestra la tasa de generación de texto (tokens/s) en el último mensaje del asistente y en el encabezado de la tarea. Oculto de forma predeterminada para mantener el chat ordenado.",
+    "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo de aprobación automática",
   "settings.display.autoApprovalReason.description":
     "Muestra una línea en las llamadas a herramientas que explica por qué se aprobaron automáticamente (regla coincidente, valor predeterminado del agente, modo YOLO, etc.).",

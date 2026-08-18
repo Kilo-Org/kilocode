@@ -1011,7 +1011,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                           const hovered = () => isSelected(row.key)
                           const preActive = () => isPreActive(row.key)
                           const starred = () => favoriteKeys().has(modelKey(model.providerID, model.id))
-                          const showProvider = () => row.kind === "favorite" || hasSearch()
                           const showSelect = () => expanded() && preActive() && !isActive(model)
                           const starLabel = () =>
                             `${starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")}: ${sanitizeName(model.name)}`
@@ -1082,9 +1081,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                       </Show>
                                     </span>
                                   </Show>
-                                  <Show when={showProvider()}>
-                                    <span class="model-selector-item-provider-tag">{model.providerName}</span>
-                                  </Show>
+                                  <span class="model-selector-item-provider-tag">{model.providerName}</span>
                                 </div>
                               </div>
                               <Show when={session && props.favorites !== false}>

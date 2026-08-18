@@ -25,6 +25,7 @@ import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
 import { ProjectActions } from "./ProjectActions"
+import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
 import { buildTopLevelItems, sortWorktrees, isGroupEnd, isGroupStart, isGrouped } from "./section-helpers"
 import { sectionAwareDetector } from "./section-dnd"
@@ -290,89 +291,85 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
 
   return (
     <div class="am-project-body" data-project-body={props.project.id}>
-      <Show
-        when={state()}
-        fallback={
-          <div class="am-project-loading">
-            <Spinner class="am-worktree-spinner" />
-          </div>
-        }
+      <button
+        class="am-local-item"
+        classList={{ "am-local-item-active": active() && props.selection === "local" }}
+        data-sidebar-id={`${props.project.id}:local`}
+        onClick={() => props.onSelectLocal(props.project.id)}
       >
-        <button
-          class="am-local-item"
-          classList={{ "am-local-item-active": active() && props.selection === "local" }}
-          data-sidebar-id={`${props.project.id}:local`}
-          onClick={() => props.onSelectLocal(props.project.id)}
-        >
-          <Show when={!props.localBusy?.()} fallback={<Spinner class="am-worktree-spinner" />}>
-            <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-              <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-              <path d="M10 13.5V16.5" stroke="currentColor" />
-            </svg>
+        <Show when={!props.localBusy?.()} fallback={<Spinner class="am-worktree-spinner" />}>
+          <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
+            <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
+            <path d="M10 13.5V16.5" stroke="currentColor" />
+          </svg>
+        </Show>
+        <div class="am-local-text">
+          <span class="am-local-label">{props.t("agentManager.local")}</span>
+          <Show when={props.local === undefined}>
+            <span class="am-local-branch-skeleton" />
           </Show>
-          <div class="am-local-text">
-            <span class="am-local-label">{props.t("agentManager.local")}</span>
-            <Show when={props.local?.branch}>
-              <span class="am-local-branch">{props.local!.branch}</span>
-            </Show>
-          </div>
-          <div class="am-wt-actions-cell">
-            <Show
-              when={
-                props.local &&
-                (props.local.additions || props.local.deletions || props.local.ahead || props.local.behind)
-              }
-            >
-              <div class="am-worktree-stats">
-                <Show when={props.local!.behind}>
-                  <span class="am-worktree-behind">↓{props.local!.behind}</span>
-                </Show>
-                <Show when={props.local!.ahead}>
-                  <span class="am-worktree-commits">↑{props.local!.ahead}</span>
-                </Show>
-                <Show when={props.local!.additions}>
-                  <span class="am-stat-additions">+{props.local!.additions}</span>
-                </Show>
-                <Show when={props.local!.deletions}>
-                  <span class="am-stat-deletions">−{props.local!.deletions}</span>
-                </Show>
-              </div>
-            </Show>
-            <div class="am-wt-hover-actions">
-              <Show when={props.shortcutMap?.().get(`${props.project.id}:local`)}>
-                {(shortcut) => (
-                  <span class="am-shortcut-badge">
-                    {isMac ? "⌘" : "Ctrl+"}
-                    {shortcut()}
-                  </span>
-                )}
+          <Show when={props.local?.branch}>
+            <span class="am-local-branch">{props.local!.branch}</span>
+          </Show>
+        </div>
+        <div class="am-wt-actions-cell">
+          <Show when={props.local === undefined}>
+            <StatsSkeleton />
+          </Show>
+          <Show
+            when={
+              props.local && (props.local.additions || props.local.deletions || props.local.ahead || props.local.behind)
+            }
+          >
+            <div class="am-worktree-stats">
+              <Show when={props.local!.behind}>
+                <span class="am-worktree-behind">↓{props.local!.behind}</span>
+              </Show>
+              <Show when={props.local!.ahead}>
+                <span class="am-worktree-commits">↑{props.local!.ahead}</span>
+              </Show>
+              <Show when={props.local!.additions}>
+                <span class="am-stat-additions">+{props.local!.additions}</span>
+              </Show>
+              <Show when={props.local!.deletions}>
+                <span class="am-stat-deletions">−{props.local!.deletions}</span>
               </Show>
             </div>
+          </Show>
+          <div class="am-wt-hover-actions">
+            <Show when={props.shortcutMap?.().get(`${props.project.id}:local`)}>
+              {(shortcut) => (
+                <span class="am-shortcut-badge">
+                  {isMac ? "⌘" : "Ctrl+"}
+                  {shortcut()}
+                </span>
+              )}
+            </Show>
           </div>
-        </button>
+        </div>
+      </button>
 
-        <div class="am-section">
-          <SidebarSectionHeader
-            class="am-section-header"
-            label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
-            actions={
-              <ProjectActions
-                branch={state()?.defaultBaseBranch ?? props.local?.branch ?? "main"}
-                bindings={props.bindings}
-                loaded={state() !== undefined}
-                t={props.t}
-                onCreate={() => post({ type: "agentManager.createWorktree" })}
-                onNew={() => props.onNewWorktree(props.project.id)}
-                onSection={() => createSection()}
-                onSetup={() => post({ type: "agentManager.configureSetupScript" })}
-                onBranch={() =>
-                  props.onDefaultBranch(props.project.id, state()?.defaultBaseBranch, props.local?.branch)
-                }
-              />
-            }
-          />
-          <div class="am-worktree-list">
+      <div class="am-section">
+        <SidebarSectionHeader
+          class="am-section-header"
+          label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
+          actions={
+            <ProjectActions
+              branch={state()?.defaultBaseBranch ?? props.local?.branch ?? "main"}
+              bindings={props.bindings}
+              loaded={state() !== undefined}
+              t={props.t}
+              onCreate={() => post({ type: "agentManager.createWorktree" })}
+              onNew={() => props.onNewWorktree(props.project.id)}
+              onSection={() => createSection()}
+              onSetup={() => post({ type: "agentManager.configureSetupScript" })}
+              onBranch={() => props.onDefaultBranch(props.project.id, state()?.defaultBaseBranch, props.local?.branch)}
+            />
+          }
+        />
+        <div class="am-worktree-list">
+          <Show when={state()} fallback={<WorktreeSkeleton />}>
             <DragDropProvider
               onDragStart={onDragStart}
               onDragOver={onDragOver}
@@ -435,21 +432,26 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
                 })()}
               </DragOverlay>
             </DragDropProvider>
-          </div>
+          </Show>
         </div>
+      </div>
 
-        <UnassignedSessionsSection
-          sessions={localSessions}
-          loaded={() => props.sessions !== undefined}
-          collapsed={() => state()!.sessionsCollapsed === true}
-          active={() => undefined}
-          onToggle={() => post({ type: "agentManager.setSessionsCollapsed", collapsed: !state()!.sessionsCollapsed })}
-          onSelect={(sessionId) => props.onSelectSession(props.project.id, sessionId)}
-          onPromote={(sessionId) => post({ type: "agentManager.promoteSession", sessionId })}
-          onOpen={(sessionId) => post({ type: "agentManager.openLocally", sessionId })}
-          sidebarId={(sessionId) => `${props.project.id}:sess:${sessionId}`}
-        />
-      </Show>
+      <UnassignedSessionsSection
+        sessions={localSessions}
+        loaded={() => props.sessions !== undefined && state() !== undefined}
+        collapsed={() => state()?.sessionsCollapsed === true}
+        disabled={state() === undefined}
+        active={() => undefined}
+        onToggle={() => {
+          const current = state()
+          if (!current) return
+          post({ type: "agentManager.setSessionsCollapsed", collapsed: !current.sessionsCollapsed })
+        }}
+        onSelect={(sessionId) => props.onSelectSession(props.project.id, sessionId)}
+        onPromote={(sessionId) => post({ type: "agentManager.promoteSession", sessionId })}
+        onOpen={(sessionId) => post({ type: "agentManager.openLocally", sessionId })}
+        sidebarId={(sessionId) => `${props.project.id}:sess:${sessionId}`}
+      />
     </div>
   )
 }

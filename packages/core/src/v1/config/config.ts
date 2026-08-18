@@ -129,6 +129,10 @@ export const Info = Schema.Struct({
     description:
       "Controls whether code edit and diff blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  mcp_tool_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
+    description:
+      "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
   hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
     description: "Hide Kilo Gateway models that may train on your prompts from model listings",
   }),

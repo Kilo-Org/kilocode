@@ -203,6 +203,39 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.dispose()
   })
 
+  test("continues following streaming growth after a downward wheel at the bottom", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+
+    ctx.el.fire("wheel", new FakeWheelEvent(50, ctx.el) as unknown as Event)
+    ctx.el.scrollHeight = 1048
+    ctx.resize(0)
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(1048)
+    ctx.dispose()
+  })
+
+  test("continues following when streaming reflow emits scroll before resize", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+
+    ctx.el.scrollHeight = 1108
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+
+    ctx.resize(0)
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(1108)
+    ctx.dispose()
+  })
+
   test("follows when initially short content starts overflowing", () => {
     const ctx = setup()
     ctx.resize()
@@ -259,6 +292,25 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.resize()
 
     expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(600)
+    ctx.dispose()
+  })
+
+  test("pauses when a native scrollbar drag changes scroll position without input events", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+    ctx.scroll.handleScroll()
+
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    ctx.el.scrollHeight = 1050
+    ctx.resize()
+
     expect(ctx.el.scrollTop).toBe(600)
     ctx.dispose()
   })
