@@ -148,6 +148,45 @@ describe("MilvusVectorStore", () => {
     expect(client.loadCollection).toHaveBeenCalledTimes(1)
   })
 
+  test("retries an ambiguous create timeout when the collection is still absent", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    fastSleep(store)
+    const client = clients[0]!
+    client.createCollection.mockRejectedValueOnce(errorWithStatus("request timeout", 408)).mockResolvedValueOnce(ok())
+
+    const created = await store.initialize()
+
+    expect(created).toBe(true)
+    expect(client.createCollection).toHaveBeenCalledTimes(2)
+    expect(client.loadCollection).toHaveBeenCalledTimes(1)
+  })
+
+  test("accepts an ambiguous create timeout when the collection now exists", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    fastSleep(store)
+    const client = clients[0]!
+    client.hasCollection.mockResolvedValueOnce(ok({ has: false })).mockResolvedValueOnce(ok({ has: true }))
+    client.createCollection.mockRejectedValueOnce(errorWithStatus("request timeout", 408))
+
+    const created = await store.initialize()
+
+    expect(created).toBe(true)
+    expect(client.createCollection).toHaveBeenCalledTimes(1)
+    expect(client.loadCollection).toHaveBeenCalledTimes(1)
+  })
+
+  test("does not retry a non-transient create failure", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    fastSleep(store)
+    const client = clients[0]!
+    client.createCollection.mockRejectedValueOnce(errorWithStatus("unauthorized", 401))
+
+    await expect(store.initialize()).rejects.toThrow("unauthorized")
+
+    expect(client.createCollection).toHaveBeenCalledTimes(1)
+    expect(client.loadCollection).not.toHaveBeenCalled()
+  })
+
   test("recreates an incompatible populated collection", async () => {
     const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
     fastSleep(store)
