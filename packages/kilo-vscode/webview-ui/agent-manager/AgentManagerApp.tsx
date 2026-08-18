@@ -178,6 +178,8 @@ import { initialMessage, seedInitialVariant } from "./initial-message"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
+import { SubagentPanel } from "./SubagentPanel"
+import { createSubagentTabs } from "./subagent-tabs"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, createPromptFocus, hasQuestionOption } from "./focus"
@@ -306,8 +308,8 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // Diff and terminal views share one inspector width, restored from webview
-  // state so the user's divider position survives panel reloads.
+  // Diff, PR, terminal, and subagent views share one inspector width, restored
+  // from webview state so the user's divider position survives panel reloads.
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
@@ -321,6 +323,17 @@ const AgentManagerContent: Component = () => {
   const reviewComposer = createReviewComposer()
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
+  const subagents = createSubagentTabs({
+    current: session.currentSessionID,
+    sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
+    unsync: (id) => session.unsyncSession(id, "inspector"),
+    show: () => {
+      setHistory(false)
+      setReviewActive(false)
+      setSidePanel(SidePanel.Subagents)
+    },
+    hide: () => setSidePanel(null),
+  })
   const markdown = createMarkdownRender(vscode)
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const worktreeStats = () => registry.active().worktreeStats()
@@ -1214,7 +1227,17 @@ const AgentManagerContent: Component = () => {
         if (match) projectNav.jump(parseInt(match[1]!) - 1)
       }
     }
+    const subagent = (event: Event) => {
+      const detail = (event as CustomEvent<{ sessionID?: unknown; title?: unknown; parentSessionID?: unknown }>).detail
+      if (typeof detail?.sessionID !== "string") return
+      subagents.open(
+        detail.sessionID,
+        typeof detail.title === "string" ? detail.title : undefined,
+        typeof detail.parentSessionID === "string" ? detail.parentSessionID : undefined,
+      )
+    }
     window.addEventListener("message", handler)
+    window.addEventListener("agentManager.openSubagent", subagent)
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
@@ -1263,6 +1286,7 @@ const AgentManagerContent: Component = () => {
       confirmDeleteWorktree(sel)
     }
     window.addEventListener("keydown", deleteKeyHandler)
+    onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
 
     // Reveal the ⌘/Ctrl+1-9 jump badges on all sidebar items while the modifier is held.
     // Capture phase so the terminal's key handlers can't swallow them; blur resets state
@@ -2157,6 +2181,10 @@ const AgentManagerContent: Component = () => {
   // Close the currently active tab via keyboard shortcut.
   // If no tabs remain, fall through to close the selected worktree.
   const closeActiveTab = () => {
+    if (sidePanel() === SidePanel.Subagents && subagents.active()) {
+      subagents.close(subagents.active()!)
+      return
+    }
     // A focused side terminal owns Cmd+W while its panel is visible.
     // Closing a chat tab out from under the user's cursor would be surprising.
     if (sidePanel() === SidePanel.Terminal && terms.sideFocusedId()) {
@@ -2587,7 +2615,7 @@ const AgentManagerContent: Component = () => {
                   mounted while a side terminal is alive — hidden via
                   .am-side-host-hidden (absolute + opacity), never
                   unmounted, so xterm render loops keep streaming. */}
-              <Show when={sidePanel() !== null || terms.sides().length > 0}>
+              <Show when={sidePanel() !== null || terms.sides().length > 0 || subagents.tabs().length > 0}>
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
                   style={{ width: `${panelWidth()}px` }}
@@ -2652,6 +2680,20 @@ const AgentManagerContent: Component = () => {
                             url: activePR()!.pr.url,
                           })
                         }
+                      />
+                    </Show>
+                    <Show when={subagents.tabs().length > 0}>
+                      <SubagentPanel
+                        tabs={subagents.tabs}
+                        active={subagents.active}
+                        visible={() => sidePanel() === SidePanel.Subagents}
+                        nextKeybind={kb().nextTab ?? ""}
+                        closeKeybind={kb().closeTab ?? ""}
+                        onSelect={subagents.select}
+                        onClose={subagents.close}
+                        onCloseOthers={subagents.closeOthers}
+                        onReorder={subagents.reorder}
+                        onClosePanel={() => setSidePanel(null)}
                       />
                     </Show>
                     <SideTerminalPanel

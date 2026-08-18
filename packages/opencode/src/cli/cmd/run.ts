@@ -281,7 +281,9 @@ export const RunCommand = effectCmd({
     // kilocode_change start - lazy Kilo implementations (see top-of-file note)
     const { createKiloClient } = yield* Effect.promise(() => import("@kilocode/sdk/v2"))
     const { buildRunMessage } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run-message"))
-    const { importCloudSession, validateCloudFork, reportCloudImportError } = yield* Effect.promise(() => import("@/kilocode/cloud-session"))
+    const { importCloudSession, validateCloudFork, reportCloudImportError } = yield* Effect.promise(
+      () => import("@/kilocode/cloud-session"),
+    )
     const { KiloRunAuto } = yield* Effect.promise(() => import("@/kilocode/cli/run-auto"))
     const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
     const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
@@ -923,7 +925,7 @@ export const RunCommand = effectCmd({
               const permission = event.properties
               // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
               // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
-              if (permission.metadata?.["skillShell"] === true) {
+              if (permission.metadata?.["skillShell"] === true || permission.metadata?.["sandboxEscalation"] === true) {
                 await client.permission.reply({ requestID: permission.id, reply: "reject" })
                 continue
               }

@@ -77,11 +77,10 @@ export function createPermissionBodyState(requestID: string): PermissionBodyStat
   }
 }
 
-export function permissionOptions(stage: PermissionStage, skillShell?: boolean): PermissionOption[] { // kilocode_change - skillShell param
+export function permissionOptions(stage: PermissionStage, temporary?: boolean): PermissionOption[] {
+  // kilocode_change
   if (stage === "permission") {
-    // kilocode_change start - skill-shell batches are never persisted, so no "Allow always"
-    return skillShell ? ["once", "reject"] : ["once", "always", "reject"]
-    // kilocode_change end
+    return temporary ? ["once", "reject"] : ["once", "always", "reject"]
   }
 
   if (stage === "always") {
@@ -97,6 +96,17 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
   const info = toolPermissionInfo(request.permission, input, dict(request.metadata), pats)
   if (info) {
     return info
+  }
+
+  if (request.permission === "sandbox_escalation") {
+    const command = text(input.command)
+    return {
+      icon: "!",
+      title: "Allow Git operation outside the sandbox", // kilocode_change
+      lines: command
+        ? [`$ ${command}`, "This approval applies to this command only."]
+        : ["This approval applies to this command only."],
+    }
   }
 
   if (request.permission === "external_directory") {
@@ -123,6 +133,10 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
     title: `Call tool ${request.permission}`,
     lines: [`Tool: ${request.permission}`],
   }
+}
+
+export function temporaryPermission(request: PermissionRequest) {
+  return request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
 }
 
 export function permissionAlwaysLines(request: PermissionRequest): string[] {
@@ -153,8 +167,9 @@ export function permissionReply(requestID: string, reply: PermissionReply["reply
   }
 }
 
-export function permissionShift(state: PermissionBodyState, dir: -1 | 1, skillShell?: boolean): PermissionBodyState { // kilocode_change - skillShell param
-  const list = permissionOptions(state.stage, skillShell) // kilocode_change - skillShell-aware options
+export function permissionShift(state: PermissionBodyState, dir: -1 | 1, temporary?: boolean): PermissionBodyState {
+  // kilocode_change
+  const list = permissionOptions(state.stage, temporary) // kilocode_change
   if (list.length === 0) {
     return state
   }

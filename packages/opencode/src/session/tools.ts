@@ -75,65 +75,79 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   // kilocode_change end
   const flags = yield* RuntimeFlags.Service
   const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
-
-  const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
-    sessionID: input.session.id,
-    abort: options.abortSignal!,
-    messageID: input.processor.message.id,
-    callID: options.toolCallId,
-    extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps: input.promptOps },
-    agent: input.agent.name,
-    messages: input.messages,
-    // kilocode_change start
-    metadata: (val) => input.processor.metadata(options.toolCallId, val),
-    ask: (req) =>
-      KiloSessionPrompt.askPermission({
-        permission,
-        agents,
-        sessions,
-        origins: permissionOrigins,
-        agent: input.agent,
-        session: input.session,
-        request: {
-          ...req,
-          sessionID: input.session.id,
-          tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-        },
-      }).pipe(
-        // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
-        Effect.tap((approval) =>
-          input.processor.metadata(options.toolCallId, {
-            metadata: {
-              approval: PermissionProvenance.tagOutsideWorkspace(
-                approval,
-                req.permission,
-                PermissionProvenance.filepathOf(req.metadata),
-              ),
-            },
-          }),
+  const sandboxed = (yield* SandboxPolicy.status(input.session.id)).enabled // kilocode_change
+  const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => {
+    const extra = {
+      model: input.model,
+      bypassAgentCheck: input.bypassAgentCheck,
+      promptOps: input.promptOps,
+      sandboxed, // kilocode_change
+      sandboxEscalation: false,
+    }
+    return {
+      sessionID: input.session.id,
+      abort: options.abortSignal!,
+      messageID: input.processor.message.id,
+      callID: options.toolCallId,
+      extra,
+      agent: input.agent.name,
+      messages: input.messages,
+      // kilocode_change start
+      metadata: (val) => input.processor.metadata(options.toolCallId, val),
+      ask: (req) =>
+        KiloSessionPrompt.askPermission({
+          permission,
+          agents,
+          sessions,
+          origins: permissionOrigins,
+          agent: input.agent,
+          session: input.session,
+          request: {
+            ...req,
+            sessionID: input.session.id,
+            tool: { messageID: input.processor.message.id, callID: options.toolCallId },
+          },
+        }).pipe(
+          // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
+          Effect.tap((approval) =>
+            Effect.gen(function* () {
+              if (req.metadata?.["sandboxEscalation"] === true && approval.source === "manual") {
+                extra.sandboxEscalation = true
+              }
+              yield* input.processor.metadata(options.toolCallId, {
+                metadata: {
+                  approval: PermissionProvenance.tagOutsideWorkspace(
+                    approval,
+                    req.permission,
+                    PermissionProvenance.filepathOf(req.metadata),
+                  ),
+                },
+              })
+            }),
+          ),
+          // record why the call was denied too, so JSON exports and clients can explain the denial
+          Effect.tapErrorTag("PermissionDeniedError", (err) =>
+            input.processor.metadata(options.toolCallId, {
+              metadata: {
+                approval: PermissionProvenance.tagOutsideWorkspace(
+                  PermissionProvenance.classifyDenial({
+                    ruleset: err.ruleset,
+                    permission: req.permission,
+                    patterns: req.patterns,
+                    agent: input.agent.name,
+                    origins: permissionOrigins,
+                  }),
+                  req.permission,
+                  PermissionProvenance.filepathOf(req.metadata),
+                ),
+              },
+            }),
+          ),
+          Effect.asVoid,
+          Effect.orDie,
         ),
-        // record why the call was denied too, so JSON exports and clients can explain the denial
-        Effect.tapErrorTag("PermissionDeniedError", (err) =>
-          input.processor.metadata(options.toolCallId, {
-            metadata: {
-              approval: PermissionProvenance.tagOutsideWorkspace(
-                PermissionProvenance.classifyDenial({
-                  ruleset: err.ruleset,
-                  permission: req.permission,
-                  patterns: req.patterns,
-                  agent: input.agent.name,
-                  origins: permissionOrigins,
-                }),
-                req.permission,
-                PermissionProvenance.filepathOf(req.metadata),
-              ),
-            },
-          }),
-        ),
-        Effect.asVoid,
-        Effect.orDie,
-      ),
-  })
+    }
+  }
   // kilocode_change end
 
   for (const item of yield* registry.tools({

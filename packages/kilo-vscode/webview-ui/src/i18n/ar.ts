@@ -265,6 +265,7 @@ export const dict = {
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
+  "notification.permission.titleSandboxEscalation": "السماح بعملية Git خارج البيئة المعزولة؟",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
   "ui.permission.doomLoop.rule": "متابعة استدعاءات {{tool}}",
