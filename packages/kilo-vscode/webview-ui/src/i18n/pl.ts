@@ -273,6 +273,7 @@ export const dict = {
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
+  "notification.permission.titleSandboxEscalation": "Zezwolić na operację Git poza piaskownicą?",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",
   "ui.permission.doomLoop.rule": "Kontynuuj wywołania {{tool}}",
