@@ -42,7 +42,7 @@ export class WorktreeDiffController {
   private applying: string | undefined
   /** Intended watch mode for the active context; isPolling lags the initial fetch. */
   private poll = false
-  /** Ephemeral per-context base override, keyed by context id. */
+  /** Ephemeral per-context base override, keyed by project and context id. */
   private baseOverrides = new Map<string, string>()
   private diffCache = new Map<string, CacheEntry>()
   private revisions = new Map<string, number>()
@@ -182,7 +182,7 @@ export class WorktreeDiffController {
   ): Promise<void> {
     if (!file) return
     if (this.controller.currentId !== id || this.activeProjectId !== projectId) {
-      const result = await this.revertFile(id, file)
+      const result = await this.revertFile(id, file, projectId)
       this.postRevertResult(id, file, result, projectId)
       return
     }
@@ -236,8 +236,9 @@ export class WorktreeDiffController {
     projectId = this.activeProjectId ?? this.ctx.getProjectId(),
   ): Promise<void> {
     const { ctx } = parseDiffId(id)
-    if (branch) this.baseOverrides.set(ctx, branch)
-    else this.baseOverrides.delete(ctx)
+    const contextKey = this.contextKey(ctx, projectId)
+    if (branch) this.baseOverrides.set(contextKey, branch)
+    else this.baseOverrides.delete(contextKey)
     const cacheKey = this.cacheKey(id, projectId)
     this.revisions.set(cacheKey, (this.revisions.get(cacheKey) ?? 0) + 1)
     this.invalidate(ctx, projectId)
@@ -266,7 +267,7 @@ export class WorktreeDiffController {
       const cached = this.diffCache.get(cacheKey)
       if (cached && Date.now() - cached.time < CACHE_TTL) continue
 
-      const resolved = await this.resolve(ctx)
+      const resolved = await this.resolve(ctx, projectId)
       if (!resolved) continue
 
       const revision = this.revisions.get(cacheKey) ?? 0
@@ -295,16 +296,19 @@ export class WorktreeDiffController {
   }
 
   /** Branch picker data for a context's directory, using any active override. */
-  public async branches(id: string) {
+  public async branches(id: string, projectId = this.activeProjectId ?? this.ctx.getProjectId()) {
     await this.ready("stateReady rejected, continuing diff branches resolve:")
     const { ctx } = parseDiffId(id)
-    const target = await this.resolve(ctx)
+    const target = await this.resolve(ctx, projectId)
     if (!target) return undefined
-    return await this.ctx.catalog.listWorkspaceBranches(this.baseOverrides.get(ctx), target.directory)
+    return await this.ctx.catalog.listWorkspaceBranches(
+      this.baseOverrides.get(this.contextKey(ctx, projectId)),
+      target.directory,
+    )
   }
 
   public async sendBranches(id: string, projectId = this.activeProjectId ?? this.ctx.getProjectId()): Promise<void> {
-    const result = await this.branches(id).catch((err) => {
+    const result = await this.branches(id, projectId).catch((err) => {
       this.ctx.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
       return undefined
     })
@@ -325,7 +329,7 @@ export class WorktreeDiffController {
     this.poll = poll
     await this.ready("stateReady rejected, continuing diff activate:")
     const { ctx } = parseDiffId(id)
-    const resolved = await this.resolve(ctx)
+    const resolved = await this.resolve(ctx, projectId)
     this.target = resolved ? { sessionId: id, ...resolved } : undefined
     // Clear any stale source notice up front; sources only push a notice when
     // one is active, so a swap away from a noticing source must reset it.
@@ -366,8 +370,11 @@ export class WorktreeDiffController {
     await this.controller.activate(id, { poll, fetch, known: warm?.diffs })
   }
 
-  private async resolve(ctxId: string): Promise<{ directory: string; baseBranch: string } | undefined> {
-    if (ctxId === LOCAL_DIFF_ID) return await this.resolveLocal()
+  private async resolve(
+    ctxId: string,
+    projectId = this.activeProjectId ?? this.ctx.getProjectId(),
+  ): Promise<{ directory: string; baseBranch: string } | undefined> {
+    if (ctxId === LOCAL_DIFF_ID) return await this.resolveLocal(projectId)
     const state = this.ctx.getState()
     if (!state) {
       this.ctx.log(`resolveDiffTarget: no state manager for context ${ctxId}`)
@@ -381,14 +388,16 @@ export class WorktreeDiffController {
       this.ctx.log(`resolveDiffTarget: worktree ${ctxId} not found`)
       return undefined
     }
-    const base = this.baseOverrides.get(ctxId) ?? remoteRef(worktree)
+    const base = this.baseOverrides.get(this.contextKey(ctxId, projectId)) ?? remoteRef(worktree)
     return { directory: worktree.path, baseBranch: base }
   }
 
-  private async resolveLocal(): Promise<{ directory: string; baseBranch: string } | undefined> {
+  private async resolveLocal(
+    projectId = this.activeProjectId ?? this.ctx.getProjectId(),
+  ): Promise<{ directory: string; baseBranch: string } | undefined> {
     const root = this.ctx.getRoot()
     if (!root) return undefined
-    const override = this.baseOverrides.get(LOCAL_DIFF_ID)
+    const override = this.baseOverrides.get(this.contextKey(LOCAL_DIFF_ID, projectId))
     if (override) {
       return { directory: root, baseBranch: override }
     }
@@ -401,6 +410,10 @@ export class WorktreeDiffController {
 
   private cacheKey(id: string, projectId = this.activeProjectId ?? this.ctx.getProjectId()): string {
     return `${projectId ?? "single"}\0${id}`
+  }
+
+  private contextKey(ctx: string, projectId = this.activeProjectId ?? this.ctx.getProjectId()): string {
+    return `${projectId ?? "single"}\0${ctx}`
   }
 
   private remember(id: string, diffs: AgentManagerDiffFile[]): void {
@@ -441,10 +454,14 @@ export class WorktreeDiffController {
     }
   }
 
-  private async revertFile(id: string, file: string): Promise<{ ok: boolean; message: string }> {
+  private async revertFile(
+    id: string,
+    file: string,
+    projectId = this.activeProjectId ?? this.ctx.getProjectId(),
+  ): Promise<{ ok: boolean; message: string }> {
     await this.ready("stateReady rejected, continuing revert resolve:")
     const { ctx } = parseDiffId(id)
-    const target = await this.resolve(ctx)
+    const target = await this.resolve(ctx, projectId)
     if (!target) return { ok: false, message: "Could not resolve diff target" }
 
     try {
