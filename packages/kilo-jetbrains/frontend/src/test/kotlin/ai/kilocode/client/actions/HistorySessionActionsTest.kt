@@ -1,5 +1,8 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.agentManager.SidePanelKeys
+import ai.kilocode.client.agentManager.SidePanelMode
+import ai.kilocode.client.agentManager.applySidePanelMode
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -15,6 +18,7 @@ import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -24,9 +28,15 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.wm.ToolWindow
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.content.ContentFactory
+import com.intellij.ui.content.ContentManager
+import java.lang.reflect.Proxy
+import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
 class HistorySessionActionsTest : BasePlatformTestCase() {
@@ -326,6 +336,30 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(renamed.isEmpty())
     }
 
+    fun `test history action selects chat content from agent manager`() = edtWait {
+        val action = HistoryAction()
+        val content = ContentFactory.getInstance().createContentManager(false, project)
+        try {
+            val chat = ContentFactory.getInstance().createContent(JPanel(), "Branch", false)
+            val agent = ContentFactory.getInstance().createContent(JPanel(), "Agent Manager", false)
+            chat.applySidePanelMode(SidePanelMode.CHAT)
+            agent.applySidePanelMode(SidePanelMode.AGENT_MANAGER)
+            content.addContent(chat)
+            content.addContent(agent)
+            content.setSelectedContent(agent)
+            val event = event(action, manager, content)
+
+            action.actionPerformed(event)
+
+            assertSame(chat, content.selectedContent)
+            assertEquals(1, manager.history)
+            manager.back?.invoke()
+            assertSame(agent, content.selectedContent)
+        } finally {
+            Disposer.dispose(content)
+        }
+    }
+
     fun `test frontend descriptor registers history actions`() {
         val xml = javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml")
             ?.bufferedReader()
@@ -387,6 +421,32 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         return AnActionEvent.createFromDataContext("", presentation, context)
     }
 
+    private fun event(
+        action: com.intellij.openapi.actionSystem.AnAction,
+        manager: SessionManager,
+        content: ContentManager,
+    ): AnActionEvent {
+        val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
+        val tool = Proxy.newProxyInstance(
+            ToolWindow::class.java.classLoader,
+            arrayOf(ToolWindow::class.java),
+        ) { _, method, _ ->
+            when (method.name) {
+                "getContentManager" -> content
+                else -> error("unexpected ToolWindow method ${method.name}")
+            }
+        } as ToolWindow
+        val context = DataContext { id ->
+            when {
+                SessionManager.KEY.`is`(id) -> manager
+                SidePanelKeys.MODE.`is`(id) -> SidePanelMode.AGENT_MANAGER
+                PlatformDataKeys.TOOL_WINDOW.`is`(id) -> tool
+                else -> null
+            }
+        }
+        return AnActionEvent.createFromDataContext("", presentation, context)
+    }
+
     private fun selection(
         source: HistorySource,
         local: List<LocalHistoryItem>,
@@ -428,8 +488,15 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
     }
 
     private class FakeManager : SessionManager {
+        var history = 0
+        var back: (() -> Unit)? = null
+
         override fun newSession() {}
-        override fun showHistory(back: (() -> Unit)?) {}
+        override fun showHistory(back: (() -> Unit)?) {
+            history++
+            this.back = back
+        }
+
         override fun openSession(ref: SessionRef) {}
     }
 }
