@@ -12,7 +12,7 @@ interface SessionManager {
 
     fun newSession()
 
-    fun showHistory()
+    fun showHistory(back: (() -> Unit)? = null)
 
     fun openSession(ref: SessionRef)
 
@@ -23,6 +23,10 @@ interface SessionManager {
     fun activityChanged() {}
 
     fun focusPrompt() {}
+
+    val showsBranchBadgeInHeader: Boolean get() = true
+
+    val hostedInEditorTab: Boolean get() = false
 
     fun openSession(session: SessionDto) {
         openSession(SessionRef.Local(session))

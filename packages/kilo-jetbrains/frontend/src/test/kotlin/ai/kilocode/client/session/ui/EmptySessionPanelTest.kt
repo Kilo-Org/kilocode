@@ -286,7 +286,7 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
     fun `test renderer shows overlay badge for active recent session`() {
         val panel = panel(
             recents = listOf(session("ses_1")),
-            activity = { sessions.activity() + mapOf("ses_1" to SessionActivityKind.QUESTION) },
+            activity = { sessions.activitySnapshot() + mapOf("ses_1" to SessionActivityKind.QUESTION) },
         )
         rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
         flush()
@@ -301,7 +301,7 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         var kind: SessionActivityKind? = null
         val panel = panel(
             recents = listOf(session("ses_1")),
-            activity = { sessions.activity() + kind?.let { mapOf("ses_1" to it) }.orEmpty() },
+            activity = { sessions.activitySnapshot() + kind?.let { mapOf("ses_1" to it) }.orEmpty() },
         )
         rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
         flush()
@@ -350,7 +350,7 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
     private fun panel(
         recents: List<SessionDto> = emptyList(),
         history: () -> Unit = {},
-        activity: () -> Map<String, SessionActivityKind> = { sessions.activity() },
+        activity: () -> Map<String, SessionActivityKind> = { sessions.activitySnapshot() },
         titles: () -> Map<String, String> = { emptyMap() },
     ) = EmptySessionPanel(testRootDisposable, controller, recents, history, activity, titles)
 

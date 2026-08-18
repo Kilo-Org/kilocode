@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views.base
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
@@ -17,13 +18,13 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
-class BaseQuestionViewTest : BasePlatformTestCase() {
+class DialogViewTest : BasePlatformTestCase() {
 
     // ------ initial state ------
 
     fun `test empty card does not render a header row by default`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             assertTrue("Root layout should be BorderLayout", panel.layout is BorderLayout)
             assertNull("Header row should be omitted until header content exists", headerRow(panel))
         }
@@ -31,7 +32,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setHeader sets the header text`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("My Title")
             val bold = findAll<JBTextArea>(panel).firstOrNull { it.font.isBold }
             assertNotNull("Bold header text area should be present", bold)
@@ -41,7 +42,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setHeader with description shows description`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("Title", "Hint text")
             val desc = findAll<JBTextArea>(panel).firstOrNull { it.text == "Hint text" }
             assertNotNull("Description text area should be present", desc)
@@ -50,7 +51,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setHeader without description hides description`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("Title")
             val areas = findAll<JBTextArea>(panel)
             val nonBold = areas.filter { !it.font.isBold }
@@ -61,7 +62,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setDescription with blank hides description`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("Title", "some text")
             panel.setDescription("")
             val areas = findAll<JBTextArea>(panel)
@@ -72,7 +73,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setDescription with null hides description`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("Title", "some text")
             panel.setDescription(null)
             val areas = findAll<JBTextArea>(panel)
@@ -85,7 +86,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setTopPanel adds component before header`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("Title")
             val top = JLabel("top")
             panel.setTopPanel(top)
@@ -101,7 +102,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setTopPanel null removes top component`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             val top = JLabel("top")
             panel.setTopPanel(top)
             panel.setTopPanel(null)
@@ -112,7 +113,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setTopPanel replaces previous top without duplicates`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             val first = JLabel("first")
             val second = JLabel("second")
             panel.setTopPanel(first)
@@ -127,7 +128,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setContent adds component after description`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             val body = JLabel("body")
             panel.setContent(body)
             assertNotNull("body should be in the tree", find(panel, body))
@@ -137,7 +138,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setContent null removes content`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             val body = JLabel("body")
             panel.setContent(body)
             panel.setContent(null)
@@ -147,7 +148,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setContent replaces previous content without duplicates`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             val first = JLabel("first body")
             val second = JLabel("second body")
             panel.setContent(first)
@@ -159,7 +160,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setContent adds header spacer in north stack`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setContent(JLabel("body"))
 
             val north = region(panel, BorderLayout.NORTH) as Container
@@ -169,14 +170,57 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test disabling side padding removes only those card insets`() {
+        edt {
+            val panel = DialogView()
+            panel.setContent(JLabel("body"))
+            panel.setContentPadding(left = false, right = false)
+
+            val ins = panel.border.getBorderInsets(panel)
+            assertEquals(0, ins.left)
+            assertEquals(0, ins.right)
+            assertEquals(UiStyle.Gap.pad(), ins.top)
+            assertEquals(UiStyle.Gap.lg(), ins.bottom)
+        }
+    }
+
+    fun `test disabling top and bottom padding removes those card insets`() {
+        edt {
+            val panel = DialogView()
+            panel.setContent(JLabel("body"))
+            panel.setContentPadding(top = false, bottom = false)
+
+            val ins = panel.border.getBorderInsets(panel)
+            assertEquals(0, ins.top)
+            assertEquals(0, ins.bottom)
+            assertEquals(UiStyle.Gap.pad(), ins.left)
+            assertEquals(UiStyle.Gap.pad(), ins.right)
+        }
+    }
+
+    fun `test disabling side padding keeps header and footer side insets`() {
+        edt {
+            val panel = DialogView()
+            panel.setHeader("Title")
+            panel.setContent(JLabel("body"))
+            panel.setContentPadding(left = false, right = false)
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) {}))
+
+            val north = region(panel, BorderLayout.NORTH) as JPanel
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            assertEquals(UiStyle.Gap.pad(), north.border.getBorderInsets(north).left)
+            assertEquals(UiStyle.Gap.pad(), footer.border.getBorderInsets(footer).left)
+        }
+    }
+
     // ------ setActions ------
 
     fun `test setActions renders one button per action`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setActions(listOf(
-                BaseQuestionView.Action("a", "Cancel", primary = false) {},
-                BaseQuestionView.Action("b", "OK", primary = true) {},
+                DialogView.Action("a", "Cancel", primary = false) {},
+                DialogView.Action("b", "OK", primary = true) {},
             ))
             val btns = actionButtons(panel)
             assertEquals(2, btns.size)
@@ -187,8 +231,8 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test primary action has DarculaButtonUI default style key`() {
         edt {
-            val panel = BaseQuestionView()
-            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+            val panel = DialogView()
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) {}))
             val btn = actionButton(panel, "OK")
             assertEquals(true, btn.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
         }
@@ -196,8 +240,8 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test non-primary action does not have DarculaButtonUI default style key`() {
         edt {
-            val panel = BaseQuestionView()
-            panel.setActions(listOf(BaseQuestionView.Action("cancel", "Cancel", primary = false) {}))
+            val panel = DialogView()
+            panel.setActions(listOf(DialogView.Action("cancel", "Cancel", primary = false) {}))
             val btn = actionButton(panel, "Cancel")
             val key = btn.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY)
             assertTrue("Non-primary should not have default style key", key == null || key == false)
@@ -207,8 +251,8 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
     fun `test action button click invokes handler`() {
         edt {
             var clicked = false
-            val panel = BaseQuestionView()
-            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) { clicked = true }))
+            val panel = DialogView()
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) { clicked = true }))
             actionButton(panel, "OK").doClick()
             assertTrue("handler should have been invoked", clicked)
         }
@@ -217,10 +261,10 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
     fun `test action button click returns focus to session prompt`() {
         edt {
             var focused = false
-            val panel = BaseQuestionView(focus = { focused = true })
+            val panel = DialogView(focus = { focused = true })
             val root = JPanel(BorderLayout())
             root.add(panel)
-            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) {}))
 
             actionButton(panel, "OK").doClick()
 
@@ -230,8 +274,8 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setActionEnabled disables and enables button`() {
         edt {
-            val panel = BaseQuestionView()
-            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true, enabled = true) {}))
+            val panel = DialogView()
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true, enabled = true) {}))
             panel.setActionEnabled("ok", false)
             assertFalse(actionButton(panel, "OK").isEnabled)
             panel.setActionEnabled("ok", true)
@@ -241,8 +285,8 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setActions empty removes all action buttons`() {
         edt {
-            val panel = BaseQuestionView()
-            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+            val panel = DialogView()
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) {}))
             panel.setActions(emptyList())
             assertTrue("action buttons should be removed", actionButtons(panel).isEmpty())
             assertNull("footer should be removed when empty", region(panel, BorderLayout.SOUTH))
@@ -251,10 +295,10 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test action buttons are non-opaque so no stray fill frame`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setActions(listOf(
-                BaseQuestionView.Action("a", "A", primary = false) {},
-                BaseQuestionView.Action("b", "B", primary = true) {},
+                DialogView.Action("a", "A", primary = false) {},
+                DialogView.Action("b", "B", primary = true) {},
             ))
             // Non-opaque so Swing does not fill the rectangular bounds with the component
             // background before DarculaButtonUI paints the rounded shape. That rectangle leaked
@@ -268,7 +312,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test header row uses icon west and text stack center`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeaderIcon(AllIcons.General.Warning)
             val header = headerRow(panel)!!
             val layout = header.layout as BorderLayout
@@ -285,7 +329,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test header row has no west icon gap without icon`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("Title")
             val header = headerRow(panel)!!
             val west = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST)
@@ -295,8 +339,8 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test action footer is in south with buttons east`() {
         edt {
-            val panel = BaseQuestionView()
-            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+            val panel = DialogView()
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) {}))
             val btn = actionButton(panel, "OK")
             val footer = region(panel, BorderLayout.SOUTH) as JPanel
             val row = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.EAST) as JPanel
@@ -306,8 +350,8 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test action footer has top gap matching panel vertical padding`() {
         edt {
-            val panel = BaseQuestionView()
-            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+            val panel = DialogView()
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) {}))
 
             val footer = region(panel, BorderLayout.SOUTH) as JPanel
             val ins = footer.border.getBorderInsets(footer)
@@ -317,7 +361,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test card top padding uses next spacing step`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             val ins = panel.border.getBorderInsets(panel)
 
             assertEquals(UiStyle.Gap.pad(), ins.top)
@@ -329,7 +373,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test action left alone attaches footer west`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             val left = JLabel("left")
             panel.setActionLeft(left)
             val footer = region(panel, BorderLayout.SOUTH) as JPanel
@@ -340,7 +384,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test action left component is transparent`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             val left = JPanel()
             panel.setActionLeft(left)
             assertFalse("action left should be transparent", left.isOpaque)
@@ -349,9 +393,9 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test footer adds bottom padding gap after side actions`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setActionLeft(JLabel("left"))
-            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) {}))
 
             val footer = region(panel, BorderLayout.SOUTH) as JPanel
             val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
@@ -363,7 +407,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setActionLeft null removes left-only footer`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setActionLeft(JLabel("left"))
             panel.setActionLeft(null)
             assertNull("footer should be removed when action left is cleared", region(panel, BorderLayout.SOUTH))
@@ -374,7 +418,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setHeaderIcon adds icon to the left side of header row`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeaderIcon(AllIcons.General.Warning, "warning")
 
             val labels = findAll<JBLabel>(panel).filter { it.icon != null && it.isVisible }
@@ -386,7 +430,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test setHeaderIcon null hides header icon`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeaderIcon(AllIcons.General.Warning)
             panel.setHeaderIcon(null)
 
@@ -399,7 +443,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test applyStyle applies headerFont to header and secondary font to description`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("Title", "Hint")
             val style = SessionEditorStyle.current()
             panel.applyStyle(style)
@@ -414,7 +458,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test applyStyle does not apply editor font family to header or description`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("Title", "Hint")
             val style = SessionEditorStyle.create(family = "Courier New", size = 20)
             panel.applyStyle(style)
@@ -429,7 +473,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     fun `test description uses same vertical stacking as option descriptions`() {
         edt {
-            val panel = BaseQuestionView()
+            val panel = DialogView()
             panel.setHeader("Title", "Hint")
             val desc = findAll<JBTextArea>(panel).firstOrNull { it.text == "Hint" }
             assertNotNull(desc)
@@ -440,16 +484,11 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     // ------ helpers ------
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
-    private fun region(panel: BaseQuestionView, region: String) = (panel.layout as BorderLayout).getLayoutComponent(region)
+    private fun region(panel: DialogView, region: String) = (panel.layout as BorderLayout).getLayoutComponent(region)
 
-    private fun headerRow(panel: BaseQuestionView): JPanel? {
+    private fun headerRow(panel: DialogView): JPanel? {
         val north = region(panel, BorderLayout.NORTH) as? Container ?: return null
         return north.components.filterIsInstance<JPanel>().firstOrNull { it.layout is BorderLayout }
     }
@@ -477,9 +516,9 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         return null
     }
 
-    private fun actionButton(panel: BaseQuestionView, text: String): JButton = actionButtons(panel)[text]!!
+    private fun actionButton(panel: DialogView, text: String): JButton = actionButtons(panel)[text]!!
 
-    private fun actionButtons(panel: BaseQuestionView): Map<String, JButton> = findAll<JButton>(panel).associateBy { it.text }
+    private fun actionButtons(panel: DialogView): Map<String, JButton> = findAll<JButton>(panel).associateBy { it.text }
 
     private inline fun <reified T> findAll(root: Container): List<T> = findAllCls(root, T::class.java)
 

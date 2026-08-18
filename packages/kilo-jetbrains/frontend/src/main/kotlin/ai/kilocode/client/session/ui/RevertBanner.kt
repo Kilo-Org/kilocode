@@ -5,10 +5,9 @@ import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.ToolbarButtonAction
@@ -23,8 +22,6 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import com.intellij.util.ui.components.BorderLayoutPanel
-import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
@@ -41,15 +38,13 @@ class RevertBanner(
     focus: (() -> Unit)? = null,
     private var openDiff: SessionDiffOpener = { _, _, _ -> },
     private var sessionId: String? = null,
-) : BorderLayoutPanel(), SessionView, SessionEditorStyleTarget {
+) : DialogView(focus = focus), SessionView {
     override val sessionViewKind = SessionView.Kind.Default
 
     companion object {
         /** Cap the reverted-file list to this many rows before scrolling. */
         const val MAX_FILE_ROWS = 10
     }
-
-    private val card = BaseQuestionView(focus = focus)
 
     private val title = JBLabel()
 
@@ -100,14 +95,13 @@ class RevertBanner(
 
     init {
         isOpaque = false
-        card.setTopPanel(header)
+        setTopPanel(header)
         body.next(scroll).next(hint).next(notice)
-        card.setContent(body)
-        card.setActions(listOf(
-            BaseQuestionView.Action("redo", KiloBundle.message("revert.banner.redo"), primary = false) { redoAction() },
-            BaseQuestionView.Action("all", KiloBundle.message("revert.banner.redo.all"), primary = false) { redoAllAction() },
+        setContent(body)
+        setActions(listOf(
+            DialogView.Action("redo", KiloBundle.message("revert.banner.redo"), primary = false) { redoAction() },
+            DialogView.Action("all", KiloBundle.message("revert.banner.redo.all"), primary = false) { redoAllAction() },
         ))
-        add(card, BorderLayout.CENTER)
         applyStyle(SessionEditorStyle.current())
         update()
     }
@@ -125,7 +119,7 @@ class RevertBanner(
         if (revert == null) return
         val total = model.revertedCount()
         title.text = KiloBundle.message(if (total == 1) "revert.banner.count.one" else "revert.banner.count.other", total)
-        card.setActionVisible("all", total > 1)
+        setActionVisible("all", total > 1)
         notice.isVisible = revert.snapshot == null
         val diffs = resolveDiffs(revert)
         val names = disambiguate(diffs.map { it.file })
@@ -153,23 +147,23 @@ class RevertBanner(
     fun setReverting(state: SessionState) {
         val busy = state is SessionState.Reverting
         if (busy) {
-            card.setActionEnabled("redo", false)
-            card.setActionEnabled("all", false)
+            setActionEnabled("redo", false)
+            setActionEnabled("all", false)
             val node = progress ?: RevertProgress(cancelAction).also {
                 it.applyStyle(SessionEditorStyle.current())
                 progress = it
             }
             node.setText(state.text)
-            card.setActionLeft(node)
+            setActionLeft(node)
             return
         }
-        card.setActionLeft(null)
-        card.setActionEnabled("redo", true)
-        card.setActionEnabled("all", true)
+        setActionLeft(null)
+        setActionEnabled("redo", true)
+        setActionEnabled("all", true)
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
-        card.applyStyle(style)
+        super.applyStyle(style)
         title.font = style.headerFont
         title.foreground = SessionUiStyle.Colors.foreground()
         progress?.applyStyle(style)
