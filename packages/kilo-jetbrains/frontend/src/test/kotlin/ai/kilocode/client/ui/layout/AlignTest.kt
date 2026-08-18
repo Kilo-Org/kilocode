@@ -298,6 +298,63 @@ class AlignTest : BasePlatformTestCase() {
         assertEquals(30 + ins.top + ins.bottom, ps.height)
     }
 
+    // ------ function max ------
+
+    fun `test CENTER with max function fills cap and centers`() {
+        val child = child(pref = 40 x 20)
+        val wrap = Align(child, HAlign.CENTER, VAlign.TOP, maxW = { 120 })
+        wrap.setBounds(0, 0, 300, 100)
+        wrap.doLayout()
+
+        assertBounds(90, 0, 120, 20, child)
+    }
+
+    fun `test CENTER with max function fills available below cap`() {
+        val child = child(pref = 40 x 20)
+        val wrap = Align(child, HAlign.CENTER, VAlign.TOP, maxW = { 120 })
+        wrap.setBounds(0, 0, 80, 100)
+        wrap.doLayout()
+
+        assertBounds(0, 0, 80, 20, child)
+    }
+
+    fun `test RIGHT with max function pins capped width to right`() {
+        val child = child(pref = 40 x 20)
+        val wrap = Align(child, HAlign.RIGHT, VAlign.TOP, maxW = { 120 })
+        wrap.setBounds(0, 0, 300, 100)
+        wrap.doLayout()
+
+        assertBounds(180, 0, 120, 20, child)
+    }
+
+    fun `test max function is evaluated on each layout`() {
+        var cap = 120
+        val child = child(pref = 40 x 20)
+        val wrap = Align(child, HAlign.CENTER, VAlign.TOP, maxW = { cap })
+        wrap.setBounds(0, 0, 300, 100)
+        wrap.doLayout()
+        assertBounds(90, 0, 120, 20, child)
+
+        cap = 60
+        wrap.doLayout()
+
+        assertBounds(120, 0, 60, 20, child)
+    }
+
+    fun `test max function probes capped width before measuring height`() {
+        val child = object : JBLabel("x") {
+            override fun getMinimumSize() = Dimension(0, 0)
+            override fun getPreferredSize() = Dimension(20, if (width == 120) 12 else 60)
+            override fun getMaximumSize() = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
+        }
+        val wrap = Align(child, HAlign.CENTER, VAlign.TOP, maxW = { 120 })
+
+        wrap.setBounds(0, 0, 300, 100)
+        wrap.doLayout()
+
+        assertBounds(90, 0, 120, 12, child)
+    }
+
     // ------ align() factory ------
 
     fun `test align extension returns Align wrapping child`() {

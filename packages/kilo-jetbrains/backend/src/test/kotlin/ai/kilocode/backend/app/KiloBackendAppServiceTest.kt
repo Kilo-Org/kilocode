@@ -414,6 +414,20 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `profile 400 does not prevent Ready`() = runBlocking {
+        mock.profileStatus = 400
+        mock.profile = """{"message":"Bad Request"}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNull(svc.profile)
+        assertIs<KiloAppState.Ready>(svc.appState.value)
+        assertTrue(log.messages.any { it.contains("Profile: unavailable (400)") })
+    }
+
+    @Test
     fun `config failure retries then transitions to Error`() = runBlocking {
         mock.configStatus = 500
         mock.config = """{"error":"internal"}"""

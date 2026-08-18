@@ -212,6 +212,42 @@ class ConnectionDelayTest : SessionControllerTestBase() {
         assertEquals(event.first, event.second.connectionState)
     }
 
+    fun `test unsupported workspace hides connection banner`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller(displayMs = 1_000)
+        val events = collect(m)
+        flush()
+        events.clear()
+
+        projectRpc.state.value = KiloWorkspaceStateDto(
+            status = KiloWorkspaceStatusDto.UNSUPPORTED,
+            error = "devcontainer_virtual_filesystem",
+        )
+        pause(10)
+
+        var snap: ControllerStateSnapshot? = null
+        edt { snap = m.snapshotState() }
+        assertEquals(SessionControllerEvent.ConnectionChanged.Hide, snap!!.connectionState)
+        assertFalse(events.any { it is SessionControllerEvent.ConnectionChanged.ShowConnecting })
+        assertFalse(events.any { it is SessionControllerEvent.ConnectionChanged.ShowError })
+    }
+
+    fun `test retry ignores unsupported workspace`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        projectRpc.state.value = KiloWorkspaceStateDto(
+            status = KiloWorkspaceStatusDto.UNSUPPORTED,
+            error = "devcontainer_virtual_filesystem",
+        )
+        val m = controller(displayMs = 1_000)
+        flush()
+
+        edt { m.retryConnection() }
+        flush()
+
+        assertEquals(0, projectRpc.reloads)
+    }
+
     fun `test dispose suppresses pending delayed connection event`() {
         appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()

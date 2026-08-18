@@ -4,6 +4,8 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
@@ -74,6 +76,30 @@ class ViewSwitchingTest : SessionControllerTestBase() {
             WorkspaceReady
             ViewChanged recents=1
         """, events)
+    }
+
+    fun `test unsupported workspace shows unsupported view instead of recents`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        projectRpc.state.value = KiloWorkspaceStateDto(
+            status = KiloWorkspaceStatusDto.UNSUPPORTED,
+            error = "devcontainer_virtual_filesystem",
+        )
+        rpc.recent.add(session("ses_1"))
+        val m = controller()
+        val events = collect(m)
+
+        flush()
+
+        assertTrue(rpc.recentCalls.isEmpty())
+        assertControllerEvents("""
+            AccountOverlayChanged hide
+            AppChanged
+            WorkspaceChanged
+            ViewChanged unsupported reason=devcontainer_virtual_filesystem
+        """, events)
+        assertFalse(m.model.showSession)
+        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowSession })
     }
 
     fun `test recent load failure shows empty recents`() {

@@ -135,6 +135,7 @@ class KiloBackendAppService private constructor(
 
     val sessions = KiloBackendSessionManager(cs, log)
     val chat = KiloBackendChatManager(cs, log)
+    val activity = KiloBackendActivityManager(cs, log)
     val models = KiloBackendModelStateManager(log)
     val workspaces = KiloBackendWorkspaceManager(cs, sessions, log)
     @Volatile var profile: KiloProfile200Response? = null
@@ -458,6 +459,7 @@ class KiloBackendAppService private constructor(
                     models.start(connection.apiClient!!, connection.port)
                     sessions.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     chat.start(connection.apiClient!!, connection.port, connection.events)
+                    activity.start(sessions.statuses, sessions::sessionDirectory, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
                     setTelemetry(true)
@@ -591,9 +593,8 @@ class KiloBackendAppService private constructor(
      * on success, [FetchResult.ok] with `null` when not logged in or when
      * the server cannot reach the profile endpoint. Never throws.
      *
-     * Profile is optional — 401 (not logged in) and 5xx (gateway/network
-     * errors) are both non-fatal. Only unexpected client errors are treated
-     * as failures.
+     * Profile is optional — 401 (not logged in), 400 (missing/corrupt local
+     * auth), and 5xx (gateway/network errors) are all non-fatal.
      */
     private suspend fun fetchProfile(): FetchResult<KiloProfile200Response?> {
         val client = connection.appLoadApi
@@ -603,8 +604,9 @@ class KiloBackendAppService private constructor(
             log.info("Profile: ${response.profile.email}")
             FetchResult.ok(response)
         } catch (e: ClientException) {
-            if (e.statusCode == 401) {
-                log.info("Profile: not logged in (401)")
+            if (e.statusCode == 400 || e.statusCode == 401) {
+                log.info("Profile: unavailable (${e.statusCode})")
+                logResponseBody("profile", e)
                 return FetchResult.ok(null)
             }
             log.warn("Profile fetch failed: HTTP ${e.statusCode}", e)
@@ -878,6 +880,7 @@ class KiloBackendAppService private constructor(
     private fun stopRuntime() {
         workspaces.stop()
         models.stop()
+        activity.stop()
         chat.stop()
         sessions.stop()
     }

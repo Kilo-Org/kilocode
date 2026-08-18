@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.nio.file.Files
 import kotlin.io.path.createTempDirectory
@@ -31,6 +32,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KiloSessionRpcApiImplTest {
+    private val mock = MockCliServer()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val apps = mutableListOf<KiloBackendAppService>()
 
@@ -39,8 +41,19 @@ class KiloSessionRpcApiImplTest {
         apps.forEach { it.dispose() }
         apps.clear()
         scope.cancel()
+        mock.close()
     }
 
+    private fun app(log: TestLog): KiloBackendAppService {
+        return KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
+    }
+
+    private suspend fun ready(app: KiloBackendAppService) {
+        app.connect()
+        withTimeout(10_000) {
+            app.appState.first { it is KiloAppState.Ready }
+        }
+    }
 
     @Test
     fun `events logs normal completion`() = runBlocking(Dispatchers.Default) {
@@ -75,6 +88,31 @@ class KiloSessionRpcApiImplTest {
         }
 
         assertTrue(log.messages.any { it.contains("route=rpc-events stop=true failed message=stream failed") }, log.messages.joinToString("\n"))
+    }
+
+    @Test
+    fun `create logs created session id`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        mock.sessionCreate = """{"id":"ses_created","slug":"created","projectID":"prj_test","directory":"/test","title":"Created","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+        val app = app(log)
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        api.create("/test")
+
+        assertTrue(log.messages.any { it.contains("create session: id=ses_created") }, log.messages.joinToString("\n"))
+    }
+
+    @Test
+    fun `delete logs deleted session id`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        api.delete("ses_deleted", "/test")
+
+        assertTrue(log.messages.any { it.contains("delete session: id=ses_deleted") }, log.messages.joinToString("\n"))
     }
 
     @Test
@@ -127,11 +165,11 @@ class KiloSessionRpcApiImplTest {
 
     @Test
     fun `diffSides prefers authoritative CLI content over local reconstruction`() = runBlocking(Dispatchers.Default) {
-        val mock = MockCliServer()
+        val server = MockCliServer()
         try {
-            mock.sessionDiff =
+            server.sessionDiff =
                 """[{"file":"src/Main.kt","additions":1,"deletions":1,"status":"modified","patch":"p","before":"OLD\n","after":"NEW\n"}]"""
-            val api = KiloSessionRpcApiImpl(app(mock))
+            val api = KiloSessionRpcApiImpl(app(server))
 
             // No working-tree file exists here, so a non-null result can only come from the CLI path.
             val diff = api.diffSides("ses_test", "/does-not-exist", DiffFileDto("src/Main.kt", 1, 1, "p", "modified"), "msg1")
@@ -139,26 +177,26 @@ class KiloSessionRpcApiImplTest {
             assertNotNull(diff)
             assertEquals("OLD\n", diff.before)
             assertEquals("NEW\n", diff.after)
-            val path = assertNotNull(mock.lastSessionDiffPath)
+            val path = assertNotNull(server.lastSessionDiffPath)
             assertTrue(path.contains("full=true"), path)
             assertTrue(path.contains("file=src%2FMain.kt"), path)
             assertTrue(path.contains("messageID=msg1"), path)
         } finally {
-            mock.close()
+            server.close()
         }
     }
 
     @Test
     fun `diffSides falls back to local reconstruction when the CLI omits full content`() = runBlocking(Dispatchers.Default) {
-        val mock = MockCliServer()
+        val server = MockCliServer()
         val dir = createTempDirectory("kilo-diff")
         try {
             // A CLI without full/file support returns the file entry but no before/after.
-            mock.sessionDiff = """[{"file":"src/Main.kt","additions":1,"deletions":1,"status":"modified","patch":"p"}]"""
+            server.sessionDiff = """[{"file":"src/Main.kt","additions":1,"deletions":1,"status":"modified","patch":"p"}]"""
             Files.createDirectories(dir.resolve("src"))
             Files.writeString(dir.resolve("src/Main.kt"), "a\nB2\nc\n")
             val patch = "--- a/src/Main.kt\n+++ b/src/Main.kt\n@@ -1,3 +1,3 @@\n a\n-b2\n+B2\n c\n"
-            val api = KiloSessionRpcApiImpl(app(mock))
+            val api = KiloSessionRpcApiImpl(app(server))
 
             val diff = api.diffSides("ses_test", dir.toString(), DiffFileDto("src/Main.kt", 1, 1, patch, "modified"), "msg1")
 
@@ -167,12 +205,12 @@ class KiloSessionRpcApiImplTest {
             assertEquals("a\nB2\nc\n", diff.after)
         } finally {
             delete(dir)
-            mock.close()
+            server.close()
         }
     }
 
-    private suspend fun app(mock: MockCliServer): KiloBackendAppService {
-        val app = KiloBackendAppService.create(scope, FakeCliServer(mock), TestLog()).also { apps.add(it) }
+    private suspend fun app(server: MockCliServer): KiloBackendAppService {
+        val app = KiloBackendAppService.create(scope, FakeCliServer(server), TestLog()).also { apps.add(it) }
         app.connect()
         val state = assertNotNull(
             withTimeoutOrNull(35_000) {

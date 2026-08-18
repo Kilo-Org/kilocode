@@ -1,6 +1,7 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.Question
@@ -21,11 +22,15 @@ import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.ui.layout.Align
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -34,9 +39,12 @@ import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTextArea
+import java.awt.Container
 import java.awt.Dimension
 import javax.swing.JLayeredPane
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
@@ -80,7 +88,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
 
-        assertSame(root.content, prompt.parent)
+        assertTrue(prompt.parent is Align)
+        assertSame(root.content, prompt.parent.parent)
         assertSame(root.overlay, connection.parent)
         assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
         assertFalse(root.content.components.contains(connection))
@@ -196,6 +205,24 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(messages, pv.parent)
     }
 
+    fun `test unsupported workspace shows standalone outcome card`() {
+        workspaceRpc.state.value = KiloWorkspaceStateDto(
+            status = KiloWorkspaceStatusDto.UNSUPPORTED,
+            error = "devcontainer_virtual_filesystem",
+        )
+        ui = newUi(displayMs = 1_000)
+        settle()
+        layout()
+
+        val view = find<SessionOutcomeView>(scrollView()!!)
+        val prompt = find<PromptPanel>(ui)
+
+        assertTrue(view.isVisible)
+        assertNotNull(findText(view, KiloBundle.message("session.unsupported.devcontainer.title")))
+        assertNotNull(findText(view, KiloBundle.message("session.unsupported.devcontainer.description")))
+        assertFalse(prompt.isSendEnabled)
+    }
+
     fun `test header is docked above shared scroll pane and hidden while empty`() {
         val root = find<SessionRootPanel>(ui)
         val header = find<SessionHeaderPanel>(ui)
@@ -238,22 +265,25 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals("rolled back prompt", prompt.text())
     }
 
-    fun `test connection panel overlays above full prompt width`() {
+    fun `test connection panel overlays above prompt with transparent inset`() {
         val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
 
         showConnection()
         layout()
+        val point = promptPoint(root, prompt)
+        val gap = SessionUiStyle.View.contentGap()
 
         assertTrue(connection.isVisible)
         assertSame(root.overlay, connection.parent)
-        assertEquals(prompt.x, connection.x)
-        assertEquals(prompt.width, connection.width)
-        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+        assertEquals(point.x + gap, connection.x)
+        assertEquals(prompt.width - gap * 2, connection.width)
+        assertEquals(point.y - gap, connection.y + connection.height)
     }
 
     fun `test expanded connection panel remains anchored above prompt`() {
+        val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
 
@@ -266,7 +296,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         layout()
 
         assertTrue(connection.detailsVisible())
-        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
     }
 
     fun `test connection panel is unaffected by active question view`() {
@@ -276,6 +306,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         layout()
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
+        val root = find<SessionRootPanel>(ui)
         val top = connection.y
 
         controller().model.setState(questionStateChanged())
@@ -284,7 +315,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<QuestionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -295,6 +326,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         layout()
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
+        val root = find<SessionRootPanel>(ui)
         val top = connection.y
 
         controller().model.setState(permissionStateChanged())
@@ -303,7 +335,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<PermissionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -763,6 +795,23 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         .components
         .single()
         .let { it as javax.swing.JComponent }
+
+    private fun promptPoint(root: SessionRootPanel, prompt: PromptPanel) =
+        SwingUtilities.convertPoint(prompt.parent, prompt.x, prompt.y, root.overlay)
+
+    private fun findText(root: Container, text: String) = findAll<JBTextArea>(root).firstOrNull { it.text == text }
+
+    private inline fun <reified T> findAll(root: Container): List<T> = findAll(root, T::class.java)
+
+    private fun <T> findAll(root: Container, cls: Class<T>): List<T> {
+        val result = mutableListOf<T>()
+        if (cls.isInstance(root)) result.add(cls.cast(root))
+        for (child in root.components) {
+            if (cls.isInstance(child)) result.add(cls.cast(child))
+            if (child is Container) result.addAll(findAll(child, cls))
+        }
+        return result
+    }
 
     private class Row(override val sessionViewKind: SessionView.Kind) : JPanel(), SessionView {
         override fun getPreferredSize() = Dimension(100, 10)

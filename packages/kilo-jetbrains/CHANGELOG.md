@@ -150,6 +150,20 @@
 
 ## [Unreleased]
 
+## [7.1.0-rc.1] - 2026-08-18
+
+### Added
+- Add the JetBrains Agent Manager beta for creating, opening, organizing, renaming, and deleting worktree-based tasks and their sessions from the IDE.
+- Show worktree activity, change, ahead/behind, and pull request badges in Agent Manager, with clearer row actions, menus, and tooltips.
+- Support opening Agent Manager worktrees in new windows and dedicated terminal tabs.
+
+### Fixed
+- Improve JetBrains chat readability and scrolling with centered readable width, refreshed prompt chrome, stable tail-follow behavior, and clearer failed-turn outcome cards.
+- Keep Ask and Plan modes read-only even when broad global permission rules are configured.
+- Preserve project-level snapshot disabling across restarts after choosing to disable snapshots from the slow-repo prompt.
+
+### Changed
+
 ## [7.0.16] - 2026-08-14
 
 ### Added

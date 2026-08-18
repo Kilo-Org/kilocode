@@ -5,6 +5,7 @@ import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import java.awt.Component
 import java.awt.Font
 import javax.swing.UIManager
 
@@ -75,6 +76,7 @@ object SessionUiStyle {
 
     /** Geometry for the transcript list and its scroll behavior. */
     object SessionLayout {
+        const val READABLE_COLUMNS = 98
         const val GAP = 3
         const val USER_PROMPT_GAP = 10
         const val TRANSCRIPT_SCROLLBAR_PADDING = 10
@@ -87,6 +89,11 @@ object SessionUiStyle {
 
         const val USER_PROMPT_INDENT = 100
         const val SCROLL_INCREMENT = 48
+
+        fun readableWidth(component: Component, font: Font): Int {
+            val width = component.getFontMetrics(font).charWidth('0').coerceAtLeast(1)
+            return width * READABLE_COLUMNS
+        }
     }
 
     /** Shared tokens for individual transcript views and session views. */
@@ -270,6 +277,11 @@ object SessionUiStyle {
         /** Permission session-view command preview limits. */
         object Permission {
             const val COMMAND_LINES = 3
+        }
+
+        /** Outcome/error footer card preview limits. */
+        object Outcome {
+            const val ERROR_LINES = 5
         }
 
         /** Tool session-view preview limits and state colors. */

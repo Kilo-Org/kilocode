@@ -70,89 +70,95 @@ class KiloBackendWorkspace(
             loader?.cancel()
             eventWatcher?.cancel()
             loader = cs.launch {
-            log.info("Loading workspace data for $directory")
-            val progress = AtomicReference(KiloWorkspaceLoadProgress())
-            _state.value = KiloWorkspaceState.Loading(progress.get())
-
-            var prov: ProviderData? = null
-            var ag: AgentData? = null
-            var cmd: List<CommandInfo>? = null
-            var sk: List<SkillInfo>? = null
-            val errors = mutableListOf<LoadError>()
-
-            try {
-                coroutineScope {
-                    launch {
-                        val result = fetchWithRetry("providers") { fetchProviders() }
-                        ensureActive()
-                        if (result.value != null) {
-                            prov = result.value
-                            progress.updateAndGet { it.copy(providers = true) }
-                                .also { _state.value = KiloWorkspaceState.Loading(it) }
-                        } else {
-                            val err = result.error ?: LoadError(resource = "providers")
-                            synchronized(errors) { errors.add(err) }
-                            throw LoadFailure(err)
-                        }
-                    }
-                    launch {
-                        val result = fetchWithRetry("agents") { fetchAgents() }
-                        ensureActive()
-                        if (result.value != null) {
-                            ag = result.value
-                            progress.updateAndGet { it.copy(agents = true) }
-                                .also { _state.value = KiloWorkspaceState.Loading(it) }
-                        } else {
-                            val err = result.error ?: LoadError(resource = "agents")
-                            synchronized(errors) { errors.add(err) }
-                            throw LoadFailure(err)
-                        }
-                    }
-                    launch {
-                        val result = fetchWithRetry("commands") { fetchCommands() }
-                        ensureActive()
-                        if (result.value != null) {
-                            cmd = result.value
-                            progress.updateAndGet { it.copy(commands = true) }
-                                .also { _state.value = KiloWorkspaceState.Loading(it) }
-                        } else {
-                            val err = result.error ?: LoadError(resource = "commands")
-                            synchronized(errors) { errors.add(err) }
-                            throw LoadFailure(err)
-                        }
-                    }
-                    launch {
-                        val result = fetchWithRetry("skills") { fetchSkills() }
-                        ensureActive()
-                        if (result.value != null) {
-                            sk = result.value
-                            progress.updateAndGet { it.copy(skills = true) }
-                                .also { _state.value = KiloWorkspaceState.Loading(it) }
-                        } else {
-                            val err = result.error ?: LoadError(resource = "skills")
-                            synchronized(errors) { errors.add(err) }
-                            throw LoadFailure(err)
-                        }
-                    }
+                log.info("Loading workspace data for $directory")
+                val reason = RemoteDirectory.detect(directory)
+                if (reason != null) {
+                    log.info("Workspace directory is unsupported for host-side Kilo runtime: $reason [$directory]")
+                    _state.value = KiloWorkspaceState.Unsupported(reason)
+                    return@launch
                 }
+                val progress = AtomicReference(KiloWorkspaceLoadProgress())
+                _state.value = KiloWorkspaceState.Loading(progress.get())
 
-                ensureActive()
-                startWatchingGlobalSseEvents()
-                _state.value = KiloWorkspaceState.Ready(
-                    providers = prov!!,
-                    agents = ag!!,
-                    commands = cmd!!,
-                    skills = sk!!,
-                )
-                log.info("Workspace data loaded for $directory")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                log.warn("Workspace data load failed for $directory: ${e.message}")
-                val items = synchronized(errors) { errors.toList() }
-                val names = items.joinToString { it.resource }
-                setWorkspaceError("Failed to load: $names", items)
-            }
+                var prov: ProviderData? = null
+                var ag: AgentData? = null
+                var cmd: List<CommandInfo>? = null
+                var sk: List<SkillInfo>? = null
+                val errors = mutableListOf<LoadError>()
+
+                try {
+                    coroutineScope {
+                        launch {
+                            val result = fetchWithRetry("providers") { fetchProviders() }
+                            ensureActive()
+                            if (result.value != null) {
+                                prov = result.value
+                                progress.updateAndGet { it.copy(providers = true) }
+                                    .also { _state.value = KiloWorkspaceState.Loading(it) }
+                            } else {
+                                val err = result.error ?: LoadError(resource = "providers")
+                                synchronized(errors) { errors.add(err) }
+                                throw LoadFailure(err)
+                            }
+                        }
+                        launch {
+                            val result = fetchWithRetry("agents") { fetchAgents() }
+                            ensureActive()
+                            if (result.value != null) {
+                                ag = result.value
+                                progress.updateAndGet { it.copy(agents = true) }
+                                    .also { _state.value = KiloWorkspaceState.Loading(it) }
+                            } else {
+                                val err = result.error ?: LoadError(resource = "agents")
+                                synchronized(errors) { errors.add(err) }
+                                throw LoadFailure(err)
+                            }
+                        }
+                        launch {
+                            val result = fetchWithRetry("commands") { fetchCommands() }
+                            ensureActive()
+                            if (result.value != null) {
+                                cmd = result.value
+                                progress.updateAndGet { it.copy(commands = true) }
+                                    .also { _state.value = KiloWorkspaceState.Loading(it) }
+                            } else {
+                                val err = result.error ?: LoadError(resource = "commands")
+                                synchronized(errors) { errors.add(err) }
+                                throw LoadFailure(err)
+                            }
+                        }
+                        launch {
+                            val result = fetchWithRetry("skills") { fetchSkills() }
+                            ensureActive()
+                            if (result.value != null) {
+                                sk = result.value
+                                progress.updateAndGet { it.copy(skills = true) }
+                                    .also { _state.value = KiloWorkspaceState.Loading(it) }
+                            } else {
+                                val err = result.error ?: LoadError(resource = "skills")
+                                synchronized(errors) { errors.add(err) }
+                                throw LoadFailure(err)
+                            }
+                        }
+                    }
+
+                    ensureActive()
+                    startWatchingGlobalSseEvents()
+                    _state.value = KiloWorkspaceState.Ready(
+                        providers = prov!!,
+                        agents = ag!!,
+                        commands = cmd!!,
+                        skills = sk!!,
+                    )
+                    log.info("Workspace data loaded for $directory")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("Workspace data load failed for $directory: ${e.message}")
+                    val items = synchronized(errors) { errors.toList() }
+                    val names = items.joinToString { it.resource }
+                    setWorkspaceError("Failed to load: $names", items)
+                }
             }
         }
     }

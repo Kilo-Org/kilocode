@@ -60,7 +60,7 @@ import { VirtualDiffList } from "../diff-viewer/VirtualDiffList"
 import { treeOrder } from "../diff-viewer/file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
 import { ImageDiffView } from "../diff-viewer/ImageDiffView"
-import { createDiffRows } from "../diff-viewer/diff-state"
+import { createDiffRows, diffSizeKey } from "../diff-viewer/diff-state"
 import { createDiffRequests } from "../diff-viewer/diff-requests"
 
 // --- Data model ---
@@ -728,6 +728,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                     after={{ name: diff.file, contents: diff.after }}
                                     patch={diff.patch}
                                     diffStyle={props.diffStyle ?? "unified"}
+                                    sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle ?? "unified")}
                                     virtualized={shouldVirtualizeDiff(diff)}
                                     annotations={annotationsForFile(diff.file)}
                                     renderAnnotation={buildAnnotation}

@@ -14,6 +14,7 @@ import ai.kilocode.client.migration.MigrationUiState
 import ai.kilocode.client.migration.ui.MigrationOverlayPanel
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.scroll.SessionScroll
@@ -44,12 +45,18 @@ import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
+import ai.kilocode.client.session.controller.PromptSelection
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
+import ai.kilocode.client.session.views.SessionOutcomeView
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
@@ -61,6 +68,7 @@ import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
@@ -124,6 +132,7 @@ class SessionUi(
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
+        private const val DEVCONTAINER_URL = "https://kilo.ai/docs/jetbrains/dev-containers"
         private const val HIDE_MS = 120
     }
 
@@ -179,6 +188,8 @@ class SessionUi(
 
     private lateinit var progressBody: JPanel
 
+    private lateinit var unsupportedBody: JPanel
+
     private lateinit var messageBody: SessionMessageListPanel
 
     private lateinit var header: SessionHeaderPanel
@@ -188,6 +199,8 @@ class SessionUi(
     private lateinit var question: QuestionView
     private lateinit var permission: PermissionView
     private lateinit var login: LoginRequiredView
+    private lateinit var outcome: SessionOutcomeView
+    private lateinit var unsupported: SessionOutcomeView
     private lateinit var connection: ConnectionPanel
 
     private lateinit var prompt: PromptPanel
@@ -224,7 +237,7 @@ class SessionUi(
         bindStyle()
         bindMigration()
         onStateChanged(controller.model.state)
-        refreshBranchChanges()
+        if (showBranchBadge()) refreshBranchChanges()
         loaded?.let(::finishOpen)
     }
 
@@ -260,7 +273,8 @@ class SessionUi(
         is SessionState.Reverting,
         is SessionState.Retry,
         is SessionState.Offline,
-        is SessionState.Error -> null
+        is SessionState.Error,
+        is SessionState.TurnEnded -> null
         is SessionState.LoginRequired -> SessionActivityKind.LOGIN_REQUIRED
         is SessionState.AwaitingPermission -> SessionActivityKind.PERMISSION
         is SessionState.AwaitingQuestion ->
@@ -281,6 +295,21 @@ class SessionUi(
     }
 
     internal val promptFocusedComponent: JComponent get() = prompt.defaultFocusedComponent
+
+    /**
+     * Sends [text] as the session's first message. Used by the New Worktree flow to auto-start a
+     * session with the prompt typed in the dialog, routing through the same path as a typed prompt.
+     * The optional [select] carries the mode / model / reasoning picked in the dialog so the first
+     * turn runs with them even before this session's own model state has loaded.
+     */
+    @RequiresEdt
+    internal fun submitPrompt(text: String, select: PromptSelection? = null) {
+        if (text.isBlank()) return
+        // Seed the session's agent/model/reasoning so the pickers and later turns reflect the pick,
+        // then send the first turn carrying it too (so it applies before workspace-ready resolves).
+        select?.let { controller.applySelection(it) }
+        sendPrompt(text, emptyList(), select)
+    }
 
     @RequiresEdt
     internal fun focusPrompt() {
@@ -340,6 +369,21 @@ class SessionUi(
         load = LoadingPanel()
         progressBody = load
         val focus = { manager?.focusPrompt() ?: focusPrompt() }
+        unsupported = SessionOutcomeView(
+            selection = selection,
+            focus = focus,
+        )
+        unsupportedBody = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            add(
+                unsupported.align(
+                    HAlign.CENTER,
+                    VAlign.TOP,
+                    maxW = { SessionUiStyle.SessionLayout.readableWidth(unsupported, style.transcriptFont) },
+                ),
+                BorderLayout.NORTH,
+            )
+        }
         question = QuestionView(
             project = project,
             reply = { id, dto, opts -> controller.replyQuestion(id, dto, opts) },
@@ -360,6 +404,10 @@ class SessionUi(
             selection = selection,
             focus = focus,
         )
+        outcome = SessionOutcomeView(
+            selection = selection,
+            focus = focus,
+        )
         messageBody = SessionMessageListPanel(
             controller.model,
             this,
@@ -377,6 +425,7 @@ class SessionUi(
             deleteQueued = { id -> controller.deleteQueuedMessage(id) },
             banner = RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
         ).also {
+            it.outcome = outcome
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
@@ -409,16 +458,17 @@ class SessionUi(
             onMentions = ::mentionParts,
             completion = completion,
             cs = cs,
+            hostedInEditorTab = manager?.hostedInEditorTab == true,
         )
         connection = ConnectionPanel(this, controller)
         root.addOverlay(connection) { pane, child ->
             val size = child.preferredSize
             val point = SwingUtilities.convertPoint(prompt.parent ?: root.content, prompt.x, prompt.y, pane)
-            val overlap = SessionUiStyle.View.Outline.width()
+            val gap = SessionUiStyle.View.contentGap()
             java.awt.Rectangle(
-                point.x,
-                point.y - size.height - overlap,
-                prompt.width,
+                point.x + gap,
+                point.y - size.height - gap,
+                (prompt.width - gap * 2).coerceAtLeast(0),
                 size.height,
             )
         }
@@ -436,7 +486,14 @@ class SessionUi(
         sessionContent.add(header, BorderLayout.NORTH)
         sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
-        root.content.add(prompt, BorderLayout.SOUTH)
+        root.content.add(
+            prompt.align(
+                HAlign.CENTER,
+                VAlign.FIT,
+                maxW = { SessionUiStyle.SessionLayout.readableWidth(prompt, style.transcriptFont) },
+            ),
+            BorderLayout.SOUTH,
+        )
         add(root, BorderLayout.CENTER)
     }
 
@@ -522,17 +579,28 @@ class SessionUi(
                         controller,
                         event.recents,
                         history = { manager?.showHistory() },
-                        activity = { manager?.activity() ?: sessions.activity() },
+                        activity = { manager?.activity() ?: sessions.activitySnapshot() },
                         titles = { manager?.titles().orEmpty() },
                         timers = timers,
                     )
                     empty = panel
-                    scroll.show(panel.view)
+                    if (controller.model.workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) {
+                        scroll.show(body(controller.model.state))
+                    }
+                    if (controller.model.workspace.status != KiloWorkspaceStatusDto.UNSUPPORTED) {
+                        scroll.show(panel.view)
+                    }
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowSession -> {
                     empty = null
                     scroll.show(body(controller.model.state))
+                }
+
+                is SessionControllerEvent.ViewChanged.ShowUnsupported -> {
+                    empty = null
+                    showUnsupported(event.reason)
+                    scroll.show(unsupportedBody)
                 }
 
                 is SessionControllerEvent.AppChanged -> {
@@ -541,6 +609,9 @@ class SessionUi(
 
                 is SessionControllerEvent.WorkspaceChanged -> {
                     prompt.setReady(controller.model.isReady())
+                    if (controller.model.workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED || scroll.view === unsupportedBody) {
+                        scroll.show(body(controller.model.state))
+                    }
                 }
 
                 is SessionControllerEvent.ConnectionChanged -> Unit
@@ -645,10 +716,37 @@ class SessionUi(
     }
 
     private fun body(state: SessionState): JPanel {
+        if (controller.model.workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) {
+            showUnsupported(controller.model.workspace.error)
+            return unsupportedBody
+        }
         if (controller.model.showSession) return messageBody
         if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (state is SessionState.Loading) return progressBody
         return blankBody
+    }
+
+    @RequiresEdt
+    private fun showUnsupported(reason: String?) {
+        val msg = unsupportedCopy(reason)
+        unsupported.showNotice(
+            KiloBundle.message(msg.first),
+            KiloBundle.message(msg.second),
+            OutcomeTone.WARNING,
+            listOf(
+                DialogView.Action("learn", KiloBundle.message("session.unsupported.learnMore"), primary = false) {
+                    openUrl(DEVCONTAINER_URL)
+                },
+            ),
+        )
+    }
+
+    private fun unsupportedCopy(reason: String?) = when (reason) {
+        "devcontainer_virtual_filesystem",
+        "wsl_virtual_filesystem",
+        "invalid_virtual_path" -> "session.unsupported.devcontainer.title" to "session.unsupported.devcontainer.description"
+
+        else -> "session.unsupported.devcontainer.title" to "session.unsupported.devcontainer.description"
     }
 
     private fun finishOpen(show: Boolean) {
@@ -674,7 +772,7 @@ class SessionUi(
         }
     }
 
-    private fun sendPrompt(text: String, files: List<PromptPartDto>) {
+    private fun sendPrompt(text: String, files: List<PromptPartDto>, select: PromptSelection? = null) {
         if (text.isBlank() && files.isEmpty()) return
         prompt.clear()
         val follow = scroll.following()
@@ -703,7 +801,7 @@ class SessionUi(
             val model = controller.model.model ?: "none"
             "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
         }
-        controller.prompt(text, allFiles, editor.context)
+        controller.prompt(text, allFiles, editor.context, select)
         scroll.followBottom(follow)
     }
 
@@ -839,6 +937,11 @@ class SessionUi(
 
     /** Badge-only refresh: fetches stats (no patch text) and updates the header count. */
     private fun refreshBranchChanges() {
+        if (!showBranchBadge()) {
+            refreshJob?.cancel()
+            header.hideBranchChanges()
+            return
+        }
         refreshJob?.cancel()
         refreshJob = cs.launch {
             val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
@@ -856,6 +959,7 @@ class SessionUi(
 
     /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
     private fun openBranchChanges() {
+        if (!showBranchBadge()) return
         openJob?.cancel()
         openJob = cs.launch {
             val dir = workspace.directory
@@ -888,6 +992,8 @@ class SessionUi(
         )
         Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
     }
+
+    private fun showBranchBadge(): Boolean = manager?.showsBranchBadgeInHeader != false
 
     private fun openAttachment(messageId: String, item: FileAttachment) {
         val url = item.url.takeIf { it.isNotBlank() } ?: run {
@@ -952,7 +1058,7 @@ class SessionUi(
         if (wasBusy && state is SessionState.Idle) refreshBranchChanges()
         wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()
-        if (state is SessionState.Error) {
+        if (state is SessionState.Error || state is SessionState.TurnEnded) {
             pendingRollback = null
             pendingRedo = null
         }
@@ -983,6 +1089,7 @@ class SessionUi(
         header.applyStyle(style)
         prompt.applyStyle(style)
         connection.applyStyle(style)
+        unsupported.applyStyle(style)
         scroll.applyStyle(style)
         empty?.applyStyle(style)
         refresh()
