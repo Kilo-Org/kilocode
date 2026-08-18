@@ -33682,6 +33682,10 @@
             "type": "string",
             "enum": ["expanded", "collapsed"]
           },
+          "mcp_tool_display": {
+            "type": "string",
+            "enum": ["expanded", "collapsed"]
+          },
           "hide_prompt_training_models": {
             "type": "boolean"
           },
