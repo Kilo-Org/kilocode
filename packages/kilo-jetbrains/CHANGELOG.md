@@ -150,6 +150,18 @@
 
 ## [Unreleased]
 
+## [7.1.0-rc.2] - 2026-08-18
+
+### Fixed
+- fix(cli): remove duplicate skill catalog by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13210
+- fix(jetbrains): unblock public API release by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13215
+
+### Changed
+- test(core): make project copy cleanup idempotent by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13211
+- release(jetbrains): v7.1.0-rc.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13212
+- ci: skip JS typecheck for JetBrains-only changes by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13208
+
+
 ## [7.1.0-rc.1] - 2026-08-18
 
 ### Added
