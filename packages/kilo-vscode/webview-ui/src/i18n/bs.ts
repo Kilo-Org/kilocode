@@ -273,6 +273,7 @@ export const dict = {
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
   "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",
+  "notification.permission.titleSandboxEscalation": "Dozvoliti Git operaciju izvan sandboxa?",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
   "ui.permission.doomLoop.prompt": "Otkrivena je moguća petlja za alat {{tool}}. Nastaviti izvršavanje?",
   "ui.permission.doomLoop.rule": "Nastavi pozive alata {{tool}}",

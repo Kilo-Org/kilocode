@@ -23,6 +23,23 @@ const MIN_PLACEHOLDER_HEIGHT = 160
 const MAX_PLACEHOLDER_HEIGHT = 1200
 type Job = { run: () => void; cancelled: boolean }
 
+const sizes = new WeakMap<object, Map<number, number>>()
+const WIDTH_LIMIT = 8
+
+function remember(key: object | undefined, width: number, height: number) {
+  if (!key || width <= 0 || height <= 0) return
+  const widths = sizes.get(key) ?? new Map<number, number>()
+  widths.delete(width)
+  widths.set(width, height)
+  if (widths.size > WIDTH_LIMIT) widths.delete(widths.keys().next().value!)
+  sizes.set(key, widths)
+}
+
+function reserved(key: object | undefined, width: number) {
+  if (!key || width <= 0) return
+  return sizes.get(key)?.get(width)
+}
+
 // A review can contain many expanded diff components. Creating one
 // IntersectionObserver per diff showed up in profiles, so all deferred diffs
 // share a single observer and only register their element + render callback.
@@ -173,6 +190,7 @@ export function Diff<T>(props: DiffProps<T>) {
     "commentedLines",
     "onRendered",
     "virtualized",
+    "sizeKey",
   ])
 
   const mobile = createMediaQuery("(max-width: 640px)")
@@ -247,7 +265,7 @@ export function Diff<T>(props: DiffProps<T>) {
 
   createEffect(() => {
     if (visible()) return
-    container.style.minHeight = `${estimate()}px`
+    container.style.minHeight = `${reserved(local.sizeKey, container.clientWidth) ?? estimate()}px`
   })
 
   createEffect(() => {
@@ -265,6 +283,17 @@ export function Diff<T>(props: DiffProps<T>) {
 
     return root
   }
+
+  createEffect(() => {
+    if (typeof ResizeObserver === "undefined") return
+    const resize = new ResizeObserver(() => {
+      const root = getRoot()
+      if (!visible() || !current() || !root?.querySelector("[data-line]")) return
+      remember(local.sizeKey, container.clientWidth, container.offsetHeight)
+    })
+    resize.observe(container)
+    onCleanup(() => resize.disconnect())
+  })
 
   const applyScheme = () => {
     const host = container.querySelector("diffs-container")
@@ -370,6 +399,7 @@ export function Diff<T>(props: DiffProps<T>) {
         if (token !== renderToken) return
         // Clear the height pin now that Pierre has rendered new content.
         container.style.minHeight = ""
+        remember(local.sizeKey, container.clientWidth, container.offsetHeight)
         setSelectedLines(lastSelection)
         local.onRendered?.()
       })
@@ -411,6 +441,7 @@ export function Diff<T>(props: DiffProps<T>) {
     if (typeof MutationObserver === "undefined") {
       container.style.minHeight = ""
       if (!root || !isReady(root)) return
+      remember(local.sizeKey, container.clientWidth, container.offsetHeight)
       setSelectedLines(lastSelection)
       local.onRendered?.()
       return
@@ -777,6 +808,7 @@ export function Diff<T>(props: DiffProps<T>) {
         if (!instance) return
         instance.setLineAnnotations(annotations ?? [])
         instance.rerender()
+        notifyRendered()
       },
       { defer: true },
     ),

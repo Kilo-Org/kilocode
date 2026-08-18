@@ -272,6 +272,7 @@ export const dict = {
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
+  "notification.permission.titleSandboxEscalation": "サンドボックス外での Git 操作を許可しますか？",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
   "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",

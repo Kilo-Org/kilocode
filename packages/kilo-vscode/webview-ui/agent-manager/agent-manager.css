@@ -1514,7 +1514,7 @@ html[data-theme="kilo-vscode"]
   color: var(--vscode-testing-iconFailed, #f87171);
 }
 
-.am-terminal-tab-spinner {
+.am-tab-spinner {
   width: 12px;
   height: 12px;
 }
@@ -4841,8 +4841,9 @@ body.vscode-high-contrast-light {
   }
 }
 
-/* Experimental terminal tabs (feature-flagged) */
+/* Shared sortable inspector tabs. */
 
+.am-tab-closable,
 .am-tab-terminal {
   display: flex;
   align-items: center;
@@ -4850,12 +4851,13 @@ body.vscode-high-contrast-light {
   border-left: 1px solid var(--border-weak-base);
 }
 
+.am-tab-closable [data-component="icon"],
 .am-tab-terminal [data-component="icon"] {
   flex-shrink: 0;
   opacity: 0.7;
 }
 
-.am-tab-terminal-focused {
+.am-tab-focused {
   background: var(--surface-base-hover);
 }
 
@@ -4978,15 +4980,14 @@ body.vscode-high-contrast-light {
   color: var(--text-weak);
 }
 
-/* Side terminal tab strip — one row of tabs reusing the top bar's
-   .am-tab chrome, plus the "+" action. Height matches .am-diff-header
+/* Inspector tab strip — one row of tabs reusing the top bar's
+   .am-tab chrome, plus an optional action. Height matches .am-diff-header
    (32px) so switching inspector modes does not shift the panel chrome.
    No vertical padding: tabs fill the strip like they fill .am-tab-bar,
-   which also keeps the "+" optically centered. The strip itself never
-   scrolls; the tab list does, so a narrow panel never pushes the "+"
-   action out of view (same split as .am-tab-list-wrap /
-   .am-tab-add-wrap). */
-.am-side-terminal-tabs {
+   which also keeps actions optically centered. The strip itself never
+   scrolls; the tab list does, so a narrow panel never pushes an action out
+   of view (same split as .am-tab-list-wrap / .am-tab-add-wrap). */
+.am-inspector-tabs {
   display: flex;
   align-items: stretch;
   height: 32px;
@@ -5001,10 +5002,10 @@ body.vscode-high-contrast-light {
 
 /* Same width model as .am-tab-list: tabs claim an equal share of the
    strip up to a maximum, and the list itself only grows as wide as its
-   tabs, so the "+" action stays glued to the last tab instead of
+   tabs, so an action stays glued to the last tab instead of
    drifting to the far edge of a wide panel. The cap is smaller than the
    top bar's 240px because the panel is narrow. */
-.am-side-terminal-tablist {
+.am-inspector-tablist {
   --am-tab-max-width: 180px;
   --am-tab-width: clamp(72px, calc(100% / var(--tab-count, 1)), var(--am-tab-max-width));
   display: flex;
@@ -5020,17 +5021,16 @@ body.vscode-high-contrast-light {
   scrollbar-width: none;
 }
 
-.am-side-terminal-tablist::-webkit-scrollbar {
+.am-inspector-tablist::-webkit-scrollbar {
   display: none;
 }
 
-.am-side-terminal-tablist[data-tab-widths-frozen] .am-tab-sortable {
+.am-inspector-tablist[data-tab-widths-frozen] .am-tab-sortable {
   transition: none;
 }
 
-/* The left divider marks a terminal among session tabs in the top bar.
-   Every tab here is a terminal, so it would just be noise. */
-.am-side-terminal-tablist .am-tab-terminal {
+/* The left divider belongs to the top-level mixed tab bar. */
+.am-inspector-tablist .am-tab-closable {
   border-left-color: transparent;
 }
 
@@ -5052,6 +5052,69 @@ body.vscode-high-contrast-light {
   bottom: 0;
   opacity: 0;
   pointer-events: none;
+}
+
+/* Subagent inspector panel. It remains mounted while another inspector mode
+   is active so switching back keeps the child transcript and scroll position. */
+.am-subagent-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: var(--surface-base);
+  will-change: opacity;
+}
+
+.am-subagent-panel-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-subagent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 32px;
+  padding: 0 4px 0 8px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-weak-base);
+  background: var(--surface-base);
+}
+
+.am-subagent-heading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  color: var(--text-base);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.am-subagent-count {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-10);
+  font-variant-numeric: tabular-nums;
+}
+
+.am-subagent-chat {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.am-subagent-chat > [data-component="data-provider"],
+.am-subagent-chat [class~="chat-view"] {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
 }
 
 .am-terminal-host {

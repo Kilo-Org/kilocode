@@ -28,6 +28,9 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.ScrollPaneConstants
@@ -50,10 +53,17 @@ class ConnectionPanel(
     }
 
     private val header = BorderLayoutPanel().apply {
-        border = JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.lg(), UiStyle.Gap.sm(), UiStyle.Gap.lg())
+        isOpaque = false
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+            SessionUiStyle.View.Header.left(),
+            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+            SessionUiStyle.View.Header.right(),
+        )
     }
 
     private val left = BorderLayoutPanel().apply {
+        isOpaque = false
         layout = BorderLayout(UiStyle.Gap.sm(), 0)
         addMouseListener(click)
     }
@@ -101,8 +111,7 @@ class ConnectionPanel(
 
     init {
         Disposer.register(parent, this)
-        // Keep the banner solid so expanded details cover transcript content beneath it.
-        isOpaque = true
+        isOpaque = false
         applyStyle(SessionEditorStyle.current())
         left.add(toggle, BorderLayout.WEST)
         left.add(label, BorderLayout.CENTER)
@@ -263,6 +272,19 @@ class ConnectionPanel(
         scroll.border = detailsBorder()
         revalidate()
         repaint()
+    }
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.color = background
+            val arc = JBUI.scale(SessionUiStyle.View.BLOCK_ARC)
+            g2.fillRoundRect(0, 0, width, height, arc, arc)
+        } finally {
+            g2.dispose()
+        }
+        super.paintComponent(g)
     }
 
     private fun detailsBorder() = JBUI.Borders.compound(

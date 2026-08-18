@@ -817,6 +817,7 @@ interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
   mode?: "replace" | "prepend" | "focus"
+  focus?: boolean
   before?: string
   limit?: number
 }
