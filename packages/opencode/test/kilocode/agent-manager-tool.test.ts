@@ -1,6 +1,6 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, ManagedRuntime, Queue, Schema } from "effect"
+import { Effect, Layer, ManagedRuntime, Queue, Result, Schema } from "effect"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -151,45 +151,77 @@ function publish(
 }
 
 describe("agent_manager tool", () => {
-  test("uses an object-root input schema without combinators", async () => {
+  test("advertises each operation as a strict union branch", async () => {
     const tool = await init()
     const schema = ToolJsonSchema.fromTool(tool)
 
-    expect(schema.type).toBe("object")
-    expect(schema.anyOf).toBeUndefined()
+    expect(schema.type).toBeUndefined()
+    expect(schema.anyOf).toHaveLength(5)
     expect(schema.oneOf).toBeUndefined()
     expect(schema.allOf).toBeUndefined()
-    const action = schema.properties?.action
-    expect(action && typeof action === "object" ? action.enum : undefined).toEqual(["list", "prompt", "stop", "move"])
-    expect(action && typeof action === "object" ? action.description : undefined).toContain("Use list first")
-    expect(action && typeof action === "object" ? action.description : undefined).toContain("Never edit")
-    expect(schema.properties?.sessionID).toEqual(
-      expect.objectContaining({ description: expect.stringContaining("IDs start with ses_") }),
-    )
-    expect(schema.properties?.sessionID).not.toHaveProperty("pattern")
-    expect(schema.properties?.sectionID).toEqual(
-      expect.objectContaining({ description: expect.stringContaining("Use null to unassign") }),
-    )
-    expect(schema.properties?.sectionID).toEqual(
-      expect.objectContaining({
-        anyOf: expect.arrayContaining([expect.objectContaining({ type: "string" }), { type: "null" }]),
-      }),
-    )
-    expect(Object.keys(schema.properties ?? {})).toEqual([
-      "mode",
-      "versions",
-      "tasks",
-      "action",
-      "filter",
-      "sessionID",
-      "prompt",
-      "sectionID",
+    const branches = schema.anyOf as Array<Record<string, unknown>>
+    const properties = (branch: Record<string, unknown>) => branch.properties as Record<string, unknown>
+    expect(branches.map((branch) => branch.required)).toEqual([
+      ["mode", "tasks"],
+      ["action"],
+      ["action", "sessionID", "prompt"],
+      ["action", "sessionID", "sectionID"],
+      ["action", "sessionID"],
     ])
+    expect(branches.every((branch) => branch.additionalProperties === false)).toBe(true)
+    expect(properties(branches[2]!).sessionID).not.toHaveProperty("pattern")
+    expect(properties(branches[3]!).sessionID).not.toHaveProperty("pattern")
+    expect(properties(branches[4]!).sessionID).not.toHaveProperty("pattern")
+    expect(properties(branches[0]!)).toEqual(
+      expect.objectContaining({ mode: expect.anything(), tasks: expect.anything() }),
+    )
+    expect(properties(branches[1]!)).toEqual(
+      expect.objectContaining({ action: expect.objectContaining({ enum: ["list"] }) }),
+    )
+    expect(properties(branches[2]!)).toEqual(
+      expect.objectContaining({ action: expect.objectContaining({ enum: ["prompt"] }) }),
+    )
+    expect(properties(branches[3]!)).toEqual(
+      expect.objectContaining({ action: expect.objectContaining({ enum: ["move"] }) }),
+    )
+    expect(properties(branches[4]!)).toEqual(
+      expect.objectContaining({ action: expect.objectContaining({ enum: ["stop"] }) }),
+    )
   })
 
-  test("keeps session ID validation local", () => {
-    expect(Schema.is(Params)({ action: "stop", sessionID: "ses_target" })).toBe(true)
-    expect(Schema.is(Params)({ action: "stop", sessionID: "invalid" })).toBe(false)
+  test("accepts each operation branch and rejects ambiguous payloads", () => {
+    const task = { prompt: "Fix the issue" }
+    const accepts = (input: unknown) => Result.isSuccess(Schema.decodeUnknownResult(Params)(input))
+    expect(accepts({ mode: "local", tasks: [task] })).toBe(true)
+    expect(accepts({ action: "list" })).toBe(true)
+    expect(accepts({ action: "list", filter: null })).toBe(true)
+    expect(accepts({ action: "prompt", sessionID: "ses_target", prompt: "Continue" })).toBe(true)
+    expect(accepts({ action: "stop", sessionID: "ses_target" })).toBe(true)
+    expect(accepts({ action: "move", sessionID: "ses_target", sectionID: null })).toBe(true)
+    expect(accepts({ action: "stop", sessionID: "invalid" })).toBe(false)
+
+    expect(accepts({ mode: "local", tasks: [task], action: "list" })).toBe(false)
+    expect(accepts({ action: "list", mode: "local", tasks: [task] })).toBe(false)
+    expect(accepts({ action: "prompt", sessionID: "ses_target", prompt: "Continue", mode: "local" })).toBe(false)
+    expect(accepts({ action: "stop", sessionID: "ses_target", prompt: "Continue" })).toBe(false)
+    expect(accepts({ action: "move", sessionID: "ses_target", sectionID: null, filter: null })).toBe(false)
+  })
+
+  test("rejects mixed payloads before dispatch", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    await expect(
+      runtime.runPromise(
+        provideTmpdirInstance(() =>
+          tool.execute(
+            { mode: "local", tasks: [{ prompt: "Fix issue" }], action: "list" },
+            { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+          ),
+        ).pipe(Effect.scoped),
+      ),
+    ).rejects.toThrow("Unexpected Agent Manager parameter")
+    expect(calls).toEqual([])
   })
 
   test("asks for agent_manager permission", async () => {

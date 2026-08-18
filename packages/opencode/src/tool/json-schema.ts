@@ -5,28 +5,36 @@ import type * as Tool from "./tool"
 type JsonObject = Record<string, unknown>
 const cache = new WeakMap<Schema.Top, JSONSchema7>()
 
-export function fromSchema(schema: Schema.Top): JSONSchema7 {
-  const cached = cache.get(schema)
+// kilocode_change start - allow Kilo-owned tools to advertise strict object branches
+export function fromSchema(schema: Schema.Top, options: { additionalProperties?: boolean } = {}): JSONSchema7 {
+  const cached = options.additionalProperties === undefined ? cache.get(schema) : undefined
   if (cached) return cached
 
-  const document = Schema.toJsonSchemaDocument(schema, { additionalProperties: true })
-  const result = normalize({
-    $schema: JsonSchema.META_SCHEMA_URI_DRAFT_2020_12,
-    ...document.schema,
-    ...(Object.keys(document.definitions).length > 0 ? { $defs: document.definitions } : {}),
+  const document = Schema.toJsonSchemaDocument(schema, {
+    additionalProperties: options.additionalProperties ?? true,
   })
+  const result = normalize(
+    {
+      $schema: JsonSchema.META_SCHEMA_URI_DRAFT_2020_12,
+      ...document.schema,
+      ...(Object.keys(document.definitions).length > 0 ? { $defs: document.definitions } : {}),
+    },
+    options,
+  )
   const inlined = dropDefinitionsIfResolved(inlineLocalReferences(result))
   if (!isJsonSchema(inlined)) throw new Error("tool JSON Schema helper produced a non-schema value")
-  cache.set(schema, inlined)
+  if (options.additionalProperties === undefined) cache.set(schema, inlined)
   return inlined
 }
+// kilocode_change end
 
 export function fromTool(tool: Tool.Def): JSONSchema7 {
   return tool.jsonSchema ?? fromSchema(tool.parameters as Schema.Top)
 }
 
-function normalize(value: unknown, options: { stripNull?: boolean } = {}): unknown {
-  if (Array.isArray(value)) return value.map((item) => normalize(item))
+// kilocode_change start - propagate strict object schema options through unions
+function normalize(value: unknown, options: { stripNull?: boolean; additionalProperties?: boolean } = {}): unknown {
+  if (Array.isArray(value)) return value.map((item) => normalize(item, options))
   if (!isRecord(value)) return value
 
   const required = Array.isArray(value.required)
@@ -39,18 +47,29 @@ function normalize(value: unknown, options: { stripNull?: boolean } = {}): unkno
         ? Object.fromEntries(
             Object.entries(item).map(([name, property]) => [
               name,
-              normalize(property, { stripNull: !required?.has(name) }),
+              normalize(property, {
+                stripNull: !required?.has(name),
+                additionalProperties: options.additionalProperties,
+              }),
             ]),
           )
-        : normalize(item),
+        : normalize(item, { additionalProperties: options.additionalProperties }),
     ]),
   )
 
   if (schema.additionalProperties === true) delete schema.additionalProperties
 
+  if (
+    options.additionalProperties !== undefined &&
+    schema.type === "object" &&
+    schema.additionalProperties === undefined
+  ) {
+    schema.additionalProperties = options.additionalProperties
+  }
+
   if (options.stripNull && Array.isArray(schema.anyOf)) {
     const withoutNull = schema.anyOf.filter((item) => !isRecord(item) || item.type !== "null")
-    if (withoutNull.length !== schema.anyOf.length) return normalize({ ...schema, anyOf: withoutNull })
+    if (withoutNull.length !== schema.anyOf.length) return normalize({ ...schema, anyOf: withoutNull }, options)
   }
 
   if (Array.isArray(schema.anyOf)) {
@@ -61,23 +80,23 @@ function normalize(value: unknown, options: { stripNull?: boolean } = {}): unkno
     )
     if (number && nonFinite.length === withoutNull.length - 1) {
       const { anyOf: _, ...rest } = schema
-      return normalize({ ...number, ...rest })
+      return normalize({ ...number, ...rest }, options)
     }
 
     if (isEmptyStructUnion(withoutNull)) {
       const { anyOf: _, ...rest } = schema
-      return normalize({ type: "object", properties: {}, ...rest })
+      return normalize({ type: "object", properties: {}, ...rest }, options)
     }
 
     if (withoutNull.length === 1 && isRecord(withoutNull[0])) {
       const { anyOf: _, ...rest } = schema
-      return normalize({ ...withoutNull[0], ...rest })
+      return normalize({ ...withoutNull[0], ...rest }, options)
     }
   }
 
   if (Array.isArray(schema.allOf) && schema.allOf.every(isRecord) && canFlattenAllOf(schema.allOf, schema)) {
     const { allOf, ...rest } = schema
-    return normalize({ ...Object.assign({}, ...allOf), ...rest })
+    return normalize({ ...Object.assign({}, ...allOf), ...rest }, options)
   }
 
   if (schema.type === "integer" && schema.maximum === undefined) {
@@ -86,6 +105,7 @@ function normalize(value: unknown, options: { stripNull?: boolean } = {}): unkno
 
   return schema
 }
+// kilocode_change end
 
 function isRecord(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value)

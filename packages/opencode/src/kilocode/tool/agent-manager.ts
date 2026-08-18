@@ -14,6 +14,18 @@ import { Effect, Schema } from "effect"
 import { matchesQuery } from "./model-search"
 import DESCRIPTION from "./agent-manager.txt"
 
+function strict<const Fields extends Schema.Struct.Fields>(fields: Fields) {
+  const target = Schema.Struct(fields)
+  // Preserve unknown keys long enough for the branch check to reject mixed operations.
+  const source = Schema.StructWithRest(target, [Schema.Record(Schema.String, Schema.Unknown)]).check(
+    Schema.makeFilter((value) => {
+      const extra = Object.keys(value).find((key) => !Object.hasOwn(fields, key))
+      return extra === undefined ? undefined : `Unexpected Agent Manager parameter: ${extra}`
+    }),
+  )
+  return source.pipe(Schema.decodeTo(target))
+}
+
 const Task = Schema.Struct({
   prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description: "Initial prompt to send to the new session",
@@ -46,7 +58,32 @@ const Task = Schema.Struct({
   ),
 )
 
-const StartParams = Schema.Struct({
+function wireSchema() {
+  const schema = ToolJsonSchema.fromSchema(Params, { additionalProperties: false })
+
+  // llama.cpp rejects the prefix-only SessionID pattern. Keep the runtime brand
+  // check, but omit that provider-incompatible hint from the advertised schema.
+  function strip(value: unknown): void {
+    if (Array.isArray(value)) {
+      value.forEach(strip)
+      return
+    }
+    if (!value || typeof value !== "object") return
+    const item = value as Record<string, unknown>
+    if (item.properties && typeof item.properties === "object") {
+      const properties = item.properties as Record<string, unknown>
+      if (properties.sessionID && typeof properties.sessionID === "object") {
+        delete (properties.sessionID as Record<string, unknown>).pattern
+      }
+    }
+    Object.values(item).forEach(strip)
+  }
+
+  strip(schema)
+  return schema
+}
+
+const StartParams = strict({
   mode: Schema.Literals(["worktree", "local"]).annotate({
     description: "Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions",
   }),
@@ -59,14 +96,14 @@ const StartParams = Schema.Struct({
     .annotate({ description: "Agent Manager sessions to start" }),
 })
 
-const ListParams = Schema.Struct({
+const ListParams = strict({
   action: Schema.Literal("list").annotate({
     description:
       "Read the current Agent Manager sections, worktrees, and sessions before any assignment. This is the source of truth for section and session IDs.",
   }),
   filter: Schema.optional(
     Schema.NullOr(
-      Schema.Struct({
+      strict({
         sectionIDs: Schema.optional(Schema.Array(Schema.String).check(Schema.isMaxLength(100))),
         states: Schema.optional(
           Schema.Array(Schema.Literals(["idle", "busy", "retry", "offline", "waiting"])).check(Schema.isMaxLength(5)),
@@ -78,7 +115,7 @@ const ListParams = Schema.Struct({
   }),
 })
 
-const PromptParams = Schema.Struct({
+const PromptParams = strict({
   action: Schema.Literal("prompt"),
   sessionID: SessionID,
   prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)).check(
@@ -86,12 +123,12 @@ const PromptParams = Schema.Struct({
   ),
 })
 
-const StopParams = Schema.Struct({
+const StopParams = strict({
   action: Schema.Literal("stop"),
   sessionID: SessionID,
 })
 
-const MoveParams = Schema.Struct({
+const MoveParams = strict({
   action: Schema.Literal("move").annotate({
     description: "Move exactly one managed worktree by targeting one of its session IDs returned by action=list.",
   }),
@@ -103,25 +140,7 @@ const MoveParams = Schema.Struct({
   }),
 })
 
-export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams])
-
-const WireParams = Schema.Struct({
-  mode: Schema.optional(StartParams.fields.mode),
-  versions: Schema.optional(StartParams.fields.versions),
-  tasks: Schema.optional(StartParams.fields.tasks),
-  action: Schema.optional(
-    Schema.Literals(["list", "prompt", "stop", "move"]).annotate({
-      description:
-        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations.",
-    }),
-  ),
-  filter: Schema.optional(ListParams.fields.filter),
-  sessionID: Schema.optional(
-    Schema.String.annotate({ description: "For move, use a session ID returned by action=list (IDs start with ses_)." }),
-  ),
-  prompt: Schema.optional(PromptParams.fields.prompt),
-  sectionID: Schema.optional(MoveParams.fields.sectionID),
-})
+export const Params = Schema.Union([StartParams, ListParams, PromptParams, MoveParams, StopParams])
 
 type Input = Schema.Schema.Type<typeof Task>
 type Selected = { task?: AgentManagerTask; error?: string }
@@ -281,18 +300,10 @@ export const AgentManagerTool = Tool.define<
     const bus = yield* Bus.Service
     const host = yield* AgentManager.Service
     const provider = yield* Provider.Service
-    const wire = ToolJsonSchema.fromSchema(WireParams)
-    const section = wire.properties?.sectionID
-    if (section && typeof section === "object" && wire.properties) {
-      wire.properties.sectionID = {
-        anyOf: [{ type: "string", minLength: 1 }, { type: "null" }],
-        description: "Section ID returned by action=list. Use null to unassign the worktree from its current section.",
-      }
-    }
     return {
       description: DESCRIPTION,
       parameters: Params,
-      jsonSchema: wire,
+      jsonSchema: wireSchema(),
       execute: (params, ctx) =>
         Effect.gen(function* () {
           if ("action" in params) {
