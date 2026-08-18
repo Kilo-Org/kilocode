@@ -287,50 +287,54 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
-        <Show
-          when={skillShellCommands().length > 0}
-          fallback={
-            <>
-              <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
-              <Show when={command()}>
-                {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
-              </Show>
+        {/* Everything above the buttons scrolls: a long command or a large diff must never
+            push Allow/Deny out of the clipped chat view. */}
+        <div data-slot="permission-scroll">
+          <Show
+            when={skillShellCommands().length > 0}
+            fallback={
+              <>
+                <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
+                <Show when={command()}>
+                  {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
+                </Show>
 
-              {(() => {
-                const desc = description()
-                if (!desc)
-                  return !command() && toolDescription() ? (
-                    <div data-slot="permission-hint">{toolDescription()}</div>
-                  ) : null
-                if (desc.kind === "single")
+                {(() => {
+                  const desc = description()
+                  if (!desc)
+                    return !command() && toolDescription() ? (
+                      <div data-slot="permission-hint">{toolDescription()}</div>
+                    ) : null
+                  if (desc.kind === "single")
+                    return (
+                      <div
+                        data-slot="permission-hint"
+                        data-wrap={external() ? "" : undefined}
+                        title={external() ? desc.text : undefined}
+                      >
+                        {desc.text}
+                      </div>
+                    )
                   return (
-                    <div
-                      data-slot="permission-hint"
-                      data-wrap={external() ? "" : undefined}
-                      title={external() ? desc.text : undefined}
-                    >
-                      {desc.text}
+                    <div data-slot="permission-patterns">
+                      <span data-slot="permission-patterns-title">{desc.title}</span>
+                      <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
                     </div>
                   )
-                return (
-                  <div data-slot="permission-patterns">
-                    <span data-slot="permission-patterns-title">{desc.title}</span>
-                    <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
-                  </div>
-                )
-              })()}
-            </>
-          }
-        >
-          {/* Verbatim commands (args.commands), control-char/bidi-escaped so the displayed command matches execution. */}
-          <For each={skillShellCommands()}>{(cmd) => <PermissionCommand command={displaySkillCommand(cmd)} />}</For>
-        </Show>
+                })()}
+              </>
+            }
+          >
+            {/* Verbatim commands (args.commands), control-char/bidi-escaped so the displayed command matches execution. */}
+            <For each={skillShellCommands()}>{(cmd) => <PermissionCommand command={displaySkillCommand(cmd)} />}</For>
+          </Show>
 
-        <Show when={diffs().length > 0}>
-          <div data-slot="permission-diffs" data-count={diffs().length}>
-            <For each={diffs()}>{(diff) => <PermissionDiff filediff={diff} />}</For>
-          </div>
-        </Show>
+          <Show when={diffs().length > 0}>
+            <div data-slot="permission-diffs" data-count={diffs().length}>
+              <For each={diffs()}>{(diff) => <PermissionDiff filediff={diff} />}</For>
+            </div>
+          </Show>
+        </div>
 
         <div data-slot="permission-actions">
           <Button
