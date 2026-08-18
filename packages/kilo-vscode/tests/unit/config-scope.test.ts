@@ -2,6 +2,13 @@ import { describe, expect, it } from "bun:test"
 import { splitConfigByScope } from "../../webview-ui/src/utils/config-scope"
 
 describe("splitConfigByScope", () => {
+  it("writes snapshot configuration to project config", () => {
+    const split = splitConfigByScope({ snapshot: false })
+
+    expect(split.global).toEqual({})
+    expect(split.project).toEqual({ snapshot: false })
+  })
+
   it("keeps indexing configuration out of project config", () => {
     const split = splitConfigByScope({
       indexing: {
