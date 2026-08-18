@@ -179,6 +179,11 @@ async function statStamp(dir: string, file: string): Promise<string> {
   return `${stat.size}:${stat.mtimeMs}`
 }
 
+function trackedStamp(status: Status, additions: number, deletions: number, anc: string, stat?: string): string {
+  if (status === "deleted") return `deleted:${anc}`
+  return `${status}:${additions}:${deletions}:${anc}${stat ? `:${stat}` : ""}`
+}
+
 async function lineCount(file: string): Promise<number> {
   const stat = await fs.lstat(file).catch(() => undefined)
   if (!stat || stat.size === 0) return 0
@@ -250,7 +255,7 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<W
       tracked: true,
       generatedLike: generatedLike(file),
       summarized,
-      stamp: status === "deleted" ? `deleted:${anc}` : `${status}:${stat.additions}:${stat.deletions}:${anc}`,
+      stamp: trackedStamp(status, stat.additions, stat.deletions, anc),
       kind: mime ? "image" : undefined,
     }
     result.push(entry)
@@ -258,46 +263,56 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<W
     if (status !== "deleted" && summarized) {
       stampTasks.push(
         statStamp(dir, file).then((s) => {
-          entry.stamp = `${status}:${stat.additions}:${stat.deletions}:${anc}:${s}`
+          entry.stamp = trackedStamp(status, stat.additions, stat.deletions, anc, s)
         }),
       )
     }
   }
 
   const untrackedFiles = untracked.code === 0 ? untracked.stdout.trim().split("\n").filter(Boolean) : []
-  const untrackedTasks = untrackedFiles.map(async (file): Promise<WorktreeDiffEntry | undefined> => {
-    if (seen.has(file)) return undefined
-    const full = resolveInside(dir, file)
-    if (!full) return undefined
-    const stat = await fs.lstat(full).catch(() => undefined)
-    if (!stat) return undefined
-    const binary = await binaryFile(full)
-    const mime = imageMime(file)
-    let patch = ""
-    let after = ""
-    let additions = 0
-    let summarized = true
+  const entries: WorktreeDiffEntry[] = []
+  let remaining = MAX_DETAIL_BYTES
+  for (const file of untrackedFiles) {
+    if (seen.has(file)) continue
+    const result = await untrackedEntry(dir, file, remaining)
+    if (!result) continue
+    entries.push(result.entry)
+    remaining -= result.cost
+  }
 
-    if (mime) {
-      summarized = true
-    } else if (binary) {
-      summarized = true
-    } else if (stat.size <= MAX_UNTRACKED_BYTES) {
-      const content = stat.isSymbolicLink()
-        ? await fs.readlink(full).catch(() => "")
-        : await fs.readFile(full, "utf-8").catch(() => "")
-      additions = linesOf(content)
-      patch = buildUntrackedPatch(file, content)
-      if (requiresContents(file)) after = content
-      summarized = false
-    }
+  await Promise.all(stampTasks)
+  result.push(...entries)
+  return result
+}
 
-    return {
+async function untrackedEntry(
+  dir: string,
+  file: string,
+  remaining: number,
+): Promise<{ entry: WorktreeDiffEntry; cost: number } | undefined> {
+  const full = resolveInside(dir, file)
+  if (!full) return undefined
+  const stat = await fs.lstat(full).catch(() => undefined)
+  if (!stat) return undefined
+
+  const binary = await binaryFile(full)
+  const mime = imageMime(file)
+  const canRead = !mime && !binary && stat.size <= MAX_UNTRACKED_BYTES && stat.size * 2 <= remaining
+  const content = canRead
+    ? stat.isSymbolicLink()
+      ? await fs.readlink(full).catch(() => "")
+      : await fs.readFile(full, "utf-8").catch(() => "")
+    : ""
+  const patch = canRead ? buildUntrackedPatch(file, content) : ""
+  const summarized = !canRead
+
+  return {
+    entry: {
       file,
       patch,
       before: "",
-      after,
-      additions,
+      after: requiresContents(file) && canRead ? content : "",
+      additions: canRead ? linesOf(content) : 0,
       deletions: 0,
       status: "added",
       tracked: false,
@@ -305,13 +320,9 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<W
       summarized,
       stamp: `${stat.size}:${stat.mtimeMs}`,
       kind: mime ? "image" : undefined,
-    }
-  })
-
-  const entries = await Promise.all(untrackedTasks)
-  await Promise.all(stampTasks)
-  result.push(...entries.filter((entry): entry is WorktreeDiffEntry => entry !== undefined))
-  return result
+    },
+    cost: canRead ? Math.max(stat.size * 2, patch.length) : 0,
+  }
 }
 
 function summarize(meta: Meta): WorktreeDiffEntry {
@@ -427,10 +438,7 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
     tracked: true,
     generatedLike: generatedLike(pathPart),
     binary: stat.binary,
-    stamp:
-      status === "deleted"
-        ? `deleted:${anc}`
-        : `${imageMime(pathPart) ? `${anc}:` : ""}${await statStamp(dir, pathPart)}`,
+    stamp: trackedStamp(status, stat.additions, stat.deletions, anc, await statStamp(dir, pathPart)),
   }
 }
 

@@ -25,7 +25,7 @@ import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import {
   getDirectory,
   getFilename,
-  lineCount,
+  diffLineCount,
   sanitizeReviewComments,
   type ReviewComment,
 } from "../diff-viewer/review-comments"
@@ -357,8 +357,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           composer().draft = null
           return
         }
-        const content = currentDraft.side === "deletions" ? diff.before : diff.after
-        const max = lineCount(content)
+        const max = diffLineCount(diff, currentDraft.side)
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
@@ -496,10 +495,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     }
     return { files: props.diffs.length, additions, deletions, large, collapsed }
   })
-  const allOpen = createMemo(() => {
-    const set = openSet()
-    return props.diffs.every((diff) => !isDiffExpandable(diff) || set.has(diff.file))
-  })
+  const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
   const openIcon = () => (allOpen() ? "files-collapse" : "files-expand")
 

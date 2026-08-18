@@ -241,6 +241,15 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+  const reviewKey = (context: string) => `${activeProjectId() ?? "single"}\0${context}`
+  const currentReviewOpen = () => {
+    const prefix = `${activeProjectId() ?? "single"}\0`
+    return Object.fromEntries(
+      Object.entries(reviewOpenByContext()).flatMap(([key, value]) =>
+        key.startsWith(prefix) ? [[key.slice(prefix.length), value]] : [],
+      ),
+    )
+  }
   const creation = usePendingCreate(activeProjectId, (projectId, worktreeId) =>
     vscode.postMessage({
       type: "agentManager.activateSelection",
@@ -300,7 +309,7 @@ const AgentManagerContent: Component = () => {
     if (!pr) return undefined
     return { pr, selected, wt: worktrees().find((w) => w.id === selected) }
   })
-  const diffs = createWorktreeDiffs(vscode)
+  const diffs = createWorktreeDiffs(vscode, activeProjectId)
   const diffDatas = diffs.diffDatas
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
@@ -488,13 +497,14 @@ const AgentManagerContent: Component = () => {
   const reviewOpen = createMemo(() => {
     const sel = selection()
     if (sel === null) return false
-    return reviewOpenByContext()[sel] === true
+    return reviewOpenByContext()[reviewKey(sel)] === true
   })
 
   const setReviewOpenForContext = (context: string, open: boolean) => {
+    const key = reviewKey(context)
     setReviewOpenByContext((prev) => {
-      if (prev[context] === open) return prev
-      return { ...prev, [context]: open }
+      if (prev[key] === open) return prev
+      return { ...prev, [key]: open }
     })
   }
 
@@ -507,13 +517,13 @@ const AgentManagerContent: Component = () => {
   const reviewComments = createMemo(() => {
     const sel = selection()
     if (sel === null) return [] as ReviewComment[]
-    return reviewCommentsByContext()[sel] ?? []
+    return reviewCommentsByContext()[reviewKey(sel)] ?? []
   })
 
   const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
     const sel = selection()
     if (sel === null) return
-    setReviewCommentsByContext((prev) => ({ ...prev, [sel]: comments }))
+    setReviewCommentsByContext((prev) => ({ ...prev, [reviewKey(sel)]: comments }))
   }
 
   const apply = createApplyToLocal({
@@ -521,9 +531,11 @@ const AgentManagerContent: Component = () => {
     dialog,
     t,
     selection,
+    project: activeProjectId,
     local: LOCAL,
     worktrees,
     diffDatas,
+    dataKey: diffs.dataKey,
     diffLoading,
     track: metrics.track,
   })
@@ -608,7 +620,7 @@ const AgentManagerContent: Component = () => {
     localSessionIDs,
     sessions: session.sessions,
     managedSessions,
-    reviewOpenByContext,
+    reviewOpenByContext: currentReviewOpen,
     terminalIdsFor: (key) => terms.forSelection(nsKey(key)).map((t) => t.id),
   })
   const appendToTabOrder = tabOrderSync.append
@@ -978,7 +990,7 @@ const AgentManagerContent: Component = () => {
     resetSession: () => session.setCurrentSessionID(undefined),
     isPending,
     isReviewTab: (remembered: string | undefined, sel: string) =>
-      remembered === REVIEW_TAB_ID && reviewOpenByContext()[sel] === true,
+      remembered === REVIEW_TAB_ID && reviewOpenByContext()[reviewKey(sel)] === true,
   }
 
   const selectLocal = () => {
@@ -1668,11 +1680,12 @@ const AgentManagerContent: Component = () => {
     const panel = diffOpen()
     const active = reviewActive()
     const id = review.id()
+    const projectId = activeProjectId()
 
     if ((panel || active) && id) {
       const data = diffDatas()
-      const wired = wireDiffId(id)
-      const hasCached = Boolean(data[id] ?? data[wired.sessionId])
+      const wired = wireDiffId(id, projectId)
+      const hasCached = Boolean(data[diffs.dataKey(id, projectId)])
       setDiffLoading(!hasCached)
       vscode.postMessage({ type: "agentManager.startDiffWatch", ...wired })
       return
@@ -1687,6 +1700,7 @@ const AgentManagerContent: Component = () => {
   createEffect(() => {
     const order = sidebarOrder()
     const sel = selection() ?? LOCAL
+    const projectId = activeProjectId()
     const idx = order.findIndex((item) => item.id === sel)
     if (idx === -1) return
     const ids = order.filter((item) => item.type === "local" || item.type === "wt").map((item) => item.id)
@@ -1694,7 +1708,7 @@ const AgentManagerContent: Component = () => {
       Boolean(id && ids.includes(id)),
     )
     if (adjacent.length > 0) {
-      vscode.postMessage({ type: "agentManager.preloadWorktreeDiffs", worktreeIds: adjacent })
+      vscode.postMessage({ type: "agentManager.preloadWorktreeDiffs", projectId, worktreeIds: adjacent })
     }
   })
 
@@ -1738,17 +1752,17 @@ const AgentManagerContent: Component = () => {
     const data = diffDatas()
     const key = diffScopeId()
     if (!key) return []
-    return data[key] ?? []
+    return data[diffs.dataKey(key, activeProjectId())] ?? []
   })
 
-  const diffSessionKey = createMemo(() => diffScopeId() ?? "")
+  const diffSessionKey = createMemo(() => `${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)
 
   // Source-level notice for the active composite id (e.g. snapshots disabled
   // for the Session scope), shown as a banner instead of the empty state.
   const diffNotice = createMemo(() => {
     const key = diffScopeId()
     if (!key) return undefined
-    return diffNotices()[key]
+    return diffNotices()[diffs.dataKey(key, activeProjectId())]
   })
 
   const setSharedDiffStyle = (style: "unified" | "split") => {

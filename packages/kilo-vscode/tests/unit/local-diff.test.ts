@@ -298,6 +298,22 @@ describe("diffSummary", () => {
     })
   })
 
+  it("keeps summarized and detailed stamps stable for markdown", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "README.md"), "# Base\n")
+      runSync(dir, ["add", "README.md"])
+      runSync(dir, ["commit", "-m", "add readme"])
+      runSync(dir, ["branch", "-f", base])
+      await fs.writeFile(path.join(dir, "README.md"), "# Updated\n")
+
+      const local = createLocalDiff(git())
+      const summary = (await local.summary(dir, base)).find((entry) => entry.file === "README.md")
+      const detail = await local.file(dir, base, "README.md")
+
+      expect(detail?.stamp).toBe(summary?.stamp)
+    })
+  })
+
   it("handles tracked filenames containing a b path segment", async () => {
     await withRepo(async (dir, base) => {
       const file = "folder b/nested file.ts"

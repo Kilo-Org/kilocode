@@ -967,12 +967,14 @@ export interface AgentManagerImportResultMessage {
 // Agent Manager: Diff data push (extension → webview)
 export interface AgentManagerWorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
+  projectId?: string
   sessionId: string
   diffs: WorktreeFileDiff[]
 }
 
 export interface AgentManagerWorktreeDiffFileMessage {
   type: "agentManager.worktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   diff: WorktreeFileDiff | null
@@ -981,6 +983,7 @@ export interface AgentManagerWorktreeDiffFileMessage {
 // Agent Manager: Diff loading state (extension → webview)
 export interface AgentManagerWorktreeDiffLoadingMessage {
   type: "agentManager.worktreeDiffLoading"
+  projectId?: string
   sessionId: string
   loading: boolean
 }
@@ -988,6 +991,7 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
 // Agent Manager: Source-level diff notice (extension → webview)
 export interface AgentManagerWorktreeDiffNoticeMessage {
   type: "agentManager.worktreeDiffNotice"
+  projectId?: string
   sessionId: string
   notice?: DiffViewerNotice
 }
@@ -1003,6 +1007,7 @@ export interface AgentManagerApplyWorktreeDiffResultMessage {
 // Agent Manager: Revert single file result (extension → webview)
 export interface AgentManagerRevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
+  projectId?: string
   sessionId: string
   file: string
   status: "success" | "error"
@@ -1012,6 +1017,7 @@ export interface AgentManagerRevertWorktreeFileResultMessage {
 // Agent Manager: Branch picker data for a diff context (extension → webview)
 export interface AgentManagerDiffBranchesMessage {
   type: "agentManager.diffBranches"
+  projectId?: string
   sessionId: string
   branches: BranchInfo[]
   defaultBranch: string

@@ -24,6 +24,7 @@ type CacheEntry = { diffs: AgentManagerDiffFile[]; time: number; bytes: number }
 export interface WorktreeDiffControllerContext {
   getState: () => WorktreeStateManager | undefined
   getRoot: () => string | undefined
+  getProjectId: () => string | undefined
   getStateReady: () => Promise<void> | undefined
   /** Builds the underlying per-scope diff sources (workspace/staged/unstaged/session). */
   catalog: DiffSourceCatalog
@@ -46,6 +47,7 @@ export class WorktreeDiffController {
   private diffCache = new Map<string, CacheEntry>()
   private revisions = new Map<string, number>()
   private preloading = new Set<string>()
+  private activeProjectId: string | undefined
 
   constructor(private readonly ctx: WorktreeDiffControllerContext) {
     this.controller = new SourceController(
@@ -55,30 +57,35 @@ export class WorktreeDiffController {
       {
         loading: (source, loading) => ({
           type: "agentManager.worktreeDiffLoading",
+          projectId: this.activeProjectId,
           sessionId: source.descriptor.id,
           loading,
         }),
         notice: (source, notice) => ({
           type: "agentManager.worktreeDiffNotice",
+          projectId: this.activeProjectId,
           sessionId: source.descriptor.id,
           notice,
         }),
         diffs: (source, diffs) => {
-          this.remember(source.descriptor.id, diffs as AgentManagerDiffFile[])
+          this.remember(this.cacheKey(source.descriptor.id), diffs as AgentManagerDiffFile[])
           return {
             type: "agentManager.worktreeDiff",
+            projectId: this.activeProjectId,
             sessionId: source.descriptor.id,
             diffs: diffs as AgentManagerDiffFile[],
           }
         },
         diffFile: (source, file, diff) => ({
           type: "agentManager.worktreeDiffFile",
+          projectId: this.activeProjectId,
           sessionId: source?.descriptor.id ?? "",
           file,
           diff: diff as AgentManagerDiffFile | null,
         }),
         revertFileResult: (source, file, result) => ({
           type: "agentManager.revertWorktreeFileResult",
+          projectId: this.activeProjectId,
           sessionId: source?.descriptor.id ?? "",
           file,
           status: result.ok ? "success" : "error",
@@ -86,6 +93,7 @@ export class WorktreeDiffController {
         }),
         unsupportedRevert: (source, file) => ({
           type: "agentManager.revertWorktreeFileResult",
+          projectId: this.activeProjectId,
           sessionId: source?.descriptor.id ?? "",
           file,
           status: "error",
@@ -102,7 +110,7 @@ export class WorktreeDiffController {
     const current = this.controller.currentId
     const ctxId = current ? parseDiffId(current).ctx : undefined
     const stop = shouldStopDiffPolling(path, sessions, this.target, ctxId)
-    if (stop && ctxId) this.invalidate(ctxId)
+    if (stop && ctxId) this.invalidate(ctxId, this.activeProjectId)
     return stop
   }
 
@@ -167,44 +175,54 @@ export class WorktreeDiffController {
     }
   }
 
-  public async revert(id: string, file: string): Promise<void> {
+  public async revert(
+    id: string,
+    file: string,
+    projectId = this.activeProjectId ?? this.ctx.getProjectId(),
+  ): Promise<void> {
     if (!file) return
-    if (this.controller.currentId !== id) {
+    if (this.controller.currentId !== id || this.activeProjectId !== projectId) {
       const result = await this.revertFile(id, file)
-      this.postRevertResult(id, file, result)
+      this.postRevertResult(id, file, result, projectId)
       return
     }
     await this.controller.revertFile(file)
   }
 
-  public async request(id: string): Promise<void> {
-    if (this.controller.currentId !== id) {
-      await this.activate(id, false, true)
+  public async request(id: string, projectId = this.activeProjectId ?? this.ctx.getProjectId()): Promise<void> {
+    if (this.controller.currentId !== id || this.activeProjectId !== projectId) {
+      await this.activate(id, false, true, projectId)
       return
     }
     this.target = undefined
     await this.controller.refresh()
   }
 
-  public async requestFile(id: string, file: string): Promise<void> {
+  public async requestFile(
+    id: string,
+    file: string,
+    projectId = this.activeProjectId ?? this.ctx.getProjectId(),
+  ): Promise<void> {
     if (!file) return
-    if (this.controller.currentId !== id) {
-      this.ctx.post({ type: "agentManager.worktreeDiffFile", sessionId: id, file, diff: null })
+    if (this.controller.currentId !== id || this.activeProjectId !== projectId) {
+      this.ctx.post({ type: "agentManager.worktreeDiffFile", projectId, sessionId: id, file, diff: null })
       return
     }
     await this.controller.requestFile(file)
   }
 
-  public start(id: string): void {
-    if (this.controller.isPolling && this.controller.currentId === id) return
+  public start(id: string, projectId = this.ctx.getProjectId()): void {
+    if (this.controller.isPolling && this.controller.currentId === id && this.activeProjectId === projectId) return
+    this.activeProjectId = projectId
     this.ctx.log(`Starting diff polling for ${id}`)
-    void this.activate(id, true, true)
+    void this.activate(id, true, true, projectId)
   }
 
   public stop(): void {
     this.controller.stop()
     this.target = undefined
     this.poll = false
+    this.activeProjectId = undefined
   }
 
   /**
@@ -212,56 +230,66 @@ export class WorktreeDiffController {
    * then re-activate the current source so it refetches against the new base.
    * Passing undefined clears the override and falls back to the recorded parent.
    */
-  public async setBase(id: string, branch: string | undefined): Promise<void> {
+  public async setBase(
+    id: string,
+    branch: string | undefined,
+    projectId = this.activeProjectId ?? this.ctx.getProjectId(),
+  ): Promise<void> {
     const { ctx } = parseDiffId(id)
     if (branch) this.baseOverrides.set(ctx, branch)
     else this.baseOverrides.delete(ctx)
-    this.revisions.set(ctx, (this.revisions.get(ctx) ?? 0) + 1)
-    this.invalidate(ctx)
+    const cacheKey = this.cacheKey(id, projectId)
+    this.revisions.set(cacheKey, (this.revisions.get(cacheKey) ?? 0) + 1)
+    this.invalidate(ctx, projectId)
     // Nothing to rebuild when the context isn't active; the override is
     // picked up the next time start()/request() resolves it.
-    if (this.controller.currentId !== id) return
+    if (this.controller.currentId !== id || this.activeProjectId !== projectId) return
     // Route through activate() so the base is re-resolved and pushed via
     // setContext() — SourceController.reactivate() alone would rebuild the
     // source against the stale context captured by the last activate(). The
     // recorded poll intent preserves watch mode even when the initial fetch
     // is still in flight (isPolling only turns true once it resolves).
-    await this.activate(id, this.poll, true)
+    await this.activate(id, this.poll, true, projectId)
   }
 
   /** Preload diffs for adjacent or visible worktrees in the background. */
-  public async preload(ids: string[]): Promise<void> {
+  public async preload(ids: string[], projectId = this.ctx.getProjectId()): Promise<void> {
     await this.ready("stateReady rejected, continuing diff preload:")
     for (const id of ids) {
       if (!id) continue
       const parsed = parseDiffId(id)
       const ctx = parsed.ctx
       const key = composeDiffId(ctx, parsed.scope, parsed.sessionId)
-      if (this.controller.currentId === key || this.preloading.has(key)) continue
-      const cached = this.diffCache.get(key)
+      const cacheKey = this.cacheKey(key, projectId)
+      if (this.activeProjectId === projectId && this.controller.currentId === key) continue
+      if (this.preloading.has(cacheKey)) continue
+      const cached = this.diffCache.get(cacheKey)
       if (cached && Date.now() - cached.time < CACHE_TTL) continue
 
       const resolved = await this.resolve(ctx)
       if (!resolved) continue
 
-      const revision = this.revisions.get(ctx) ?? 0
-      this.preloading.add(key)
+      const revision = this.revisions.get(cacheKey) ?? 0
+      this.preloading.add(cacheKey)
       try {
         const entries = await diffSummary(this.ctx.git, resolved.directory, resolved.baseBranch, (...args) =>
           this.ctx.log(...args),
         )
         const diffs = entries.map(toDiffFile) as AgentManagerDiffFile[]
-        if ((this.revisions.get(ctx) ?? 0) !== revision) continue
-        this.remember(key, diffs)
+        if (this.ctx.getProjectId() !== projectId) continue
+        if (this.activeProjectId === projectId && this.controller.currentId === key) continue
+        if ((this.revisions.get(cacheKey) ?? 0) !== revision) continue
+        this.remember(cacheKey, diffs)
         this.ctx.post({
           type: "agentManager.worktreeDiff",
+          projectId,
           sessionId: key,
           diffs,
         })
       } catch (err) {
         this.ctx.log("Preload diff failed for", id, err)
       } finally {
-        this.preloading.delete(key)
+        this.preloading.delete(cacheKey)
       }
     }
   }
@@ -275,16 +303,24 @@ export class WorktreeDiffController {
     return await this.ctx.catalog.listWorkspaceBranches(this.baseOverrides.get(ctx), target.directory)
   }
 
-  public async sendBranches(id: string): Promise<void> {
+  public async sendBranches(id: string, projectId = this.activeProjectId ?? this.ctx.getProjectId()): Promise<void> {
     const result = await this.branches(id).catch((err) => {
       this.ctx.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
       return undefined
     })
     if (!result) return
-    this.ctx.post({ type: "agentManager.diffBranches", sessionId: id, ...result })
+    this.ctx.post({ type: "agentManager.diffBranches", projectId, sessionId: id, ...result })
   }
 
-  private async activate(id: string, poll: boolean, fetch: boolean): Promise<void> {
+  private async activate(
+    id: string,
+    poll: boolean,
+    fetch: boolean,
+    projectId = this.ctx.getProjectId(),
+  ): Promise<void> {
+    this.activeProjectId = projectId
+    const revisionKey = this.cacheKey(id, projectId)
+    this.revisions.set(revisionKey, (this.revisions.get(revisionKey) ?? 0) + 1)
     this.target = undefined
     this.poll = poll
     await this.ready("stateReady rejected, continuing diff activate:")
@@ -293,22 +329,24 @@ export class WorktreeDiffController {
     this.target = resolved ? { sessionId: id, ...resolved } : undefined
     // Clear any stale source notice up front; sources only push a notice when
     // one is active, so a swap away from a noticing source must reset it.
-    this.ctx.post({ type: "agentManager.worktreeDiffNotice", sessionId: id, notice: undefined })
+    this.ctx.post({ type: "agentManager.worktreeDiffNotice", projectId, sessionId: id, notice: undefined })
 
     // If we have cached diffs for this context, push them immediately to eliminate initial loading delay!
-    const cached = this.diffCache.get(id)
+    const cacheKey = this.cacheKey(id, projectId)
+    const cached = this.diffCache.get(cacheKey)
     const warm = cached && Date.now() - cached.time < CACHE_TTL ? cached : undefined
     if (warm) {
-      this.diffCache.delete(id)
-      this.diffCache.set(id, warm)
+      this.diffCache.delete(cacheKey)
+      this.diffCache.set(cacheKey, warm)
       this.ctx.post({
         type: "agentManager.worktreeDiff",
+        projectId,
         sessionId: id,
         diffs: warm.diffs,
       })
-      this.ctx.post({ type: "agentManager.worktreeDiffLoading", sessionId: id, loading: false })
+      this.ctx.post({ type: "agentManager.worktreeDiffLoading", projectId, sessionId: id, loading: false })
     } else if (cached) {
-      this.diffCache.delete(id)
+      this.diffCache.delete(cacheKey)
     }
 
     this.controller.setContext({
@@ -361,6 +399,10 @@ export class WorktreeDiffController {
     await this.ctx.getStateReady()?.catch((err) => this.ctx.log(msg, err))
   }
 
+  private cacheKey(id: string, projectId = this.activeProjectId ?? this.ctx.getProjectId()): string {
+    return `${projectId ?? "single"}\0${id}`
+  }
+
   private remember(id: string, diffs: AgentManagerDiffFile[]): void {
     const bytes = diffs.reduce(
       (sum, diff) => sum + (diff.patch?.length ?? 0) + diff.before.length + diff.after.length,
@@ -375,9 +417,11 @@ export class WorktreeDiffController {
     }
   }
 
-  private invalidate(ctx: string): void {
-    for (const id of this.diffCache.keys()) {
-      if (parseDiffId(id).ctx === ctx) this.diffCache.delete(id)
+  private invalidate(ctx: string, projectId = this.activeProjectId ?? this.ctx.getProjectId()): void {
+    const prefix = `${projectId ?? "single"}\0`
+    for (const key of this.diffCache.keys()) {
+      if (!key.startsWith(prefix)) continue
+      if (parseDiffId(key.slice(prefix.length)).ctx === ctx) this.diffCache.delete(key)
     }
   }
 
@@ -417,9 +461,15 @@ export class WorktreeDiffController {
     }
   }
 
-  private postRevertResult(sessionId: string, file: string, result: { ok: boolean; message: string }): void {
+  private postRevertResult(
+    sessionId: string,
+    file: string,
+    result: { ok: boolean; message: string },
+    projectId = this.activeProjectId,
+  ): void {
     this.ctx.post({
       type: "agentManager.revertWorktreeFileResult",
+      projectId,
       sessionId,
       file,
       status: result.ok ? "success" : "error",

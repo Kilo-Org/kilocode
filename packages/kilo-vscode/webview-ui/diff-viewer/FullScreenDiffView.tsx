@@ -30,7 +30,7 @@ import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToTex
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { FileTree } from "./FileTree"
 import { treeOrder } from "./file-tree-utils"
-import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
+import { diffLineCount, getDirectory, getFilename, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
@@ -366,8 +366,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           composer().draft = null
           return
         }
-        const content = currentDraft.side === "deletions" ? diff.before : diff.after
-        const max = lineCount(content)
+        const max = diffLineCount(diff, currentDraft.side)
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
@@ -554,10 +553,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     }
     return { files: props.diffs.length, additions, deletions, large, collapsed }
   })
-  const allOpen = createMemo(() => {
-    const set = openSet()
-    return props.diffs.every((diff) => !isDiffExpandable(diff) || set.has(diff.file))
-  })
+  const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
 
   return (
