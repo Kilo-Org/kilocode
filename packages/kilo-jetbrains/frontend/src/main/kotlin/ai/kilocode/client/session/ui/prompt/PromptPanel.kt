@@ -108,11 +108,16 @@ class PromptPanel(
     private val project: Project,
     private val onSend: (String, List<PromptPartDto>) -> Unit,
     private val onAbort: () -> Unit,
-    private val onEnhance: (String, (Result<String>) -> Unit) -> Unit,
+    private val onEnhance: (String, (Result<String>) -> Unit) -> Unit = { _, _ -> },
     private val onMentions: suspend (String) -> List<PromptPartDto> = { emptyList() },
     private val completion: KiloPromptCompletionProvider? = null,
     private val selection: SessionSelection? = null,
     private val cs: CoroutineScope = CoroutineScope(Dispatchers.Default),
+    private val rounded: Boolean = true,
+    private val showSubmit: Boolean = true,
+    private val approve: Boolean = true,
+    private val showEnhance: Boolean = true,
+    private val hostedInEditorTab: Boolean = false,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, UiDataProvider {
 
     companion object {
@@ -142,7 +147,7 @@ class PromptPanel(
     private var style = SessionEditorStyle.current()
     private var focused = false
     private val shell = BorderLayoutPanel().apply {
-        isOpaque = true
+        isOpaque = false
         border = JBUI.Borders.empty(
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
@@ -270,6 +275,7 @@ class PromptPanel(
 
     init {
         applyStyle(style)
+        syncBorder()
         selection?.register(editor)
         editor.text = ""
         editor.addDocumentListener(object : DocumentListener {
@@ -308,13 +314,17 @@ class PromptPanel(
         bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         bar.add(reset)
         bar.add(Box.createHorizontalGlue())
-        bar.add(auto)
-        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-        bar.add(enhance)
-        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-        bar.add(separator)
-        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-        bar.add(button)
+        if (approve) {
+            bar.add(auto)
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        }
+        if (showEnhance) bar.add(enhance)
+        if (showSubmit) {
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+            bar.add(separator)
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+            bar.add(button)
+        }
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
         addComponentListener(resize)
@@ -353,14 +363,29 @@ class PromptPanel(
             } else {
                 JBUI.Borders.customLineTop(SessionUiStyle.View.Prompt.separator())
             },
-            JBUI.Borders.empty(),
+            JBUI.Borders.empty(0, focusInset(), focusInset(), focusInset()),
         )
     }
+
+    private fun focusInset() = if (hostedInEditorTab) JBUI.scale(SessionUiStyle.View.Prompt.FOCUS_WIDTH) else 0
 
     private fun promptSize(size: Dimension): Dimension {
         val chrome = (shell.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
         val ins = insets
         return Dimension(size.width, editor.preferredSize.height + chrome + ins.top + ins.bottom)
+    }
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.color = SessionUiStyle.Colors.sessionBackground()
+            g2.fillRect(0, 0, width, height)
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.color = SessionUiStyle.View.Prompt.bgColor(style)
+            g2.fill(surface(0f))
+        } finally {
+            g2.dispose()
+        }
     }
 
     override fun paintChildren(g: Graphics) {
@@ -370,39 +395,41 @@ class PromptPanel(
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             val line = JBUI.scale(SessionUiStyle.View.Prompt.FOCUS_WIDTH)
-            val half = line / 2f
-            val top = half
-            val left = half
-            val right = width - half
-            val bottom = height - half
-            val arc = if (IslandsState.isEnabled()) {
-                JBUI.scale(JBUI.getInt("Island.arc", SessionUiStyle.View.Prompt.CORNER_ARC)) / 2f
-            } else {
-                0f
-            }
-            val radius = arc
-                .coerceAtMost((right - left) / 2f)
-                .coerceAtMost(bottom - top)
-                .coerceAtLeast(0f)
-            val path = Path2D.Float().apply {
-                moveTo(left, top)
-                lineTo(right, top)
-                lineTo(right, bottom - radius)
-                if (radius > 0f) {
-                    quadTo(right, bottom, right - radius, bottom)
-                    lineTo(left + radius, bottom)
-                    quadTo(left, bottom, left, bottom - radius)
-                } else {
-                    lineTo(right, bottom)
-                    lineTo(left, bottom)
-                }
-                closePath()
-            }
             g2.color = JBUI.CurrentTheme.Focus.focusColor()
             g2.stroke = BasicStroke(line.toFloat(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND)
-            g2.draw(path)
+            g2.draw(surface(line / 2f))
         } finally {
             g2.dispose()
+        }
+    }
+
+    private fun surface(inset: Float): Path2D.Float {
+        val top = inset
+        val left = inset + insets.left
+        val right = width - inset - insets.right
+        val bottom = height - inset - insets.bottom
+        val arc = if (rounded && IslandsState.isEnabled()) {
+            JBUI.scale(JBUI.getInt("Island.arc", SessionUiStyle.View.Prompt.CORNER_ARC)) / 2f
+        } else {
+            0f
+        }
+        val radius = arc
+            .coerceAtMost((right - left) / 2f)
+            .coerceAtMost(bottom - top)
+            .coerceAtLeast(0f)
+        return Path2D.Float().apply {
+            moveTo(left, top)
+            lineTo(right, top)
+            lineTo(right, bottom - radius)
+            if (radius > 0f) {
+                quadTo(right, bottom, right - radius, bottom)
+                lineTo(left + radius, bottom)
+                quadTo(left, bottom, left, bottom - radius)
+            } else {
+                lineTo(right, bottom)
+                lineTo(left, bottom)
+            }
+            closePath()
         }
     }
 
