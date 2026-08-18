@@ -2,8 +2,10 @@ package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
@@ -72,11 +74,12 @@ class ViewSwitchingTest : SessionControllerTestBase() {
             AppChanged
             WorkspaceChanged
             WorkspaceReady
-            ViewChanged recents=1
+            ViewChanged empty
         """, events)
+        assertEquals(1, m.recents().size)
     }
 
-    fun `test recent load failure shows empty recents`() {
+    fun `test recent load failure shows empty view`() {
         projectRpc.state.value = workspaceReady()
         rpc.recentFailures = 1
         val m = controller()
@@ -91,11 +94,12 @@ class ViewSwitchingTest : SessionControllerTestBase() {
             AppChanged
             WorkspaceChanged
             WorkspaceReady
-            ViewChanged recents=0
+            ViewChanged empty
         """, events)
+        assertTrue(m.recents().isEmpty())
     }
 
-    fun `test empty explicit session history shows session view`() {
+    fun `test empty explicit session history shows empty view`() {
         rpc.recent.add(session("ses_1"))
         val m = controller("ses_test", displayMs = 1_000)
         val events = collect(m)
@@ -105,13 +109,15 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         assertTrue(rpc.recentCalls.isEmpty())
         assertControllerEvents("""
             AccountOverlayChanged hide
+            AccountOverlayChanged show loggedIn=false
             AppChanged
             WorkspaceChanged
             ViewChanged progress
-            ViewChanged session
+            ViewChanged empty
         """, events)
-        assertTrue(m.model.showSession)
-        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertFalse(m.model.showSession)
+        assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowEmpty })
+        assertTrue(m.recents().isEmpty())
     }
 
     fun `test workspace ready does not load recents during explicit local load`() {
@@ -126,14 +132,14 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         assertTrue(rpc.recentCalls.isEmpty())
         assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowProgress })
-        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowEmpty })
 
         gate.complete(Unit)
         flush()
 
         assertTrue(rpc.recentCalls.isEmpty())
-        assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowSession })
-        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowEmpty })
+        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowSession })
     }
 
     fun `test workspace ready does not load recents during cloud import`() {
@@ -149,18 +155,19 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         assertTrue(rpc.recentCalls.isEmpty())
         assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowProgress })
-        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowEmpty })
 
         gate.complete(Unit)
         flush()
 
         assertTrue(rpc.recentCalls.isEmpty())
-        assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowSession })
-        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowEmpty })
+        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowSession })
     }
 
     fun `test local history session event sees loaded state on EDT`() {
         projectRpc.state.value = workspaceReady()
+        seedHistory("ses_test")
         val gate = CompletableDeferred<Unit>()
         rpc.historyGate = gate
         val m = controller("ses_test", displayMs = 50)
@@ -181,6 +188,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
     fun `test cloud history session event sees imported local state on EDT`() {
         projectRpc.state.value = workspaceReady()
         rpc.importedCloudSession = session("ses_imported")
+        seedHistory("ses_imported")
         val gate = CompletableDeferred<Unit>()
         rpc.historyGate = gate
         val m = controller("cloud:cloud_1", displayMs = 50)
@@ -233,12 +241,13 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         // After completing, recents must fire directly (no prior progress event)
         assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowProgress })
-        assertEquals(1, events.count { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertEquals(1, events.count { it is SessionControllerEvent.ViewChanged.ShowEmpty })
         val recentsView = events.filterIsInstance<SessionControllerEvent.ViewChanged>()
-        assertEquals("ViewChanged recents=1", recentsView.last().toString())
+        assertEquals("ViewChanged empty", recentsView.last().toString())
+        assertEquals(1, m.recents().size)
     }
 
-    fun `test recents loaded state visible on EDT when recents event fires`() {
+    fun `test recents loaded state visible on EDT when empty event fires`() {
         projectRpc.state.value = workspaceReady()
         rpc.recent.add(session("ses_1"))
         val gate = CompletableDeferred<Unit>()
@@ -250,7 +259,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         flush()
 
         assertFalse(states.any { it.first is SessionControllerEvent.ViewChanged.ShowProgress })
-        val state = states.single { it.first is SessionControllerEvent.ViewChanged.ShowRecents }.second
+        val state = states.single { it.first is SessionControllerEvent.ViewChanged.ShowEmpty }.second
         assertEquals("Loaded", state.recentsState)
     }
 
@@ -264,10 +273,10 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         assertTrue(rpc.recentCalls.contains("/test" to SessionController.RECENT_LIMIT))
         assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowProgress })
-        assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowEmpty })
     }
 
-    fun `test recents event sees loaded state on EDT`() {
+    fun `test empty event sees loaded recents state on EDT`() {
         projectRpc.state.value = workspaceReady()
         rpc.recent.add(session("ses_1"))
         val m = controller(displayMs = 1_000)
@@ -275,12 +284,12 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         flush()
 
-        val event = states.single { it.first is SessionControllerEvent.ViewChanged.ShowRecents }
+        val event = states.single { it.first is SessionControllerEvent.ViewChanged.ShowEmpty }
         assertEquals(event.first, event.second.viewState)
         assertEquals("Loaded", event.second.recentsState)
     }
 
-    fun `test failed fast recents suppress progress and show empty recents`() {
+    fun `test failed fast recents suppress progress and show empty view`() {
         projectRpc.state.value = workspaceReady()
         rpc.recentFailures = 1
         val m = controller(displayMs = 1_000)
@@ -289,8 +298,8 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         flush()
 
         assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowProgress })
-        assertEquals(1, events.count { it is SessionControllerEvent.ViewChanged.ShowRecents })
-        assertTrue(events.filterIsInstance<SessionControllerEvent.ViewChanged.ShowRecents>().single().recents.isEmpty())
+        assertEquals(1, events.count { it is SessionControllerEvent.ViewChanged.ShowEmpty })
+        assertTrue(m.recents().isEmpty())
     }
 
     fun `test recents progress is canceled when messages view appears`() {
@@ -309,7 +318,19 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowSession })
         assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowProgress })
-        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowEmpty })
+    }
+
+    fun `test empty existing session returns to session view after message arrives`() {
+        val m = controller("ses_test", displayMs = 1_000)
+        val events = collect(m)
+        flush()
+        events.clear()
+
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
+
+        assertTrue(events.any { it is SessionControllerEvent.ViewChanged.ShowSession })
+        assertTrue(m.model.showSession)
     }
 
     fun `test id-only local ref starts with local identity`() {
@@ -357,6 +378,10 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         version = "1",
         time = ai.kilocode.rpc.dto.SessionTimeDto(created = 1.0, updated = 2.0),
     )
+
+    private fun seedHistory(id: String) {
+        rpc.history.add(MessageWithPartsDto(msg("msg1", id, "user"), emptyList()))
+    }
 
     // --- account overlay controller tests ---
 
@@ -409,6 +434,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
     fun `test explicit local session load never shows overlay`() {
         projectRpc.state.value = workspaceReady()
         rpc.recent.add(session("ses_1"))
+        seedHistory("ses_test")
         val m = controller("ses_test")
         val events = collect(m)
 
@@ -421,6 +447,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         projectRpc.state.value = workspaceReady()
         rpc.importedCloudSession = session("ses_imported")
         rpc.recent.add(session("ses_1"))
+        seedHistory("ses_imported")
         val m = controller("cloud:cloud_1")
         val events = collect(m)
 

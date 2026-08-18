@@ -3,6 +3,7 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.migration.FakeMigrationUiController
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
@@ -545,6 +546,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         create = { _, _, _, _, _ -> error("unused") },
         request = {},
         cs = coroutines.scope,
+        migration = FakeMigrationUiController(),
         adopt = { _, _, _ -> RenameWorktreeResultDto() },
     ) {
         var newCount = 0
