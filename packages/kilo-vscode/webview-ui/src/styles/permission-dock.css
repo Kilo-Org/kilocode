@@ -162,7 +162,6 @@
   [data-slot="permission-scroll"] {
     display: flex;
     flex-direction: column;
-    gap: 4px;
     flex: 1 1 auto;
     min-height: 0;
     max-height: 420px;
@@ -170,11 +169,23 @@
     overscroll-behavior: contain;
   }
 
+  /* Pierre's virtualizer treats the scroll root's first child as its content
+     container. Keep the variable-height permission content together so nested
+     descriptions do not become the virtualizer's content root. */
+  [data-slot="permission-scroll-content"] {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 4px;
+    min-height: min-content;
+  }
+
   [data-slot="permission-diffs"] {
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin: 8px 0;
+    flex-shrink: 0;
     min-height: 0;
   }
 
