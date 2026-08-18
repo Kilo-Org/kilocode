@@ -286,11 +286,13 @@ interface SessionContextValue {
   clearCurrentSession: () => void
   loadSessions: () => void
   loadOlderMessages: () => boolean
-  selectSession: (id: string) => void
+  selectSession: (id: string, options?: { focus?: boolean }) => void
+  releaseSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
   exportSessionTranscript: (id: string) => void
-  syncSession: (sessionID: string) => void
+  syncSession: (sessionID: string, parentSessionID?: string, scope?: "task" | "inspector") => void
+  unsyncSession: (sessionID: string, scope?: "task" | "inspector") => void
 
   // Cloud session preview
   cloudPreviewId: Accessor<string | null>
@@ -2598,9 +2600,9 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Session whose message fetch was deferred because the backend was offline at
   // selection time. Replayed by the reconnect effect below.
-  let deferredFetch: string | undefined
+  let deferredFetch: { id: string; focus: boolean } | undefined
 
-  function selectSession(id: string) {
+  function selectSession(id: string, options: { focus?: boolean } = {}) {
     // Cloud preview sessions use a separate keyed path (selectCloudSession).
     if (id.startsWith("cloud:")) {
       console.warn("[Kilo New] Cannot select cloud preview session via selectSession")
@@ -2621,15 +2623,26 @@ export const SessionProvider: ParentComponent = (props) => {
     // load message is what re-focuses the backend (focusSession, contextSessionID,
     // SSE tracking, active worktree) and runs the reconcile self-heal, so skipping
     // it would leave the extension focused on the previously selected session.
+    const focus = options.focus !== false
     if (!server.isConnected()) {
-      deferredFetch = id
+      deferredFetch = { id, focus }
       return
     }
     deferredFetch = undefined
-    loadFocusedMessages(id, ready)
+    loadFocusedMessages(id, ready, focus)
   }
 
-  function loadFocusedMessages(id: string, ready: boolean) {
+  function loadFocusedMessages(id: string, ready: boolean, focus = true) {
+    if (!focus) {
+      vscode.postMessage({
+        type: "loadMessages",
+        sessionID: id,
+        mode: "replace",
+        focus: false,
+        limit: MESSAGE_PAGE_LIMIT,
+      })
+      return
+    }
     vscode.postMessage(
       ready
         ? { type: "loadMessages", sessionID: id, mode: "focus" }
@@ -2644,10 +2657,10 @@ export const SessionProvider: ParentComponent = (props) => {
   createEffect(
     on(server.isConnected, (connected) => {
       if (!connected) return
-      const id = deferredFetch
+      const pending = deferredFetch
       deferredFetch = undefined
-      if (!id || id !== currentSessionID()) return
-      loadFocusedMessages(id, loaded().has(id))
+      if (!pending || pending.id !== currentSessionID()) return
+      loadFocusedMessages(pending.id, loaded().has(pending.id), pending.focus)
     }),
   )
 
@@ -2835,8 +2848,12 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
   }
 
-  function syncSession(sessionID: string) {
-    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID: currentSessionID() })
+  function syncSession(sessionID: string, parentSessionID = currentSessionID(), scope: "task" | "inspector" = "task") {
+    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID, scope })
+  }
+
+  function unsyncSession(sessionID: string, scope: "task" | "inspector" = "task") {
+    vscode.postMessage({ type: "unsyncSession", sessionID, scope })
   }
 
   const todos = () => {
@@ -3031,10 +3048,12 @@ export const SessionProvider: ParentComponent = (props) => {
     loadSessions,
     loadOlderMessages,
     selectSession,
+    releaseSession: handleSessionDeleted,
     deleteSession,
     renameSession,
     exportSessionTranscript,
     syncSession,
+    unsyncSession,
     cloudPreviewId,
     selectCloudSession,
     draftSessionID,

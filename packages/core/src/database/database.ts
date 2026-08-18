@@ -27,9 +27,11 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const db = yield* makeDatabase
 
-    yield* db.run("PRAGMA journal_mode = WAL")
-    yield* db.run("PRAGMA synchronous = NORMAL")
+    // kilocode_change start - install SQLite's busy handler before concurrent processes can race to recover the WAL
     yield* db.run("PRAGMA busy_timeout = 5000")
+    yield* db.run("PRAGMA journal_mode = WAL")
+    // kilocode_change end
+    yield* db.run("PRAGMA synchronous = NORMAL")
     yield* db.run("PRAGMA cache_size = -64000")
     yield* db.run("PRAGMA foreign_keys = ON")
     yield* db.run("PRAGMA wal_checkpoint(PASSIVE)")
@@ -42,7 +44,7 @@ const layer = Layer.effect(
 
 export function layerFromPath(filename: string) {
   DbPreflight.assertWritable(filename) // kilocode_change - actionable error (and self-heal for kilo-owned files) instead of an opaque wal_checkpoint crash on read-only db files
-  return layer.pipe(Layer.provide(sqliteLayer({ filename })))
+  return layer.pipe(Layer.provide(sqliteLayer({ filename, disableWAL: true }))) // kilocode_change - Database configures WAL after busy_timeout
 }
 
 export function path() {

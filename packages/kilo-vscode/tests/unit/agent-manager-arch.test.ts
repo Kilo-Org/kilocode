@@ -21,6 +21,7 @@ const CSS_FILES = [
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
@@ -51,6 +52,8 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ClosableTab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/InspectorTabStrip.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectBranchDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),

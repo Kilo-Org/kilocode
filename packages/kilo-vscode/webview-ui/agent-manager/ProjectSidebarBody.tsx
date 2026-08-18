@@ -33,6 +33,7 @@ import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
 import { randomColor } from "./section-colors"
 import { projectSidebarOrder, projectWorktreeRow } from "./project-local-navigation"
+import { rootSessions } from "./project/session-filter"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -94,8 +95,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     pendingTimer = setTimeout(() => setPending(undefined), 2500)
   }
   const state = () => props.state
-  const sessions = (worktreeId: string | null) =>
-    (props.sessions ?? []).filter((item) => item.worktreeId === worktreeId)
+  const sessions = (worktreeId: string | null) => rootSessions(props.sessions ?? [], worktreeId)
   const active = () => props.selectedProject === props.project.id
   const runs = () => store.runStatuses()
   const sections = () => store.sections()

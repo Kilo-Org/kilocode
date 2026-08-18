@@ -60,6 +60,12 @@ export class Handler {
     }
 
     const skillShell = SkillShellPrompt.is(permission.metadata) // kilocode_change - skill batches list commands and never persist
+    const temporary = skillShell || permission.metadata?.["sandboxEscalation"] === true // kilocode_change
+    const title = skillShell
+      ? SkillShellPrompt.title
+      : temporary
+        ? "Allow Git operation outside the sandbox"
+        : undefined // kilocode_change
     const result = await this.input.connection
       .requestPermission({
         sessionId: permission.sessionID,
@@ -67,9 +73,9 @@ export class Handler {
           toolCallId: permission.tool?.callID ?? permission.id,
           toolName: permission.permission,
           input: permission.metadata,
-          title: skillShell ? SkillShellPrompt.title : undefined, // kilocode_change
+          title, // kilocode_change
         }),
-        options: skillShell ? SkillShellPrompt.options : permissionOptions, // kilocode_change
+        options: temporary ? SkillShellPrompt.options : permissionOptions, // kilocode_change
       })
       .catch(async () => {
         await this.reply(permission.id, "reject", session.cwd)
@@ -91,7 +97,8 @@ export class Handler {
     await this.reply(permission.id, reply, session.cwd, true) // kilocode_change - human selected via requestPermission
   }
 
-  private async reply(requestID: string, reply: Reply, directory: string, interactive = false) { // kilocode_change - interactive param
+  private async reply(requestID: string, reply: Reply, directory: string, interactive = false) {
+    // kilocode_change - interactive param
     await this.input.sdk.permission.reply({
       requestID,
       reply,

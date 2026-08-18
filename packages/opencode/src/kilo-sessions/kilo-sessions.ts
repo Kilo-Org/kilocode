@@ -1068,12 +1068,12 @@ export namespace KiloSessions {
       throw new Error(`Unable to share session ${sessionId}: ${response.status} ${response.statusText}`)
     }
 
-    const result = (await response.json()) as { public_id?: string }
-    if (!result.public_id) {
-      throw new Error(`Unable to share session ${sessionId}: server did not return a public id`)
+    const result = (await response.json()) as { share_token?: string }
+    if (!result.share_token) {
+      throw new Error(`Unable to share session ${sessionId}: server did not return a share token`)
     }
 
-    const url = `https://app.kilo.ai/s/${result.public_id}`
+    const url = `https://app.kilo.ai/s/${result.share_token}`
 
     await save(sessionId, {
       ...current,
