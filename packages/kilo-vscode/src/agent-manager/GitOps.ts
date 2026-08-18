@@ -425,7 +425,7 @@ export class GitOps {
         throw new Error(read.stderr.trim() || "Failed to initialize temporary index")
       }
 
-      const add = await this.exec(["add", "-A", "--", ...pathspec], sourcePath, { env })
+      const add = await this.exec(["--literal-pathspecs", "add", "-A", "--", ...pathspec], sourcePath, { env })
       if (add.code !== 0) {
         throw new Error(add.stderr.trim() || "Failed to stage worktree snapshot")
       }
@@ -481,12 +481,14 @@ export class GitOps {
       }
       await fs.rm(full, { force: true })
       // Also remove from git index in case it was staged
-      await this.raw(["rm", "--cached", "--force", "--ignore-unmatch", "--", file], cwd).catch(() => "")
+      await this.raw(["--literal-pathspecs", "rm", "--cached", "--force", "--ignore-unmatch", "--", file], cwd).catch(
+        () => "",
+      )
       return { ok: true, message: "Removed added file" }
     }
 
     // Modified or deleted file — restore from merge-base
-    const result = await this.exec(["checkout", base, "--", file], cwd)
+    const result = await this.exec(["--literal-pathspecs", "checkout", base, "--", file], cwd)
     if (result.code !== 0) {
       return { ok: false, message: result.stderr.trim() || "Failed to revert file" }
     }
@@ -494,7 +496,7 @@ export class GitOps {
     // restored the file into the index correctly — resetting to HEAD would drop
     // it from the index and make it appear as a new untracked file.
     if (status === "modified") {
-      await this.raw(["reset", "HEAD", "--", file], cwd).catch(() => "")
+      await this.raw(["--literal-pathspecs", "reset", "HEAD", "--", file], cwd).catch(() => "")
     }
     return { ok: true, message: "Reverted file to base" }
   }

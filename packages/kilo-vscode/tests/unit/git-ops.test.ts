@@ -99,6 +99,25 @@ describe("GitOps", () => {
     })
   })
 
+  it("treats selected filenames as literal pathspecs", async () => {
+    await withRepo(async (cwd) => {
+      runGit(cwd, ["config", "user.email", "test@example.com"])
+      runGit(cwd, ["config", "user.name", "Test"])
+      await fs.writeFile(nodePath.join(cwd, "*"), "before\n")
+      await fs.writeFile(nodePath.join(cwd, "other.txt"), "before\n")
+      runGit(cwd, ["add", "."])
+      runGit(cwd, ["commit", "-m", "seed"])
+      await fs.writeFile(nodePath.join(cwd, "*"), "after\n")
+      await fs.writeFile(nodePath.join(cwd, "other.txt"), "changed\n")
+
+      const git = new GitOps({ log: () => undefined, binary: async () => "git" })
+      const patch = await git.buildWorktreePatch(cwd, "HEAD", ["*"])
+
+      expect(patch).toContain("diff --git a/* b/*")
+      expect(patch).not.toContain("other.txt")
+    })
+  })
+
   it("retries executable resolution after a transient failure", async () => {
     await withRepo(async (cwd) => {
       let calls = 0

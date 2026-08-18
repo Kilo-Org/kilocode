@@ -247,7 +247,7 @@ export class SourceController {
       // Self-cancel when the tick reports the source is done
       void this.runFetch(source, epoch, false)
         .then((keep) => {
-          if (!keep) this.stopPolling()
+          if (!keep && this.epoch === epoch && this.activeId === source.descriptor.id) this.stopPolling()
         })
         .finally(() => {
           busy = false

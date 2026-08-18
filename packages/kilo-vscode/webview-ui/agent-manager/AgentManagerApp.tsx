@@ -1756,7 +1756,7 @@ const AgentManagerContent: Component = () => {
 
   const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(diffScopeId))
 
-  const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), vscode, showToast, t)
+  const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), activeProjectId, vscode, showToast, t)
 
   const handleConfigureSetupScript = () => {
     vscode.postMessage({ type: "agentManager.configureSetupScript" })

@@ -48,6 +48,8 @@ export class WorktreeDiffController {
   private revisions = new Map<string, number>()
   private preloading = new Set<string>()
   private activeProjectId: string | undefined
+  private activation = 0
+  private sourceProjects = new WeakMap<DiffSource, string | undefined>()
 
   constructor(private readonly ctx: WorktreeDiffControllerContext) {
     this.controller = new SourceController(
@@ -57,35 +59,36 @@ export class WorktreeDiffController {
       {
         loading: (source, loading) => ({
           type: "agentManager.worktreeDiffLoading",
-          projectId: this.activeProjectId,
+          projectId: this.projectFor(source),
           sessionId: source.descriptor.id,
           loading,
         }),
         notice: (source, notice) => ({
           type: "agentManager.worktreeDiffNotice",
-          projectId: this.activeProjectId,
+          projectId: this.projectFor(source),
           sessionId: source.descriptor.id,
           notice,
         }),
         diffs: (source, diffs) => {
-          this.remember(this.cacheKey(source.descriptor.id), diffs as AgentManagerDiffFile[])
+          const projectId = this.projectFor(source)
+          this.remember(this.cacheKey(source.descriptor.id, projectId), diffs as AgentManagerDiffFile[])
           return {
             type: "agentManager.worktreeDiff",
-            projectId: this.activeProjectId,
+            projectId,
             sessionId: source.descriptor.id,
             diffs: diffs as AgentManagerDiffFile[],
           }
         },
         diffFile: (source, file, diff) => ({
           type: "agentManager.worktreeDiffFile",
-          projectId: this.activeProjectId,
+          projectId: this.projectFor(source),
           sessionId: source?.descriptor.id ?? "",
           file,
           diff: diff as AgentManagerDiffFile | null,
         }),
         revertFileResult: (source, file, result) => ({
           type: "agentManager.revertWorktreeFileResult",
-          projectId: this.activeProjectId,
+          projectId: this.projectFor(source),
           sessionId: source?.descriptor.id ?? "",
           file,
           status: result.ok ? "success" : "error",
@@ -219,6 +222,7 @@ export class WorktreeDiffController {
   }
 
   public stop(): void {
+    this.activation++
     this.controller.stop()
     this.target = undefined
     this.poll = false
@@ -322,14 +326,17 @@ export class WorktreeDiffController {
     fetch: boolean,
     projectId = this.ctx.getProjectId(),
   ): Promise<void> {
+    const activation = ++this.activation
     this.activeProjectId = projectId
     const revisionKey = this.cacheKey(id, projectId)
     this.revisions.set(revisionKey, (this.revisions.get(revisionKey) ?? 0) + 1)
     this.target = undefined
     this.poll = poll
     await this.ready("stateReady rejected, continuing diff activate:")
+    if (activation !== this.activation) return
     const { ctx } = parseDiffId(id)
     const resolved = await this.resolve(ctx, projectId)
+    if (activation !== this.activation) return
     this.target = resolved ? { sessionId: id, ...resolved } : undefined
     // Clear any stale source notice up front; sources only push a notice when
     // one is active, so a swap away from a noticing source must reset it.
@@ -448,10 +455,16 @@ export class WorktreeDiffController {
   private source(id: string, panelCtx: PanelContext): DiffSource {
     const { ctx, scope, sessionId } = parseDiffId(id)
     const built = this.ctx.catalog.build(scopeToSourceId(scope, ctx, sessionId), panelCtx)
-    return {
+    const source = {
       ...built,
       descriptor: { ...built.descriptor, id },
     }
+    this.sourceProjects.set(source, this.activeProjectId)
+    return source
+  }
+
+  private projectFor(source: DiffSource | undefined): string | undefined {
+    return source ? this.sourceProjects.get(source) : this.activeProjectId
   }
 
   private async revertFile(

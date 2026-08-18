@@ -23,6 +23,8 @@ type Log = (...args: unknown[]) => void
 /** Cap untracked file reads so line-counting a multi-megabyte log file does
  *  not stall the poll. Matches `GitOps.workingTreeStats()`. */
 const MAX_UNTRACKED_BYTES = 1_000_000
+const MAX_UNTRACKED_OUTPUT_BYTES = 4_000_000
+const MAX_UNTRACKED_ENTRIES = 10_000
 
 /** Cap per-side reads in the detail view. Opening very large tracked files
  *  used to spike `kilo serve`; now that the detail path runs in the
@@ -209,7 +211,7 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<W
     }),
     git.execGit(["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", anc], dir),
     git.execGit(["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc], dir),
-    git.execGit(["ls-files", "--others", "--exclude-standard"], dir),
+    git.execGit(["ls-files", "--others", "--exclude-standard"], dir, { maxOutput: MAX_UNTRACKED_OUTPUT_BYTES }),
   ])
 
   if (nameStatus.code !== 0) {
@@ -269,7 +271,11 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<W
     }
   }
 
-  const untrackedFiles = untracked.code === 0 ? untracked.stdout.trim().split("\n").filter(Boolean) : []
+  if (untracked.code !== 0) {
+    log?.("git ls-files --others failed", { code: untracked.code, stderr: untracked.stderr.trim() })
+  }
+  const untrackedFiles =
+    untracked.code === 0 ? untracked.stdout.trim().split("\n").filter(Boolean).slice(0, MAX_UNTRACKED_ENTRIES) : []
   const entries: WorktreeDiffEntry[] = []
   let remaining = MAX_DETAIL_BYTES
   for (const file of untrackedFiles) {
