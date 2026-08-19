@@ -1,6 +1,6 @@
 import { test, expect, describe, afterEach, beforeEach, spyOn } from "bun:test"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
-import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
+import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent" // kilocode_change
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { Cause, Effect, Exit, Layer, Option } from "effect"
@@ -1586,6 +1586,7 @@ test("config parser preserves permission order while rejecting unknown top-level
   }
 })
 
+// kilocode_change start - preserve legacy agent requirement declarations without forwarding them
 test("config parser ignores legacy agent requirements", () => {
   const config = ConfigParse.schema(
     ConfigAgentV1.Info,
@@ -1600,6 +1601,7 @@ test("config parser ignores legacy agent requirements", () => {
   expect(config.options).toEqual({ custom: true })
   expect(config.options).not.toHaveProperty("requirements")
 })
+// kilocode_change end
 
 // MCP config merging tests
 
