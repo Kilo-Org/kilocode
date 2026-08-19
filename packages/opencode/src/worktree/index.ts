@@ -410,11 +410,12 @@ const layer: Layer.Layer<
       const entry = yield* locateWorktree(entries, directory)
 
       if (!entry?.path) {
-        // kilocode_change start
-        const exists = yield* fs.exists(directory).pipe(Effect.orDie)
-        if (exists) return yield* new RemoveFailedError({ message: "Worktree not found" })
-        // kilocode_change end
         yield* clearPtys(directory, workspaceID) // kilocode_change
+        const directoryExists = yield* fs.exists(directory).pipe(Effect.orDie)
+        if (directoryExists) {
+          yield* stopFsmonitor(directory)
+          yield* cleanDirectory(directory)
+        }
         return true
       }
 
