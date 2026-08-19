@@ -5,11 +5,9 @@ import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/midd
 import {
   WorkspaceRoutingMiddleware,
   WorkspaceRoutingQuery,
-  WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import { AnacondaDesktopApi } from "./anaconda-desktop"
-import { Result as AgentRequirementResult } from "@/kilocode/agent-requirements"
 import {
   Failure as AgentManagerFailure,
   Request as AgentManagerRequest,
@@ -42,10 +40,6 @@ export const RemoveAgentPayload = Schema.Struct({
   scope: Schema.optional(Scope),
 })
 
-export const AgentRequirementQuery = Schema.Struct({
-  ...WorkspaceRoutingQueryFields,
-  agent: Schema.String,
-})
 export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
 export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
 export const AgentManagerReplyPayload = Schema.Struct({ result: AgentManagerResult })
@@ -53,7 +47,6 @@ export const AgentManagerRejectPayload = Schema.Struct({ error: AgentManagerFail
 
 export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
-  agentRequirements: `${root}/agent/requirements`,
   commandFiles: `${root}/command/files`,
   removeCommand: `${root}/command/remove`,
   removeSkill: `${root}/skill/remove`,
@@ -80,16 +73,6 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.heap.snapshot",
             summary: "Write heap snapshot",
             description: "Write a heap snapshot for the CLI process to the log directory.",
-          }),
-        ),
-        HttpApiEndpoint.get("agentRequirements", KilocodePaths.agentRequirements, {
-          query: AgentRequirementQuery,
-          success: described(AgentRequirementResult, "Agent requirement status"),
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "kilocode.agentRequirements",
-            summary: "Check agent requirements",
-            description: "Check whether the selected agent's requirements are available in the request directory.",
           }),
         ),
         HttpApiEndpoint.get("commandFiles", KilocodePaths.commandFiles, {
