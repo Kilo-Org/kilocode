@@ -8,7 +8,6 @@
       "allowed": {
         "packages/opencode/src/kilo-sessions/kilo-sessions.ts": { "count": 1, "owner": "session-runtime", "reason": "Kilo session coordination state" },
         "packages/opencode/src/kilocode/background-process/index.ts": { "count": 1, "owner": "process-runtime", "reason": "Directory-keyed background process registry" },
-        "packages/opencode/src/kilocode/notebook/service.ts": { "count": 1, "owner": "notebook-runtime", "reason": "Notebook cell execution service state" },
         "packages/opencode/src/kilocode/watcher.ts": { "count": 1, "owner": "watcher-runtime", "reason": "Eager location watcher subscription" }
       }
     },
