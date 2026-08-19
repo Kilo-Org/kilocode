@@ -6,6 +6,7 @@ import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
 import { parsePRResult, checkStatus, formatCheckDuration, parseComments, parseReviewers } from "./pr/am-pr-utils"
+import { PR_REVIEWERS_QUERY, PR_COMMENTS_QUERY } from "./pr/graphql"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./pr/am-pr-types"
 
 interface PRStatusPollerOptions {
@@ -437,24 +438,12 @@ export class PRStatusPoller {
   private async fetchReviewers(prNumber: number, cwd: string): Promise<PRReviewer[]> {
     try {
       const repo = await this.getRepoInfo(cwd)
-      const query = `query($owner: String!, $repo: String!, $number: Int!) {
-        repository(owner: $owner, name: $repo) {
-          pullRequest(number: $number) {
-            reviewRequests(first: 20) {
-              nodes { requestedReviewer { ... on User { login avatarUrl } } }
-            }
-            reviews(last: 20, states: [APPROVED, CHANGES_REQUESTED, COMMENTED]) {
-              nodes { author { login avatarUrl } state }
-            }
-          }
-        }
-      }`
       const { stdout } = await this.gh(
         [
           "api",
           "graphql",
           "-f",
-          `query=${query}`,
+          `query=${PR_REVIEWERS_QUERY}`,
           "-F",
           `owner=${repo.owner}`,
           "-F",
@@ -481,38 +470,12 @@ export class PRStatusPoller {
   ): Promise<{ total: number; unresolved: number; comments: PRComment[] }> {
     try {
       const repo = await this.getRepoInfo(cwd)
-      const query = `query($owner: String!, $repo: String!, $number: Int!) {
-        repository(owner: $owner, name: $repo) {
-          pullRequest(number: $number) {
-            reviewThreads(first: 100) {
-              totalCount
-              nodes {
-                id
-                isResolved
-                comments(first: 1) {
-                  nodes {
-                    id
-                    author { login avatarUrl }
-                    body
-                    path
-                    line
-                    url
-                    createdAt
-                    diffHunk
-                  }
-                }
-              }
-            }
-          }
-        }
-      }`
-
       const { stdout } = await this.gh(
         [
           "api",
           "graphql",
           "-f",
-          `query=${query}`,
+          `query=${PR_COMMENTS_QUERY}`,
           "-F",
           `owner=${repo.owner}`,
           "-F",

@@ -1,10 +1,10 @@
 import { execGhRead } from "../gh"
 import { GH_MUTATION_TIMEOUT } from "./pr-constants"
+import { RESOLVE_THREAD_MUTATION, UNRESOLVE_THREAD_MUTATION } from "./graphql"
 
 export async function resolveComment(threadId: string, cwd: string): Promise<void> {
-  const mutation = `mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { isResolved } } }`
   try {
-    await execGhRead(["api", "graphql", "-f", `query=${mutation}`, "-F", `id=${threadId}`], {
+    await execGhRead(["api", "graphql", "-f", `query=${RESOLVE_THREAD_MUTATION}`, "-F", `id=${threadId}`], {
       cwd,
       timeout: GH_MUTATION_TIMEOUT,
     })
@@ -16,9 +16,8 @@ export async function resolveComment(threadId: string, cwd: string): Promise<voi
 }
 
 export async function unresolveComment(threadId: string, cwd: string): Promise<void> {
-  const mutation = `mutation($id: ID!) { unresolveReviewThread(input: { threadId: $id }) { thread { isResolved } } }`
   try {
-    await execGhRead(["api", "graphql", "-f", `query=${mutation}`, "-F", `id=${threadId}`], {
+    await execGhRead(["api", "graphql", "-f", `query=${UNRESOLVE_THREAD_MUTATION}`, "-F", `id=${threadId}`], {
       cwd,
       timeout: GH_MUTATION_TIMEOUT,
     })

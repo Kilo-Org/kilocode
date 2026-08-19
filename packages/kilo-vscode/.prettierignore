@@ -2,3 +2,4 @@ node_modules
 dist
 out
 *.md
+.github-schema-cache.graphql
