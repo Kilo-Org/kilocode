@@ -160,7 +160,7 @@ describe("agent_manager tool", () => {
     expect(schema.oneOf).toBeUndefined()
     expect(schema.allOf).toBeUndefined()
     const action = schema.properties?.action
-    expect(action && typeof action === "object" ? action.enum : undefined).toEqual(["list", "prompt", "stop", "move"])
+    expect(action && typeof action === "object" ? action.enum : undefined).toEqual(["list", "prompt", "stop", "move", "delete"])
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Use list first")
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Never edit")
     expect(schema.properties?.sessionID).toEqual(
@@ -184,6 +184,7 @@ describe("agent_manager tool", () => {
       "sessionID",
       "prompt",
       "sectionID",
+      "worktreeID",
     ])
   })
 
@@ -417,6 +418,50 @@ describe("agent_manager tool", () => {
     expect(result.metadata).toEqual(
       expect.objectContaining({ action: "move", sessionID: "ses_target", sectionID: "sec_review" }),
     )
+    await rt.dispose()
+  })
+
+  test("deletes one worktree with a separate mutation permission pattern", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return { operation: "delete" as const, worktreeID: "wt_target", deleted: true as const }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { action: "delete", worktreeID: "wt_target" },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["delete"],
+        always: ["delete"],
+        metadata: { action: "delete", worktreeID: "wt_target" },
+      },
+    ])
+    expect(requests).toEqual([
+      {
+        operation: "delete",
+        sessionID: ctx.sessionID,
+        worktreeID: "wt_target",
+      },
+    ])
+    expect(result.output).toContain("removed it from Agent Manager")
+    expect(result.metadata).toEqual(expect.objectContaining({ action: "delete", worktreeID: "wt_target" }))
     await rt.dispose()
   })
 

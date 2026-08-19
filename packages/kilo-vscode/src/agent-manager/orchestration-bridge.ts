@@ -28,12 +28,14 @@ type Request =
   | (RequestBase & { operation: "prompt"; targetSessionID: string; prompt: string })
   | (RequestBase & { operation: "stop"; targetSessionID: string })
   | (RequestBase & { operation: "move"; targetSessionID: string; sectionID: string | null })
+  | (RequestBase & { operation: "delete"; worktreeID: string })
 
 type Result =
   | { operation: "overview"; overview: Overview }
   | { operation: "prompt"; sessionID: string; delivered: true }
   | { operation: "stop"; sessionID: string; stopped: true }
   | { operation: "move"; sessionID: string; sectionID: string | null; moved: true }
+  | { operation: "delete"; worktreeID: string; deleted: true }
 
 interface Failure {
   code: FailureCode | "cancelled" | "disconnected" | "timeout"
@@ -49,6 +51,7 @@ interface Options {
   push(directory?: string): void
   managed(sessionID: string, directory?: string): boolean
   close(sessionID: string, directory?: string): Promise<void>
+  delete(worktreeID: string, directory?: string): Promise<void>
   directories?(): string[]
   log(...args: unknown[]): void
 }
@@ -301,15 +304,51 @@ export class AgentManagerOrchestrationBridge {
           },
         }
       }
-      if (!this.options.managed(request.targetSessionID, origin.directory)) {
-        throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
+      if (request.operation === "delete") {
+        return await this.deleteWorktree(active, origin, request.worktreeID, state)
       }
-      await this.options.close(request.targetSessionID, origin.directory)
-      if (this.disposed || active.cancelled) return
-      return { result: { operation: "stop", sessionID: request.targetSessionID, stopped: true } }
+      return await this.closeSession(active, origin, request.targetSessionID)
     } catch (error) {
       if (this.disposed || active.cancelled) return
       return { error: failure(error) }
+    }
+  }
+
+  private async closeSession(active: Active, origin: Origin, sessionID: string): Promise<Outcome | undefined> {
+    if (!this.options.managed(sessionID, origin.directory)) {
+      throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
+    }
+    await this.options.close(sessionID, origin.directory)
+    if (this.disposed || active.cancelled) return
+    return { result: { operation: "stop", sessionID, stopped: true } }
+  }
+
+  private async deleteWorktree(
+    active: Active,
+    origin: Origin,
+    worktreeID: string,
+    state: WorktreeStateManager,
+  ): Promise<Outcome | undefined> {
+    if (!state.getWorktree(worktreeID)) {
+      throw new OrchestrationError("unknown_session", "The worktree is not managed by this Agent Manager workspace")
+    }
+    await this.options.delete(worktreeID, origin.directory)
+    if (this.disposed || active.cancelled) return
+    // deleteLifecycleWorktree resolves to null on every path, so a remaining entry means the
+    // teardown was aborted (e.g. a Run/Setup script terminal could not be stopped). Surface that
+    // instead of reporting a false success to driven agents and orchestration flows.
+    if (state.getWorktree(worktreeID)) {
+      throw new OrchestrationError(
+        "host_error",
+        "The worktree could not be deleted (a Run/Setup script may still be running)",
+      )
+    }
+    return {
+      result: {
+        operation: "delete",
+        worktreeID,
+        deleted: true,
+      },
     }
   }
 

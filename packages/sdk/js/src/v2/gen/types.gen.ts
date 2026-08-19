@@ -382,11 +382,19 @@ export type AgentManagerMoveRequest = {
   sectionID: string | null
 }
 
+export type AgentManagerDeleteRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "delete"
+  worktreeID: string
+}
+
 export type AgentManagerRequest =
   | AgentManagerOverviewRequest
   | AgentManagerPromptRequest
   | AgentManagerStopRequest
   | AgentManagerMoveRequest
+  | AgentManagerDeleteRequest
 
 export type NotebookRequestId = string
 
@@ -4385,11 +4393,18 @@ export type AgentManagerMoveResult = {
   moved: true
 }
 
+export type AgentManagerDeleteResult = {
+  operation: "delete"
+  worktreeID: string
+  deleted: true
+}
+
 export type AgentManagerResult =
   | AgentManagerOverviewResult
   | AgentManagerPromptResult
   | AgentManagerStopResult
   | AgentManagerMoveResult
+  | AgentManagerDeleteResult
 
 export type AgentManagerFailure = {
   code:

@@ -48,6 +48,9 @@ describe("AgentManagerOrchestrationBridge", () => {
     const managed = new Set(["ses_target"])
     const promptAsync = mock(async () => ({ data: undefined }))
     const close = mock(async () => undefined)
+    const del = mock(async (id?: string, _dir?: string) => {
+      if (id) state.removeWorktree(id)
+    })
     const push = mock(() => undefined)
     const client = {
       session: {
@@ -113,6 +116,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       push: (dir) => (overrides?.push ? overrides.push(dir) : push()),
       managed: (id, dir) => (overrides?.managed ? overrides.managed(id, dir) : managed.has(id)),
       close: async (id, dir) => (overrides?.close ? overrides.close(id, dir) : close(id, dir)),
+      delete: async (id, dir) => (overrides?.delete ? overrides.delete(id, dir) : del(id, dir)),
       log: () => undefined,
     })
     const request = (value: AgentManagerRequest, directory = root) =>
@@ -124,6 +128,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       bridge,
       client,
       close,
+      del,
       handlers,
       lists,
       managed,
@@ -208,6 +213,58 @@ describe("AgentManagerOrchestrationBridge", () => {
         requestID: "amr_stop",
         directory: root,
         result: { operation: "stop", sessionID: "ses_target", stopped: true },
+      },
+    ])
+    test.bridge.dispose()
+  })
+
+  it("deletes a worktree through the same deletion operation as the UI", async () => {
+    const test = harness()
+    const worktreeID = state.getSession("ses_target")!.worktreeId!
+    const del: AgentManagerRequest = {
+      id: "amr_delete",
+      sessionID: "ses_caller",
+      operation: "delete",
+      worktreeID,
+    }
+
+    test.request(del)
+    await waitFor(() => test.replies.length === 1)
+
+    expect(test.del).toHaveBeenCalledTimes(1)
+    expect(test.del).toHaveBeenCalledWith(worktreeID, root)
+    expect(state.getWorktree(worktreeID)).toBeUndefined()
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_delete",
+      directory: root,
+      result: { operation: "delete", worktreeID, deleted: true },
+    })
+    test.bridge.dispose()
+  })
+
+  it("rejects a delete whose teardown was aborted instead of reporting success", async () => {
+    const test = harness({
+      delete: async () => undefined,
+    })
+    const worktreeID = state.getSession("ses_target")!.worktreeId!
+
+    test.request({
+      id: "amr_delete_aborted",
+      sessionID: "ses_caller",
+      operation: "delete",
+      worktreeID,
+    })
+    await waitFor(() => test.rejections.length === 1)
+
+    expect(state.getWorktree(worktreeID)).toBeDefined()
+    expect(test.rejections).toEqual([
+      {
+        requestID: "amr_delete_aborted",
+        directory: root,
+        error: {
+          code: "host_error",
+          message: "The worktree could not be deleted (a Run/Setup script may still be running)",
+        },
       },
     ])
     test.bridge.dispose()

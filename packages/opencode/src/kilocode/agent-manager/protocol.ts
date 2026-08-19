@@ -112,7 +112,13 @@ export const MoveRequest = Schema.Struct({
   sectionID: Schema.NullOr(ID),
 }).annotate({ identifier: "AgentManagerMoveRequest" })
 
-export const Request = Schema.Union([OverviewRequest, PromptRequest, StopRequest, MoveRequest]).annotate({
+export const DeleteRequest = Schema.Struct({
+  ...Base,
+  operation: Schema.Literal("delete"),
+  worktreeID: ID,
+}).annotate({ identifier: "AgentManagerDeleteRequest" })
+
+export const Request = Schema.Union([OverviewRequest, PromptRequest, StopRequest, MoveRequest, DeleteRequest]).annotate({
   identifier: "AgentManagerRequest",
 })
 export type Request = Schema.Schema.Type<typeof Request>
@@ -141,7 +147,13 @@ export const MoveResult = Schema.Struct({
   moved: Schema.Literal(true),
 }).annotate({ identifier: "AgentManagerMoveResult" })
 
-export const Result = Schema.Union([OverviewResult, PromptResult, StopResult, MoveResult]).annotate({
+export const DeleteResult = Schema.Struct({
+  operation: Schema.Literal("delete"),
+  worktreeID: ID,
+  deleted: Schema.Literal(true),
+}).annotate({ identifier: "AgentManagerDeleteResult" })
+
+export const Result = Schema.Union([OverviewResult, PromptResult, StopResult, MoveResult, DeleteResult]).annotate({
   identifier: "AgentManagerResult",
 })
 export type Result = Schema.Schema.Type<typeof Result>
