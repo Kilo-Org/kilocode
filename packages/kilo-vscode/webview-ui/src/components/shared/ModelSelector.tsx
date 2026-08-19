@@ -243,48 +243,42 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     return null
   }
 
-  // Only the single group that actually holds the currently selected model's
-  // row is kept expanded. Favorites is only shown when the current model lives
-  // there — otherwise it stays collapsed like every other group.
-  const activeExpandKeys = () => {
-    const group = groupForActive()
-    if (!group) return new Set<string>()
-    return new Set([group])
-  }
+  // Provider groups already considered by the fold logic; new providers are
+  // folded on first sight so later-connected providers never stay expanded.
+  const seenProviders = new Set<string>()
 
-  // On the first open, initialize the collapse state: fold every group —
-  // providers, auto, recommended, most-used and favorites — keeping only the
-  // group holding the currently selected model. Runs against the fully loaded
-  // catalog (the picker only opens once models are shown), so loading timing
-  // can never leave groups expanded. Later opens only re-expand the active
-  // model's group and never fight manual toggles.
+  // Fold groups as soon as the catalog is available — before the picker ever
+  // opens, so the first paint is already collapsed (no expanded flash). Every
+  // provider group is folded the first time it appears, the special groups
+  // (favorites, auto, recommended, most-used) are folded once, and the group
+  // holding the currently selected model is left expanded. Manual toggles are
+  // never overridden and the active group is not force-reopened on later opens.
   createEffect(() => {
-    if (!open()) return
-    const keys = activeExpandKeys()
-    const hidden = untrack(collapsed)
-    const next = new Set(hidden)
-    let changed = false
-    if (!collapseInitialized) {
-      const list = visibleModels()
-      if (list.length === 0) return
+    const list = visibleModels()
+    if (list.length === 0) return
+    const activeGroup = collapseInitialized ? null : groupForActive()
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      let changed = false
       for (const m of list) {
-        if (!next.has(m.providerID)) {
+        if (!seenProviders.has(m.providerID)) {
+          seenProviders.add(m.providerID)
           next.add(m.providerID)
           changed = true
         }
       }
-      for (const key of [FAVORITES_KEY, AUTO_KEY, RECOMMENDED_KEY, MOST_USED_KEY]) {
-        if (!next.has(key)) {
-          next.add(key)
-          changed = true
+      if (!collapseInitialized) {
+        for (const key of [FAVORITES_KEY, AUTO_KEY, RECOMMENDED_KEY, MOST_USED_KEY]) {
+          if (!next.has(key)) {
+            next.add(key)
+            changed = true
+          }
         }
+        if (activeGroup && next.delete(activeGroup)) changed = true
+        collapseInitialized = true
       }
-      collapseInitialized = true
-    }
-    for (const key of keys) {
-      if (next.delete(key)) changed = true
-    }
-    if (changed) setCollapsed(next)
+      return changed ? next : prev
+    })
   })
 
   // Flat filtered list for keyboard navigation
@@ -486,9 +480,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const nodeMap = createMemo(() => new Map(nodes().map((node) => [node.key, node] as const)))
   const nodeIndex = createMemo(() => new Map(nodes().map((node, i) => [node.key, i] as const)))
   const rowMap = createMemo(() => new Map(rows().map((row) => [row.key, row] as const)))
-  // Pinned group header: the last expanded group whose own header has scrolled
-  // above the viewport top. Lets the user see/collapse the current group while
-  // scrolling through a long list without scrolling back up.
+  // Pinned group header: the last group whose own header has scrolled above
+  // the viewport top, expanded or not. The pinned bar therefore switches as
+  // soon as the next group's title arrives, without requiring that group to
+  // be expanded. Lets the user see/collapse the current group while scrolling
+  // through a long list without scrolling back up.
   const sticky = createMemo<ModelGroup | null>(() => {
     const handle = virtualizer()
     const list = nodes()
@@ -500,7 +496,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       if (node.kind !== "group" || !node.group) continue
       const offset = handle.getItemOffset(i)
       if (offset === undefined || offset >= scroll) break
-      if (!isGroupOpen(node.group.key)) continue
       found = node.group
     }
     return found
@@ -607,6 +602,17 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   createEffect(() => {
     if (open()) {
+      // Reveal the selected model: ensure the group holding it is expanded so
+      // its row is rendered and the scroll below can reach it.
+      const revealGroup = groupForActive()
+      if (revealGroup) {
+        setCollapsed((prev) => {
+          if (!prev.has(revealGroup)) return prev
+          const next = new Set(prev)
+          next.delete(revealGroup)
+          return next
+        })
+      }
       // Defer key resolution to next microtask so favoriteModels/groups/rows
       // recompute before we try to resolve the key.
       queueMicrotask(() => {
@@ -628,6 +634,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     setBrowsing(false)
     setNavigating(false)
     setSearch("")
+    setScrollTop(0)
     clearTimeout(previewTimer)
     if (scrollFrame !== undefined) cancelAnimationFrame(scrollFrame)
     scrollFrame = undefined
@@ -1188,37 +1195,39 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                   </div>
 
                   <Show when={sticky()}>
-                    {(group) => (
-                      <div
-                        class="model-selector-group-label model-selector-sticky"
-                        role="treeitem"
-                        aria-level={1}
-                        aria-expanded="true"
-                        data-key={groupKey(group().key)}
-                        onMouseDown={(e) => e.preventDefault()}
-                        // Pointer over the pinned header must clear any
-                        // row-level hover left by the list beneath it.
-                        onMouseMove={(e) => {
-                          e.stopPropagation()
-                          setPointer(true)
-                          setSelectedKey("")
-                          setPreActiveKey(null)
-                        }}
-                        onClick={() => toggleGroup(group().key)}
-                      >
-                        <svg
-                          class="model-selector-group-chevron"
-                          width="10"
-                          height="10"
-                          viewBox="0 0 16 16"
-                          fill="currentColor"
-                          aria-hidden="true"
+                    {(group) => {
+                      const shown = () => isGroupOpen(group().key)
+                      return (
+                        <div
+                          class="model-selector-group-label model-selector-sticky"
+                          role="button"
+                          aria-expanded={shown()}
+                          aria-label={shown() ? language.t("dialog.model.collapse") : language.t("dialog.model.expand")}
+                          onMouseDown={(e) => e.preventDefault()}
+                          // Pointer over the pinned header must clear any
+                          // row-level hover left by the list beneath it.
+                          onMouseMove={(e) => {
+                            e.stopPropagation()
+                            setPointer(true)
+                            setSelectedKey("")
+                            setPreActiveKey(null)
+                          }}
+                          onClick={() => toggleGroup(group().key)}
                         >
-                          <path d="M4 6l4 5 4-5H4z" />
-                        </svg>
-                        <span>{group().label}</span>
-                      </div>
-                    )}
+                          <svg
+                            class={`model-selector-group-chevron${shown() ? "" : " model-selector-group-chevron--collapsed"}`}
+                            width="10"
+                            height="10"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path d="M4 6l4 5 4-5H4z" />
+                          </svg>
+                          <span>{group().label}</span>
+                        </div>
+                      )
+                    }}
                   </Show>
                 </div>
 
