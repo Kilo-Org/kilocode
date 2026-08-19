@@ -65,6 +65,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOKAAL & WORKTREES",
 
   "agentManager.terminal.new": "Nieuw terminaltabblad",
+  "agentManager.terminal.addCentral": "Nieuw centraal terminaltabblad",
+  "agentManager.terminal.addTerminal": "Nieuw terminaltabblad in de zijbalk",
   "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
   "agentManager.terminal.endedRestartable":
     "terminal beëindigd - typ om een nieuwe shell te starten of sluit het tabblad",

@@ -65,6 +65,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "محلی و WORKTREE‌ها",
 
   "agentManager.terminal.new": "تب ترمینال جدید",
+  "agentManager.terminal.addCentral": "زبانه ترمینال مرکزی جدید",
+  "agentManager.terminal.addTerminal": "زبانه ترمینال جدید در نوار کناری",
   "agentManager.terminal.add": "ترمینال جدید",
   "agentManager.terminal.ended": "ترمینال پایان یافت — برای بستن، تب را ببندید",
   "agentManager.terminal.endedRestartable": "ترمینال پایان یافت - برای شروع پوسته جدید تایپ کنید یا تب را ببندید",

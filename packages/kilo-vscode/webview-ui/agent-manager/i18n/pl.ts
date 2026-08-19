@@ -62,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOKALNE & WORKTREES",
 
   "agentManager.terminal.new": "Nowa karta terminala",
+  "agentManager.terminal.addCentral": "Nowa centralna karta terminala",
+  "agentManager.terminal.addTerminal": "Nowa karta terminala na pasku bocznym",
   "agentManager.terminal.ended": "terminal zakończony — zamknij kartę, aby zamknąć",
   "agentManager.terminal.endedRestartable":
     "terminal zakończony - wpisz tekst, aby uruchomić nową powłokę, lub zamknij kartę",

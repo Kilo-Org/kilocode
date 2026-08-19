@@ -167,7 +167,7 @@ export interface Host {
   createOutput(name: string): OutputHandle
 
   /** Read extension keybinding metadata. */
-  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }>
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }>
 
   /** Copy text to the system clipboard. */
   copyToClipboard(text: string): void

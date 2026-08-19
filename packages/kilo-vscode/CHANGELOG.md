@@ -4,6 +4,7 @@
 
 ### Minor Changes
 
+
 - [#11219](https://github.com/Kilo-Org/kilocode/pull/11219) [`8013e5f`](https://github.com/Kilo-Org/kilocode/commit/8013e5f50451225bb32b1284579322c137f497e3) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Make file references in agent responses clickable by validating inline code spans against the filesystem. Code spans that match real files in the workspace become clickable links that open the file at the referenced line. Non-existent paths stay as plain code. Also adds fallback workspace search and "File not found" warning when clicking dead links.
 
 - [#13071](https://github.com/Kilo-Org/kilocode/pull/13071) [`3e3dd3d`](https://github.com/Kilo-Org/kilocode/commit/3e3dd3dcb2a711192ec2477ef7c0532b11f67886) Thanks [@cosi-conda](https://github.com/cosi-conda)! - Add Agent Manager PR comment actions: resolve/unresolve review threads, jump to comments section, and scroll-to-top for PR diff view.
@@ -11,6 +12,8 @@
 - [#13084](https://github.com/Kilo-Org/kilocode/pull/13084) [`5c97b48`](https://github.com/Kilo-Org/kilocode/commit/5c97b481d233d294859bcb737448661910fd4916) - Remove the built-in experimental Morph WarpGrep codebase search tool and ignore its retired configuration flag.
 
 ### Patch Changes
+
+- Make Agent Manager shortcuts follow the focused area. In the center, `Cmd+T` / `Ctrl+T` creates a new session tab and `Cmd+Shift+T` / `Ctrl+Shift+T` creates a central terminal tab, whether the prompt or a central terminal is focused. In the right sidebar terminal, `Cmd+T` / `Ctrl+T` creates another sidebar terminal tab and `Cmd+Shift+T` / `Ctrl+Shift+T` does nothing. Returning from a terminal with `Cmd+Shift+M` / `Ctrl+Shift+M` restores the previous session tab before focusing its prompt.
 
 - [#13063](https://github.com/Kilo-Org/kilocode/pull/13063) [`ca9a99f`](https://github.com/Kilo-Org/kilocode/commit/ca9a99ffd8f118b5445e0fc2c890c4c6dd797d66) - Show and select the model's default reasoning variant in chat and Agent Manager.
 
