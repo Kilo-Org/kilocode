@@ -286,7 +286,6 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   overflow-y: auto;
   overflow-x: hidden;
   max-height: 240px;
-  scrollbar-gutter: stable;
 }
 
 [data-component="bash-output"] [data-slot="bash-section-actions"] {
