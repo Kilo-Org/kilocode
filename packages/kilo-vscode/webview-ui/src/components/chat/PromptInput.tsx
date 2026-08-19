@@ -105,6 +105,10 @@ function beginPending(id: string | undefined) {
   if (id) beginPendingSend(id)
 }
 
+function readTerminalContext(read: (() => string | undefined) | undefined): string | undefined {
+  return read?.()
+}
+
 interface PromptInputProps {
   blocked?: () => boolean
   blockedReason?: () => string | undefined
@@ -115,11 +119,13 @@ interface PromptInputProps {
   /** When true, defer prompt focus while switching to a pending question */
   deferFocusToQuestion?: () => boolean
   boxId?: string
+  terminalContext?: () => string | undefined
   pendingSessionID?: string
   /** Agent Manager can suppress automatic prompt focus when this session last
    *  used its side terminal instead. Other callers retain the old behavior. */
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
+  resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
 }
 
 function MentionItemContent(props: { item: MentionResult }) {
@@ -189,7 +195,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const hasGit = () => server.gitInstalled()
   const mention = useFileMention(vscode, sid, hasGit)
-  const terminal = useTerminalContext(vscode)
+  const terminal = useTerminalContext(props.resolveEmbeddedTerminal)
   const git = useGitChangesContext(vscode, ctx, hasGit)
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
@@ -1214,10 +1220,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const context = ctx()
     const key = draftKey()
 
-    const terminalFile = await terminal.resolveAttachment(message, id).catch((err: Error) => {
-      showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
-      return undefined
-    })
+    const terminalFile = await terminal
+      .resolveAttachment(message, id, readTerminalContext(props.terminalContext))
+      .catch((err: Error) => {
+        showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
+        return undefined
+      })
     if (hasTerminalMention(message) && !terminalFile) {
       finishPending(pendingId)
       return

@@ -142,6 +142,7 @@ import {
   resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
 } from "./terminal"
+import { readTerminalOutput } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
@@ -372,6 +373,21 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     return sel === null ? null : nsKey(sel)
   })
+  const resolveEmbeddedTerminal = async (context?: string) => {
+    const key = nsKey(context ?? LOCAL)
+    const side = terms.sidesForContext(key)
+    const tabs = terms.forSelection(key)
+    const focused = terms.focusedId()
+    const focusedTerm = side.find((term) => term.id === focused) ?? tabs.find((term) => term.id === focused)
+    const sideTerm = side.find((term) => term.id === terms.sideActiveFor(key))
+    const tab = tabs.find((term) => term.id === terms.activeId())
+    const id = focusedTerm?.id ?? sideTerm?.id
+    const target = id ?? tab?.id
+    if (!target) return undefined
+    const term = side.find((item) => item.id === target) ?? tabs.find((item) => item.id === target)
+    if (!term) return undefined
+    return readTerminalOutput(term.id)
+  }
   const requestChatFocus = createChatFocus({
     term: () => terms.activeId(),
     history,
@@ -2572,10 +2588,12 @@ const AgentManagerContent: Component = () => {
                     readonly={readOnly()}
                     continueInWorktree={selection() === LOCAL}
                     promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                    terminalContext={() => selection() ?? undefined}
                     deferFocusToQuestion={hasQuestionOption}
                     pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
                     focusOnDraftChange={focusOnDraftChange}
                     onFocusChange={rememberPromptFocus}
+                    resolveEmbeddedTerminal={resolveEmbeddedTerminal}
                   />
                   <Show when={readOnly()}>
                     <div class="am-readonly-banner">
@@ -2765,7 +2783,6 @@ const AgentManagerContent: Component = () => {
     </div>
   )
 }
-
 export const AgentManagerApp: Component = () => {
   return (
     <ProviderShell.Root>
