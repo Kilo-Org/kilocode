@@ -191,6 +191,11 @@ export interface WebviewFocusChangedRequest {
   focused: boolean
 }
 
+export interface AgentManagerFocusChangedRequest {
+  type: "agentManagerFocusChanged"
+  target: "prompt" | "mainTerminal" | "sideTerminal" | "other"
+}
+
 export interface SelectSourceRequest {
   type: "selectSource"
   id: string
@@ -1422,6 +1427,7 @@ export type WebviewMessage =
   | SetOrganizationRequest
   | WebviewReadyRequest
   | WebviewFocusChangedRequest
+  | AgentManagerFocusChangedRequest
   | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest

@@ -66,6 +66,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOCALE & WORKTREE",
 
   "agentManager.terminal.new": "Nuova scheda terminale",
+  "agentManager.terminal.addCentral": "Nuova scheda terminale centrale",
+  "agentManager.terminal.addTerminal": "Nuova scheda terminale nella barra laterale",
   "agentManager.terminal.ended": "terminale terminato - chiudi la scheda per nasconderlo",
   "agentManager.terminal.endedRestartable":
     "terminale terminato - digita per avviare una nuova shell o chiudi la scheda",

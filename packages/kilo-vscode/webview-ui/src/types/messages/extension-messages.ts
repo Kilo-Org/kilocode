@@ -1279,7 +1279,12 @@ export interface ClipboardWriteResultMessage {
   error?: string
 }
 
+export interface AgentManagerFocusContextRequestedMessage {
+  type: "agentManager.focusContextRequested"
+}
+
 export type ExtensionMessage =
+  | AgentManagerFocusContextRequestedMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage

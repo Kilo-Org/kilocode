@@ -182,7 +182,7 @@ export const TerminalTab: Component<Props> = (props) => {
     term.unicode.activeVersion = "15-graphemes"
 
     // Pass Agent Manager hotkeys through to the parent key handler so
-    // ⌘T / ⌘⇧T / ⌘W / terminal cycling / ⌘⌥← still work while focused.
+    // ⌘T / ⌘W / terminal cycling / ⌘⌥← still work while focused.
     term.attachCustomKeyEventHandler((event) => {
       const prompt =
         (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === "m"
@@ -196,10 +196,11 @@ export const TerminalTab: Component<Props> = (props) => {
     // Track DOM focus so the state layer knows which terminal holds the
     // cursor (drives Cmd+W targeting). focusout is ignored when focus
     // moves within the same host (xterm shuffles inner nodes).
-    const onFocusIn = () => props.onFocusChange?.(true)
+    const reportFocus = () => props.onFocusChange?.(host.contains(document.activeElement))
+    const onFocusIn = () => queueMicrotask(reportFocus)
     const onFocusOut = (event: FocusEvent) => {
       if (event.relatedTarget instanceof Node && host.contains(event.relatedTarget)) return
-      props.onFocusChange?.(false)
+      queueMicrotask(reportFocus)
     }
     host.addEventListener("focusin", onFocusIn)
     host.addEventListener("focusout", onFocusOut)

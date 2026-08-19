@@ -62,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOCAL ET WORKTREES",
 
   "agentManager.terminal.new": "Nouvel onglet de terminal",
+  "agentManager.terminal.addCentral": "Nouvel onglet de terminal central",
+  "agentManager.terminal.addTerminal": "Nouvel onglet de terminal dans la barre latérale",
   "agentManager.terminal.ended": "terminal terminé — fermez l'onglet pour ignorer",
   "agentManager.terminal.endedRestartable":
     "terminal terminé - saisissez du texte pour démarrer un nouveau shell ou fermez l'onglet",

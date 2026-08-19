@@ -296,8 +296,13 @@
         "category": "Kilo Code"
       },
       {
-        "command": "kilo-code.new.agentManager.newTerminal",
-        "title": "Agent Manager: New Terminal Tab (Experimental)",
+        "command": "kilo-code.new.agentManager.newTerminalTab",
+        "title": "Agent Manager: New Terminal Tab",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.newSideTerminal",
+        "title": "Agent Manager: New Sidebar Terminal Tab",
         "category": "Kilo Code"
       },
       {
@@ -735,13 +740,19 @@
         "command": "kilo-code.new.agentManager.newTab",
         "key": "ctrl+t",
         "mac": "cmd+t",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused"
       },
       {
-        "command": "kilo-code.new.agentManager.newTerminal",
+        "command": "kilo-code.new.agentManager.newTerminalTab",
         "key": "ctrl+shift+t",
         "mac": "cmd+shift+t",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused"
+      },
+      {
+        "command": "kilo-code.new.agentManager.newSideTerminal",
+        "key": "ctrl+t",
+        "mac": "cmd+t",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && kilo-code.new.agentManagerSideTerminalFocused"
       },
       {
         "command": "kilo-code.new.agentManager.closeTab",

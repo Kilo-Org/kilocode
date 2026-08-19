@@ -62,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOCAL & WORKTREES",
 
   "agentManager.terminal.new": "Nova aba de terminal",
+  "agentManager.terminal.addCentral": "Nova aba de terminal central",
+  "agentManager.terminal.addTerminal": "Nova aba de terminal na barra lateral",
   "agentManager.terminal.ended": "terminal encerrado — feche a aba para dispensar",
   "agentManager.terminal.endedRestartable": "terminal encerrado - digite para iniciar um novo shell ou feche a aba",
   "agentManager.terminal.setupFailed": "falha no script de configuração",

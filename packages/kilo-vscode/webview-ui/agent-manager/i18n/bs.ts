@@ -61,6 +61,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOKALNO & WORKTREES",
 
   "agentManager.terminal.new": "Nova kartica terminala",
+  "agentManager.terminal.addCentral": "Nova centralna kartica terminala",
+  "agentManager.terminal.addTerminal": "Nova kartica terminala u bočnoj traci",
   "agentManager.terminal.ended": "terminal je završen — zatvorite karticu da biste odbacili",
   "agentManager.terminal.endedRestartable": "terminal je završen - kucajte za novu ljusku ili zatvorite karticu",
   "agentManager.terminal.setupFailed": "skripta za postavljanje nije uspjela",

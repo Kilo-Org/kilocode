@@ -66,6 +66,8 @@ export const dict = {
 
   "agentManager.terminal.new": "New Terminal Tab",
   "agentManager.terminal.add": "New terminal",
+  "agentManager.terminal.addCentral": "New central terminal tab",
+  "agentManager.terminal.addTerminal": "New sidebar terminal tab",
   "agentManager.terminal.ended": "terminal ended — close tab to dismiss",
   "agentManager.terminal.endedRestartable": "terminal ended - type to start a new shell or close tab to dismiss",
   "agentManager.terminal.setupFailed": "setup script failed",

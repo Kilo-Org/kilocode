@@ -515,8 +515,11 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.newTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "newTab" })
     }),
-    vscode.commands.registerCommand("kilo-code.new.agentManager.newTerminal", () => {
-      agentManagerProvider.postMessage({ type: "action", action: "newTerminal" })
+    vscode.commands.registerCommand("kilo-code.new.agentManager.newTerminalTab", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "newTerminalTab" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.newSideTerminal", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "newSideTerminal" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.closeTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "closeTab" })

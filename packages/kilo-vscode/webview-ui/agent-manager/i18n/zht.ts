@@ -61,6 +61,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "本機 & WORKTREES",
 
   "agentManager.terminal.new": "新增終端分頁",
+  "agentManager.terminal.addCentral": "新增中央終端機分頁",
+  "agentManager.terminal.addTerminal": "在側邊欄新增終端機分頁",
   "agentManager.terminal.ended": "終端已結束 — 關閉分頁以消除",
   "agentManager.terminal.endedRestartable": "終端已結束 - 輸入以啟動新的 shell，或關閉分頁",
   "agentManager.terminal.setupFailed": "設定腳本失敗",
