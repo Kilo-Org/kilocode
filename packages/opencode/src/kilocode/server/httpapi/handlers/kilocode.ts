@@ -18,7 +18,8 @@ import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import { Skill } from "@/skill"
 import { BackgroundJob } from "@/background/job"
-import type { SessionID } from "@/session/schema"
+import { SessionRunState } from "@/session/run-state"
+import { SessionID } from "@/session/schema"
 import {
   AgentManagerRejectPayload,
   AgentManagerReplyPayload,
@@ -40,6 +41,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
     const background = yield* BackgroundJob.Service
+    const runState = yield* SessionRunState.Service
 
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
@@ -190,6 +192,8 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     }) {
       const job = yield* background.get(ctx.params.jobID)
       if (!job) return yield* new HttpApiError.NotFound({})
+      const sessionID = SessionID.make(typeof job.metadata?.sessionId === "string" ? job.metadata.sessionId : job.id)
+      yield* runState.cancel(sessionID)
       yield* background.cancel(ctx.params.jobID)
       return true
     })
