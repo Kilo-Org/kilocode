@@ -25,6 +25,7 @@ The mobile app lets you:
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
+- See which pull request a session is working on — a tappable badge in the session detail header shows the PR number, state, and review decision. Tapping it opens the in-app PR review for GitHub PRs, or the browser for PRs on other platforms.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
 ## Privacy and telemetry
@@ -59,6 +60,12 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 - **A connected CLI instance** — a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
+
+## Choosing a mode
+
+The mode picker — on the new-session screen and in an open session — lists the built-in modes first, then a **Custom modes** group with the custom agents available to your account (see [Custom Modes](/docs/customize/custom-modes)). Your pick stays on the composer when you send, and applies to both Cloud Agent sessions and remote sessions on a connected `kilo remote` CLI instance.
+
+A custom mode that pins a model locks the model picker to that model for as long as the mode is selected. If a custom mode shares a slug with a built-in mode, the built-in mode wins and the custom one is hidden.
 
 ## Queueing follow-up messages
 

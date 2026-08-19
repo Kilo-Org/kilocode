@@ -73,6 +73,7 @@ Use filters to find the models or providers you want to block:
 
 - Only **Owners** can modify model access controls.
 - Individual users cannot override organization-level restrictions.
+- Enterprise requests must use an exact model ID from the current gateway catalog. Unregistered aliases and catalog entries without inference endpoints (for example, `openrouter/free`) are rejected and don't appear in the organization model selectors. Kilo's managed latest aliases (such as `~anthropic/claude-sonnet-latest`) are not available to Enterprise organizations: they don't appear in organization model selectors, requests that use them are rejected, and model blocks apply to them. Non-Enterprise users can still use these aliases.
 - Blocking a provider blocks all its models, including models added by that provider in the future.
 - Unblocking a provider immediately restores access to all its models.
 - To grant models to specific sets of members instead of the whole organization, use [Groups](/docs/collaborate/enterprise/groups). These organization-wide controls remain a hard ceiling that group grants cannot exceed.

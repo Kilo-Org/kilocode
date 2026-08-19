@@ -72,7 +72,7 @@ Organizations can subscribe to [Kilo Pass](https://kilo.ai/pricing/kilo-pass) at
 
 - **One pass per seat** — purchased capacity always matches your paid seat count and adjusts automatically as seats are added or removed.
 - **Pooled credits** — each service window's Kilo Pass credits are issued to the organization's pool rather than to individuals.
-- **Child organizations** — if your organization has direct child organizations, you can allocate part of the pooled capacity to each child. Anything not allocated stays with the parent organization.
+- **Child organizations** — if your organization has direct child organizations, you can allocate part of the pooled capacity to each child from **Sub-organizations → Distribute funds** (see [Managing Sub-organizations](/docs/collaborate/teams/team-management#managing-sub-organizations)). Anything not allocated stays with the parent organization.
 
 Organization owners and billing managers can purchase Kilo Pass, manage allocations, and cancel from your organization's **Subscriptions** page on the [Organization dashboard](https://app.kilo.ai). Cancellation takes effect at the end of the current paid period. Regular members do not see these controls.
 

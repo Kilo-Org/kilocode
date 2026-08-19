@@ -114,13 +114,19 @@ Writes are allowed in:
 
 Writes are denied everywhere else. The following rules still apply inside writable locations:
 
-- `.git` directories are always read-only to sandboxed tools.
+- `.git` directories are always read-only to sandboxed tools. Mutating Git commands need a one-shot approval to run outside the sandbox — see [Git operations](#git-operations).
 - Kilo's stored sandbox policy and preference files are read-only.
 - Kilo's global config root is read-only so a sandboxed command cannot widen network or write authority for a later session.
 - A permission approval for a path outside the sandbox does not make that path writable. Add the path to **Additional Writable Paths** if the tool must modify it.
 - Linked worktree sessions can write to their active worktree, not the primary checkout or sibling worktrees.
 
 Shell commands and their child processes inherit the same restrictions. Kilo's file tools perform mutations through a sandboxed worker. Writable file handles are unavailable, so a tool that requires an open read-write handle may fail even for an allowed path.
+
+### Git operations
+
+Read-only Git commands such as `git status`, `git log`, and `git diff` run inside the sandbox as usual. Commands that change Git state — for example `git add`, `git commit`, or `git push` — cannot write to `.git` while confined, so Kilo asks first: an "Allow Git operation outside the sandbox?" prompt appears when the agent runs a mutating Git command in a sandboxed session.
+
+Approving runs only that single command without sandbox confinement. The approval is one-shot — there is no "always" option — and auto-approve and non-interactive runs never silently approve it, so the agent cannot change Git metadata without an explicit decision from you.
 
 Direct filesystem access inside trusted integrations is confined only when the integration uses Kilo's sandbox-aware filesystem service. Interactive terminals, notebook execution, and starting or restarting a background process are unavailable while sandboxing is active because those processes do not yet run inside the same boundary.
 

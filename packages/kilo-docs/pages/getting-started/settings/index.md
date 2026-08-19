@@ -62,10 +62,12 @@ When the Kilo provider is enabled and you are signed in, choose the transcriptio
 ```json
 {
   "experimental": {
-    "speech_to_text_model": "openai/whisper-large-v3-turbo"
+    "speech_to_text_model": "nvidia/parakeet-tdt-0.6b-v3"
   }
 }
 ```
+
+NVIDIA Parakeet TDT 0.6B v3 is the default when no model is configured.
 
 ### Prompt-Training Model Visibility
 
@@ -101,9 +103,29 @@ Terminal command blocks stay expanded by default in the VS Code chat UI. Choose 
 
 Valid values are `expanded` and `collapsed`.
 
+### MCP & Generic Tool Blocks
+
+MCP and generic tool blocks start collapsed by default in the VS Code chat UI. Choose **Expanded** for **MCP & Generic Tool Blocks** in the Display tab, or set `mcp_tool_display` in `kilo.jsonc`, to start them expanded:
+
+```json
+{
+  "mcp_tool_display": "expanded"
+}
+```
+
+Valid values are `expanded` and `collapsed`.
+
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
+
+### Token Throughput
+
+The VS Code chat shows the text-generation rate (tokens per second) on the latest assistant message and in the task header. These badges are shown by default. Turn off **Show Token Throughput** in the Display tab, or set `kilo-code.new.showTokenThroughput` to `false`, to hide them.
+
+### Auto-Approval Reason
+
+Auto-approved tool calls in the VS Code chat show a line after the tool output explaining why the call was approved — a matched permission rule, the agent's defaults, YOLO mode, and so on. The line is shown by default. Turn off **Show Auto-Approval Reason** in the Display tab, or set `kilo-code.new.showAutoApprovalReason` to `false`, to hide it.
 
 ### Web Search
 

@@ -5,7 +5,7 @@ description: "Share and collaborate on Kilo Code sessions"
 
 # Sessions & Sharing
 
-A session is your platform-agnostic interaction with Kilo. It remembers your repository, your task, and the conversation so you can pause and resume work without losing context. Local sessions stay on the machine where Kilo runs. Account-backed cloud sessions are private to your account by default. You can optionally share a session link with others who can read or fork it.
+A session is your platform-agnostic interaction with Kilo. It remembers your repository, your task, and the conversation so you can pause and resume work without losing context. Local sessions stay on the machine where Kilo runs. Account-backed cloud sessions are private to your account by default.
 
 ## What a session keeps for you
 
@@ -33,9 +33,9 @@ You can share a session with anyone via a link. A shared page:
 
 1. Shows who shared it, the session title, and a short preview of the conversation
 2. Provides safe “open in editor” or CLI actions so collaborators can try your session themselves
-3. Lives at a URL like /share/SHARE_ID and is visible to anyone with the link
+3. Lives at a URL like `https://app.kilo.ai/s/<share-token>` and is visible to anyone with the link
 
-Note: Sharing creates a read‑only copy for the public link so your private session remains in your account.
+Note: Sharing creates a read‑only copy for the public link so your private session remains in your account. Each link carries a purpose-bound share token — unsharing the session invalidates the link, and links created before public sharing was re-enabled no longer work, so share the session again to generate a fresh link.
 
 ## Fork a shared session (make it yours)
 

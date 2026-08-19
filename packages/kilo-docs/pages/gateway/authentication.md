@@ -93,6 +93,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | Chutes BYOK | `chutes-byok` |
 | Codestral (FIM) | `codestral` |
 | CrofAI | `crofai` |
+| Eden AI | `edenai` |
 | Inceptron BYOK | `inceptron-byok` |
 | Kimi Code | `kimi-coding` |
 | Martian | `martian` |

@@ -104,6 +104,27 @@ Hovering over a worktree item shows a card with additional PR details:
 
 PR badges update automatically in the background. The active worktree refreshes frequently, while other worktrees sync periodically to keep badges current. Polling pauses when the Agent Manager panel is hidden.
 
+### PR Panel
+
+When the selected worktree branch has an associated pull request, the toolbar shows a pull-request button (labeled with the PR number) next to the diff button. Click it to open a panel alongside the chat with:
+
+- The PR title, number, and state, plus the branch it merges into its parent branch
+- A summary of CI checks, review status, and unresolved comments
+- Reviewers and their review states
+- The PR description
+- CI checks with per-check status and duration, each with a link to open the check in the browser
+- Review comments, each with the diff hunk it was left on and actions to copy the comment or resolve the thread
+
+Click the link icon in the panel header to open the PR in your browser. The panel refreshes through the same `gh` polling as the badges, so it requires the GitHub CLI to be installed and authenticated.
+
+#### Review comments
+
+Each review comment shows the author, the file and line it applies to, and the code diff hunk the comment was left on, so you can read feedback without opening the PR in a browser.
+
+Click **Resolve comment** on a comment to resolve the corresponding GitHub review thread directly from the panel. Resolved threads show a **Resolved** badge and appear dimmed, and can be reopened with **Unresolve comment**. Resolving writes to GitHub through `gh`; if it fails (for example, because of missing permissions), an error is shown on the comment.
+
+Click the comments row in the PR summary at the top of the panel to jump straight to the comments section. On long PRs, a floating **↑** button appears once you scroll down and scrolls back to the top.
+
 ### Creating a New Worktree Session
 
 1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to open the new worktree dialog
@@ -242,6 +263,15 @@ A scope selector in the diff toolbar (both in the side panel and the full-screen
 The Branch scope also has a base-branch picker next to it for overriding the comparison branch. **Apply to local** works only on the Branch scope — switch back to Branch to apply.
 
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
+
+## Subagents Panel
+
+When an agent delegates work to a subagent, the subagent's tool block in chat shows an **Open sub-agent in panel** button. Clicking it opens the child session in the **Subagents** panel, which shares the side inspector area with the diff, PR, and terminal views.
+
+- Each opened subagent gets its own tab, so you can inspect several child sessions in parallel while the parent session keeps running
+- Drag tabs to reorder them, close a tab with its close button or middle-click, or right-click a tab for **Close others**
+- `Cmd+W` (macOS) / `Ctrl+W` (Windows/Linux) closes the active subagent tab while the panel is visible
+- The subagent chat is read-only — it shows the child's transcript without taking over the parent session
 
 ## Terminals
 
