@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Подключить Anaconda Desktop",
   "provider.anaconda.title.manage": "Управление Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Подключить провайдера",
 
@@ -267,6 +270,7 @@ export const dict = {
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
+  "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
@@ -833,8 +837,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Включить интеграцию протокола языкового сервера",
   "settings.experimental.batch.title": "Пакетный инструмент",
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
-  "settings.experimental.codebaseSearch.title": "Поиск по коду",
-  "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
   "settings.experimental.imageGeneration.title": "Генерация изображений",
   "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
   "settings.experimental.imageGenerationModel.title": "Модель изображений",
@@ -1118,10 +1120,15 @@ export const dict = {
     "Выберите, будут ли блоки изменений кода и различий изначально развёрнуты или свёрнуты.",
   "settings.display.codeEdit.expanded": "Развёрнуты",
   "settings.display.codeEdit.collapsed": "Свёрнуты",
+  "settings.display.mcpTool.title": "Блоки MCP и общих инструментов",
+  "settings.display.mcpTool.description":
+    "Выберите, будут ли блоки MCP и общих инструментов изначально развёрнуты или свёрнуты.",
+  "settings.display.mcpTool.expanded": "Развёрнуты",
+  "settings.display.mcpTool.collapsed": "Свёрнуты",
 
   "settings.display.tokenThroughput.title": "Показывать пропускную способность токенов",
   "settings.display.tokenThroughput.description":
-    "Отображает скорость генерации текста (токенов/с) в последнем сообщении ассистента и в заголовке задачи. По умолчанию скрыто, чтобы не загромождать чат.",
+    "Показывать скорость генерации текста (tokens/sec) в последнем сообщении ассистента и в заголовке задачи. Показывается по умолчанию; отключите этот параметр, чтобы при необходимости скрыть её.",
   "settings.display.autoApprovalReason.title": "Показывать причину автоодобрения",
   "settings.display.autoApprovalReason.description":
     "Показывает строку у вызовов инструментов, объясняющую, почему они были одобрены автоматически (совпавшее правило, значение агента по умолчанию, режим YOLO и т. д.).",

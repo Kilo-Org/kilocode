@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Conectar Anaconda Desktop",
   "provider.anaconda.title.manage": "Administrar Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Conectar proveedor",
 
@@ -273,6 +276,7 @@ export const dict = {
   "notification.permission.title": "Permiso requerido",
   "notification.permission.titleSubagent": "Permiso requerido (subagente)",
   "notification.permission.titleSkillShell": "¿Ejecutar comandos de shell de la habilidad «{{skill}}»?",
+  "notification.permission.titleSandboxEscalation": "¿Permitir la operación de Git fuera del entorno aislado?",
   "ui.permission.manageAutoApprove": "Gestionar reglas de aprobación automática",
   "ui.permission.doomLoop.prompt": "Se detectó un posible bucle en la herramienta {{tool}}. ¿Continuar ejecutando?",
   "ui.permission.doomLoop.rule": "Continuar llamadas a {{tool}}",
@@ -845,9 +849,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Habilitar integración del protocolo de servidor de lenguaje",
   "settings.experimental.batch.title": "Herramienta por lotes",
   "settings.experimental.batch.description": "Habilitar procesamiento por lotes de llamadas a herramientas",
-  "settings.experimental.codebaseSearch.title": "Búsqueda de código",
-  "settings.experimental.codebaseSearch.description":
-    "Habilitar búsqueda por lenguaje natural con IA en toda la base de código",
   "settings.experimental.imageGeneration.title": "Generación de imágenes",
   "settings.experimental.imageGeneration.description": "Habilitar generación de imágenes con IA",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagen",
@@ -1136,10 +1137,15 @@ export const dict = {
     "Elige si los bloques de edición de código y de diferencias aparecen inicialmente expandidos o contraídos.",
   "settings.display.codeEdit.expanded": "Expandidos",
   "settings.display.codeEdit.collapsed": "Contraídos",
+  "settings.display.mcpTool.title": "Bloques de herramientas MCP y genéricas",
+  "settings.display.mcpTool.description":
+    "Elige si los bloques de herramientas MCP y genéricas aparecen inicialmente expandidos o contraídos.",
+  "settings.display.mcpTool.expanded": "Expandidos",
+  "settings.display.mcpTool.collapsed": "Contraídos",
 
   "settings.display.tokenThroughput.title": "Mostrar rendimiento de tokens",
   "settings.display.tokenThroughput.description":
-    "Muestra la tasa de generación de texto (tokens/s) en el último mensaje del asistente y en el encabezado de la tarea. Oculto de forma predeterminada para mantener el chat ordenado.",
+    "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo de aprobación automática",
   "settings.display.autoApprovalReason.description":
     "Muestra una línea en las llamadas a herramientas que explica por qué se aprobaron automáticamente (regla coincidente, valor predeterminado del agente, modo YOLO, etc.).",

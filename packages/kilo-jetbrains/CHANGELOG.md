@@ -150,6 +150,52 @@
 
 ## [Unreleased]
 
+## [7.1.0-rc.2] - 2026-08-18
+
+### Added
+- Add the JetBrains Agent Manager beta for creating, opening, organizing, renaming, and deleting worktree-based tasks and their sessions from the IDE.
+- Show worktree activity, change, ahead/behind, and pull request badges in Agent Manager, with clearer row actions, menus, and tooltips.
+- Support opening Agent Manager worktrees in new windows and dedicated terminal tabs.
+
+### Fixed
+- Improve JetBrains chat readability and scrolling with centered readable width, refreshed prompt chrome, stable tail-follow behavior, and clearer failed-turn outcome cards.
+- Unblock JetBrains release verification by replacing internal and override-only IntelliJ API usage with verifier-safe public API paths.
+- Keep the migration wizard visible across reconnects and restore worktree session creation after migration completes.
+- Show the intended empty session panel for empty persisted sessions instead of a blank transcript.
+- Preserve recovered non-idle session states, including pending permission, pending question, retry, and offline states.
+- Keep Ask and Plan modes read-only even when broad global permission rules are configured.
+- Preserve project-level snapshot disabling across restarts after choosing to disable snapshots from the slow-repo prompt.
+- Remove duplicated skill catalog content from Kilo Core prompts to reduce request size while preserving lazy skill loading.
+
+### Changed
+- Reuse the session modal layout for the JetBrains migration wizard.
+
+## [7.1.0-rc.1] - 2026-08-18
+
+### Added
+- Add the JetBrains Agent Manager beta for creating, opening, organizing, renaming, and deleting worktree-based tasks and their sessions from the IDE.
+- Show worktree activity, change, ahead/behind, and pull request badges in Agent Manager, with clearer row actions, menus, and tooltips.
+- Support opening Agent Manager worktrees in new windows and dedicated terminal tabs.
+
+### Fixed
+- Improve JetBrains chat readability and scrolling with centered readable width, refreshed prompt chrome, stable tail-follow behavior, and clearer failed-turn outcome cards.
+- Keep Ask and Plan modes read-only even when broad global permission rules are configured.
+- Preserve project-level snapshot disabling across restarts after choosing to disable snapshots from the slow-repo prompt.
+
+### Changed
+
+## [7.0.16] - 2026-08-14
+
+### Added
+
+### Fixed
+- Improve JetBrains chat readability with refreshed session surfaces, softer spacing, clearer prompt bubbles, and more consistent hover states.
+- Make JetBrains CLI downloads more reliable by retrying transient failures and rate limits, and by avoiding authentication on public CLI asset fetches.
+
+### Changed
+- Update the JetBrains plugin CLI pin to Kilo Core 7.4.22.
+- Refresh Kilo Core with upstream provider, model variant, and session runtime updates.
+
 ## [7.0.15] - 2026-08-10
 
 ### Added

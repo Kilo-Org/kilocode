@@ -1,6 +1,7 @@
 /** @jsxImportSource solid-js */
 
 import {
+  batch,
   For,
   Show,
   createSignal,
@@ -177,6 +178,8 @@ import { initialMessage, seedInitialVariant } from "./initial-message"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
+import { SubagentPanel } from "./SubagentPanel"
+import { createSubagentTabs } from "./subagent-tabs"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, createPromptFocus, hasQuestionOption } from "./focus"
@@ -305,8 +308,8 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // Diff and terminal views share one inspector width, restored from webview
-  // state so the user's divider position survives panel reloads.
+  // Diff, PR, terminal, and subagent views share one inspector width, restored
+  // from webview state so the user's divider position survives panel reloads.
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
@@ -320,6 +323,17 @@ const AgentManagerContent: Component = () => {
   const reviewComposer = createReviewComposer()
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
+  const subagents = createSubagentTabs({
+    current: session.currentSessionID,
+    sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
+    unsync: (id) => session.unsyncSession(id, "inspector"),
+    show: () => {
+      setHistory(false)
+      setReviewActive(false)
+      setSidePanel(SidePanel.Subagents)
+    },
+    hide: () => setSidePanel(null),
+  })
   const markdown = createMarkdownRender(vscode)
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const worktreeStats = () => registry.active().worktreeStats()
@@ -539,7 +553,14 @@ const AgentManagerContent: Component = () => {
   const togglePRPanel = () => {
     setHistory(false)
     if (reviewActive()) closeReviewTab()
+    const opening = sidePanel() !== SidePanel.PR
     setSidePanel((prev) => (prev === SidePanel.PR ? null : SidePanel.PR))
+    // Trigger an immediate refresh when opening so the panel shows fresh data
+    // rather than waiting for the next poll cycle
+    if (opening) {
+      const sel = selection()
+      if (sel && sel !== LOCAL) vscode.postMessage({ type: "agentManager.refreshPR", worktreeId: sel })
+    }
   }
 
   const openSelectedPR = () => {
@@ -1206,7 +1227,17 @@ const AgentManagerContent: Component = () => {
         if (match) projectNav.jump(parseInt(match[1]!) - 1)
       }
     }
+    const subagent = (event: Event) => {
+      const detail = (event as CustomEvent<{ sessionID?: unknown; title?: unknown; parentSessionID?: unknown }>).detail
+      if (typeof detail?.sessionID !== "string") return
+      subagents.open(
+        detail.sessionID,
+        typeof detail.title === "string" ? detail.title : undefined,
+        typeof detail.parentSessionID === "string" ? detail.parentSessionID : undefined,
+      )
+    }
     window.addEventListener("message", handler)
+    window.addEventListener("agentManager.openSubagent", subagent)
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
@@ -1255,6 +1286,7 @@ const AgentManagerContent: Component = () => {
       confirmDeleteWorktree(sel)
     }
     window.addEventListener("keydown", deleteKeyHandler)
+    onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
 
     // Reveal the ⌘/Ctrl+1-9 jump badges on all sidebar items while the modifier is held.
     // Capture phase so the terminal's key handlers can't swallow them; blur resets state
@@ -1983,14 +2015,16 @@ const AgentManagerContent: Component = () => {
   }
 
   const selectSessionTab = (id: string, pending: boolean) => {
-    setReviewActive(false)
-    if (pending) {
-      setActivePendingId(id)
-      session.clearCurrentSession()
-    } else {
-      setActivePendingId(undefined)
-      session.selectSession(id)
-    }
+    batch(() => {
+      setReviewActive(false)
+      if (pending) {
+        setActivePendingId(id)
+        session.clearCurrentSession()
+      } else {
+        setActivePendingId(undefined)
+        session.selectSession(id)
+      }
+    })
   }
   const termHandlers = createTerminalHandlers({
     state: terms,
@@ -2147,6 +2181,10 @@ const AgentManagerContent: Component = () => {
   // Close the currently active tab via keyboard shortcut.
   // If no tabs remain, fall through to close the selected worktree.
   const closeActiveTab = () => {
+    if (sidePanel() === SidePanel.Subagents && subagents.active()) {
+      subagents.close(subagents.active()!)
+      return
+    }
     // A focused side terminal owns Cmd+W while its panel is visible.
     // Closing a chat tab out from under the user's cursor would be surprising.
     if (sidePanel() === SidePanel.Terminal && terms.sideFocusedId()) {
@@ -2505,81 +2543,79 @@ const AgentManagerContent: Component = () => {
                     </Show>
                   </div>
                 </Show>
-                <Show when={!contextEmpty()}>
-                  <div class="am-chat-wrapper">
-                    <ChatView
-                      onSelectSession={(id) => {
-                        if (addSessionToCurrentWorktree(id)) return
-                        if (localSessionIDs().includes(id)) {
+                <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
+                  <ChatView
+                    onSelectSession={(id) => {
+                      if (addSessionToCurrentWorktree(id)) return
+                      if (localSessionIDs().includes(id)) {
+                        session.selectSession(id)
+                        if (selection() === null) setSelection(LOCAL)
+                        requestChatFocus()
+                        return
+                      }
+                      // Navigate to owning worktree instead of forcing into local mode
+                      if (worktreeSessionIds().has(id)) {
+                        const ms = managedSessions().find((s) => s.id === id)
+                        if (ms?.worktreeId) {
+                          selectWorktree(ms.worktreeId)
                           session.selectSession(id)
-                          if (selection() === null) setSelection(LOCAL)
+                          setReviewActive(false)
                           requestChatFocus()
                           return
                         }
-                        // Navigate to owning worktree instead of forcing into local mode
-                        if (worktreeSessionIds().has(id)) {
-                          const ms = managedSessions().find((s) => s.id === id)
-                          if (ms?.worktreeId) {
-                            selectWorktree(ms.worktreeId)
-                            session.selectSession(id)
-                            setReviewActive(false)
-                            requestChatFocus()
-                            return
-                          }
-                        }
-                        openLocally(id)
-                      }}
-                      onShowHistory={() => setHistory(true)}
-                      onForkMessage={readOnly() ? undefined : handleForkSession}
-                      onForkSession={readOnly() ? undefined : handleForkSession}
-                      readonly={readOnly()}
-                      continueInWorktree={selection() === LOCAL}
-                      promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
-                      deferFocusToQuestion={hasQuestionOption}
-                      pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
-                      focusOnDraftChange={focusOnDraftChange}
-                      onFocusChange={rememberPromptFocus}
-                    />
-                    <Show when={readOnly()}>
-                      <div class="am-readonly-banner">
-                        <Icon name="branch" size="small" />
-                        <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
-                        <Button
-                          variant="secondary"
-                          size="small"
-                          onClick={() => {
-                            if (!loaded()) return
-                            const sid = session.currentSessionID()
-                            if (!sid) return
-                            metrics.track("open_session_locally", "readonly_banner")
-                            openLocally(sid)
-                          }}
-                        >
-                          {t("agentManager.session.openLocally")}
-                        </Button>
-                        <Button
-                          variant="primary"
-                          size="small"
-                          onClick={() => {
-                            if (!loaded()) return
-                            const sid = session.currentSessionID()
-                            if (!sid) return
-                            metrics.track("promote_session", "readonly_banner")
-                            vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
-                          }}
-                        >
-                          {t("agentManager.session.openInWorktree")}
-                        </Button>
-                      </div>
-                    </Show>
-                  </div>
-                </Show>
+                      }
+                      openLocally(id)
+                    }}
+                    onShowHistory={() => setHistory(true)}
+                    onForkMessage={readOnly() ? undefined : handleForkSession}
+                    onForkSession={readOnly() ? undefined : handleForkSession}
+                    readonly={readOnly()}
+                    continueInWorktree={selection() === LOCAL}
+                    promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                    deferFocusToQuestion={hasQuestionOption}
+                    pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
+                    focusOnDraftChange={focusOnDraftChange}
+                    onFocusChange={rememberPromptFocus}
+                  />
+                  <Show when={readOnly()}>
+                    <div class="am-readonly-banner">
+                      <Icon name="branch" size="small" />
+                      <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => {
+                          if (!loaded()) return
+                          const sid = session.currentSessionID()
+                          if (!sid) return
+                          metrics.track("open_session_locally", "readonly_banner")
+                          openLocally(sid)
+                        }}
+                      >
+                        {t("agentManager.session.openLocally")}
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="small"
+                        onClick={() => {
+                          if (!loaded()) return
+                          const sid = session.currentSessionID()
+                          if (!sid) return
+                          metrics.track("promote_session", "readonly_banner")
+                          vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
+                        }}
+                      >
+                        {t("agentManager.session.openInWorktree")}
+                      </Button>
+                    </div>
+                  </Show>
+                </div>
               </div>
               {/* One inspector host for all right-side modes. It stays
                   mounted while a side terminal is alive — hidden via
                   .am-side-host-hidden (absolute + opacity), never
                   unmounted, so xterm render loops keep streaming. */}
-              <Show when={sidePanel() !== null || terms.sides().length > 0}>
+              <Show when={sidePanel() !== null || terms.sides().length > 0 || subagents.tabs().length > 0}>
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
                   style={{ width: `${panelWidth()}px` }}
@@ -2632,23 +2668,33 @@ const AgentManagerContent: Component = () => {
                       />
                     </Show>
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
-                      {(() => {
-                        const data = activePR()!
-                        return (
-                          <PRPanel
-                            pr={data.pr}
-                            worktree={data.wt}
-                            onClose={() => setSidePanel(null)}
-                            onOpenExternal={() =>
-                              vscode.postMessage({
-                                type: "agentManager.openPR",
-                                worktreeId: data.selected,
-                                url: data.pr.url,
-                              })
-                            }
-                          />
-                        )
-                      })()}
+                      <PRPanel
+                        pr={activePR()!.pr}
+                        worktree={activePR()!.wt}
+                        worktreeId={activePR()!.selected}
+                        onClose={() => setSidePanel(null)}
+                        onOpenExternal={() =>
+                          vscode.postMessage({
+                            type: "agentManager.openPR",
+                            worktreeId: activePR()!.selected,
+                            url: activePR()!.pr.url,
+                          })
+                        }
+                      />
+                    </Show>
+                    <Show when={subagents.tabs().length > 0}>
+                      <SubagentPanel
+                        tabs={subagents.tabs}
+                        active={subagents.active}
+                        visible={() => sidePanel() === SidePanel.Subagents}
+                        nextKeybind={kb().nextTab ?? ""}
+                        closeKeybind={kb().closeTab ?? ""}
+                        onSelect={subagents.select}
+                        onClose={subagents.close}
+                        onCloseOthers={subagents.closeOthers}
+                        onReorder={subagents.reorder}
+                        onClosePanel={() => setSidePanel(null)}
+                      />
                     </Show>
                     <SideTerminalPanel
                       state={terms}

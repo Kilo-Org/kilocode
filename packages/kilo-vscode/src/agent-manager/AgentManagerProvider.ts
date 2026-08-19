@@ -69,6 +69,7 @@ import { PLATFORM } from "./constants"
 import { ProjectRegistry } from "./project/registry"
 import type { ProjectContext } from "./project/context"
 import { ProjectContexts } from "./project/contexts"
+import { hydrateExpanded } from "./project/hydrate"
 import { createMultiVersion, type MultiVersionHost } from "./provider-multi-version"
 import { handleProjectMessage, type ProjectMessageDeps } from "./project/messages"
 import { createProjectWiring } from "./project/wiring"
@@ -319,7 +320,7 @@ export class AgentManagerProvider implements Disposable {
     // Session events from sync or older backends can lack time/directory; a
     // throw here would escape into the SSE dispatch loop and starve the other
     // listeners (there is no per-listener error isolation).
-    if (!info?.time || !dir) return
+    if (!info?.time || !dir || (info.parentID !== undefined && info.parentID !== null)) return
     const ctx = this.contexts.byDirectory(dir)
     if (!ctx || ctx.lifecycle !== "ready") return
     const state = ctx.peekState()
@@ -1625,15 +1626,14 @@ export class AgentManagerProvider implements Disposable {
       multiProject: this.host.multiProject(),
       projects,
     })
-    if (this.panel) {
-      for (const project of projects) {
-        if (project.active || !project.expanded || !project.trusted || project.missing) continue
-        if (this.contexts.get(project.id)) continue
-        const ctx = this.contexts.expand(project.id)
-        if (ctx) this.initExpanded(ctx)
-      }
-    }
+    if (this.panel)
+      hydrateExpanded(projects, {
+        expand: (id) => this.contexts.expand(id),
+        push: (ctx) => this.pushState(ctx),
+        init: (ctx) => this.initExpanded(ctx),
+      })
     this.projectPollers.sync(this.contexts)
+    this.projectPollers.replay()
   }
 
   // Worktree file helpers

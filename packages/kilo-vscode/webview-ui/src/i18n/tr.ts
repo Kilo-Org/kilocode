@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop'a bağlan",
   "provider.anaconda.title.manage": "Anaconda Desktop'ı yönet",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Sağlayıcı bağla",
 
@@ -268,6 +271,8 @@ export const dict = {
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
+  "notification.permission.titleSandboxEscalation":
+    "Git işleminin korumalı alan dışında gerçekleştirilmesine izin verilsin mi?",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
   "ui.permission.doomLoop.rule": "{{tool}} çağrılarına devam et",
@@ -825,9 +830,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Dil sunucu protokolü entegrasyonunu etkinleştir",
   "settings.experimental.batch.title": "Toplu Araç",
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
-  "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
-  "settings.experimental.codebaseSearch.description":
-    "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
   "settings.experimental.imageGeneration.title": "Görüntü oluşturma",
   "settings.experimental.imageGeneration.description": "AI görüntü oluşturmayı etkinleştir",
   "settings.experimental.imageGenerationModel.title": "Görüntü modeli",
@@ -1079,10 +1081,15 @@ export const dict = {
     "Kod düzenleme ve fark bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.codeEdit.expanded": "Genişletilmiş",
   "settings.display.codeEdit.collapsed": "Daraltılmış",
+  "settings.display.mcpTool.title": "MCP ve Genel Araç Blokları",
+  "settings.display.mcpTool.description":
+    "MCP ve genel araç bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
+  "settings.display.mcpTool.expanded": "Genişletilmiş",
+  "settings.display.mcpTool.collapsed": "Daraltılmış",
 
   "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":
-    "En son asistan mesajında ve görev başlığında metin üretim hızını (token/sn) gösterir. Sohbeti dağınık göstermemek için varsayılan olarak gizlidir.",
+    "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
   "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
   "settings.display.autoApprovalReason.description":
     "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",

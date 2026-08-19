@@ -126,6 +126,14 @@ describe("kilo help <command>", () => {
     expect(output).not.toContain("## kilo debug")
   })
 
+  test("documents pr subcommands", async () => {
+    const output = await generateHelp({ command: "pr", format: "md", commands })
+    expect(output).toContain("kilo pr checkout")
+    expect(output).toContain("kilo pr link")
+    expect(output).toContain("kilo pr unlink")
+    expect(output).toContain("kilo pr status")
+  })
+
   test("documents console stop and foreground mode", async () => {
     const output = await generateHelp({ command: "console", format: "md", commands })
     expect(output).toContain("kilo console stop")

@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "اتصال به Anaconda Desktop",
   "provider.anaconda.title.manage": "مدیریت Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "اتصال به ارائه‌دهنده",
 
@@ -267,6 +270,7 @@ export const dict = {
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
+  "notification.permission.titleSandboxEscalation": "اجازه انجام عملیات Git خارج از sandbox داده شود؟",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",
   "ui.permission.doomLoop.rule": "ادامه فراخوانی‌های {{tool}}",
@@ -820,9 +824,6 @@ export const dict = {
   "settings.experimental.lsp.description": "فعال‌سازی یکپارچه‌سازی پروتکل سرور زبان",
   "settings.experimental.batch.title": "ابزار دسته‌ای",
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
-  "settings.experimental.codebaseSearch.title": "جستجوی پایگاه کد",
-  "settings.experimental.codebaseSearch.description":
-    "فعال‌سازی جستجوی زبان طبیعی مبتنی بر هوش مصنوعی در سراسر پایگاه کد",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",
@@ -1105,9 +1106,14 @@ export const dict = {
   "settings.display.codeEdit.description": "انتخاب کنید که بلوک‌های ویرایش کد و تفاوت در حالت باز یا بسته شروع شوند.",
   "settings.display.codeEdit.expanded": "گسترش‌یافته",
   "settings.display.codeEdit.collapsed": "جمع‌شده",
+  "settings.display.mcpTool.title": "بلوک‌های ابزار MCP و عمومی",
+  "settings.display.mcpTool.description":
+    "انتخاب کنید که بلوک‌های ابزار MCP و عمومی در حالت گسترش‌یافته یا جمع‌شده شروع شوند.",
+  "settings.display.mcpTool.expanded": "گسترش‌یافته",
+  "settings.display.mcpTool.collapsed": "جمع‌شده",
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
-    "نرخ تولید متن (توکن/ثانیه) را در آخرین پیام دستیار و در سربرگ وظیفه نمایش می‌دهد. به‌طور پیش‌فرض پنهان است تا چت شلوغ نشود.",
+    "نمایش نرخ تولید متن (tokens/sec) در جدیدترین پیام دستیار و سربرگ کار. به‌طور پیش‌فرض نمایش داده می‌شود؛ برای پنهان کردن آن در صورت نیاز، این تنظیم را غیرفعال کنید.",
   "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
   "settings.display.autoApprovalReason.description":
     "نمایش خطی در فراخوانی ابزارها که توضیح می‌دهد چرا به‌طور خودکار تأیید شده‌اند (قانون مطابق، پیش‌فرض عامل، حالت YOLO و غیره).",

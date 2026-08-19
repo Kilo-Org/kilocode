@@ -5,15 +5,17 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.PrimarySessionPartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
+import java.awt.image.BufferedImage
+import javax.swing.JComponent
 import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
@@ -33,10 +35,8 @@ class TodoWriteViewTest : BasePlatformTestCase() {
                 TodoDto("Next", "pending", "medium"),
             )
         })
-        val base: Any = view
 
         assertTrue(view.labelText().contains("To-dos"))
-        assertTrue(base is PrimarySessionPartView)
         assertTrue(view.labelText().contains("1/2"))
         assertTrue(view.isExpanded())
         assertEquals(2, view.rowCount())
@@ -49,6 +49,25 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertEquals(SessionUiStyle.View.Todo.checkBorder(), view.rowCheckBorder(0))
         assertEquals("Completed to-do: Done", view.rowCheckAccessibleName(0))
         assertEquals("Pending to-do: Next", view.rowCheckAccessibleName(1))
+    }
+
+    fun `test todo content is a rounded editor-background surface`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(TodoDto("A", "pending", "medium"))
+        })
+        val list = view.components.filterIsInstance<TodoListPanel>().single()
+
+        // The todo list is the raised editor surface, but rounded like the header: non-opaque so the
+        // corners reveal the transparent card body, filled with the editor background in the middle.
+        assertFalse(list.isOpaque)
+
+        list.setSize(80, 80)
+        val image = BufferedImage(80, 80, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        list.paint(graphics)
+        graphics.dispose()
+        assertEquals("rounded corner reveals the backdrop", 0, image.getRGB(0, 0) ushr 24)
+        assertEquals(SessionUiStyle.Colors.codeBlockBackground().rgb, image.getRGB(40, 4))
     }
 
     fun `test pending rows keep normal foreground`() {
@@ -95,7 +114,9 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         val body = view.components.filterIsInstance<TodoListPanel>().single()
         val ins = body.border.getBorderInsets(body)
 
-        assertEquals(UiStyle.Gap.lg() + SessionUiStyle.View.Outline.width(), ins.top)
+        // No separator line: just the standard content padding, so the list reads as transparent
+        // content set apart from the header by the base card's transparent gap.
+        assertEquals(UiStyle.Gap.lg(), ins.top)
         assertEquals(UiStyle.Gap.pad(), ins.left)
         assertEquals(UiStyle.Gap.lg(), ins.bottom)
         assertEquals(UiStyle.Gap.pad(), ins.right)
@@ -161,6 +182,67 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         val row = view.components.filterIsInstance<JPanel>().first()
         val header = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
         return (header.layout as BorderLayout).hgap
+    }
+
+    fun `test todo header popup shows when collapsed and lists todos`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(TodoDto("Done", "completed", "high"), TodoDto("Next", "pending", "medium"))
+        })
+        assertTrue(view.isExpanded())
+        assertNull(view.headerPopup())
+
+        view.toggle()
+        assertFalse(view.isExpanded())
+        val body = view.headerPopup()!!.build()
+        try {
+            val list = popupTodoList(body.component)
+            assertEquals(2, list.rowCount())
+            assertTrue(list.rowChecked(0))
+            assertFalse(list.rowChecked(1))
+            assertTrue(list.rowText(0).contains("<s>Done</s>"))
+            assertTrue(list.rowText(1).contains("Next"))
+            assertEquals(view.rowCheckBackground(0), list.rowCheckBackground(0))
+            assertEquals(view.rowCheckForeground(0), list.rowCheckForeground(0))
+            assertEquals(view.rowCheckBorder(0), list.rowCheckBorder(0))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test todo header popup uses compact todo view rows`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(TodoDto("Hidden", "pending", "medium"))
+            it.todoView = TodoViewDto(
+                mode = "compact",
+                todos = listOf(TodoDto("Visible", "pending", "high", changed = true)),
+                hiddenBefore = 2,
+                hiddenAfter = 3,
+            )
+        })
+        view.toggle()
+        val body = view.headerPopup()!!.build()
+        try {
+            val list = popupTodoList(body.component)
+            assertEquals(1, list.rowCount())
+            assertTrue(list.rowText(0).contains("Visible"))
+            assertEquals(view.hiddenText(), list.hiddenText())
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test todo header popup is absent without todos`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED))
+        view.toggle()
+        assertNull(view.headerPopup())
+    }
+
+    private fun popupTodoList(root: JComponent): TodoListPanel {
+        fun visit(component: JComponent): TodoListPanel? {
+            if (component is TodoListPanel) return component
+            return component.components.filterIsInstance<JComponent>().firstNotNullOfOrNull(::visit)
+        }
+        return visit(root) ?: error("TodoListPanel not found")
     }
 
     private fun tool(name: String, state: ToolExecState) = Tool("p1", name, toolKind(name)).also { it.state = state }

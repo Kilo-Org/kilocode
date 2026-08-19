@@ -3,19 +3,18 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.ui.SessionSurfacePanel
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.ToolView
-import ai.kilocode.client.ui.UiStyle
 import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
@@ -37,7 +36,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test command only shell renders markdown`() {
+    fun `test command only shell renders one code surface without labels`() {
         val view = track(ShellToolView(tool().also { it.input = mapOf("command" to "pwd") }))
 
         assertTrue(view.hasToggle())
@@ -45,21 +44,23 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals("pwd", view.bodyText())
         view.toggle()
 
-        assertEquals("**Command**\n\n```bash\npwd\n```", view.markdown())
+        assertEquals("```bash\npwd\n```", view.markdown())
         assertEquals(listOf("pwd"), view.codeTexts())
+        assertVisibleSurfaces(view, 1)
     }
 
-    fun `test output only shell renders markdown`() {
+    fun `test output only shell renders one code surface without labels`() {
         val view = track(ShellToolView(tool().also { it.output = "done" }))
 
         assertEquals("done", view.outputText())
         view.toggle()
 
-        assertEquals("**Output**\n\n```shell-output\ndone\n```", view.markdown())
+        assertEquals("```shell-output\ndone\n```", view.markdown())
         assertEquals(listOf("done"), view.codeTexts())
+        assertVisibleSurfaces(view, 1)
     }
 
-    fun `test command and output render sections in order`() {
+    fun `test command and output render two surfaces in order`() {
         val view = track(ShellToolView(tool().also {
             it.input = mapOf("command" to "git status", "description" to "Check status")
             it.output = "clean"
@@ -72,11 +73,9 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals("git status\n\nclean", view.bodyText())
         view.toggle()
 
-        assertEquals(
-            "**Command**\n\n```bash\ngit status\n```\n\n**Output**\n\n```shell-output\nclean\n```",
-            view.markdown(),
-        )
+        assertEquals("```bash\ngit status\n```\n\n```shell-output\nclean\n```", view.markdown())
         assertEquals(listOf("git status", "clean"), view.codeTexts())
+        assertVisibleSurfaces(view, 2)
     }
 
     fun `test shell header subtitle is normalized to one html line`() {
@@ -144,7 +143,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals(listOf("before\n```\nafter"), view.codeTexts())
     }
 
-    fun `test error section uses shell error text`() {
+    fun `test error renders as its own code surface`() {
         val view = track(ShellToolView(tool(ToolExecState.ERROR).also {
             it.input = mapOf("command" to "fail")
             it.error = "boom"
@@ -154,10 +153,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertTrue(view.labelText().contains("Error"))
         view.toggle()
 
-        assertEquals(
-            "**Command**\n\n```bash\nfail\n```\n\n**Error**\n\n```ansi-stderr\nboom\n```",
-            view.markdown(),
-        )
+        assertEquals("```bash\nfail\n```\n\n```ansi-stderr\nboom\n```", view.markdown())
         assertEquals(listOf("fail", "boom"), view.codeTexts())
         val error = view.codeEditors().last().getEditor(true)!!
         val expected = ConsoleViewContentType.getConsoleViewType(ProcessOutputTypes.STDERR).attributesKey
@@ -171,14 +167,18 @@ class ShellToolViewTest : BasePlatformTestCase() {
         }))
 
         assertFalse(view.bodyCreated())
+        assertNull(view.content())
+        assertTrue(view.surfaces().isEmpty())
+        assertTrue(view.codeEditors().isEmpty())
+        assertTrue(view.scrolls().isEmpty())
         view.toggle()
-        val body = view.mdComponent()
+        val body = view.content()
         val cmd = view.codeEditors().first()
         val out = view.codeEditors().last()
         view.toggle()
         view.toggle()
 
-        assertSame(body, view.mdComponent())
+        assertSame(body, view.content())
         assertSame(cmd, view.codeEditors().first())
         assertSame(out, view.codeEditors().last())
         assertTrue(view.bodyVisible())
@@ -207,7 +207,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
 
         view.toggle()
         view.toggle()
-        val body = view.mdComponent()
+        val body = view.content()
         val cmd = view.codeEditors().first()
         val out = view.codeEditors().last()
         view.update(tool().also {
@@ -217,7 +217,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
 
         assertTrue(view.bodyCreated())
         assertFalse(view.bodyVisible())
-        assertSame(body, view.mdComponent())
+        assertSame(body, view.content())
         assertSame(cmd, view.codeEditors().first())
         assertSame(out, view.codeEditors().last())
         assertEquals(listOf("pwd", "/home"), view.codeTexts())
@@ -239,7 +239,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals(style.transcriptFont.name, view.subtitleFont().name)
         assertEquals(style.transcriptFont.size, view.subtitleFont().size)
         assertFalse(view.subtitleFont().isBold)
-        assertEquals(UiStyle.Colors.weak().rgb, view.subtitleForeground().rgb)
+        assertEquals(SessionUiStyle.Text.Secondary.foreground().rgb, view.subtitleForeground().rgb)
         assertTrue(view.stateFont().size < style.editorSize)
     }
 
@@ -263,6 +263,49 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals(1, view.codeEditors().size)
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, view.horizontalPolicy())
         assertTrue(view.preferredSize.height > 0)
+    }
+
+    fun `test command and output are separate rounded surfaces with a transparent footer slot`() {
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf("command" to "pwd")
+            it.output = "/tmp"
+        }))
+        view.toggle()
+        val surfaces = view.surfaces()
+
+        assertEquals(2, surfaces.size)
+        surfaces.forEach {
+            assertTrue("each content piece is a rounded code surface", it is SessionSurfacePanel)
+            assertEquals(SessionUiStyle.Colors.codeBlockBackground().rgb, it.background.rgb)
+        }
+        // Two independent code editors — no shared body, no "Command"/"Output" labels.
+        assertEquals(2, view.codeEditors().size)
+        // The footer region stays empty (and transparent) until a view adds an ambient note.
+        assertFalse(view.content()!!.hasFooter())
+    }
+
+    fun `test shell code blocks are editor backed and capped to fifteen lines`() {
+        val output = (1..30).joinToString("\n") { "line $it" }
+        val view = track(ShellToolView(tool().also { it.output = output }))
+        view.toggle()
+        val pane = view.scrolls().single()
+        val editor = view.codeEditors().single()
+        val nested = editor.getEditor(true)!!.scrollPane
+        val line = editor.getEditor(true)!!.lineHeight
+        val chrome = pane.insets.top + pane.insets.bottom +
+            pane.viewportBorder.getBorderInsets(pane).top + pane.viewportBorder.getBorderInsets(pane).bottom +
+            pane.horizontalScrollBar.preferredSize.height
+
+        assertEquals(output, editor.text)
+        assertEquals(1, view.codeEditors().size)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, pane.verticalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, pane.horizontalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, nested.verticalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, nested.horizontalScrollBarPolicy)
+        assertFalse(editor.getEditor(true)!!.settings.isUseSoftWraps)
+        assertTrue(pane.preferredSize.height <= line * 15 + chrome)
+        assertTrue(editor.preferredSize.height > pane.preferredSize.height - chrome)
+        assertTrue(pane.preferredSize.height < editor.preferredSize.height + chrome)
     }
 
     fun `test plain git output receives shell output highlighters`() {
@@ -310,61 +353,6 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertTrue(spans.contains("-30" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("--oneline" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("--decorate" to DefaultLanguageHighlighterColors.KEYWORD))
-    }
-
-    fun `test shell labels align with code text and code blocks use bottom border only`() {
-        val view = track(ShellToolView(tool().also {
-            it.input = mapOf("command" to "pwd")
-            it.output = "/tmp"
-        }))
-        view.toggle()
-        val root = view.mdComponent()!!
-        val ins = root.border?.getBorderInsets(root)
-        val labels = root.components.filterIsInstance<JBHtmlPane>()
-        val panes = root.components.filterIsInstance<JBScrollPane>()
-
-        assertEquals(0, ins?.left ?: 0)
-        assertEquals(2, labels.size)
-        assertEquals(2, panes.size)
-        labels.forEach {
-            val label = it.border?.getBorderInsets(it)
-            assertEquals(JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING), label?.left ?: 0)
-            assertEquals(0, label?.right ?: 0)
-        }
-        panes.forEach {
-            val pane = it.border.getBorderInsets(it)
-            assertEquals(0, pane.top)
-            assertEquals(SessionUiStyle.View.Code.BORDER_WIDTH, pane.bottom)
-            assertEquals(0, pane.left)
-            assertEquals(0, pane.right)
-            assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, it.verticalScrollBarPolicy)
-            assertEquals(root.background.rgb, it.background.rgb)
-            assertEquals(root.background.rgb, it.viewport.background.rgb)
-        }
-    }
-
-    fun `test shell code blocks are editor backed and capped to fifteen lines`() {
-        val output = (1..30).joinToString("\n") { "line $it" }
-        val view = track(ShellToolView(tool().also { it.output = output }))
-        view.toggle()
-        val pane = view.mdComponent()!!.components.filterIsInstance<JBScrollPane>().single()
-        val editor = view.codeEditors().single()
-        val nested = editor.getEditor(true)!!.scrollPane
-        val line = editor.getEditor(true)!!.lineHeight
-        val chrome = pane.insets.top + pane.insets.bottom +
-            pane.viewportBorder.getBorderInsets(pane).top + pane.viewportBorder.getBorderInsets(pane).bottom +
-            pane.horizontalScrollBar.preferredSize.height
-
-        assertEquals(output, editor.text)
-        assertEquals(1, view.codeEditors().size)
-        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, pane.verticalScrollBarPolicy)
-        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, pane.horizontalScrollBarPolicy)
-        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, nested.verticalScrollBarPolicy)
-        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, nested.horizontalScrollBarPolicy)
-        assertFalse(editor.getEditor(true)!!.settings.isUseSoftWraps)
-        assertTrue(pane.preferredSize.height <= line * 15 + chrome)
-        assertTrue(editor.preferredSize.height > pane.preferredSize.height - chrome)
-        assertTrue(pane.preferredSize.height < editor.preferredSize.height + chrome)
     }
 
     fun `test shell header popup is available for collapsed command`() {
@@ -419,6 +407,27 @@ class ShellToolViewTest : BasePlatformTestCase() {
             assertTrue(body.component.preferredSize.width in 1..JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH))
             assertTrue(body.component.preferredSize.height > 0)
             assertTrue(body.component.preferredSize.height <= JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
+    fun `test shell header popup includes output and disposes both editors after hide`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf("command" to "git status")
+            it.output = "on branch main"
+        }))
+        val req = view.headerPopup()!!
+        val body = req.build()
+
+        try {
+            val editors = popupCodeEditors(body.component)
+            editors.forEach { it.getEditor(true) }
+            assertEquals(listOf("git status", "on branch main"), editors.map { it.text })
         } finally {
             Disposer.dispose(body.disposable)
         }
@@ -522,6 +531,10 @@ class ShellToolViewTest : BasePlatformTestCase() {
     }
 
     private fun ShellToolView.codeTexts() = codeEditors().map { it.text }
+
+    private fun assertVisibleSurfaces(view: ShellToolView, expected: Int) {
+        assertEquals(expected, view.surfaces().count { it.isVisible })
+    }
 
     private fun tool(state: ToolExecState = ToolExecState.COMPLETED) = Tool("p1", "bash", toolKind("bash")).also {
         it.state = state

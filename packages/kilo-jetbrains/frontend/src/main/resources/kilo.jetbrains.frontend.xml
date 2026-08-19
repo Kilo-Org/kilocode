@@ -1,6 +1,8 @@
 <idea-plugin>
     <dependencies>
         <module name="intellij.platform.frontend"/>
+        <plugin id="org.jetbrains.plugins.terminal"/>
+        <module name="intellij.terminal.frontend"/>
         <module name="kilo.jetbrains.shared"/>
     </dependencies>
 
@@ -22,6 +24,9 @@
                     factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
 
         <fileEditorProvider id="KiloVfsEditor" implementation="ai.kilocode.client.vfs.KiloFileEditorProvider"/>
+        <fileType name="KILO_WORKTREE_SESSION"
+                  implementationClass="ai.kilocode.client.agentManager.worktree.WorktreeSessionFileType"
+                  fieldName="INSTANCE"/>
 
         <applicationConfigurable
                 parentId="tools"
@@ -144,7 +149,8 @@
                 class="ai.kilocode.client.actions.CoreInfoAction"/>
 
         <action id="Kilo.OpenSettings"
-                class="ai.kilocode.client.actions.OpenSettingsAction"/>
+                class="ai.kilocode.client.actions.OpenSettingsAction"
+                icon="AllIcons.General.GearPlain"/>
 
         <action id="Kilo.OpenLocalConfig"
                 class="ai.kilocode.client.actions.OpenLocalConfigAction"/>
@@ -184,12 +190,16 @@
         <action id="Kilo.NewSession"
                 class="ai.kilocode.client.actions.NewSessionAction"/>
 
+        <action id="Kilo.NewWorktree"
+                class="ai.kilocode.client.actions.NewWorktreeAction"/>
+
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
 
         <!-- Declarative toolbar group for the Kilo tool window title bar -->
         <group id="Kilo.ToolWindowToolbar">
             <reference ref="Kilo.NewSession"/>
+            <reference ref="Kilo.NewWorktree"/>
             <reference ref="Kilo.History"/>
             <reference ref="Kilo.Settings"/>
         </group>
@@ -226,6 +236,38 @@
         <action id="Kilo.Session.Delete"
                 class="ai.kilocode.client.actions.DeleteSessionAction"
                 use-shortcut-of="$Delete"/>
+
+        <action id="Kilo.Worktree.Rename"
+                class="ai.kilocode.client.actions.RenameWorktreeAction"/>
+
+        <action id="Kilo.Worktree.Delete"
+                class="ai.kilocode.client.actions.DeleteWorktreeAction"/>
+
+        <action id="Kilo.Worktree.OpenPr"
+                class="ai.kilocode.client.actions.OpenWorktreePrAction"/>
+
+        <action id="Kilo.Worktree.OpenDiff"
+                class="ai.kilocode.client.actions.OpenWorktreeDiffAction"/>
+
+        <action id="Kilo.WorktreeSession.Rename"
+                class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
+
+        <action id="Kilo.WorktreeSession.Delete"
+                class="ai.kilocode.client.actions.DeleteWorktreeSessionAction"/>
+
+        <group id="Kilo.Worktree.RowMenu">
+            <reference ref="Kilo.Worktree.Rename"/>
+            <separator/>
+            <reference ref="Kilo.Worktree.OpenPr"/>
+            <reference ref="Kilo.Worktree.OpenDiff"/>
+            <separator/>
+            <reference ref="Kilo.Worktree.Delete"/>
+        </group>
+
+        <group id="Kilo.WorktreeSession.RowMenu">
+            <reference ref="Kilo.WorktreeSession.Rename"/>
+            <reference ref="Kilo.WorktreeSession.Delete"/>
+        </group>
 
         <group id="Kilo.History.ContextMenu">
             <reference ref="Kilo.Session.Open"/>

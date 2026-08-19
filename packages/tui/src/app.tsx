@@ -632,6 +632,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         category: "Workspace",
         hidden: !Flag.KILO_EXPERIMENTAL_WORKSPACES,
         slashName: "workspaces",
+        slashAliases: ["worktree", "worktrees"], // kilocode_change - `kilo --worktree` worktrees are workspaces too
         run: () => {
           dialog.replace(() => <DialogWorkspaceList />)
         },
