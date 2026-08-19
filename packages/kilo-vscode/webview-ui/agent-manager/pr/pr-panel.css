@@ -80,28 +80,6 @@
   overflow-anchor: none;
 }
 
-.am-pr-scroll-top {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid var(--vscode-foreground);
-  background: var(--vscode-editor-background);
-  color: var(--vscode-foreground);
-  cursor: pointer;
-  font-size: var(--kilo-font-size-14);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.6;
-}
-
-.am-pr-scroll-top:hover {
-  opacity: 1;
-}
-
 .am-pr-panel-section {
   padding: 4px 12px;
 }

@@ -66,6 +66,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "YEREL & WORKTREE'LER",
 
   "agentManager.terminal.new": "Yeni Terminal Sekmesi",
+  "agentManager.terminal.addCentral": "Yeni merkezi terminal sekmesi",
+  "agentManager.terminal.addTerminal": "Kenar çubuğunda yeni terminal sekmesi",
   "agentManager.terminal.ended": "terminal sona erdi — kapatmak için sekmeyi kapatın",
   "agentManager.terminal.endedRestartable":
     "terminal sona erdi - yeni bir kabuk başlatmak için yazın veya sekmeyi kapatın",

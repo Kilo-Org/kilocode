@@ -62,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOKAL & WORKTREES",
 
   "agentManager.terminal.new": "Neuer Terminal-Tab",
+  "agentManager.terminal.addCentral": "Neuer zentraler Terminal-Tab",
+  "agentManager.terminal.addTerminal": "Neuer Terminal-Tab in der Seitenleiste",
   "agentManager.terminal.ended": "Terminal beendet — Tab schließen zum Verwerfen",
   "agentManager.terminal.endedRestartable":
     "Terminal beendet - tippen, um eine neue Shell zu starten, oder Tab schließen",

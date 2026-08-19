@@ -191,6 +191,11 @@ export interface WebviewFocusChangedRequest {
   focused: boolean
 }
 
+export interface AgentManagerFocusChangedRequest {
+  type: "agentManagerFocusChanged"
+  target: "prompt" | "mainTerminal" | "sideTerminal" | "other"
+}
+
 export interface SelectSourceRequest {
   type: "selectSource"
   id: string
@@ -271,14 +276,6 @@ export interface RequestAgentsMessage {
 
 export interface RequestSkillsMessage {
   type: "requestSkills"
-}
-
-export interface RequestAgentRequirementsMessage {
-  type: "requestAgentRequirements"
-  agent: string
-  directory: string
-  sessionID?: string
-  force?: boolean
 }
 
 export interface RequestCommandsMessage {
@@ -442,6 +439,7 @@ export interface RequestTerminalContextMessage {
   type: "requestTerminalContext"
   requestId: string
   sessionID?: string
+  agentManagerContext?: string
 }
 
 export interface RequestGitChangesContextMessage {
@@ -1429,12 +1427,12 @@ export type WebviewMessage =
   | SetOrganizationRequest
   | WebviewReadyRequest
   | WebviewFocusChangedRequest
+  | AgentManagerFocusChangedRequest
   | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
-  | RequestAgentRequirementsMessage
   | RequestCommandsMessage
   | SendCommandRequest
   | RemoveSkillMessage

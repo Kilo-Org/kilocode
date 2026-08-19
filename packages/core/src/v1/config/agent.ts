@@ -9,62 +9,6 @@ const Color = Schema.Union([
   Schema.Literals(["primary", "secondary", "accent", "success", "warning", "error", "info"]),
 ])
 
-// kilocode_change start - agent skill/MCP/VS Code extension requirements schema
-const RequirementID = Schema.String.check(
-  Schema.isMinLength(1),
-  Schema.isMaxLength(128),
-  Schema.isPattern(/^[A-Za-z0-9][A-Za-z0-9._-]*$/),
-)
-const RequirementName = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(128), Schema.isPattern(/\S/))
-
-export const VSCodeExtension = Schema.Struct({
-  name: RequirementName,
-  id: RequirementID,
-})
-export type VSCodeExtension = Schema.Schema.Type<typeof VSCodeExtension>
-
-const RequirementGroup = Schema.mutable(Schema.Array(RequirementName)).check(
-  Schema.isMinLength(1),
-  Schema.isMaxLength(20),
-)
-const VSCodeExtensions = Schema.mutable(Schema.Array(VSCodeExtension)).check(
-  Schema.isMinLength(1),
-  Schema.isMaxLength(20),
-)
-
-export const Requirements = Schema.Struct({
-  skills: Schema.optional(RequirementGroup),
-  mcps: Schema.optional(RequirementGroup),
-  vscode_extensions: Schema.optional(VSCodeExtensions),
-}).check(
-  Schema.makeFilter((input) => {
-    const issues: Schema.FilterIssue[] = []
-    if (!input.skills && !input.mcps && !input.vscode_extensions) {
-      issues.push({ path: [], issue: "At least one requirement group is required" })
-    }
-
-    for (const group of ["skills", "mcps"] as const) {
-      const seen = new Set<string>()
-      for (const [index, value] of (input[group] ?? []).entries()) {
-        if (seen.has(value)) issues.push({ path: [group, index], issue: `Duplicate ${group} requirement` })
-        seen.add(value)
-      }
-    }
-
-    const seen = new Set<string>()
-    for (const [index, extension] of (input.vscode_extensions ?? []).entries()) {
-      if (seen.has(extension.id)) {
-        issues.push({ path: ["vscode_extensions", index, "id"], issue: "Duplicate vscode_extensions requirement" })
-      }
-      seen.add(extension.id)
-    }
-
-    return issues
-  }),
-)
-export type Requirements = Schema.Schema.Type<typeof Requirements>
-// kilocode_change end
-
 const AgentSchema = Schema.StructWithRest(
   Schema.Struct({
     model: Schema.optional(Schema.NullOr(Schema.String)), // kilocode_change - nullable for delete sentinel
@@ -108,7 +52,6 @@ const AgentSchema = Schema.StructWithRest(
     // kilocode_change end
     maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated Use 'steps' field instead." }),
     permission: Schema.optional(ConfigPermissionV1.Info),
-    requirements: Schema.optional(Requirements), // kilocode_change
   }),
   [Schema.Record(Schema.String, Schema.Any)],
 )
@@ -132,7 +75,7 @@ const KNOWN_KEYS = new Set([
   "permission",
   "disable",
   "tools",
-  "requirements", // kilocode_change
+  "requirements", // kilocode_change - ignore declarations from removed agent requirements feature
 ])
 
 const normalize = (agent: Schema.Schema.Type<typeof AgentSchema>): Schema.Schema.Type<typeof AgentSchema> => {
