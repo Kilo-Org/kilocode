@@ -1,6 +1,7 @@
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { extractLines, type ReviewComment } from "./review-comments"
+import type { ReviewCommentEntry } from "../src/types/messages"
 
 export interface AnnotationLabels {
   commentOnLine: (line: number) => string
@@ -137,7 +138,7 @@ function makeActionButton(title: string, icon: SVGSVGElement, action: () => void
   return button
 }
 
-export function sendReviewComments(comments: ReviewComment[], activeTerminalId?: string): void {
+export function sendReviewComments(comments: ReviewCommentEntry[], activeTerminalId?: string): void {
   window.dispatchEvent(
     new MessageEvent("message", {
       data: {
