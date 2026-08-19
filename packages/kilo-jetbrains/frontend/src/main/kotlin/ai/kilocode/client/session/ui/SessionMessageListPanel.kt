@@ -13,6 +13,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
+import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
@@ -91,12 +92,25 @@ class SessionMessageListPanel(
 
     var onHover: ((PartView, Boolean) -> Unit)? = null
     var onReflow: ((Boolean) -> Unit)? = null
+    var outcome: SessionOutcomeView? = null
+        set(value) {
+            if (field === value) return
+            field?.let { remove(it) }
+            field = value
+            value?.applyStyle(style)
+            syncActive(model.state)
+            anchorFooter()
+            refresh()
+        }
 
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
 
     init {
         Disposer.register(parent, this)
+        (layout as? SessionLayout)?.maxWidth = { view ->
+            SessionUiStyle.SessionLayout.readableWidth(view, style.transcriptFont)
+        }
         applyStyle(style)
 
         model.addListener(parent) { event ->
@@ -424,25 +438,43 @@ class SessionMessageListPanel(
                 setHiddenQuestionTool(state.question.tool)
                 permission?.hideView()
                 login?.hideView()
+                outcome?.hideView()
                 question?.show(state.question)
             }
             is SessionState.AwaitingPermission -> {
                 setHiddenQuestionTool(null)
                 question?.hideView()
                 login?.hideView()
+                outcome?.hideView()
                 permission?.show(state.permission)
             }
             is SessionState.LoginRequired -> {
                 setHiddenQuestionTool(null)
                 question?.hideView()
                 permission?.hideView()
+                outcome?.hideView()
                 login?.show(state.message)
+            }
+            is SessionState.Error -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                permission?.hideView()
+                login?.hideView()
+                outcome?.showError(state.message, state.kind)
+            }
+            is SessionState.TurnEnded -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                permission?.hideView()
+                login?.hideView()
+                outcome?.showOutcome(state.outcome, state.tone)
             }
             else -> {
                 setHiddenQuestionTool(null)
                 question?.hideView()
                 permission?.hideView()
                 login?.hideView()
+                outcome?.hideView()
             }
         }
     }
@@ -494,11 +526,13 @@ class SessionMessageListPanel(
         if (question != null) remove(question)
         if (permission != null) remove(permission)
         if (login != null) remove(login)
+        if (outcome != null) remove(outcome)
         if (banner != null) remove(banner)
         remove(progress)
         if (question != null) add(question)
         if (permission != null) add(permission)
         if (login != null) add(login)
+        if (outcome != null) add(outcome)
         if (banner != null) add(banner)
         add(progress)
     }
@@ -616,6 +650,7 @@ class SessionMessageListPanel(
         question?.applyStyle(style)
         permission?.applyStyle(style)
         login?.applyStyle(style)
+        outcome?.applyStyle(style)
         banner?.applyStyle(style)
         progress.applyStyle(style)
         reflow()
@@ -630,6 +665,7 @@ class SessionMessageListPanel(
         question?.hideView()
         permission?.hideView()
         login?.hideView()
+        outcome?.hideView()
         turnViews.values.forEach {
             remove(it)
             Disposer.dispose(it)

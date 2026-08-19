@@ -3,6 +3,8 @@ package ai.kilocode.client.session.ui
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
+import ai.kilocode.client.session.model.Outcome
+import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
@@ -14,7 +16,8 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.PlanExitView
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.SessionOutcomeView
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionResultView
@@ -52,6 +55,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
@@ -1074,6 +1078,47 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertSame(item.progress, item.components.last())
     }
 
+    fun `test error state makes outcome view visible and hides others`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.Error("OpenRouter balance is too low", "APIError"))
+
+        val ov = find<SessionOutcomeView>(item)!!
+        val qv = find<QuestionView>(item)!!
+        val pv = find<PermissionView>(item)!!
+        val lv = find<LoginRequiredView>(item)!!
+
+        assertTrue(ov.isVisible)
+        assertFalse(qv.isVisible)
+        assertFalse(pv.isVisible)
+        assertFalse(lv.isVisible)
+        assertNotNull(text(item, "OpenRouter balance is too low"))
+        assertSame(item.progress, item.components.last())
+    }
+
+    fun `test turn ended state makes outcome view visible`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED, OutcomeTone.WARNING))
+
+        val ov = find<SessionOutcomeView>(item)!!
+        val comps = item.components.toList()
+
+        assertTrue(ov.isVisible)
+        assertNotNull(text(item, KiloBundle.message("session.outcome.interrupted.description")))
+        assertTrue(comps.indexOf(ov) < comps.indexOf(item.progress))
+        assertSame(item.progress, comps.last())
+    }
+
+    fun `test returning to idle hides outcome view`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.TurnEnded(Outcome.FAILED, OutcomeTone.CRITICAL))
+        model.setState(SessionState.Idle)
+
+        val ov = find<SessionOutcomeView>(item)!!
+
+        assertFalse(ov.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
     fun `test login required button invokes openProfile callback`() {
         var called = false
         val lv = LoginRequiredView(openProfile = { called = true }, dismiss = {})
@@ -1107,7 +1152,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.setRevert(SessionRevertDto("u1"))
         banner.update()
 
-        assertNotNull(find<BaseQuestionView>(banner))
+        assertNotNull(find<DialogView>(banner))
         assertNotNull(components(banner).filterIsInstance<PartHeader>().singleOrNull())
 
         val buttons = components(banner).filterIsInstance<JButton>().filter { it.text.isNotEmpty() }
@@ -1524,10 +1569,13 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             reply = { _, _, _ -> },
         )
         val l = LoginRequiredView(openProfile = {}, dismiss = {})
-        return SessionMessageListPanel(model, parent, q, p, l, openFile)
+        val o = SessionOutcomeView()
+        return SessionMessageListPanel(model, parent, q, p, l, openFile).also { it.outcome = o }
     }
 
     private inline fun <reified T> find(root: Container): T? = findCls(root, T::class.java)
+
+    private fun text(root: Container, value: String) = components(root).filterIsInstance<JBTextArea>().firstOrNull { it.text == value }
 
     private fun <T> findCls(root: Container, cls: Class<T>): T? {
         if (cls.isInstance(root)) return cls.cast(root)

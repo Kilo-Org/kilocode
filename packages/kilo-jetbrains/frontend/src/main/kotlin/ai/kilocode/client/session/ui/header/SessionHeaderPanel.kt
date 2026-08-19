@@ -310,6 +310,12 @@ class SessionHeaderPanel(
         refresh()
     }
 
+    fun hideBranchChanges() {
+        if (!changes.isVisible) return
+        changes.isVisible = false
+        refresh()
+    }
+
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         val bg = SessionUiStyle.Colors.sessionBackground()
