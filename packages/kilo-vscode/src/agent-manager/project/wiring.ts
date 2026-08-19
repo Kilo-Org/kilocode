@@ -49,7 +49,6 @@ export function createProjectWiring(opts: {
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.host.workspacePath(),
     registry,
-    trusted: (id) => registry.get(id)?.trusted === true,
     enabled: () => opts.host.multiProject(),
     remove: (id) => opts.host.unregisterProjectRoutes(id),
     deps: { log: opts.output, git: opts.git },

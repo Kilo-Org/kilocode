@@ -58,8 +58,6 @@ export interface ExperimentalConfig {
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
-  swe_pruner?: boolean
-  swe_pruner_model?: string
   smooth_scrolling?: boolean
 }
 
@@ -135,6 +133,7 @@ export interface BrowserSettings {
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
+export type McpToolDisplay = "expanded" | "collapsed"
 
 export interface Config {
   permission?: PermissionConfig
@@ -156,6 +155,7 @@ export interface Config {
   remote_control?: boolean
   terminal_command_display?: TerminalCommandDisplay
   code_edit_display?: CodeEditDisplay
+  mcp_tool_display?: McpToolDisplay
   hide_prompt_training_models?: boolean
   share?: "manual" | "auto" | "disabled"
   username?: string

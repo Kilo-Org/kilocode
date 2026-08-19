@@ -26,16 +26,20 @@ function runtime(
   }> = []
   const signals: Array<{ pid: number; signal: "SIGTERM" | "SIGKILL" }> = []
   const sleeps: number[] = []
+  let alive = true
   const value: KiloPtyTermination.Runtime = {
     platform,
     taskkill: async (file, args, opts) => {
       tasks.push({ file, args, opts })
-      return input.taskkill ?? true
+      const result = input.taskkill ?? true
+      if (result) alive = false
+      return result
     },
     tree: async () => input.tree ?? [],
-    alive: () => true,
+    alive: () => alive,
     signal: (pid, signal) => {
       signals.push({ pid, signal })
+      if (signal === "SIGKILL") alive = false
       if (input.signal === "throw") throw new Error("process group unavailable")
     },
     sleep: async (ms) => {

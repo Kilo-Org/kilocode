@@ -8,8 +8,6 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useImageModels } from "../../context/image-models"
 import type { ExtensionMessage } from "../../types/messages"
-import { parseModelString } from "../../../../src/shared/provider-model"
-import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
 
 interface ShareOption {
@@ -205,38 +203,6 @@ const ExperimentalTab: Component = () => {
             {language.t("settings.experimental.continueOnDeny.title")}
           </Switch>
         </SettingsRow>
-
-        <SettingsRow
-          title={language.t("settings.experimental.swePruner.title")}
-          description={language.t("settings.experimental.swePruner.description")}
-        >
-          <Switch
-            checked={experimental().swe_pruner ?? false}
-            onChange={(checked) => updateExperimental("swe_pruner", checked)}
-            hideLabel
-          >
-            {language.t("settings.experimental.swePruner.title")}
-          </Switch>
-        </SettingsRow>
-
-        <Show when={experimental().swe_pruner}>
-          <SettingsRow
-            title={language.t("settings.experimental.swePrunerModel.title")}
-            description={language.t("settings.experimental.swePrunerModel.description")}
-          >
-            <ModelSelectorBase
-              value={parseModelString(experimental().swe_pruner_model ?? undefined)}
-              onSelect={(providerID, modelID) =>
-                updateExperimental("swe_pruner_model", providerID && modelID ? `${providerID}/${modelID}` : null)
-              }
-              placement="bottom-start"
-              allowClear
-              clearLabel={language.t("settings.providers.notSet")}
-              label={language.t("settings.experimental.swePrunerModel.title")}
-              description={language.t("settings.experimental.swePrunerModel.description")}
-            />
-          </SettingsRow>
-        </Show>
 
         <SettingsRow
           title={language.t("settings.experimental.multiProject.title")}

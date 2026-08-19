@@ -24,10 +24,7 @@
     },
     "kilo-tool-process-env": {
       "description": "Direct process.env reads in Kilo-owned tools. Target: pass configuration explicitly via Tool.Context or Env.Service.",
-      "allowed": {
-        "packages/opencode/src/tool/mcp-websearch.ts": { "count": 2, "owner": "tool-runtime", "reason": "Top-level EXA_API_KEY snapshot" },
-        "packages/opencode/src/tool/websearch.ts": { "count": 4, "owner": "tool-runtime", "reason": "KILO_WEBSEARCH_PROVIDER, PARALLEL_API_KEY, EXA_API_KEY reads" }
-      }
+      "allowed": {}
     }
   }
 }

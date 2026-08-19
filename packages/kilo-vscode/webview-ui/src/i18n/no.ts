@@ -279,6 +279,7 @@ export const dict = {
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
+  "notification.permission.titleSandboxEscalation": "Tillate Git-operasjon utenfor sandkassen?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
   "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
@@ -826,13 +827,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Aktiver SWE-Pruner: oppgavebevisst beskjæring av store utdata fra lese-, søke- og shell-verktøy, styrt av et fokusspørsmål fra agenten",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner-modell",
-  "settings.experimental.swePrunerModel.description":
-    "Modell som brukes til å beskjære verktøyutdata; som standard den konfigurerte lille modellen",
-
   "settings.experimental.smoothScrolling.title": "Smooth Scrolling",
   "settings.experimental.smoothScrolling.description":
     "Animate scroll positions in the chat (tab strip, question dock, reasoning panel). Turn off for instant scrolling. Mouse wheel inertia is controlled by your OS / VS Code and is not affected.",
@@ -1112,10 +1106,15 @@ export const dict = {
     "Velg om blokker for kodeendringer og forskjeller skal være utvidet eller skjult fra start.",
   "settings.display.codeEdit.expanded": "Utvidet",
   "settings.display.codeEdit.collapsed": "Skjult",
+  "settings.display.mcpTool.title": "Blokker for MCP- og generiske verktøy",
+  "settings.display.mcpTool.description":
+    "Velg om blokker for MCP- og generiske verktøy skal være utvidet eller skjult fra start.",
+  "settings.display.mcpTool.expanded": "Utvidet",
+  "settings.display.mcpTool.collapsed": "Skjult",
 
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
-    "Vis tekstgenereringshastighet (tokens/sek) på den siste assistentmeldingen og i oppgaveoverskriften. Skjult som standard for å holde chatten ryddig.",
+    "Vis tekstgenereringshastigheten (tokens/sec) i den nyeste assistentmeldingen og i oppgaveoverskriften. Vises som standard; deaktiver denne innstillingen for å skjule den ved behov.",
   "settings.display.autoApprovalReason.title": "Vis årsak til automatisk godkjenning",
   "settings.display.autoApprovalReason.description":
     "Viser en linje ved verktøykall som forklarer hvorfor de ble automatisk godkjent (samsvarende regel, agentstandard, YOLO-modus osv.).",

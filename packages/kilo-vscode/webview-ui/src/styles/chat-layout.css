@@ -363,6 +363,42 @@
   margin-inline: 0;
 }
 
+/* A permission card with a diff can be taller than the room left under the
+   transcript, and `.chat-view` clips whatever doesn't fit. With a rigid
+   `.chat-input` that silently cut off the Allow/Deny row with nothing to
+   scroll. Only while a permission is pending, lay the composer column out so
+   the card is a shrinkable flex item: its height is then bounded by the space
+   actually available and its own body scrolls instead. */
+.chat-input:has(> [data-component="permission-shortcuts"]) {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.chat-input:has(> [data-component="permission-shortcuts"]) > * {
+  flex-shrink: 0;
+}
+
+/* Margins don't collapse in a flex column, so drop the halves that used to
+   overlap and keep the spacing around the card identical. */
+.chat-input:has(> [data-component="permission-shortcuts"]) > .startup-error-banner {
+  margin-bottom: 0;
+}
+
+.chat-input:has(> [data-component="permission-shortcuts"]) > .prompt-input-container {
+  margin-top: 0;
+}
+
+.chat-input > [data-component="permission-shortcuts"] {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 1;
+  /* Shrinks down to the card's own floor plus its 12px vertical margins, so the
+     card is never laid out over the prompt input below it. */
+  min-height: calc(var(--permission-card-min-height, 11em) + 24px);
+}
+
 .vscode-session-turn-diffs-trigger {
   display: inline-flex;
   align-items: center;

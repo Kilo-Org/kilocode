@@ -273,6 +273,7 @@ export const dict = {
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
+  "notification.permission.titleSandboxEscalation": "Zezwolić na operację Git poza piaskownicą?",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",
   "ui.permission.doomLoop.rule": "Kontynuuj wywołania {{tool}}",
@@ -823,13 +824,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Włącz SWE-Pruner: przycinanie obszernych danych wyjściowych narzędzi odczytu, wyszukiwania i powłoki z uwzględnieniem zadania, kierowane pytaniem przewodnim dostarczonym przez agenta",
-  "settings.experimental.swePrunerModel.title": "Model SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Model używany do przycinania wyników narzędzi; domyślnie skonfigurowany mały model",
-
   "settings.experimental.smoothScrolling.title": "Smooth Scrolling",
   "settings.experimental.smoothScrolling.description":
     "Animate scroll positions in the chat (tab strip, question dock, reasoning panel). Turn off for instant scrolling. Mouse wheel inertia is controlled by your OS / VS Code and is not affected.",
@@ -1119,10 +1113,15 @@ export const dict = {
     "Wybierz, czy bloki edycji kodu i podglądy różnic mają być początkowo rozwinięte czy zwinięte.",
   "settings.display.codeEdit.expanded": "Rozwinięte",
   "settings.display.codeEdit.collapsed": "Zwinięte",
+  "settings.display.mcpTool.title": "Bloki narzędzi MCP i ogólnych",
+  "settings.display.mcpTool.description":
+    "Wybierz, czy bloki narzędzi MCP i ogólnych mają być początkowo rozwinięte czy zwinięte.",
+  "settings.display.mcpTool.expanded": "Rozwinięte",
+  "settings.display.mcpTool.collapsed": "Zwinięte",
 
   "settings.display.tokenThroughput.title": "Pokaż przepustowość tokenów",
   "settings.display.tokenThroughput.description":
-    "Wyświetla szybkość generowania tekstu (tokeny/s) w ostatniej wiadomości asystenta i w nagłówku zadania. Domyślnie skryte, aby czat był przejrzysty.",
+    "Wyświetlaj szybkość generowania tekstu (tokens/sec) w najnowszej wiadomości asystenta i nagłówku zadania. Domyślnie jest wyświetlana; wyłącz to ustawienie, aby w razie potrzeby ją ukryć.",
   "settings.display.autoApprovalReason.title": "Pokaż powód automatycznego zatwierdzenia",
   "settings.display.autoApprovalReason.description":
     "Pokazuje wiersz przy wywołaniach narzędzi wyjaśniający, dlaczego zostały automatycznie zatwierdzone (dopasowana reguła, wartość domyślna agenta, tryb YOLO itp.).",
