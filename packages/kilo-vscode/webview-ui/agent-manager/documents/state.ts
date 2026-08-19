@@ -50,7 +50,7 @@ export function createDocuments(
     vscode.postMessage({ type: "agentManager.requestDocument", sessionId, file, contextKey: ctx })
   }
 
-  const open = (file: string, sessionId = current(), line?: number, column?: number) => {
+  const open = (file: string, sessionId = session() ?? "", line?: number, column?: number) => {
     const ctx = current()
     if (!ctx || !file) return
     setTabs((prev) => {
