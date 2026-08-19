@@ -22,7 +22,7 @@ describe("terminal context architecture", () => {
     const util = src("webview-ui/src/hooks/terminal-context-utils.ts")
 
     expect(prompt).toContain("useTerminalContext")
-    expect(prompt).toContain("terminal.resolveAttachment(message, id, readTerminalContext(props.terminalContext))")
+    expect(prompt).toContain("resolveAttachment(message, id, readTerminalContext(props.terminalContext))")
     expect(prompt).not.toContain("requestTerminalContext")
     expect(prompt).not.toContain("data:text/plain")
     expect(hook).toContain("requestTerminalContext")
