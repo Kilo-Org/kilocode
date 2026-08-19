@@ -1013,185 +1013,188 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                     onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
                   >
                     <Show when={groups().length === 0}>
-                    <div class="model-selector-empty" role="status" aria-live="polite">
-                      {language.t("dialog.model.empty")}
-                    </div>
-                  </Show>
+                      <div class="model-selector-empty" role="status" aria-live="polite">
+                        {language.t("dialog.model.empty")}
+                      </div>
+                    </Show>
 
-                  <Show when={nodes().length > 0}>
-                    <Virtualizer
-                      ref={setVirtualizer}
-                      data={nodes()}
-                      keepMounted={mounted()}
-                      bufferSize={120}
-                      itemSize={30}
-                    >
-                      {
-                        // eslint-disable-next-line complexity
-                        (node) => {
-                          if (node.kind === "group" && node.group) {
-                            const group = node.group
-                            const key = groupKey(group.key)
-                            const shown = () => isGroupOpen(group.key)
+                    <Show when={nodes().length > 0}>
+                      <Virtualizer
+                        ref={setVirtualizer}
+                        data={nodes()}
+                        keepMounted={mounted()}
+                        bufferSize={120}
+                        itemSize={30}
+                      >
+                        {
+                          // eslint-disable-next-line complexity
+                          (node) => {
+                            if (node.kind === "group" && node.group) {
+                              const group = node.group
+                              const key = groupKey(group.key)
+                              const shown = () => isGroupOpen(group.key)
+                              return (
+                                <div
+                                  id={optionID(key)}
+                                  data-key={key}
+                                  class={`model-selector-group-label${props.allowClear || group.key !== groups()[0]?.key ? " model-selector-group-label--divided" : ""}${isSelected(key) ? " selected" : ""}${isSelected(key) && !pointer() ? " keyboard-focused" : ""}`}
+                                  role="treeitem"
+                                  aria-level={1}
+                                  aria-expanded={shown()}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => toggleGroup(group.key)}
+                                >
+                                  <svg
+                                    class={`model-selector-group-chevron${shown() ? "" : " model-selector-group-chevron--collapsed"}`}
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 16 16"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                  >
+                                    <path d="M4 6l4 5 4-5H4z" />
+                                  </svg>
+                                  <span>{group.label}</span>
+                                  <Show when={!shown() && hasSearch()}>
+                                    <span class="model-selector-group-match-dot" aria-hidden="true" />
+                                  </Show>
+                                </div>
+                              )
+                            }
+
+                            const row = node.row
+                            if (!row) return null
+                            if (row.kind === "clear") {
+                              return (
+                                <div
+                                  id={optionID(CLEAR_KEY)}
+                                  data-key={CLEAR_KEY}
+                                  class={`model-selector-item${isSelected(CLEAR_KEY) && !pointer() ? " keyboard-focused" : ""}${isSelected(CLEAR_KEY) ? " selected" : ""}${!props.value?.providerID ? " active" : ""}`}
+                                  role="treeitem"
+                                  aria-level={1}
+                                  aria-selected={!props.value?.providerID}
+                                  onClick={() => pickClear()}
+                                >
+                                  <span
+                                    class="model-selector-item-name"
+                                    style={{ "font-style": "italic", opacity: 0.7 }}
+                                  >
+                                    {props.clearLabel ?? language.t("dialog.model.notSet")}
+                                  </span>
+                                </div>
+                              )
+                            }
+                            if (!row.model) return null
+
+                            const model = row.model
+                            const hovered = () => isSelected(row.key)
+                            const preActive = () => isPreActive(row.key)
+                            const starred = () => favoriteKeys().has(modelKey(model.providerID, model.id))
+                            const showSelect = () => expanded() && preActive() && !isActive(model)
+                            const starLabel = () =>
+                              `${starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")}: ${sanitizeName(model.name)}`
                             return (
                               <div
-                                id={optionID(key)}
-                                data-key={key}
-                                class={`model-selector-group-label${props.allowClear || group.key !== groups()[0]?.key ? " model-selector-group-label--divided" : ""}${isSelected(key) ? " selected" : ""}${isSelected(key) && !pointer() ? " keyboard-focused" : ""}`}
-                                role="treeitem"
-                                aria-level={1}
-                                aria-expanded={shown()}
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => toggleGroup(group.key)}
+                                role="presentation"
+                                class={`model-selector-row${hovered() || preActive() ? " selected" : ""}`}
                               >
-                                <svg
-                                  class={`model-selector-group-chevron${shown() ? "" : " model-selector-group-chevron--collapsed"}`}
-                                  width="10"
-                                  height="10"
-                                  viewBox="0 0 16 16"
-                                  fill="currentColor"
-                                  aria-hidden="true"
+                                <div
+                                  id={optionID(row.key)}
+                                  data-key={row.key}
+                                  class={`model-selector-item${(hovered() && !pointer()) || preActive() ? " keyboard-focused" : ""}${hovered() || preActive() ? " selected" : ""}${chosen(row) ? " active" : ""}`}
+                                  role="treeitem"
+                                  aria-level={2}
+                                  aria-selected={chosen(row)}
+                                  onClick={() => {
+                                    if (!expanded()) {
+                                      selectRow(row)
+                                      return
+                                    }
+                                    setRow(row.key)
+                                    setPreviewKey(row.key)
+                                    searchRef?.focus()
+                                  }}
+                                  onDblClick={() => {
+                                    if (expanded()) selectRow(row)
+                                  }}
                                 >
-                                  <path d="M4 6l4 5 4-5H4z" />
-                                </svg>
-                                <span>{group.label}</span>
-                                <Show when={!shown() && hasSearch()}>
-                                  <span class="model-selector-group-match-dot" aria-hidden="true" />
+                                  <div class="model-selector-item-left">
+                                    <span class="model-selector-item-name">
+                                      {(() => {
+                                        const full = sanitizeName(model.name)
+                                        const sep = full.indexOf(": ")
+                                        if (sep < 0) return <span class="model-selector-item-name-main">{full}</span>
+                                        return (
+                                          <>
+                                            <span class="model-selector-item-name-provider">{full.slice(0, sep)}</span>
+                                            <span class="model-selector-item-name-main">{full.slice(sep + 2)}</span>
+                                          </>
+                                        )
+                                      })()}
+                                    </span>
+                                    <Show when={isAuto(model)}>
+                                      <Tooltip value={autoLabel(model)} placement="top">
+                                        <span class="model-selector-auto-icon" aria-label={autoLabel(model)}>
+                                          <Icon name="models" size="small" />
+                                        </span>
+                                      </Tooltip>
+                                    </Show>
+                                    <Show when={isFree(model) || hasByok(model) || isDataCollectedModel(model)}>
+                                      <span class="model-selector-free-data">
+                                        <Show when={isFree(model) && !hasByok(model)}>
+                                          <span class="model-selector-data-badge">
+                                            <Tag data-variant="member">{freeLabel()}</Tag>
+                                          </span>
+                                        </Show>
+                                        <Show when={hasByok(model)}>
+                                          <span class="model-selector-data-badge model-selector-data-badge--byok">
+                                            <Tag data-variant="member">BYOK</Tag>
+                                          </span>
+                                        </Show>
+                                        <Show when={isDataCollectedModel(model)}>
+                                          <Tooltip value={dataLabel()} placement="top">
+                                            <span class="model-selector-free-data-icon" aria-label={dataLabel()}>
+                                              <Icon name="book-open-check" size="small" />
+                                            </span>
+                                          </Tooltip>
+                                        </Show>
+                                      </span>
+                                    </Show>
+                                    <span class="model-selector-item-provider-tag">{model.providerName}</span>
+                                  </div>
+                                </div>
+                                <Show when={session && props.favorites !== false}>
+                                  <button
+                                    type="button"
+                                    class={`model-selector-star${starred() ? " model-selector-star--active" : ""}`}
+                                    aria-label={starLabel()}
+                                    aria-pressed={starred()}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleFavorite(model, row)
+                                      searchRef?.focus()
+                                    }}
+                                  >
+                                    <Icon name={starred() ? "star-filled" : "star"} size="small" />
+                                  </button>
+                                </Show>
+                                <Show when={showSelect()}>
+                                  <button
+                                    type="button"
+                                    class="model-selector-item-select-btn"
+                                    aria-label={`${language.t("dialog.model.select")}: ${sanitizeName(model.name)}`}
+                                    onClick={() => selectRow(row)}
+                                  >
+                                    {language.t("dialog.model.select")}
+                                  </button>
                                 </Show>
                               </div>
                             )
                           }
-
-                          const row = node.row
-                          if (!row) return null
-                          if (row.kind === "clear") {
-                            return (
-                              <div
-                                id={optionID(CLEAR_KEY)}
-                                data-key={CLEAR_KEY}
-                                class={`model-selector-item${isSelected(CLEAR_KEY) && !pointer() ? " keyboard-focused" : ""}${isSelected(CLEAR_KEY) ? " selected" : ""}${!props.value?.providerID ? " active" : ""}`}
-                                role="treeitem"
-                                aria-level={1}
-                                aria-selected={!props.value?.providerID}
-                                onClick={() => pickClear()}
-                              >
-                                <span class="model-selector-item-name" style={{ "font-style": "italic", opacity: 0.7 }}>
-                                  {props.clearLabel ?? language.t("dialog.model.notSet")}
-                                </span>
-                              </div>
-                            )
-                          }
-                          if (!row.model) return null
-
-                          const model = row.model
-                          const hovered = () => isSelected(row.key)
-                          const preActive = () => isPreActive(row.key)
-                          const starred = () => favoriteKeys().has(modelKey(model.providerID, model.id))
-                          const showSelect = () => expanded() && preActive() && !isActive(model)
-                          const starLabel = () =>
-                            `${starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")}: ${sanitizeName(model.name)}`
-                          return (
-                            <div
-                              role="presentation"
-                              class={`model-selector-row${hovered() || preActive() ? " selected" : ""}`}
-                            >
-                              <div
-                                id={optionID(row.key)}
-                                data-key={row.key}
-                                class={`model-selector-item${(hovered() && !pointer()) || preActive() ? " keyboard-focused" : ""}${hovered() || preActive() ? " selected" : ""}${chosen(row) ? " active" : ""}`}
-                                role="treeitem"
-                                aria-level={2}
-                                aria-selected={chosen(row)}
-                                onClick={() => {
-                                  if (!expanded()) {
-                                    selectRow(row)
-                                    return
-                                  }
-                                  setRow(row.key)
-                                  setPreviewKey(row.key)
-                                  searchRef?.focus()
-                                }}
-                                onDblClick={() => {
-                                  if (expanded()) selectRow(row)
-                                }}
-                              >
-                                <div class="model-selector-item-left">
-                                  <span class="model-selector-item-name">
-                                    {(() => {
-                                      const full = sanitizeName(model.name)
-                                      const sep = full.indexOf(": ")
-                                      if (sep < 0) return <span class="model-selector-item-name-main">{full}</span>
-                                      return (
-                                        <>
-                                          <span class="model-selector-item-name-provider">{full.slice(0, sep)}</span>
-                                          <span class="model-selector-item-name-main">{full.slice(sep + 2)}</span>
-                                        </>
-                                      )
-                                    })()}
-                                  </span>
-                                  <Show when={isAuto(model)}>
-                                    <Tooltip value={autoLabel(model)} placement="top">
-                                      <span class="model-selector-auto-icon" aria-label={autoLabel(model)}>
-                                        <Icon name="models" size="small" />
-                                      </span>
-                                    </Tooltip>
-                                  </Show>
-                                  <Show when={isFree(model) || hasByok(model) || isDataCollectedModel(model)}>
-                                    <span class="model-selector-free-data">
-                                      <Show when={isFree(model) && !hasByok(model)}>
-                                        <span class="model-selector-data-badge">
-                                          <Tag data-variant="member">{freeLabel()}</Tag>
-                                        </span>
-                                      </Show>
-                                      <Show when={hasByok(model)}>
-                                        <span class="model-selector-data-badge model-selector-data-badge--byok">
-                                          <Tag data-variant="member">BYOK</Tag>
-                                        </span>
-                                      </Show>
-                                      <Show when={isDataCollectedModel(model)}>
-                                        <Tooltip value={dataLabel()} placement="top">
-                                          <span class="model-selector-free-data-icon" aria-label={dataLabel()}>
-                                            <Icon name="book-open-check" size="small" />
-                                          </span>
-                                        </Tooltip>
-                                      </Show>
-                                    </span>
-                                  </Show>
-                                  <span class="model-selector-item-provider-tag">{model.providerName}</span>
-                                </div>
-                              </div>
-                              <Show when={session && props.favorites !== false}>
-                                <button
-                                  type="button"
-                                  class={`model-selector-star${starred() ? " model-selector-star--active" : ""}`}
-                                  aria-label={starLabel()}
-                                  aria-pressed={starred()}
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    toggleFavorite(model, row)
-                                    searchRef?.focus()
-                                  }}
-                                >
-                                  <Icon name={starred() ? "star-filled" : "star"} size="small" />
-                                </button>
-                              </Show>
-                              <Show when={showSelect()}>
-                                <button
-                                  type="button"
-                                  class="model-selector-item-select-btn"
-                                  aria-label={`${language.t("dialog.model.select")}: ${sanitizeName(model.name)}`}
-                                  onClick={() => selectRow(row)}
-                                >
-                                  {language.t("dialog.model.select")}
-                                </button>
-                              </Show>
-                            </div>
-                          )
                         }
-                      }
-                    </Virtualizer>
-                  </Show>
+                      </Virtualizer>
+                    </Show>
                   </div>
 
                   <Show when={sticky()}>
