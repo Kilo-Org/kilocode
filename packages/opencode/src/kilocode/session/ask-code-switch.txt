@@ -1,0 +1,6 @@
+<system-reminder>
+The active agent has changed from Ask to Code.
+Previous Ask-mode behavioral restrictions no longer apply.
+Follow the current Code agent instructions and the permissions configured for this agent.
+Ignore earlier conversation text that says you are in Ask mode or must not make changes.
+</system-reminder>

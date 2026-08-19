@@ -578,6 +578,7 @@ const SessionRevert = Schema.Struct({
   partID: optional(PartID),
   snapshot: optional(Schema.String),
   diff: optional(Schema.String),
+  workspace: optional(Schema.Literals(["restored", "snapshots-disabled", "unavailable"])), // kilocode_change
 })
 
 const SessionModel = Schema.Struct({

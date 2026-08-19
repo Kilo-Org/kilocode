@@ -47,6 +47,7 @@ import {
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 import * as ModelDiscovery from "@/kilocode/provider/discover-models"
+import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
 // kilocode_change end
 import { ProviderError } from "./error"
 
@@ -326,12 +327,13 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
     "amazon-bedrock": Effect.fnUntraced(function* () {
       const providerConfig = (yield* dep.config()).provider?.["amazon-bedrock"]
       const auth = yield* dep.auth("amazon-bedrock")
+      const stored = bedrockAuth(auth) // kilocode_change
       const env = yield* dep.env()
 
-      // Region precedence: 1) config file, 2) env var, 3) default
+      // Region precedence: 1) config file, 2) stored credentials, 3) env var, 4) default // kilocode_change
       const configRegion = providerConfig?.options?.region
       const envRegion = env["AWS_REGION"]
-      const defaultRegion = configRegion ?? envRegion ?? "us-east-1"
+      const defaultRegion = configRegion ?? stored?.region ?? envRegion ?? "us-east-1" // kilocode_change
 
       // Profile: config file takes precedence over env var
       const configProfile = providerConfig?.options?.profile
@@ -341,17 +343,10 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const awsAccessKeyId = env["AWS_ACCESS_KEY_ID"]
       const configApiKey = providerConfig?.options?.apiKey
 
-      // TODO: Using process.env directly because Env.set only updates a process.env shallow copy,
-      // until the scope of the Env API is clarified (test only or runtime?)
-      const awsBearerToken = iife(() => {
-        const envToken = process.env.AWS_BEARER_TOKEN_BEDROCK
-        if (envToken) return envToken
-        if (auth?.type === "api") {
-          process.env.AWS_BEARER_TOKEN_BEDROCK = auth.key
-          return auth.key
-        }
-        return undefined
-      })
+      // kilocode_change start - pass stored bearer tokens directly without leaking them into process.env
+      const awsBearerToken =
+        process.env.AWS_BEARER_TOKEN_BEDROCK ?? (auth?.type === "api" && !stored ? auth.key : undefined)
+      // kilocode_change end
 
       const awsWebIdentityTokenFile = env["AWS_WEB_IDENTITY_TOKEN_FILE"]
 
@@ -362,6 +357,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       if (
         !profile &&
         !awsAccessKeyId &&
+        !stored && // kilocode_change
         !awsBearerToken &&
         !configApiKey &&
         !awsWebIdentityTokenFile &&
@@ -373,16 +369,19 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
 
       const providerOptions: Record<string, any> = {
         region: defaultRegion,
+        ...(stored ? { credentialProvider: async () => stored.credentials } : {}), // kilocode_change
       }
 
       // Only use credential chain if no bearer token exists
       // Bearer token takes precedence over credential chain (profiles, access keys, IAM roles, web identity tokens)
-      if (!awsBearerToken && !configApiKey) {
+      // kilocode_change start - stored static credentials use the credential provider above
+      if (!awsBearerToken && !configApiKey && !stored) {
         // Build credential provider options (only pass profile if specified)
         const credentialProviderOptions = profile ? { profile } : {}
 
         providerOptions.credentialProvider = fromNodeProviderChain(credentialProviderOptions)
       }
+      // kilocode_change end
 
       // Add custom endpoint if specified (endpoint takes precedence over baseURL)
       const endpoint = providerConfig?.options?.endpoint ?? providerConfig?.options?.baseURL
@@ -529,10 +528,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       }),
     "google-vertex": Effect.fnUntraced(function* (provider: Info) {
       const env = yield* dep.env()
+      const stored = vertexAuth(yield* dep.auth("google-vertex")) // kilocode_change
       // models.dev advertises GOOGLE_VERTEX_PROJECT for Vertex; keep the wider
       // Google Cloud project env names as fallbacks for existing ADC setups.
       const project =
         provider.options?.project ??
+        stored?.project ?? // kilocode_change
         env["GOOGLE_VERTEX_PROJECT"] ??
         env["GOOGLE_CLOUD_PROJECT"] ??
         env["GCP_PROJECT"] ??
@@ -540,6 +541,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
 
       const location = String(
         provider.options?.location ??
+          stored?.location ?? // kilocode_change
           env["GOOGLE_VERTEX_LOCATION"] ??
           env["GOOGLE_CLOUD_LOCATION"] ??
           env["VERTEX_LOCATION"] ??
@@ -561,9 +563,15 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           project,
           location,
+          ...(stored ? vertexCredentials(stored.credentials) : {}), // kilocode_change
           fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
             const { GoogleAuth } = await import("google-auth-library")
-            const auth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] })
+            // kilocode_change start - authenticate OpenAI-compatible Vertex endpoints with stored credentials
+            const auth = new GoogleAuth({
+              scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+              ...(stored ? { credentials: stored.credentials } : {}),
+            })
+            // kilocode_change end
             const client = await auth.getClient()
             const token = await client.getAccessToken()
 
@@ -1612,7 +1620,7 @@ const layer = Layer.effect(
           if (provider.type === "api") {
             mergeProvider(providerID, {
               source: "api",
-              key: provider.key,
+              key: providerKey(providerID, provider), // kilocode_change - keep structured credentials provider-specific
             })
           }
         }
@@ -1746,6 +1754,7 @@ const layer = Layer.effect(
       try {
         const provider = s.providers[model.providerID]
         const options = { ...provider.options }
+        vertexOptions(model.providerID, model.api.npm, options) // kilocode_change - hydrate stored credentials
 
         if (
           model.providerID === "google-vertex" &&

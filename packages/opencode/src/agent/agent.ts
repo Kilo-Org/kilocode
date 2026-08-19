@@ -383,6 +383,7 @@ const layer = Layer.effect(
           // kilocode_change start
           KiloAgent.processConfigItem(item)
           KiloAgent.hardenPlan(key, item, ctx.worktree, user, Permission.fromConfig(value.permission ?? {}))
+          KiloAgent.hardenExplore(key, item, user, Permission.fromConfig(value.permission ?? {}))
         }
 
         function referencePrompt(reference: KiloReference.Resolved) {

@@ -4,6 +4,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.md.MdView
 import com.intellij.openapi.editor.colors.CodeInsightColors
@@ -24,6 +25,16 @@ class PlanExitViewTest : BasePlatformTestCase() {
         val view = PlanExitView(tool, openFile = { _, _ -> })
 
         assertEquals("Plan is ready [.kilo/plans/x.md](.kilo/plans/x.md)", view.markdown())
+    }
+
+    fun `test plan exit is indented to the regular header leading edge`() {
+        val view = PlanExitView(tool(ToolExecState.COMPLETED), openFile = { _, _ -> })
+
+        val ins = view.border.getBorderInsets(view)
+        assertEquals(SessionUiStyle.View.Header.left(), ins.left)
+        assertEquals(0, ins.top)
+        assertEquals(0, ins.bottom)
+        assertEquals(0, ins.right)
     }
 
     fun `test view factory replaces running tool with plan exit view when completed`() {

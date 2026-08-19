@@ -153,6 +153,7 @@ function recalledMemory(turn: Turn) {
 // --- Model resolution + invocation (host provider/`ai` -> port ModelHandle) --------------------
 
 function consolidationOptions(model: Provider.Model) {
+  if (model.api.npm === "@ai-sdk/openai-compatible") return { ...ProviderTransform.smallOptions(model), stream: false }
   if (model.providerID === "openai" || model.api.npm === "@ai-sdk/openai") return { store: false }
   return ProviderTransform.smallOptions(model)
 }

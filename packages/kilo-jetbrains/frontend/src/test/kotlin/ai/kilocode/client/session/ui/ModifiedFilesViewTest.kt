@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -9,10 +10,13 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
+import java.awt.image.BufferedImage
 import javax.swing.AbstractButton
+import javax.swing.JComponent
 
 class ModifiedFilesViewTest : BasePlatformTestCase() {
     private lateinit var view: ModifiedFilesView
@@ -66,6 +70,23 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
         val links = components(view).filterIsInstance<JBLabel>().filter { it.text?.contains("<u>") == true }
         assertTrue(links.any { it.text!!.contains("A.kt") && it.toolTipText == "src/A.kt" })
         assertTrue(links.any { it.text!!.contains("B.kt") && it.toolTipText == "pkg/B.kt" })
+        assertFileHeadersHaveNoSeparators(view)
+        diffScrolls(view).forEach(::assertFullWidthRoundedDiff)
+    }
+
+    fun `test popup modified file headers have no separators`() {
+        view.setDiffs(listOf(
+            file("src/A.kt", 2, 0, ADD),
+            file("pkg/B.kt", 1, 1, UPDATE),
+        ))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            assertFileHeadersHaveNoSeparators(body.component)
+            diffScrolls(body.component).forEach(::assertFullWidthRoundedDiff)
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
     }
 
     fun `test popup is available only when collapsed`() {
@@ -140,6 +161,41 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
         }
         visit(root)
         return out
+    }
+
+    private fun diffScrolls(root: Container): List<JBScrollPane> = root.components.flatMap { child ->
+        val nested = if (child is Container) diffScrolls(child) else emptyList()
+        if (child is JBScrollPane && child.viewport.view is EditorTextField) nested + child else nested
+    }
+
+    private fun assertFullWidthRoundedDiff(pane: JBScrollPane) {
+        val border = pane.border.getBorderInsets(pane)
+        val viewport = pane.viewportBorder.getBorderInsets(pane)
+        assertEquals(0, border.top)
+        assertEquals(0, border.left)
+        assertEquals(0, border.bottom)
+        assertEquals(0, border.right)
+        assertEquals(0, viewport.left)
+        assertEquals(0, viewport.right)
+        assertFalse("diff pane paints its own rounded background", pane.isOpaque)
+
+        pane.setSize(40, 40)
+        val image = BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        pane.paint(graphics)
+        graphics.dispose()
+        assertEquals("rounded corner lets the backdrop show", 0, image.getRGB(0, 0) ushr 24)
+        assertEquals(SessionUiStyle.Colors.codeBlockBackground().rgb, image.getRGB(20, 20))
+    }
+
+    private fun assertFileHeadersHaveNoSeparators(root: Component) {
+        val links = components(root).filterIsInstance<JBLabel>().filter { it.text?.contains("<u>") == true }
+        assertTrue("expected file link headers", links.isNotEmpty())
+        links.forEach { link ->
+            val header = link.parent?.parent as? JComponent
+            assertNotNull("file link should live inside a patch header panel", header)
+            assertNull("patch file header should not draw a separator", header!!.border)
+        }
     }
 
     private fun openDiffButton(): AbstractButton = view.copyToolbar as AbstractButton

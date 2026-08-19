@@ -162,6 +162,19 @@ describe("custom provider fallback reasoning efforts", () => {
     })
   }
 
+  for (const id of ["glm-custom", "kimi-custom", "minimax-custom"]) {
+    test(`openai-compatible custom provider uses broad efforts for ${id}`, () => {
+      const npm = "@ai-sdk/openai-compatible"
+      const model = mockModel({ id, api: { id, url: "https://api.test.com", npm } })
+      expect(ProviderTransform.variants({ ...model, variants: {} })).toEqual({})
+
+      const result = customProviderVariants(model, npm, ProviderTransform.variants)
+      expect(Object.keys(result)).toEqual(efforts)
+      expect(result.none?.reasoningEffort).toBe("none")
+      expect(result.max?.reasoningEffort).toBe("max")
+    })
+  }
+
   test("preserves successful heuristics", () => {
     const model = mockModel({ api: { id: "custom", url: "https://api.test.com", npm: "@ai-sdk/openai-compatible" } })
     const generated = { low: { reasoningEffort: "low" }, high: { reasoningEffort: "high" } }

@@ -11421,11 +11421,18 @@
             }
           },
           "422": {
-            "description": "CommitMessageNoChangesError",
+            "description": "CommitMessageNoChangesError | CommitMessageFailedError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommitMessageNoChangesError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/CommitMessageNoChangesError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CommitMessageFailedError"
+                    }
+                  ]
                 }
               }
             }
@@ -15251,7 +15258,7 @@
             }
           }
         },
-        "description": "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+        "description": "Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.",
         "summary": "Remove a custom agent",
         "requestBody": {
           "content": {
@@ -15261,6 +15268,10 @@
                 "properties": {
                   "name": {
                     "type": "string"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
                   }
                 },
                 "required": ["name"],
@@ -25905,6 +25916,9 @@
             "$ref": "#/components/schemas/EventWorktreeFailed1"
           },
           {
+            "$ref": "#/components/schemas/EventWorktreeSetupReady1"
+          },
+          {
             "$ref": "#/components/schemas/EventServerConnected1"
           },
           {
@@ -26257,6 +26271,9 @@
           },
           {
             "$ref": "#/components/schemas/EventWorktreeFailed"
+          },
+          {
+            "$ref": "#/components/schemas/EventWorktreeSetupReady"
           },
           {
             "$ref": "#/components/schemas/EventServerConnected"
@@ -27280,6 +27297,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -29400,6 +29421,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventWorktreeFailed"
+              },
+              {
+                "$ref": "#/components/schemas/EventWorktreeSetupReady"
               },
               {
                 "$ref": "#/components/schemas/EventServerConnected"
@@ -32389,6 +32413,34 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["worktree.setup.ready"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "branch": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["name"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["server.connected"]
                   },
                   "properties": {
@@ -34016,12 +34068,6 @@
                 "items": {
                   "type": "string"
                 }
-              },
-              "swe_pruner": {
-                "type": "boolean"
-              },
-              "swe_pruner_model": {
-                "type": "string"
               },
               "mcp_timeout": {
                 "type": "integer",
@@ -37765,6 +37811,16 @@
         "required": ["message"],
         "additionalProperties": false
       },
+      "CommitMessageFailedError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      },
       "ConfigOverlayResponse": {
         "type": "object",
         "properties": {
@@ -40279,6 +40335,9 @@
           },
           {
             "$ref": "#/components/schemas/WorktreeFailed"
+          },
+          {
+            "$ref": "#/components/schemas/WorktreeSetupReady"
           },
           {
             "$ref": "#/components/schemas/ServerConnected"
@@ -43982,6 +44041,10 @@
             "items": {
               "$ref": "#/components/schemas/FileDiff"
             }
+          },
+          "workspace": {
+            "type": "string",
+            "enum": ["restored", "snapshots-disabled", "unavailable"]
           }
         },
         "required": ["messageID"],
@@ -45389,6 +45452,33 @@
               }
             },
             "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventWorktreeSetupReady": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["worktree.setup.ready"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              }
+            },
+            "required": ["name"],
             "additionalProperties": false
           }
         },
@@ -54231,6 +54321,56 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "WorktreeSetupReady": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["worktree.setup.ready"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "ServerConnected": {
         "type": "object",
         "properties": {
@@ -57434,6 +57574,34 @@
               }
             },
             "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventWorktreeSetupReady1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["worktree.setup.ready"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              }
+            },
+            "required": ["name"],
             "additionalProperties": false
           }
         },

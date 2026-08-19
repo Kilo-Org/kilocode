@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "專案",
   "agentManager.project.add": "新增專案",
   "agentManager.project.remove": "從 Agent Manager 移除",
-  "agentManager.project.trust": "信任",
   "agentManager.project.missing": "找不到儲存庫",
   "agentManager.notGitRepo": "不是 git 儲存庫",
   "agentManager.worktree.settings": "Worktree 設定",
@@ -112,7 +111,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
 
   "agentManager.dialog.project.select": "選擇專案",
-  "agentManager.dialog.project.untrusted": "請先在側邊欄信任此專案",
   "agentManager.dialog.project.missing": "找不到儲存庫",
   "agentManager.dialog.openWorktree": "新建工作樹",
   "agentManager.dialog.configureWorktree": "配置新 Worktree...",

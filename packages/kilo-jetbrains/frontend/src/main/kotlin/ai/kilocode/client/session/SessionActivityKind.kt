@@ -20,7 +20,7 @@ enum class SessionActivityKind {
     }
 
     fun style(): UiStyle.Badge.Style = when (this) {
-        RUNNING -> UiStyle.Badge.Alert
+        RUNNING -> UiStyle.Badge.SessionRunning
         LOGIN_REQUIRED, PERMISSION, PLAN, QUESTION -> UiStyle.Badge.Primary
     }
 }

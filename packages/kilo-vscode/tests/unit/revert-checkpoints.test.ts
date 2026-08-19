@@ -23,6 +23,13 @@ function method(name: string, next: string) {
   return provider.slice(start, end)
 }
 
+function exported(name: string) {
+  const start = sdk.indexOf(`export type ${name} = {`)
+  const end = sdk.indexOf("\nexport type ", start + 1)
+  expect(start).toBeGreaterThan(-1)
+  return sdk.slice(start, end === -1 ? undefined : end)
+}
+
 describe("message revert checkpoints", () => {
   it("keeps revert actions available after a session is already reverted", () => {
     expect(src).toMatch(/onRevert=\{\s*assistantMessages\(\)\.length > 0\s*\? \(\) =>/)
@@ -59,11 +66,9 @@ describe("revert session synchronization", () => {
 describe("revert workspace restoration status", () => {
   it("renders explicit conversation-only outcomes", () => {
     expect(session).toContain('workspace?: "restored" | "snapshots-disabled" | "unavailable"')
-    expect(sdk).toMatch(
-      /export type Session = \{[\s\S]*?workspace\?: "restored" \| "snapshots-disabled" \| "unavailable"/,
-    )
-    expect(sdk).toMatch(
-      /export type KilocodeSessionImportSessionData = \{[\s\S]*?workspace\?: "restored" \| "snapshots-disabled" \| "unavailable"/,
+    expect(exported("Session")).toContain('workspace?: "restored" | "snapshots-disabled" | "unavailable"')
+    expect(exported("KilocodeSessionImportSessionData")).toContain(
+      'workspace?: "restored" | "snapshots-disabled" | "unavailable"',
     )
     expect(banner).toContain('"revert.banner.workspace.snapshotsDisabled"')
     expect(banner).toContain('"revert.banner.workspace.unavailable"')

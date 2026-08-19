@@ -19,7 +19,6 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.Component
@@ -42,7 +41,7 @@ internal class RecentsList(
     private var snapshot = HistoryActivitySnapshot()
 
     private val title = JBLabel(KiloBundle.message("session.empty.recent")).apply {
-        foreground = UIUtil.getContextHelpForeground()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
     }
 
     internal val list = JBList(model).apply {
@@ -180,8 +179,8 @@ internal class RecentsList(
             val over = selected || hover == index
             isOpaque = over
             background = if (over) list.selectionBackground else list.background
-            title.foreground = if (over) list.selectionForeground else UIUtil.getLabelForeground()
-            time.foreground = if (over) list.selectionForeground else UIUtil.getContextHelpForeground()
+            title.foreground = if (over) list.selectionForeground else SessionUiStyle.Colors.foreground()
+            time.foreground = if (over) list.selectionForeground else SessionUiStyle.Text.Secondary.foreground()
             title.text = value?.let { snapshot.titles[it.id] ?: title(it) } ?: ""
             time.text = value?.let(HistoryTime::relative) ?: ""
             setBadge(value?.id?.let(snapshot.activity::get))
