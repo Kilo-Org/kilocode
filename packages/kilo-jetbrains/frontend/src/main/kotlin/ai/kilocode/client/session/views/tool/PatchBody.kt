@@ -18,6 +18,7 @@ import ai.kilocode.client.ui.md.MdViewFactory
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
@@ -62,6 +63,7 @@ class PatchBody(
     private val selection: SessionSelection?,
     private val openFile: SessionFileOpener,
     private val opts: MdCodeBlockOptions = DIFF_OPTS,
+    private val linkFiles: Boolean = true,
 ) : EditBody {
     override var parent: Disposable? = null
     override var overflow: (() -> Unit)? = null
@@ -69,7 +71,7 @@ class PatchBody(
     private var root: Stack? = null
     private var owner: Disposable? = null
     private val views = mutableListOf<MdView>()
-    private val links = mutableListOf<FileLinkLabel>()
+    private val links = mutableListOf<JBLabel>()
     private var style = SessionEditorStyle.current()
     private var signature = ""
     private val rows = mutableListOf<List<DiffLineNumbers.Row>>()
@@ -182,16 +184,21 @@ class PatchBody(
 
     @RequiresEdt
     private fun header(file: EditFileChange): JComponent {
-        val link = FileLinkLabel(openFile).apply {
+        val label = if (linkFiles) FileLinkLabel(openFile).apply {
             foreground = SessionUiStyle.Colors.foreground()
             font = style.transcriptFont
             setTarget(file.path, tail(file.path))
             isVisible = true
+        } else JBLabel(tail(file.path)).apply {
+            foreground = SessionUiStyle.Colors.foreground()
+            font = style.transcriptFont
         }
-        links.add(link)
+        links.add(label)
+        // Indent only the filename row; the diff content below stays flush to the card edge.
         val row = Stack.horizontal(UiStyle.Gap.sm())
-            .next(link)
+            .next(label)
             .next(DiffStatBadge(file.additions, file.deletions))
+        row.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.bodyIndent())
         return JBUI.Panels.simplePanel(row).apply {
             isOpaque = false
         }

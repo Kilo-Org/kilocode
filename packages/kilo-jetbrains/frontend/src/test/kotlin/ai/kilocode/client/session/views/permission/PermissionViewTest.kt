@@ -7,9 +7,12 @@ import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.PermissionRuleCandidate
 import ai.kilocode.client.session.model.PermissionRuleDecision
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.views.tool.FileLinkLabel
 import ai.kilocode.client.ui.md.MdCommon
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -381,6 +384,8 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertTrue("Should render old line after expansion, got: $expanded", expanded.contains("old"))
         assertTrue("Should render new line after expansion, got: $expanded", expanded.contains("new"))
         assertFalse("Should strip hunk marker in editor preview, got: $expanded", expanded.contains("@@"))
+        assertTrue("Permission diffs should render proposed filenames as plain text", findAll<JBLabel>(diffs.single()).any { it.text == "A.kt" })
+        assertTrue("Permission diffs should not render proposed filenames as links", findAll<FileLinkLabel>(diffs.single()).isEmpty())
         assertTrue(diffs.single().bodyCreated())
 
         diffs.single().openDiffForTest()
@@ -389,6 +394,94 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals("permission:ses:perm6", opens.single().third)
         assertEquals("src/A.kt", opens.single().first.single().file)
         assertEquals("@@ -1 +1 @@\n-old\n+new", opens.single().first.single().patch)
+    }
+
+    fun `test diff view exposes open diff toolbar target`() {
+        view.show(
+            Permission(
+                id = "perm_toolbar",
+                sessionId = "ses",
+                name = "edit",
+                patterns = listOf("src/A.kt"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    fileDiffs = listOf(
+                        PermissionFileDiff(
+                            file = "src/A.kt",
+                            patch = "@@ -1 +1 @@\n-old\n+new",
+                            additions = 1,
+                            deletions = 1,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val diff = view.diffViewsForTest().single()
+        assertTrue(diff is SessionCopyTarget)
+        val target = diff as SessionCopyTarget
+        assertTrue(target.copyEligible)
+        assertSame(diff.openDiffButtonForTest(), target.copyToolbar)
+        assertSame(diff.openDiffAnchorForTest(), target.copyAnchor)
+        assertNull(target.copyText())
+    }
+
+    fun `test diff view does not expose toolbar without openable content`() {
+        view.show(
+            Permission(
+                id = "perm_toolbar_empty",
+                sessionId = "ses",
+                name = "edit",
+                patterns = listOf("src/A.kt"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    fileDiffs = listOf(
+                        PermissionFileDiff(
+                            file = "src/A.kt",
+                            patch = null,
+                            additions = 1,
+                            deletions = 0,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        assertFalse((view.diffViewsForTest().single() as SessionCopyTarget).copyEligible)
+    }
+
+    fun `test diff hover sink drives popup`() {
+        val events = mutableListOf<Pair<PartView, Boolean>>()
+        view.setHoverSink { part, value -> events.add(part to value) }
+        view.show(
+            Permission(
+                id = "perm_hover",
+                sessionId = "ses",
+                name = "edit",
+                patterns = listOf("src/A.kt"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    fileDiffs = listOf(
+                        PermissionFileDiff(
+                            file = "src/A.kt",
+                            patch = "@@ -1 +1 @@\n-old\n+new",
+                            additions = 1,
+                            deletions = 1,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val diff = view.diffViewsForTest().single()
+        assertNotNull(diff.headerPopup())
+
+        diff.setHovered(true)
+        diff.setHovered(false)
+
+        assertEquals(listOf(diff to true, diff to false), events)
+        diff.expand()
+        assertNull(diff.headerPopup())
     }
 
     fun `test diff preview shows no unavailable fallback text`() {

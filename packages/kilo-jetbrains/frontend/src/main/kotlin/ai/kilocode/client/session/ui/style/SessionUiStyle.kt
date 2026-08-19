@@ -111,7 +111,16 @@ object SessionUiStyle {
             const val COMPACT_VERTICAL_PADDING = 5
             const val HORIZONTAL_PADDING = 12
             const val BODY_EXTRA_HEIGHT = 16
+            /** Left inset for the filename row of a diff body so it reads as nested under the header. */
+            const val BODY_INDENT = 24
         }
+
+        /**
+         * Left inset applied to the per-file filename row inside a diff body
+         * ([ai.kilocode.client.session.views.tool.PatchBody]) so filenames sit indented under the header
+         * while the diff content below stays flush to the card edge.
+         */
+        fun bodyIndent() = JBUI.scale(Layout.BODY_INDENT)
 
         /**
          * Standard transparent inset separating an expanded card header from its content, and

@@ -229,6 +229,7 @@ class SessionMessageListPanel(
         this.sessionId = sessionId
         banner?.setDiffOpener(openDiff, sessionId)
         permission?.setDiffOpener(openDiff, sessionId)
+        permission?.setHoverSink(::hover)
         turnViews.values.forEach { it.setDiffOpener(openDiff, sessionId) }
     }
 

@@ -7,6 +7,7 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.selection.hoverPlaceholder
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -38,7 +39,7 @@ class PermissionDiffView private constructor(
     private val selection: SessionSelection?,
     private val parts: Header,
     private val body: PatchBody,
-) : AbstractSessionPartView(parts.panel, { body.mountFiles(emptyList()) }) {
+) : AbstractSessionPartView(parts.panel, { body.mountFiles(emptyList()) }), SessionCopyTarget {
     override val contentId = CONTENT_ID
 
     private var style = SessionEditorStyle.current()
@@ -52,9 +53,15 @@ class PermissionDiffView private constructor(
         diffs: List<PermissionFileDiff>,
         openFile: SessionFileOpener,
         selection: SessionSelection?,
-    ) : this(openFile, selection, Header(), PatchBody(selection, openFile)) {
+    ) : this(openFile, selection, Header(), PatchBody(selection, openFile, linkFiles = false)) {
         setDiffs(diffs)
     }
+
+    override val copyEligible: Boolean get() = diffs.any(::hasOpenableContent)
+    override val copyAnchor: JComponent get() = parts.anchor
+    override val copyToolbar: JComponent get() = parts.diff
+
+    override fun copyText(): String? = null
 
     init {
         body.parent = this
@@ -126,6 +133,12 @@ class PermissionDiffView private constructor(
     internal fun openDiffEnabledForTest() = parts.diff.isEnabled
 
     @RequiresEdt
+    internal fun openDiffButtonForTest() = parts.diff
+
+    @RequiresEdt
+    internal fun openDiffAnchorForTest() = parts.anchor
+
+    @RequiresEdt
     internal fun codeEditorsForTest() = body.codeEditors()
 
     @RequiresEdt
@@ -140,7 +153,7 @@ class PermissionDiffView private constructor(
     @RequiresEdt
     private fun buildPopup(files: List<EditFileChange>): HeaderPopupBody {
         val owner = Disposer.newDisposable("Permission diff popup body")
-        val popup = PatchBody(selection, openFile, POPUP_OPTS).also {
+        val popup = PatchBody(selection, openFile, POPUP_OPTS, linkFiles = false).also {
             it.parent = owner
             it.overflow = ::openDiffViewer
         }

@@ -15,6 +15,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
 import ai.kilocode.client.ui.editor.BashCommandHighlighter
@@ -80,6 +81,7 @@ class PermissionView(
     private var style = SessionEditorStyle.current()
     private var openDiff: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
+    private var hover: ((PartView, Boolean) -> Unit)? = null
 
     private val body = Stack.vertical(gap = UiStyle.Gap.sm())
     private val desc = makeDescription()
@@ -161,6 +163,12 @@ class PermissionView(
         for (view in diffViews) view.setDiffOpener(openDiff, sessionId, requestId)
     }
 
+    @RequiresEdt
+    fun setHoverSink(sink: (PartView, Boolean) -> Unit) {
+        hover = sink
+        for (view in diffViews) view.hover = sink
+    }
+
     /** Hide this view and clear the active request id. */
     @RequiresEdt
     fun hideView() {
@@ -200,6 +208,7 @@ class PermissionView(
         if (diffs.isNotEmpty()) {
             val dv = PermissionDiffView(diffs, openFile, selection)
             dv.setDiffOpener(openDiff, sessionId, requestId)
+            dv.hover = hover
             dv.applyStyle(style)
             diffViews.add(dv)
             diffRow.add(dv)
