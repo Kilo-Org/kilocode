@@ -10,6 +10,7 @@ import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
 import { resolveComment, unresolveComment } from "./pr/PRActions"
+import { ghErrorReason } from "./pr/am-pr-utils"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
@@ -124,6 +125,7 @@ export class PRStatusBridge {
             worktreeId: id,
             threadId,
             success: false,
+            error: ghErrorReason(msg),
           })
         },
       )

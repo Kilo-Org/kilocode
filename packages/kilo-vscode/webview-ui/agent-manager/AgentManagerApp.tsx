@@ -2672,12 +2672,25 @@ const AgentManagerContent: Component = () => {
                         pr={activePR()!.pr}
                         worktree={activePR()!.wt}
                         worktreeId={activePR()!.selected}
+                        activeTerminalId={terms.activeId()}
                         onClose={() => setSidePanel(null)}
                         onOpenExternal={() =>
                           vscode.postMessage({
                             type: "agentManager.openPR",
                             worktreeId: activePR()!.selected,
                             url: activePR()!.pr.url,
+                          })
+                        }
+                        onOpenFile={(file, line) => {
+                          const id = diffCtx()
+                          if (id)
+                            vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
+                        }}
+                        onOpenUrl={(url) =>
+                          vscode.postMessage({
+                            type: "agentManager.openPR",
+                            worktreeId: activePR()!.selected,
+                            url,
                           })
                         }
                       />

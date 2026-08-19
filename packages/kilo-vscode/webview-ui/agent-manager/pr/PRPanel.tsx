@@ -17,8 +17,11 @@ interface PRPanelProps {
   pr: PRStatus
   worktree?: WorktreeState
   worktreeId: string
+  activeTerminalId?: string
   onClose: () => void
   onOpenExternal: () => void
+  onOpenFile?: (file: string, line?: number) => void
+  onOpenUrl?: (url: string) => void
 }
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
@@ -76,7 +79,13 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <Show when={props.pr.comments?.total ? props.pr.comments : undefined}>
             {(comments) => (
               <div ref={commentsRef}>
-                <PRComments comments={comments()} worktreeId={props.worktreeId} />
+                <PRComments
+                  comments={comments()}
+                  worktreeId={props.worktreeId}
+                  activeTerminalId={props.activeTerminalId}
+                  onOpenFile={props.onOpenFile}
+                  onOpenUrl={props.onOpenUrl}
+                />
               </div>
             )}
           </Show>
