@@ -1,4 +1,4 @@
-import { Agent } from "@/agent/agent"
+import * as Agent from "@/agent/agent"
 import { Config } from "@/config/config"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import * as KiloAgent from "@/kilocode/agent"
