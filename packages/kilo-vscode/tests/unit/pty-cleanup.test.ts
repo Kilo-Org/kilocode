@@ -54,4 +54,22 @@ describe("Agent Manager PTY cleanup", () => {
     await discardWorktree(ctx, host, "wt-1", "/worktree", "branch")
     expect(calls).toEqual(["pty", "log"])
   })
+
+  it("keeps the cleanup gate until disk deletion completes", async () => {
+    const calls: string[] = []
+    const release = () => calls.push("release")
+    const ctx = {
+      peekState: () => ({ removeWorktree: () => calls.push("state") }),
+      worktreeManager: () => ({ removeWorktree: async () => calls.push("disk") }),
+    } as unknown as ProjectContext
+    const host = {
+      push: () => calls.push("push"),
+      removePtys: async () => release,
+      client: () => ({ session: { delete: async () => undefined } }) as unknown as KiloClient,
+      log: () => undefined,
+    } as unknown as LifecycleHost
+
+    await discardWorktree(ctx, host, "wt-1", "/worktree", "branch")
+    expect(calls).toEqual(["disk", "state", "push", "release"])
+  })
 })

@@ -42,7 +42,7 @@ export interface LifecycleHost {
   capture: (event: string, props: Record<string, unknown>) => void
   autoName: () => { enabled: boolean }
   client: () => KiloClient
-  removePtys: (directory: string) => Promise<void>
+  removePtys: (directory: string) => Promise<() => void>
   metadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   post: (message: AgentManagerOutMessage) => void
   log: (...args: unknown[]) => void
@@ -64,15 +64,20 @@ export async function createLifecycleWorktree(
 
   const session = await host.createSession(created.result.path, created.result.branch, created.worktree.id)
   if (!session) {
+    let release: () => void
     try {
-      await host.removePtys(created.result.path)
+      release = await host.removePtys(created.result.path)
     } catch (error) {
       host.log("Failed to remove worktree PTYs:", error)
       return null
     }
-    await ctx.worktreeManager().removeWorktree(created.result.path, created.result.branch)
-    ctx.peekState()?.removeWorktree(created.worktree.id)
-    host.push()
+    try {
+      await ctx.worktreeManager().removeWorktree(created.result.path, created.result.branch)
+      ctx.peekState()?.removeWorktree(created.worktree.id)
+      host.push()
+    } finally {
+      release()
+    }
     return null
   }
 
@@ -117,21 +122,26 @@ export async function deleteLifecycleWorktree(
     return null
   }
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
+  let release: () => void
   try {
-    await host.removePtys(worktree.path)
-    await ctx.worktreeManager().removeWorktree(worktree.path, branch)
+    release = await host.removePtys(worktree.path)
   } catch (error) {
     host.log(`Failed to remove worktree from disk: ${error}`)
     host.unskipStats(worktreeId)
     return null
   }
-  const orphaned = state.removeWorktree(worktreeId)
-  host.removePR(worktreeId)
-  host.forgetName(worktreeId)
-  host.stopDiffs(worktree.path, orphaned)
-  for (const s of orphaned) host.sessions.clearDirectory(s.id)
-  host.push()
-  host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
+  try {
+    await ctx.worktreeManager().removeWorktree(worktree.path, branch)
+    const orphaned = state.removeWorktree(worktreeId)
+    host.removePR(worktreeId)
+    host.forgetName(worktreeId)
+    host.stopDiffs(worktree.path, orphaned)
+    for (const s of orphaned) host.sessions.clearDirectory(s.id)
+    host.push()
+    host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
+  } finally {
+    release()
+  }
   return null
 }
 
@@ -161,7 +171,8 @@ export async function removeStaleLifecycleWorktree(
     return null
   }
   try {
-    await host.removePtys(worktree.path)
+    const release = await host.removePtys(worktree.path)
+    release()
   } catch (error) {
     host.log(`Failed to remove stale worktree PTYs: ${error}`)
     return null
