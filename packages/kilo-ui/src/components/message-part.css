@@ -286,12 +286,13 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   overflow-y: auto;
   overflow-x: hidden;
   max-height: 240px;
+  scrollbar-gutter: stable;
 }
 
 [data-component="bash-output"] [data-slot="bash-section-actions"] {
   position: absolute;
   top: 4px;
-  right: 16px;
+  right: 20px;
   z-index: 1;
   display: flex;
   align-items: center;
