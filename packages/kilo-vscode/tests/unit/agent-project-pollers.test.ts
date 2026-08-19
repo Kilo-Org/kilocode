@@ -9,8 +9,8 @@ import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeState
 const WORKSPACE = "/repo/main"
 const PINNED = projectIdFor(WORKSPACE)
 
-function stored(id: string, trusted = true): StoredProject {
-  return { id, root: `/repo/${id}`, order: 1, trusted, addedAt: new Date().toISOString() }
+function stored(id: string): StoredProject {
+  return { id, root: `/repo/${id}`, order: 1, addedAt: new Date().toISOString() }
 }
 
 function setup(projects: StoredProject[], opts: { enabled?: boolean } = {}) {
@@ -20,7 +20,6 @@ function setup(projects: StoredProject[], opts: { enabled?: boolean } = {}) {
       list: () => projects,
       get: (id) => projects.find((p) => p.id === id),
     },
-    trusted: (id) => projects.find((p) => p.id === id)?.trusted === true,
     enabled: () => opts.enabled ?? true,
     deps: {
       log: () => {},
@@ -83,7 +82,7 @@ function fakes() {
 }
 
 describe("ProjectPollers", () => {
-  it("starts pollers for an expanded trusted background project", () => {
+  it("starts pollers for an expanded background project", () => {
     const extra = stored("prj-extra")
     const contexts = setup([extra])
     expand(contexts, "prj-extra")

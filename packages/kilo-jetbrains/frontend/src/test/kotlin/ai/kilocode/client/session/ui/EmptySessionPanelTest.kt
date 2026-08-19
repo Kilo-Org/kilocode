@@ -130,6 +130,26 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals(5, panel.recentCount())
     }
 
+    fun `test minimal mode shows only logo and feedback`() {
+        val panel = panel(recents = listOf(session("ses_1")), minimal = true)
+
+        assertTrue(panel.logoVisible())
+        assertTrue(panel.feedbackVisible())
+        assertFalse(panel.historyVisible())
+        assertFalse(panel.descriptionVisible())
+        assertFalse(panel.recentVisible())
+    }
+
+    fun `test full mode shows logo feedback history description and recents`() {
+        val panel = panel(recents = listOf(session("ses_1")))
+
+        assertTrue(panel.logoVisible())
+        assertTrue(panel.feedbackVisible())
+        assertTrue(panel.historyVisible())
+        assertTrue(panel.descriptionVisible())
+        assertTrue(panel.recentVisible())
+    }
+
     fun `test explanation uses welcome message`() {
         val panel = panel()
 
@@ -352,7 +372,8 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         history: () -> Unit = {},
         activity: () -> Map<String, SessionActivityKind> = { sessions.activitySnapshot() },
         titles: () -> Map<String, String> = { emptyMap() },
-    ) = EmptySessionPanel(testRootDisposable, controller, recents, history, activity, titles)
+        minimal: Boolean = false,
+    ) = EmptySessionPanel(testRootDisposable, controller, recents, history, activity, titles, minimal = minimal)
 
     private fun flush() = runBlocking {
         delay(100)

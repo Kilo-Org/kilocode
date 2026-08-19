@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "PROJEKTY",
   "agentManager.project.add": "Dodaj projekt",
   "agentManager.project.remove": "Usuń z Agent Manager",
-  "agentManager.project.trust": "Zaufaj",
   "agentManager.project.missing": "Nie znaleziono repozytorium",
   "agentManager.notGitRepo": "Nie jest repozytorium git",
   "agentManager.worktree.settings": "Ustawienia Worktree",
@@ -63,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOKALNE & WORKTREES",
 
   "agentManager.terminal.new": "Nowa karta terminala",
+  "agentManager.terminal.addCentral": "Nowa centralna karta terminala",
+  "agentManager.terminal.addTerminal": "Nowa karta terminala na pasku bocznym",
   "agentManager.terminal.ended": "terminal zakończony — zamknij kartę, aby zamknąć",
   "agentManager.terminal.endedRestartable":
     "terminal zakończony - wpisz tekst, aby uruchomić nową powłokę, lub zamknij kartę",
@@ -118,7 +119,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Usuń nieaktualny Worktree",
 
   "agentManager.dialog.project.select": "Wybierz projekt",
-  "agentManager.dialog.project.untrusted": "Najpierw zaufaj temu projektowi na pasku bocznym",
   "agentManager.dialog.project.missing": "Nie znaleziono repozytorium",
   "agentManager.dialog.openWorktree": "Nowy Worktree",
   "agentManager.dialog.configureWorktree": "Skonfiguruj Nowe Worktree...",

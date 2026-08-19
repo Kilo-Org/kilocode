@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "PROGETTI",
   "agentManager.project.add": "Aggiungi progetto",
   "agentManager.project.remove": "Rimuovi da Agent Manager",
-  "agentManager.project.trust": "Fidati",
   "agentManager.project.missing": "Repository non trovata",
   "agentManager.notGitRepo": "Non è una repository git",
 
@@ -67,6 +66,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOCALE & WORKTREE",
 
   "agentManager.terminal.new": "Nuova scheda terminale",
+  "agentManager.terminal.addCentral": "Nuova scheda terminale centrale",
+  "agentManager.terminal.addTerminal": "Nuova scheda terminale nella barra laterale",
   "agentManager.terminal.ended": "terminale terminato - chiudi la scheda per nasconderlo",
   "agentManager.terminal.endedRestartable":
     "terminale terminato - digita per avviare una nuova shell o chiudi la scheda",
@@ -124,7 +125,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Rimuovi worktree obsoleto",
 
   "agentManager.dialog.project.select": "Seleziona progetto",
-  "agentManager.dialog.project.untrusted": "Prima, fidati di questo progetto nella barra laterale",
   "agentManager.dialog.project.missing": "Repository non trovata",
   "agentManager.dialog.openWorktree": "Nuovo worktree",
   "agentManager.dialog.tab.new": "Nuovo",

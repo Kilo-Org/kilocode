@@ -510,12 +510,6 @@ interface SetProjectExpandedIn {
   expanded: boolean
 }
 
-/** Grant a project permission to run project-controlled scripts and load state. */
-interface TrustProjectIn {
-  type: "agentManager.trustProject"
-  projectId: string
-}
-
 interface DeleteWorktreeIn {
   type: "agentManager.deleteWorktree"
   projectId?: string
@@ -899,6 +893,7 @@ interface RequestTerminalContextIn {
   type: "requestTerminalContext"
   requestId: string
   sessionID?: string
+  agentManagerContext?: string
 }
 
 interface ClearSessionIn {
@@ -1024,7 +1019,6 @@ export type AgentManagerInMessage =
   | ActivateSelectionIn
   | RememberTargetIn
   | SetProjectExpandedIn
-  | TrustProjectIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | PromoteSessionIn

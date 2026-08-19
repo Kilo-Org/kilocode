@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "PROJELER",
   "agentManager.project.add": "Proje ekle",
   "agentManager.project.remove": "Agent Manager'dan kaldır",
-  "agentManager.project.trust": "Güven",
   "agentManager.project.missing": "Depo bulunamadı",
   "agentManager.notGitRepo": "Bir git deposu değil",
 
@@ -67,6 +66,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "YEREL & WORKTREE'LER",
 
   "agentManager.terminal.new": "Yeni Terminal Sekmesi",
+  "agentManager.terminal.addCentral": "Yeni merkezi terminal sekmesi",
+  "agentManager.terminal.addTerminal": "Kenar çubuğunda yeni terminal sekmesi",
   "agentManager.terminal.ended": "terminal sona erdi — kapatmak için sekmeyi kapatın",
   "agentManager.terminal.endedRestartable":
     "terminal sona erdi - yeni bir kabuk başlatmak için yazın veya sekmeyi kapatın",
@@ -124,7 +125,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Eskimiş worktree'yi kaldır",
 
   "agentManager.dialog.project.select": "Proje seç",
-  "agentManager.dialog.project.untrusted": "Önce kenar çubuğunda bu projeye güvenin",
   "agentManager.dialog.project.missing": "Depo bulunamadı",
   "agentManager.dialog.openWorktree": "Yeni Worktree",
   "agentManager.dialog.configureWorktree": "Yeni Worktree Yapılandır...",

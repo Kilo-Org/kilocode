@@ -42,11 +42,6 @@ export interface AgentContent {
   prompt: string
   options?: Record<string, unknown>
   permission?: Record<string, unknown>
-  requirements?: {
-    skills?: string[]
-    mcps?: string[]
-    vscode_extensions?: Array<{ name: string; id: string }>
-  }
 }
 
 export interface AgentMarketplaceItem extends MarketplaceItemBase {

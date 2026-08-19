@@ -191,6 +191,11 @@ export interface WebviewFocusChangedRequest {
   focused: boolean
 }
 
+export interface AgentManagerFocusChangedRequest {
+  type: "agentManagerFocusChanged"
+  target: "prompt" | "mainTerminal" | "sideTerminal" | "other"
+}
+
 export interface SelectSourceRequest {
   type: "selectSource"
   id: string
@@ -271,14 +276,6 @@ export interface RequestAgentsMessage {
 
 export interface RequestSkillsMessage {
   type: "requestSkills"
-}
-
-export interface RequestAgentRequirementsMessage {
-  type: "requestAgentRequirements"
-  agent: string
-  directory: string
-  sessionID?: string
-  force?: boolean
 }
 
 export interface RequestCommandsMessage {
@@ -442,6 +439,7 @@ export interface RequestTerminalContextMessage {
   type: "requestTerminalContext"
   requestId: string
   sessionID?: string
+  agentManagerContext?: string
 }
 
 export interface RequestGitChangesContextMessage {
@@ -756,12 +754,6 @@ export interface SetProjectExpandedMessage {
   type: "agentManager.setProjectExpanded"
   projectId: string
   expanded: boolean
-}
-
-// Grant a project permission to run project-controlled scripts and load state
-export interface TrustProjectMessage {
-  type: "agentManager.trustProject"
-  projectId: string
 }
 
 // Configure worktree setup script
@@ -1435,12 +1427,12 @@ export type WebviewMessage =
   | SetOrganizationRequest
   | WebviewReadyRequest
   | WebviewFocusChangedRequest
+  | AgentManagerFocusChangedRequest
   | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
-  | RequestAgentRequirementsMessage
   | RequestCommandsMessage
   | SendCommandRequest
   | RemoveSkillMessage
@@ -1522,7 +1514,6 @@ export type WebviewMessage =
   | ActivateSelectionMessage
   | RememberTargetMessage
   | SetProjectExpandedMessage
-  | TrustProjectMessage
   | ConfigureSetupScriptRequest
   | ConfigureRunScriptRequest
   | RunScriptRequest

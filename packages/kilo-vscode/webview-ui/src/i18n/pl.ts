@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "Kompaktuj sesję",
   "command.session.export": "Eksportuj transkrypcję sesji",
 
-  "agentRequirements.skill.installed": "Zainstalowano",
-  "agentRequirements.skill.checkFailed": "Sprawdzanie umiejętności nie powiodło się",
-  "agentRequirements.skill.missing": "Nie zainstalowano",
-  "agentRequirements.mcp.connected": "Połączono",
-  "agentRequirements.mcp.checkFailed": "Sprawdzanie MCP nie powiodło się",
-  "agentRequirements.mcp.missing": "Nie połączono",
-  "agentRequirements.extension.installed": "Zainstalowano",
-  "agentRequirements.extension.checkFailed": "Sprawdzanie rozszerzenia VS Code nie powiodło się",
-  "agentRequirements.extension.missing": "Nie zainstalowano",
-  "agentRequirements.extension.description": "Zainstaluj brakujące rozszerzenia w VS Code.",
-  "agentRequirements.group.skills": "Umiejętności",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "Rozszerzenia VS Code",
-  "agentRequirements.blocked.title": "Wymagania wstępne agenta {{agent}}",
-  "agentRequirements.blocked.description": "Ten agent potrzebuje następujących narzędzi, zanim będzie mógł działać.",
-  "agentRequirements.prompt.blocked": "Najpierw ukończ wymagane sprawdzenia, aby użyć tego agenta",
-  "agentRequirements.action.openMarketplace": "Otwórz Marketplace",
-  "agentRequirements.error.unknownAgent": "Nie znaleziono wybranego agenta.",
-  "agentRequirements.error.malformedDeclaration": "Ten agent ma nieprawidłową deklarację wymagań.",
-  "agentRequirements.error.discoveryFailed": "Kilo nie mógł sprawdzić dostępnych umiejętności.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo nie mógł sprawdzić stanu serwera MCP.",
-  "agentRequirements.error.scopeMismatch": "To sprawdzenie wymagań agenta nie jest już aktywne.",
-  "agentRequirements.error.requestFailed": "Kilo nie mógł sprawdzić wymagań agenta.",
-
   "dialog.provider.search.placeholder": "Szukaj dostawców",
   "dialog.provider.empty": "Nie znaleziono dostawców",
   "dialog.provider.group.other": "Inne",
@@ -824,12 +800,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Włącz SWE-Pruner: przycinanie obszernych danych wyjściowych narzędzi odczytu, wyszukiwania i powłoki z uwzględnieniem zadania, kierowane pytaniem przewodnim dostarczonym przez agenta",
-  "settings.experimental.swePrunerModel.title": "Model SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Model używany do przycinania wyników narzędzi; domyślnie skonfigurowany mały model",
   "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
   "settings.experimental.multiProject.description":
     "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",

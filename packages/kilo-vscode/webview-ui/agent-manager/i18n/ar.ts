@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "المشاريع",
   "agentManager.project.add": "إضافة مشروع",
   "agentManager.project.remove": "إزالة من Agent Manager",
-  "agentManager.project.trust": "وثوق",
   "agentManager.project.missing": "المستودع غير موجود",
   "agentManager.notGitRepo": "ليس مستودع git",
   "agentManager.worktree.settings": "إعدادات Worktree",
@@ -62,6 +61,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "محلي & WORKTREES",
 
   "agentManager.terminal.new": "علامة تبويب جديدة للمحطة الطرفية",
+  "agentManager.terminal.addCentral": "علامة تبويب طرفية مركزية جديدة",
+  "agentManager.terminal.addTerminal": "علامة تبويب طرفية جديدة في الشريط الجانبي",
   "agentManager.terminal.ended": "انتهت المحطة الطرفية — أغلق علامة التبويب للإخفاء",
   "agentManager.terminal.endedRestartable": "انتهت المحطة الطرفية - اكتب لبدء صدفة جديدة أو أغلق علامة التبويب",
   "agentManager.terminal.setupFailed": "فشل البرنامج النصي للإعداد",
@@ -115,7 +116,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "إزالة Worktree القديم",
 
   "agentManager.dialog.project.select": "اختيار مشروع",
-  "agentManager.dialog.project.untrusted": "يُرجى الوثوق بهذا المشروع من الشريط الجانبي أولًا",
   "agentManager.dialog.project.missing": "المستودع غير موجود",
   "agentManager.dialog.openWorktree": "شجرة عمل جديدة",
   "agentManager.dialog.configureWorktree": "تكوين Worktree جديد...",

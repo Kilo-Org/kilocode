@@ -3,6 +3,12 @@ import type { ProjectRouteService } from "../agent-manager/project/route"
 export type KiloProviderOptions = {
   /** Context key updated from focus events reported by this provider's webview. */
   focusContext?: string
+  /** Context keys updated by Agent Manager prompt and terminal focus events. */
+  focusTargetContext?: {
+    prompt: string
+    mainTerminal: string
+    sideTerminal: string
+  }
   projectDirectory?: string | null
   platform?: string
   snapshotInitialization?: "wait"

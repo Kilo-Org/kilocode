@@ -1,7 +1,10 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.rpc.dto.SessionDto
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataKey
 
 interface SessionManager {
@@ -27,6 +30,15 @@ interface SessionManager {
     val showsBranchBadgeInHeader: Boolean get() = true
 
     val hostedInEditorTab: Boolean get() = false
+
+    fun emptyPanel(parent: Disposable, controller: SessionController): EmptySessionPanel = EmptySessionPanel(
+        parent,
+        controller,
+        controller.recents(),
+        history = { showHistory() },
+        activity = { activity() },
+        titles = { titles() },
+    )
 
     fun openSession(session: SessionDto) {
         openSession(SessionRef.Local(session))
