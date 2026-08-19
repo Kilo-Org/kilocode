@@ -44,7 +44,7 @@ describe("kilo tui thread", () => {
     expect(calls).toBe(1)
   })
 
-  test.skipIf(process.platform === "win32")(
+  test(
     "starts the TUI from a directory without OpenTUI dependencies",
     async () => {
       await using root = await tmpdir()

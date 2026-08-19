@@ -349,7 +349,8 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
       }
       if (y < 0) {
         scroll.scrollBy(y)
-        if (flat()[0] === selected()) { // kilocode_change - reference identity; duplicate values are legal (see `active`)
+        if (flat()[0] === selected()) {
+          // kilocode_change - reference identity; duplicate values are legal (see `active`)
           scroll.scrollTo(0)
         }
       }

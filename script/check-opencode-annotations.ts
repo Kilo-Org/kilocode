@@ -118,8 +118,7 @@ function isUpstreamMerge() {
       s.startsWith("merge: opencode ") ||
       s.startsWith("merge: record upstream ") ||
       s.startsWith("resolve merge conflict") ||
-      s.startsWith("merge branch 'johnnyeric/opencode") ||
-      (s.includes("merge") && s.includes("opencode"))
+      /^merge (?:remote-tracking )?branch '(?:[^/']+\/)*opencode-v\d/.test(s)
     )
   })
 }
