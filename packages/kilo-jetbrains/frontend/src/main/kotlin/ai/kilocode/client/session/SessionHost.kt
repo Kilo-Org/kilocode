@@ -1,5 +1,7 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.telemetry.Telemetry
@@ -91,7 +93,29 @@ abstract class SessionHost(
     }
 
     @RequiresEdt
+    override fun emptyPanel(parent: Disposable, controller: SessionController): EmptySessionPanel = EmptySessionPanel(
+        parent,
+        controller,
+        controller.recents(),
+        history = { showHistory() },
+        activity = { activity() },
+        titles = { titles() },
+        timers = timers,
+    )
+
+    @RequiresEdt
     protected fun currentUi(): SessionUi? = current
+
+    /**
+     * Present an empty, lazily-created session panel so a host never sits on a blank void while a
+     * real session cannot be created yet (e.g. the backend is paused for migration). Unlike
+     * [newSession] it does not fire [onSessionsChanged], so it won't kick off list reloads.
+     */
+    @RequiresEdt
+    protected fun showBlank() {
+        if (current?.blank == true) return
+        show(create(project, root, this, null, timers))
+    }
 
     @RequiresEdt
     fun currentKey(): String? {

@@ -75,30 +75,6 @@ export const dict = {
   "command.session.compact": "ضغط الجلسة",
   "command.session.export": "تصدير سجل الجلسة",
 
-  "agentRequirements.skill.installed": "مثبت",
-  "agentRequirements.skill.checkFailed": "فشل فحص المهارة",
-  "agentRequirements.skill.missing": "غير مثبت",
-  "agentRequirements.mcp.connected": "متصل",
-  "agentRequirements.mcp.checkFailed": "فشل فحص MCP",
-  "agentRequirements.mcp.missing": "غير متصل",
-  "agentRequirements.extension.installed": "مثبت",
-  "agentRequirements.extension.checkFailed": "فشل فحص إضافة VS Code",
-  "agentRequirements.extension.missing": "غير مثبت",
-  "agentRequirements.extension.description": "ثبّت الإضافات الناقصة في VS Code.",
-  "agentRequirements.group.skills": "المهارات",
-  "agentRequirements.group.mcps": "MCPs",
-  "agentRequirements.group.extensions": "إضافات VS Code",
-  "agentRequirements.blocked.title": "متطلبات وكيل {{agent}}",
-  "agentRequirements.blocked.description": "يحتاج هذا الوكيل إلى الأدوات التالية قبل أن يتمكن من العمل.",
-  "agentRequirements.prompt.blocked": "أكمل الفحوصات المطلوبة لاستخدام هذا الوكيل أولاً",
-  "agentRequirements.action.openMarketplace": "فتح Marketplace",
-  "agentRequirements.error.unknownAgent": "تعذر العثور على الوكيل المحدد.",
-  "agentRequirements.error.malformedDeclaration": "لدى هذا الوكيل تعريف متطلبات غير صالح.",
-  "agentRequirements.error.discoveryFailed": "تعذر على Kilo فحص المهارات المتاحة.",
-  "agentRequirements.error.mcpStatusFailed": "تعذر على Kilo فحص حالة خادم MCP.",
-  "agentRequirements.error.scopeMismatch": "لم يعد فحص متطلبات هذا الوكيل نشطًا.",
-  "agentRequirements.error.requestFailed": "تعذر على Kilo فحص متطلبات الوكيل.",
-
   "dialog.provider.search.placeholder": "البحث عن موفرين",
   "dialog.provider.empty": "لم يتم العثور على موفرين",
   "dialog.provider.group.other": "آخر",
@@ -844,12 +820,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "تفعيل SWE-Pruner: تقليم المخرجات الكبيرة لأدوات القراءة والبحث وshell مع مراعاة المهمة، استنادًا إلى سؤال تركيز يقدّمه الوكيل",
-  "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",

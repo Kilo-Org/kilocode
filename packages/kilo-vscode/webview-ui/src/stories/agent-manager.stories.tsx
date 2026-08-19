@@ -1122,7 +1122,6 @@ const projectPickerProjects: AgentProjectSnapshot[] = [
     active: true,
     expanded: true,
     initialized: true,
-    trusted: true,
     missing: false,
   },
   {
@@ -1133,18 +1132,6 @@ const projectPickerProjects: AgentProjectSnapshot[] = [
     active: false,
     expanded: false,
     initialized: true,
-    trusted: true,
-    missing: false,
-  },
-  {
-    id: "project-untrusted",
-    root: "/workspace/sample-app",
-    label: "sample-app",
-    pinned: false,
-    active: false,
-    expanded: false,
-    initialized: false,
-    trusted: false,
     missing: false,
   },
 ]
@@ -1196,10 +1183,7 @@ export const NewWorktreeProjectDropdown: Story = {
                           projects={projectPickerProjects}
                           selected="project-main"
                           onSelect={() => undefined}
-                          labels={{
-                            untrusted: "Trust this project in the sidebar first",
-                            missing: "Repository not found",
-                          }}
+                          labels={{ missing: "Repository not found" }}
                         />
                       </DeferredPopover>
                     </div>
@@ -1355,7 +1339,6 @@ const projectA: AgentProjectSnapshot = {
   active: true,
   expanded: true,
   initialized: true,
-  trusted: true,
   missing: false,
 }
 const projectB: AgentProjectSnapshot = {
@@ -1366,7 +1349,6 @@ const projectB: AgentProjectSnapshot = {
   active: false,
   expanded: true,
   initialized: true,
-  trusted: true,
   missing: false,
 }
 

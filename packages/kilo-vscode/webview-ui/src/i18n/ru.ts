@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "Сжать сессию",
   "command.session.export": "Экспортировать запись сеанса",
 
-  "agentRequirements.skill.installed": "Установлено",
-  "agentRequirements.skill.checkFailed": "Не удалось проверить навык",
-  "agentRequirements.skill.missing": "Не установлено",
-  "agentRequirements.mcp.connected": "Подключено",
-  "agentRequirements.mcp.checkFailed": "Не удалось проверить MCP",
-  "agentRequirements.mcp.missing": "Не подключено",
-  "agentRequirements.extension.installed": "Установлено",
-  "agentRequirements.extension.checkFailed": "Не удалось проверить расширение VS Code",
-  "agentRequirements.extension.missing": "Не установлено",
-  "agentRequirements.extension.description": "Установите отсутствующие расширения в VS Code.",
-  "agentRequirements.group.skills": "Навыки",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "Расширения VS Code",
-  "agentRequirements.blocked.title": "Требования агента {{agent}}",
-  "agentRequirements.blocked.description": "Этому агенту нужны следующие инструменты перед запуском.",
-  "agentRequirements.prompt.blocked": "Сначала выполните необходимые проверки, чтобы использовать этого агента",
-  "agentRequirements.action.openMarketplace": "Открыть Marketplace",
-  "agentRequirements.error.unknownAgent": "Выбранный агент не найден.",
-  "agentRequirements.error.malformedDeclaration": "У этого агента недопустимое объявление требований.",
-  "agentRequirements.error.discoveryFailed": "Kilo не смог проверить доступные навыки.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo не смог проверить состояние сервера MCP.",
-  "agentRequirements.error.scopeMismatch": "Эта проверка требований агента больше не активна.",
-  "agentRequirements.error.requestFailed": "Kilo не смог проверить требования агента.",
-
   "dialog.provider.search.placeholder": "Поиск провайдеров",
   "dialog.provider.empty": "Провайдеры не найдены",
   "dialog.provider.group.other": "Другие",
@@ -863,12 +839,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Включить SWE-Pruner: обрезка больших объёмов вывода инструментов чтения, поиска и командной оболочки с учётом задачи и на основе предоставленного агентом фокус-вопроса",
-  "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Модель для обрезки вывода инструментов; по умолчанию — настроенная малая модель",
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",

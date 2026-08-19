@@ -57,6 +57,13 @@ function name(diff: ReviewDiff) {
   return diff.file ?? ""
 }
 
+function patchFor(file: string, value: string) {
+  if (!value.trimStart().startsWith("@@")) return value
+  if (!file) return value
+  const body = value.endsWith("\n") ? value : `${value}\n`
+  return `--- a/${file}\n+++ b/${file}\n${body}`
+}
+
 function contents(diff: ReviewDiff): DiffText {
   if (typeof diff.patch === "string") {
     return { ...reconstruct(diff.patch), patch: diff.patch }
@@ -90,6 +97,28 @@ export function normalize(diff: ReviewDiff): ViewDiff {
     deletions: diff.deletions,
     status: diff.status,
     fileDiff: fileDiffFor(diff, view),
+  }
+}
+
+export function normalizeHunk(file: string, patch: string) {
+  if (!file || !patch.trim()) return
+  const value = patchFor(file, patch)
+  let fileDiff: FileDiffMetadata | undefined
+  try {
+    fileDiff = processFile(value, { cacheKey: value })
+  } catch {
+    return
+  }
+  if (!fileDiff?.hunks.length) return
+  return {
+    file,
+    patch: value,
+    before: fileDiff.deletionLines.join(""),
+    after: fileDiff.additionLines.join(""),
+    additions: fileDiff.additionLines.length,
+    deletions: fileDiff.deletionLines.length,
+    status: "modified" as const,
+    fileDiff,
   }
 }
 

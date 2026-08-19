@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "Komprimér session",
   "command.session.export": "Eksporter sessionsudskrift",
 
-  "agentRequirements.skill.installed": "Installeret",
-  "agentRequirements.skill.checkFailed": "Skill-kontrollen mislykkedes",
-  "agentRequirements.skill.missing": "Ikke installeret",
-  "agentRequirements.mcp.connected": "Forbundet",
-  "agentRequirements.mcp.checkFailed": "MCP-kontrollen mislykkedes",
-  "agentRequirements.mcp.missing": "Ikke forbundet",
-  "agentRequirements.extension.installed": "Installeret",
-  "agentRequirements.extension.checkFailed": "Kontrollen af VS Code-udvidelsen mislykkedes",
-  "agentRequirements.extension.missing": "Ikke installeret",
-  "agentRequirements.extension.description": "Installer de manglende udvidelser i VS Code.",
-  "agentRequirements.group.skills": "Skills",
-  "agentRequirements.group.mcps": "MCP’er",
-  "agentRequirements.group.extensions": "VS Code-udvidelser",
-  "agentRequirements.blocked.title": "Forudsætninger for {{agent}}-agenten",
-  "agentRequirements.blocked.description": "Denne agent skal have følgende værktøjer, før den kan køre.",
-  "agentRequirements.prompt.blocked": "Fuldfør først de krævede kontroller for at bruge denne agent",
-  "agentRequirements.action.openMarketplace": "Åbn Marketplace",
-  "agentRequirements.error.unknownAgent": "Den valgte agent blev ikke fundet.",
-  "agentRequirements.error.malformedDeclaration": "Denne agent har en ugyldig kravdeklaration.",
-  "agentRequirements.error.discoveryFailed": "Kilo kunne ikke kontrollere de tilgængelige skills.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo kunne ikke kontrollere MCP-serverstatus.",
-  "agentRequirements.error.scopeMismatch": "Denne agentkravskontrol er ikke længere aktiv.",
-  "agentRequirements.error.requestFailed": "Kilo kunne ikke kontrollere agentkravene.",
-
   "dialog.provider.search.placeholder": "Søg udbydere",
   "dialog.provider.empty": "Ingen udbydere fundet",
   "dialog.provider.group.other": "Andre",
@@ -866,12 +842,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Yderligere skrivbare stier",
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Aktivér SWE-Pruner: opgavebevidst beskæring af store output fra læse-, søge- og shellværktøjer, styret af et fokusspørgsmål fra agenten",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
-  "settings.experimental.swePrunerModel.description":
-    "Model til beskæring af værktøjsoutput; som standard den konfigurerede lille model",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",

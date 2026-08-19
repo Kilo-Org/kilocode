@@ -77,30 +77,6 @@ export const dict = {
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.export": "ส่งออกบันทึกเซสชัน",
 
-  "agentRequirements.skill.installed": "ติดตั้งแล้ว",
-  "agentRequirements.skill.checkFailed": "การตรวจสอบสกิลล้มเหลว",
-  "agentRequirements.skill.missing": "ยังไม่ได้ติดตั้ง",
-  "agentRequirements.mcp.connected": "เชื่อมต่อแล้ว",
-  "agentRequirements.mcp.checkFailed": "การตรวจสอบ MCP ล้มเหลว",
-  "agentRequirements.mcp.missing": "ยังไม่ได้เชื่อมต่อ",
-  "agentRequirements.extension.installed": "ติดตั้งแล้ว",
-  "agentRequirements.extension.checkFailed": "การตรวจสอบส่วนขยาย VS Code ล้มเหลว",
-  "agentRequirements.extension.missing": "ยังไม่ได้ติดตั้ง",
-  "agentRequirements.extension.description": "ติดตั้งส่วนขยายที่ขาดหายใน VS Code",
-  "agentRequirements.group.skills": "สกิล",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "ส่วนขยาย VS Code",
-  "agentRequirements.blocked.title": "ข้อกำหนดเบื้องต้นของเอเจนต์ {{agent}}",
-  "agentRequirements.blocked.description": "เอเจนต์นี้ต้องใช้เครื่องมือต่อไปนี้ก่อนจึงจะทำงานได้",
-  "agentRequirements.prompt.blocked": "ทำการตรวจสอบที่จำเป็นให้เสร็จก่อนเพื่อใช้เอเจนต์นี้",
-  "agentRequirements.action.openMarketplace": "เปิด Marketplace",
-  "agentRequirements.error.unknownAgent": "ไม่พบเอเจนต์ที่เลือก",
-  "agentRequirements.error.malformedDeclaration": "เอเจนต์นี้มีการประกาศข้อกำหนดที่ไม่ถูกต้อง",
-  "agentRequirements.error.discoveryFailed": "Kilo ไม่สามารถตรวจสอบสกิลที่มีอยู่ได้",
-  "agentRequirements.error.mcpStatusFailed": "Kilo ไม่สามารถตรวจสอบสถานะเซิร์ฟเวอร์ MCP ได้",
-  "agentRequirements.error.scopeMismatch": "การตรวจสอบข้อกำหนดของเอเจนต์นี้ไม่ทำงานอีกต่อไป",
-  "agentRequirements.error.requestFailed": "Kilo ไม่สามารถตรวจสอบข้อกำหนดของเอเจนต์ได้",
-
   "dialog.provider.search.placeholder": "ค้นหาผู้ให้บริการ",
   "dialog.provider.empty": "ไม่พบผู้ให้บริการ",
   "dialog.provider.group.other": "อื่น ๆ",
@@ -852,12 +828,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "เปิดใช้ SWE-Pruner: ตัดทอนผลลัพธ์ขนาดใหญ่ของเครื่องมืออ่าน ค้นหา และเชลล์โดยคำนึงถึงงานและใช้คำถามโฟกัสที่เอเจนต์ระบุเป็นแนวทาง",
-  "settings.experimental.swePrunerModel.title": "โมเดล SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "โมเดลที่ใช้ตัดทอนผลลัพธ์ของเครื่องมือ ค่าเริ่มต้นคือโมเดลขนาดเล็กที่กำหนดไว้",
   "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
   "settings.experimental.multiProject.description":
     "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",

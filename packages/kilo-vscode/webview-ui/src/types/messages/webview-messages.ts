@@ -273,14 +273,6 @@ export interface RequestSkillsMessage {
   type: "requestSkills"
 }
 
-export interface RequestAgentRequirementsMessage {
-  type: "requestAgentRequirements"
-  agent: string
-  directory: string
-  sessionID?: string
-  force?: boolean
-}
-
 export interface RequestCommandsMessage {
   type: "requestCommands"
 }
@@ -756,12 +748,6 @@ export interface SetProjectExpandedMessage {
   type: "agentManager.setProjectExpanded"
   projectId: string
   expanded: boolean
-}
-
-// Grant a project permission to run project-controlled scripts and load state
-export interface TrustProjectMessage {
-  type: "agentManager.trustProject"
-  projectId: string
 }
 
 // Configure worktree setup script
@@ -1440,7 +1426,6 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
-  | RequestAgentRequirementsMessage
   | RequestCommandsMessage
   | SendCommandRequest
   | RemoveSkillMessage
@@ -1522,7 +1507,6 @@ export type WebviewMessage =
   | ActivateSelectionMessage
   | RememberTargetMessage
   | SetProjectExpandedMessage
-  | TrustProjectMessage
   | ConfigureSetupScriptRequest
   | ConfigureRunScriptRequest
   | RunScriptRequest

@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "فشرده‌سازی جلسه",
   "command.session.export": "صدور رونوشت جلسه",
 
-  "agentRequirements.skill.installed": "نصب شده",
-  "agentRequirements.skill.checkFailed": "بررسی مهارت ناموفق بود",
-  "agentRequirements.skill.missing": "نصب نشده",
-  "agentRequirements.mcp.connected": "متصل",
-  "agentRequirements.mcp.checkFailed": "بررسی MCP ناموفق بود",
-  "agentRequirements.mcp.missing": "متصل نیست",
-  "agentRequirements.extension.installed": "نصب شده",
-  "agentRequirements.extension.checkFailed": "بررسی افزونه VS Code ناموفق بود",
-  "agentRequirements.extension.missing": "نصب نشده",
-  "agentRequirements.extension.description": "افزونه‌های مفقود را در VS Code نصب کنید.",
-  "agentRequirements.group.skills": "مهارت‌ها",
-  "agentRequirements.group.mcps": "MCPs",
-  "agentRequirements.group.extensions": "افزونه‌های VS Code",
-  "agentRequirements.blocked.title": "پیش‌نیازهای عامل {{agent}}",
-  "agentRequirements.blocked.description": "این عامل پیش از اجرا به ابزارهای زیر نیاز دارد.",
-  "agentRequirements.prompt.blocked": "ابتدا بررسی‌های لازم را تکمیل کنید تا بتوانید از این عامل استفاده کنید",
-  "agentRequirements.action.openMarketplace": "باز کردن Marketplace",
-  "agentRequirements.error.unknownAgent": "عامل انتخاب‌شده یافت نشد.",
-  "agentRequirements.error.malformedDeclaration": "این عامل دارای اعلان پیش‌نیاز نامعتبر است.",
-  "agentRequirements.error.discoveryFailed": "Kilo نتوانست مهارت‌های موجود را بررسی کند.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo نتوانست وضعیت سرور MCP را بررسی کند.",
-  "agentRequirements.error.scopeMismatch": "این بررسی نیازمندی‌های عامل دیگر فعال نیست.",
-  "agentRequirements.error.requestFailed": "Kilo نتوانست نیازمندی‌های عامل را بررسی کند.",
-
   "dialog.provider.search.placeholder": "جستجوی ارائه‌دهندگان",
   "dialog.provider.empty": "ارائه‌دهنده‌ای یافت نشد",
   "dialog.provider.group.other": "سایر",
@@ -852,12 +828,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسیرهای قابل نوشتن اضافی",
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "فعال‌سازی SWE-Pruner: هرس آگاه از وظیفه برای خروجی‌های بزرگ ابزارهای خواندن، جستجو و پوسته، هدایت‌شده توسط یک سؤال تمرکز از عامل",
-  "settings.experimental.swePrunerModel.title": "مدل SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "مدل مورد استفاده برای مرور سریع خروجی‌های ابزار؛ به‌طور پیش‌فرض از مدل کوچک پیکربندی‌شده استفاده می‌کند",
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",

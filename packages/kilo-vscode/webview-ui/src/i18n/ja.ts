@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "セッションを圧縮",
   "command.session.export": "セッション記録をエクスポート",
 
-  "agentRequirements.skill.installed": "インストール済み",
-  "agentRequirements.skill.checkFailed": "スキルの確認に失敗しました",
-  "agentRequirements.skill.missing": "未インストール",
-  "agentRequirements.mcp.connected": "接続済み",
-  "agentRequirements.mcp.checkFailed": "MCP の確認に失敗しました",
-  "agentRequirements.mcp.missing": "未接続",
-  "agentRequirements.extension.installed": "インストール済み",
-  "agentRequirements.extension.checkFailed": "VS Code 拡張機能の確認に失敗しました",
-  "agentRequirements.extension.missing": "未インストール",
-  "agentRequirements.extension.description": "不足している拡張機能を VS Code にインストールしてください。",
-  "agentRequirements.group.skills": "スキル",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "VS Code 拡張機能",
-  "agentRequirements.blocked.title": "{{agent}} エージェントの前提条件",
-  "agentRequirements.blocked.description": "このエージェントを実行するには、次のツールが必要です。",
-  "agentRequirements.prompt.blocked": "このエージェントを使用するには、先に必要な確認を完了してください",
-  "agentRequirements.action.openMarketplace": "Marketplace を開く",
-  "agentRequirements.error.unknownAgent": "選択したエージェントが見つかりませんでした。",
-  "agentRequirements.error.malformedDeclaration": "このエージェントの要件宣言は無効です。",
-  "agentRequirements.error.discoveryFailed": "Kilo は利用可能なスキルを確認できませんでした。",
-  "agentRequirements.error.mcpStatusFailed": "Kilo は MCP サーバーの状態を確認できませんでした。",
-  "agentRequirements.error.scopeMismatch": "このエージェント要件の確認はもう有効ではありません。",
-  "agentRequirements.error.requestFailed": "Kilo はエージェント要件を確認できませんでした。",
-
   "dialog.provider.search.placeholder": "プロバイダーを検索",
   "dialog.provider.empty": "プロバイダーが見つかりません",
   "dialog.provider.group.other": "その他",
@@ -860,12 +836,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner を有効にする: エージェントが提供するフォーカス質問に基づき、タスクを考慮して、読み取り、検索、シェルツールのサイズの大きい出力をプルーニングします",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner モデル",
-  "settings.experimental.swePrunerModel.description":
-    "ツール出力の剪定に使用するモデル。既定では設定済みのスモールモデルを使用します",
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",

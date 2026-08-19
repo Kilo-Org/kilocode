@@ -34,6 +34,8 @@ jobs:
             jetbrains:
               - '**'
               - '!.changeset/**'
+              - '!.kilo/plans/**'
+              - '!packages/opencode/**'
               - '!packages/kilo-vscode/**'
               - '!packages/kilo-docs/**'
 

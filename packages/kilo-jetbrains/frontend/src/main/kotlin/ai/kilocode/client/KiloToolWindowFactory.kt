@@ -9,6 +9,7 @@ import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
+import ai.kilocode.client.agentManager.applySidePanelMode
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.AgentManagerPanel
 import ai.kilocode.client.plugin.KiloBundle
@@ -126,9 +127,11 @@ internal class KiloToolWindowSetupService(
 
             val factory = ContentFactory.getInstance()
             val chatContent = factory.createContent(chat, KiloBundle.message("sidePanel.mode.branch"), false)
+            chatContent.applySidePanelMode(SidePanelMode.CHAT)
             chatContent.setDisposer(manager)
             chatContent.setPreferredFocusedComponent { manager.defaultFocusedComponent }
             val agentContent = factory.createContent(agent, KiloBundle.message("sidePanel.mode.agentManager"), false)
+            agentContent.applySidePanelMode(SidePanelMode.AGENT_MANAGER)
             agentContent.applyAgentManagerBetaBadge()
             agentContent.setPreferredFocusedComponent { agentManagerPanel.component }
             toolWindow.contentManager.addContent(chatContent)

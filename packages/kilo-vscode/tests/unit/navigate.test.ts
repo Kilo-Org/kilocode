@@ -629,7 +629,6 @@ describe("createProjectNav", () => {
       active: id === "A",
       expanded,
       initialized: true,
-      trusted: true,
       missing: false,
     }) as AgentProjectSnapshot
 

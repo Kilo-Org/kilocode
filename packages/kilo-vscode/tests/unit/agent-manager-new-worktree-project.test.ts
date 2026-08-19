@@ -41,11 +41,7 @@ describe("Agent Manager New Worktree project targeting", () => {
   })
 
   it("defines project labels in every Agent Manager locale", () => {
-    const keys = [
-      "agentManager.dialog.project.select",
-      "agentManager.dialog.project.untrusted",
-      "agentManager.dialog.project.missing",
-    ]
+    const keys = ["agentManager.dialog.project.select", "agentManager.dialog.project.missing"]
     const locales = readdirSync(join(root, "webview-ui", "agent-manager", "i18n")).filter((file) =>
       file.endsWith(".ts"),
     )
