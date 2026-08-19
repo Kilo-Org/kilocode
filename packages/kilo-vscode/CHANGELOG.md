@@ -4,7 +4,6 @@
 
 ### Minor Changes
 
-- Make Agent Manager shortcuts follow the focused area. In the center, `Cmd+T` / `Ctrl+T` creates a new session tab and `Cmd+Shift+T` / `Ctrl+Shift+T` creates a central terminal tab, whether the prompt or a central terminal is focused. In the right sidebar terminal, `Cmd+T` / `Ctrl+T` creates another sidebar terminal tab and `Cmd+Shift+T` / `Ctrl+Shift+T` does nothing. Returning from a terminal with `Cmd+Shift+M` / `Ctrl+Shift+M` restores the previous session tab before focusing its prompt.
 
 - [#11219](https://github.com/Kilo-Org/kilocode/pull/11219) [`8013e5f`](https://github.com/Kilo-Org/kilocode/commit/8013e5f50451225bb32b1284579322c137f497e3) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Make file references in agent responses clickable by validating inline code spans against the filesystem. Code spans that match real files in the workspace become clickable links that open the file at the referenced line. Non-existent paths stay as plain code. Also adds fallback workspace search and "File not found" warning when clicking dead links.
 
@@ -13,6 +12,8 @@
 - [#13084](https://github.com/Kilo-Org/kilocode/pull/13084) [`5c97b48`](https://github.com/Kilo-Org/kilocode/commit/5c97b481d233d294859bcb737448661910fd4916) - Remove the built-in experimental Morph WarpGrep codebase search tool and ignore its retired configuration flag.
 
 ### Patch Changes
+
+- Make Agent Manager shortcuts follow the focused area. In the center, `Cmd+T` / `Ctrl+T` creates a new session tab and `Cmd+Shift+T` / `Ctrl+Shift+T` creates a central terminal tab, whether the prompt or a central terminal is focused. In the right sidebar terminal, `Cmd+T` / `Ctrl+T` creates another sidebar terminal tab and `Cmd+Shift+T` / `Ctrl+Shift+T` does nothing. Returning from a terminal with `Cmd+Shift+M` / `Ctrl+Shift+M` restores the previous session tab before focusing its prompt.
 
 - [#13063](https://github.com/Kilo-Org/kilocode/pull/13063) [`ca9a99f`](https://github.com/Kilo-Org/kilocode/commit/ca9a99ffd8f118b5445e0fc2c890c4c6dd797d66) - Show and select the model's default reasoning variant in chat and Agent Manager.
 
@@ -55,7 +56,7 @@
 
 ### Minor Changes
 
-- [#12945](https://github.com/Kilo-Org/kilocode/pull/12945) [`e0dfec0`](https://github.com/Kilo-Org/kilocode/commit/e0dfec020dd087c97a7b5644db3ab76105fab212) - Improve Agent Manager terminal focus and keyboard navigation. `Cmd+/` now focuses a visible embedded terminal before hiding it, `Cmd+Shift+[` / `]` switch terminal tabs, and `Cmd+Shift+M` focuses the Agent Manager prompt instead of opening VS Code Problems. `Cmd+W` hides the last side terminal instead of stopping its shell.
+- [#12945](https://github.com/Kilo-Org/kilocode/pull/12945) [`e0dfec0`](https://github.com/Kilo-Org/kilocode/commit/e0dfec020dd087c97a7b5644db3ab76105fab212) - Improve Agent Manager terminal focus and keyboard navigation. `Cmd+/` now focuses a visible embedded terminal before hiding it, `Cmd+Shift+T` creates a side terminal only while that terminal area has focus, and `Cmd+Shift+[` / `]` switch terminal tabs. `Cmd+Shift+M` focuses the Agent Manager prompt instead of opening VS Code Problems. `Cmd+W` hides the last side terminal instead of stopping its shell.
 
 - [#12943](https://github.com/Kilo-Org/kilocode/pull/12943) [`28ca073`](https://github.com/Kilo-Org/kilocode/commit/28ca0733bbe007c15b98eb28ddbf5a2bbb7a3fd8) - Improve model search relevance with provider-aware results and personalized usage suggestions.
 

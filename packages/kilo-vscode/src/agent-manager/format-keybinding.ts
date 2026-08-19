@@ -44,7 +44,7 @@ const GLOBAL_KEYBINDINGS: Record<string, string> = {
 }
 
 function addBinding(bindings: Record<string, string>, name: string, value: string, when?: string): void {
-  if (name === "newTerminalTab" && when?.includes("agentManagerPromptFocused")) {
+  if (name === "newTerminalTab" && when?.includes("!kilo-code.new.agentManagerSideTerminalFocused")) {
     bindings.newTerminalCenter = value
     return
   }

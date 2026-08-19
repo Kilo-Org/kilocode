@@ -607,8 +607,6 @@ export interface TerminalHandlerDeps {
   clearSession: () => void
   /** Reset review/pending state when activating a terminal. */
   resetOthers: () => void
-  /** Remember the current session before a central terminal replaces it. */
-  rememberSession?: () => void
   isPendingId: (id: string) => boolean
   /** Locate a session/pending tab by id. */
   findTab: (id: string) => { id: string } | undefined
@@ -658,7 +656,6 @@ function measureInitialDimensions(
 
 export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   const activate = (id: string) => {
-    deps.rememberSession?.()
     deps.state.setActiveId(id)
     deps.resetOthers()
   }
@@ -909,6 +906,8 @@ export interface TerminalMessageHandlerDeps {
   state: TerminalStateControls
   activate: (id: string) => void
   saveTabMemory: () => void
+  /** Remember the current session before a central terminal is selected. */
+  rememberSession?: () => void
   setSelection: (sel: string | typeof LOCAL) => void
   showError: (message: string) => void
   postMessage: (message: unknown) => void
@@ -963,6 +962,7 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
     }
     return
   }
+  deps.rememberSession?.()
   deps.state.add(key === LOCAL ? null : key, term)
   deps.onCreated?.(target, msg.terminalId)
   deps.saveTabMemory()

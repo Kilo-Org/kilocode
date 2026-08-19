@@ -4,6 +4,10 @@ const OPTION = '[data-component="question-dock"] button[data-slot="question-opti
 
 export type AgentManagerFocusTarget = "prompt" | "mainTerminal" | "sideTerminal" | "other"
 
+export function forgetTerminalFocus(memory: Map<string, "prompt" | { terminal: string }>, id: string): void {
+  for (const [key, owner] of memory) if (owner !== "prompt" && owner.terminal === id) memory.delete(key)
+}
+
 /** Resolve focus from the current DOM owner, not focus event order. */
 export function agentManagerFocusTarget(active: Element | null, promptPending = false): AgentManagerFocusTarget {
   if (promptPending || active?.matches("textarea.prompt-input")) return "prompt"
@@ -16,7 +20,7 @@ export function createFocusBridge(deps: {
   prompt: { active: () => boolean; focus: () => void }
   post: (target: AgentManagerFocusTarget) => void
   remember: () => void
-  restore: () => void
+  restore: () => "none" | "ready" | "pending"
 }) {
   const report = () => {
     const active = agentManagerFocusTarget(document.activeElement)
@@ -34,7 +38,7 @@ export function createFocusBridge(deps: {
     },
     focus: () => {
       deps.post("prompt")
-      deps.restore()
+      if (deps.restore() === "pending") return
       deps.prompt.focus()
     },
   }

@@ -740,13 +740,13 @@
         "command": "kilo-code.new.agentManager.newTab",
         "key": "ctrl+t",
         "mac": "cmd+t",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && (kilo-code.new.agentManagerPromptFocused || kilo-code.new.agentManagerMainTerminalFocused)"
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused"
       },
       {
         "command": "kilo-code.new.agentManager.newTerminalTab",
         "key": "ctrl+shift+t",
         "mac": "cmd+shift+t",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && (kilo-code.new.agentManagerPromptFocused || kilo-code.new.agentManagerMainTerminalFocused)"
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused"
       },
       {
         "command": "kilo-code.new.agentManager.newSideTerminal",

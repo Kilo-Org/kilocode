@@ -1569,6 +1569,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (message.type === "webviewFocusChanged" && this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, message.focused === true)
     }
+    if (message.type === "webviewFocusChanged" && message.focused === true) {
+      if (this.opts.focusTargetContext) this.postMessage({ type: "agentManager.focusContextRequested" })
+      return
+    }
     if (message.type === "webviewFocusChanged" && message.focused !== true) {
       this.setFocusTarget("other")
       return

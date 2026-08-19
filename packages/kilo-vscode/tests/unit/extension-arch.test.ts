@@ -135,12 +135,12 @@ describe("Extension — package.json command sync", () => {
     expect(create).toMatchObject({
       key: "ctrl+shift+t",
       mac: "cmd+shift+t",
-      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && (kilo-code.new.agentManagerPromptFocused || kilo-code.new.agentManagerMainTerminalFocused)",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused",
     })
     expect(sessionCreate).toMatchObject({
       key: "ctrl+t",
       mac: "cmd+t",
-      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && (kilo-code.new.agentManagerPromptFocused || kilo-code.new.agentManagerMainTerminalFocused)",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused",
     })
     const terminalCreate = pkg.contributes?.keybindings?.find(
       (item: { command: string; key?: string; mac?: string; when?: string }) =>

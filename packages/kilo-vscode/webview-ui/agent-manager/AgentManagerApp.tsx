@@ -182,7 +182,7 @@ import { SubagentPanel } from "./SubagentPanel"
 import { createSubagentTabs } from "./subagent-tabs"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
-import { createChatFocus, createFocusBridge, createPromptFocus, hasQuestionOption } from "./focus"
+import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
 import { usePendingCreate } from "./pending-create"
 import { defaultBase as projectDefaultBase } from "./project/default-base"
 import "./agent-manager.css"
@@ -403,12 +403,7 @@ const AgentManagerContent: Component = () => {
   const forgetContextFocus = (context: string) => {
     for (const key of focusMemory.keys()) if (key.startsWith(`${context}:`)) focusMemory.delete(key)
   }
-  const forgetTerminalFocus = (terminalID: string) => {
-    for (const [key, owner] of focusMemory) {
-      if (owner !== "prompt" && owner.terminal === terminalID) focusMemory.delete(key)
-    }
-  }
-  let restoreSession: () => void = () => undefined
+  let restoreSession: () => "none" | "ready" | "pending" = () => "none"
   const focusCtl = createFocusBridge({
     prompt,
     post: (target) => vscode.postMessage({ type: "agentManagerFocusChanged", target }),
@@ -1306,6 +1301,7 @@ const AgentManagerContent: Component = () => {
     const onWindowFocus = () => {
       document.body.style.pointerEvents = ""
       document.body.style.overflow = ""
+      focusCtl.report()
       restoreFocus()
     }
     window.addEventListener("focus", onWindowFocus)
@@ -1366,13 +1362,14 @@ const AgentManagerContent: Component = () => {
       state: terms,
       activate: termHandlers.activate,
       saveTabMemory,
+      rememberSession: tabs.remember,
       setSelection,
       showError: (message) =>
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
       postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
 
-      onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(terminalId),
+      onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(focusMemory, terminalId),
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
         // Setup output is informational: reveal without stealing focus, and
@@ -1482,6 +1479,8 @@ const AgentManagerContent: Component = () => {
         const ev = msg as AgentManagerKeybindingsMessage
         setKb(ev.bindings)
       }
+
+      if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
 
       if (msg.type === "agentManager.state") applyState(msg)
 
@@ -2028,20 +2027,24 @@ const AgentManagerContent: Component = () => {
   // Cmd+T: add a new tab strictly to the current selection (no side effects)
   const handleNewTabForCurrentSelection = () => {
     const sel = selection()
-    if (sel === LOCAL) addPendingTab()
-    else if (sel) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
+    if (sel === LOCAL) {
+      addPendingTab()
+      return "ready" as const
+    }
+    if (sel) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
+    return "pending" as const
   }
   const tabs = createSessionRestore({
     terminal: terms.activeId,
     selection,
-    remembered: (sel) => registry.active().tabMemory.get(sel),
+    remembered: (sel) => registry.active().sessionRestore.get(sel),
     sessions: activeTabs,
     current: session.currentSessionID,
     pending: activePendingId,
     isPending,
     select: selectSessionTab,
     create: handleNewTabForCurrentSelection,
-    remember: (sel, id) => registry.active().tabMemory.set(sel, id),
+    remember: (sel, id) => registry.active().sessionRestore.set(sel, id),
   })
   restoreSession = tabs.restore
   const termHandlers = createTerminalHandlers({
@@ -2055,7 +2058,6 @@ const AgentManagerContent: Component = () => {
       setActivePendingId(undefined)
       session.clearCurrentSession()
     },
-    rememberSession: tabs.remember,
     isPendingId: isPending,
     findTab: (id) => tabLookup().get(id),
     postMessage: (msg) => vscode.postMessage(msg as never),

@@ -13,9 +13,12 @@ describe("Agent Manager session restoration", () => {
         sessions: [{ id: "session:one" }, { id: "session:two" }],
         isPending: () => false,
         select: (id, pending) => selected.push([id, pending]),
-        create: () => created.push("created"),
+        create: () => {
+          created.push("created")
+          return "pending"
+        },
       }),
-    ).toBe(true)
+    ).toBe("ready")
     expect(selected).toEqual([["session:two", false]])
     expect(created).toEqual([])
   })
@@ -23,14 +26,16 @@ describe("Agent Manager session restoration", () => {
   it("falls back to the first session when the remembered tab is gone", () => {
     const selected: Array<[string, boolean]> = []
 
-    restoreSessionAfterTerminal({
-      terminal: "terminal:one",
-      remembered: "session:gone",
-      sessions: [{ id: "pending:one" }, { id: "session:two" }],
-      isPending: (id) => id.startsWith("pending:"),
-      select: (id, pending) => selected.push([id, pending]),
-      create: () => undefined,
-    })
+    expect(
+      restoreSessionAfterTerminal({
+        terminal: "terminal:one",
+        remembered: "session:gone",
+        sessions: [{ id: "pending:one" }, { id: "session:two" }],
+        isPending: (id) => id.startsWith("pending:"),
+        select: (id, pending) => selected.push([id, pending]),
+        create: () => undefined,
+      }),
+    ).toBe("ready")
 
     expect(selected).toEqual([["pending:one", true]])
   })
@@ -45,9 +50,12 @@ describe("Agent Manager session restoration", () => {
         sessions: [],
         isPending: () => false,
         select: () => undefined,
-        create: () => created.push("created"),
+        create: () => {
+          created.push("created")
+          return "pending"
+        },
       }),
-    ).toBe(true)
+    ).toBe("pending")
     expect(created).toEqual(["created"])
   })
 
@@ -63,7 +71,7 @@ describe("Agent Manager session restoration", () => {
         select: (id) => selected.push(id),
         create: () => selected.push("created"),
       }),
-    ).toBe(false)
+    ).toBe("none")
     expect(selected).toEqual([])
   })
 })

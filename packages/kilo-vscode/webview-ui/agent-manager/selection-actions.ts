@@ -43,13 +43,13 @@ export function restoreSessionAfterTerminal<T extends SessionLike>(input: {
   sessions: T[]
   isPending: (id: string) => boolean
   select: (id: string, pending: boolean) => void
-  create: () => void
-}): boolean {
-  if (!input.terminal) return false
+  create: () => "ready" | "pending"
+}): "none" | "ready" | "pending" {
+  if (!input.terminal) return "none"
   const target = input.sessions.find((item) => item.id === input.remembered) ?? input.sessions[0]
   if (target) input.select(target.id, input.isPending(target.id))
-  else input.create()
-  return true
+  else return input.create()
+  return "ready"
 }
 
 export function createSessionRestore<T extends SessionLike>(deps: {
@@ -61,7 +61,7 @@ export function createSessionRestore<T extends SessionLike>(deps: {
   pending: () => string | undefined
   isPending: (id: string) => boolean
   select: (id: string, pending: boolean) => void
-  create: () => void
+  create: () => "ready" | "pending"
   remember: (selection: string, id: string) => void
 }) {
   return {
@@ -72,7 +72,7 @@ export function createSessionRestore<T extends SessionLike>(deps: {
     },
     restore: () => {
       const selection = deps.selection()
-      restoreSessionAfterTerminal({
+      return restoreSessionAfterTerminal({
         terminal: deps.terminal(),
         remembered: selection === null ? undefined : deps.remembered(selection),
         sessions: deps.sessions(),
