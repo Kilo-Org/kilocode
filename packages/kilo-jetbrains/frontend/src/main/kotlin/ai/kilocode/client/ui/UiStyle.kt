@@ -108,14 +108,38 @@ object UiStyle {
             )
         }
 
-        object SessionRunning : Style {
+        object ActivityRunning : Style {
             override fun bg(): Color = JBColor.namedColor(
-                "Kilo.SessionStatus.runningBadgeBackground",
-                JBColor(Color(0xF9, 0x73, 0x16), Color(0xC2, 0x41, 0x0C)),
+                "Kilo.Activity.runningBackground",
+                JBColor(Color(0x55, 0xA7, 0x6A), Color(0x57, 0x96, 0x5C)),
             )
 
             override fun fg(): Color = JBColor.namedColor(
-                "Kilo.SessionStatus.runningBadgeForeground",
+                "Kilo.Activity.runningForeground",
+                Color.WHITE,
+            )
+        }
+
+        object ActivityAttention : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.Activity.attentionBackground",
+                JBColor(Color(0xE6, 0x6D, 0x17), Color(0xC7, 0x7D, 0x55)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.Activity.attentionForeground",
+                Color.WHITE,
+            )
+        }
+
+        object ActivityError : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.Activity.errorBackground",
+                JBColor(Color(0xE5, 0x57, 0x65), Color(0xDB, 0x5C, 0x5C)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.Activity.errorForeground",
                 Color.WHITE,
             )
         }

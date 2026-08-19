@@ -50,11 +50,12 @@ class UiStyleTest : BasePlatformTestCase() {
     }
 
     fun `test session status badges use shared styles`() {
-        assertSame(UiStyle.Badge.SessionRunning, SessionActivityKind.RUNNING.style())
-        assertSame(UiStyle.Badge.Primary, SessionActivityKind.QUESTION.style())
-        assertSame(UiStyle.Badge.Primary, SessionActivityKind.PLAN.style())
-        assertSame(UiStyle.Badge.Primary, SessionActivityKind.PERMISSION.style())
-        assertSame(UiStyle.Badge.Primary, SessionActivityKind.LOGIN_REQUIRED.style())
+        assertSame(UiStyle.Badge.ActivityRunning, SessionActivityKind.RUNNING.style())
+        assertSame(UiStyle.Badge.ActivityAttention, SessionActivityKind.QUESTION.style())
+        assertSame(UiStyle.Badge.ActivityAttention, SessionActivityKind.PLAN.style())
+        assertSame(UiStyle.Badge.ActivityAttention, SessionActivityKind.PERMISSION.style())
+        assertSame(UiStyle.Badge.ActivityAttention, SessionActivityKind.LOGIN_REQUIRED.style())
+        assertSame(UiStyle.Badge.ActivityError, SessionActivityKind.ERROR.style())
     }
 
     fun `test pull request states use github badge styles`() {

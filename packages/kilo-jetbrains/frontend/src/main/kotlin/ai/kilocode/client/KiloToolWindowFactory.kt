@@ -12,7 +12,9 @@ import ai.kilocode.client.agentManager.SidePanelMode
 import ai.kilocode.client.agentManager.applySidePanelMode
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.AgentManagerPanel
+import ai.kilocode.client.agentManager.sessionAttentionNeeded
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.AttentionDotIcon
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
@@ -32,6 +34,7 @@ import com.intellij.ui.content.ContentManagerListener
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -132,6 +135,7 @@ internal class KiloToolWindowSetupService(
             val agentContent = factory.createContent(agent, KiloBundle.message("sidePanel.mode.agentManager"), false)
             agentContent.applySidePanelMode(SidePanelMode.AGENT_MANAGER)
             agentContent.setPreferredFocusedComponent { agentManagerPanel.component }
+            agentContent.putUserData(ToolWindow.SHOW_CONTENT_ICON, true)
             toolWindow.contentManager.addContent(chatContent)
             toolWindow.contentManager.addContent(agentContent)
             val listener = object : ContentManagerListener {
@@ -145,6 +149,16 @@ internal class KiloToolWindowSetupService(
             Disposer.register(manager) { toolWindow.contentManager.removeContentManagerListener(listener) }
             toolWindow.contentManager.setSelectedContent(chatContent)
             manager.newSession()
+
+            // Show a notification dot on the Agents tab whenever a worktree session needs attention.
+            val dot = cs.launch {
+                project.service<KiloSessionService>().activity.map(::sessionAttentionNeeded).collect { needed ->
+                    withContext(Dispatchers.Main) {
+                        agentContent.icon = if (needed) AttentionDotIcon else null
+                    }
+                }
+            }
+            Disposer.register(manager) { dot.cancel() }
 
             val actions = listOfNotNull(
                 ActionManager.getInstance().getAction("Kilo.NewSession"),

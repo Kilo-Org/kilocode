@@ -355,20 +355,20 @@ class WorktreeControllerTest : BasePlatformTestCase() {
             WorktreeIcons.forRow(locked = false, pending = true, kind = SessionActivityKind.RUNNING),
         )
         assertSame(
-            WorktreeIcons.running,
+            SessionActivityKind.RUNNING.icon(),
             WorktreeIcons.forRow(locked = true, pending = false, kind = SessionActivityKind.RUNNING),
         )
         assertSame(
-            WorktreeIcons.question,
+            SessionActivityKind.QUESTION.icon(),
             WorktreeIcons.forRow(locked = false, pending = false, kind = SessionActivityKind.QUESTION),
         )
         assertSame(
-            WorktreeIcons.question,
+            SessionActivityKind.PLAN.icon(),
             WorktreeIcons.forRow(locked = false, pending = false, kind = SessionActivityKind.PLAN),
         )
         assertSame(
-            WorktreeIcons.question,
-            WorktreeIcons.forRow(locked = false, pending = false, kind = SessionActivityKind.PERMISSION),
+            SessionActivityKind.ERROR.icon(),
+            WorktreeIcons.forRow(locked = false, pending = false, kind = SessionActivityKind.ERROR),
         )
         assertSame(WorktreeIcons.locked, WorktreeIcons.forRow(locked = true, pending = false))
         assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(locked = false, pending = false))
@@ -377,14 +377,17 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     fun `test worktree icons load at the same size`() {
         assertTrue("branch icon should load", WorktreeIcons.branch.iconWidth > 0)
         assertTrue("lock icon should load", WorktreeIcons.locked.iconWidth > 0)
-        assertTrue("running icon should load", WorktreeIcons.running.iconWidth > 0)
-        assertTrue("question icon should load", WorktreeIcons.question.iconWidth > 0)
         assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.locked.iconWidth)
         assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.locked.iconHeight)
-        assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.running.iconWidth)
-        assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.running.iconHeight)
-        assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.question.iconWidth)
-        assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.question.iconHeight)
+        for (kind in SessionActivityKind.entries) {
+            assertEquals(WorktreeIcons.branch.iconWidth, kind.icon().iconWidth)
+            assertEquals(WorktreeIcons.branch.iconHeight, kind.icon().iconHeight)
+        }
+    }
+
+    fun `test activity icons are stable per kind`() {
+        assertSame(SessionActivityKind.RUNNING.icon(), SessionActivityKind.RUNNING.icon())
+        assertNotSame(SessionActivityKind.RUNNING.icon(), SessionActivityKind.ERROR.icon())
     }
 
     fun `test worktree delete eligibility excludes missing main and pending rows`() {

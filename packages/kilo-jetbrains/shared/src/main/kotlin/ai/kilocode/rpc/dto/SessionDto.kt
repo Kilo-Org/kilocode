@@ -53,6 +53,7 @@ enum class SessionActivityKindDto {
     QUESTION,
     PLAN,
     PERMISSION,
+    ERROR,
 }
 
 @Serializable

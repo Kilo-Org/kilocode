@@ -13,6 +13,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
@@ -448,8 +449,22 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         val row = row(panel, 0)
-        assertSame(WorktreeIcons.question, row.icon)
+        assertSame(SessionActivityKind.QUESTION.icon(), row.icon)
         assertEquals(emptyList<ActiveListBadge>(), row.badges)
+    }
+
+    fun `test worktree row shows error activity icon`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val activity = MutableStateFlow(mapOf(
+            "ses_1" to SessionActivityDto(item.path, SessionActivityKindDto.ERROR),
+        ))
+        rpc.listed += item
+        val controller = WorktreeController(service, "/test", coroutines.scope, activity = activity)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
+        edt { controller.reload() }
+        flush()
+
+        assertSame(SessionActivityKind.ERROR.icon(), row(panel, 0).icon)
     }
 
     fun `test worktree row shows metrics from status service`() {

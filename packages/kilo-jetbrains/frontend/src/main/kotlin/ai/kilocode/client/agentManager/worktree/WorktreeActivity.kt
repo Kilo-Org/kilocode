@@ -24,12 +24,14 @@ private fun kind(kind: SessionActivityKindDto): SessionActivityKind = when (kind
     SessionActivityKindDto.QUESTION -> SessionActivityKind.QUESTION
     SessionActivityKindDto.PLAN -> SessionActivityKind.PLAN
     SessionActivityKindDto.PERMISSION -> SessionActivityKind.PERMISSION
+    SessionActivityKindDto.ERROR -> SessionActivityKind.ERROR
 }
 
 private fun rank(kind: SessionActivityKind): Int = when (kind) {
     SessionActivityKind.PERMISSION -> 0
     SessionActivityKind.QUESTION -> 1
     SessionActivityKind.PLAN -> 2
-    SessionActivityKind.RUNNING -> 3
-    SessionActivityKind.LOGIN_REQUIRED -> 4
+    SessionActivityKind.ERROR -> 3
+    SessionActivityKind.RUNNING -> 4
+    SessionActivityKind.LOGIN_REQUIRED -> 5
 }

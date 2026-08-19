@@ -32,6 +32,21 @@ class WorktreeActivityTest {
     }
 
     @Test
+    fun `error outranks running but yields to interactive prompts`() {
+        val errorOverRunning = aggregateWorktreeActivity(mapOf(
+            "ses_run" to SessionActivityDto("/repo/wt", SessionActivityKindDto.RUNNING),
+            "ses_error" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
+        ))
+        assertEquals(SessionActivityKind.ERROR, errorOverRunning["/repo/wt"])
+
+        val questionOverError = aggregateWorktreeActivity(mapOf(
+            "ses_error" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
+            "ses_question" to SessionActivityDto("/repo/wt", SessionActivityKindDto.QUESTION),
+        ))
+        assertEquals(SessionActivityKind.QUESTION, questionOverError["/repo/wt"])
+    }
+
+    @Test
     fun `normalizes trailing slashes`() {
         val result = aggregateWorktreeActivity(mapOf(
             "ses_1" to SessionActivityDto("/repo/wt/", SessionActivityKindDto.RUNNING),
