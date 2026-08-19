@@ -76,7 +76,7 @@ Create `.md` files in any of these directories:
 ```
 .kilo/agents/my-agent.md
 .kilo/agent/my-agent.md
-.kilocode/agents/my-agent.md
+.kilocode/agents/my-agent.md  # legacy fallback
 ```
 
 For global agents, place files in your global config directory:
@@ -312,7 +312,7 @@ Create `.md` files in any of these directories:
 ```
 .kilo/agents/my-agent.md
 .kilo/agent/my-agent.md
-.kilocode/agents/my-agent.md
+.kilocode/agents/my-agent.md  # legacy fallback
 ```
 
 For global agents, place files in your global config directory:
