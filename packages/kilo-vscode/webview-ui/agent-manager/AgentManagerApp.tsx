@@ -374,9 +374,6 @@ const AgentManagerContent: Component = () => {
   /** Namespace key so worktree/local ids from different projects never collide. */
   const nsKey = (sel: string) => `${currentProjectId() ?? "single"}:${sel}`
 
-  // Per-sidebar-context terminal state. `terms.activeId` holds the id of the focused
-  // terminal tab, if any — takes precedence over session/pending/review when deriving
-  // the visible tab. Contexts are project-keyed: every project reuses LOCAL and ids like "0".
   const terms = createTerminalState(() => {
     const sel = selection()
     return sel === null ? null : nsKey(sel)
@@ -949,9 +946,6 @@ const AgentManagerContent: Component = () => {
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
 
-  // Sidebar previous/next + numeric-shortcut nav. Multi-project mode traverses
-  // every expanded project and atomically activates via activateSelection;
-  // single-project mode keeps the legacy in-process path.
   const projectNav = createProjectNav(
     {
       multiProject,
@@ -1254,8 +1248,6 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n", "d", "e", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent browser defaults for shift variants (new terminal, close worktree,
-      // advanced/new/open worktree, open PR, terminal cycling)
       if (["t", "m", "w", "n", "o", "r", "[", "]"].includes(e.key.toLowerCase()) && e.shiftKey) {
         e.preventDefault()
       }
@@ -1270,10 +1262,6 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", preventDefaults, true)
 
-    // Cmd/Ctrl+/ toggles the terminal even when VS Code's webview keybinding
-    // forwarding drops the key before it reaches the workbench (reported with
-    // the prompt input focused). When forwarding does work, the extension
-    // echoes the shortcut back as an action message and sideCtl dedupes it.
     const shortcut = (e: KeyboardEvent) => sideCtl.press(e)
     window.addEventListener("keydown", shortcut, true)
 
@@ -1639,8 +1627,6 @@ const AgentManagerContent: Component = () => {
     }
   })
 
-  // Diff context = sidebar selection (worktree id or LOCAL), stable across
-  // session tab switches inside the context so the git scopes don't refetch.
   const diffCtx = createMemo(() => selection() ?? undefined)
 
   // Active session within the diff context. The Session scope follows it, so
@@ -1690,8 +1676,6 @@ const AgentManagerContent: Component = () => {
     />
   )
 
-  // Start/stop diff watch when the panel opens/closes, the review tab opens,
-  // or the composite id (context, scope, active session) changes.
   createEffect(() => {
     const panel = diffOpen()
     const active = reviewActive()
@@ -2085,7 +2069,6 @@ const AgentManagerContent: Component = () => {
     closeReviewTab()
   }
 
-  // Drag-and-drop handlers for tab reordering
   const tabLookup = createMemo(() => new Map(activeTabs().map((s) => [s.id, s])))
   const tabIds = createMemo(() => {
     const ids = activeTabs().map((s) => s.id)
