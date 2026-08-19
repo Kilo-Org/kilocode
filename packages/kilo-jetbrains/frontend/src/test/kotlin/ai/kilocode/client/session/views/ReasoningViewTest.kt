@@ -3,13 +3,13 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
 import javax.swing.Icon
@@ -23,10 +23,8 @@ class ReasoningViewTest : BasePlatformTestCase() {
 
     fun `test completed reasoning is collapsed by default`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
-        val base: Any = view
 
         assertFalse(view.isExpanded())
-        assertTrue(base is SecondarySessionPartView)
         assertEquals("Reasoning", view.headerText())
         assertEquals("one\ntwo\nthree\nfour", view.markdown())
         assertTrue(view.hasToggle())
@@ -336,18 +334,15 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertEquals(0, scroll.verticalScrollBar.value)
     }
 
-    fun `test reasoning block uses vertical separator`() {
+    fun `test reasoning draws no separator and gaps the body`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one"))
 
-        assertEquals(1, view.border!!.getBorderInsets(view).left)
+        assertNull("collapsed reasoning draws no separator", view.border)
 
         view.toggle()
 
-        val insets = view.border!!.getBorderInsets(view)
-        assertEquals(0, insets.top)
-        assertEquals(1, insets.left)
-        assertEquals(0, insets.bottom)
-        assertEquals(0, insets.right)
+        assertNull("expanded reasoning draws no separator", view.border)
+        assertEquals(SessionUiStyle.View.contentGap(), (view.layout as BorderLayout).vgap)
         assertEquals(SessionUiStyle.View.Reasoning.BODY_LINES, view.bodyMaxRows())
     }
 
@@ -401,16 +396,6 @@ class ReasoningViewTest : BasePlatformTestCase() {
     private fun icons(component: Component): List<Icon> {
         val found = mutableListOf<Icon>()
         collect(component, found)
-        return found
-    }
-
-    private fun popupEditors(root: JComponent): List<com.intellij.ui.EditorTextField> {
-        val found = mutableListOf<com.intellij.ui.EditorTextField>()
-        fun visit(component: JComponent) {
-            if (component is com.intellij.ui.EditorTextField) found.add(component)
-            component.components.filterIsInstance<JComponent>().forEach(::visit)
-        }
-        visit(root)
         return found
     }
 

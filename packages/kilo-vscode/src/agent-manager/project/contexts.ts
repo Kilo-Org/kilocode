@@ -22,7 +22,6 @@ export interface ProjectSnapshot {
   active: boolean
   expanded: boolean
   initialized: boolean
-  trusted: boolean
   missing: boolean
 }
 
@@ -34,8 +33,6 @@ interface ContextsOptions {
     get(id: string): StoredProject | undefined
     expanded?(id: string): boolean | undefined
   }
-  /** Registry trust lookup for non-pinned projects. */
-  trusted: (id: string) => boolean
   /** Whether the multi-project experiment is enabled. */
   enabled: () => boolean
   remove?: (id: string) => void
@@ -78,7 +75,7 @@ export class ProjectContexts {
     return this.ensure(stored.id, stored.root, false)
   }
 
-  /** The active context. Defaults to the pinned project, or the first trusted registry project without a workspace. */
+  /** The active context. Defaults to the pinned project, or the first registry project without a workspace. */
   active(): ProjectContext | undefined {
     if (this.activeId) return this.contexts.get(this.activeId)
     const pinned = this.pinned()
@@ -88,7 +85,7 @@ export class ProjectContexts {
       return pinned
     }
     if (!this.opts.enabled()) return undefined
-    const first = this.opts.registry.list().find((p) => this.opts.trusted(p.id))
+    const first = this.opts.registry.list()[0]
     if (!first) return undefined
     const ctx = this.ensure(first.id, first.root, false)
     this.activeId = ctx.id
@@ -135,7 +132,7 @@ export class ProjectContexts {
     return this.resolveCtx(id)
   }
 
-  /** Whether a project may be shown or initialized: known, flag-gated, and trusted. */
+  /** Whether a project may be shown or initialized: known and flag-gated. */
   usable(id: string): ProjectContext | undefined {
     return this.usableCtx(id)
   }
@@ -197,7 +194,6 @@ export class ProjectContexts {
     if (!ctx) return undefined
     if (ctx.pinned) return ctx
     if (!this.opts.enabled()) return undefined
-    if (!this.opts.trusted(id)) return undefined
     return ctx
   }
 
@@ -261,7 +257,6 @@ export class ProjectContexts {
       active: this.isActive(id),
       expanded: !missing && this.isExpanded(id),
       initialized: ctx?.loaded ?? false,
-      trusted: pinned || (stored?.trusted ?? false),
       missing,
     }
   }

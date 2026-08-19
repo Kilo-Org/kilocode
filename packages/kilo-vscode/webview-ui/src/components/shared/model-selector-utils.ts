@@ -232,7 +232,6 @@ export function stripSubProviderPrefix(name: string): string {
 export function buildTriggerLabel(
   resolvedName: string | undefined,
   providerID: string | undefined,
-  providerName: string | undefined,
   raw: ModelSelection | null,
   allowClear: boolean,
   clearLabel: string,
@@ -241,7 +240,6 @@ export function buildTriggerLabel(
 ): string {
   if (resolvedName) {
     if (providerID === KILO_GATEWAY_ID) return stripSubProviderPrefix(resolvedName)
-    if (providerName) return `${providerName} / ${resolvedName}`
     return resolvedName
   }
   if (raw?.providerID && raw?.modelID) {

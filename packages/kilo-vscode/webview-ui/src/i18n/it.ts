@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Connetti Anaconda Desktop",
   "provider.anaconda.title.manage": "Gestisci Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
   "command.provider.connect": "Connetti provider",
   "command.session.new": "Nuova sessione",
   "command.session.show.changes": "Mostra modifiche",
@@ -198,6 +201,7 @@ export const dict = {
   "notification.permission.title": "Autorizzazione richiesta",
   "notification.permission.titleSubagent": "Autorizzazione richiesta (sub-agent)",
   "notification.permission.titleSkillShell": "Eseguire i comandi shell della skill “{{skill}}”?",
+  "notification.permission.titleSandboxEscalation": "Consentire l'operazione Git al di fuori della sandbox?",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
   "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",
   "ui.permission.doomLoop.rule": "Continua le chiamate a {{tool}}",
@@ -724,12 +728,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Abilita SWE-Pruner: potatura degli output di grandi dimensioni degli strumenti di lettura, ricerca e shell, che tiene conto del compito ed è guidata da una domanda di focalizzazione fornita dall'agente",
-  "settings.experimental.swePrunerModel.title": "Modello SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Modello usato per potare le uscite degli strumenti; per impostazione predefinita, il modello piccolo configurato",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Progetto",
   "settings.experimental.multiProject.description":
     "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
@@ -980,10 +978,14 @@ export const dict = {
     "Scegli se i blocchi delle modifiche al codice e delle differenze iniziano espansi o compressi.",
   "settings.display.codeEdit.expanded": "Espansi",
   "settings.display.codeEdit.collapsed": "Compressi",
+  "settings.display.mcpTool.title": "Blocchi strumento MCP e generici",
+  "settings.display.mcpTool.description": "Scegli se i blocchi strumento MCP e generici iniziano espansi o compressi.",
+  "settings.display.mcpTool.expanded": "Espansi",
+  "settings.display.mcpTool.collapsed": "Compressi",
 
   "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
-    "Mostra la velocità di generazione del testo (token/sec) sull'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Nascosto per impostazione predefinita per mantenere la chat ordinata.",
+    "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",
   "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
   "settings.display.autoApprovalReason.description":
     "Mostra una riga sulle chiamate agli strumenti che spiega perché sono state approvate automaticamente (regola corrispondente, predefinito dell'agente, modalità YOLO, ecc.).",

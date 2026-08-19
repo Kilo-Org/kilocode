@@ -25,7 +25,6 @@ import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 // kilocode_change start
-import { SwePruner } from "@/kilocode/swe-pruner"
 import { Config } from "@/config/config"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 // kilocode_change end
@@ -67,73 +66,86 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const registry = yield* ToolRegistry.Service
   const mcp = yield* MCP.Service
   const truncate = yield* Truncate.Service
-  // kilocode_change start - SWE-Pruner (experimental)
+  // kilocode_change start - permission provenance
   const config = yield* Config.Service
   const cfg = yield* config.get()
-  const swe = SwePruner.enabled(cfg)
   const permissionOrigins = cfg.permission_origins
   // kilocode_change end
   const flags = yield* RuntimeFlags.Service
   const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
-
-  const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
-    sessionID: input.session.id,
-    abort: options.abortSignal!,
-    messageID: input.processor.message.id,
-    callID: options.toolCallId,
-    extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps: input.promptOps },
-    agent: input.agent.name,
-    messages: input.messages,
-    // kilocode_change start
-    metadata: (val) => input.processor.metadata(options.toolCallId, val),
-    ask: (req) =>
-      KiloSessionPrompt.askPermission({
-        permission,
-        agents,
-        sessions,
-        origins: permissionOrigins,
-        agent: input.agent,
-        session: input.session,
-        request: {
-          ...req,
-          sessionID: input.session.id,
-          tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-        },
-      }).pipe(
-        // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
-        Effect.tap((approval) =>
-          input.processor.metadata(options.toolCallId, {
-            metadata: {
-              approval: PermissionProvenance.tagOutsideWorkspace(
-                approval,
-                req.permission,
-                PermissionProvenance.filepathOf(req.metadata),
-              ),
-            },
-          }),
+  const sandboxed = (yield* SandboxPolicy.status(input.session.id)).enabled // kilocode_change
+  const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => {
+    const extra = {
+      model: input.model,
+      bypassAgentCheck: input.bypassAgentCheck,
+      promptOps: input.promptOps,
+      sandboxed, // kilocode_change
+      sandboxEscalation: false,
+    }
+    return {
+      sessionID: input.session.id,
+      abort: options.abortSignal!,
+      messageID: input.processor.message.id,
+      callID: options.toolCallId,
+      extra,
+      agent: input.agent.name,
+      messages: input.messages,
+      // kilocode_change start
+      metadata: (val) => input.processor.metadata(options.toolCallId, val),
+      ask: (req) =>
+        KiloSessionPrompt.askPermission({
+          permission,
+          agents,
+          sessions,
+          origins: permissionOrigins,
+          agent: input.agent,
+          session: input.session,
+          request: {
+            ...req,
+            sessionID: input.session.id,
+            tool: { messageID: input.processor.message.id, callID: options.toolCallId },
+          },
+        }).pipe(
+          // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
+          Effect.tap((approval) =>
+            Effect.gen(function* () {
+              if (req.metadata?.["sandboxEscalation"] === true && approval.source === "manual") {
+                extra.sandboxEscalation = true
+              }
+              yield* input.processor.metadata(options.toolCallId, {
+                metadata: {
+                  approval: PermissionProvenance.tagOutsideWorkspace(
+                    approval,
+                    req.permission,
+                    PermissionProvenance.filepathOf(req.metadata),
+                  ),
+                },
+              })
+            }),
+          ),
+          // record why the call was denied too, so JSON exports and clients can explain the denial
+          Effect.tapErrorTag("PermissionDeniedError", (err) =>
+            input.processor.metadata(options.toolCallId, {
+              metadata: {
+                approval: PermissionProvenance.tagOutsideWorkspace(
+                  PermissionProvenance.classifyDenial({
+                    ruleset: err.ruleset,
+                    permission: req.permission,
+                    patterns: req.patterns,
+                    agent: input.agent.name,
+                    origins: permissionOrigins,
+                  }),
+                  req.permission,
+                  PermissionProvenance.filepathOf(req.metadata),
+                ),
+              },
+            }),
+          ),
+          Effect.asVoid,
+          Effect.orDie,
         ),
-        // record why the call was denied too, so JSON exports and clients can explain the denial
-        Effect.tapErrorTag("PermissionDeniedError", (err) =>
-          input.processor.metadata(options.toolCallId, {
-            metadata: {
-              approval: PermissionProvenance.tagOutsideWorkspace(
-                PermissionProvenance.classifyDenial({
-                  ruleset: err.ruleset,
-                  permission: req.permission,
-                  patterns: req.patterns,
-                  agent: input.agent.name,
-                  origins: permissionOrigins,
-                }),
-                req.permission,
-                PermissionProvenance.filepathOf(req.metadata),
-              ),
-            },
-          }),
-        ),
-        Effect.asVoid,
-        Effect.orDie,
-      ),
-  })
+    }
+  }
   // kilocode_change end
 
   for (const item of yield* registry.tools({
@@ -144,11 +156,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     permission: input.session.permission,
     networkRestricted: restricted, // kilocode_change - let the registry suppress code-mode in restricted sessions
   })) {
-    // kilocode_change start - SWE-Pruner (experimental): advertise the focus parameter on prunable tools
-    const pruner = swe && SwePruner.prunable(item.id)
     const base = ToolJsonSchema.fromTool(item)
-    const schema = ProviderTransform.schema(input.model, pruner ? SwePruner.extend(base) : base)
-    // kilocode_change end
+    const schema = ProviderTransform.schema(input.model, base)
     tools[item.id] = tool({
       description: item.description,
       inputSchema: jsonSchema(schema),
@@ -162,11 +171,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { args },
             )
             // kilocode_change start
-            let result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
-            // SWE-Pruner (experimental): prune the output when the model provided a focus question.
-            // Runs before tool.execute.after so plugins observe the final output the model will
-            // see; pruning is signalled to them via metadata.swePruner.
-            if (pruner) result = yield* SwePruner.sweep({ tool: item.id, args, result, abort: ctx.abort })
+            const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
             // kilocode_change end
             const output = {
               ...result,

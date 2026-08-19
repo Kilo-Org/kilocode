@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { createRoot } from "solid-js"
+import { createRoot, createSignal } from "solid-js"
 import { useFileMention } from "../../webview-ui/src/hooks/useFileMention"
 import { FILE_PICKER_RESULT } from "../../webview-ui/src/hooks/file-mention-utils"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
@@ -747,6 +747,335 @@ describe("useFileMention", () => {
 
     expect(input.value).toBe("hello @b")
     expect(mention.mentionedPaths().has("/outside/file.ts")).toBe(false)
+
+    dispose.fn?.()
+  })
+
+  it("renders cached files instantly when opening @ with empty query", () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+    mention.onInput("@", 1)
+    const refresh = posted.at(-1)
+    expect(refresh?.type).toBe("requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: refresh?.type === "requestFileSearch" ? refresh.requestId : "",
+        dir: "/repo",
+        paths: ["src/index.ts", "package.json"],
+        items: [
+          { path: "src/index.ts", type: "opened-file" },
+          { path: "package.json", type: "file" },
+        ],
+      })
+    }
+
+    expect(mention.mentionResults()).toEqual([
+      { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
+      { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
+      { type: "opened-file", value: "src/index.ts" },
+      { type: "file", value: "package.json" },
+      FILE_PICKER_RESULT,
+    ])
+
+    // Close mention and reopen @ - should still be instant
+    mention.closeMention()
+    expect(mention.mentionResults().length).toBe(0)
+
+    mention.onInput("@", 1)
+    expect(mention.mentionResults()).toEqual([
+      { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
+      { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
+      { type: "opened-file", value: "src/index.ts" },
+      { type: "file", value: "package.json" },
+      FILE_PICKER_RESULT,
+    ])
+
+    dispose.fn?.()
+  })
+
+  it("replaces deleted cached files when an empty refresh completes", () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+    mention.onInput("@", 1)
+    const prewarm = posted.at(-1)
+    expect(prewarm?.type).toBe("requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: prewarm?.type === "requestFileSearch" ? prewarm.requestId : "",
+        dir: "/repo",
+        paths: ["deleted.ts"],
+        items: [{ path: "deleted.ts", type: "file" }],
+      })
+    }
+
+    expect(mention.mentionResults()).toContainEqual({ type: "file", value: "deleted.ts" })
+    mention.closeMention()
+    mention.onInput("@", 1)
+    expect(mention.mentionResults()).toContainEqual({ type: "file", value: "deleted.ts" })
+    const refresh = posted.at(-1)
+    expect(refresh?.type).toBe("requestFileSearch")
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: refresh?.type === "requestFileSearch" ? refresh.requestId : "",
+        dir: "/repo",
+        paths: [],
+        items: [],
+      })
+    }
+
+    expect(mention.mentionResults()).not.toContainEqual({ type: "file", value: "deleted.ts" })
+    mention.closeMention()
+    mention.onInput("@", 1)
+    expect(mention.mentionResults()).not.toContainEqual({ type: "file", value: "deleted.ts" })
+
+    dispose.fn?.()
+  })
+
+  it("does not reuse cached files after switching sessions", () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const state = createRoot((root) => {
+      dispose.fn = root
+      const [session, setSession] = createSignal("session-a")
+      return { mention: useFileMention(ctx, session, () => false), setSession }
+    })
+    state.mention.onInput("@", 1)
+    const first = posted.at(-1)
+    expect(first).toMatchObject({ type: "requestFileSearch", sessionID: "session-a" })
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: first?.type === "requestFileSearch" ? first.requestId : "",
+        dir: "/repo-a",
+        paths: ["only-a.ts"],
+        items: [{ path: "only-a.ts", type: "file" }],
+      })
+    }
+
+    state.mention.closeMention()
+    state.setSession("session-b")
+    state.mention.onInput("@", 1)
+
+    expect(state.mention.mentionResults()).not.toContainEqual({ type: "file", value: "only-a.ts" })
+    expect(posted.at(-1)).toMatchObject({ type: "requestFileSearch", sessionID: "session-b", query: "" })
+
+    dispose.fn?.()
+  })
+
+  it("bounds remembered session directories", () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const state = createRoot((root) => {
+      dispose.fn = root
+      const [session, setSession] = createSignal("session-0")
+      return { mention: useFileMention(ctx, session, () => false), setSession }
+    })
+
+    const reply = (request: WebviewMessage | undefined, dir: string) => {
+      for (const handler of handlers) {
+        handler({
+          type: "fileSearchResult",
+          requestId: request?.type === "requestFileSearch" ? request.requestId : "",
+          dir,
+          paths: [],
+          items: [],
+        })
+      }
+    }
+
+    state.mention.onInput("@", 1)
+    reply(posted.at(-1), "/repo/0")
+    for (let index = 1; index <= 8; index++) {
+      state.mention.closeMention()
+      state.setSession(`session-${index}`)
+      state.mention.onInput("@", 1)
+      reply(posted.at(-1), `/repo/${index}`)
+    }
+
+    state.mention.closeMention()
+    state.setSession("session-0")
+    state.mention.onInput("@", 1)
+
+    expect(state.mention.mentionResults()).toEqual([
+      { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
+      { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
+      FILE_PICKER_RESULT,
+    ])
+
+    dispose.fn?.()
+  })
+
+  it("preserves the highlighted file when fresh results replace cached results", () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+    mention.onInput("@", 1)
+    const prewarm = posted.at(-1)
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: prewarm?.type === "requestFileSearch" ? prewarm.requestId : "",
+        dir: "/repo",
+        paths: ["a.ts", "b.ts"],
+        items: [
+          { path: "a.ts", type: "file" },
+          { path: "b.ts", type: "file" },
+        ],
+      })
+    }
+    mention.closeMention()
+    mention.onInput("@", 1)
+    const selected = mention.mentionResults().findIndex((item) => item.type === "file" && item.value === "b.ts")
+    mention.setMentionIndex(selected)
+
+    const refresh = posted.at(-1)
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: refresh?.type === "requestFileSearch" ? refresh.requestId : "",
+        dir: "/repo",
+        paths: ["new.ts", "b.ts"],
+        items: [
+          { path: "new.ts", type: "file" },
+          { path: "b.ts", type: "file" },
+        ],
+      })
+    }
+
+    expect(mention.mentionResults()[mention.mentionIndex()]).toEqual({ type: "file", value: "b.ts" })
+
+    dispose.fn?.()
+  })
+
+  it("ignores a response after the query changes", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@old", 4)
+    await wait(170)
+    const old = posted.at(-1)
+    expect(old).toMatchObject({ type: "requestFileSearch", query: "old" })
+    mention.onInput("@new", 4)
+
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: old?.type === "requestFileSearch" ? old.requestId : "",
+        dir: "/repo",
+        paths: ["old.ts"],
+        items: [{ path: "old.ts", type: "file" }],
+      })
+    }
+
+    expect(mention.mentionResults()).not.toContainEqual({ type: "file", value: "old.ts" })
+
+    dispose.fn?.()
+  })
+
+  it("ignores a response after closing the mention menu", () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@", 1)
+    const request = posted.at(-1)
+    mention.closeMention()
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: request?.type === "requestFileSearch" ? request.requestId : "",
+        dir: "/repo",
+        paths: ["late.ts"],
+        items: [{ path: "late.ts", type: "file" }],
+      })
+    }
+    mention.onInput("@", 1)
+
+    expect(mention.mentionResults()).not.toContainEqual({ type: "file", value: "late.ts" })
 
     dispose.fn?.()
   })

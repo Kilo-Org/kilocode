@@ -156,7 +156,10 @@ describe("pty HttpApi bridge", () => {
 
     // Exited sessions are retained by core for the canonical surface, but the legacy
     // routes preserve pre-retention behavior: exited sessions are invisible here.
-    const deadline = Date.now() + 5_000
+    // kilocode_change start - exit propagation can exceed 5s on a loaded CI shard; the loop
+    // breaks as soon as the session disappears, so a generous deadline costs nothing when healthy.
+    const deadline = Date.now() + 30_000
+    // kilocode_change end
     while (Date.now() < deadline) {
       const found = await app().request(PtyPaths.get.replace(":ptyID", info.id), { headers })
       if (found.status === 404) break
@@ -170,22 +173,29 @@ describe("pty HttpApi bridge", () => {
     expect(await list.json()).toEqual([])
   })
 
-  testPty("disposes PTY sessions with their legacy instance", async () => {
+  // kilocode_change start - location disposal must preserve the process-wide PTY registry.
+  testPty("preserves PTY sessions across legacy instance disposal", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
     const headers = { "x-kilo-directory": tmp.path }
     const created = await app().request(PtyPaths.create, {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "sleep 5"] }),
+      body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "sleep 30"] }),
     })
     expect(created.status).toBe(200)
+    const info = await created.json()
 
-    await disposeAllInstances()
+    try {
+      await disposeAllInstances()
 
-    const list = await app().request(PtyPaths.list, { headers })
-    expect(list.status).toBe(200)
-    expect(await list.json()).toEqual([])
+      const list = await app().request(PtyPaths.list, { headers })
+      expect(list.status).toBe(200)
+      expect(await list.json()).toEqual([info])
+    } finally {
+      await app().request(PtyPaths.remove.replace(":ptyID", info.id), { method: "DELETE", headers })
+    }
   })
+  // kilocode_change end
 
   test("returns 404 for missing PTY websocket before upgrade", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })

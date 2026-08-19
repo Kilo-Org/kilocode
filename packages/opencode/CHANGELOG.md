@@ -1,5 +1,60 @@
 # @kilocode/cli
 
+## 7.4.22
+
+### Minor Changes
+
+- [#13084](https://github.com/Kilo-Org/kilocode/pull/13084) [`5c97b48`](https://github.com/Kilo-Org/kilocode/commit/5c97b481d233d294859bcb737448661910fd4916) - Remove the built-in experimental Morph WarpGrep codebase search tool and ignore its retired configuration flag.
+
+- [#12809](https://github.com/Kilo-Org/kilocode/pull/12809) [`907f7df`](https://github.com/Kilo-Org/kilocode/commit/907f7dfcf398e6ce44d8ee59dc031b3a1da5464f) Thanks [@bagatao-anaconda](https://github.com/bagatao-anaconda)! - Add `kilo --worktree <name>` to create (or reuse) a git worktree and start the TUI there, placed at `.kilo/worktrees/<name>` alongside worktrees created by the VS Code extension's Agent Manager. Also adds `kilo worktree create/list/remove` for managing worktrees without launching the TUI, and a `/worktree` command in the TUI to list and remove them. Resuming an explicit `--session <id>` now tries to restart in the worktree the session was originally created in, if it still exists.
+
+### Patch Changes
+
+- [#13102](https://github.com/Kilo-Org/kilocode/pull/13102) [`f4cba05`](https://github.com/Kilo-Org/kilocode/commit/f4cba053a0ad9ef177f4c1c2ec845420e959f063) Thanks [@quanzhuo](https://github.com/quanzhuo)! - Preserve the selected session agent when sending headless prompts without an explicit agent.
+
+- [#12388](https://github.com/Kilo-Org/kilocode/pull/12388) [`c8e9c3b`](https://github.com/Kilo-Org/kilocode/commit/c8e9c3bf8f942c4ad40678bbc19ec541ef5c5928) Thanks [@rakshith1928](https://github.com/rakshith1928)! - Surface the underlying reason when `kilo --cloud-fork` fails to import a cloud session (HTTP status, server message, or fetch error) in both the user-visible message and the DEBUG log stream.
+
+- [#13100](https://github.com/Kilo-Org/kilocode/pull/13100) [`753d560`](https://github.com/Kilo-Org/kilocode/commit/753d5609859f2b646c404392e71ca048714f61dd) - Support structured AWS access keys and Google Cloud service-account JSON when connecting Bedrock and Vertex AI in VS Code.
+
+- [#13108](https://github.com/Kilo-Org/kilocode/pull/13108) [`738163b`](https://github.com/Kilo-Org/kilocode/commit/738163bb1255ec9eb1b56c2c5fc1d7ea5fc3d3d4) - Show the real commit-message generation error instead of a generic "check server logs" toast.
+
+- [#12373](https://github.com/Kilo-Org/kilocode/pull/12373) [`3a99f36`](https://github.com/Kilo-Org/kilocode/commit/3a99f36d96d316f03d481d7b120b9f1aaca243f1) Thanks [@mvanhorn](https://github.com/mvanhorn)! - Fix subagent permission errors that referenced phantom deny rules and blocked commands the subagent's own config explicitly allowed. A read-only or delegating agent's `readOnlyBash` allowlist is no longer projected onto a writable subagent as a bash ceiling, so a delegated subagent can run its own allowed commands (e.g. `git status`). Edit, notebook, and MCP denials are still inherited as hard ceilings.
+
+- [#13107](https://github.com/Kilo-Org/kilocode/pull/13107) [`746fa97`](https://github.com/Kilo-Org/kilocode/commit/746fa974ecaa11de5e587f6d0b0067aa4872d291) - Stop models.dev catalog refresh errors from overwriting the TUI prompt.
+
+- Changes from opencode v1.17.13 to v1.18.0 upstream:
+  - Core Improvements: Added a code mode MCP adapter for running confined orchestration scripts against connected MCP tools.
+  - Core Improvements: Hid the `execute` tool unless code mode is enabled.
+  - Core Improvements: Add a model-specific system prompt for Meta Muse Spark.
+  - Core Improvements: Updated Azure AI support for GPT-5.6.
+  - Core Bugfixes: Fixed paginated MCP tool catalogs losing tool metadata and output schema validation.
+  - Core Bugfixes: Preserved low reasoning effort for OpenRouter small-model variants instead of disabling it.
+  - Core Bugfixes: Fixed GitHub Copilot model routing to honor each model's advertised chat or responses endpoint.
+  - Core Bugfixes: Fixed session lists to match equivalent instance directories reliably.
+  - Core Bugfixes: Fixed Cerebras reasoning replay so earlier assistant reasoning is sent back in the provider-supported field.
+  - Core Bugfixes: Better classify Z.ai context-window overflow errors so oversized requests surface the right failure mode (@fengjikui)
+  - Core Bugfixes: Handle unavailable config directories more gracefully when reading config files
+  - Core Bugfixes: Exposed reasoning effort variants for Grok models.
+  - Core Bugfixes: Improved xAI prompt cache routing and PDF file support in Responses models.
+  - Core Bugfixes: Improved Meta model handling for reasoning variants and provider requests.
+  - Core Bugfixes: Prevent crashes and bad pricing data when GitHub Copilot returns models with a zero billing batch size.
+  - Core Bugfixes: Supported OpenAI pro reasoning mode.
+  - Core Bugfixes: Disabled response storage by default for xAI Responses. (@geraint0923)
+  - Core Bugfixes: Added OAuth support for Luna Responses Lite.
+  - Core Bugfixes: Switched to another available org after logging out in the console.
+  - Core Bugfixes: Used Codex context limits for GPT-5.6 over OAuth. (@nabilfreeman)
+  - Core Bugfixes: Removed an obsolete Codex workaround that could interfere with OpenAI Luna Responses Lite requests.
+  - TUI Bugfixes: Fixed spinner registration so loading indicators keep rendering across TUI surfaces.
+  - TUI Bugfixes: Forwarded CLI environment variables to the TUI worker.
+
+- Adopt upstream improvements from v1.18.1 through v1.18.13, including model compatibility, MCP reliability, and TUI enhancements.
+
+- [#13104](https://github.com/Kilo-Org/kilocode/pull/13104) [`9b01d97`](https://github.com/Kilo-Org/kilocode/commit/9b01d97cf336e42a33ede75d44232c907c022938) - Preserve workspace restoration outcomes when reverting fresh VS Code sessions.
+
+- [#13067](https://github.com/Kilo-Org/kilocode/pull/13067) [`2c2b0a2`](https://github.com/Kilo-Org/kilocode/commit/2c2b0a2ffa563ad8883fbb52260e8c3204406e4f) - Stop startup from crashing on a database migration that another Kilo process already applied
+
+- [#13114](https://github.com/Kilo-Org/kilocode/pull/13114) [`b5f5d9f`](https://github.com/Kilo-Org/kilocode/commit/b5f5d9f22aac812468c1d8e8cea7b9cf7f04da7a) - Stop leftover toast titles from appearing when installing a TUI update.
+
 ## 7.4.21
 
 ### Minor Changes
@@ -480,16 +535,6 @@
   - @kilocode/plugin-atomic-chat@7.4.4
   - @kilocode/kilo-telemetry@7.4.4
 
-## 7.4.3
-
-### Minor Changes
-
-- [#12067](https://github.com/Kilo-Org/kilocode/pull/12067) [`ed36326`](https://github.com/Kilo-Org/kilocode/commit/ed36326b1f4b3ced02e24b07e54ec665d8ce5cc4) - Support task-aware pruning of agent-invoked Bash output with experimental SWE-Pruner.
-
-### Patch Changes
-
-- [#12052](https://github.com/Kilo-Org/kilocode/pull/12052) [`61d90f1`](https://github.com/Kilo-Org/kilocode/commit/61d90f166ab2e8230c87f5cc5d0e8d932d720911) - Exclude directory-scoped AGENTS.md instructions from SWE-Pruner context.
-
 ## 7.4.2
 
 ### Minor Changes
@@ -499,8 +544,6 @@
 - [#12004](https://github.com/Kilo-Org/kilocode/pull/12004) [`cef3dc7`](https://github.com/Kilo-Org/kilocode/commit/cef3dc7ae8a7ef7f26e36fb690af5014b542b7bb) - Add a reload action that reboots the per-directory instance, picking up config, skills, agents, commands, and MCP prompts changed on disk. Sessions and history are preserved. Surfaces: `/reload` in the CLI palette and editor chat, a reload button in the task header and settings panel, the `Kilo Code: Reload Config and Skills` command, and a `POST /instance/reload` HTTP endpoint. The endpoint returns 409 while a session is actively running.
 
 - [#11835](https://github.com/Kilo-Org/kilocode/pull/11835) [`cd49ae6`](https://github.com/Kilo-Org/kilocode/commit/cd49ae633cab8b6887f6b37abc4ef1e6475a852e) - Support provider-aware model discovery and selection for remote Cloud sessions.
-
-- [#11980](https://github.com/Kilo-Org/kilocode/pull/11980) [`adcbe0f`](https://github.com/Kilo-Org/kilocode/commit/adcbe0f37321704abdc0994d4e1f78919c9bfa5a) Thanks [@Drilmo](https://github.com/Drilmo)! - Add experimental SWE-Pruner support (disabled by default). When enabled via `experimental.swe_pruner` or the Experimental settings tab in VS Code, the read and grep tools accept an optional `context_focus_question` parameter; when the agent provides it, large tool outputs are pruned by a small model down to the lines relevant to that question, with omitted sections marked inline and a `SWE-Pruner · kept/total` indicator on the tool row. The skimming model can be overridden via `experimental.swe_pruner_model` (defaults to the configured small model). Any pruning failure falls back to the full output.
 
 - [#11428](https://github.com/Kilo-Org/kilocode/pull/11428) [`69f5b9d`](https://github.com/Kilo-Org/kilocode/commit/69f5b9d66df88f727a80c8f4fdb3f2ccc7162f35) Thanks [@drye](https://github.com/drye)! - Add vim modal editing to the CLI prompt input. Enable it with `"vim": true` in `tui.jsonc`, the `Toggle vim mode` command in the command palette, or the `/vim` slash command. Supports NORMAL-mode motions (h/j/k/l, w/b/e, 0/^/$, gg/G, counts), edits (x, dd, dw, cw, D, C, r, yy/p, u, Ctrl+r), insert transitions (i/a/A/I/o/O), and VISUAL / VISUAL-LINE mode (v/V with selection-extending motions, d/x/c/s/y, o to swap ends), with a mode indicator and matching cursor shape.
 

@@ -361,7 +361,7 @@ describe("ProjectCopy", () => {
   it.live("refresh ignores existing directories that are no longer git checkouts", () =>
     Effect.gen(function* () {
       const input = yield* setup()
-      yield* Effect.promise(() => fs.rm(path.join(input.sourceDirectory, ".git"), { recursive: true }))
+      yield* Effect.promise(() => fs.rm(path.join(input.sourceDirectory, ".git"), { recursive: true, force: true })) // kilocode_change
       const copy = yield* ProjectCopy.Service
 
       yield* copy.refresh({ projectID: input.projectID })

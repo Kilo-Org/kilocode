@@ -12,7 +12,9 @@ import {
   isPathMention,
   applySandboxState,
   applySandboxStates,
+  memoryRest,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
+import { parseMemoryCommand } from "../../webview-ui/src/utils/memory-command"
 
 describe("applySandboxState", () => {
   const state = (enabled: boolean, revision: number, sessionID = "ses_1", directory = "/repo") => ({
@@ -327,5 +329,35 @@ describe("isPathMention", () => {
 
   it("handles text without @ prefix", () => {
     expect(isPathMention("src/foo.ts")).toBe(true)
+  })
+})
+
+describe("memoryRest", () => {
+  it("keeps trailing text in the input after a no-argument memory command", () => {
+    // /memory rebuild hello -> rebuild executes, "hello" stays in the input.
+    // This is the submit-path half of the trailing-text bug: handleSend sets
+    // the input to memoryRest(parsed), so a regression would drop "hello".
+    const memory = parseMemoryCommand("/memory rebuild hello")
+    expect(memory).not.toBeUndefined()
+    expect(memoryRest(memory!)).toBe("hello")
+  })
+
+  it("keeps trailing text through the project scope", () => {
+    expect(memoryRest(parseMemoryCommand("/memory project rebuild hello")!)).toBe("hello")
+  })
+
+  it("returns empty string when a no-argument command has no trailing text", () => {
+    expect(memoryRest(parseMemoryCommand("/memory rebuild")!)).toBe("")
+  })
+
+  it("keeps trailing text in the input after the show command", () => {
+    // /memory show draft notes -> show executes, "draft notes" stays in the input.
+    expect(memoryRest(parseMemoryCommand("/memory show draft notes")!)).toBe("draft notes")
+  })
+
+  it("returns empty string for argument-taking operations", () => {
+    // remember/correct/forget/auto/purge consume their text, so nothing remains.
+    expect(memoryRest(parseMemoryCommand("/memory remember hello")!)).toBe("")
+    expect(memoryRest(parseMemoryCommand("/memory auto on")!)).toBe("")
   })
 })

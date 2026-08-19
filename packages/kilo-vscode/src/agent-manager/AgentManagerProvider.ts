@@ -35,6 +35,8 @@ import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
+import { discardWorktree as discard } from "./discard-worktree"
+import { removePtys as cleanupPtys } from "./pty-cleanup"
 import { executeVscodeTask } from "./task-runner"
 import { runWorktreeSetupScript } from "./setup-script-task"
 import { RunController } from "./run/controller"
@@ -69,6 +71,7 @@ import { PLATFORM } from "./constants"
 import { ProjectRegistry } from "./project/registry"
 import type { ProjectContext } from "./project/context"
 import { ProjectContexts } from "./project/contexts"
+import { hydrateExpanded } from "./project/hydrate"
 import { createMultiVersion, type MultiVersionHost } from "./provider-multi-version"
 import { handleProjectMessage, type ProjectMessageDeps } from "./project/messages"
 import { createProjectWiring } from "./project/wiring"
@@ -175,6 +178,7 @@ export class AgentManagerProvider implements Disposable {
       push: () => this.pushState(),
       setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
       session: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
+      removePtys: (directory) => this.removePtys(directory),
       register: (sid, dir) => this.registerWorktreeSession(sid, dir),
       ready: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
       log: (...args) => this.log(...args),
@@ -319,7 +323,7 @@ export class AgentManagerProvider implements Disposable {
     // Session events from sync or older backends can lack time/directory; a
     // throw here would escape into the SSE dispatch loop and starve the other
     // listeners (there is no per-listener error isolation).
-    if (!info?.time || !dir) return
+    if (!info?.time || !dir || (info.parentID !== undefined && info.parentID !== null)) return
     const ctx = this.contexts.byDirectory(dir)
     if (!ctx || ctx.lifecycle !== "ready") return
     const state = ctx.peekState()
@@ -1029,26 +1033,21 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  /** Remove a worktree whose session could not be safely initialized. */
-  private async discardWorktree(id: string, dir: string, branch: string, sessionId?: string): Promise<void> {
-    this.getStateManager()?.removeWorktree(id)
-    this.pushState()
-
-    if (sessionId) {
-      try {
-        await this.connectionService
-          .getClient()
-          .session.delete({ sessionID: sessionId, directory: dir }, { throwOnError: true })
-      } catch (err) {
-        this.log(`Failed to delete session ${sessionId} after worktree setup failed:`, err)
-      }
-    }
-
+  private async removePtys(directory: string): Promise<void> {
+    const release = await this.terminalRouter.blockDirectory(directory)
     try {
-      await this.getWorktreeManager()?.removeWorktree(dir, branch)
-    } catch (err) {
-      this.log(`Failed to remove worktree ${id} after setup failed:`, err)
+      await this.terminalRouter.closeDirectory(directory)
+      await cleanupPtys((dir) => this.connectionService.getClientAsync(dir), directory)
+    } finally {
+      release()
     }
+  }
+
+  private async discardWorktree(id: string, dir: string, branch: string, sessionId?: string): Promise<void> {
+    const ctx = this.context
+    if (!ctx) return
+    // The helper clears PTYs before ctx.worktreeManager().removeWorktree(dir, branch).
+    return discard(ctx, this.lifecycleHost, id, dir, branch, sessionId)
   }
 
   /** Send worktreeSetup.ready + pushState after worktree creation. */
@@ -1114,6 +1113,7 @@ export class AgentManagerProvider implements Disposable {
           return true
         },
         cleanupWorktree: async (wid, dir) => {
+          await this.removePtys(dir)
           this.getStateManager()?.removeWorktree(wid)
           await this.getWorktreeManager()?.removeWorktree(dir)
           this.pushState()
@@ -1486,6 +1486,7 @@ export class AgentManagerProvider implements Disposable {
       capture: (event, props) => this.host.capture(event, props),
       autoName: () => this.host.autoBranchNaming(),
       client: () => this.connectionService.getClient(),
+      removePtys: (directory) => this.removePtys(directory),
       metadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
@@ -1625,15 +1626,14 @@ export class AgentManagerProvider implements Disposable {
       multiProject: this.host.multiProject(),
       projects,
     })
-    if (this.panel) {
-      for (const project of projects) {
-        if (project.active || !project.expanded || !project.trusted || project.missing) continue
-        if (this.contexts.get(project.id)) continue
-        const ctx = this.contexts.expand(project.id)
-        if (ctx) this.initExpanded(ctx)
-      }
-    }
+    if (this.panel)
+      hydrateExpanded(projects, {
+        expand: (id) => this.contexts.expand(id),
+        push: (ctx) => this.pushState(ctx),
+        init: (ctx) => this.initExpanded(ctx),
+      })
     this.projectPollers.sync(this.contexts)
+    this.projectPollers.replay()
   }
 
   // Worktree file helpers

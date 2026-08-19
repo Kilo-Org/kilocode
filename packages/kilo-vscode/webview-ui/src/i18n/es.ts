@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Conectar Anaconda Desktop",
   "provider.anaconda.title.manage": "Administrar Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Conectar proveedor",
 
@@ -286,6 +289,7 @@ export const dict = {
   "notification.permission.title": "Permiso requerido",
   "notification.permission.titleSubagent": "Permiso requerido (subagente)",
   "notification.permission.titleSkillShell": "¿Ejecutar comandos de shell de la habilidad «{{skill}}»?",
+  "notification.permission.titleSandboxEscalation": "¿Permitir la operación de Git fuera del entorno aislado?",
   "ui.permission.manageAutoApprove": "Gestionar reglas de aprobación automática",
   "ui.permission.doomLoop.prompt": "Se detectó un posible bucle en la herramienta {{tool}}. ¿Continuar ejecutando?",
   "ui.permission.doomLoop.rule": "Continuar llamadas a {{tool}}",
@@ -888,12 +892,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Activar SWE-Pruner: poda de los resultados extensos de las herramientas de lectura, búsqueda y shell que tiene en cuenta la tarea y está guiada por una pregunta de enfoque proporcionada por el agente",
-  "settings.experimental.swePrunerModel.title": "Modelo de SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Modelo usado para podar las salidas de herramientas; por defecto, el modelo pequeño configurado",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
   "settings.experimental.multiProject.description":
     "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",
@@ -1139,10 +1137,15 @@ export const dict = {
     "Elige si los bloques de edición de código y de diferencias aparecen inicialmente expandidos o contraídos.",
   "settings.display.codeEdit.expanded": "Expandidos",
   "settings.display.codeEdit.collapsed": "Contraídos",
+  "settings.display.mcpTool.title": "Bloques de herramientas MCP y genéricas",
+  "settings.display.mcpTool.description":
+    "Elige si los bloques de herramientas MCP y genéricas aparecen inicialmente expandidos o contraídos.",
+  "settings.display.mcpTool.expanded": "Expandidos",
+  "settings.display.mcpTool.collapsed": "Contraídos",
 
   "settings.display.tokenThroughput.title": "Mostrar rendimiento de tokens",
   "settings.display.tokenThroughput.description":
-    "Muestra la tasa de generación de texto (tokens/s) en el último mensaje del asistente y en el encabezado de la tarea. Oculto de forma predeterminada para mantener el chat ordenado.",
+    "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo de aprobación automática",
   "settings.display.autoApprovalReason.description":
     "Muestra una línea en las llamadas a herramientas que explica por qué se aprobaron automáticamente (regla coincidente, valor predeterminado del agente, modo YOLO, etc.).",

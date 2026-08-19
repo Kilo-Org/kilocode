@@ -327,12 +327,15 @@ Options:
 `;
 
 exports[`Kilo CLI help-text snapshots every documented command emits stable help text: kilo pr --help 1`] = `
-"kilo pr <number>
+"kilo pr
 
-fetch and checkout a GitHub PR branch, then run kilo
+manage pull requests
 
-Positionals:
-  number  PR number to checkout                                                  [number] [required]
+Commands:
+  kilo pr checkout <number>  fetch and checkout a GitHub PR branch, then run kilo
+  kilo pr link <url>         link the current worktree to a pull request
+  kilo pr unlink             clear the linked pull request
+  kilo pr status             show the linked pull request
 
 Options:
   -h, --help        show help                                                              [boolean]

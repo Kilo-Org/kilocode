@@ -44,17 +44,25 @@ export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handler
     const cors = yield* CorsConfig
     const plugin = yield* Plugin.Service
     const locations = yield* LocationServiceMap.Service
-    const unregister = registerDisposer((directory) =>
-      Effect.runPromise(locations.invalidate(Location.Ref.make({ directory: AbsolutePath.make(directory) }))),
+    // kilocode_change start
+    const unregister = registerDisposer((directory, workspaceID) =>
+      Effect.runPromise(
+        locations.invalidate(Location.Ref.make({ directory: AbsolutePath.make(directory), workspaceID })),
+      ),
     )
+    // kilocode_change end
     yield* Effect.addFinalizer(() => Effect.sync(unregister))
 
     const pty = Effect.fnUntraced(function* <A, E, R>(effect: Effect.Effect<A, E, R>) {
+      // kilocode_change start
+      const instance = yield* InstanceState.context
+      const workspaceID = yield* WorkspaceRef
       return yield* effect.pipe(
         Effect.provide(
-          locations.get(Location.Ref.make({ directory: AbsolutePath.make((yield* InstanceState.context).directory) })),
+          locations.get(Location.Ref.make({ directory: AbsolutePath.make(instance.directory), workspaceID })),
         ),
       )
+      // kilocode_change end
     })
 
     const shells = Effect.fn("PtyHttpApi.shells")(function* () {
@@ -127,7 +135,6 @@ export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handler
     })
 
     const remove = Effect.fn("PtyHttpApi.remove")(function* (ctx: { params: { ptyID: PtyID } }) {
-      yield* get(ctx)
       yield* pty(Pty.Service.use((service) => service.remove(ctx.params.ptyID))).pipe(
         Effect.catchTag(
           "Pty.NotFoundError",
@@ -165,17 +172,25 @@ export const ptyConnectHandlers = HttpApiBuilder.group(PtyConnectApi, "pty-conne
     const tickets = yield* PtyTicket.Service
     const cors = yield* CorsConfig
     const locations = yield* LocationServiceMap.Service
-    const unregister = registerDisposer((directory) =>
-      Effect.runPromise(locations.invalidate(Location.Ref.make({ directory: AbsolutePath.make(directory) }))),
+    // kilocode_change start
+    const unregister = registerDisposer((directory, workspaceID) =>
+      Effect.runPromise(
+        locations.invalidate(Location.Ref.make({ directory: AbsolutePath.make(directory), workspaceID })),
+      ),
     )
+    // kilocode_change end
     yield* Effect.addFinalizer(() => Effect.sync(unregister))
 
     const pty = Effect.fnUntraced(function* <A, E, R>(effect: Effect.Effect<A, E, R>) {
+      // kilocode_change start
+      const instance = yield* InstanceState.context
+      const workspaceID = yield* WorkspaceRef
       return yield* effect.pipe(
         Effect.provide(
-          locations.get(Location.Ref.make({ directory: AbsolutePath.make((yield* InstanceState.context).directory) })),
+          locations.get(Location.Ref.make({ directory: AbsolutePath.make(instance.directory), workspaceID })),
         ),
       )
+      // kilocode_change end
     })
 
     return handlers.handleRaw(
