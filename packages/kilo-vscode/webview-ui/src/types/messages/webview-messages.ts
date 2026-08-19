@@ -758,12 +758,6 @@ export interface SetProjectExpandedMessage {
   expanded: boolean
 }
 
-// Grant a project permission to run project-controlled scripts and load state
-export interface TrustProjectMessage {
-  type: "agentManager.trustProject"
-  projectId: string
-}
-
 // Configure worktree setup script
 export interface ConfigureSetupScriptRequest {
   type: "agentManager.configureSetupScript"
@@ -1522,7 +1516,6 @@ export type WebviewMessage =
   | ActivateSelectionMessage
   | RememberTargetMessage
   | SetProjectExpandedMessage
-  | TrustProjectMessage
   | ConfigureSetupScriptRequest
   | ConfigureRunScriptRequest
   | RunScriptRequest

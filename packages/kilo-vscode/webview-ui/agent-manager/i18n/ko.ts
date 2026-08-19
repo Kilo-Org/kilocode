@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "프로젝트",
   "agentManager.project.add": "프로젝트 추가",
   "agentManager.project.remove": "Agent Manager에서 제거",
-  "agentManager.project.trust": "신뢰",
   "agentManager.project.missing": "저장소를 찾을 수 없음",
   "agentManager.notGitRepo": "git 저장소가 아닙니다",
   "agentManager.worktree.settings": "Worktree 설정",
@@ -116,7 +115,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "오래된 Worktree 제거",
 
   "agentManager.dialog.project.select": "프로젝트 선택",
-  "agentManager.dialog.project.untrusted": "먼저 사이드바에서 이 프로젝트를 신뢰하세요",
   "agentManager.dialog.project.missing": "저장소를 찾을 수 없음",
   "agentManager.dialog.openWorktree": "새 워크트리",
   "agentManager.dialog.configureWorktree": "새 Worktree 구성...",

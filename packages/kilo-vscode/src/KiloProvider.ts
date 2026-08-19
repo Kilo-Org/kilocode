@@ -3623,7 +3623,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     if (!this.extensionContext) return undefined
     const project = registeredProjects(this.extensionContext).find((item) => samePath(item.root, root))
-    if (!project?.trusted || !existsSync(project.root)) return undefined
+    if (!project || !existsSync(project.root)) return undefined
     return { id: project.id, root: project.root, generation: 0, pinned: false }
   }
 
@@ -3633,7 +3633,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     if (!this.extensionContext) return false
     const current = registeredProjects(this.extensionContext).find((item) => item.id === project.id)
-    return !!current?.trusted && samePath(current.root, project.root) && existsSync(current.root)
+    return !!current && samePath(current.root, project.root) && existsSync(current.root)
   }
 
   private setMaxCost(value: unknown): number {

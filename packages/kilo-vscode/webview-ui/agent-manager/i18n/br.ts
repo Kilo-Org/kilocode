@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "PROJETOS",
   "agentManager.project.add": "Adicionar projeto",
   "agentManager.project.remove": "Remover do Agent Manager",
-  "agentManager.project.trust": "Confiar",
   "agentManager.project.missing": "Repositório não encontrado",
   "agentManager.notGitRepo": "Não é um repositório git",
   "agentManager.worktree.settings": "Configurações do Worktree",
@@ -117,7 +116,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Remover Worktree obsoleto",
 
   "agentManager.dialog.project.select": "Selecionar projeto",
-  "agentManager.dialog.project.untrusted": "Primeiro, confie neste projeto na barra lateral",
   "agentManager.dialog.project.missing": "Repositório não encontrado",
   "agentManager.dialog.openWorktree": "Novo Worktree",
   "agentManager.dialog.configureWorktree": "Configurar Novo Worktree...",

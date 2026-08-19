@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "โปรเจกต์",
   "agentManager.project.add": "เพิ่มโปรเจกต์",
   "agentManager.project.remove": "ลบออกจาก Agent Manager",
-  "agentManager.project.trust": "เชื่อถือ",
   "agentManager.project.missing": "ไม่พบ Repository",
   "agentManager.notGitRepo": "ไม่ใช่ git repository",
   "agentManager.worktree.settings": "ตั้งค่า Worktree",
@@ -113,7 +112,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "ลบ Worktree ที่ล้าสมัย",
 
   "agentManager.dialog.project.select": "เลือกโปรเจกต์",
-  "agentManager.dialog.project.untrusted": "โปรดเชื่อถือโปรเจกต์นี้ในแถบด้านข้างก่อน",
   "agentManager.dialog.project.missing": "ไม่พบ Repository",
   "agentManager.dialog.openWorktree": "Worktree ใหม่",
   "agentManager.dialog.configureWorktree": "กำหนดค่า Worktree ใหม่...",

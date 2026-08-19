@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "PROJEKTI",
   "agentManager.project.add": "Dodaj projekat",
   "agentManager.project.remove": "Ukloni iz Agent Manager-a",
-  "agentManager.project.trust": "Vjeruj",
   "agentManager.project.missing": "Repozitorij nije pronađen",
   "agentManager.notGitRepo": "Nije git repozitorij",
   "agentManager.worktree.settings": "Postavke Worktree-a",
@@ -117,7 +116,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Ukloni zastarjeli Worktree",
 
   "agentManager.dialog.project.select": "Odaberi projekat",
-  "agentManager.dialog.project.untrusted": "Prvo vjeruj ovom projektu na bočnoj traci",
   "agentManager.dialog.project.missing": "Repozitorij nije pronađen",
   "agentManager.dialog.openWorktree": "Novi worktree",
   "agentManager.dialog.configureWorktree": "Konfiguriši Novi Worktree...",
