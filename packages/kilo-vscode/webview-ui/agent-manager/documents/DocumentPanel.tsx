@@ -36,7 +36,7 @@ export interface DocumentPanelProps {
   onClose: (id: string) => void
   onCloseOthers: (id: string) => void
   onReorder: (from: string, to: string) => void
-  onOpenFile: (file: string, line?: number) => void
+  onOpenFile: (file: string, line?: number, column?: number) => void
   onClosePanel: () => void
   activeTerminalId?: string
   visible: Accessor<boolean>
@@ -166,14 +166,29 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
 
   createEffect(
     on(
-      () => [file(), content(), props.comments] as const,
+      () => [file(), content(), props.comments, data()?.loading, data()?.error] as const,
       ([path, text, current]) => {
         if (!path) return
+        if (data()?.loading || data()?.error || data()?.content === undefined) return
         const max = lineCount(text)
         const valid = current.filter((item) => item.file !== path || (item.line >= 1 && item.line <= max))
         if (valid.length !== current.length) updateComments(valid)
         const currentDraft = draft()
         if (currentDraft && currentDraft.file === path && currentDraft.line > max) cancelDraft()
+      },
+      { defer: true },
+    ),
+  )
+  createEffect(
+    on(
+      () => [file(), props.tabs()] as const,
+      () => {
+        setDraft(null)
+        setEditing(null)
+        draftMeta = null
+        editMeta = null
+        composer.draft = null
+        composer.edit = null
       },
       { defer: true },
     ),
@@ -218,7 +233,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                 size="small"
                 variant="ghost"
                 label={t("agentManager.diff.openFile")}
-                onClick={() => props.onOpenFile(file())}
+                onClick={() => props.onOpenFile(file(), selected()?.line, selected()?.column)}
               />
             </Tooltip>
           </Show>

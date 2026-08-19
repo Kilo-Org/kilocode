@@ -873,6 +873,7 @@ export interface AgentManagerRequestDocumentMessage {
   type: "agentManager.requestDocument"
   sessionId: string
   file: string
+  contextKey?: string
 }
 
 // Create multiple worktree sessions for the same prompt (multi-version mode)

@@ -327,6 +327,7 @@ const AgentManagerContent: Component = () => {
   const documentInspector = createDocumentInspector(
     vscode,
     selection,
+    currentProjectId,
     () => sidePanel() === SidePanel.Documents,
     () => {
       setHistory(false)

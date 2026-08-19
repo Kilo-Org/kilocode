@@ -980,6 +980,7 @@ export interface AgentManagerWorktreeDiffFileMessage {
 export interface AgentManagerDocumentMessage {
   type: "agentManager.document"
   sessionId: string
+  contextKey?: string
   file: string
   requestedFile?: string
   content?: string

@@ -56,10 +56,8 @@ export class DiffViewerProvider implements vscode.Disposable {
     if (this.panel && this.controller) {
       this.panel.reveal(this.panel.viewColumn ?? vscode.ViewColumn.One)
       void this.panel.webview.postMessage({ type: "diffViewer.initialFile", file: this.ctx.initialFile })
-      void this.panel.webview.postMessage({
-        type: "diffViewer.initialMarkdown",
-        render: this.ctx.initialMarkdown === true,
-      })
+      if (this.ctx.initialMarkdown !== undefined)
+        void this.panel.webview.postMessage({ type: "diffViewer.initialMarkdown", render: this.ctx.initialMarkdown })
       this.controller.setContext(this.ctx)
       const nextId = this.catalog.defaultSourceId(this.ctx)
       if (nextId && nextId !== this.controller.currentId) {
@@ -99,7 +97,7 @@ export class DiffViewerProvider implements vscode.Disposable {
       dir,
       initialSourceId: turnInitialSourceId ?? arg?.initialSourceId,
       initialFile: arg?.file,
-      initialMarkdown: typeof arg?.file === "string" && /\.(md|mdx|markdown)$/i.test(arg.file),
+      ...(typeof arg?.file === "string" && /\.(md|mdx|markdown)$/i.test(arg.file) ? { initialMarkdown: true } : {}),
       hidePicker: !!turnInitialSourceId,
     })
   }
@@ -243,10 +241,8 @@ export class DiffViewerProvider implements vscode.Disposable {
     })
     void this.panel.webview.postMessage({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
     void this.panel.webview.postMessage({ type: "diffViewer.initialFile", file: this.ctx?.initialFile })
-    void this.panel.webview.postMessage({
-      type: "diffViewer.initialMarkdown",
-      render: this.ctx?.initialMarkdown === true,
-    })
+    if (this.ctx?.initialMarkdown !== undefined)
+      void this.panel.webview.postMessage({ type: "diffViewer.initialMarkdown", render: this.ctx.initialMarkdown })
     const initial = this.ctx ? this.catalog.defaultSourceId(this.ctx) : undefined
     if (initial) this.swap(initial)
   }

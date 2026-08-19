@@ -207,14 +207,23 @@ export class WorktreeDiffController {
    * controller's state/root context because a document read is a worktree file
    * read, resolved against the same directory the diff for that context uses.
    */
-  public document(sessionId: string, file: string): null {
-    const state = this.ctx.getState()
-    const worktree = state?.getWorktree(sessionId)
-    const session = worktree ? undefined : state?.getSession(sessionId)
-    const root =
-      worktree?.path ?? (session?.worktreeId ? state?.getWorktree(session.worktreeId)?.path : this.ctx.getRoot())
-    if (!root) return null
-    this.ctx.post({ type: "agentManager.document", sessionId, file, requestedFile: file, ...readDocument(root, file) })
+  public document(sessionId: string, file: string, contextKey?: string): null {
+    void this.ready("stateReady rejected, continuing document resolve:").then(() => {
+      const state = this.ctx.getState()
+      const worktree = sessionId === LOCAL_DIFF_ID ? undefined : state?.getWorktree(sessionId)
+      const session = worktree || sessionId === LOCAL_DIFF_ID ? undefined : state?.getSession(sessionId)
+      const root =
+        sessionId === LOCAL_DIFF_ID
+          ? this.ctx.getRoot()
+          : (worktree?.path ??
+            (session?.worktreeId
+              ? state?.getWorktree(session.worktreeId)?.path
+              : session
+                ? this.ctx.getRoot()
+                : undefined))
+      const result = root ? readDocument(root, file) : { error: "The document context is no longer available." }
+      this.ctx.post({ type: "agentManager.document", sessionId, file, requestedFile: file, contextKey, ...result })
+    })
     return null
   }
 

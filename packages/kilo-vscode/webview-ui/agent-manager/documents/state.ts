@@ -6,6 +6,8 @@ import type { AgentManagerDocumentMessage } from "../../src/types/messages"
 export interface DocumentTab {
   id: string
   file: string
+  line?: number
+  column?: number
 }
 
 export interface DocumentData {
@@ -26,7 +28,11 @@ export function isMarkdownPath(file: string): boolean {
   return /\.(md|mdx|markdown)$/i.test(file)
 }
 
-export function createDocuments(vscode: ReturnType<typeof useVSCode>, context: Accessor<string | null>) {
+export function createDocuments(
+  vscode: ReturnType<typeof useVSCode>,
+  context: Accessor<string | null>,
+  session: Accessor<string | null> = context,
+) {
   const [tabs, setTabs] = createSignal<Record<string, DocumentTab[]>>({})
   const [active, setActive] = createSignal<Record<string, string | undefined>>({})
   const [data, setData] = createSignal<Record<string, DocumentData>>({})
@@ -36,24 +42,28 @@ export function createDocuments(vscode: ReturnType<typeof useVSCode>, context: A
   const selected = () => active()[current()]
   const document = (file: string) => data()[key(current(), file)]
 
-  const request = (file: string) => {
+  const request = (file: string, sessionId = session() ?? "") => {
     const ctx = current()
     if (!ctx) return
     const id = key(ctx, file)
     setData((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { file }), file, loading: true, error: undefined } }))
-    vscode.postMessage({ type: "agentManager.requestDocument", sessionId: ctx, file })
+    vscode.postMessage({ type: "agentManager.requestDocument", sessionId, file, contextKey: ctx })
   }
 
-  const open = (file: string) => {
+  const open = (file: string, sessionId = current(), line?: number, column?: number) => {
     const ctx = current()
     if (!ctx || !file) return
     setTabs((prev) => {
       const list = prev[ctx] ?? []
-      if (list.some((tab) => tab.file === file)) return prev
-      return { ...prev, [ctx]: [...list, { id: key(ctx, file), file }] }
+      const id = key(ctx, file)
+      if (list.some((tab) => tab.id === id)) {
+        return { ...prev, [ctx]: list.map((tab) => (tab.id === id ? { ...tab, line, column } : tab)) }
+      }
+      return { ...prev, [ctx]: [...list, { id, file, line, column }] }
     })
     setActive((prev) => ({ ...prev, [ctx]: key(ctx, file) }))
-    request(file)
+    request(file, sessionId)
+    return true
   }
 
   const select = (id: string) => {
@@ -98,7 +108,7 @@ export function createDocuments(vscode: ReturnType<typeof useVSCode>, context: A
   }
 
   const onMessage = (message: AgentManagerDocumentMessage) => {
-    const id = key(message.sessionId, message.requestedFile ?? message.file)
+    const id = key(message.contextKey ?? message.sessionId, message.requestedFile ?? message.file)
     setData((prev) => ({
       ...prev,
       [id]: {
@@ -133,13 +143,24 @@ export function createDocumentComments(context: Accessor<string | null>) {
 export function createDocumentInspector(
   vscode: ReturnType<typeof useVSCode>,
   context: Accessor<string | null>,
+  project: Accessor<string | undefined>,
   isOpen: Accessor<boolean>,
   openPanel: () => void,
   closePanel: () => void,
 ) {
-  const documents = createDocuments(vscode, context)
-  const comments = createDocumentComments(context)
-  const open = (file?: string) => (openPanel(), file ? documents.open(file) : undefined)
+  const scope = () => `${project() ?? "single"}:${context() ?? ""}`
+  const documents = createDocuments(vscode, scope, context)
+  const comments = createDocumentComments(scope)
+  const open = (file?: string, sessionId?: string, line?: number, column?: number) => {
+    if (!file) {
+      openPanel()
+      return true
+    }
+    const sid = sessionId ?? context()
+    if (!sid || !documents.open(file, sid, line, column)) return false
+    openPanel()
+    return true
+  }
   onMount(() => {
     const handler = (event: Event) => handleDocumentOpen(event, open)
     const message = vscode.onMessage((item) => {
@@ -156,17 +177,24 @@ export function createDocumentInspector(
   // Tabs are keyed per worktree, so this hides itself on a worktree with none,
   // and stays visible while the panel is open so it can still be toggled shut.
   const available = () => documents.tabs().length > 0 || isOpen()
-  const openFile = (file: string, line?: number) => {
+  const openFile = (file: string, line?: number, column?: number) => {
     const sessionId = context()
-    if (sessionId) vscode.postMessage({ type: "agentManager.openFile", sessionId, filePath: file, line })
+    if (sessionId) vscode.postMessage({ type: "agentManager.openFile", sessionId, filePath: file, line, column })
   }
   const toggle = () => (isOpen() ? closePanel() : open())
-  return { documents, comments, open, openFile, toggle, available, isOpen }
+  return { documents, comments, open, openFile, toggle, available, isOpen, scope }
 }
 
-export function handleDocumentOpen(event: Event, open: (file: string) => void): void {
-  const file = (event as CustomEvent<{ filePath?: unknown }>).detail?.filePath
+export function handleDocumentOpen(
+  event: Event,
+  open: (file: string, sessionId?: string, line?: number, column?: number) => boolean,
+): void {
+  const detail = (event as CustomEvent<{ filePath?: unknown; sessionID?: unknown; line?: unknown; column?: unknown }>)
+    .detail
+  const file = detail?.filePath
   if (typeof file !== "string" || !file) return
-  event.preventDefault()
-  open(file)
+  const sessionId = typeof detail.sessionID === "string" ? detail.sessionID : undefined
+  const line = typeof detail.line === "number" ? detail.line : undefined
+  const column = typeof detail.column === "number" ? detail.column : undefined
+  if (open(file, sessionId, line, column)) event.preventDefault()
 }

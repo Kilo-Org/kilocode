@@ -161,6 +161,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   // Initialize each worktree with every file expanded, then preserve manual
   // collapse state while adding and removing files from live summaries.
   let initializedKey: string | undefined
+  let initialFileKey: string | undefined
   let known = new Set<string>()
   let rootRef: HTMLDivElement | undefined
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
@@ -221,7 +222,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   // vs when we just prune stale entries from the open list.
   createEffect(
     on(
-      () => [props.sessionKey, props.diffs] as const,
+      () => [props.sessionKey, props.diffs, props.initialFile] as const,
       ([key, diffs]) => {
         if (diffs.length === 0) {
           // No diffs yet — clear active file only for a new key; keep current
@@ -234,11 +235,13 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
         // Keep active file in sync — pick first if current is stale
         const current = activeFile()
-        if (!current || !diffs.some((d) => d.file === current)) {
-          const initial =
-            props.initialFile && diffs.some((d) => d.file === props.initialFile) ? props.initialFile : undefined
-          setActiveFile(initial ?? diffs[0]!.file)
-        }
+        const initial =
+          props.initialFile && diffs.some((d) => d.file === props.initialFile) ? props.initialFile : undefined
+        const initialKey = initial ? `${key}:${initial}` : undefined
+        if (initial && initial !== current && initialFileKey !== initialKey) {
+          initialFileKey = initialKey
+          setActiveFile(initial)
+        } else if (!current || !diffs.some((d) => d.file === current)) setActiveFile(diffs[0]!.file)
 
         // New context: initialize open state from the diff policy.
         if (key !== initializedKey) {

@@ -365,6 +365,7 @@ interface WorktreeDiffFileMessage {
 interface DocumentMessage {
   type: "agentManager.document"
   sessionId: string
+  contextKey?: string
   file: string
   requestedFile?: string
   content?: string
@@ -804,6 +805,7 @@ interface RequestDocumentIn {
   type: "agentManager.requestDocument"
   sessionId: string
   file: string
+  contextKey?: string
 }
 
 // Pass-through messages intercepted for side effects

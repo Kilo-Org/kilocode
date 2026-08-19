@@ -869,7 +869,7 @@ export class AgentManagerProvider implements Disposable {
       this.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
       return null
     }
-    if (m.type === "agentManager.requestDocument") return this.diffs.document(m.sessionId, m.file)
+    if (m.type === "agentManager.requestDocument") return this.diffs.document(m.sessionId, m.file, m.contextKey)
   }
 
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
