@@ -301,7 +301,7 @@ cat > .kilo/rules-test/testing-standards.md << 'EOF'
 EOF
 
 # 3. Define the mode (optional - creates a custom mode)
-# Add to .kilo/config.yaml:
+# Add to .kilocodemodes:
 # modes:
 #   - slug: test
 #     name: Test Mode
