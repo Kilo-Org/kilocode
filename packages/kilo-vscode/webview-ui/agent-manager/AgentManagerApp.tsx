@@ -145,8 +145,7 @@ import {
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
-import { PRPanel } from "./pr/PRPanel"
-import { openFile as openPRFile, openUrl as openPRUrl } from "./pr/pr-panel-actions"
+import { PRPanelHost } from "./pr/PRPanelHost"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
@@ -2669,21 +2668,13 @@ const AgentManagerContent: Component = () => {
                       />
                     </Show>
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
-                      <PRPanel
+                      <PRPanelHost
                         pr={activePR()!.pr}
                         worktree={activePR()!.wt}
                         worktreeId={activePR()!.selected}
                         activeTerminalId={terms.activeId()}
+                        sessionId={diffCtx()}
                         onClose={() => setSidePanel(null)}
-                        onOpenExternal={() =>
-                          vscode.postMessage({
-                            type: "agentManager.openPR",
-                            worktreeId: activePR()!.selected,
-                            url: activePR()!.pr.url,
-                          })
-                        }
-                        onOpenFile={(file, line) => openPRFile(vscode.postMessage, diffCtx(), file, line)}
-                        onOpenUrl={(url) => openPRUrl(vscode.postMessage, activePR()!.selected, url)}
                       />
                     </Show>
                     <Show when={subagents.tabs().length > 0}>
