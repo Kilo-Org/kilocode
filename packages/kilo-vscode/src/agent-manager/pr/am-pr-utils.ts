@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type { CheckStatus, PRComment, PRReviewer, ReviewerState } from "../types"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
@@ -129,11 +130,8 @@ export function ghErrorReason(message: string): string {
  * unresolved counts alone hide edits and new replies, which the panel renders.
  */
 export function commentsSig(comments?: PRComment[]): string {
-  if (!comments) return ""
-  return comments
-    .map(
-      (item) =>
-        `${item.threadId}:${item.resolved ? 1 : 0}${item.outdated ? "o" : ""}:${item.line ?? ""}:${item.body.length}:${(item.replies ?? []).map((reply) => reply.body.length).join("/")}`,
-    )
-    .join(",")
+  if (!comments?.length) return ""
+  return createHash("sha256")
+    .update(JSON.stringify(comments ?? []))
+    .digest("hex")
 }

@@ -77,7 +77,7 @@ export function PRCommentCard(props: Props) {
         </For>
         <Show when={props.error}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
         <div class="am-pr-comment-actions am-pr-row">
-          <Button variant="primary" size="small" onClick={props.onSend}>
+          <Button variant="primary" size="small" disabled={props.sent} onClick={props.onSend}>
             {t("agentManager.pr.comment.send")}
           </Button>
           <Button

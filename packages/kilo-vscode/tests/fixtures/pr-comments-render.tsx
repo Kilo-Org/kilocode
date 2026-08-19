@@ -155,4 +155,10 @@ assert.equal(payload.comments[0]!.origin, "pr")
 assert.equal(payload.comments[0]!.id, "PRRT_open")
 assert.equal(payload.comments[0]!.replies?.length, 1)
 
+// Sending the same thread again is a no-op, and the card button is disabled.
+;(send as HTMLButtonElement).click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(sent.length, 1)
+assert.equal((send as HTMLButtonElement).disabled, true)
+
 dispose()

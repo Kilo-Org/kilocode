@@ -47,6 +47,17 @@ export function PRComments(props: Props) {
     return { todo: list.filter((item) => !resolved(item)), done: list.filter((item) => resolved(item)) }
   })
 
+  const unsent = createMemo(() => groups().todo.filter((item) => !sent()[item.threadId]))
+
+  createEffect(() => {
+    props.worktreeId
+    setPending({})
+    setErrors({})
+    setExpanded({})
+    setSent({})
+    setDoneOpen(false)
+  })
+
   // Drop the optimistic state once a poll reports the state the user asked for.
   createEffect(() => {
     const map = pending()
@@ -102,8 +113,8 @@ export function PRComments(props: Props) {
   }
 
   function send(list: PRComment[]) {
-    if (list.length === 0) return
-    const batch = list.slice(0, SEND_LIMIT)
+    const batch = list.filter((item) => !sent()[item.threadId]).slice(0, SEND_LIMIT)
+    if (batch.length === 0) return
     sendReviewComments(batch.map(prPayload), props.activeTerminalId)
     setSent((prev) => {
       const next = { ...prev }
@@ -150,13 +161,13 @@ export function PRComments(props: Props) {
           countClass="am-pr-panel-unresolved"
         />
         <Show when={open()}>
-          <Show when={groups().todo.length > 0}>
-            <Button variant="primary" size="small" class="am-pr-comment-send-all" onClick={() => send(groups().todo)}>
+          <Show when={unsent().length > 0}>
+            <Button variant="primary" size="small" class="am-pr-comment-send-all" onClick={() => send(unsent())}>
               {t(
                 props.activeTerminalId
                   ? "agentManager.pr.comment.sendAllToTerminal"
                   : "agentManager.pr.comment.sendAll",
-                { count: Math.min(groups().todo.length, SEND_LIMIT) },
+                { count: Math.min(unsent().length, SEND_LIMIT) },
               )}
             </Button>
           </Show>

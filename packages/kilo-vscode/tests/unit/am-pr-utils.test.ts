@@ -345,8 +345,14 @@ describe("commentsSig", () => {
     expect(after).not.toBe(before)
   })
 
-  it("changes when a body is edited or a thread moves line", () => {
-    expect(commentsSig([thread({ body: "looks good!" })])).not.toBe(commentsSig([thread()]))
+  it("changes when a body is edited, even when the length stays the same", () => {
+    expect(commentsSig([thread({ body: "looks fine" })])).not.toBe(commentsSig([thread()]))
+    expect(commentsSig([thread({ replies: [{ author: "bob", body: "guard it" }] })])).not.toBe(
+      commentsSig([thread({ replies: [{ author: "bob", body: "guard me" }] })]),
+    )
+  })
+
+  it("changes when a thread moves line", () => {
     expect(commentsSig([thread({ line: 5 })])).not.toBe(commentsSig([thread()]))
   })
 
