@@ -228,6 +228,7 @@ class SessionMessageListPanel(
         this.openDiff = openDiff
         this.sessionId = sessionId
         banner?.setDiffOpener(openDiff, sessionId)
+        permission?.setDiffOpener(openDiff, sessionId)
         turnViews.values.forEach { it.setDiffOpener(openDiff, sessionId) }
     }
 

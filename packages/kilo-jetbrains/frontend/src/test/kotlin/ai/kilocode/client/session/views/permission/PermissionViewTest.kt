@@ -11,6 +11,7 @@ import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.md.MdCommon
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import com.intellij.icons.AllIcons
@@ -335,7 +336,9 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertTrue("Expected both patterns in label, got: ${labels[0].text}", labels[0].text.contains("test/*.kt"))
     }
 
-    fun `test diff preview renders only stat badge without duplicate file path`() {
+    fun `test diff preview renders collapsed then expands inline patch`() {
+        val opens = mutableListOf<Triple<List<DiffFileDto>, String, String>>()
+        view.setDiffOpener({ files, title, key -> opens.add(Triple(files, title, key)) }, "ses")
         view.show(
             Permission(
                 id = "perm6",
@@ -370,6 +373,22 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals("-2", badge.removedLabelForTest().text)
         assertEquals("+1", badge.addedLabelForTest().text)
         assertNotSame("Removed and added labels should use different colors", badge.removedLabelForTest().foreground, badge.addedLabelForTest().foreground)
+        assertFalse(diffs.single().bodyCreated())
+
+        diffs.single().expand()
+
+        val expanded = diffs.single().codeEditorsForTest().single().text
+        assertTrue("Should render old line after expansion, got: $expanded", expanded.contains("old"))
+        assertTrue("Should render new line after expansion, got: $expanded", expanded.contains("new"))
+        assertFalse("Should strip hunk marker in editor preview, got: $expanded", expanded.contains("@@"))
+        assertTrue(diffs.single().bodyCreated())
+
+        diffs.single().openDiffForTest()
+
+        assertEquals(1, opens.size)
+        assertEquals("permission:ses:perm6", opens.single().third)
+        assertEquals("src/A.kt", opens.single().first.single().file)
+        assertEquals("@@ -1 +1 @@\n-old\n+new", opens.single().first.single().patch)
     }
 
     fun `test diff preview shows no unavailable fallback text`() {
@@ -401,9 +420,10 @@ class PermissionViewTest : BasePlatformTestCase() {
         val badge = view.diffViewsForTest().single().badgeForTest()
         assertEquals("-1", badge.removedLabelForTest().text)
         assertEquals("+3", badge.addedLabelForTest().text)
+        assertFalse(view.diffViewsForTest().single().openDiffEnabledForTest())
     }
 
-    fun `test multiple diffs render each file separately`() {
+    fun `test multiple diffs render as one expandable group`() {
         view.show(
             Permission(
                 id = "perm_multi_diff",
@@ -431,14 +451,24 @@ class PermissionViewTest : BasePlatformTestCase() {
         )
 
         val diffs = view.diffViewsForTest()
-        assertEquals("Expected two diff views", 2, diffs.size)
-        assertEquals("-1", diffs[0].badgeForTest().removedLabelForTest().text)
-        assertEquals("+1", diffs[0].badgeForTest().addedLabelForTest().text)
-        assertEquals("-3", diffs[1].badgeForTest().removedLabelForTest().text)
-        assertEquals("+2", diffs[1].badgeForTest().addedLabelForTest().text)
+        assertEquals("Expected one grouped diff view", 1, diffs.size)
+        assertEquals("-4", diffs.single().badgeForTest().removedLabelForTest().text)
+        assertEquals("+3", diffs.single().badgeForTest().addedLabelForTest().text)
+        assertEquals("2 files", diffs.single().countTextForTest())
         // Patch content should not be in text
         val text = allText(view)
         assertFalse("Should not render patch markers, got: $text", text.contains("@@"))
+
+        diffs.single().expand()
+
+        val editors = diffs.single().codeEditorsForTest()
+        assertEquals(2, editors.size)
+        val expanded = editors.joinToString("\n") { it.text }
+        assertTrue("Should render first file diff after expansion, got: $expanded", expanded.contains("a"))
+        assertTrue("Should render first file diff after expansion, got: $expanded", expanded.contains("b"))
+        assertTrue("Should render second file diff after expansion, got: $expanded", expanded.contains("c"))
+        assertTrue("Should render second file diff after expansion, got: $expanded", expanded.contains("d"))
+        assertFalse("Should strip hunk markers in editor preview, got: $expanded", expanded.contains("@@"))
     }
 
     fun `test rule controls render collapsed when candidates exist`() {
@@ -985,6 +1015,39 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         assertTrue(view.rulesForTest().commandFieldsForTest().isEmpty())
         assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
+    fun `test diff editors are lazy and disposed after churn`() {
+        val base = EditorFactory.getInstance().allEditors.size
+
+        repeat(20) { i ->
+            view.show(
+                Permission(
+                    id = "perm_diff_$i",
+                    sessionId = "ses",
+                    name = "edit",
+                    patterns = listOf("src/A.kt"),
+                    always = emptyList(),
+                    meta = PermissionMeta(
+                        fileDiffs = listOf(
+                            PermissionFileDiff(
+                                file = "src/A.kt",
+                                patch = "@@ -1 +1 @@\n-old$i\n+new$i",
+                                additions = 1,
+                                deletions = 1,
+                            ),
+                        ),
+                    ),
+                ),
+            )
+            val diff = view.diffViewsForTest().single()
+            assertFalse(diff.bodyCreated())
+            diff.expand()
+            diff.codeEditorsForTest().forEach { it.getEditor(true) }
+            view.hideView()
+            UIUtil.dispatchAllInvocationEvents()
+            assertEquals(base, EditorFactory.getInstance().allEditors.size)
+        }
     }
 
     fun `test stale rule command fields are released on rebuild`() {

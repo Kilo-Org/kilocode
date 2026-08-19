@@ -373,6 +373,7 @@ class SessionUi(
         )
         permission = PermissionView(
             reply = { id, dto, rules -> controller.replyPermission(id, dto, rules) },
+            openFile = fileLinks::open,
             selection = selection,
             focus = focus,
         )

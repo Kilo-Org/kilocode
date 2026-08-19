@@ -2,6 +2,8 @@ package ai.kilocode.client.session.views.permission
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.SessionDiffOpener
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionRuleCandidate
@@ -67,6 +69,7 @@ import javax.swing.ScrollPaneConstants
  */
 class PermissionView(
     private val reply: (String, PermissionReplyDto, PermissionAlwaysRulesDto?) -> Unit,
+    private val openFile: SessionFileOpener = { _, _ -> },
     private val selection: SessionSelection? = null,
     focus: (() -> Unit)? = null,
 ) : DialogView(selection, focus), SessionView, Disposable {
@@ -75,11 +78,13 @@ class PermissionView(
     private var requestId: String? = null
     private var responding = false
     private var style = SessionEditorStyle.current()
+    private var openDiff: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
 
     private val body = Stack.vertical(gap = UiStyle.Gap.sm())
     private val desc = makeDescription()
     private val codeSlot = BorderLayoutPanel().apply { isVisible = false }
-    private val diffRow = Stack.horizontal().apply { isVisible = false }
+    private val diffRow = Stack.vertical().apply { isVisible = false }
     private val rules = PermissionRulesView(selection) { syncPrimaryText() }.apply { isVisible = false }
     private val state = JBLabel().apply {
         border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
@@ -149,15 +154,20 @@ class PermissionView(
         refresh()
     }
 
+    @RequiresEdt
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+        for (view in diffViews) view.setDiffOpener(openDiff, sessionId, requestId)
+    }
+
     /** Hide this view and clear the active request id. */
     @RequiresEdt
     fun hideView() {
         requestId = null
         responding = false
         disposeMd()
-        diffViews.clear()
-        diffRow.removeAll()
-        diffRow.isVisible = false
+        disposeDiffs()
         rules.update(emptyList(), reset = true)
         state.isVisible = false
         isVisible = false
@@ -185,15 +195,14 @@ class PermissionView(
 
     @RequiresEdt
     private fun syncDiffs(diffs: List<PermissionFileDiff>) {
-        diffRow.removeAll()
-        diffViews.clear()
+        disposeDiffs()
         diffRow.isVisible = diffs.isNotEmpty()
         if (diffs.isNotEmpty()) {
-            for (diff in diffs) {
-                val dv = PermissionDiffView(diff)
-                diffViews.add(dv)
-                diffRow.add(dv)
-            }
+            val dv = PermissionDiffView(diffs, openFile, selection)
+            dv.setDiffOpener(openDiff, sessionId, requestId)
+            dv.applyStyle(style)
+            diffViews.add(dv)
+            diffRow.add(dv)
         }
         diffRow.revalidate()
         diffRow.repaint()
@@ -436,8 +445,17 @@ class PermissionView(
         Disposer.dispose(view)
     }
 
+    @RequiresEdt
+    private fun disposeDiffs() {
+        for (view in diffViews) Disposer.dispose(view)
+        diffViews.clear()
+        diffRow.removeAll()
+        diffRow.isVisible = false
+    }
+
     override fun dispose() {
         disposeMd()
+        disposeDiffs()
         Disposer.dispose(rules)
     }
 
