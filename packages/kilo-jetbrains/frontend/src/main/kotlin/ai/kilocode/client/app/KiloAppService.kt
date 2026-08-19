@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.LogConfigDto
+import ai.kilocode.rpc.dto.LogFileDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
@@ -114,6 +115,14 @@ class KiloAppService internal constructor(
             refreshModelFavoritesAsync()
             service<KiloLogSettingsService>().apply(this)
         }
+    }
+
+    /** Read the backend diagnostic log file for download in split mode. Null when absent or on failure. */
+    suspend fun backendLog(): LogFileDto? = try {
+        call { backendLogFile() }
+    } catch (e: Exception) {
+        LOG.warn("backend log fetch failed", e)
+        null
     }
 
     /** One-shot health check. Returns null on failure. */

@@ -67,6 +67,9 @@ interface KiloLog {
 
         fun sandbox(): Boolean = System.getProperty("idea.plugin.in.sandbox.mode", "false").toBoolean()
 
+        /** Current diagnostic log file for this process (frontend or backend in split mode). */
+        fun logFile(): Path = FileLog.logFile()
+
         fun payload(log: KiloLog? = null): Map<String, String> = buildMap {
             put("platform", "jetbrains")
             put("client", "jetbrains")
@@ -166,6 +169,8 @@ internal class FileLog(cls: Class<*>) : KiloLog {
             if (!initialized) return
             root.level = LogConfig.julLevel()
         }
+
+        internal fun logFile(): Path = resolveLogDir().resolve("kilo.log")
     }
 
     override val isDebugEnabled: Boolean

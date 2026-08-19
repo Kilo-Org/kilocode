@@ -3,6 +3,7 @@ package ai.kilocode.client.settings
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.log.LogConfig
+import ai.kilocode.rpc.dto.LogFileDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,5 +53,20 @@ class KiloLogSettingsServiceTest : BasePlatformTestCase() {
         assertEquals("ERROR", dto.level)
         assertEquals("PREVIEW", dto.contentMode)
         assertEquals(25, dto.previewMax)
+    }
+
+    fun `test backendLog returns the file from rpc`() = runBlocking(Dispatchers.Default) {
+        rpc.backendLog = LogFileDto("kilo.log", "line one\nline two\n")
+
+        val log = app.backendLog()
+
+        assertEquals("kilo.log", log?.name)
+        assertEquals("line one\nline two\n", log?.content)
+    }
+
+    fun `test backendLog returns null when backend has no log`() = runBlocking(Dispatchers.Default) {
+        rpc.backendLog = null
+
+        assertNull(app.backendLog())
     }
 }

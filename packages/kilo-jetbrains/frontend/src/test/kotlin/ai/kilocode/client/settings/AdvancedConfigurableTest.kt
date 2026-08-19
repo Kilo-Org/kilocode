@@ -5,6 +5,7 @@ import ai.kilocode.log.LogConfig
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBTextField
 import java.awt.Container
 import javax.swing.JComponent
@@ -91,7 +92,21 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test createComponent shows a reveal logs action`() {
+        // Tests run in monolith mode, so a single OS-appropriate reveal link is shown.
+        val cfg = configurable()
+        edt {
+            val root = cfg.createComponent()
+            val labels = links(root as Container).map { it.text }
+            assertTrue("expected a reveal-logs link, got $labels", labels.contains(AdvancedLogActions.revealLabel()))
+        }
+    }
+
     private fun configurable() = AdvancedConfigurable(settings) { it.applyLocal() }
+
+    private fun links(root: Container): List<ActionLink> = buildList {
+        collect(root) { if (it is ActionLink) add(it) }
+    }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
 

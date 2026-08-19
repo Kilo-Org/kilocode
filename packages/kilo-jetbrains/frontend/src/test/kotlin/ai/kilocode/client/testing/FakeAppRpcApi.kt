@@ -10,6 +10,7 @@ import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.LogConfigDto
+import ai.kilocode.rpc.dto.LogFileDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
@@ -176,6 +177,13 @@ class FakeAppRpcApi : KiloAppRpcApi {
     override suspend fun applyLogConfig(config: LogConfigDto) {
         assertNotEdt("applyLogConfig")
         logConfigs.add(config)
+    }
+
+    var backendLog: LogFileDto? = null
+
+    override suspend fun backendLogFile(): LogFileDto? {
+        assertNotEdt("backendLogFile")
+        return backendLog
     }
 
     private fun applyPatch(config: ConfigDto, patch: ConfigPatchDto): ConfigDto {
