@@ -210,6 +210,10 @@
   flex-shrink: 0;
 }
 
+.session-dock:not([data-active]) {
+  display: none;
+}
+
 .session-dock-state {
   display: flex;
   grid-area: 1 / 1;

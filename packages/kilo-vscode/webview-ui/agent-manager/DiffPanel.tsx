@@ -51,6 +51,7 @@ import {
   initialOpenFiles,
   isDiffExpandable,
   isLargeDiffFile,
+  reconcileOpenFiles,
   sanitizeOpenFiles,
   shouldVirtualizeDiff,
   toggleOpenFiles,
@@ -133,6 +134,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const localComposer = createReviewComposer()
   const composer = () => props.composer ?? localComposer
   const [manualOpen, setManualOpen] = createSignal<Record<string, string[]>>({})
+  const [knownFiles, setKnownFiles] = createSignal<Record<string, string[]>>({})
   const open = createMemo(() => {
     const key = props.sessionKey ?? ""
     const diffs = props.diffs
@@ -141,6 +143,21 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     if (manual) return sanitizeOpenFiles(diffs, manual)
     return initialOpenFiles(diffs)
   })
+  createEffect(
+    on(
+      () => [props.sessionKey, props.diffs] as const,
+      ([key, diffs]) => {
+        if (diffs.length === 0) return
+        const id = key ?? ""
+        const manual = manualOpen()[id]
+        const result = reconcileOpenFiles(diffs, manual, knownFiles()[id] ?? [])
+        setKnownFiles((prev) => ({ ...prev, [id]: result.known }))
+        if (!manual || !result.open) return
+        if (result.open.length === manual.length && result.open.every((file, index) => file === manual[index])) return
+        setManualOpen((prev) => ({ ...prev, [id]: result.open! }))
+      },
+    ),
+  )
   const setOpen = (files: string[] | ((prev: string[]) => string[])) => {
     const key = props.sessionKey ?? ""
     const current = open()

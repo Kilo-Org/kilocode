@@ -627,10 +627,10 @@ describe("Optimistic parts preservation and smooth status contract", () => {
     expect(updated).toContain("mergeOptimisticPart")
   })
 
-  it("statusText derives status only from the active turn after the last user message", () => {
+  it("statusText derives status from the active turn instead of queued follow-ups", () => {
     const match = source.match(/const statusText = createMemo<string \| undefined>\(\(\) => \{([\s\S]*?)\n  \}\)/)
     expect(match).not.toBeNull()
-    expect(match![1]).toContain('msgs.findLastIndex((m) => m.role === "user")')
+    expect(match![1]).toContain("activeUserMessageID(msgs, statusInfo()")
     expect(match![1]).toContain('language.t("ui.sessionTurn.status.thinking")')
   })
 })

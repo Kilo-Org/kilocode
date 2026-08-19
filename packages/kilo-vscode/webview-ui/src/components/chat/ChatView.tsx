@@ -89,7 +89,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const suggesting = () => isSuggesting(blocked(), familySuggestions().length)
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
-  const dock = () => !props.readonly || !!permissionRequest()
+  const dock = () => !props.readonly || !!permissionRequest() || session.submitting() || session.status() !== "idle"
   // The session dock stays empty while another surface owns the interaction:
   // a permission card, a pending question or suggestion, or agent requirements.
   // A spinner there would claim the agent is working while it waits on the user.
@@ -375,9 +375,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 />
               )}
             </Show>
-            <Show when={!props.readonly}>
-              <SessionDock blocked={dockBlocked()} actions={() => renderActions(hasMessages())} />
-            </Show>
+            <SessionDock
+              blocked={dockBlocked()}
+              hasActions={() => !props.readonly && hasActions(hasMessages())}
+              actions={() => renderActions(hasMessages())}
+            />
             <Show when={!props.readonly}>
               <PromptInput
                 blocked={blocked}

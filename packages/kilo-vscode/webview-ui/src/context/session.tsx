@@ -84,7 +84,7 @@ import { sessionVariantKeys, transferVariants, variantKey } from "./session-vari
 import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
-import { visibleMessages as filterVisibleMessages } from "./session-queue"
+import { activeUserMessageID, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
@@ -2913,10 +2913,13 @@ export const SessionProvider: ParentComponent = (props) => {
     const fallback = language.t("ui.sessionTurn.status.consideringNextSteps")
     const id = currentSessionID()
     const msgs = messages()
-    const lastUserIdx = msgs.findLastIndex((m) => m.role === "user")
-    if (lastUserIdx < 0) return thinking
+    const activeID = activeUserMessageID(msgs, statusInfo(), (msg) => getParts(msg.id), submitting())
+    const activeIdx = activeID
+      ? msgs.findIndex((msg) => msg.id === activeID)
+      : msgs.findLastIndex((m) => m.role === "user")
+    if (activeIdx < 0) return thinking
 
-    for (let i = msgs.length - 1; i > lastUserIdx; i--) {
+    for (let i = msgs.length - 1; i > activeIdx; i--) {
       if (msgs[i].role !== "assistant") continue
       const parts = getParts(msgs[i].id)
       if (parts.length === 0) return thinking
