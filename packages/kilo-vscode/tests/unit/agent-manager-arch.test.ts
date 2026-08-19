@@ -527,7 +527,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("terminal context reveals the terminal associated with the originating session", () => {
     const text = body("onSessionMessage")
-    const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID)")
+    const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID, m.agentManagerContext)")
     expect(show).toBeGreaterThan(-1)
     expect(text).toContain('type: "terminalContextError"')
   })

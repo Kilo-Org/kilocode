@@ -434,6 +434,7 @@ export interface RequestTerminalContextMessage {
   type: "requestTerminalContext"
   requestId: string
   sessionID?: string
+  agentManagerContext?: string
 }
 
 export interface RequestGitChangesContextMessage {

@@ -318,7 +318,7 @@ type ContextRequestMessage =
   | { type: "requestFileSearch"; query: string; requestId: string; sessionID?: string }
   | { type: "requestSessionSearch"; requestId: string; sessionID?: string }
   | { type: "requestFilePicker"; requestId: string }
-  | { type: "requestTerminalContext"; requestId: string; sessionID?: string }
+  | { type: "requestTerminalContext"; requestId: string; sessionID?: string; agentManagerContext?: string }
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
