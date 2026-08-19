@@ -17,7 +17,6 @@ import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.prTooltip
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.style
-import ai.kilocode.client.agentManager.worktree.worktreeActivityBadge
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.diff.diffParams
@@ -202,7 +201,7 @@ class AgentManagerPanel(
 
     private fun open(item: WorktreeDto, focus: Boolean) {
         val target = project ?: return
-        if (item.main || controller.isPending(item.id)) return
+        if (controller.isPending(item.id)) return
         ensureWorktreeSessionEditorKind()
         target.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(item), focus)
     }
@@ -350,13 +349,31 @@ class AgentManagerPanel(
 
     private fun sync() {
         val key = selected
+        val current = controller.current?.let { item ->
+            WorktreeRow(
+                item,
+                pending = false,
+                deleting = false,
+                kind = controller.kind(item.path),
+                stats = null,
+                pr = null,
+                current = true,
+            )
+        }
         list.update(
-            (0 until controller.model.size).map {
+            listOfNotNull(current) + (0 until controller.model.size).map {
                 val item = controller.model.getElementAt(it)
                 val key = normalizeWorktreePath(item.path)
                 val pull = prs[key]
                 service<WorktreeNameCache>().putPr(item.path, pull)
-                WorktreeRow(item, controller.isPending(item.id), controller.isDeleting(item.id), controller.kind(item.path), stats[key], pull)
+                WorktreeRow(
+                    item,
+                    controller.isPending(item.id),
+                    controller.isDeleting(item.id),
+                    controller.kind(item.path),
+                    stats[key],
+                    pull,
+                )
             },
             ActiveListSelection.PreserveNoScroll,
         )
@@ -465,19 +482,16 @@ class AgentManagerPanel(
         val kind: SessionActivityKind?,
         val stats: WorktreeStatsDto?,
         val pr: WorktreePrDto?,
+        val current: Boolean = false,
     ) : ActiveListItem {
         override val key: String get() = dto.id
-        override val title: String get() = WorktreeTitle.text(dto.name, dto.path, pr)
+        override val title: String get() = if (current) dto.branch else WorktreeTitle.text(dto.name, dto.path, pr)
         override val description: String get() = WorktreeTitle.fallback(dto.path)
         override val tooltip: String? get() = null
-        override val icon = WorktreeIcons.forRow(dto.locked, pending)
+        override val icon = WorktreeIcons.forRow(dto.locked, pending, kind)
+        override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)
-        override val badges: List<ActiveListBadge>
-            get() {
-                if (pending || deleting) return emptyList()
-                return listOfNotNull(kind?.let(::worktreeActivityBadge))
-            }
         override val metrics: ActiveListMetrics?
             get() {
                 if (pending || deleting) return null
@@ -503,7 +517,8 @@ class AgentManagerPanel(
                 deleting == row.deleting &&
                 kind == row.kind &&
                 stats == row.stats &&
-                pr == row.pr
+                pr == row.pr &&
+                current == row.current
         }
 
         override fun hashCode(): Int {
@@ -513,6 +528,7 @@ class AgentManagerPanel(
             result = 31 * result + (kind?.hashCode() ?: 0)
             result = 31 * result + (stats?.hashCode() ?: 0)
             result = 31 * result + (pr?.hashCode() ?: 0)
+            result = 31 * result + current.hashCode()
             return result
         }
     }

@@ -6,6 +6,7 @@ import ai.kilocode.client.agentManager.worktree.GhStatusCoordinator
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
+import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
@@ -17,7 +18,6 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.fire
-import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMetrics
@@ -172,6 +172,46 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(item.path, file.path.params["path"])
         assertSame(WorktreeSessionEditorKind.fileType(file.path.params), file.fileType)
         assertEquals(false, file.getUserData(KiloVfsManager.FOCUS))
+    }
+
+    fun `test current branch row appears first and opens session editor`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += main
+        rpc.listed += item
+        val controller = WorktreeController(service, "/repo", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val current = row(panel, 0)
+        assertEquals("main", current.title)
+        assertEquals("repo", current.description)
+        assertNull(current.section)
+        assertNull(current.metrics)
+        assertEquals("Local worktrees", row(panel, 1).section)
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            list.setSize(400, 120)
+            list.doLayout()
+            val bounds = list.getCellBounds(0, 0)
+            fire(list, MouseEvent(
+                list,
+                MouseEvent.MOUSE_CLICKED,
+                System.currentTimeMillis(),
+                0,
+                bounds.x + 8,
+                bounds.y + bounds.height / 2,
+                1,
+                false,
+                MouseEvent.BUTTON1,
+            ))
+        }
+
+        val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
+        assertEquals(WorktreeSessionEditorKind.ID, file.path.kind)
+        assertEquals(main.path, file.path.params["path"])
     }
 
     fun `test refresh preserves selected worktree across model replace`() {
@@ -396,7 +436,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(a.path, file.path.params["path"])
     }
 
-    fun `test worktree row shows activity badge for matching directory`() {
+    fun `test worktree row shows activity icon for matching directory`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         val activity = MutableStateFlow(mapOf(
             "ses_1" to SessionActivityDto(item.path, SessionActivityKindDto.QUESTION),
@@ -408,7 +448,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         val row = row(panel, 0)
-        assertEquals(listOf(ActiveListBadge(SessionActivityKind.QUESTION.label(), SessionActivityKind.QUESTION.style())), row.badges)
+        assertSame(WorktreeIcons.question, row.icon)
+        assertEquals(emptyList<ActiveListBadge>(), row.badges)
     }
 
     fun `test worktree row shows metrics from status service`() {
@@ -528,6 +569,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         val pending = row(panel, 0)
+        assertSame(WorktreeIcons.spinner, pending.icon)
         assertEquals(emptyList<ActiveListBadge>(), pending.badges)
         gate.complete(Unit)
         flush()
