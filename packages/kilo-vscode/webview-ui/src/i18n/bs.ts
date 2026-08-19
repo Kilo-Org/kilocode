@@ -867,12 +867,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Omogući SWE-Pruner: orezivanje velikih izlaza alata za čitanje i pretragu te shell alata koje uzima zadatak u obzir, vođeno fokusnim pitanjem koje pruža agent",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
-  "settings.experimental.swePrunerModel.description":
-    "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",

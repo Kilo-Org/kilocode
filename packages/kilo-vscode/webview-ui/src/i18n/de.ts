@@ -887,12 +887,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Zusätzliche schreibbare Pfade",
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner aktivieren: aufgabenbewusstes Kürzen großer Ausgaben der Lese-, Such- und Shell-Werkzeuge, gesteuert durch eine vom Agenten bereitgestellte Fokusfrage",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
-  "settings.experimental.swePrunerModel.description":
-    "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",

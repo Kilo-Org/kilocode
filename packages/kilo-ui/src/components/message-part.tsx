@@ -1893,14 +1893,6 @@ function ToolText(props: { text: string; delay?: number; animate?: boolean }) {
   )
 }
 
-function swePruned(metadata: Record<string, unknown>) {
-  const value = metadata["swePruner"]
-  if (typeof value !== "object" || value === null) return undefined
-  const info = value as { kept?: unknown; total?: unknown }
-  if (typeof info.kept !== "number" || typeof info.total !== "number") return undefined
-  return { kept: info.kept, total: info.total }
-}
-
 function ToolLoadedFile(props: { text: string; animate?: boolean; onClick?: () => void }) {
   let ref: HTMLDivElement | undefined
   useToolFade(() => ref, { delay: 0.02, wipe: true, animate: props.animate })
@@ -2029,7 +2021,6 @@ ToolRegistry.register({
       if (!value || !Array.isArray(value)) return []
       return value.filter((p): p is string => typeof p === "string")
     })
-    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
     const images = createMemo(() => (props.attachments ?? []).filter((f) => f.mime.startsWith("image/") && f.url))
     const preview = (url: string, alt?: string) => dialog.show(() => <ImagePreview src={url} alt={alt} />)
@@ -2080,9 +2071,6 @@ ToolRegistry.register({
               )}
             </For>
           </div>
-        </Show>
-        <Show when={pruned()}>
-          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
         </Show>
       </>
     )
@@ -2157,35 +2145,29 @@ ToolRegistry.register({
     const args: string[] = []
     if (props.input.pattern) args.push("pattern=" + props.input.pattern)
     if (props.input.include) args.push("include=" + props.input.include)
-    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
     return (
-      <>
-        <BasicTool
-          {...props}
-          icon="magnifying-glass-menu"
-          trigger={
-            <ToolTriggerRow
-              title={i18n.t("ui.tool.grep")}
-              pending={pending()}
-              subtitle={getDirectory(props.input.path)}
-              args={args}
-              animate={props.reveal}
-            />
-          }
-        >
-          <Show when={props.output}>
-            {(output) => (
-              <div data-component="tool-output" data-variant="preview" data-scrollable>
-                <Markdown text={output()} />
-              </div>
-            )}
-          </Show>
-        </BasicTool>
-        <Show when={pruned()}>
-          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
+      <BasicTool
+        {...props}
+        icon="magnifying-glass-menu"
+        trigger={
+          <ToolTriggerRow
+            title={i18n.t("ui.tool.grep")}
+            pending={pending()}
+            subtitle={getDirectory(props.input.path)}
+            args={args}
+            animate={props.reveal}
+          />
+        }
+      >
+        <Show when={props.output}>
+          {(output) => (
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
+              <Markdown text={output()} />
+            </div>
+          )}
         </Show>
-      </>
+      </BasicTool>
     )
   },
 })
@@ -2479,7 +2461,6 @@ ToolRegistry.register({
   name: "bash",
   render(props) {
     const i18n = useI18n()
-    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const subtitle = () => props.input.description ?? props.metadata.description
@@ -2512,38 +2493,33 @@ ToolRegistry.register({
     const out = createMemo(() => processCarriageReturns(stripAnsi(rawOutput())))
 
     return (
-      <>
-        <BasicTool
-          {...props}
-          icon="console"
-          hasDetails
-          defaultOpen={props.defaultOpen ?? true}
-          onOpenChange={setOpen}
-          allowPendingToggle
-          trigger={
-            <div data-slot="basic-tool-tool-info-structured">
-              <div data-slot="basic-tool-tool-info-main">
-                <span data-slot="basic-tool-tool-title">
-                  <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
-                </span>
-                <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
-              </div>
+      <BasicTool
+        {...props}
+        icon="console"
+        hasDetails
+        defaultOpen={props.defaultOpen ?? true}
+        onOpenChange={setOpen}
+        allowPendingToggle
+        trigger={
+          <div data-slot="basic-tool-tool-info-structured">
+            <div data-slot="basic-tool-tool-info-main">
+              <span data-slot="basic-tool-tool-title">
+                <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
+              </span>
+              <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
             </div>
-          }
-        >
-          <Show when={mounted()}>
-            <BashHighlightedOutput
-              cmd={cmd()}
-              output={out()}
-              outputPath={props.metadata.outputPath}
-              active={open() || !!props.forceOpen}
-            />
-          </Show>
-        </BasicTool>
-        <Show when={pruned()}>
-          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
+          </div>
+        }
+      >
+        <Show when={mounted()}>
+          <BashHighlightedOutput
+            cmd={cmd()}
+            output={out()}
+            outputPath={props.metadata.outputPath}
+            active={open() || !!props.forceOpen}
+          />
         </Show>
-      </>
+      </BasicTool>
     )
   },
 })

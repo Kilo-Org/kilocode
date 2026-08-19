@@ -860,12 +860,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner を有効にする: エージェントが提供するフォーカス質問に基づき、タスクを考慮して、読み取り、検索、シェルツールのサイズの大きい出力をプルーニングします",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner モデル",
-  "settings.experimental.swePrunerModel.description":
-    "ツール出力の剪定に使用するモデル。既定では設定済みのスモールモデルを使用します",
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",

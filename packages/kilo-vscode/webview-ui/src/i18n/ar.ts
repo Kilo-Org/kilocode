@@ -844,12 +844,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "تفعيل SWE-Pruner: تقليم المخرجات الكبيرة لأدوات القراءة والبحث وshell مع مراعاة المهمة، استنادًا إلى سؤال تركيز يقدّمه الوكيل",
-  "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",

@@ -846,12 +846,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Enable SWE-Pruner: task-aware pruning of large read, search, and shell tool outputs, guided by a focus question from the agent",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner Model",
-  "settings.experimental.swePrunerModel.description":
-    "Model used to skim tool outputs; defaults to the configured small model",
   "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
   "settings.experimental.multiProject.description":
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",

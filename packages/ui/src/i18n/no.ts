@@ -238,6 +238,5 @@ export const dict: Record<Keys, string> = {
   "ui.sessionTurn.diffs.changed": "Endret",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} av {{total}} linjer beholdt",
   // kilocode_change end
 }

@@ -824,12 +824,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Włącz SWE-Pruner: przycinanie obszernych danych wyjściowych narzędzi odczytu, wyszukiwania i powłoki z uwzględnieniem zadania, kierowane pytaniem przewodnim dostarczonym przez agenta",
-  "settings.experimental.swePrunerModel.title": "Model SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Model używany do przycinania wyników narzędzi; domyślnie skonfigurowany mały model",
   "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
   "settings.experimental.multiProject.description":
     "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",

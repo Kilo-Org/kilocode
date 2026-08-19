@@ -866,12 +866,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Yderligere skrivbare stier",
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Aktivér SWE-Pruner: opgavebevidst beskæring af store output fra læse-, søge- og shellværktøjer, styret af et fokusspørgsmål fra agenten",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
-  "settings.experimental.swePrunerModel.description":
-    "Model til beskæring af værktøjsoutput; som standard den konfigurerede lille model",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",

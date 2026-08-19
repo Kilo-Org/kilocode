@@ -333,14 +333,6 @@ export const Info = Schema.Struct({
         description:
           "Additional filesystem paths the sandbox allows writes to (e.g. ['/tmp', '/var/log']). These are merged with the default writable paths when the sandbox is active.",
       }),
-      swe_pruner: Schema.optional(Schema.Boolean).annotate({
-        description:
-          "Enable SWE-Pruner: task-aware pruning of large read, grep, and bash tool outputs guided by a focus question provided by the agent (default: false)",
-      }),
-      swe_pruner_model: Schema.optional(Schema.String).annotate({
-        description:
-          'Model used by SWE-Pruner to skim tool outputs, in "provider/model" format (default: the configured small model)',
-      }),
       // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
