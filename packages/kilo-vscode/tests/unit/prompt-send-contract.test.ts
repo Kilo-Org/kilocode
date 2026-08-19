@@ -358,7 +358,9 @@ describe("PromptInput send origin contract", () => {
 
   it("captures the real or pending tab before asynchronous attachment resolution", () => {
     expect(source).toMatch(/const origin = session\.currentSessionID\(\)[\s\S]*const id = origin \?\? pendingId/)
-    expect(source.indexOf("beginPending(pendingId)")).toBeLessThan(source.indexOf("const terminalFile = await terminal"))
+    expect(source.indexOf("beginPending(pendingId)")).toBeLessThan(
+      source.indexOf("const terminalFile = await terminal"),
+    )
     expect(source).toMatch(/resolveAttachment\(message, id, readTerminalContext\(props\.terminalContext\)\)/)
     expect(source).toMatch(/await git\.resolveAttachment\(message, id, context\)/)
   })
