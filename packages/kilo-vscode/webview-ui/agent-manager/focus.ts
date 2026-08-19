@@ -37,8 +37,8 @@ export function createFocusBridge(deps: {
       report()
     },
     focus: () => {
-      deps.post("prompt")
       if (deps.restore() === "pending") return
+      deps.post("prompt")
       deps.prompt.focus()
     },
   }

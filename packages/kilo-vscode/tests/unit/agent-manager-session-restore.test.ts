@@ -33,7 +33,7 @@ describe("Agent Manager session restoration", () => {
         sessions: [{ id: "pending:one" }, { id: "session:two" }],
         isPending: (id) => id.startsWith("pending:"),
         select: (id, pending) => selected.push([id, pending]),
-        create: () => undefined,
+        create: () => "pending",
       }),
     ).toBe("ready")
 
