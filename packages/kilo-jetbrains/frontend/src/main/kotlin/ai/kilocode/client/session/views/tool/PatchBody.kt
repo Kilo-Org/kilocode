@@ -198,7 +198,7 @@ class PatchBody(
         val row = Stack.horizontal(UiStyle.Gap.sm())
             .next(label)
             .next(DiffStatBadge(file.additions, file.deletions))
-        row.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.bodyIndent())
+        row.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.contentIndent())
         return JBUI.Panels.simplePanel(row).apply {
             isOpaque = false
         }

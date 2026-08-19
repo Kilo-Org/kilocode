@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionRuleCandidate
@@ -15,6 +16,8 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
@@ -39,6 +42,7 @@ import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -56,6 +60,7 @@ import java.awt.Rectangle
 import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -329,50 +334,7 @@ class PermissionView(
     }
 
     private fun makeDescription(): JBTextArea {
-        val area = object : JBTextArea() {
-            override fun getPreferredSize() = withWidth(super.getPreferredSize().height)
-
-            override fun getMaximumSize(): Dimension {
-                val size = preferredSize
-                return Dimension(Int.MAX_VALUE, size.height)
-            }
-
-            override fun scrollRectToVisible(aRect: Rectangle) {}
-
-            private fun withWidth(fallback: Int): Dimension {
-                val w = availableWidth()
-                if (w <= 0) return Dimension(super.getPreferredSize().width, fallback)
-                val old = size
-                setSize(w, Int.MAX_VALUE)
-                val ps = super.getPreferredSize()
-                setSize(old)
-                return Dimension(w, ps.height)
-            }
-
-            private fun availableWidth(): Int {
-                var node = parent
-                while (node != null) {
-                    if (node.width > 0) {
-                        val ins = node.insets
-                        return (node.width - ins.left - ins.right).coerceAtLeast(0)
-                    }
-                    node = node.parent
-                }
-                return width
-            }
-        }.apply {
-            isEditable = false
-            isOpaque = false
-            isFocusable = false
-            caret.isVisible = false
-            caret.isSelectionVisible = false
-            lineWrap = true
-            wrapStyleWord = true
-            foreground = SessionUiStyle.Text.Secondary.foreground()
-            font = SessionUiStyle.Text.Secondary.font(style)
-            border = JBUI.Borders.empty()
-            isVisible = false
-        }
+        val area = wrappingSecondaryText(style).apply { isVisible = false }
         selection?.register(area)
         return area
     }
@@ -504,36 +466,80 @@ class PermissionView(
     }
 }
 
-internal class PermissionRulesView(
+/**
+ * Transparent, non-editable, secondary-styled text area that soft-wraps to its parent width. Shared
+ * by the permission description and the auto-approve rule hints so wrapping prose reads the same
+ * everywhere instead of clipping in a single-line label.
+ */
+private fun wrappingSecondaryText(style: SessionEditorStyle): JBTextArea {
+    val area = object : JBTextArea() {
+        override fun getPreferredSize() = withWidth(super.getPreferredSize().height)
+
+        override fun getMaximumSize(): Dimension {
+            val size = preferredSize
+            return Dimension(Int.MAX_VALUE, size.height)
+        }
+
+        override fun scrollRectToVisible(aRect: Rectangle) {}
+
+        private fun withWidth(fallback: Int): Dimension {
+            val w = availableWidth()
+            if (w <= 0) return Dimension(super.getPreferredSize().width, fallback)
+            val old = size
+            setSize(w, Int.MAX_VALUE)
+            val ps = super.getPreferredSize()
+            setSize(old)
+            return Dimension(w, ps.height)
+        }
+
+        private fun availableWidth(): Int {
+            var node = parent
+            while (node != null) {
+                if (node.width > 0) {
+                    val ins = node.insets
+                    return (node.width - ins.left - ins.right).coerceAtLeast(0)
+                }
+                node = node.parent
+            }
+            return width
+        }
+    }
+    area.isEditable = false
+    area.isOpaque = false
+    area.isFocusable = false
+    area.caret.isVisible = false
+    area.caret.isSelectionVisible = false
+    area.lineWrap = true
+    area.wrapStyleWord = true
+    area.foreground = SessionUiStyle.Text.Secondary.foreground()
+    area.font = SessionUiStyle.Text.Secondary.font(style)
+    area.border = JBUI.Borders.empty()
+    return area
+}
+
+internal class PermissionRulesView private constructor(
     private val selection: SessionSelection?,
     private val changed: () -> Unit,
-) : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()), Disposable {
-    private val title = JBLabel(KiloBundle.message("session.permission.rules.title"))
-    private val arrow = JBLabel(SessionViewIcons.chevronCollapsed)
-    private val header = Stack.horizontal(gap = UiStyle.Gap.xs())
-    private val inset = Stack.vertical(gap = UiStyle.Gap.xs()).apply {
-        border = JBUI.Borders.emptyLeft(SessionViewIcons.chevronCollapsed.iconWidth)
-    }
-    private var box: Stack? = null
+    private val parts: Header,
+    private val box: Stack,
+) : AbstractSessionPartView(parts.panel, box, expanded = KiloPluginSettings.getPermissionRulesExpanded()) {
+    override val contentId = CONTENT_ID
+
     private val rows = mutableListOf<RuleRow>()
     private var style = SessionEditorStyle.current()
-
-    init {
-        header.next(arrow.align(HAlign.LEFT, VAlign.CENTER)).next(title.align(HAlign.LEFT, VAlign.CENTER)).fill(0)
-        header.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        header.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent) {
-                toggle()
-            }
-        })
-        next(header)
-        next(inset)
-        syncArrow()
-    }
 
     private var candidates = emptyList<PermissionRuleCandidate>()
     private var baseline = emptyMap<String, PermissionRuleDecision>()
     private var decisions = emptyMap<String, PermissionRuleDecision>()
+
+    constructor(selection: SessionSelection?, changed: () -> Unit) :
+        this(selection, changed, Header(), Stack.vertical(gap = UiStyle.Gap.xs()))
+
+    init {
+        // Indent the rule rows under the header, matching the diff body's nested content inset.
+        box.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.contentIndent())
+        parts.applyStyle(style)
+    }
 
     @RequiresEdt
     fun update(candidates: List<PermissionRuleCandidate>, reset: Boolean = false) {
@@ -544,78 +550,53 @@ internal class PermissionRulesView(
         this.candidates = candidates
         if (reset || stale) baseline = candidates.associate { it.pattern to it.decision }
         decisions = candidates.associate { it.pattern to (old[it.pattern] ?: it.decision) }
+        syncExpandable(candidates.isNotEmpty())
         if (candidates.isEmpty()) {
-            box?.let {
-                if (it.parent === inset) inset.remove(it)
-            }
-            box = null
             disposeRows()
-            syncArrow()
+            box.removeAll()
             changed()
             return
         }
-        if (stale && box != null) syncBody(rebuild = true) else syncRows()
-        syncExpanded()
-        syncArrow()
+        if (isExpanded()) {
+            if (stale) rebuildRows() else syncRows()
+        }
         changed()
     }
 
+    // The rule rows are the card body: built lazily on first expand and rebuilt only when the
+    // candidate set changes, so the editor-backed command fields are not created while collapsed.
     @RequiresEdt
-    private fun body(): Stack {
-        val current = box
-        if (current != null) return current
-        val root = Stack.vertical(gap = UiStyle.Gap.xs())
-        box = root
-        syncBody(rebuild = true)
-        return root
+    override fun expand(): Boolean {
+        val changed = super.expand()
+        if (changed) rebuildRows()
+        return changed
     }
 
     @RequiresEdt
-    private fun syncBody(rebuild: Boolean) {
-        val root = box ?: return
-        if (rebuild) {
-            root.removeAll()
-            disposeRows()
-            for (candidate in candidates) {
-                val row = RuleRow(candidate.pattern, candidate.defaultDecision, style, selection) { pattern, decision ->
-                    decisions = decisions + (pattern to decision)
-                    syncRows()
-                    changed()
-                }
-                rows.add(row)
-                root.next(row)
+    override fun update(content: Content) = Unit
+
+    @RequiresEdt
+    private fun rebuildRows() {
+        box.removeAll()
+        disposeRows()
+        for (candidate in candidates) {
+            val row = RuleRow(candidate.pattern, candidate.defaultDecision, style, selection) { pattern, decision ->
+                decisions = decisions + (pattern to decision)
+                syncRows()
+                changed()
             }
+            rows.add(row)
+            box.next(row)
         }
         syncRows()
-        root.revalidate()
-        root.repaint()
+        box.revalidate()
+        box.repaint()
     }
 
     @RequiresEdt
     private fun syncRows() {
         for (row in rows) row.update(decisions[row.pattern] ?: PermissionRuleDecision.PENDING)
     }
-
-    @RequiresEdt
-    private fun syncExpanded() {
-        if (box?.parent === inset) return
-        if (!KiloPluginSettings.getPermissionRulesExpanded()) return
-        inset.add(body())
-    }
-
-    @RequiresEdt
-    fun toggle() {
-        if (candidates.isEmpty()) return
-        val root = body()
-        if (isExpanded()) inset.remove(root) else inset.add(root)
-        KiloPluginSettings.setPermissionRulesExpanded(isExpanded())
-        syncArrow()
-        revalidate()
-        repaint()
-    }
-
-    @RequiresEdt
-    fun isExpanded(): Boolean = box?.parent === inset
 
     @RequiresEdt
     fun approved(): List<String> = candidates.map { it.pattern }.filter { decisions[it] == PermissionRuleDecision.APPROVED }
@@ -632,9 +613,15 @@ internal class PermissionRulesView(
     }
 
     @RequiresEdt
-    fun applyStyle(style: SessionEditorStyle) {
+    override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
+        parts.applyStyle(style)
         for (row in rows) row.applyStyle(style)
+        refresh()
+    }
+
+    override fun userToggled() {
+        KiloPluginSettings.setPermissionRulesExpanded(isExpanded())
     }
 
     @RequiresEdt
@@ -647,12 +634,7 @@ internal class PermissionRulesView(
     fun commandFieldsForTest(): List<EditorTextField> = rows.map { it.commandFieldForTest() }
 
     @RequiresEdt
-    fun hintLabelsForTest(): List<JBLabel> = rows.map { it.hintLabelForTest() }
-
-    @RequiresEdt
-    private fun syncArrow() {
-        arrow.icon = if (isExpanded()) SessionViewIcons.chevronExpanded else SessionViewIcons.chevronCollapsed
-    }
+    fun hintLabelsForTest(): List<JBTextArea> = rows.map { it.hintLabelForTest() }
 
     @RequiresEdt
     private fun disposeRows() {
@@ -662,6 +644,29 @@ internal class PermissionRulesView(
 
     override fun dispose() {
         disposeRows()
+        super.dispose()
+    }
+
+    // Card-style header shared with the change/modified cards: leading permission glyph and title.
+    // The collapse/expand chevron on the trailing edge is owned by AbstractSessionPartView.
+    private class Header {
+        val glyph = JBLabel(SHIELD_ICON)
+        val title = JBLabel(KiloBundle.message("session.permission.rules.title"))
+        val panel = PartHeader().apply {
+            leading(glyph)
+            left(title)
+        }
+
+        @RequiresEdt
+        fun applyStyle(style: SessionEditorStyle) {
+            title.font = style.boldEditorFont
+            title.foreground = SessionUiStyle.Colors.foreground()
+        }
+    }
+
+    private companion object {
+        const val CONTENT_ID = "session-permission-rules"
+        val SHIELD_ICON: Icon = IconLoader.getIcon("/icons/shield.svg", PermissionRulesView::class.java)
     }
 
     private class RuleRow(
@@ -680,7 +685,8 @@ internal class PermissionRulesView(
         private val deny = RuleToggleButton(false) {
             changed(pattern, if (decision == PermissionRuleDecision.DENIED) PermissionRuleDecision.PENDING else PermissionRuleDecision.DENIED)
         }
-        private val hint = JBLabel()
+        private val hint = wrappingSecondaryText(style)
+        private val hintReg = selection?.register(hint)
         private val field = RuleCommandField(pattern, style, selection)
         private val controls = Stack.horizontal(gap = UiStyle.Gap.xs())
 
@@ -691,7 +697,7 @@ internal class PermissionRulesView(
             controls.next(field.align(HAlign.LEFT, VAlign.CENTER))
             controls.fill(0)
             next(controls)
-            next(hint.align(HAlign.LEFT, VAlign.CENTER))
+            next(hint)
             applyStyle(style)
             update(PermissionRuleDecision.PENDING)
         }
@@ -733,9 +739,10 @@ internal class PermissionRulesView(
 
         fun commandFieldForTest(): EditorTextField = field
 
-        fun hintLabelForTest(): JBLabel = hint
+        fun hintLabelForTest(): JBTextArea = hint
 
         override fun dispose() {
+            hintReg?.let(Disposer::dispose)
             field.dispose()
         }
     }
