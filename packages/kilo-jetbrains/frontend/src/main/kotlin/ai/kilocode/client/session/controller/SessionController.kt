@@ -175,6 +175,7 @@ class SessionController(
     private val childParts: MutableMap<PartKey, String> = mutableMapOf()
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
     private var recentsState: RecentsState = RecentsState.Idle
+    private var recentsSnapshot: List<SessionDto> = emptyList()
     private var viewState: SessionControllerEvent.ViewChanged? = null
     private var connectionState: SessionControllerEvent.ConnectionChanged? = null
     private var connectionTargetState: SessionControllerEvent.ConnectionChanged? = null
@@ -201,6 +202,7 @@ class SessionController(
     internal val sessionDirectory: String get() = model.session?.directory ?: (ref as? SessionRef.Local)?.session?.directory ?: directory
     internal val refKey: String? get() = ref?.key
     internal val refType: SessionRef.Type? get() = ref?.type
+    internal fun recents(): List<SessionDto> = recentsSnapshot
 
     fun openSession(session: SessionDto) {
         assertEdt()
@@ -1071,7 +1073,11 @@ class SessionController(
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
                     for (child in discovered.values.toSet()) trackChild(child)
-                    showSession()
+                    if (model.isEmpty() && model.state is SessionState.Idle) {
+                        setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    } else {
+                        showSession()
+                    }
                     loaded(!model.isEmpty())
                 }
             } catch (e: Exception) {
@@ -1123,7 +1129,11 @@ class SessionController(
                     childParts.clear()
                     childParts.putAll(discovered)
                     for (child in discovered.values.toSet()) trackChild(child)
-                    showSession()
+                    if (model.isEmpty() && model.state is SessionState.Idle) {
+                        setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    } else {
+                        showSession()
+                    }
                     loaded(!model.isEmpty())
                 }
             } catch (e: Exception) {
@@ -2242,7 +2252,7 @@ class SessionController(
         }
     }
 
-    fun refreshRecents(force: Boolean = false) {
+    private fun refreshRecents(force: Boolean = false) {
         assertEdt()
         if (!canUseRecents()) return
         if (recentsState is RecentsState.Loading) return
@@ -2257,7 +2267,8 @@ class SessionController(
                     if (recentsState != state) return@edt
                     setRecentSessionsState(RecentsState.Loaded)
                     if (!canUseRecents()) return@edt
-                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowRecents(items))
+                    recentsSnapshot = items
+                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
                 }
             } catch (e: Exception) {
                 LOG.warn("kind=session-recent dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
@@ -2266,7 +2277,8 @@ class SessionController(
                     if (recentsState != state) return@edt
                     setRecentSessionsState(RecentsState.Loaded)
                     if (!canUseRecents()) return@edt
-                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowRecents(emptyList()))
+                    recentsSnapshot = emptyList()
+                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
                 }
             }
         }
@@ -2294,7 +2306,7 @@ class SessionController(
             }
         }
         when (event) {
-            is SessionControllerEvent.ViewChanged.ShowRecents -> showAccountOverlay()
+            is SessionControllerEvent.ViewChanged.ShowEmpty -> showAccountOverlay()
             is SessionControllerEvent.ViewChanged.ShowProgress -> hideAccountOverlay()
             is SessionControllerEvent.ViewChanged.ShowSession -> hideAccountOverlay()
         }

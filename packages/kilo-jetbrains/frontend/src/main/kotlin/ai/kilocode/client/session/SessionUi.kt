@@ -11,7 +11,7 @@ import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.migration.KiloMigrationService
 import ai.kilocode.client.migration.MigrationUiController
 import ai.kilocode.client.migration.MigrationUiState
-import ai.kilocode.client.migration.ui.MigrationOverlayPanel
+import ai.kilocode.client.migration.ui.MigrationWizardPanel
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.SessionModelEvent
@@ -199,7 +199,7 @@ class SessionUi(
     private lateinit var prompt: PromptPanel
     private lateinit var completion: KiloPromptCompletionProvider
     private lateinit var load: LoadingPanel
-    private lateinit var migrationOverlay: MigrationOverlayPanel
+    private lateinit var migrationWizard: MigrationWizardPanel
     private var empty: EmptySessionPanel? = null
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
@@ -314,9 +314,9 @@ class SessionUi(
         }, ModalityState.defaultModalityState())
     }
 
-    internal fun setModalContent(content: JComponent?, focus: (() -> JComponent)? = null) {
+    internal fun setModalContent(content: JComponent?, maxW: (() -> Int)? = null, focus: (() -> JComponent)? = null) {
         modalFocus = if (content == null) null else focus
-        root.setModalContent(content)
+        root.setModalContent(content, maxW)
     }
 
     private fun buildUi() {
@@ -325,19 +325,13 @@ class SessionUi(
         fileLinks = SessionFileLinks(workspace.directory, workspaces, cs, root, ::openUrl)
         SessionContextMenu.install(root, this)
 
-        migrationOverlay = MigrationOverlayPanel().apply {
+        migrationWizard = MigrationWizardPanel().apply {
             onSkip = { migration.skip() }
             onLater = { migration.later() }
             onDone = { migration.finish() }
             onContinueFromError = { migration.finish() }
             onStart = { sel -> migration.start(sel) }
         }
-        migrationOverlay.border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
-        )
 
         account = SessionAccountOverlay(
             select = { org -> controller.selectOrganization(org) },
@@ -551,16 +545,9 @@ class SessionUi(
                     scroll.show(progressBody)
                 }
 
-                is SessionControllerEvent.ViewChanged.ShowRecents -> {
-                    val panel = EmptySessionPanel(
-                        this,
-                        controller,
-                        event.recents,
-                        history = { manager?.showHistory() },
-                        activity = { manager?.activity() ?: sessions.activitySnapshot() },
-                        titles = { manager?.titles().orEmpty() },
-                        timers = timers,
-                    )
+                is SessionControllerEvent.ViewChanged.ShowEmpty -> {
+                    val panel = manager?.emptyPanel(this, controller)
+                        ?: EmptySessionPanel(this, controller, controller.recents(), timers = timers)
                     empty = panel
                     scroll.show(panel.view)
                 }
@@ -644,10 +631,13 @@ class SessionUi(
             }
             is MigrationUiState.Needed -> {
                 if (!root.blocker.isVisible) LOG.info("Migration wizard: overlay shown session=${id ?: cacheKey ?: "new"} phase=${state.phase}")
-                migrationOverlay.update(state)
-                setModalContent(migrationOverlay) { migrationOverlay.preferredFocusComponent() }
-                migrationOverlay.revalidate()
-                migrationOverlay.repaint()
+                migrationWizard.update(state)
+                setModalContent(
+                    migrationWizard,
+                    maxW = { SessionUiStyle.SessionLayout.readableWidth(root, style.transcriptFont) },
+                ) { migrationWizard.preferredFocusComponent() }
+                migrationWizard.revalidate()
+                migrationWizard.repaint()
             }
         }
     }

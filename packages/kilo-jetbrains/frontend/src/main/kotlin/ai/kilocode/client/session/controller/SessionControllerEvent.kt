@@ -4,7 +4,6 @@ import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
-import ai.kilocode.rpc.dto.SessionDto
 
 /**
  * Lifecycle events fired by [SessionController] on the EDT.
@@ -27,8 +26,8 @@ sealed class SessionControllerEvent {
             override fun toString() = "ViewChanged progress"
         }
 
-        data class ShowRecents(val recents: List<SessionDto>) : ViewChanged() {
-            override fun toString() = "ViewChanged recents=${recents.size}"
+        data object ShowEmpty : ViewChanged() {
+            override fun toString() = "ViewChanged empty"
         }
 
         data object ShowSession : ViewChanged() {
