@@ -215,6 +215,7 @@ export class AgentManagerProvider implements Disposable {
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
+      getProjectId: () => this.contexts.active()?.id,
       getStateReady: () => this.stateReady,
       catalog: this.diffCatalog,
       git: this.gitOps,
@@ -788,9 +789,6 @@ export class AgentManagerProvider implements Disposable {
     }
     if (m.type === "agentManager.setSessionsCollapsed") {
       this.state?.setSessionsCollapsed(m.collapsed)
-      // Multi-project bodies render collapsed purely from pushed state, so the
-      // mutation must round-trip; legacy mode is covered by its optimistic
-      // signal and the push is a no-op update.
       this.pushState()
       return null
     }
@@ -831,11 +829,15 @@ export class AgentManagerProvider implements Disposable {
 
   private onDiffMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
     if (m.type === "agentManager.requestWorktreeDiff") {
-      void this.diffs.request(composeDiffId(m.sessionId, normalizeScope(m.scope)))
+      void this.diffs.request(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.projectId)
       return null
     }
     if (m.type === "agentManager.requestWorktreeDiffFile") {
-      void this.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId), m.file)
+      void this.diffs.requestFile(
+        composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId),
+        m.file,
+        m.projectId,
+      )
       return null
     }
     if (m.type === "agentManager.applyWorktreeDiff") {
@@ -843,11 +845,11 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.revertWorktreeFile") {
-      void this.diffs.revert(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.file)
+      void this.diffs.revert(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.file, m.projectId)
       return null
     }
     if (m.type === "agentManager.startDiffWatch") {
-      this.diffs.start(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId))
+      this.diffs.start(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId), m.projectId)
       return null
     }
     if (m.type === "agentManager.stopDiffWatch") {
@@ -855,39 +857,27 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.requestDiffBranches") {
-      void this.sendDiffBranches(m.sessionId, m.scope)
+      void this.diffs.sendBranches(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.projectId)
       return null
     }
     if (m.type === "agentManager.setDiffBaseBranch") {
+      const logErr = (err: unknown) =>
+        this.log("Failed to set diff base:", err instanceof Error ? err.message : String(err))
+      const id = composeDiffId(m.sessionId, normalizeScope(m.scope))
       void this.diffs
-        .setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch)
-        .catch((err) => this.log("Failed to set diff base:", err instanceof Error ? err.message : String(err)))
-        .then(() => void this.sendDiffBranches(m.sessionId, m.scope))
+        .setBase(id, m.branch, m.projectId)
+        .catch(logErr)
+        .then(() => void this.diffs.sendBranches(id, m.projectId))
+      return null
+    }
+    if (m.type === "agentManager.preloadWorktreeDiffs") {
+      void this.diffs.preload(m.worktreeIds, m.projectId)
       return null
     }
     if (m.type === "agentManager.openFile") {
       this.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
       return null
     }
-  }
-
-  private async sendDiffBranches(sessionId: string, scope?: string): Promise<void> {
-    const id = composeDiffId(sessionId, normalizeScope(scope))
-    const result = await this.diffs.branches(id).catch((err) => {
-      this.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
-      return undefined
-    })
-    if (!result) return
-    this.postToWebview({
-      type: "agentManager.diffBranches",
-      sessionId: id,
-      branches: result.branches,
-      defaultBranch: result.defaultBranch,
-      autoBase: result.autoBase,
-      currentBase: result.currentBase,
-      isAuto: result.isAuto,
-      currentBranch: result.currentBranch,
-    })
   }
 
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {

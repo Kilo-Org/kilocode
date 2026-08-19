@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test"
+import { describe, expect, it } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
@@ -9,6 +9,7 @@ import {
   generatedLike,
   resolveBase,
   MAX_DETAIL_BYTES,
+  splitPatches,
 } from "../../src/agent-manager/local-diff"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import { WorktreeDiffReverter } from "../../src/diff/shared/reverter"
@@ -110,6 +111,68 @@ describe("generatedLike", () => {
   })
 })
 
+describe("splitPatches", () => {
+  it("extracts multiple patches by their authoritative file list", () => {
+    const patch = [
+      "diff --git a/first.ts b/first.ts",
+      "--- a/first.ts",
+      "+++ b/first.ts",
+      "@@ -1 +1 @@",
+      "-old",
+      "+new",
+      "diff --git a/second.ts b/second.ts",
+      "--- a/second.ts",
+      "+++ b/second.ts",
+      "@@ -1 +1 @@",
+      "-before",
+      "+after",
+      "",
+    ].join("\n")
+
+    const result = splitPatches(patch, ["first.ts", "second.ts"])
+
+    expect(result.get("first.ts")).toContain("+new")
+    expect(result.get("first.ts")).not.toContain("second.ts")
+    expect(result.get("second.ts")).toContain("+after")
+  })
+
+  it("handles spaces and b path segments without splitting the filename", () => {
+    const file = "folder b/nested file.ts"
+    const patch = `diff --git a/${file} b/${file}\n--- a/${file}\n+++ b/${file}\n@@ -1 +1 @@\n-old\n+new\n`
+
+    expect(splitPatches(patch, [file]).get(file)).toBe(patch)
+  })
+
+  it("ignores header-looking lines inside a patch body", () => {
+    const patch = [
+      "diff --git a/patches/example.patch b/patches/example.patch",
+      "--- a/patches/example.patch",
+      "+++ b/patches/example.patch",
+      "@@ -1 +1 @@",
+      "-old",
+      "+diff --git a/target.ts b/target.ts",
+      "diff --git a/target.ts b/target.ts",
+      "--- a/target.ts",
+      "+++ b/target.ts",
+      "@@ -1 +1 @@",
+      "-before",
+      "+after",
+      "",
+    ].join("\n")
+
+    const result = splitPatches(patch, ["patches/example.patch", "target.ts"])
+
+    expect(result.get("patches/example.patch")).toContain("+diff --git a/target.ts b/target.ts")
+    expect(result.get("target.ts")).toContain("+after")
+  })
+
+  it("keeps binary patches and ignores empty input", () => {
+    const patch = "diff --git a/image.bin b/image.bin\nBinary files a/image.bin and b/image.bin differ\n"
+    expect(splitPatches(patch, ["image.bin"]).get("image.bin")).toBe(patch)
+    expect(splitPatches("", ["image.bin"]).size).toBe(0)
+  })
+})
+
 describe("diffSummary", () => {
   it("uses candidate local branch fallback when base is empty string and on a feature branch", async () => {
     await withRepo(async (dir) => {
@@ -204,7 +267,7 @@ describe("diffSummary", () => {
     })
   })
 
-  it("all entries are summarized with empty before/after/patch", async () => {
+  it("all entries include patches with summarized=false for text files", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "untracked.txt"), "x\n")
       await fs.writeFile(path.join(dir, "seed.txt"), "changed\n")
@@ -213,12 +276,83 @@ describe("diffSummary", () => {
       const result = await diffSummary(git(), dir, base)
       expect(result.length).toBeGreaterThan(0)
       for (const entry of result) {
-        expect(entry.summarized).toBe(true)
-        expect(entry.before).toBe("")
-        expect(entry.after).toBe("")
-        expect(entry.patch).toBe("")
+        expect(entry.summarized).toBe(false)
+        expect(entry.patch).toBeTruthy()
         expect(typeof entry.stamp).toBe("string")
       }
+    })
+  })
+
+  it("keeps markdown summarized so rendered mode loads complete contents", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "README.md"), "# Base\n")
+      runSync(dir, ["add", "README.md"])
+      runSync(dir, ["commit", "-m", "add readme"])
+      runSync(dir, ["branch", "-f", base])
+      await fs.writeFile(path.join(dir, "README.md"), "# Updated\n")
+
+      const summary = (await diffSummary(git(), dir, base)).find((entry) => entry.file === "README.md")
+
+      expect(summary?.summarized).toBe(true)
+      expect(summary?.patch).toBe("")
+    })
+  })
+
+  it("keeps summarized and detailed stamps stable for markdown", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "README.md"), "# Base\n")
+      runSync(dir, ["add", "README.md"])
+      runSync(dir, ["commit", "-m", "add readme"])
+      runSync(dir, ["branch", "-f", base])
+      await fs.writeFile(path.join(dir, "README.md"), "# Updated\n")
+
+      const local = createLocalDiff(git())
+      const summary = (await local.summary(dir, base)).find((entry) => entry.file === "README.md")
+      const detail = await local.file(dir, base, "README.md")
+
+      expect(detail?.stamp).toBe(summary?.stamp)
+    })
+  })
+
+  it("handles tracked filenames containing a b path segment", async () => {
+    await withRepo(async (dir, base) => {
+      const file = "folder b/nested file.ts"
+      await fs.mkdir(path.dirname(path.join(dir, file)), { recursive: true })
+      await fs.writeFile(path.join(dir, file), "before\n")
+      runSync(dir, ["add", file])
+      runSync(dir, ["commit", "-m", "add nested file"])
+      runSync(dir, ["branch", "-f", base])
+      await fs.writeFile(path.join(dir, file), "after\n")
+
+      const summary = (await diffSummary(git(), dir, base)).find((entry) => entry.file === file)
+
+      expect(summary?.summarized).toBe(false)
+      expect(summary?.patch).toContain("+after")
+    })
+  })
+
+  it("keeps untracked file order stable while loading contents concurrently", async () => {
+    await withRepo(async (dir, base) => {
+      await Promise.all([
+        fs.writeFile(path.join(dir, "a.txt"), "a\n"),
+        fs.writeFile(path.join(dir, "b.txt"), "b\n"),
+        fs.writeFile(path.join(dir, "c.txt"), "c\n"),
+      ])
+
+      const result = await diffSummary(git(), dir, base)
+
+      expect(result.map((entry) => entry.file)).toEqual(["a.txt", "b.txt", "c.txt"])
+    })
+  })
+
+  it("falls back to summarized details when aggregate patch output exceeds the cap", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "large.txt"), `${"x".repeat(MAX_DETAIL_BYTES + 1)}\n`)
+      const result = await diffSummary(git(), dir, base)
+      const entry = result.find((item) => item.file === "large.txt")
+
+      expect(entry?.summarized).toBe(true)
+      expect(entry?.patch).toBe("")
     })
   })
 
@@ -341,7 +475,7 @@ describe("diffFile", () => {
       const entry = summary.find((item) => item.file === "seed.txt")
       const result = await local.file(dir, base, "seed.txt")
 
-      expect(entry?.summarized).toBe(true)
+      expect(entry?.summarized).toBe(false)
       expect(result?.summarized).toBe(false)
       expect(result?.additions).toBe(entry?.additions)
       expect(result?.deletions).toBe(entry?.deletions)

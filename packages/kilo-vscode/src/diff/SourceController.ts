@@ -15,7 +15,7 @@ type Messages = {
   unsupportedRevert: (source: DiffSource | undefined, file: string) => unknown
 }
 
-type ActivateOptions = { poll?: boolean; fetch?: boolean }
+type ActivateOptions = { poll?: boolean; fetch?: boolean; known?: DiffFile[] }
 
 const viewerMessages: Messages = {
   available: (descriptors, id) => ({
@@ -117,7 +117,8 @@ export class SourceController {
 
     if (opts.fetch === false) return
 
-    const keepPolling = await this.runFetch(source, epoch, true)
+    this.lastHash = opts.known ? hashFileDiffs(opts.known as never) : undefined
+    const keepPolling = await this.runFetch(source, epoch, opts.known === undefined)
     // Prevents the polling interval from starting after teardown or swap.
     if (this.epoch !== epoch || this.activeId !== id) return
     if (opts.poll !== false && keepPolling) this.startPolling(source, epoch)
@@ -239,10 +240,18 @@ export class SourceController {
 
   private startPolling(source: DiffSource, epoch: number): void {
     this.stopPolling()
-    this.interval = setInterval(async () => {
+    let busy = false
+    this.interval = setInterval(() => {
+      if (busy) return
+      busy = true
       // Self-cancel when the tick reports the source is done
-      const keep = await this.runFetch(source, epoch, false)
-      if (!keep) this.stopPolling()
+      void this.runFetch(source, epoch, false)
+        .then((keep) => {
+          if (!keep && this.epoch === epoch && this.activeId === source.descriptor.id) this.stopPolling()
+        })
+        .finally(() => {
+          busy = false
+        })
     }, DIFF_POLL_INTERVAL_MS)
   }
 

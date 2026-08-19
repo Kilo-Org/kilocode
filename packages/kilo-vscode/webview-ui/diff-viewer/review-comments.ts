@@ -11,6 +11,24 @@ export function lineCount(text: string): number {
   return n
 }
 
+function patchLineCount(patch: string, side: "deletions" | "additions"): number {
+  const re = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/gm
+  let max = 0
+  for (const match of patch.matchAll(re)) {
+    const start = Number(match[side === "deletions" ? 1 : 3])
+    const count = Number(match[side === "deletions" ? 2 : 4] ?? 1)
+    if (count > 0) max = Math.max(max, start + count - 1)
+  }
+  return max
+}
+
+export function diffLineCount(diff: WorktreeFileDiff, side: "deletions" | "additions"): number {
+  const content = side === "deletions" ? diff.before : diff.after
+  if (content.length > 0) return lineCount(content)
+  if (diff.patch) return patchLineCount(diff.patch, side)
+  return 0
+}
+
 export function getDirectory(path: string): string {
   const idx = path.lastIndexOf("/")
   return idx === -1 ? "" : path.slice(0, idx + 1)
@@ -44,9 +62,8 @@ export function sanitizeReviewComments(comments: ReviewComment[], diffs: Worktre
   return comments.filter((comment) => {
     const diff = map.get(comment.file)
     if (!diff) return false
-    const content = comment.side === "deletions" ? diff.before : diff.after
     if (diff.summarized === true) return true
-    const max = lineCount(content)
+    const max = diffLineCount(diff, comment.side)
     if (comment.line < 1) return false
     if (comment.line > max) return false
     return true

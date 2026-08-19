@@ -33,17 +33,19 @@ interface ApplyToLocalOptions {
   t: ReturnType<typeof useLanguage>["t"]
   /** Current sidebar selection (LOCAL, a worktree id, or null). */
   selection: Accessor<string | null>
+  project: Accessor<string | undefined>
   /** Sentinel id for the local repo selection. */
   local: string
   worktrees: Accessor<{ id: string }[]>
   diffDatas: Accessor<Record<string, WorktreeFileDiff[]>>
+  dataKey: (id: string, projectId?: string) => string
   diffLoading: Accessor<boolean>
   /** Telemetry: metrics.track(name, surface, data). */
   track: ReturnType<typeof tracker>["track"]
 }
 
 export function createApplyToLocal(opts: ApplyToLocalOptions) {
-  const { vscode, dialog, t, selection, local, worktrees, diffDatas, diffLoading } = opts
+  const { vscode, dialog, t, selection, project, local, worktrees, diffDatas, dataKey, diffLoading } = opts
 
   const [applyStates, setApplyStates] = createSignal<Record<string, ApplyState>>({})
   const [applyTarget, setApplyTarget] = createSignal<string | undefined>()
@@ -73,7 +75,7 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
   const applyDiffs = createMemo(() => {
     const key = applyDiffKey()
     if (!key) return [] as WorktreeFileDiff[]
-    return diffDatas()[key] ?? ([] as WorktreeFileDiff[])
+    return diffDatas()[dataKey(key, project())] ?? ([] as WorktreeFileDiff[])
   })
 
   const applyStateForTarget = createMemo(() => {

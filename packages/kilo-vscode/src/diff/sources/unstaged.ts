@@ -1,7 +1,7 @@
 import * as fs from "fs/promises"
 import * as vscode from "vscode"
 import { GitOps } from "../../agent-manager/GitOps"
-import { generatedLike } from "../../agent-manager/local-diff"
+import { generatedLike, requiresContents, splitPatches } from "../../agent-manager/local-diff"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import { binaryFile } from "../shared/binary"
 import { imageMime, loadImage } from "../shared/image"
@@ -75,7 +75,10 @@ export function createUnstagedDiffSource(opts: UnstagedDiffSourceOptions = {}): 
   }
 
   const listTracked = async (dir: string): Promise<FileEntry[]> => {
-    const [nameStatus, numstat, raw] = await Promise.all([
+    const [patchResult, nameStatus, numstat, raw] = await Promise.all([
+      git.execGit(["-c", "core.quotepath=false", "diff", "--no-ext-diff", "--no-renames", "-U3"], dir, {
+        maxOutput: MAX_DETAIL_BYTES,
+      }),
       git.execGit(["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames"], dir),
       git.execGit(["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames"], dir),
       git.execGit(["-c", "core.quotepath=false", "diff", "--raw", "--abbrev=64", "--no-renames"], dir),
@@ -86,20 +89,31 @@ export function createUnstagedDiffSource(opts: UnstagedDiffSourceOptions = {}): 
     }
     const counts = parseNumstat(numstat.code === 0 ? numstat.stdout : "")
     const refs = parseRawOids(raw.code === 0 ? raw.stdout : "")
+    const items = parseNameStatus(nameStatus.stdout)
+    const patches = splitPatches(
+      patchResult.code === 0 ? patchResult.stdout : "",
+      items.map((item) => item.file),
+    )
     return Promise.all(
-      parseNameStatus(nameStatus.stdout).map(async (item) => {
+      items.map(async (item) => {
+        const count = counts.get(item.file)
+        const patch = patches.get(item.file)
+        const isImage = imageMime(item.file) !== undefined
+        const summarized = isImage || count?.binary || patch === undefined || requiresContents(item.file)
         const entry = {
           file: item.file,
           status: item.status,
-          additions: counts.get(item.file)?.additions ?? 0,
-          deletions: counts.get(item.file)?.deletions ?? 0,
+          additions: count?.additions ?? 0,
+          deletions: count?.deletions ?? 0,
           tracked: true,
-          binary: counts.get(item.file)?.binary ?? false,
+          binary: count?.binary ?? false,
+          patch: summarized ? undefined : patch,
+          summarized,
         }
-        if (!imageMime(item.file)) return entry
+        if (!summarized) return entry
         const before = item.status === "added" ? "missing" : (refs.get(item.file)?.before ?? "missing")
         const after = item.status === "deleted" ? "missing" : await diskStamp(dir, item.file)
-        return stamp(entry, before, after)
+        return { ...entry, stamp: `${item.status}:${before}:${after}` }
       }),
     )
   }

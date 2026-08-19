@@ -30,7 +30,7 @@ import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToTex
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { FileTree } from "./FileTree"
 import { treeOrder } from "./file-tree-utils"
-import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
+import { diffLineCount, getDirectory, getFilename, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
@@ -366,8 +366,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           composer().draft = null
           return
         }
-        const content = currentDraft.side === "deletions" ? diff.before : diff.after
-        const max = lineCount(content)
+        const max = diffLineCount(diff, currentDraft.side)
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
@@ -498,7 +497,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     const handle = virtualizer()
     if (!handle) return
     const file = rows()[handle.findItemIndex(handle.scrollOffset)]?.file
-    if (file) setActiveFile(file)
+    if (file && file !== activeFile()) setActiveFile(file)
   }
 
   const scheduleSyncActiveFile = () => {
@@ -536,13 +535,24 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     ),
   )
 
-  const totals = createMemo(() => ({
-    files: props.diffs.length,
-    additions: props.diffs.reduce((s, d) => s + d.additions, 0),
-    deletions: props.diffs.reduce((s, d) => s + d.deletions, 0),
-    large: props.diffs.filter((diff) => isDiffExpandable(diff) && isLargeDiffFile(diff)).length,
-    collapsed: props.diffs.filter((diff) => isDiffExpandable(diff) && !open().includes(diff.file)).length,
-  }))
+  const openSet = createMemo(() => new Set(open()))
+
+  const totals = createMemo(() => {
+    const set = openSet()
+    let additions = 0
+    let deletions = 0
+    let large = 0
+    let collapsed = 0
+    for (const diff of props.diffs) {
+      additions += diff.additions
+      deletions += diff.deletions
+      if (isDiffExpandable(diff)) {
+        if (isLargeDiffFile(diff)) large++
+        if (!set.has(diff.file)) collapsed++
+      }
+    }
+    return { files: props.diffs.length, additions, deletions, large, collapsed }
+  })
   const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
 
@@ -663,12 +673,12 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                   render={(diff) => {
                     const isAdded = () => diff.status === "added"
                     const isDeleted = () => diff.status === "deleted"
-                    const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
+                    const isLargeCollapsed = () => isLargeDiffFile(diff) && !openSet().has(diff.file)
                     const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                     const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
                     createEffect(() => {
-                      if (diff.kind === "image" && open().includes(diff.file)) request(diff)
+                      if (diff.kind === "image" && openSet().has(diff.file)) request(diff)
                     })
 
                     return (
@@ -777,7 +787,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                           </Accordion.Trigger>
                         </StickyAccordionHeader>
                         <Accordion.Content>
-                          <Show when={open().includes(diff.file)}>
+                          <Show when={openSet().has(diff.file)}>
                             <Show
                               when={diff.summarized !== true}
                               fallback={

@@ -943,12 +943,14 @@ export interface ImportFromPRRequest {
 // Agent Manager: Request one-shot diff fetch (webview → extension)
 export interface RequestWorktreeDiffMessage {
   type: "agentManager.requestWorktreeDiff"
+  projectId?: string
   sessionId: string
   scope?: string
 }
 
 export interface RequestWorktreeDiffFileMessage {
   type: "agentManager.requestWorktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   scope?: string
@@ -957,6 +959,7 @@ export interface RequestWorktreeDiffFileMessage {
 // Agent Manager: Start polling for live diff updates (webview → extension)
 export interface StartDiffWatchMessage {
   type: "agentManager.startDiffWatch"
+  projectId?: string
   sessionId: string
   scope?: string
 }
@@ -969,6 +972,7 @@ export interface StopDiffWatchMessage {
 // Agent Manager: Request branch picker data for a diff context (webview → extension)
 export interface RequestDiffBranchesMessage {
   type: "agentManager.requestDiffBranches"
+  projectId?: string
   sessionId: string
   scope?: string
 }
@@ -976,9 +980,17 @@ export interface RequestDiffBranchesMessage {
 // Agent Manager: Set or clear the base branch override for a diff context (webview → extension)
 export interface SetDiffBaseBranchMessage {
   type: "agentManager.setDiffBaseBranch"
+  projectId?: string
   sessionId: string
   scope?: string
   branch?: string
+}
+
+// Agent Manager: Preload diffs for adjacent or candidate worktrees (webview → extension)
+export interface PreloadWorktreeDiffsMessage {
+  type: "agentManager.preloadWorktreeDiffs"
+  projectId?: string
+  worktreeIds: string[]
 }
 
 // Agent Manager: PR messages (webview → extension)
@@ -1538,6 +1550,7 @@ export type WebviewMessage =
   | StopDiffWatchMessage
   | RequestDiffBranchesMessage
   | SetDiffBaseBranchMessage
+  | PreloadWorktreeDiffsMessage
   | RefreshPRMessage
   | OpenPRMessage
   | CommentActionMessage

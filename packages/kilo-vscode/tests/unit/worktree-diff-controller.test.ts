@@ -10,8 +10,10 @@ import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeState
 // base branch the active source was (re)built with. The controller, scope
 // resolution, and SourceController lifecycle under test are all real.
 // Contexts are worktree ids (the sidebar selection), not session ids.
-function make(onFetch?: (n: number) => Promise<void>) {
+function make(onFetch?: (n: number, id: string) => Promise<void>, diffs: Record<string, string> = {}) {
   const builds: { id: string; ctx: PanelContext }[] = []
+  const posted: unknown[] = []
+  let project: string | undefined
   let fetches = 0
   const catalog = {
     build: (id: string, ctx: PanelContext): DiffSource => {
@@ -19,8 +21,13 @@ function make(onFetch?: (n: number) => Promise<void>) {
       return {
         descriptor: { id, type: "workspace", group: "Git", capabilities: { revert: true, comments: true } },
         async fetch() {
-          await onFetch?.(++fetches)
-          return { diffs: [] }
+          await onFetch?.(++fetches, id)
+          const file = diffs[id]
+          return {
+            diffs: file
+              ? [{ file: project ? `${project}:${file}` : file, before: "", after: "", additions: 1, deletions: 0 }]
+              : [],
+          }
         },
       }
     },
@@ -35,14 +42,15 @@ function make(onFetch?: (n: number) => Promise<void>) {
   const controller = new WorktreeDiffController({
     getState: () => state,
     getRoot: () => "/repo",
+    getProjectId: () => project,
     getStateReady: () => undefined,
     catalog,
     git: {} as GitOps,
     localDiffFile: async () => null,
-    post: () => {},
+    post: (msg) => posted.push(msg),
     log: () => {},
   })
-  return { controller, builds }
+  return { controller, builds, posted, setProject: (id: string | undefined) => (project = id) }
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -115,6 +123,54 @@ describe("WorktreeDiffController.setBase", () => {
     await tick()
     expect(builds.length).toBe(2)
 
+    controller.stop()
+  })
+})
+
+describe("WorktreeDiffController cache", () => {
+  it("does not replay branch cache into another scope", async () => {
+    const { controller, posted } = make(undefined, { workspace: "branch.ts", staged: "staged.ts" })
+    controller.start("w1#branch")
+    await waitFor(() => posted.some((msg) => (msg as { type?: string }).type === "agentManager.worktreeDiff"))
+    posted.length = 0
+
+    controller.start("w1#staged")
+    await waitFor(() =>
+      posted.some(
+        (msg) =>
+          (msg as { type?: string; sessionId?: string }).type === "agentManager.worktreeDiff" &&
+          (msg as { sessionId?: string }).sessionId === "w1#staged",
+      ),
+    )
+
+    const staged = posted.filter(
+      (msg) =>
+        (msg as { type?: string; sessionId?: string }).type === "agentManager.worktreeDiff" &&
+        (msg as { sessionId?: string }).sessionId === "w1#staged",
+    )
+    expect(staged).toHaveLength(1)
+    expect((staged[0] as { diffs: { file: string }[] }).diffs).toEqual([expect.objectContaining({ file: "staged.ts" })])
+    controller.stop()
+  })
+
+  it("does not replay cached diffs across projects", async () => {
+    const { controller, posted, setProject } = make(undefined, { workspace: "branch.ts" })
+    setProject("project-a")
+    controller.start("w1#branch")
+    await waitFor(() => posted.some((msg) => (msg as { type?: string }).type === "agentManager.worktreeDiff"))
+
+    posted.length = 0
+    setProject("project-b")
+    controller.start("w1#branch")
+    await waitFor(() => posted.some((msg) => (msg as { type?: string }).type === "agentManager.worktreeDiff"))
+
+    const messages = posted.filter((msg) => (msg as { type?: string }).type === "agentManager.worktreeDiff") as {
+      projectId?: string
+      diffs: { file: string }[]
+    }[]
+    expect(messages).toHaveLength(1)
+    expect(messages[0]?.projectId).toBe("project-b")
+    expect(messages[0]?.diffs[0]?.file).toBe("project-b:branch.ts")
     controller.stop()
   })
 })

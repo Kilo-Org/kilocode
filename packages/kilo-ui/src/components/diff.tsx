@@ -73,8 +73,8 @@ function enqueue(job: Job) {
   schedule()
 }
 
-// When a large batch of diffs becomes near-visible at once, render one diff per
-// animation frame. This keeps the UI responsive while preserving expanded state.
+// Render one newly visible diff per frame so a large intersection batch does
+// not monopolize the main thread during fast scrolling or session switches.
 function schedule() {
   if (frame !== undefined) return
   frame = requestAnimationFrame(() => {
@@ -86,9 +86,6 @@ function schedule() {
 }
 
 // Defer Pierre's expensive DOM render until the diff is close to the viewport.
-// The caller still mounts an expanded diff container immediately, but the body
-// render is queued here so offscreen expanded diffs do not block worktree
-// switches or message handling.
 function observe(node: Element, cb: () => void): () => void {
   if (typeof IntersectionObserver === "undefined") {
     cb()

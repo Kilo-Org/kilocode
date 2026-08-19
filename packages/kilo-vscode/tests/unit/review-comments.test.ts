@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import {
   sanitizeReviewComments,
+  diffLineCount,
   formatReviewCommentsMarkdown,
   extractLines,
   getDirectory,
@@ -112,6 +113,20 @@ describe("sanitizeReviewComments", () => {
     const d = { ...diff("a.ts", "", ""), summarized: true }
     const result = sanitizeReviewComments([c], [d])
     expect(result).toEqual([c])
+  })
+
+  it("keeps comments on patch-backed files before detail loads", () => {
+    const d = {
+      ...diff("a.ts", "", ""),
+      patch: "diff --git a/a.ts b/a.ts\n@@ -1,2 +1,3 @@\n+new\n",
+      summarized: false,
+    }
+    const addition = comment({ file: "a.ts", line: 3 })
+    const deletion = comment({ file: "a.ts", line: 2, side: "deletions" })
+
+    expect(diffLineCount(d, "additions")).toBe(3)
+    expect(diffLineCount(d, "deletions")).toBe(2)
+    expect(sanitizeReviewComments([addition, deletion], [d])).toEqual([addition, deletion])
   })
 
   it("returns all when all comments are valid", () => {

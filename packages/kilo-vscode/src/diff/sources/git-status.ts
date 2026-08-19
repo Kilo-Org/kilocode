@@ -19,6 +19,8 @@ export interface FileEntry {
   deletions: number
   tracked: boolean
   binary: boolean
+  patch?: string
+  summarized?: boolean
   stamp?: string
 }
 
@@ -77,10 +79,12 @@ function statusFromCode(code: string): Status {
  */
 export function summarize(entry: FileEntry): DiffFile {
   const image = imageMime(entry.file) !== undefined
+  const summarized = entry.summarized ?? (image || !entry.binary)
   return {
     file: entry.file,
     before: "",
     after: "",
+    patch: entry.patch,
     additions: entry.additions,
     deletions: entry.deletions,
     status: entry.status,
@@ -88,7 +92,7 @@ export function summarize(entry: FileEntry): DiffFile {
     generatedLike: generatedLike(entry.file),
     // Binary metadata is complete because no deferred text body exists.
     // Images are the exception: their encoded sides load lazily on expansion.
-    summarized: image || !entry.binary,
+    summarized,
     // Synthetic stamp keyed on the stats we actually polled: any change to
     // the file's diff produces new additions/deletions, which invalidates
     // the webview-side cached detail via mergeWorktreeDiffs. Callers can

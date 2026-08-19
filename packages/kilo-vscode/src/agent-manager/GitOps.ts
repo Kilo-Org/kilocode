@@ -43,6 +43,7 @@ interface ApplyPatchResult {
 interface ExecOptions {
   env?: NodeJS.ProcessEnv
   stdin?: string
+  maxOutput?: number
 }
 
 export interface ExecResult {
@@ -424,7 +425,7 @@ export class GitOps {
         throw new Error(read.stderr.trim() || "Failed to initialize temporary index")
       }
 
-      const add = await this.exec(["add", "-A", "--", ...pathspec], sourcePath, { env })
+      const add = await this.exec(["--literal-pathspecs", "add", "-A", "--", ...pathspec], sourcePath, { env })
       if (add.code !== 0) {
         throw new Error(add.stderr.trim() || "Failed to stage worktree snapshot")
       }
@@ -480,12 +481,14 @@ export class GitOps {
       }
       await fs.rm(full, { force: true })
       // Also remove from git index in case it was staged
-      await this.raw(["rm", "--cached", "--force", "--ignore-unmatch", "--", file], cwd).catch(() => "")
+      await this.raw(["--literal-pathspecs", "rm", "--cached", "--force", "--ignore-unmatch", "--", file], cwd).catch(
+        () => "",
+      )
       return { ok: true, message: "Removed added file" }
     }
 
     // Modified or deleted file — restore from merge-base
-    const result = await this.exec(["checkout", base, "--", file], cwd)
+    const result = await this.exec(["--literal-pathspecs", "checkout", base, "--", file], cwd)
     if (result.code !== 0) {
       return { ok: false, message: result.stderr.trim() || "Failed to revert file" }
     }
@@ -493,7 +496,7 @@ export class GitOps {
     // restored the file into the index correctly — resetting to HEAD would drop
     // it from the index and make it appear as a new untracked file.
     if (status === "modified") {
-      await this.raw(["reset", "HEAD", "--", file], cwd).catch(() => "")
+      await this.raw(["--literal-pathspecs", "reset", "HEAD", "--", file], cwd).catch(() => "")
     }
     return { ok: true, message: "Reverted file to base" }
   }
@@ -579,7 +582,7 @@ export class GitOps {
    * suitable for callers that need to tolerate legitimate failures (e.g.
    * `merge-base` on an orphan branch, `ls-files --error-unmatch`).
    */
-  execGit(args: string[], cwd: string, options?: { stdin?: string }): Promise<ExecResult> {
+  execGit(args: string[], cwd: string, options?: { stdin?: string; maxOutput?: number }): Promise<ExecResult> {
     return this.exec(args, cwd, options)
   }
 
@@ -639,11 +642,22 @@ export class GitOps {
       })
       const out: Buffer[] = []
       const err: Buffer[] = []
+      let size = 0
+      let limited = false
       let failure: string | undefined
       const abort = () => child.kill("SIGTERM")
 
       this.controller.signal.addEventListener("abort", abort, { once: true })
-      child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
+      child.stdout?.on("data", (chunk: Buffer) => {
+        size += chunk.length
+        if (options?.maxOutput !== undefined && size > options.maxOutput) {
+          limited = true
+          failure = `git output exceeded ${options.maxOutput} bytes`
+          child.kill("SIGTERM")
+          return
+        }
+        out.push(chunk)
+      })
       child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
       child.on("error", (error) => {
@@ -652,8 +666,8 @@ export class GitOps {
       child.on("close", (code) => {
         this.controller.signal.removeEventListener("abort", abort)
         resolve({
-          code: code ?? 1,
-          stdout: Buffer.concat(out),
+          code: failure ? 1 : (code ?? 1),
+          stdout: limited ? Buffer.alloc(0) : Buffer.concat(out),
           stderr: failure ?? Buffer.concat(err).toString("utf8"),
         })
       })

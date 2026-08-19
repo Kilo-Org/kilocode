@@ -25,7 +25,7 @@ import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import {
   getDirectory,
   getFilename,
-  lineCount,
+  diffLineCount,
   sanitizeReviewComments,
   type ReviewComment,
 } from "../diff-viewer/review-comments"
@@ -357,8 +357,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           composer().draft = null
           return
         }
-        const content = currentDraft.side === "deletions" ? diff.before : diff.after
-        const max = lineCount(content)
+        const max = diffLineCount(diff, currentDraft.side)
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
@@ -478,13 +477,24 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     setOpen(toggleOpenFiles(props.diffs, open()))
   }
 
-  const totals = createMemo(() => ({
-    files: props.diffs.length,
-    additions: props.diffs.reduce((sum, diff) => sum + diff.additions, 0),
-    deletions: props.diffs.reduce((sum, diff) => sum + diff.deletions, 0),
-    large: props.diffs.filter((diff) => isDiffExpandable(diff) && isLargeDiffFile(diff)).length,
-    collapsed: props.diffs.filter((diff) => isDiffExpandable(diff) && !open().includes(diff.file)).length,
-  }))
+  const openSet = createMemo(() => new Set(open()))
+
+  const totals = createMemo(() => {
+    const set = openSet()
+    let additions = 0
+    let deletions = 0
+    let large = 0
+    let collapsed = 0
+    for (const diff of props.diffs) {
+      additions += diff.additions
+      deletions += diff.deletions
+      if (isDiffExpandable(diff)) {
+        if (isLargeDiffFile(diff)) large++
+        if (!set.has(diff.file)) collapsed++
+      }
+    }
+    return { files: props.diffs.length, additions, deletions, large, collapsed }
+  })
   const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
   const openIcon = () => (allOpen() ? "files-collapse" : "files-expand")
@@ -585,12 +595,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
               render={(diff) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"
-                const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
+                const isLargeCollapsed = () => isLargeDiffFile(diff) && !openSet().has(diff.file)
                 const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
                 createEffect(() => {
-                  if (diff.kind === "image" && open().includes(diff.file)) request(diff)
+                  if (diff.kind === "image" && openSet().has(diff.file)) request(diff)
                 })
 
                 return (
@@ -703,7 +713,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                       </Accordion.Trigger>
                     </StickyAccordionHeader>
                     <Accordion.Content>
-                      <Show when={open().includes(diff.file)}>
+                      <Show when={openSet().has(diff.file)}>
                         <Show
                           when={diff.summarized !== true}
                           fallback={

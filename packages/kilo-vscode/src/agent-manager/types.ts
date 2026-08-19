@@ -338,6 +338,7 @@ interface ApplyWorktreeDiffResultMessage {
 
 interface WorktreeDiffLoadingMessage {
   type: "agentManager.worktreeDiffLoading"
+  projectId?: string
   sessionId: string
   loading: boolean
 }
@@ -345,18 +346,21 @@ interface WorktreeDiffLoadingMessage {
 /** Source-level notice for a diff context (e.g. snapshots disabled). */
 interface WorktreeDiffNoticeMessage {
   type: "agentManager.worktreeDiffNotice"
+  projectId?: string
   sessionId: string
   notice?: string
 }
 
 interface WorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
+  projectId?: string
   sessionId: string
   diffs: WorktreeDiffEntry[]
 }
 
 interface WorktreeDiffFileMessage {
   type: "agentManager.worktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   diff: WorktreeDiffEntry | null
@@ -364,6 +368,7 @@ interface WorktreeDiffFileMessage {
 
 interface RevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
+  projectId?: string
   sessionId: string
   file: string
   status: "success" | "error"
@@ -373,6 +378,7 @@ interface RevertWorktreeFileResultMessage {
 /** Branch picker data for a context's diff directory. */
 interface DiffBranchesMessage {
   type: "agentManager.diffBranches"
+  projectId?: string
   sessionId: string
   branches: BranchListItem[]
   defaultBranch: string
@@ -700,6 +706,7 @@ interface ImportFromPRIn {
 
 interface RequestWorktreeDiffIn {
   type: "agentManager.requestWorktreeDiff"
+  projectId?: string
   sessionId: string
   scope?: string
 }
@@ -712,6 +719,7 @@ interface ApplyWorktreeDiffIn {
 
 interface RequestWorktreeDiffFileIn {
   type: "agentManager.requestWorktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   scope?: string
@@ -721,6 +729,7 @@ interface RequestWorktreeDiffFileIn {
 
 interface StartDiffWatchIn {
   type: "agentManager.startDiffWatch"
+  projectId?: string
   sessionId: string
   scope?: string
   /** Active session for the session scope (ctx alone is a worktree/local id). */
@@ -733,6 +742,7 @@ interface StopDiffWatchIn {
 
 interface RevertWorktreeFileIn {
   type: "agentManager.revertWorktreeFile"
+  projectId?: string
   sessionId: string
   file: string
   scope?: string
@@ -740,15 +750,23 @@ interface RevertWorktreeFileIn {
 
 interface RequestDiffBranchesIn {
   type: "agentManager.requestDiffBranches"
+  projectId?: string
   sessionId: string
   scope?: string
 }
 
 interface SetDiffBaseBranchIn {
   type: "agentManager.setDiffBaseBranch"
+  projectId?: string
   sessionId: string
   scope?: string
   branch?: string
+}
+
+interface PreloadWorktreeDiffsIn {
+  type: "agentManager.preloadWorktreeDiffs"
+  projectId?: string
+  worktreeIds: string[]
 }
 
 interface RefreshPRIn {
@@ -1059,6 +1077,7 @@ export type AgentManagerInMessage =
   | RevertWorktreeFileIn
   | RequestDiffBranchesIn
   | SetDiffBaseBranchIn
+  | PreloadWorktreeDiffsIn
   | RefreshPRIn
   | OpenPRIn
   | CommentActionIn

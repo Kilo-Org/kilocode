@@ -23,6 +23,8 @@ type Log = (...args: unknown[]) => void
 /** Cap untracked file reads so line-counting a multi-megabyte log file does
  *  not stall the poll. Matches `GitOps.workingTreeStats()`. */
 const MAX_UNTRACKED_BYTES = 1_000_000
+const MAX_UNTRACKED_OUTPUT_BYTES = 4_000_000
+const MAX_UNTRACKED_ENTRIES = 10_000
 
 /** Cap per-side reads in the detail view. Opening very large tracked files
  *  used to spike `kilo serve`; now that the detail path runs in the
@@ -95,6 +97,8 @@ export function generatedLike(file: string): boolean {
 
 const BASE_CANDIDATES = ["main", "master", "dev", "develop"]
 
+const ancCache = new Map<string, { anc: string; time: number }>()
+
 export async function resolveBase(git: GitOps, dir: string, base: string): Promise<string> {
   // If the caller gave an explicit base, honor it. Return it as-is so merge-base
   // fails loudly on a stale/misspelled ref instead of silently diffing against
@@ -109,23 +113,45 @@ export async function resolveBase(git: GitOps, dir: string, base: string): Promi
 
 async function ancestor(git: GitOps, dir: string, base: string, log?: Log): Promise<string | undefined> {
   const resolvedBase = await resolveBase(git, dir, base)
+  const cacheKey = `${dir}\0${resolvedBase}`
+  const cached = ancCache.get(cacheKey)
+  if (cached && Date.now() - cached.time < 2000) return cached.anc
+
   const result = await git.execGit(["merge-base", "HEAD", resolvedBase], dir)
   if (result.code !== 0) {
     log?.("git merge-base failed", { code: result.code, stderr: result.stderr.trim(), dir, base, resolvedBase })
     return undefined
   }
-  return result.stdout.trim()
+  const anc = result.stdout.trim()
+  ancCache.set(cacheKey, { anc, time: Date.now() })
+  if (ancCache.size > 32) ancCache.delete(ancCache.keys().next().value!)
+  return anc
 }
 
-async function numstat(git: GitOps, dir: string, base: string, file?: string) {
-  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
-  if (file) args.push("--", file)
-  const result = await git.execGit(args, dir)
+export function splitPatches(patchText: string, files: string[]): Map<string, string> {
+  const map = new Map<string, string>()
+  if (!patchText || files.length === 0) return map
+  const names = new Map(files.map((file) => [`diff --git a/${file} b/${file}`, file]))
+  const headers = [...patchText.matchAll(/^diff --git a\/.* b\/.*$/gm)]
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i]!
+    const file = names.get(header[0])
+    if (!file || header.index === undefined) continue
+    map.set(file, patchText.slice(header.index, headers[i + 1]?.index ?? patchText.length))
+  }
+  return map
+}
+
+export function requiresContents(file: string): boolean {
+  return /\.(md|mdx|markdown)$/i.test(file)
+}
+
+function parseNumstatOutput(stdout: string) {
   const map = new Map<string, { additions: number; deletions: number; binary: boolean }>()
-  if (result.code !== 0) return map
-  for (const line of result.stdout.trim().split("\n")) {
+  for (const line of stdout.trim().split("\n")) {
     if (!line) continue
     const parts = line.split("\t")
+    if (parts.length < 3) continue
     const add = parts[0]
     const del = parts[1]
     const name = parts.slice(2).join("\t")
@@ -139,12 +165,25 @@ async function numstat(git: GitOps, dir: string, base: string, file?: string) {
   return map
 }
 
+async function numstat(git: GitOps, dir: string, base: string, file?: string) {
+  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
+  if (file) args.push("--", file)
+  const result = await git.execGit(args, dir)
+  if (result.code !== 0) return new Map<string, { additions: number; deletions: number; binary: boolean }>()
+  return parseNumstatOutput(result.stdout)
+}
+
 async function statStamp(dir: string, file: string): Promise<string> {
   const full = resolveInside(dir, file)
   if (!full) return `missing:${file}`
   const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) return `missing:${file}`
   return `${stat.size}:${stat.mtimeMs}`
+}
+
+function trackedStamp(status: Status, additions: number, deletions: number, anc: string, stat?: string): string {
+  if (status === "deleted") return `deleted:${anc}`
+  return `${status}:${additions}:${deletions}:${anc}${stat ? `:${stat}` : ""}`
 }
 
 async function lineCount(file: string): Promise<number> {
@@ -165,71 +204,131 @@ function statusFromCode(code: string): Status {
   return "modified"
 }
 
-async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<Meta[]> {
-  const nameStatus = await git.execGit(
-    ["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", anc],
-    dir,
-  )
+async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<WorktreeDiffEntry[]> {
+  const [patchResult, nameStatus, numstatResult, untracked] = await Promise.all([
+    git.execGit(["-c", "core.quotepath=false", "diff", "--no-ext-diff", "--no-renames", "-U3", anc], dir, {
+      maxOutput: MAX_DETAIL_BYTES,
+    }),
+    git.execGit(["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", anc], dir),
+    git.execGit(["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc], dir),
+    git.execGit(["ls-files", "--others", "--exclude-standard"], dir, { maxOutput: MAX_UNTRACKED_OUTPUT_BYTES }),
+  ])
+
   if (nameStatus.code !== 0) {
     log?.("git diff --name-status failed", { code: nameStatus.code, stderr: nameStatus.stderr.trim() })
     return []
   }
 
-  const counts = await numstat(git, dir, anc)
-  const result: Meta[] = []
+  const tracked = nameStatus.stdout
+    .trim()
+    .split("\n")
+    .flatMap((line) => {
+      if (!line) return []
+      const parts = line.split("\t")
+      const code = parts[0]
+      const file = parts.slice(1).join("\t")
+      return file && code ? [{ file, code }] : []
+    })
+  const counts = numstatResult.code === 0 ? parseNumstatOutput(numstatResult.stdout) : new Map()
+  const patches = splitPatches(
+    patchResult.code === 0 ? patchResult.stdout : "",
+    tracked.map((item) => item.file),
+  )
+  const result: WorktreeDiffEntry[] = []
   const seen = new Set<string>()
+  const stampTasks: Promise<void>[] = []
 
-  for (const line of nameStatus.stdout.trim().split("\n")) {
-    if (!line) continue
-    const parts = line.split("\t")
-    const code = parts[0]
-    const file = parts.slice(1).join("\t")
-    if (!file || !code) continue
+  for (const { file, code } of tracked) {
     seen.add(file)
     const status = statusFromCode(code)
     const stat = counts.get(file) ?? { additions: 0, deletions: 0, binary: false }
-    result.push({
+    const mime = imageMime(file)
+    const patch = patches.get(file)
+    const summarized = mime !== undefined || stat.binary || patch === undefined || requiresContents(file)
+
+    const entry: WorktreeDiffEntry = {
       file,
+      patch: summarized ? "" : patch,
+      before: "",
+      after: "",
       additions: stat.additions,
       deletions: stat.deletions,
       status,
       tracked: true,
       generatedLike: generatedLike(file),
-      binary: stat.binary,
-      stamp:
-        status === "deleted" ? `deleted:${anc}` : `${imageMime(file) ? `${anc}:` : ""}${await statStamp(dir, file)}`,
-    })
+      summarized,
+      stamp: trackedStamp(status, stat.additions, stat.deletions, anc),
+      kind: mime ? "image" : undefined,
+    }
+    result.push(entry)
+
+    if (status !== "deleted" && summarized) {
+      stampTasks.push(
+        statStamp(dir, file).then((s) => {
+          entry.stamp = trackedStamp(status, stat.additions, stat.deletions, anc, s)
+        }),
+      )
+    }
   }
 
-  const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard"], dir)
   if (untracked.code !== 0) {
     log?.("git ls-files --others failed", { code: untracked.code, stderr: untracked.stderr.trim() })
-    return result
+  }
+  const untrackedFiles =
+    untracked.code === 0 ? untracked.stdout.trim().split("\n").filter(Boolean).slice(0, MAX_UNTRACKED_ENTRIES) : []
+  const entries: WorktreeDiffEntry[] = []
+  let remaining = MAX_DETAIL_BYTES
+  for (const file of untrackedFiles) {
+    if (seen.has(file)) continue
+    const result = await untrackedEntry(dir, file, remaining)
+    if (!result) continue
+    entries.push(result.entry)
+    remaining -= result.cost
   }
 
-  const files = untracked.stdout.trim()
-  if (!files) return result
+  await Promise.all(stampTasks)
+  result.push(...entries)
+  return result
+}
 
-  for (const file of files.split("\n")) {
-    if (!file || seen.has(file)) continue
-    const full = resolveInside(dir, file)
-    if (!full) continue
-    const exists = await fs.lstat(full).catch(() => undefined)
-    if (!exists) continue
-    const binary = await binaryFile(full)
-    result.push({
+async function untrackedEntry(
+  dir: string,
+  file: string,
+  remaining: number,
+): Promise<{ entry: WorktreeDiffEntry; cost: number } | undefined> {
+  const full = resolveInside(dir, file)
+  if (!full) return undefined
+  const stat = await fs.lstat(full).catch(() => undefined)
+  if (!stat) return undefined
+
+  const binary = await binaryFile(full)
+  const mime = imageMime(file)
+  const canRead = !mime && !binary && stat.size <= MAX_UNTRACKED_BYTES && stat.size * 2 <= remaining
+  const content = canRead
+    ? stat.isSymbolicLink()
+      ? await fs.readlink(full).catch(() => "")
+      : await fs.readFile(full, "utf-8").catch(() => "")
+    : ""
+  const patch = canRead ? buildUntrackedPatch(file, content) : ""
+  const summarized = !canRead
+
+  return {
+    entry: {
       file,
-      additions: binary ? 0 : await lineCount(full),
+      patch,
+      before: "",
+      after: requiresContents(file) && canRead ? content : "",
+      additions: canRead ? linesOf(content) : 0,
       deletions: 0,
       status: "added",
       tracked: false,
       generatedLike: generatedLike(file),
-      binary,
-      stamp: await statStamp(dir, file),
-    })
+      summarized,
+      stamp: `${stat.size}:${stat.mtimeMs}`,
+      kind: mime ? "image" : undefined,
+    },
+    cost: canRead ? Math.max(stat.size * 2, patch.length) : 0,
   }
-
-  return result
 }
 
 function summarize(meta: Meta): WorktreeDiffEntry {
@@ -251,20 +350,18 @@ function summarize(meta: Meta): WorktreeDiffEntry {
 }
 
 /**
- * Hot polling path. Returns one summarized entry per changed file (tracked or
- * untracked) relative to `merge-base HEAD base`. No file contents are read —
- * `before`/`after`/`patch` are empty strings. Matches the shape the server's
- * `WorktreeDiff.summary` emits.
+ * Fast unified diff path. Returns one entry per changed file (tracked or
+ * untracked) relative to `merge-base HEAD base`, with complete hunk patches
+ * populated for instant rendering.
  */
 export async function diffSummary(git: GitOps, dir: string, base: string, log?: Log): Promise<WorktreeDiffEntry[]> {
   const anc = await ancestor(git, dir, base, log)
   if (!anc) return []
-  const items = await list(git, dir, anc, log)
-  return items.map(summarize)
+  return await list(git, dir, anc, log)
 }
 
 export function createLocalDiff(git: GitOps, log?: Log) {
-  const states = new Map<string, { anc: string; metas: Map<string, Meta> }>()
+  const states = new Map<string, { anc: string; entries: Map<string, WorktreeDiffEntry> }>()
 
   return {
     summary: async (dir: string, base: string): Promise<WorktreeDiffEntry[]> => {
@@ -277,16 +374,27 @@ export function createLocalDiff(git: GitOps, log?: Log) {
 
       const items = await list(git, dir, anc, log)
       states.delete(id)
-      states.set(id, { anc, metas: new Map(items.map((item) => [item.file, item])) })
+      states.set(id, { anc, entries: new Map(items.map((item) => [item.file ?? "", item])) })
       if (states.size > 8) states.delete(states.keys().next().value!)
-      return items.map(summarize)
+      return items
     },
     file: async (dir: string, base: string, file: string): Promise<WorktreeDiffEntry | null> => {
       const state = states.get(`${dir}\0${base}`)
-      if (!state) return diffFile(git, dir, base, file, log)
-      const meta = state.metas.get(file)
-      if (!meta) return null
-      return materialize(git, dir, state.anc, meta, log)
+      if (state) {
+        const cached = state.entries.get(file)
+        if (cached && !cached.kind && cached.patch) {
+          const status = cached.status ?? "modified"
+          const before = await readBefore(git, dir, state.anc, file, status)
+          const after = await readAfter(dir, file, status)
+          return {
+            ...cached,
+            before,
+            after,
+            summarized: false,
+          }
+        }
+      }
+      return diffFile(git, dir, base, file, log)
     },
   }
 }
@@ -336,10 +444,7 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
     tracked: true,
     generatedLike: generatedLike(pathPart),
     binary: stat.binary,
-    stamp:
-      status === "deleted"
-        ? `deleted:${anc}`
-        : `${imageMime(pathPart) ? `${anc}:` : ""}${await statStamp(dir, pathPart)}`,
+    stamp: trackedStamp(status, stat.additions, stat.deletions, anc, await statStamp(dir, pathPart)),
   }
 }
 
