@@ -106,6 +106,13 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
+                id="ai.kilocode.jetbrains.settings.agentBehavior.workflows"
+                instance="ai.kilocode.client.settings.agents.WorkflowsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.agentBehavior.workflows.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings.agentBehavior"
                 id="ai.kilocode.jetbrains.settings.agentBehavior.rules"
                 instance="ai.kilocode.client.settings.rules.RulesConfigurable"
                 bundle="messages.KiloBundle"
