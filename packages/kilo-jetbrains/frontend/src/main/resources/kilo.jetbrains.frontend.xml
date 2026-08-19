@@ -84,6 +84,14 @@
                 key="settings.autoApprove.displayName"/>
 
         <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.advanced"
+                groupWeight="-2"
+                instance="ai.kilocode.client.settings.AdvancedConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.advanced.displayName"/>
+
+        <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
                 id="ai.kilocode.jetbrains.settings.agentBehavior.agents"
                 instance="ai.kilocode.client.settings.agents.AgentsConfigurable"
@@ -160,14 +168,6 @@
 
         <action id="Kilo.ForceMigration"
                 class="ai.kilocode.client.actions.ForceMigrationAction"/>
-
-        <action id="Kilo.LogsConfiguration"
-                class="ai.kilocode.client.actions.LogsConfigurationAction"/>
-
-        <group id="Kilo.ToolsMenu" popup="true">
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
-            <reference ref="Kilo.LogsConfiguration"/>
-        </group>
 
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.Restart"/>

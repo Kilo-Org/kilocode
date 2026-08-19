@@ -6,32 +6,28 @@ import ai.kilocode.client.settings.base.SettingsRows
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.log.LogConfig
 import com.intellij.openapi.ui.ComboBox
-import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import javax.swing.DefaultComboBoxModel
-import javax.swing.JComponent
 import javax.swing.JPanel
 
-class LogsConfigurationDialog(
-    private val settings: KiloLogSettingsService = KiloLogSettingsService.getInstance(),
-) : DialogWrapper(true) {
+internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
+    data class Values(
+        val level: LogConfig.LogLevel,
+        val mode: LogConfig.ContentMode,
+        val preview: Int,
+    )
+
     private val level = ComboBox(DefaultComboBoxModel(LogConfig.LogLevel.all.toTypedArray()))
     private val mode = ComboBox(DefaultComboBoxModel(LogConfig.ContentMode.all.toTypedArray()))
     private val preview = JBTextField().apply { columns = 6 }
 
-    init {
-        title = KiloBundle.message("logs.configuration.dialog.title")
-        settings.applyLocal()
-        level.selectedItem = LogConfig.level()
-        mode.selectedItem = LogConfig.contentMode()
-        preview.text = LogConfig.previewMax().toString()
-        init()
-    }
+    private var saved = current()
 
-    override fun createCenterPanel(): JComponent {
+    init {
+        resetForm()
+
         val rows = SettingsRows().apply {
             border = JBUI.Borders.empty(UiStyle.Gap.pad(), UiStyle.Gap.lg())
             row(SettingsRow(
@@ -50,33 +46,41 @@ class LogsConfigurationDialog(
                 preview,
             ))
         }
-        return JPanel(BorderLayout()).apply { add(rows, BorderLayout.CENTER) }
+        add(rows, BorderLayout.CENTER)
     }
 
-    override fun getPreferredFocusedComponent(): JComponent = level
+    fun modified(): Boolean {
+        if (level.selectedItem != saved.level) return true
+        if (mode.selectedItem != saved.mode) return true
+        return preview.text.trim() != saved.preview.toString()
+    }
 
-    override fun getDimensionServiceKey(): String = "Kilo.LogsConfigurationDialog"
-
-    override fun doValidate(): ValidationInfo? {
-        val value = preview.text.trim().toIntOrNull()
-            ?: return ValidationInfo(KiloBundle.message("logs.configuration.previewSize.invalid"), preview)
+    fun error(): String? {
+        val value = count() ?: return KiloBundle.message("logs.configuration.previewSize.invalid")
         if (value !in LogConfig.MIN_PREVIEW..LogConfig.MAX_PREVIEW) {
-            return ValidationInfo(
-                KiloBundle.message("logs.configuration.previewSize.outOfRange", LogConfig.MIN_PREVIEW, LogConfig.MAX_PREVIEW),
-                preview,
-            )
+            return KiloBundle.message("logs.configuration.previewSize.outOfRange", LogConfig.MIN_PREVIEW, LogConfig.MAX_PREVIEW)
         }
         return null
     }
 
-    override fun doOKAction() {
-        if (doValidate() != null) return
-        settings.update(
-            level.selectedItem as LogConfig.LogLevel,
-            mode.selectedItem as LogConfig.ContentMode,
-            preview.text.trim().toInt(),
-        )
-        settings.apply()
-        super.doOKAction()
+    fun resetForm() {
+        level.selectedItem = saved.level
+        mode.selectedItem = saved.mode
+        preview.text = saved.preview.toString()
     }
+
+    fun sync() {
+        saved = value()
+        resetForm()
+    }
+
+    fun value(): Values = Values(
+        level = level.selectedItem as LogConfig.LogLevel,
+        mode = mode.selectedItem as LogConfig.ContentMode,
+        preview = count() ?: saved.preview,
+    )
+
+    private fun current(): Values = Values(LogConfig.level(), LogConfig.contentMode(), LogConfig.previewMax())
+
+    private fun count(): Int? = preview.text.trim().toIntOrNull()
 }
