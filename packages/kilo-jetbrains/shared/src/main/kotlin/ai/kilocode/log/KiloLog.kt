@@ -4,6 +4,8 @@ import ai.kilocode.KiloPlugin
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
+import java.io.BufferedOutputStream
+import java.io.OutputStream
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.management.ManagementFactory
@@ -193,6 +195,11 @@ internal class RotatingLogHandler(
     private val limit: Int,
     private val count: Int,
 ) : Handler() {
+    // The stream stays open across records; it is reopened only after a rotation. `size` tracks the
+    // current file length in memory so the hot logging path avoids per-record open/close and stat calls.
+    private var out: OutputStream? = null
+    private var size: Long = 0
+
     init {
         Files.createDirectories(path.parent)
     }
@@ -202,24 +209,41 @@ internal class RotatingLogHandler(
         if (!isLoggable(record)) return
         runCatching {
             val bytes = formatter.format(record).toByteArray(StandardCharsets.UTF_8)
-            rotate(bytes.size)
-            Files.newOutputStream(path, StandardOpenOption.CREATE, StandardOpenOption.APPEND).use {
-                it.write(bytes)
+            ensureOpen()
+            if (limit > 0 && count > 0 && size + bytes.size > limit) {
+                rotate()
+                ensureOpen()
             }
+            val stream = out ?: return@runCatching
+            stream.write(bytes)
+            stream.flush()
+            size += bytes.size
         }.onFailure {
             val err = if (it is Exception) it else RuntimeException(it)
             reportError(null, err, ErrorManager.WRITE_FAILURE)
         }
     }
 
-    override fun flush() {}
+    @Synchronized
+    override fun flush() {
+        runCatching { out?.flush() }
+    }
 
-    override fun close() {}
+    @Synchronized
+    override fun close() {
+        runCatching { out?.close() }
+        out = null
+    }
 
-    private fun rotate(size: Int) {
-        if (limit <= 0 || count <= 0) return
-        val current = runCatching { Files.size(path) }.getOrDefault(0L)
-        if (current + size <= limit) return
+    private fun ensureOpen() {
+        if (out != null) return
+        out = BufferedOutputStream(Files.newOutputStream(path, StandardOpenOption.CREATE, StandardOpenOption.APPEND))
+        size = runCatching { Files.size(path) }.getOrDefault(0L)
+    }
+
+    private fun rotate() {
+        runCatching { out?.close() }
+        out = null
         for (i in count - 1 downTo 0) {
             val src = rotated(i)
             val dst = rotated(i + 1)
@@ -230,6 +254,7 @@ internal class RotatingLogHandler(
             if (Files.exists(src)) Files.move(src, dst, StandardCopyOption.REPLACE_EXISTING)
         }
         if (Files.exists(path)) Files.move(path, rotated(0), StandardCopyOption.REPLACE_EXISTING)
+        size = 0
     }
 
     private fun rotated(i: Int): Path = path.resolveSibling("${path.fileName}.$i")
