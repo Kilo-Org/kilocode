@@ -8,10 +8,9 @@ import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.editor.SessionEditorTextField
 import ai.kilocode.client.session.views.SessionViewIcons
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
@@ -30,7 +29,6 @@ import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -44,7 +42,6 @@ import java.awt.event.FocusEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.AbstractButton
-import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.ButtonGroup
 import javax.swing.JPanel
@@ -60,7 +57,7 @@ class QuestionView(
     private val scroll: (Boolean) -> Unit = {},
     private val selection: SessionSelection? = null,
     focus: (() -> Unit)? = null,
-) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
+) : DialogView(selection, focus), SessionView {
     override val sessionViewKind = SessionView.Kind.Default
 
     private var request: String? = null
@@ -83,8 +80,6 @@ class QuestionView(
             customEditor?.let(::syncEditorHeight)
         }
     }
-
-    private val card = BaseQuestionView(selection, focus)
 
     private val summary = JBLabel()
     private val nav = JPanel().apply {
@@ -131,9 +126,8 @@ class QuestionView(
         topPanel.add(summary, BorderLayout.WEST)
         topPanel.add(nav, BorderLayout.EAST)
 
-        card.setTopPanel(topPanel)
-        card.setContent(body)
-        add(card, BorderLayout.CENTER)
+        setTopPanel(topPanel)
+        setContent(body)
     }
 
     @RequiresEdt
@@ -174,7 +168,7 @@ class QuestionView(
         disposeRegs()
         texts.clear()
         body.removeAll()
-        card.setActions(emptyList())
+        setActions(emptyList())
         isVisible = false
         refresh()
     }
@@ -182,7 +176,7 @@ class QuestionView(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        card.applyStyle(style)
+        super.applyStyle(style)
         customEditor?.let { ed ->
             style.applyTranscriptToField(ed)
             ed.background = SessionUiStyle.Colors.codeBlockBackground()
@@ -202,14 +196,14 @@ class QuestionView(
         customFocus = null
         body.removeAll()
         if (review(q)) {
-            card.setHeader(KiloBundle.message("session.question.review.title"))
+            setHeader(KiloBundle.message("session.question.review.title"))
             addReview(q)
         } else {
             val item = q.items[idx]
             val hint = KiloBundle.message(
                 if (item.multiple) "session.question.hint.multi" else "session.question.hint.single"
             )
-            card.setHeader(item.question, hint)
+            setHeader(item.question, hint)
             addContent(item, selections[idx])
         }
         syncHeader(q)
@@ -229,20 +223,20 @@ class QuestionView(
         topPanel.isVisible = total > 1
         if (total > 1) {
             topPanel.border = JBUI.Borders.empty(0, 0, UiStyle.Gap.sm(), 0)
-            card.setSpacing(UiStyle.Gap.sm(), UiStyle.Gap.pad())
+            setSpacing(UiStyle.Gap.sm(), UiStyle.Gap.pad())
             return
         }
-        card.setSpacing(UiStyle.Gap.xl(), UiStyle.Gap.pad())
+        setSpacing(UiStyle.Gap.xl(), UiStyle.Gap.pad())
     }
 
     @RequiresEdt
     private fun syncFooter(q: Question) {
-        val actions = mutableListOf<BaseQuestionView.Action>()
-        actions.add(BaseQuestionView.Action(ID_DISMISS, KiloBundle.message("session.question.dismiss"), primary = false) { doReject() })
+        val actions = mutableListOf<DialogView.Action>()
+        actions.add(DialogView.Action(ID_DISMISS, KiloBundle.message("session.question.dismiss"), primary = false) { doReject() })
 
         if (review(q)) {
-            actions.add(BaseQuestionView.Action(ID_BACK, KiloBundle.message("session.question.back"), primary = false) { goBack() })
-            actions.add(BaseQuestionView.Action(ID_MAIN, KiloBundle.message("session.question.submit"), primary = true) { doReply() })
+            actions.add(DialogView.Action(ID_BACK, KiloBundle.message("session.question.back"), primary = false) { goBack() })
+            actions.add(DialogView.Action(ID_MAIN, KiloBundle.message("session.question.submit"), primary = true) { doReply() })
         } else {
             val label = when {
                 direct(q) -> KiloBundle.message("session.question.submit")
@@ -250,7 +244,7 @@ class QuestionView(
                 else -> KiloBundle.message("session.question.next")
             }
             val isPrimary = direct(q) || lastItem(q)
-            actions.add(BaseQuestionView.Action(ID_MAIN, label, isPrimary) {
+            actions.add(DialogView.Action(ID_MAIN, label, isPrimary) {
                 when {
                     direct(q) -> doReply()
                     lastItem(q) -> goReview()
@@ -258,7 +252,7 @@ class QuestionView(
                 }
             })
         }
-        card.setActions(actions)
+        setActions(actions)
     }
 
     @RequiresEdt
@@ -266,7 +260,7 @@ class QuestionView(
         val ready = isReady(idx)
         back.isEnabled = idx > 0
         fwd.isEnabled = idx < q.items.size && ready
-        card.setActionEnabled(ID_MAIN, review(q) || ready)
+        setActionEnabled(ID_MAIN, review(q) || ready)
     }
 
     /**
@@ -848,11 +842,4 @@ class QuestionView(
         return true
     }
 
-    @RequiresEdt
-    private fun refresh() {
-        revalidate()
-        repaint()
-        parent?.revalidate()
-        parent?.repaint()
-    }
 }
