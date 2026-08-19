@@ -387,15 +387,6 @@ html[data-theme="kilo-vscode"]
   color: var(--text-weak);
 }
 
-.am-project-trust {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  font-size: var(--font-size-small);
-  color: var(--text-weak);
-}
-
 .am-project-body {
   display: flex;
   flex-direction: column;

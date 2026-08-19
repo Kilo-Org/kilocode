@@ -96,14 +96,8 @@ export function indexingConsentStore(context: vscode.ExtensionContext): Indexing
 }
 
 export function registeredProjects(context: vscode.ExtensionContext) {
-  return (
-    new ProjectRegistry({
-      read: () => context.globalState.get("agentManager.projects"),
-      write: (value) => Promise.resolve(context.globalState.update("agentManager.projects", value)),
-    })
-      .list()
-      // Consent must never be offered for a repository the user has not trusted:
-      // enabling indexing sends the directory to the backend for reading.
-      .filter((project) => project.trusted)
-  )
+  return new ProjectRegistry({
+    read: () => context.globalState.get("agentManager.projects"),
+    write: (value) => Promise.resolve(context.globalState.update("agentManager.projects", value)),
+  }).list()
 }
