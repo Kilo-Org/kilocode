@@ -35,7 +35,6 @@ import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -58,7 +57,6 @@ internal class WorkflowsSettingsUi(
     dir: String,
     private val edit: (CommandFileDto, Boolean) -> WorkflowEditDialogHandle = ::WorkflowEditDialog,
 ) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
-    private val cs = scope
     private var dir = dir
     private var flows = emptyMap<String, CommandFileDto>()
     private val state = SettingsDraftState(workflowsDraft(), ::saved)
@@ -156,7 +154,12 @@ internal class WorkflowsSettingsUi(
                 }
                 setBusy(false)
             }
-        }) return
+        }) {
+            val failed = KiloBundle.message("settings.agentBehavior.save.failed")
+            state.fail(token, failed)
+            showError(failed)
+            return
+        }
         showProgress(KiloBundle.message("settings.agentBehavior.saving"))
     }
 
@@ -219,12 +222,17 @@ internal class WorkflowsSettingsUi(
 
     private fun open(flow: CommandFileDto) {
         if (!flow.editable) return
-        showProgress(KiloBundle.message("settings.agentBehavior.workflows.openInEditor.pending"))
-        cs.launch {
+        if (!launch("open") { id ->
             val opened = service<KiloWorkspaceService>().openFile(flow.location)
-            if (opened) return@launch
-            withContext(workflowEdt) { KiloNotifications.error(KiloBundle.message("settings.agentBehavior.workflows.openInEditor.failed")) }
-        }
+            withContext(workflowEdt) {
+                if (!active(id)) return@withContext
+                setBusy(false)
+                if (opened) return@withContext
+                clearProgress()
+                KiloNotifications.error(KiloBundle.message("settings.agentBehavior.workflows.openInEditor.failed"))
+            }
+        }) return
+        showProgress(KiloBundle.message("settings.agentBehavior.workflows.openInEditor.pending"))
     }
 
     private fun remove(flow: CommandFileDto) {
@@ -250,7 +258,11 @@ internal class WorkflowsSettingsUi(
         const val LEGACY_BUILTIN = "<built-in>"
         val LOG = KiloLog.create(WorkflowsSettingsUi::class.java)
 
-        fun key(flow: CommandFileDto) = flow.location.ifBlank { flow.name }
+        fun key(flow: CommandFileDto) = if (builtin(flow)) {
+            listOf("builtin", flow.source.orEmpty(), flow.name).joinToString(":")
+        } else {
+            flow.location.ifBlank { flow.name }
+        }
         fun builtin(flow: CommandFileDto) = flow.builtin || flow.location == BUILTIN || flow.location == LEGACY_BUILTIN
     }
 }

@@ -32,6 +32,7 @@ import java.awt.event.MouseEvent
 import javax.swing.JTextField
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -74,7 +75,7 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
             assertFalse(custom.cells.single { it.id == "edit" }.primary)
             assertEquals("Edit", custom.cells.single { it.id == "edit" }.label)
             assertTrue(custom.cells.single { it.id == "delete" }.iconOnly)
-            val builtin = rows.single { it.key == "builtin" }
+            val builtin = rows.single { it.key == "builtin::init" }
             assertEquals("/init", builtin.title)
             assertNull(builtin.note)
             assertEquals(listOf("built-in"), builtin.badges.map { it.text })
@@ -245,8 +246,57 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         edt { panel.applyDraft(); true }
 
         flushUntil { agentRpc.commandSaves.size == 1 && !edt { panel.modified() } }
-        assertEquals(listOf(CUSTOM, "builtin", REMOTE), edt { rows(panel).map { it.key } })
+        assertEquals(listOf(CUSTOM, "builtin::init", REMOTE), edt { rows(panel).map { it.key } })
         assertEquals("# Saved", agentRpc.commandFiles.single { it.location == CUSTOM }.content)
+    }
+
+    fun `test fileless workflow keys stay unique and route read only opens`() {
+        val seen = mutableListOf<String?>()
+        val panel = panel(edit = { flow, savable ->
+            assertFalse(savable)
+            seen += flow.content
+            FakeWorkflowDialog("# Ignored")
+        })
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.commandFiles = listOf(
+            CommandFileDto("init", "Built in", builtin = true, location = "builtin", content = "Init content"),
+            CommandFileDto("review", "Built in", builtin = true, location = "builtin", content = "Review content"),
+        )
+        edt { panel.reload(); true }
+        flushUntil { rows(panel).size == 2 }
+
+        click(workflowsList(panel), panel, "builtin::init", "edit")
+        click(workflowsList(panel), panel, "builtin::review", "edit")
+
+        assertEquals(listOf("builtin::init", "builtin::review"), edt { rows(panel).map { it.key } })
+        assertEquals(listOf("Init content", "Review content"), seen)
+    }
+
+    fun `test apply while list busy preserves staged workflow edits`() {
+        val panel = panel(edit = { _, _ -> FakeWorkflowDialog("# Saved") })
+        flushUntil { rows(panel).size == 3 }
+        doubleClick(workflowsList(panel), panel, CUSTOM)
+        agentRpc.commandFilesGate = CompletableDeferred()
+
+        edt {
+            panel.reload()
+            panel.applyDraft()
+            true
+        }
+
+        assertTrue(edt { panel.modified() })
+        assertTrue(agentRpc.commandSaves.isEmpty())
+        agentRpc.commandFilesGate?.complete(Unit)
+    }
+
+    fun `test failed open in editor clears pending banner`() {
+        val panel = panel()
+        workspaceRpc.openResult = false
+        flushUntil { rows(panel).size == 3 }
+
+        click(workflowsList(panel), panel, CUSTOM, "open")
+
+        flushUntil { workspaceRpc.openedFiles.size == 1 && edt { !panel.progress.isVisible && progressText(panel).isBlank() } }
     }
 
     fun `test search filters workflows by name`() {
@@ -259,7 +309,7 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
             true
         }
 
-        flushUntil { rows(panel).map { it.key } == listOf("builtin") }
+        flushUntil { rows(panel).map { it.key } == listOf("builtin::init") }
     }
 
     fun `test workflows reload failure keeps existing rows`() {
@@ -270,7 +320,7 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         edt { panel.reload(); true }
         flushUntil { edt { workflowsList(panel).isEnabled } }
 
-        assertEquals(listOf(CUSTOM, "builtin", REMOTE), edt { rows(panel).map { it.key } })
+        assertEquals(listOf(CUSTOM, "builtin::init", REMOTE), edt { rows(panel).map { it.key } })
     }
 
     fun `test workflow editor file type follows location extension`() {
