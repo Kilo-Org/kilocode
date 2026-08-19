@@ -284,39 +284,12 @@
   margin-left: auto;
 }
 
-/* Diff hunk preview inside comment cards */
+/* Pierre diff hunk preview inside comment cards */
 .am-pr-diff-hunk {
-  font-family: var(--font-mono, monospace);
-  font-size: var(--kilo-font-size-11);
-  border-radius: 3px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
   overflow: hidden;
   margin-bottom: 6px;
-  border: 1px solid var(--vscode-panel-border);
-}
-
-.am-pr-diff-line {
-  padding: 1px 6px;
-  white-space: pre;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.am-pr-diff-line-add {
-  background: color-mix(in lab, var(--syntax-diff-add, #318430) 15%, transparent);
-  color: var(--syntax-diff-add, #318430);
-}
-
-.am-pr-diff-line-del {
-  background: color-mix(in lab, var(--syntax-diff-delete, #da3319) 15%, transparent);
-  color: var(--syntax-diff-delete, #da3319);
-}
-
-.am-pr-diff-line-meta {
-  color: var(--text-weaker);
-}
-
-.am-pr-diff-line-ctx {
-  color: var(--vscode-foreground);
 }
 
 /* Resolve button */
