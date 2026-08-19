@@ -61,6 +61,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "로컬 & WORKTREES",
 
   "agentManager.terminal.new": "새 터미널 탭",
+  "agentManager.terminal.addCentral": "새 중앙 터미널 탭",
+  "agentManager.terminal.addTerminal": "사이드바에 새 터미널 탭",
   "agentManager.terminal.ended": "터미널 종료됨 — 탭을 닫아 해제",
   "agentManager.terminal.endedRestartable": "터미널 종료됨 - 입력하여 새 셸을 시작하거나 탭을 닫으세요",
   "agentManager.terminal.setupFailed": "설정 스크립트 실패",

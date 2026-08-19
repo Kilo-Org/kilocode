@@ -62,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "ЛОКАЛЬНЫЙ & WORKTREES",
 
   "agentManager.terminal.new": "Новая вкладка терминала",
+  "agentManager.terminal.addCentral": "Новая центральная вкладка терминала",
+  "agentManager.terminal.addTerminal": "Новая вкладка терминала на боковой панели",
   "agentManager.terminal.ended": "терминал завершен — закройте вкладку, чтобы скрыть",
   "agentManager.terminal.endedRestartable":
     "терминал завершен - введите текст, чтобы запустить новую оболочку, или закройте вкладку",

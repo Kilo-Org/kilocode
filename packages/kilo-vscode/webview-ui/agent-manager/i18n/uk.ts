@@ -66,6 +66,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "ЛОКАЛЬНИЙ & РОБОЧІ ДЕРЕВА",
 
   "agentManager.terminal.new": "Нова вкладка термінала",
+  "agentManager.terminal.addCentral": "Нова центральна вкладка термінала",
+  "agentManager.terminal.addTerminal": "Нова вкладка термінала на бічній панелі",
   "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
   "agentManager.terminal.endedRestartable":
     "термінал завершено - введіть текст, щоб запустити нову оболонку, або закрийте вкладку",

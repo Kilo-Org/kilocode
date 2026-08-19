@@ -607,6 +607,8 @@ export interface TerminalHandlerDeps {
   clearSession: () => void
   /** Reset review/pending state when activating a terminal. */
   resetOthers: () => void
+  /** Remember the current session before a central terminal replaces it. */
+  rememberSession?: () => void
   isPendingId: (id: string) => boolean
   /** Locate a session/pending tab by id. */
   findTab: (id: string) => { id: string } | undefined
@@ -656,6 +658,7 @@ function measureInitialDimensions(
 
 export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   const activate = (id: string) => {
+    deps.rememberSession?.()
     deps.state.setActiveId(id)
     deps.resetOthers()
   }

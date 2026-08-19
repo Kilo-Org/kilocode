@@ -62,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "ローカル & WORKTREES",
 
   "agentManager.terminal.new": "新しいターミナルタブ",
+  "agentManager.terminal.addCentral": "新しい中央ターミナルタブ",
+  "agentManager.terminal.addTerminal": "サイドバーに新しいターミナルタブ",
   "agentManager.terminal.ended": "ターミナルが終了しました — タブを閉じて破棄",
   "agentManager.terminal.endedRestartable":
     "ターミナルが終了しました - 入力して新しいシェルを開始するか、タブを閉じてください",

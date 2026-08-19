@@ -62,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOCAL & WORKTREES",
 
   "agentManager.terminal.new": "Nueva pestaña de terminal",
+  "agentManager.terminal.addCentral": "Nueva pestaña de terminal central",
+  "agentManager.terminal.addTerminal": "Nueva pestaña de terminal en la barra lateral",
   "agentManager.terminal.ended": "terminal finalizado — cierra la pestaña para descartar",
   "agentManager.terminal.endedRestartable":
     "terminal finalizado - escribe para iniciar un shell nuevo o cierra la pestaña",

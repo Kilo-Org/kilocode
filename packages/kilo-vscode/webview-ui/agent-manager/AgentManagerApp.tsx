@@ -93,7 +93,7 @@ import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
 import { applyRunStatus } from "./project/run-status"
 import { clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
-import { selectLocalAction, selectWorktreeAction } from "./selection-actions"
+import { createSessionRestore, selectLocalAction, selectWorktreeAction } from "./selection-actions"
 import { DataBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
 import { useLanguage } from "../src/context/language"
@@ -182,7 +182,7 @@ import { SubagentPanel } from "./SubagentPanel"
 import { createSubagentTabs } from "./subagent-tabs"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
-import { createChatFocus, createPromptFocus, hasQuestionOption } from "./focus"
+import { createChatFocus, createFocusBridge, createPromptFocus, hasQuestionOption } from "./focus"
 import { usePendingCreate } from "./pending-create"
 import { defaultBase as projectDefaultBase } from "./project/default-base"
 import "./agent-manager.css"
@@ -396,11 +396,7 @@ const AgentManagerContent: Component = () => {
   type FocusOwner = "prompt" | { terminal: string }
   const focusMemory = new Map<string, FocusOwner>()
   const prompt = createPromptFocus(terms, requestChatFocus)
-  const focusKey = () => {
-    const context = terms.sideKey()
-    const sessionID = session.currentSessionID() ?? activePendingId() ?? "new"
-    return `${context}:${sessionID}`
-  }
+  const focusKey = () => `${terms.sideKey()}:${session.currentSessionID() ?? activePendingId() ?? "new"}`
   const forgetSessionFocus = (sessionID: string) => {
     for (const key of focusMemory.keys()) if (key.endsWith(`:${sessionID}`)) focusMemory.delete(key)
   }
@@ -412,9 +408,13 @@ const AgentManagerContent: Component = () => {
       if (owner !== "prompt" && owner.terminal === terminalID) focusMemory.delete(key)
     }
   }
-  const rememberPromptFocus = (focused: boolean) => {
-    if (focused) focusMemory.set(focusKey(), "prompt")
-  }
+  let restoreSession: () => void = () => undefined
+  const focusCtl = createFocusBridge({
+    prompt,
+    post: (target) => vscode.postMessage({ type: "agentManagerFocusChanged", target }),
+    remember: () => focusMemory.set(focusKey(), "prompt"),
+    restore: () => restoreSession(),
+  })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
   const focusOnDraftChange = () => {
     const key = focusKey()
@@ -1211,13 +1211,12 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
-      else if (msg.action === "focusInput") prompt.focus()
+      else if (msg.action === "focusInput") focusCtl.focus()
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
-      else if (msg.action === "newTerminal") {
-        if (terms.sideFocusedId()) termHandlers.addSide()
-        else termHandlers.requestNew()
-      } else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
+      else if (msg.action === "newTerminalTab") termHandlers.requestNew()
+      else if (msg.action === "newSideTerminal") termHandlers.addSide()
+      else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
         if (!mode.dispatch(1)) cycleAgent(1)
       } else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) {
         if (!mode.dispatch(-1)) cycleAgent(-1)
@@ -1251,8 +1250,8 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n", "d", "e", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent browser defaults for shift variants (new terminal, close worktree,
-      // advanced/new/open worktree, open PR, terminal cycling)
+      // Prevent browser defaults for shift variants (new central terminal,
+      // close worktree, advanced/new/open worktree, open PR, terminal cycling)
       if (["t", "m", "w", "n", "o", "r", "[", "]"].includes(e.key.toLowerCase()) && e.shiftKey) {
         e.preventDefault()
       }
@@ -2026,6 +2025,25 @@ const AgentManagerContent: Component = () => {
       }
     })
   }
+  // Cmd+T: add a new tab strictly to the current selection (no side effects)
+  const handleNewTabForCurrentSelection = () => {
+    const sel = selection()
+    if (sel === LOCAL) addPendingTab()
+    else if (sel) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
+  }
+  const tabs = createSessionRestore({
+    terminal: terms.activeId,
+    selection,
+    remembered: (sel) => registry.active().tabMemory.get(sel),
+    sessions: activeTabs,
+    current: session.currentSessionID,
+    pending: activePendingId,
+    isPending,
+    select: selectSessionTab,
+    create: handleNewTabForCurrentSelection,
+    remember: (sel, id) => registry.active().tabMemory.set(sel, id),
+  })
+  restoreSession = tabs.restore
   const termHandlers = createTerminalHandlers({
     state: terms,
     tabIds: () => tabIds(),
@@ -2037,6 +2055,7 @@ const AgentManagerContent: Component = () => {
       setActivePendingId(undefined)
       session.clearCurrentSession()
     },
+    rememberSession: tabs.remember,
     isPendingId: isPending,
     findTab: (id) => tabLookup().get(id),
     postMessage: (msg) => vscode.postMessage(msg as never),
@@ -2216,17 +2235,6 @@ const AgentManagerContent: Component = () => {
         : undefined
     if (!target) return
     handleCloseTab(target.id)
-  }
-
-  // Cmd+T: add a new tab strictly to the current selection (no side effects)
-  const handleNewTabForCurrentSelection = () => {
-    const sel = selection()
-    if (sel === LOCAL) {
-      addPendingTab()
-    } else if (sel) {
-      // Pass the captured worktree ID directly to avoid race conditions
-      vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
-    }
   }
 
   // Close the currently selected worktree with a confirmation dialog
@@ -2515,7 +2523,11 @@ const AgentManagerContent: Component = () => {
             >
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
                 {/* Keep terminal tabs mounted so output streams across worktree switches. */}
-                {renderTerminalLayer({ state: terms, onFocusPrompt: prompt.focus })}
+                {renderTerminalLayer({
+                  state: terms,
+                  onFocusPrompt: focusCtl.focus,
+                  onFocusChange: focusCtl.report,
+                })}
                 {/* Session-less context (e.g. a worktree mid-provisioning): the
                     empty state lives in the main pane so the side terminal
                     panel can render next to it. */}
@@ -2575,7 +2587,7 @@ const AgentManagerContent: Component = () => {
                     deferFocusToQuestion={hasQuestionOption}
                     pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
                     focusOnDraftChange={focusOnDraftChange}
-                    onFocusChange={rememberPromptFocus}
+                    onFocusChange={focusCtl.prompt}
                   />
                   <Show when={readOnly()}>
                     <div class="am-readonly-banner">
@@ -2702,7 +2714,8 @@ const AgentManagerContent: Component = () => {
                       visible={() => sidePanel() === SidePanel.Terminal}
                       nextKeybind={kb().nextTerminal ?? ""}
                       closeKeybind={kb().closeTab ?? ""}
-                      onFocusPrompt={prompt.focus}
+                      onFocusPrompt={focusCtl.focus}
+                      onFocusChange={focusCtl.report}
                       onSelect={(id) => termHandlers.selectSide(id)}
                       onClose={(id) => {
                         cancelAmbientSetup()

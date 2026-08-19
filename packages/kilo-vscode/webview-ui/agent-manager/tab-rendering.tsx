@@ -236,6 +236,10 @@ export interface NewTabButtonDeps {
   onNewTerminal: () => void
 }
 
+function keybind(deps: NewTabButtonDeps, name: string): string {
+  return deps.kb()[name] ?? ""
+}
+
 /**
  * Render the tab bar's "new" affordance: a split button with the plus
  * icon (primary action: new agent session) and a chevron that opens a
@@ -250,7 +254,7 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
       <div class="am-split-button am-tab-add-split">
         <TooltipKeybind
           title={deps.newSessionLabel}
-          keybind={deps.kb().newTab ?? ""}
+          keybind={keybind(deps, "newTab")}
           placement="top"
           gutter={8}
           openDelay={0}
@@ -273,7 +277,7 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
                 <Icon name="plus" size="small" />
                 <DropdownMenu.ItemLabel>{deps.newSessionMenuLabel}</DropdownMenu.ItemLabel>
                 <span class="am-menu-shortcut">
-                  {parseBindingTokens(deps.kb().newTab ?? "").map((token) => (
+                  {parseBindingTokens(keybind(deps, "newTab")).map((token) => (
                     <kbd class="am-menu-key">{token}</kbd>
                   ))}
                 </span>
@@ -282,7 +286,7 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
                 <Icon name="console" size="small" />
                 <DropdownMenu.ItemLabel>{deps.newTerminalLabel}</DropdownMenu.ItemLabel>
                 <span class="am-menu-shortcut">
-                  {parseBindingTokens(deps.kb().newTerminal ?? "").map((token) => (
+                  {parseBindingTokens(keybind(deps, "newTerminalCenter")).map((token) => (
                     <kbd class="am-menu-key">{token}</kbd>
                   ))}
                 </span>

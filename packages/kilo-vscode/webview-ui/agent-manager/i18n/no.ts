@@ -61,6 +61,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOKAL & WORKTREES",
 
   "agentManager.terminal.new": "Ny terminalfane",
+  "agentManager.terminal.addCentral": "Ny sentral terminalfane",
+  "agentManager.terminal.addTerminal": "Ny terminalfane i sidepanelet",
   "agentManager.terminal.ended": "terminal avsluttet — lukk fanen for å avvise",
   "agentManager.terminal.endedRestartable": "terminal avsluttet - skriv for å starte et nytt skall, eller lukk fanen",
   "agentManager.terminal.setupFailed": "oppsettskript mislyktes",

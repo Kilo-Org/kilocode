@@ -61,6 +61,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "ในเครื่อง & WORKTREES",
 
   "agentManager.terminal.new": "แท็บเทอร์มินัลใหม่",
+  "agentManager.terminal.addCentral": "แท็บเทอร์มินัลกลางใหม่",
+  "agentManager.terminal.addTerminal": "แท็บเทอร์มินัลใหม่ในแถบด้านข้าง",
   "agentManager.terminal.ended": "เทอร์มินัลสิ้นสุด — ปิดแท็บเพื่อยกเลิก",
   "agentManager.terminal.endedRestartable": "เทอร์มินัลสิ้นสุด - พิมพ์เพื่อเริ่มเชลล์ใหม่หรือปิดแท็บ",
   "agentManager.terminal.setupFailed": "สคริปต์ติดตั้งล้มเหลว",
