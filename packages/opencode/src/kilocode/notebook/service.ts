@@ -1,7 +1,9 @@
 import { Bus } from "@/bus"
-import { InstanceState } from "@/effect/instance-state"
+import { InstanceRef } from "@/effect/instance-ref"
+import { registerDisposer } from "@/effect/instance-registry"
 import { Identifier } from "@/id/id"
-import { Deferred, Duration, Effect, Layer, Schema, Context } from "effect"
+import { capture } from "@/kilocode/instance"
+import { Context, Deferred, Duration, Effect, Layer, LayerMap, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { ErrorCode, Event, type Failure, type Request, RequestID, type Result } from "./protocol"
@@ -36,7 +38,16 @@ interface Entry {
 }
 interface State {
   pending: Map<RequestID, Entry>
+  dispose: () => Effect.Effect<void>
 }
+
+class StateService extends Context.Service<StateService, State>()("@kilocode/NotebookState") {}
+
+const context = Effect.gen(function* () {
+  const ctx = (yield* InstanceRef) ?? capture()
+  if (!ctx) return yield* Effect.die(new Error("Instance context not provided"))
+  return ctx
+})
 
 function matches(request: Request, result: Result) {
   if (request.path !== result.requestPath) return false
@@ -63,31 +74,67 @@ export function layer(timeout: Duration.Input = "10 minutes") {
     Service,
     Effect.gen(function* () {
       const bus = yield* Bus.Service
-      const state = yield* InstanceState.make<State>(
-        Effect.fn("Notebook.state")(function* () {
-          const state = { pending: new Map<RequestID, Entry>() }
-          yield* Effect.addFinalizer(() =>
-            Effect.gen(function* () {
-              for (const entry of state.pending.values()) {
-                yield* bus.publish(Event.Cancelled, {
-                  requestID: entry.info.id,
-                  sessionID: entry.info.sessionID,
-                  reason: "disposed",
-                })
+      const states = new Map<string, State>()
+      const stateLayer = (directory: string) =>
+        Layer.effect(
+          StateService,
+          Effect.gen(function* () {
+            const instance = (yield* InstanceRef) ?? capture()
+            if (!instance) return yield* Effect.die(new Error("Instance context not provided"))
+            const pending = new Map<RequestID, Entry>()
+            const dispose = Effect.fn("Notebook.dispose")(function* () {
+              const entries = Array.from(pending.values())
+              pending.clear()
+              for (const entry of entries) {
+                yield* bus
+                  .publish(Event.Cancelled, {
+                    requestID: entry.info.id,
+                    sessionID: entry.info.sessionID,
+                    reason: "disposed" as const,
+                  })
+                  .pipe(Effect.provideService(InstanceRef, instance))
                 yield* Deferred.fail(
                   entry.deferred,
                   new HostError({ code: "disconnected", detail: "The notebook host disconnected" }),
                 )
               }
-              state.pending.clear()
-            }),
-          )
-          return state
-        }),
+            })
+            const state: State = { pending, dispose }
+            states.set(directory, state)
+            yield* Effect.addFinalizer(() =>
+              Effect.gen(function* () {
+                if (states.get(directory) === state) states.delete(directory)
+                yield* state.dispose()
+              }),
+            )
+            return StateService.of(state)
+          }),
+        )
+      const map = yield* LayerMap.make((directory: string) => stateLayer(directory), { idleTimeToLive: "10 minutes" })
+      const off = registerDisposer((directory) =>
+        Effect.runPromise(
+          Effect.gen(function* () {
+            const state = states.get(directory)
+            yield* map.invalidate(directory)
+            if (state) {
+              yield* state.dispose()
+              if (states.get(directory) === state) states.delete(directory)
+            }
+          }),
+        ),
       )
+      yield* Effect.addFinalizer(() => Effect.sync(off))
+
+      const use = <A, E>(effect: Effect.Effect<A, E, StateService>): Effect.Effect<A, E> => {
+        const run = Effect.gen(function* () {
+          const ctx = yield* context
+          return yield* effect.pipe(Effect.provide(map.get(ctx.directory)))
+        })
+        return run.pipe(Effect.scoped)
+      }
 
       const cancel = Effect.fn("Notebook.cancel")(function* (id: RequestID, reason: "cancelled" | "timeout") {
-        const pending = (yield* InstanceState.get(state)).pending
+        const pending = (yield* StateService).pending
         const entry = pending.get(id)
         if (!entry) return
         pending.delete(id)
@@ -102,8 +149,8 @@ export function layer(timeout: Duration.Input = "10 minutes") {
         )
       })
 
-      const request: Interface["request"] = Effect.fn("Notebook.request")(function* (input) {
-        const pending = (yield* InstanceState.get(state)).pending
+      const request = Effect.fn("Notebook.request")(function* (input: Input) {
+        const pending = (yield* StateService).pending
         const id = RequestID.make(Identifier.create("nbr", "ascending"))
         const deferred = yield* Deferred.make<Result, HostError>()
         const info = { ...input, id } as Request
@@ -119,20 +166,20 @@ export function layer(timeout: Duration.Input = "10 minutes") {
         }).pipe(Effect.ensuring(cancel(id, "cancelled")))
       })
 
-      const list: Interface["list"] = Effect.fn("Notebook.list")(function* () {
-        return Array.from((yield* InstanceState.get(state)).pending.values(), (entry) => entry.info)
+      const list = Effect.fn("Notebook.list")(function* () {
+        return Array.from((yield* StateService).pending.values(), (entry) => entry.info)
       })
 
-      const cancelSession: Interface["cancelSession"] = Effect.fn("Notebook.cancelSession")(function* (sessionID) {
-        const pending = (yield* InstanceState.get(state)).pending
+      const cancelSession = Effect.fn("Notebook.cancelSession")(function* (sessionID: Request["sessionID"]) {
+        const pending = (yield* StateService).pending
         const ids = Array.from(pending.values())
           .filter((entry) => entry.info.sessionID === sessionID)
           .map((entry) => entry.info.id)
         yield* Effect.forEach(ids, (id) => cancel(id, "cancelled"), { discard: true })
       })
 
-      const reply: Interface["reply"] = Effect.fn("Notebook.reply")(function* (input) {
-        const pending = (yield* InstanceState.get(state)).pending
+      const reply = Effect.fn("Notebook.reply")(function* (input: Parameters<Interface["reply"]>[0]) {
+        const pending = (yield* StateService).pending
         const entry = pending.get(input.requestID)
         if (!entry) {
           log.warn("reply for unknown request", { requestID: input.requestID })
@@ -141,10 +188,11 @@ export function layer(timeout: Duration.Input = "10 minutes") {
         if (!matches(entry.info, input.result)) return yield* new InvalidReplyError({ requestID: input.requestID })
         pending.delete(input.requestID)
         yield* Deferred.succeed(entry.deferred, input.result)
+        return yield* Effect.void
       })
 
-      const reject: Interface["reject"] = Effect.fn("Notebook.reject")(function* (input) {
-        const pending = (yield* InstanceState.get(state)).pending
+      const reject = Effect.fn("Notebook.reject")(function* (input: Parameters<Interface["reject"]>[0]) {
+        const pending = (yield* StateService).pending
         const entry = pending.get(input.requestID)
         if (!entry) {
           log.warn("rejection for unknown request", { requestID: input.requestID })
@@ -161,9 +209,16 @@ export function layer(timeout: Duration.Input = "10 minutes") {
             currentRevision: input.error.currentRevision,
           }),
         )
+        return yield* Effect.void
       })
 
-      return Service.of({ request, list, cancelSession, reply, reject })
+      return Service.of({
+        request: (input) => use(request(input)),
+        list: () => use(list()),
+        cancelSession: (sessionID) => use(cancelSession(sessionID)),
+        reply: (input) => use(reply(input)),
+        reject: (input) => use(reject(input)),
+      })
     }),
   )
 }
