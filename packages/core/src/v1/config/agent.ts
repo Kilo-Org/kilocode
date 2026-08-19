@@ -75,6 +75,7 @@ const KNOWN_KEYS = new Set([
   "permission",
   "disable",
   "tools",
+  "requirements", // kilocode_change - ignore declarations from removed agent requirements feature
 ])
 
 const normalize = (agent: Schema.Schema.Type<typeof AgentSchema>): Schema.Schema.Type<typeof AgentSchema> => {
