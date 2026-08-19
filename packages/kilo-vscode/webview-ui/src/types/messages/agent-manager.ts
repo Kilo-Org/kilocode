@@ -63,6 +63,7 @@ export type {
   AggregateCheckStatus,
   PRCheck,
   PRComment,
+  PRCommentReply,
   PRReviewer,
 } from "../../../agent-manager/pr/pr-types"
 
@@ -178,7 +179,11 @@ export interface LocalGitStats {
   behind: number
 }
 
-export type { ReviewCommentData as ReviewComment } from "../../../../src/shared/review-comments"
+export type {
+  ReviewCommentData as ReviewComment,
+  ReviewCommentEntry,
+  PRReviewCommentData,
+} from "../../../../src/shared/review-comments"
 
 /**
  * Maximum number of parallel worktree versions for multi-version mode.

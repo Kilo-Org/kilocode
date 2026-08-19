@@ -291,10 +291,14 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 [data-component="bash-output"] [data-slot="bash-section-actions"] {
   position: absolute;
   top: 4px;
-  right: 4px;
+  right: 20px;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-tool-output-base);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;

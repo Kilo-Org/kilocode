@@ -50,7 +50,7 @@ class NewSessionActionTest : BasePlatformTestCase() {
             created++
         }
 
-        override fun showHistory() {
+        override fun showHistory(back: (() -> Unit)?) {
         }
 
         override fun openSession(ref: SessionRef) {

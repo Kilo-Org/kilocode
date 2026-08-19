@@ -233,7 +233,6 @@ export const dict = {
   "ui.mermaid.copyPng": "PNG kopieren",
   "ui.mermaid.downloadSvg": "SVG herunterladen",
   "ui.mermaid.downloadPng": "PNG herunterladen",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} von {{total}} Zeilen behalten",
   "ui.message.deleteQueued": "Nachricht in Warteschlange löschen",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

@@ -1,6 +1,6 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, ManagedRuntime, Queue, Result, Schema } from "effect"
+import { Effect, Layer, ManagedRuntime, Queue, Schema } from "effect"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -151,87 +151,120 @@ function publish(
 }
 
 describe("agent_manager tool", () => {
-  test("advertises each operation as a strict union branch", async () => {
+  test("uses an object-root input schema without combinators because more complex schemas break Claude models", async () => {
     const tool = await init()
     const schema = ToolJsonSchema.fromTool(tool)
 
-    expect(schema.type).toBeUndefined()
-    expect(schema.anyOf).toHaveLength(5)
+    expect(schema.type).toBe("object")
+    expect(schema.anyOf).toBeUndefined()
     expect(schema.oneOf).toBeUndefined()
     expect(schema.allOf).toBeUndefined()
-    const branches = schema.anyOf as Array<Record<string, unknown>>
-    const properties = (branch: Record<string, unknown>) => branch.properties as Record<string, unknown>
-    expect(branches.map((branch) => branch.required)).toEqual([
-      ["mode", "tasks"],
-      ["action"],
-      ["action", "sessionID", "prompt"],
-      ["action", "sessionID", "sectionID"],
-      ["action", "sessionID"],
+    const action = schema.properties?.action
+    expect(action && typeof action === "object" ? action.anyOf?.[0] : undefined).toEqual(
+      expect.objectContaining({ enum: ["list", "prompt", "stop", "move"] }),
+    )
+    expect(action && typeof action === "object" ? action.description : undefined).toContain("Use list first")
+    expect(action && typeof action === "object" ? action.description : undefined).toContain("Never edit")
+    expect(schema.properties?.sessionID).toEqual(
+      expect.objectContaining({ description: expect.stringContaining("IDs start with ses_") }),
+    )
+    expect(schema.properties?.sessionID).not.toHaveProperty("pattern")
+    expect(schema.properties?.sectionID).toEqual(
+      expect.objectContaining({ description: expect.stringContaining("Use null to unassign") }),
+    )
+    expect(schema.properties?.sectionID).toEqual(
+      expect.objectContaining({
+        anyOf: expect.arrayContaining([expect.objectContaining({ type: "string" }), { type: "null" }]),
+      }),
+    )
+    expect(Object.keys(schema.properties ?? {})).toEqual([
+      "mode",
+      "versions",
+      "tasks",
+      "action",
+      "filter",
+      "sessionID",
+      "prompt",
+      "sectionID",
     ])
-    expect(branches.every((branch) => branch.additionalProperties === false)).toBe(true)
-    expect(properties(branches[2]!).sessionID).not.toHaveProperty("pattern")
-    expect(properties(branches[3]!).sessionID).not.toHaveProperty("pattern")
-    expect(properties(branches[4]!).sessionID).not.toHaveProperty("pattern")
-    expect(properties(branches[0]!)).toEqual(
-      expect.objectContaining({ mode: expect.anything(), tasks: expect.anything() }),
-    )
-    expect(properties(branches[1]!)).toEqual(
-      expect.objectContaining({ action: expect.objectContaining({ enum: ["list"] }) }),
-    )
-    expect(properties(branches[2]!)).toEqual(
-      expect.objectContaining({
-        action: expect.objectContaining({ enum: ["prompt"] }),
-        sessionID: expect.objectContaining({
-          description: expect.stringContaining("Session ID returned by action=list"),
-        }),
-      }),
-    )
-    expect(properties(branches[3]!)).toEqual(
-      expect.objectContaining({ action: expect.objectContaining({ enum: ["move"] }) }),
-    )
-    expect(properties(branches[4]!)).toEqual(
-      expect.objectContaining({
-        action: expect.objectContaining({ enum: ["stop"] }),
-        sessionID: expect.objectContaining({
-          description: expect.stringContaining("Session ID returned by action=list"),
-        }),
-      }),
-    )
   })
 
-  test("accepts each operation branch and rejects ambiguous payloads", () => {
-    const task = { prompt: "Fix the issue" }
-    const accepts = (input: unknown) => Result.isSuccess(Schema.decodeUnknownResult(Params)(input))
-    expect(accepts({ mode: "local", tasks: [task] })).toBe(true)
-    expect(accepts({ action: "list" })).toBe(true)
-    expect(accepts({ action: "list", filter: null })).toBe(true)
-    expect(accepts({ action: "prompt", sessionID: "ses_target", prompt: "Continue" })).toBe(true)
-    expect(accepts({ action: "stop", sessionID: "ses_target" })).toBe(true)
-    expect(accepts({ action: "move", sessionID: "ses_target", sectionID: null })).toBe(true)
-    expect(accepts({ action: "stop", sessionID: "invalid" })).toBe(false)
-
-    expect(accepts({ mode: "local", tasks: [task], action: "list" })).toBe(false)
-    expect(accepts({ action: "list", mode: "local", tasks: [task] })).toBe(false)
-    expect(accepts({ action: "prompt", sessionID: "ses_target", prompt: "Continue", mode: "local" })).toBe(false)
-    expect(accepts({ action: "stop", sessionID: "ses_target", prompt: "Continue" })).toBe(false)
-    expect(accepts({ action: "move", sessionID: "ses_target", sectionID: null, filter: null })).toBe(false)
-  })
-
-  test("rejects mixed payloads before dispatch", async () => {
+  // Flattening the operations into one object means providers with strict structured
+  // outputs must supply every property, so null has to be a legal value everywhere.
+  // Otherwise the model invents one, and an invented action beats mode and tasks.
+  test("advertises every field as nullable so strict providers can opt out of it", async () => {
     const tool = await init()
-    const calls: unknown[] = []
+    const schema = ToolJsonSchema.fromTool(tool)
 
-    await expect(
-      runtime.runPromise(
-        provideTmpdirInstance(() =>
-          tool.execute(
-            { mode: "local", tasks: [{ prompt: "Fix issue" }], action: "list" },
-            { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
-          ),
-        ).pipe(Effect.scoped),
-      ),
-    ).rejects.toThrow("Unexpected Agent Manager parameter")
-    expect(calls).toEqual([])
+    for (const key of ["mode", "versions", "tasks", "action", "filter", "sessionID", "prompt", "sectionID"]) {
+      const property = schema.properties?.[key]
+      const branches = property && typeof property === "object" ? property.anyOf : undefined
+      expect(
+        Array.isArray(branches) &&
+          branches.some((branch) => typeof branch === "object" && branch !== null && branch.type === "null"),
+      ).toBe(true)
+    }
+    // The advertised bounds on tasks must survive being made nullable.
+    const tasks = schema.properties?.tasks
+    expect(typeof tasks === "object" ? tasks.anyOf?.[0] : undefined).toEqual(
+      expect.objectContaining({ minItems: 1, maxItems: 20 }),
+    )
+  })
+
+  test("keeps session ID validation local", () => {
+    expect(Schema.is(Params)({ action: "stop", sessionID: "ses_target" })).toBe(true)
+    expect(Schema.is(Params)({ action: "stop", sessionID: "invalid" })).toBe(false)
+  })
+
+  // Regression for #13029: the OpenAI Responses API forces a value for every
+  // advertised property. With action nullable the model can decline it and the
+  // start request survives; with a populated action the action wins instead.
+  test("routes a null-filled start request to start", () => {
+    const task = { prompt: "balabala...", name: "a new name", branchName: "a-new-branch", model: "", variant: "" }
+    const filled = {
+      mode: "worktree",
+      versions: false,
+      tasks: [task],
+      action: null,
+      filter: null,
+      sessionID: null,
+      prompt: null,
+      sectionID: null,
+    }
+    const decoded = Schema.decodeUnknownSync(Params)(filled) as Record<string, unknown>
+    expect("action" in decoded).toBe(false)
+    expect(decoded.mode).toBe("worktree")
+    expect(decoded.tasks).toHaveLength(1)
+
+    // The empty-string variant the issue reported must resolve the same way.
+    expect(
+      "action" in
+        (Schema.decodeUnknownSync(Params)({ ...filled, sessionID: "", prompt: "" }) as Record<string, unknown>),
+    ).toBe(false)
+  })
+
+  test("routes null-filled management requests to their action", () => {
+    const blanks = { mode: null, versions: null, tasks: null, filter: null, sectionID: null }
+    const decode = (input: unknown) => Schema.decodeUnknownSync(Params)(input) as Record<string, unknown>
+
+    expect(decode({ ...blanks, action: "list", sessionID: null, prompt: null })).toEqual({
+      action: "list",
+      filter: null,
+    })
+    expect(decode({ ...blanks, action: "stop", sessionID: "ses_target", prompt: null })).toEqual({
+      action: "stop",
+      sessionID: "ses_target",
+    })
+    expect(decode({ ...blanks, action: "move", sessionID: "ses_target", sectionID: null, prompt: null })).toEqual({
+      action: "move",
+      sessionID: "ses_target",
+      sectionID: null,
+    })
+    expect(decode({ ...blanks, action: "prompt", sessionID: "ses_target", prompt: "go" })).toEqual({
+      action: "prompt",
+      sessionID: "ses_target",
+      prompt: "go",
+    })
   })
 
   test("asks for agent_manager permission", async () => {

@@ -82,30 +82,6 @@ export const dict = {
   "command.session.compact": "세션 압축",
   "command.session.export": "세션 기록 내보내기",
 
-  "agentRequirements.skill.installed": "설치됨",
-  "agentRequirements.skill.checkFailed": "스킬 확인에 실패했습니다",
-  "agentRequirements.skill.missing": "설치되지 않음",
-  "agentRequirements.mcp.connected": "연결됨",
-  "agentRequirements.mcp.checkFailed": "MCP 확인에 실패했습니다",
-  "agentRequirements.mcp.missing": "연결되지 않음",
-  "agentRequirements.extension.installed": "설치됨",
-  "agentRequirements.extension.checkFailed": "VS Code 확장 확인에 실패했습니다",
-  "agentRequirements.extension.missing": "설치되지 않음",
-  "agentRequirements.extension.description": "VS Code에서 누락된 확장을 설치하세요.",
-  "agentRequirements.group.skills": "스킬",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "VS Code 확장",
-  "agentRequirements.blocked.title": "{{agent}} 에이전트 필수 조건",
-  "agentRequirements.blocked.description": "이 에이전트를 실행하려면 다음 도구가 필요합니다.",
-  "agentRequirements.prompt.blocked": "이 에이전트를 사용하려면 먼저 필요한 확인을 완료하세요",
-  "agentRequirements.action.openMarketplace": "Marketplace 열기",
-  "agentRequirements.error.unknownAgent": "선택한 에이전트를 찾을 수 없습니다.",
-  "agentRequirements.error.malformedDeclaration": "이 에이전트의 요구 사항 선언이 올바르지 않습니다.",
-  "agentRequirements.error.discoveryFailed": "Kilo가 사용 가능한 스킬을 확인하지 못했습니다.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo가 MCP 서버 상태를 확인하지 못했습니다.",
-  "agentRequirements.error.scopeMismatch": "이 에이전트 요구 사항 확인은 더 이상 활성 상태가 아닙니다.",
-  "agentRequirements.error.requestFailed": "Kilo가 에이전트 요구 사항을 확인하지 못했습니다.",
-
   "dialog.provider.search.placeholder": "공급자 검색",
   "dialog.provider.empty": "공급자 없음",
   "dialog.provider.group.other": "기타",
@@ -857,12 +833,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "추가 쓰기 가능 경로",
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner 활성화: 에이전트가 제공한 초점 질문에 따라 작업 맥락을 고려하여 읽기, 검색 및 셸 도구의 대용량 출력을 프루닝합니다",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner 모델",
-  "settings.experimental.swePrunerModel.description":
-    "도구 출력을 정리하는 데 사용하는 모델. 기본값은 구성된 소형 모델입니다",
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",

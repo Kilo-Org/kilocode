@@ -14,18 +14,6 @@ import { Effect, Schema } from "effect"
 import { matchesQuery } from "./model-search"
 import DESCRIPTION from "./agent-manager.txt"
 
-function strict<const Fields extends Schema.Struct.Fields>(fields: Fields) {
-  const target = Schema.Struct(fields)
-  // Preserve unknown keys long enough for the branch check to reject mixed operations.
-  const source = Schema.StructWithRest(target, [Schema.Record(Schema.String, Schema.Unknown)]).check(
-    Schema.makeFilter((value) => {
-      const extra = Object.keys(value).find((key) => !Object.hasOwn(fields, key))
-      return extra === undefined ? undefined : `Unexpected Agent Manager parameter: ${extra}`
-    }),
-  )
-  return source.pipe(Schema.decodeTo(target))
-}
-
 const Task = Schema.Struct({
   prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description: "Initial prompt to send to the new session",
@@ -58,35 +46,7 @@ const Task = Schema.Struct({
   ),
 )
 
-function wireSchema() {
-  const schema = structuredClone(ToolJsonSchema.fromSchema(Params))
-
-  // llama.cpp rejects the prefix-only SessionID pattern. Keep the runtime brand
-  // check, but omit that provider-incompatible hint from the advertised schema.
-  function strip(value: unknown): void {
-    if (Array.isArray(value)) {
-      value.forEach(strip)
-      return
-    }
-    if (!value || typeof value !== "object") return
-    const item = value as Record<string, unknown>
-    if (item.type === "object" && item.additionalProperties === undefined) {
-      item.additionalProperties = false
-    }
-    if (item.properties && typeof item.properties === "object") {
-      const properties = item.properties as Record<string, unknown>
-      if (properties.sessionID && typeof properties.sessionID === "object") {
-        delete (properties.sessionID as Record<string, unknown>).pattern
-      }
-    }
-    Object.values(item).forEach(strip)
-  }
-
-  strip(schema)
-  return schema
-}
-
-const StartParams = strict({
+const StartParams = Schema.Struct({
   mode: Schema.Literals(["worktree", "local"]).annotate({
     description: "Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions",
   }),
@@ -99,14 +59,14 @@ const StartParams = strict({
     .annotate({ description: "Agent Manager sessions to start" }),
 })
 
-const ListParams = strict({
+const ListParams = Schema.Struct({
   action: Schema.Literal("list").annotate({
     description:
       "Read the current Agent Manager sections, worktrees, and sessions before any assignment. This is the source of truth for section and session IDs.",
   }),
   filter: Schema.optional(
     Schema.NullOr(
-      strict({
+      Schema.Struct({
         sectionIDs: Schema.optional(Schema.Array(Schema.String).check(Schema.isMaxLength(100))),
         states: Schema.optional(
           Schema.Array(Schema.Literals(["idle", "busy", "retry", "offline", "waiting"])).check(Schema.isMaxLength(5)),
@@ -118,24 +78,20 @@ const ListParams = strict({
   }),
 })
 
-const PromptParams = strict({
+const PromptParams = Schema.Struct({
   action: Schema.Literal("prompt"),
-  sessionID: SessionID.annotate({
-    description: "Session ID returned by action=list. Do not use a worktree name, branch, or section name.",
-  }),
+  sessionID: SessionID,
   prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)).check(
     Schema.makeFilter((value) => (value.trim() ? undefined : "Prompt must not be empty")),
   ),
 })
 
-const StopParams = strict({
+const StopParams = Schema.Struct({
   action: Schema.Literal("stop"),
-  sessionID: SessionID.annotate({
-    description: "Session ID returned by action=list. Do not use a worktree name, branch, or section name.",
-  }),
+  sessionID: SessionID,
 })
 
-const MoveParams = strict({
+const MoveParams = Schema.Struct({
   action: Schema.Literal("move").annotate({
     description: "Move exactly one managed worktree by targeting one of its session IDs returned by action=list.",
   }),
@@ -147,7 +103,44 @@ const MoveParams = strict({
   }),
 })
 
-export const Params = Schema.Union([StartParams, ListParams, PromptParams, MoveParams, StopParams])
+export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams])
+
+// Anthropic rejects a top-level anyOf/oneOf/allOf, so the advertised schema has to
+// stay one flat object while Params keeps the real per-operation validation. That
+// flattening means providers with strict structured outputs (the OpenAI Responses
+// API) must supply a value for every property, so every field is nullable: null is
+// how a model says "this field is not part of the operation I picked". Without it
+// the model is forced to invent a value, and an invented action wins over mode and
+// tasks, turning a start request into a list.
+const WireParams = Schema.Struct({
+  mode: Schema.optional(Schema.NullOr(StartParams.fields.mode)).annotate({
+    description:
+      "Start sessions only. Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions. Send null whenever action is set.",
+  }),
+  versions: Schema.optional(Schema.NullOr(Schema.Boolean)).annotate({
+    description:
+      "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
+  }),
+  tasks: Schema.optional(Schema.NullOr(StartParams.fields.tasks)).annotate({
+    description: "Start sessions only. Agent Manager sessions to start. Send null whenever action is set.",
+  }),
+  action: Schema.optional(
+    Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move"])).annotate({
+      description:
+        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
+    }),
+  ),
+  filter: ListParams.fields.filter,
+  sessionID: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "For prompt, stop, and move: a session ID returned by action=list (IDs start with ses_). Send null for every other operation.",
+  }),
+  prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "For prompt: the instruction to send to that session. Start requests use tasks[].prompt instead, so send null.",
+  }),
+  sectionID: Schema.optional(MoveParams.fields.sectionID),
+})
 
 type Input = Schema.Schema.Type<typeof Task>
 type Selected = { task?: AgentManagerTask; error?: string }
@@ -307,10 +300,18 @@ export const AgentManagerTool = Tool.define<
     const bus = yield* Bus.Service
     const host = yield* AgentManager.Service
     const provider = yield* Provider.Service
+    const wire = ToolJsonSchema.fromSchema(WireParams)
+    const section = wire.properties?.sectionID
+    if (section && typeof section === "object" && wire.properties) {
+      wire.properties.sectionID = {
+        anyOf: [{ type: "string", minLength: 1 }, { type: "null" }],
+        description: "Section ID returned by action=list. Use null to unassign the worktree from its current section.",
+      }
+    }
     return {
       description: DESCRIPTION,
       parameters: Params,
-      jsonSchema: wireSchema(),
+      jsonSchema: wire,
       execute: (params, ctx) =>
         Effect.gen(function* () {
           if ("action" in params) {

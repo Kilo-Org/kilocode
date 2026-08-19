@@ -20,7 +20,7 @@ import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/ana
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
-import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
+import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
   BrowserSettings,
   Config,
@@ -39,7 +39,7 @@ import type {
   LocalGitStats,
   ManagedSessionState,
   PRStatus,
-  ReviewComment,
+  ReviewCommentEntry,
   RunStatus,
   SectionState,
   TerminalDestination,
@@ -305,13 +305,13 @@ export interface AppendChatBoxMessage {
 
 export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
-  comments: ReviewComment[]
+  comments: ReviewCommentEntry[]
   autoSend?: boolean
 }
 
 export interface AppendReviewCommentsToTerminalMessage {
   type: "appendReviewCommentsToTerminal"
-  comments: ReviewComment[]
+  comments: ReviewCommentEntry[]
   autoSend?: boolean
   targetTerminalId: string
 }
@@ -410,15 +410,6 @@ export interface AgentsLoadedMessage {
 export interface SkillsLoadedMessage {
   type: "skillsLoaded"
   skills: SkillInfo[]
-}
-
-export interface AgentRequirementsLoadedMessage {
-  type: "agentRequirementsLoaded"
-  result: AgentRequirementResult
-}
-
-export interface AgentRequirementsInvalidatedMessage {
-  type: "agentRequirementsInvalidated"
 }
 
 export interface CommandsLoadedMessage {
@@ -763,7 +754,6 @@ export interface AgentProjectSnapshot {
   active: boolean
   expanded: boolean
   initialized: boolean
-  trusted: boolean
   missing: boolean
 }
 
@@ -1289,7 +1279,12 @@ export interface ClipboardWriteResultMessage {
   error?: string
 }
 
+export interface AgentManagerFocusContextRequestedMessage {
+  type: "agentManager.focusContextRequested"
+}
+
 export type ExtensionMessage =
+  | AgentManagerFocusContextRequestedMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage
@@ -1336,8 +1331,6 @@ export type ExtensionMessage =
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
-  | AgentRequirementsLoadedMessage
-  | AgentRequirementsInvalidatedMessage
   | CommandsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage

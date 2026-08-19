@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "Compacter la session",
   "command.session.export": "Exporter la transcription de la session",
 
-  "agentRequirements.skill.installed": "Installée",
-  "agentRequirements.skill.checkFailed": "La vérification de la compétence a échoué",
-  "agentRequirements.skill.missing": "Non installée",
-  "agentRequirements.mcp.connected": "Connecté",
-  "agentRequirements.mcp.checkFailed": "La vérification MCP a échoué",
-  "agentRequirements.mcp.missing": "Non connecté",
-  "agentRequirements.extension.installed": "Installée",
-  "agentRequirements.extension.checkFailed": "La vérification de l’extension VS Code a échoué",
-  "agentRequirements.extension.missing": "Non installée",
-  "agentRequirements.extension.description": "Installez les extensions manquantes dans VS Code.",
-  "agentRequirements.group.skills": "Compétences",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "Extensions VS Code",
-  "agentRequirements.blocked.title": "Prérequis de l’agent {{agent}}",
-  "agentRequirements.blocked.description": "Cet agent a besoin des outils suivants avant de pouvoir s’exécuter.",
-  "agentRequirements.prompt.blocked": "Terminez d’abord les vérifications requises pour utiliser cet agent",
-  "agentRequirements.action.openMarketplace": "Ouvrir Marketplace",
-  "agentRequirements.error.unknownAgent": "L’agent sélectionné est introuvable.",
-  "agentRequirements.error.malformedDeclaration": "Cet agent a une déclaration de prérequis invalide.",
-  "agentRequirements.error.discoveryFailed": "Kilo n’a pas pu vérifier les compétences disponibles.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo n’a pas pu vérifier l’état du serveur MCP.",
-  "agentRequirements.error.scopeMismatch": "Cette vérification des prérequis de l’agent n’est plus active.",
-  "agentRequirements.error.requestFailed": "Kilo n’a pas pu vérifier les prérequis de l’agent.",
-
   "dialog.provider.search.placeholder": "Rechercher des fournisseurs",
   "dialog.provider.empty": "Aucun fournisseur trouvé",
   "dialog.provider.group.other": "Autre",
@@ -888,12 +864,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Chemins en écriture supplémentaires",
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Activer SWE-Pruner : élagage des sorties volumineuses des outils de lecture, de recherche et de shell, tenant compte de la tâche et guidé par une question de focalisation fournie par l’agent",
-  "settings.experimental.swePrunerModel.title": "Modèle SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Modèle utilisé pour élaguer les sorties d'outils ; par défaut, le small model configuré",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
   "settings.experimental.multiProject.description":
     "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",

@@ -52,14 +52,11 @@ export interface ExperimentalConfig {
   batch_tool?: boolean
   image_generation?: boolean
   image_generation_model?: string
-  agent_requirements?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
-  swe_pruner?: boolean
-  swe_pruner_model?: string
 }
 
 export interface SandboxConfig {
