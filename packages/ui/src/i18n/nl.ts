@@ -215,6 +215,5 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.tool.codesearch": "Code Search",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} van {{total}} regels behouden",
   // kilocode_change end
 }

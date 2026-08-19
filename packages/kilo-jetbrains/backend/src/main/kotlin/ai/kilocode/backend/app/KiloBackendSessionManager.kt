@@ -50,6 +50,9 @@ class KiloBackendSessionManager(
     /** Per-session directory overrides (sessionId → worktree path). */
     private val directories = ConcurrentHashMap<String, String>()
 
+    /** Session directory cache populated while mapping CLI sessions. */
+    private val owned = ConcurrentHashMap<String, String>()
+
     private val _statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
     val statuses: StateFlow<Map<String, SessionStatusDto>> = _statuses.asStateFlow()
 
@@ -95,6 +98,7 @@ class KiloBackendSessionManager(
         client = null
         http = null
         base = null
+        owned.clear()
         _statuses.value = emptyMap()
         log.info("Session manager stopped")
     }
@@ -154,6 +158,7 @@ class KiloBackendSessionManager(
             val dto = KiloCliDataParser.parseSession(raw!!)
             val meta = if (log.isDebugEnabled) ChatLogSummary.dir(dir) else "kind=session"
             log.info("${ChatLogSummary.sid(dto.id)} kind=session $meta created=true code=${response.code}")
+            owned[dto.id] = dto.directory
             return dto
         }
     }
@@ -168,6 +173,7 @@ class KiloBackendSessionManager(
     fun delete(id: String, dir: String) {
         requireClient().sessionDelete(sessionID = id, directory = dir)
         directories.remove(id)
+        owned.remove(id)
     }
 
     /**
@@ -196,7 +202,9 @@ class KiloBackendSessionManager(
                 log.warn("Session rename failed: HTTP ${response.code}, body=$raw")
                 throw RuntimeException("Session rename failed: HTTP ${response.code} — $raw")
             }
-            return KiloCliDataParser.parseSession(raw!!)
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            owned[dto.id] = dto.directory
+            return dto
         }
     }
 
@@ -241,7 +249,9 @@ class KiloBackendSessionManager(
                 log.warn("Cloud session import failed: HTTP ${response.code}, body=$raw")
                 throw RuntimeException("Cloud session import failed: HTTP ${response.code} — $raw")
             }
-            return KiloCliDataParser.parseSession(raw)
+            val dto = KiloCliDataParser.parseSession(raw)
+            owned[dto.id] = dto.directory
+            return dto
         }
     }
 
@@ -265,6 +275,9 @@ class KiloBackendSessionManager(
 
     fun getDirectory(id: String, fallback: String): String =
         directories[id] ?: fallback
+
+    fun sessionDirectory(id: String): String? =
+        directories[id] ?: owned[id]
 
     // ------ mapping (generated API model → DTO) ------
 
@@ -322,21 +335,24 @@ class KiloBackendSessionManager(
         archived: Double?,
         summary: SessionSummaryDto?,
         revert: SessionRevertDto?,
-    ) = SessionDto(
-        id = id,
-        projectID = project,
-        directory = dir,
-        parentID = parent,
-        title = title,
-        version = version,
-        time = SessionTimeDto(
-            created = time(id, "created", created),
-            updated = time(id, "updated", updated),
-            archived = archived,
-        ),
-        summary = summary,
-        revert = revert,
-    )
+    ): SessionDto {
+        owned[id] = dir
+        return SessionDto(
+            id = id,
+            projectID = project,
+            directory = dir,
+            parentID = parent,
+            title = title,
+            version = version,
+            time = SessionTimeDto(
+                created = time(id, "created", created),
+                updated = time(id, "updated", updated),
+                archived = archived,
+            ),
+            summary = summary,
+            revert = revert,
+        )
+    }
 
     private fun summary(add: Double?, del: Double?, files: Double?) = SessionSummaryDto(
         additions = count(add),

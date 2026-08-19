@@ -235,7 +235,6 @@ export const dict = {
   "ui.mermaid.copyPng": "PNG kopyala",
   "ui.mermaid.downloadSvg": "SVG indir",
   "ui.mermaid.downloadPng": "PNG indir",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}} satırdan {{kept}} tanesi korundu",
   "ui.message.deleteQueued": "Kuyruktaki mesajı sil",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

@@ -1,5 +1,6 @@
 package ai.kilocode.client.vfs
 
+import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import com.intellij.openapi.components.service
@@ -13,8 +14,7 @@ import com.intellij.openapi.vfs.VirtualFile
 
 class KiloFileEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean {
-        ensureAttachmentEditorKind()
-        ensureDiffEditorKind()
+        ensureKinds()
         val path = path(file) ?: return false
         return service<KiloEditorKindRegistry>().get(path.kind) != null
     }
@@ -22,8 +22,7 @@ class KiloFileEditorProvider : FileEditorProvider, DumbAware {
     override fun acceptRequiresReadAction(): Boolean = false
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
-        ensureAttachmentEditorKind()
-        ensureDiffEditorKind()
+        ensureKinds()
         val path = path(file) ?: error("Invalid Kilo virtual file: ${file.path}")
         val kilo = file as? KiloVirtualFile ?: KiloVirtualFile(path)
         val kind = service<KiloEditorKindRegistry>().get(kilo.path.kind) ?: error("Unknown Kilo editor kind: ${kilo.path.kind}")
@@ -39,6 +38,12 @@ class KiloFileEditorProvider : FileEditorProvider, DumbAware {
 
     companion object {
         const val EDITOR_TYPE_ID = "KiloVfsEditor"
+
+        private fun ensureKinds() {
+            ensureAttachmentEditorKind()
+            ensureDiffEditorKind()
+            ensureWorktreeSessionEditorKind()
+        }
 
         private fun path(file: VirtualFile): KiloPath? {
             if (file is KiloVirtualFile) return file.path

@@ -267,11 +267,6 @@ describe("Bash tool static terminal preview (source)", () => {
   it("bash tool passes outputPath from metadata to BashHighlightedOutput", () => {
     expect(block).toContain("props.metadata.outputPath")
   })
-
-  it("bash tool shows the SWE-Pruner kept-lines indicator", () => {
-    expect(block).toContain("swePruned(props.metadata)")
-    expect(block).toContain('i18n.t("ui.tool.swePruned"')
-  })
 })
 
 describe("Expanded tool motion and typography (source)", () => {

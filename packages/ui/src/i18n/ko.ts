@@ -235,6 +235,5 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "변경됨",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}}줄 중 {{kept}}줄 유지",
   // kilocode_change end
 }

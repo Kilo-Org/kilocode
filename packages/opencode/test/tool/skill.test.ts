@@ -9,6 +9,7 @@ import type { Permission } from "../../src/permission"
 import type { Tool } from "@/tool/tool"
 import { SkillTool } from "../../src/tool/skill"
 import { ToolRegistry } from "@/tool/registry"
+import { ToolJsonSchema } from "@/tool/json-schema"
 import { disposeAllInstances, provideTmpdirInstance, TestInstance } from "../fixture/fixture" // kilocode_change
 import { SessionID, MessageID } from "../../src/session/schema"
 import { testEffect } from "../lib/effect"
@@ -70,8 +71,17 @@ Use this skill.
       })).find((tool) => tool.id === SkillTool.id)
       if (!tool) throw new Error("Skill tool not found")
 
-      expect(tool.description).toContain("tool-skill") // kilocode_change - include concise available-skill context
-      expect(tool.description).toContain("Skill for tool tests.") // kilocode_change
+      expect(tool.description).not.toContain("tool-skill")
+      expect(tool.description).not.toContain("Skill for tool tests.")
+      expect(tool.description).not.toContain("# Tool Skill")
+      expect(tool.description).toContain("skills listed in the system prompt")
+      expect(ToolJsonSchema.fromTool(tool)).toMatchObject({
+        type: "object",
+        properties: {
+          name: { type: "string", description: "The name of the skill from available_skills" },
+        },
+        required: ["name"],
+      })
 
       const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
       const ctx: Tool.Context = {
@@ -91,6 +101,7 @@ Use this skill.
       expect(requests[0].always).toContain("tool-skill")
       expect(result.metadata.dir).toBe(skill)
       expect(result.output).toContain(`<skill_content name="tool-skill">`)
+      expect(result.output).toContain("Use this skill.")
       expect(result.output).toContain(`Base directory for this skill: ${skill}`)
       expect(result.output).toContain(`<file>${file}</file>`)
     }),

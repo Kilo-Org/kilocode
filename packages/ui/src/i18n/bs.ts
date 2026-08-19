@@ -237,7 +237,6 @@ export const dict = {
   "ui.mermaid.copyPng": "Kopiraj PNG",
   "ui.mermaid.downloadSvg": "Preuzmi SVG",
   "ui.mermaid.downloadPng": "Preuzmi PNG",
-  "ui.tool.swePruned": "SWE-Pruner · zadržano {{kept}} od {{total}} redova",
   "ui.message.deleteQueued": "Obriši poruku iz reda",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

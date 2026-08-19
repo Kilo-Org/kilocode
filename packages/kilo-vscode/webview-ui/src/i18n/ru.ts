@@ -863,12 +863,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Включить SWE-Pruner: обрезка больших объёмов вывода инструментов чтения, поиска и командной оболочки с учётом задачи и на основе предоставленного агентом фокус-вопроса",
-  "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Модель для обрезки вывода инструментов; по умолчанию — настроенная малая модель",
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",

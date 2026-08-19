@@ -48,6 +48,20 @@ data class SessionStatusDto(
 )
 
 @Serializable
+enum class SessionActivityKindDto {
+    RUNNING,
+    QUESTION,
+    PLAN,
+    PERMISSION,
+}
+
+@Serializable
+data class SessionActivityDto(
+    val directory: String,
+    val kind: SessionActivityKindDto,
+)
+
+@Serializable
 data class SessionListDto(
     val sessions: List<SessionDto>,
     val statuses: Map<String, SessionStatusDto>,

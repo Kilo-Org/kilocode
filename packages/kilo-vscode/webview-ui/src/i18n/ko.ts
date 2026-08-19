@@ -857,12 +857,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "추가 쓰기 가능 경로",
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner 활성화: 에이전트가 제공한 초점 질문에 따라 작업 맥락을 고려하여 읽기, 검색 및 셸 도구의 대용량 출력을 프루닝합니다",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner 모델",
-  "settings.experimental.swePrunerModel.description":
-    "도구 출력을 정리하는 데 사용하는 모델. 기본값은 구성된 소형 모델입니다",
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",

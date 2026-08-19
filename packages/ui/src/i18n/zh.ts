@@ -231,7 +231,6 @@ export const dict = {
   "ui.mermaid.copyPng": "复制 PNG",
   "ui.mermaid.downloadSvg": "下载 SVG",
   "ui.mermaid.downloadPng": "下载 PNG",
-  "ui.tool.swePruned": "SWE-Pruner · 保留 {{total}} 行中的 {{kept}} 行",
   "ui.message.deleteQueued": "删除排队中的消息",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",
