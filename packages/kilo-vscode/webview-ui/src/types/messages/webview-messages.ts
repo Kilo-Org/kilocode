@@ -278,14 +278,6 @@ export interface RequestSkillsMessage {
   type: "requestSkills"
 }
 
-export interface RequestAgentRequirementsMessage {
-  type: "requestAgentRequirements"
-  agent: string
-  directory: string
-  sessionID?: string
-  force?: boolean
-}
-
 export interface RequestCommandsMessage {
   type: "requestCommands"
 }
@@ -447,6 +439,7 @@ export interface RequestTerminalContextMessage {
   type: "requestTerminalContext"
   requestId: string
   sessionID?: string
+  agentManagerContext?: string
 }
 
 export interface RequestGitChangesContextMessage {
@@ -1440,7 +1433,6 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
-  | RequestAgentRequirementsMessage
   | RequestCommandsMessage
   | SendCommandRequest
   | RemoveSkillMessage

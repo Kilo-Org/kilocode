@@ -22,6 +22,7 @@ import { useLanguage } from "../../src/context/language"
 import { formatReviewCommentsMarkdown } from "../../src/utils/review-comment-markdown"
 import type { ScriptTerminalStatus, TerminalFont } from "./state"
 import { createInputBuffer, createReplayGate } from "./replay"
+import { registerTerminalOutput, unregisterTerminalOutput } from "./output"
 
 interface Props {
   terminalId: string
@@ -167,6 +168,13 @@ export const TerminalTab: Component<Props> = (props) => {
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(host)
+    registerTerminalOutput(props.terminalId, () => {
+      const buffer = term.buffer.active
+      return Array.from(
+        { length: buffer.length },
+        (_, index) => buffer.getLine(index)?.translateToString(true) ?? "",
+      ).join("\n")
+    })
     // Unicode width must be configured before the first PTY bytes are parsed.
     // Loading it later can leave already-wrapped graphemes with stale cell
     // widths, which moves the cursor in narrow terminals.
@@ -582,6 +590,7 @@ export const TerminalTab: Component<Props> = (props) => {
 
     onCleanup(() => {
       closed = true
+      unregisterTerminalOutput(props.terminalId)
       if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
       if (frame !== undefined) cancelAnimationFrame(frame)
       if (deferred !== undefined) cancelAnimationFrame(deferred)

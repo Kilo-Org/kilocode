@@ -105,21 +105,40 @@ const MoveParams = Schema.Struct({
 
 export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams])
 
+// Anthropic rejects a top-level anyOf/oneOf/allOf, so the advertised schema has to
+// stay one flat object while Params keeps the real per-operation validation. That
+// flattening means providers with strict structured outputs (the OpenAI Responses
+// API) must supply a value for every property, so every field is nullable: null is
+// how a model says "this field is not part of the operation I picked". Without it
+// the model is forced to invent a value, and an invented action wins over mode and
+// tasks, turning a start request into a list.
 const WireParams = Schema.Struct({
-  mode: Schema.optional(StartParams.fields.mode),
-  versions: Schema.optional(StartParams.fields.versions),
-  tasks: Schema.optional(StartParams.fields.tasks),
+  mode: Schema.optional(Schema.NullOr(StartParams.fields.mode)).annotate({
+    description:
+      "Start sessions only. Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions. Send null whenever action is set.",
+  }),
+  versions: Schema.optional(Schema.NullOr(Schema.Boolean)).annotate({
+    description:
+      "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
+  }),
+  tasks: Schema.optional(Schema.NullOr(StartParams.fields.tasks)).annotate({
+    description: "Start sessions only. Agent Manager sessions to start. Send null whenever action is set.",
+  }),
   action: Schema.optional(
-    Schema.Literals(["list", "prompt", "stop", "move"]).annotate({
+    Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move"])).annotate({
       description:
-        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations.",
+        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
     }),
   ),
-  filter: Schema.optional(ListParams.fields.filter),
-  sessionID: Schema.optional(
-    Schema.String.annotate({ description: "For move, use a session ID returned by action=list (IDs start with ses_)." }),
-  ),
-  prompt: Schema.optional(PromptParams.fields.prompt),
+  filter: ListParams.fields.filter,
+  sessionID: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "For prompt, stop, and move: a session ID returned by action=list (IDs start with ses_). Send null for every other operation.",
+  }),
+  prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "For prompt: the instruction to send to that session. Start requests use tasks[].prompt instead, so send null.",
+  }),
   sectionID: Schema.optional(MoveParams.fields.sectionID),
 })
 

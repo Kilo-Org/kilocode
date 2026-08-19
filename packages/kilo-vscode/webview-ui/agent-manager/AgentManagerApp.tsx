@@ -72,7 +72,6 @@ import { NotificationsProvider } from "../src/context/notifications"
 import { FeedbackProvider } from "../src/context/feedback"
 import { MemoryProvider } from "../src/context/memory"
 import { SessionProvider, useSession } from "../src/context/session"
-import { AgentRequirementsProvider } from "../src/context/agent-requirements"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
@@ -142,6 +141,7 @@ import {
   resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
 } from "./terminal"
+import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
@@ -339,7 +339,6 @@ const AgentManagerContent: Component = () => {
   const worktreeStats = () => registry.active().worktreeStats()
 
   const prStatuses = () => registry.active().prStatuses()
-
   const runStatuses = () => registry.active().runStatuses()
   const setRunStatuses: Setter<Record<string, RunStatus>> = (v) => registry.active().setRunStatuses(v)
   const runScriptConfigured = () => registry.active().runScriptConfigured()
@@ -347,7 +346,6 @@ const AgentManagerContent: Component = () => {
 
   // Local repo git stats (branch name, diff additions/deletions, commits)
   const localStats = () => registry.active().localStats()
-
   const projectLive = createProjectLive({
     ensure: (pid) => (pid ? registry.ensure(pid) : registry.active()),
     active: isActivePayload,
@@ -362,22 +360,25 @@ const AgentManagerContent: Component = () => {
     fontSize: readFontSize(),
   })
 
-  /** Namespace key so worktree/local ids from different projects never collide. */
   const nsKey = (sel: string) => `${currentProjectId() ?? "single"}:${sel}`
-
-  // Per-sidebar-context terminal state. `terms.activeId` holds the id of the focused
-  // terminal tab, if any — takes precedence over session/pending/review when deriving
-  // the visible tab. Contexts are project-keyed: every project reuses LOCAL and ids like "0".
   const terms = createTerminalState(() => {
     const sel = selection()
     return sel === null ? null : nsKey(sel)
+  })
+  const resolveTerminal = createEmbeddedTerminalReader({
+    key: (context) => nsKey(context ?? LOCAL),
+    local: LOCAL,
+    side: (key) => terms.sidesForContext(key),
+    tabs: (key) => terms.forSelection(key),
+    focused: terms.focusedId,
+    sideActive: terms.sideActiveFor,
+    active: terms.activeId,
   })
   const requestChatFocus = createChatFocus({
     term: () => terms.activeId(),
     history,
     review: reviewActive,
   })
-
   createEffect(
     on(
       () => {
@@ -2024,7 +2025,6 @@ const AgentManagerContent: Component = () => {
       }
     })
   }
-  // Cmd+T: add a new tab strictly to the current selection (no side effects)
   const handleNewTabForCurrentSelection = () => {
     const sel = selection()
     if (sel === LOCAL) {
@@ -2586,10 +2586,12 @@ const AgentManagerContent: Component = () => {
                     readonly={readOnly()}
                     continueInWorktree={selection() === LOCAL}
                     promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                    terminalContext={() => selection() ?? undefined}
                     deferFocusToQuestion={hasQuestionOption}
                     pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
                     focusOnDraftChange={focusOnDraftChange}
                     onFocusChange={focusCtl.prompt}
+                    resolveEmbeddedTerminal={resolveTerminal}
                   />
                   <Show when={readOnly()}>
                     <div class="am-readonly-banner">
@@ -2780,7 +2782,6 @@ const AgentManagerContent: Component = () => {
     </div>
   )
 }
-
 export const AgentManagerApp: Component = () => {
   return (
     <ProviderShell.Root>
