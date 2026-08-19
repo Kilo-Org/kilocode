@@ -39,6 +39,7 @@ const providers = [
 const stores = [
   { value: "lancedb", label: "LanceDB (default)" },
   { value: "qdrant", label: "Qdrant" },
+  { value: "milvus", label: "Milvus" },
 ] satisfies SelectOption<Store>[]
 
 const fields: Record<Provider, Field[]> = {
@@ -393,7 +394,7 @@ export function IndexingRoute() {
             <div class="ui-form agent-builder-form">
               <FieldCard
                 label="Backend"
-                description="LanceDB stores vectors locally by default. Qdrant connects to an external service."
+                description="LanceDB stores vectors locally by default. Qdrant and Milvus connect to external services."
                 actions={
                   <SourceBadge
                     source={field("vectorStore")?.source}
@@ -412,31 +413,29 @@ export function IndexingRoute() {
                 />
               </FieldCard>
 
-              <Show
-                when={store() === "qdrant"}
-                fallback={
-                  <FieldCard
-                    label="LanceDB directory"
-                    description="Optional directory for local LanceDB storage."
-                    actions={
-                      <SourceBadge
-                        source={field("lancedb.directory")?.source}
-                        inherited={field("lancedb.directory")?.inherited}
-                        overridden={field("lancedb.directory")?.overridden}
-                      />
-                    }
-                  >
-                    <input
-                      value={view().lancedb?.directory ?? ""}
-                      placeholder="Default Kilo state directory"
-                      disabled={Boolean(ctx.saving())}
-                      onInput={(event) =>
-                        update({ lancedb: { ...draft().lancedb, directory: event.currentTarget.value || undefined } })
-                      }
+              <Show when={store() === "lancedb"}>
+                <FieldCard
+                  label="LanceDB directory"
+                  description="Optional directory for local LanceDB storage."
+                  actions={
+                    <SourceBadge
+                      source={field("lancedb.directory")?.source}
+                      inherited={field("lancedb.directory")?.inherited}
+                      overridden={field("lancedb.directory")?.overridden}
                     />
-                  </FieldCard>
-                }
-              >
+                  }
+                >
+                  <input
+                    value={view().lancedb?.directory ?? ""}
+                    placeholder="Default Kilo state directory"
+                    disabled={Boolean(ctx.saving())}
+                    onInput={(event) =>
+                      update({ lancedb: { ...draft().lancedb, directory: event.currentTarget.value || undefined } })
+                    }
+                  />
+                </FieldCard>
+              </Show>
+              <Show when={store() === "qdrant"}>
                 <FieldCard
                   label="Qdrant URL"
                   description="Server URL for the Qdrant instance."
@@ -475,6 +474,69 @@ export function IndexingRoute() {
                     disabled={Boolean(ctx.saving())}
                     onInput={(event) =>
                       update({ qdrant: { ...draft().qdrant, apiKey: event.currentTarget.value || undefined } })
+                    }
+                  />
+                </FieldCard>
+              </Show>
+              <Show when={store() === "milvus"}>
+                <FieldCard
+                  label="Milvus address"
+                  description="Address for Milvus standalone or Zilliz Cloud."
+                  actions={
+                    <SourceBadge
+                      source={field("milvus.address")?.source}
+                      inherited={field("milvus.address")?.inherited}
+                      overridden={field("milvus.address")?.overridden}
+                    />
+                  }
+                >
+                  <input
+                    value={view().milvus?.address ?? ""}
+                    placeholder="localhost:19530"
+                    disabled={Boolean(ctx.saving())}
+                    onInput={(event) =>
+                      update({ milvus: { ...draft().milvus, address: event.currentTarget.value || undefined } })
+                    }
+                  />
+                </FieldCard>
+                <FieldCard
+                  label="Milvus token"
+                  description="Optional token for authenticated Milvus or Zilliz Cloud."
+                  actions={
+                    <SourceBadge
+                      source={field("milvus.token")?.source}
+                      inherited={field("milvus.token")?.inherited}
+                      overridden={field("milvus.token")?.overridden}
+                    />
+                  }
+                >
+                  <input
+                    type="password"
+                    value={view().milvus?.token ?? ""}
+                    placeholder="Optional token"
+                    disabled={Boolean(ctx.saving())}
+                    onInput={(event) =>
+                      update({ milvus: { ...draft().milvus, token: event.currentTarget.value || undefined } })
+                    }
+                  />
+                </FieldCard>
+                <FieldCard
+                  label="Milvus database"
+                  description="Optional Milvus database name."
+                  actions={
+                    <SourceBadge
+                      source={field("milvus.database")?.source}
+                      inherited={field("milvus.database")?.inherited}
+                      overridden={field("milvus.database")?.overridden}
+                    />
+                  }
+                >
+                  <input
+                    value={view().milvus?.database ?? ""}
+                    placeholder="Default database"
+                    disabled={Boolean(ctx.saving())}
+                    onInput={(event) =>
+                      update({ milvus: { ...draft().milvus, database: event.currentTarget.value || undefined } })
                     }
                   />
                 </FieldCard>
