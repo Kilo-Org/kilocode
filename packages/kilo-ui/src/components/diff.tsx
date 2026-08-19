@@ -73,14 +73,21 @@ function enqueue(job: Job) {
   schedule()
 }
 
-// When a large batch of diffs becomes near-visible at once, render one diff per
-// animation frame. This keeps the UI responsive while preserving expanded state.
+const FRAME_BUDGET_MS = 12
+
+// When a batch of diffs becomes near-visible at once, render within a per-frame
+// time budget so visible diffs populate smoothly in the same frame while preserving
+// 60fps responsiveness for large lists.
 function schedule() {
   if (frame !== undefined) return
   frame = requestAnimationFrame(() => {
     frame = undefined
-    const job = queue.shift()
-    if (job && !job.cancelled) job.run()
+    const deadline = performance.now() + FRAME_BUDGET_MS
+    while (queue.length > 0) {
+      const job = queue.shift()
+      if (job && !job.cancelled) job.run()
+      if (performance.now() >= deadline) break
+    }
     if (queue.length > 0) schedule()
   })
 }

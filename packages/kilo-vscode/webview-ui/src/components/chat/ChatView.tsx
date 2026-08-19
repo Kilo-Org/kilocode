@@ -16,6 +16,7 @@ import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
 import { PermissionDock } from "./PermissionDock"
+import { SessionDock } from "./SessionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { SessionTabStrip } from "./SessionTabStrip"
 import { useSession } from "../../context/session"
@@ -60,8 +61,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const canContinueInWorktree = () => props.continueInWorktree === true
 
   const id = () => session.currentSessionID()
-  const hasMessages = () => session.messages().length > 0
-  const idle = () => session.status() !== "busy"
+  // Counts the in-flight first message too, so the dock reserves the same row on
+  // the very first send instead of growing once the message lands.
+  const hasMessages = () => session.messages().length > 0 || session.submitting()
 
   // "Continue in Worktree" state
   const [transferring, setTransferring] = createSignal(false)
@@ -89,7 +91,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const suggesting = () => isSuggesting(blocked(), familySuggestions().length)
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
-  const dock = () => !props.readonly || !!permissionRequest()
+  const dock = () => !props.readonly || !!permissionRequest() || session.submitting() || session.status() !== "idle"
+  // The session dock stays empty while another surface owns the interaction:
+  // a permission card, a pending question or suggestion, or agent requirements.
+  // A spinner there would claim the agent is working while it waits on the user.
+  const dockBlocked = () => blocked() || familyQuestions().length > 0 || familySuggestions().length > 0
 
   onMount(() => {
     if (props.readonly) return
@@ -200,7 +206,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const canStartSession = (hasChat: boolean) => hasChat
 
-  const canFork = (hasChat: boolean) => hasChat && !isSidebar() && session.status() === "idle" && !!props.onForkSession
+  // Deliberately status-independent: the dock reserves this row's height even
+  // while the working indicator covers it, so a button that came and went with
+  // the turn would resize the row and shift the transcript. The row is hidden
+  // and non-interactive while a turn runs.
+  const canFork = (hasChat: boolean) => hasChat && !isSidebar() && !!props.onForkSession
 
   const canStartWorktree = () => isSidebar() && server.gitInstalled()
 
@@ -367,9 +377,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 />
               )}
             </Show>
-            <Show when={!props.readonly && idle() && !blocked() && hasActions(hasMessages())}>
-              {renderActions(hasMessages())}
-            </Show>
+            <SessionDock
+              blocked={dockBlocked()}
+              hasActions={() => !props.readonly && hasActions(hasMessages())}
+              actions={() => renderActions(hasMessages())}
+            />
             <Show when={!props.readonly}>
               <PromptInput
                 blocked={blocked}
