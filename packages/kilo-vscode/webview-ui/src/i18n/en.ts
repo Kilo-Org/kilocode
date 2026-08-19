@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Connect Anaconda Desktop",
   "provider.anaconda.title.manage": "Manage Anaconda Desktop",
@@ -52,6 +54,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Connect provider",
 
@@ -267,6 +270,7 @@ export const dict = {
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
+  "notification.permission.titleSandboxEscalation": "Allow Git operation outside the sandbox?",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
@@ -814,8 +818,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Enable language server protocol integration",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
-  "settings.experimental.codebaseSearch.title": "Codebase Search",
-  "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
   "settings.experimental.imageGenerationModel.title": "Image Model",
@@ -1082,9 +1084,13 @@ export const dict = {
   "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
   "settings.display.codeEdit.expanded": "Expanded",
   "settings.display.codeEdit.collapsed": "Collapsed",
+  "settings.display.mcpTool.title": "MCP & Generic Tool Blocks",
+  "settings.display.mcpTool.description": "Choose whether MCP and generic tool blocks start expanded or collapsed.",
+  "settings.display.mcpTool.expanded": "Expanded",
+  "settings.display.mcpTool.collapsed": "Collapsed",
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
   "settings.display.autoApprovalReason.description":
     "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",

@@ -76,7 +76,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals("cache read 75", panel.cacheReadText())
         assertEquals("1/2 todos complete", panel.todoText())
         assertTrue(panel.todoVisible())
-        assertEquals(style.editorBackground, panel.background)
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), panel.background)
         assertEquals(
             List(panel.foregrounds().size) { style.editorForeground },
             panel.foregrounds(),
@@ -288,7 +288,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
 
         panel.applyStyle(style)
 
-        assertEquals(style.editorBackground, panel.background)
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), panel.background)
         assertEquals(
             List(panel.foregrounds().size) { style.editorForeground },
             panel.foregrounds(),

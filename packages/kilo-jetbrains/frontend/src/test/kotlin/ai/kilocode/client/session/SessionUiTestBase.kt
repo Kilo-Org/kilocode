@@ -28,15 +28,16 @@ import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.openapi.util.Disposer
-import com.intellij.util.ui.UIUtil
+import ai.kilocode.client.testing.pumpEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.awt.Container
+import java.awt.event.ActionEvent
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
-import javax.swing.JLabel
 import javax.swing.JComponent
+import javax.swing.JLabel
 import javax.swing.JScrollBar
 
 @Suppress("UnstableApiUsage")
@@ -77,7 +78,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             Disposer.dispose(ui)
-            coroutines.close { UIUtil.dispatchAllInvocationEvents() }
+            coroutines.close()
         } finally {
             super.tearDown()
         }
@@ -92,7 +93,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         val manager = open?.let { fn ->
             object : SessionManager {
                 override fun newSession() {}
-                override fun showHistory() {}
+                override fun showHistory(back: (() -> Unit)?) {}
                 override fun openSession(ref: SessionRef) = fn(ref)
             }
         }
@@ -119,12 +120,12 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     }
 
     protected fun settle() {
-        coroutines.drain { UIUtil.dispatchAllInvocationEvents() }
+        coroutines.drain()
     }
 
     protected fun settleShort(ms: Long) = runBlocking {
         delay(ms)
-        UIUtil.dispatchAllInvocationEvents()
+        pumpEdt()
     }
 
     protected fun showMessages() {
@@ -155,7 +156,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
 
     protected fun forceFlush() {
         controller().flushEvents()
-        UIUtil.dispatchAllInvocationEvents()
+        pumpEdt()
     }
 
     protected fun forceFlushWithoutDispatch() {
@@ -165,7 +166,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     protected fun drainScroll() {
         repeat(4) {
             layout()
-            UIUtil.dispatchAllInvocationEvents()
+            pumpEdt()
         }
     }
 
@@ -197,6 +198,18 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
 
     protected fun setValuePassive(bar: JScrollBar, value: Int) {
         bar.value = value.coerceIn(bar.minimum, bottom(bar))
+    }
+
+    // Simulate keyboard scrolling: the scroll pane's key bindings move the bar synchronously
+    // while a KeyEvent is the current AWT event. Move the bar from an IdeEventQueue dispatcher so it
+    // runs while EventQueue.getCurrentEvent() is the KeyEvent, exactly like production key bindings.
+    // Simulate keyboard scrolling: keyboard PageUp/PageDown/Home/End fire the scroll pane's own
+    // scroll actions through its WHEN_ANCESTOR_OF_FOCUSED_COMPONENT bindings. Invoke the same action
+    // SessionScroll wraps so the user-gesture flag and real scrolling happen exactly as in production.
+    protected fun keyScroll(action: String) {
+        val map = scrollComponent().actionMap
+        val entry = map.get(action) ?: error("missing scroll action $action")
+        entry.actionPerformed(ActionEvent(scrollComponent(), ActionEvent.ACTION_PERFORMED, action))
     }
 
     protected fun wheelNoop() {

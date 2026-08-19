@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.Container
@@ -47,9 +48,12 @@ open class LayeredOverlayPanel(
     }
 
     @RequiresEdt
-    fun setModalContent(child: JComponent?) {
+    fun setModalContent(child: JComponent?, maxW: (() -> Int)? = null) {
         blocker.removeAll()
-        if (child != null) blocker.add(child.align(HAlign.CENTER, VAlign.CENTER), BorderLayout.CENTER)
+        // Keep the standard large dialog padding on every side so modal content never sits flush
+        // against the blocker edges.
+        blocker.border = if (child == null) null else JBUI.Borders.empty(UiStyle.Gap.pad())
+        if (child != null) blocker.add(child.align(HAlign.CENTER, VAlign.CENTER, maxW = maxW), BorderLayout.CENTER)
         blocker.isVisible = child != null
         if (child != null) blocker.requestFocusInWindow()
         invalidate()

@@ -47,7 +47,6 @@ describe("kilocode tool registry semantic tool import failure", () => {
 
 function infos() {
   return {
-    codebase: info("codebase_search"),
     recall: info("recall"),
     managerModels: info("agent_manager_models"),
     memory: info("kilo_memory_recall"),

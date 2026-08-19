@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Підключити Anaconda Desktop",
   "provider.anaconda.title.manage": "Керувати Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Підключити провайдера",
 
@@ -271,6 +274,7 @@ export const dict = {
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
+  "notification.permission.titleSandboxEscalation": "Дозволити операцію Git за межами пісочниці?",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
   "ui.permission.doomLoop.prompt":
     "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
@@ -827,9 +831,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Увімкнути інтеграцію з мовним сервером",
   "settings.experimental.batch.title": "Пакетний інструмент",
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
-  "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
-  "settings.experimental.codebaseSearch.description":
-    "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",
@@ -1069,10 +1070,15 @@ export const dict = {
     "Виберіть, чи будуть блоки редагування коду та відмінностей спочатку розгорнутими чи згорнутими.",
   "settings.display.codeEdit.expanded": "Розгорнуті",
   "settings.display.codeEdit.collapsed": "Згорнуті",
+  "settings.display.mcpTool.title": "Блоки MCP та загальних інструментів",
+  "settings.display.mcpTool.description":
+    "Виберіть, чи будуть блоки MCP та загальних інструментів спочатку розгорнутими чи згорнутими.",
+  "settings.display.mcpTool.expanded": "Розгорнуті",
+  "settings.display.mcpTool.collapsed": "Згорнуті",
 
   "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
-    "Показує швидкість генерації тексту (токенів/с) на останньому повідомленні асистента та в заголовку завдання. За замовчуванням приховано, щоб чат залишався охайним.",
+    "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",
   "settings.display.autoApprovalReason.title": "Показувати причину автосхвалення",
   "settings.display.autoApprovalReason.description":
     "Показує рядок біля викликів інструментів, що пояснює, чому їх автоматично схвалено (відповідне правило, стандартне значення агента, режим YOLO тощо).",

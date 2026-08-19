@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { Component, Show } from "solid-js"
+import { Component, Show, createSignal } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { WorktreeState } from "../../src/types/messages"
@@ -16,11 +16,29 @@ import "./pr-panel.css"
 interface PRPanelProps {
   pr: PRStatus
   worktree?: WorktreeState
+  worktreeId: string
   onClose: () => void
   onOpenExternal: () => void
 }
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
+  let bodyRef: HTMLDivElement | undefined
+  let commentsRef: HTMLDivElement | undefined
+  const [showScrollTop, setShowScrollTop] = createSignal(false)
+
+  function onScroll(e: Event) {
+    const el = e.target as HTMLDivElement
+    setShowScrollTop(el.scrollTop > 100)
+  }
+
+  function scrollToTop() {
+    bodyRef?.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  function jumpToComments() {
+    commentsRef?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
   return (
     <div class="am-pr-panel am-pr-col">
       <div class="am-pr-panel-header am-pr-row">
@@ -44,18 +62,31 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           </Tooltip>
         </div>
       </div>
-      <div class="am-pr-panel-body">
-        <PRSummary pr={props.pr} />
-        <PROverview pr={props.pr} worktree={props.worktree} />
-        <Show when={(props.pr.reviewers ?? []).length > 0}>
-          <PRReviewers reviewers={props.pr.reviewers ?? []} />
-        </Show>
-        <Show when={props.pr.body}>{(body) => <PRDescription body={body()} />}</Show>
-        <Show when={props.pr.checks.total > 0}>
-          <PRChecks checks={props.pr.checks} />
-        </Show>
-        <Show when={props.pr.comments?.total ? props.pr.comments : undefined}>
-          {(comments) => <PRComments comments={comments()} />}
+      <div class="am-pr-panel-body-wrap">
+        <div class="am-pr-panel-body" ref={bodyRef} onScroll={onScroll}>
+          <PRSummary pr={props.pr} onJumpToComments={jumpToComments} />
+          <PROverview pr={props.pr} worktree={props.worktree} />
+          <Show when={(props.pr.reviewers ?? []).length > 0}>
+            <PRReviewers reviewers={props.pr.reviewers ?? []} />
+          </Show>
+          <Show when={props.pr.body}>{(body) => <PRDescription body={body()} />}</Show>
+          <Show when={props.pr.checks.total > 0}>
+            <PRChecks checks={props.pr.checks} />
+          </Show>
+          <Show when={props.pr.comments?.total ? props.pr.comments : undefined}>
+            {(comments) => (
+              <div ref={commentsRef}>
+                <PRComments comments={comments()} worktreeId={props.worktreeId} />
+              </div>
+            )}
+          </Show>
+        </div>
+        <Show when={showScrollTop()}>
+          <Tooltip value="Scroll to top" placement="left">
+            <button class="am-pr-scroll-top" onClick={scrollToTop}>
+              ↑
+            </button>
+          </Tooltip>
         </Show>
       </div>
     </div>
