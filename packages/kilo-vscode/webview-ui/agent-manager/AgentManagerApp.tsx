@@ -298,7 +298,6 @@ const AgentManagerContent: Component = () => {
   const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
   const diffOpen = () => sidePanel() === SidePanel.Diff
   const prOpen = () => sidePanel() === SidePanel.PR
-  const documentsOpen = () => sidePanel() === SidePanel.Documents
   const activePR = createMemo(() => {
     const selected = selection()
     if (!selected || selected === LOCAL) return undefined
@@ -311,7 +310,7 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-   // Diff, PR, terminal, and subagent views share one inspector width.
+  // Diff, PR, terminal, and subagent views share one inspector width.
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
@@ -328,7 +327,7 @@ const AgentManagerContent: Component = () => {
   const documentInspector = createDocumentInspector(
     vscode,
     selection,
-    documentsOpen,
+    () => sidePanel() === SidePanel.Documents,
     () => {
       setHistory(false)
       setReviewActive(false)
@@ -2253,8 +2252,6 @@ const AgentManagerContent: Component = () => {
     setSidePanel((prev) => (prev === SidePanel.Diff ? null : SidePanel.Diff))
   }
 
-  const toggleDocumentsPanel = documentInspector.toggle
-
   const renderTabById = (id: string) =>
     renderTab(id, {
       terms,
@@ -2451,9 +2448,9 @@ const AgentManagerContent: Component = () => {
           prStatus={() => activePR()?.pr}
           prOpen={prOpen}
           onTogglePR={togglePRPanel}
-          documentsOpen={documentsOpen}
+          documentsOpen={documentInspector.isOpen}
           documentsAvailable={documentInspector.available}
-          onToggleDocuments={toggleDocumentsPanel}
+          onToggleDocuments={documentInspector.toggle}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
           terminalKeybind={() => kb().showTerminal ?? ""}
@@ -2710,7 +2707,7 @@ const AgentManagerContent: Component = () => {
                       inspector={documentInspector}
                       onClosePanel={() => setSidePanel(null)}
                       activeTerminalId={terms.activeId()}
-                      visible={documentsOpen}
+                      visible={documentInspector.isOpen}
                     />
                     <SideTerminalPanel
                       state={terms}

@@ -161,7 +161,7 @@ export function createDocumentInspector(
     if (sessionId) vscode.postMessage({ type: "agentManager.openFile", sessionId, filePath: file, line })
   }
   const toggle = () => (isOpen() ? closePanel() : open())
-  return { documents, comments, open, openFile, toggle, available }
+  return { documents, comments, open, openFile, toggle, available, isOpen }
 }
 
 export function handleDocumentOpen(event: Event, open: (file: string) => void): void {
