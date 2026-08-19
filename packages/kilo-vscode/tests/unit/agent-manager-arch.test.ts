@@ -397,15 +397,17 @@ describe("Agent Manager Worktree Actions", () => {
     expect(manager).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
   })
 
-  it("creates side terminals only while a side terminal owns focus", () => {
+  it("routes prompt and side-terminal shortcut actions separately", () => {
     const source = fs.readFileSync(TSX_FILE, "utf-8")
-    const start = source.indexOf('else if (msg.action === "newTerminal")')
+    const start = source.indexOf('else if (msg.action === "newTerminalTab")')
     const end = source.indexOf('else if (msg.action === "cycleAgentMode"', start)
     const action = source.slice(start, end)
 
-    expect(action).toContain("if (terms.sideFocusedId()) termHandlers.addSide()")
-    expect(action).not.toContain("terminalVisible()")
-    expect(action).toContain("else termHandlers.requestNew()")
+    expect(action).toContain('msg.action === "newTerminalTab"')
+    expect(action).toContain("termHandlers.requestNew()")
+    expect(action).toContain('msg.action === "newSideTerminal"')
+    expect(action).toContain("termHandlers.addSide()")
+    expect(action).not.toContain('msg.action === "newMainTerminal"')
   })
 
   it("forwards the quick-worktree command to immediate creation", () => {
@@ -527,7 +529,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("terminal context reveals the terminal associated with the originating session", () => {
     const text = body("onSessionMessage")
-    const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID)")
+    const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID, m.agentManagerContext)")
     expect(show).toBeGreaterThan(-1)
     expect(text).toContain('type: "terminalContextError"')
   })
@@ -1113,7 +1115,6 @@ describe("Shared webview provider shell", () => {
       "ImageModelsProvider",
       "NotificationsProvider",
       "SessionProvider",
-      "AgentRequirementsProvider",
       "MemoryProvider",
       "FeedbackProvider",
     ])
