@@ -8,10 +8,9 @@ import ai.kilocode.client.session.model.PermissionRuleCandidate
 import ai.kilocode.client.session.model.PermissionRuleDecision
 import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.ui.SessionView
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.ui.UiStyle
@@ -70,14 +69,12 @@ class PermissionView(
     private val reply: (String, PermissionReplyDto, PermissionAlwaysRulesDto?) -> Unit,
     private val selection: SessionSelection? = null,
     focus: (() -> Unit)? = null,
-) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView, Disposable {
+) : DialogView(selection, focus), SessionView, Disposable {
     override val sessionViewKind = SessionView.Kind.Default
 
     private var requestId: String? = null
     private var responding = false
     private var style = SessionEditorStyle.current()
-
-    private val card = BaseQuestionView(selection, focus)
 
     private val body = Stack.vertical(gap = UiStyle.Gap.sm())
     private val desc = makeDescription()
@@ -99,16 +96,15 @@ class PermissionView(
         isOpaque = false
         isVisible = false
 
-        card.setHeaderIcon(AllIcons.General.Warning, KiloBundle.message("session.permission.title"))
-        card.setContent(body)
+        setHeaderIcon(AllIcons.General.Warning, KiloBundle.message("session.permission.title"))
+        setContent(body)
         body.next(desc).next(codeSlot).next(diffRow).next(rules).next(state)
-        card.setActions(
+        setActions(
             listOf(
-                BaseQuestionView.Action(ID_DENY, KiloBundle.message("session.permission.reject"), primary = false) { reject() },
-                BaseQuestionView.Action(ID_RUN, KiloBundle.message("session.permission.allow.once"), primary = true) { allow() },
+                DialogView.Action(ID_DENY, KiloBundle.message("session.permission.reject"), primary = false) { reject() },
+                DialogView.Action(ID_RUN, KiloBundle.message("session.permission.allow.once"), primary = true) { allow() },
             ),
         )
-        addToCenter(card)
     }
 
     /** Populate the view for [permission] and make it visible. */
@@ -119,7 +115,7 @@ class PermissionView(
 
         val skillShell = permission.meta.raw["skillShell"] == "true"
         val skill = permission.meta.raw["skill"]
-        card.setHeader(
+        setHeader(
             if (skillShell && !skill.isNullOrBlank())
                 // skill is the untrusted SKILL.md frontmatter name; escape it the same way as
                 // the command list so it can't reorder/repaint the header.
@@ -171,7 +167,7 @@ class PermissionView(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        card.applyStyle(style)
+        super.applyStyle(style)
         desc.font = SessionUiStyle.Text.Secondary.font(style)
         desc.foreground = SessionUiStyle.Text.Secondary.foreground()
         rules.applyStyle(style)
@@ -232,8 +228,8 @@ class PermissionView(
     private fun syncButtons(responding: Boolean) {
         val approved = rules.approved().isNotEmpty()
         val denied = rules.denied().isNotEmpty()
-        card.setActionEnabled(ID_RUN, !responding && !(denied && !approved))
-        card.setActionEnabled(ID_DENY, !responding && !(approved && !denied))
+        setActionEnabled(ID_RUN, !responding && !(denied && !approved))
+        setActionEnabled(ID_DENY, !responding && !(approved && !denied))
     }
 
     @RequiresEdt
@@ -396,8 +392,8 @@ class PermissionView(
     @RequiresEdt
     private fun allow() {
         val id = requestId ?: return
-        card.setActionEnabled(ID_RUN, false)
-        card.setActionEnabled(ID_DENY, false)
+        setActionEnabled(ID_RUN, false)
+        setActionEnabled(ID_DENY, false)
         rules.setControlsEnabled(false)
         reply(id, PermissionReplyDto(reply = "once", interactive = true), rulePayload())
     }
@@ -405,8 +401,8 @@ class PermissionView(
     @RequiresEdt
     private fun reject() {
         val id = requestId ?: return
-        card.setActionEnabled(ID_RUN, false)
-        card.setActionEnabled(ID_DENY, false)
+        setActionEnabled(ID_RUN, false)
+        setActionEnabled(ID_DENY, false)
         rules.setControlsEnabled(false)
         reply(id, PermissionReplyDto(reply = "reject"), rulePayload())
     }
@@ -420,22 +416,15 @@ class PermissionView(
     @RequiresEdt
     private fun syncPrimaryText() {
         val key = if (rules.anyDecided()) "session.permission.allow" else "session.permission.allow.once"
-        card.setActionText(
+        setActionText(
             ID_RUN,
             KiloBundle.message(key),
         )
-        card.setActionText(
+        setActionText(
             ID_DENY,
             KiloBundle.message("session.permission.reject"),
         )
         syncButtons(responding)
-    }
-
-    private fun refresh() {
-        revalidate()
-        repaint()
-        parent?.revalidate()
-        parent?.repaint()
     }
 
     @RequiresEdt
@@ -462,11 +451,11 @@ class PermissionView(
     }
 
     // Test helpers
-    internal fun runButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.allow") || it.text == KiloBundle.message("session.permission.allow.once") }
-    internal fun denyButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.reject") }
+    internal fun runButtonForTest() = buttons(this).first { it.text == KiloBundle.message("session.permission.allow") || it.text == KiloBundle.message("session.permission.allow.once") }
+    internal fun denyButtonForTest() = buttons(this).first { it.text == KiloBundle.message("session.permission.reject") }
     internal fun codeLabelsForTest() = codeEditors()
     internal fun diffViewsForTest() = diffViews.toList()
-    internal fun headerFontForTest() = textAreas(card).first { it.font.isBold }.font
+    internal fun headerFontForTest() = textAreas(this).first { it.font.isBold }.font
     internal fun rulesForTest() = rules
 
     private fun buttons(root: Container): List<JButton> {

@@ -18,6 +18,10 @@
 - `packages/kilo-jetbrains/gradle.properties` `kilo.cli.pinned` ↔ Gradle and release-script gates
 - `.kilo/skills/release-jetbrains/script/check-pin.ts` / `set-pin.ts` ↔ release skill and CLI pin documentation
 
+### PR Hygiene
+
+- Do not include `.kilo/plans/**` files in JetBrains commits or PRs unless the user explicitly asks to publish plan files.
+
 ## IntelliJ Platform Source Lookup
 
 When looking for IntelliJ Platform API usage, implementation examples, extension points, services, actions, inspections, PSI/VFS/editor behavior, or plugin patterns, prefer real IntelliJ source code over Gradle caches, downloaded jars, generated parser artifacts, or decompiled classes.

@@ -70,7 +70,7 @@ class DisposedStateTest : SessionControllerTestBase() {
         gate.complete(Unit)
         flush()
 
-        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowRecents })
+        assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowEmpty })
     }
 
     fun `test disposed controller addListener is no-op`() {
