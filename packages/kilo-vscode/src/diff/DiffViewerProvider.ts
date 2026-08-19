@@ -55,6 +55,11 @@ export class DiffViewerProvider implements vscode.Disposable {
 
     if (this.panel && this.controller) {
       this.panel.reveal(this.panel.viewColumn ?? vscode.ViewColumn.One)
+      void this.panel.webview.postMessage({ type: "diffViewer.initialFile", file: this.ctx.initialFile })
+      void this.panel.webview.postMessage({
+        type: "diffViewer.initialMarkdown",
+        render: this.ctx.initialMarkdown === true,
+      })
       this.controller.setContext(this.ctx)
       const nextId = this.catalog.defaultSourceId(this.ctx)
       if (nextId && nextId !== this.controller.currentId) {
@@ -77,7 +82,13 @@ export class DiffViewerProvider implements vscode.Disposable {
    * the source picker hidden — the view becomes a static "diff of this turn"
    * rather than the switchable workspace/session viewer.
    */
-  openFromCommand(arg?: { sessionId?: string; turnId?: string; initialSourceId?: string; directory?: string }): void {
+  openFromCommand(arg?: {
+    sessionId?: string
+    turnId?: string
+    initialSourceId?: string
+    directory?: string
+    file?: string
+  }): void {
     const sessionId = arg?.sessionId ?? this.sessionIdProvider()
     const explicit = !!arg && "directory" in arg
     const dir = explicit ? arg.directory : sessionId ? this.sessionDirectoryProvider(sessionId) : undefined
@@ -87,6 +98,8 @@ export class DiffViewerProvider implements vscode.Disposable {
       sessionId,
       dir,
       initialSourceId: turnInitialSourceId ?? arg?.initialSourceId,
+      initialFile: arg?.file,
+      initialMarkdown: typeof arg?.file === "string" && /\.(md|mdx|markdown)$/i.test(arg.file),
       hidePicker: !!turnInitialSourceId,
     })
   }
@@ -229,6 +242,11 @@ export class DiffViewerProvider implements vscode.Disposable {
       workspaceDirectory: this.ctx?.dir ?? getWorkspaceRoot(),
     })
     void this.panel.webview.postMessage({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
+    void this.panel.webview.postMessage({ type: "diffViewer.initialFile", file: this.ctx?.initialFile })
+    void this.panel.webview.postMessage({
+      type: "diffViewer.initialMarkdown",
+      render: this.ctx?.initialMarkdown === true,
+    })
     const initial = this.ctx ? this.catalog.defaultSourceId(this.ctx) : undefined
     if (initial) this.swap(initial)
   }

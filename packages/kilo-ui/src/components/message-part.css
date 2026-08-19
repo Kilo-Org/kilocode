@@ -119,6 +119,7 @@
         color: var(--text-base);
       }
     }
+
   }
 
   [data-slot="message-part-title-filename"] {
@@ -154,6 +155,7 @@
     direction: rtl;
     text-align: left;
   }
+
 }
 
 /* Task tool child-session tool list (v1.0.25 style) */

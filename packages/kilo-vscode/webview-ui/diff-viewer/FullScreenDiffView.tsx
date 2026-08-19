@@ -90,6 +90,7 @@ interface FullScreenDiffViewProps {
   onMarkdownRenderChange?: (render: boolean) => void
   onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string, line?: number) => void
+  initialFile?: string
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
   activeTerminalId?: string
@@ -234,7 +235,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         // Keep active file in sync — pick first if current is stale
         const current = activeFile()
         if (!current || !diffs.some((d) => d.file === current)) {
-          setActiveFile(diffs[0]!.file)
+          const initial =
+            props.initialFile && diffs.some((d) => d.file === props.initialFile) ? props.initialFile : undefined
+          setActiveFile(initial ?? diffs[0]!.file)
         }
 
         // New context: initialize open state from the diff policy.

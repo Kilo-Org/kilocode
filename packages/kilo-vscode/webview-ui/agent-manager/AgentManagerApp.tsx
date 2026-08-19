@@ -180,6 +180,8 @@ import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { SubagentPanel } from "./SubagentPanel"
 import { createSubagentTabs } from "./subagent-tabs"
+import { DocumentPanelHost } from "./documents/DocumentPanelHost"
+import { createDocumentInspector } from "./documents/state"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, createPromptFocus, hasQuestionOption } from "./focus"
@@ -296,6 +298,7 @@ const AgentManagerContent: Component = () => {
   const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
   const diffOpen = () => sidePanel() === SidePanel.Diff
   const prOpen = () => sidePanel() === SidePanel.PR
+  const documentsOpen = () => sidePanel() === SidePanel.Documents
   const activePR = createMemo(() => {
     const selected = selection()
     if (!selected || selected === LOCAL) return undefined
@@ -308,8 +311,7 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // Diff, PR, terminal, and subagent views share one inspector width, restored
-  // from webview state so the user's divider position survives panel reloads.
+   // Diff, PR, terminal, and subagent views share one inspector width.
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
@@ -323,6 +325,17 @@ const AgentManagerContent: Component = () => {
   const reviewComposer = createReviewComposer()
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
+  const documentInspector = createDocumentInspector(
+    vscode,
+    selection,
+    documentsOpen,
+    () => {
+      setHistory(false)
+      setReviewActive(false)
+      setSidePanel(SidePanel.Documents)
+    },
+    () => setSidePanel(null),
+  )
   const subagents = createSubagentTabs({
     current: session.currentSessionID,
     sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
@@ -335,17 +348,14 @@ const AgentManagerContent: Component = () => {
     hide: () => setSidePanel(null),
   })
   const markdown = createMarkdownRender(vscode)
-  // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const worktreeStats = () => registry.active().worktreeStats()
 
   const prStatuses = () => registry.active().prStatuses()
-
   const runStatuses = () => registry.active().runStatuses()
   const setRunStatuses: Setter<Record<string, RunStatus>> = (v) => registry.active().setRunStatuses(v)
   const runScriptConfigured = () => registry.active().runScriptConfigured()
   const setRunScriptConfigured = (v: Parameters<Setter<boolean>>[0]) => registry.active().setRunScriptConfigured(v)
 
-  // Local repo git stats (branch name, diff additions/deletions, commits)
   const localStats = () => registry.active().localStats()
 
   const projectLive = createProjectLive({
@@ -495,15 +505,9 @@ const AgentManagerContent: Component = () => {
   )
   onCleanup(() => clearTimeout(pendingDeleteTimer))
 
-  // Per-context tab memory lives in the active project's store: maps sidebar
-  // selection ("local" or a worktree id) -> last active session/pending ID
   const tabMemory = () => registry.active().tabMemory.all()
 
-  const reviewOpen = createMemo(() => {
-    const sel = selection()
-    if (sel === null) return false
-    return reviewOpenByContext()[sel] === true
-  })
+  const reviewOpen = createMemo(() => selection() !== null && reviewOpenByContext()[selection()!] === true)
 
   const setReviewOpenForContext = (context: string, open: boolean) => {
     setReviewOpenByContext((prev) => {
@@ -2249,6 +2253,8 @@ const AgentManagerContent: Component = () => {
     setSidePanel((prev) => (prev === SidePanel.Diff ? null : SidePanel.Diff))
   }
 
+  const toggleDocumentsPanel = documentInspector.toggle
+
   const renderTabById = (id: string) =>
     renderTab(id, {
       terms,
@@ -2445,6 +2451,9 @@ const AgentManagerContent: Component = () => {
           prStatus={() => activePR()?.pr}
           prOpen={prOpen}
           onTogglePR={togglePRPanel}
+          documentsOpen={documentsOpen}
+          documentsAvailable={documentInspector.available}
+          onToggleDocuments={toggleDocumentsPanel}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
           terminalKeybind={() => kb().showTerminal ?? ""}
@@ -2662,6 +2671,7 @@ const AgentManagerContent: Component = () => {
                           if (id)
                             vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
                         }}
+                        onOpenDocument={documentInspector.open}
                         onRevertFile={metrics.use("revert_file", "side_review", revertCtl.revert)}
                         revertingFiles={revertCtl.reverting()}
                         activeTerminalId={terms.activeId()}
@@ -2696,6 +2706,12 @@ const AgentManagerContent: Component = () => {
                         onClosePanel={() => setSidePanel(null)}
                       />
                     </Show>
+                    <DocumentPanelHost
+                      inspector={documentInspector}
+                      onClosePanel={() => setSidePanel(null)}
+                      activeTerminalId={terms.activeId()}
+                      visible={documentsOpen}
+                    />
                     <SideTerminalPanel
                       state={terms}
                       contextKey={terms.sideKey}

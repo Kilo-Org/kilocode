@@ -1,0 +1,315 @@
+import { Dynamic } from "solid-js/web"
+import { Component, Show, Accessor, createMemo, createSignal, createEffect, on } from "solid-js"
+import { MarkdownPane } from "../../diff-viewer/MarkdownDiffView"
+import { isMarkdownPath, type DocumentData, type DocumentTab } from "./state"
+import { InspectorTabStrip } from "../InspectorTabStrip"
+import { SortableClosableTab } from "../ClosableTab"
+import { useCodeComponent } from "@kilocode/kilo-ui/context/code"
+import { FileIcon } from "@kilocode/kilo-ui/file-icon"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
+import type { WorktreeFileDiff } from "../../src/types/messages"
+import type { ReviewComment } from "../../diff-viewer/review-comments"
+import {
+  buildFileAnnotations,
+  buildReviewAnnotation,
+  createReviewComposer,
+  sendReviewComments,
+  type AnnotationLabels,
+  type AnnotationMeta,
+  type ReviewComposer,
+  type ReviewDraft,
+} from "../../diff-viewer/review-annotations"
+import { lineCount } from "../../diff-viewer/review-comments"
+import { useLanguage } from "../../src/context/language"
+
+export interface DocumentPanelProps {
+  tabs: Accessor<DocumentTab[]>
+  active: Accessor<string | undefined>
+  getData: (file: string) => DocumentData | undefined
+  comments: ReviewComment[]
+  onCommentsChange: (comments: ReviewComment[]) => void
+  onSelect: (id: string) => void
+  onClose: (id: string) => void
+  onCloseOthers: (id: string) => void
+  onReorder: (from: string, to: string) => void
+  onOpenFile: (file: string, line?: number) => void
+  onClosePanel: () => void
+  activeTerminalId?: string
+  visible: Accessor<boolean>
+}
+
+function pathName(file: string): string {
+  return file.slice(file.lastIndexOf("/") + 1)
+}
+
+function virtualDiff(file: string, content: string): WorktreeFileDiff {
+  return {
+    file,
+    before: "",
+    after: content,
+    additions: lineCount(content),
+    deletions: 0,
+    status: "added",
+  }
+}
+
+export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
+  const { t } = useLanguage()
+  const code = useCodeComponent()
+  const [source, setSource] = createSignal(false)
+  const [draft, setDraft] = createSignal<ReviewDraft | null>(null)
+  const [editing, setEditing] = createSignal<string | null>(null)
+  const composer: ReviewComposer = createReviewComposer()
+  let draftMeta: AnnotationMeta | null = null
+  let editMeta: AnnotationMeta | null = null
+  let nextId = 0
+
+  const selected = createMemo(() => {
+    const id = props.active()
+    return props.tabs().find((tab) => tab.id === id)
+  })
+  const data = () => {
+    const tab = selected()
+    return tab ? props.getData(tab.file) : undefined
+  }
+  const file = () => selected()?.file ?? ""
+  const content = () => data()?.content ?? ""
+  const diff = () => virtualDiff(file(), content())
+  const labels = (): AnnotationLabels => ({
+    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
+    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
+    placeholder: t("agentManager.review.commentPlaceholder"),
+    cancel: t("common.cancel"),
+    comment: t("agentManager.review.commentAction"),
+    send: t("prompt.action.send"),
+    save: t("common.save"),
+    sendToChat: t("agentManager.review.sendToChat"),
+    edit: t("common.edit"),
+    delete: t("common.delete"),
+  })
+
+  const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
+  const comments = () => props.comments.filter((item) => item.file === file())
+  const addComment = (path: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
+    updateComments([
+      ...props.comments,
+      { id: `doc-${++nextId}-${Date.now()}`, file: path, side, line, comment: text, selectedText },
+    ])
+    setDraft(null)
+    draftMeta = null
+    composer.draft = null
+  }
+  const sendComment = (path: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
+    sendReviewComments(
+      [{ id: `doc-${++nextId}-${Date.now()}`, file: path, side, line, comment: text, selectedText }],
+      props.activeTerminalId,
+    )
+    setDraft(null)
+    draftMeta = null
+    composer.draft = null
+  }
+  const updateComment = (id: string, text: string) => {
+    updateComments(props.comments.map((item) => (item.id === id ? { ...item, comment: text } : item)))
+    setEditing(null)
+    editMeta = null
+    composer.edit = null
+  }
+  const deleteComment = (id: string) => {
+    updateComments(props.comments.filter((item) => item.id !== id))
+    setEditing(null)
+    editMeta = null
+    composer.edit = null
+  }
+  const cancelDraft = () => {
+    setDraft(null)
+    draftMeta = null
+    composer.draft = null
+  }
+  const annotations = (): DiffLineAnnotation<AnnotationMeta>[] => {
+    const result = buildFileAnnotations(file(), comments(), editing(), draft(), draftMeta, editMeta)
+    draftMeta = result.draftMeta
+    editMeta = result.editMeta
+    composer.draft = draft() ? draftMeta : null
+    composer.edit = editing() ? editMeta : null
+    return result.annotations
+  }
+  const renderAnnotation = (annotation: DiffLineAnnotation<AnnotationMeta>) =>
+    buildReviewAnnotation(annotation, {
+      diffs: [diff()],
+      editing: editing(),
+      setEditing: (id) => setEditing(id),
+      addComment,
+      sendComment,
+      updateComment,
+      deleteComment,
+      cancelDraft,
+      labels: labels(),
+      activeTerminalId: props.activeTerminalId,
+    })
+  const gutter = (range: SelectedLineRange) => {
+    if (draft()) return
+    const side: AnnotationSide = "additions"
+    const next = { file: file(), side, line: range.start, endLine: range.end }
+    draftMeta = { type: "draft", comment: null, ...next }
+    composer.draft = draftMeta
+    setDraft(next)
+  }
+  const sendAll = () => {
+    if (comments().length === 0) return
+    sendReviewComments(comments(), props.activeTerminalId)
+    updateComments(props.comments.filter((item) => item.file !== file()))
+  }
+
+  createEffect(
+    on(
+      () => [file(), content(), props.comments] as const,
+      ([path, text, current]) => {
+        if (!path) return
+        const max = lineCount(text)
+        const valid = current.filter((item) => item.file !== path || (item.line >= 1 && item.line <= max))
+        if (valid.length !== current.length) updateComments(valid)
+        const currentDraft = draft()
+        if (currentDraft && currentDraft.file === path && currentDraft.line > max) cancelDraft()
+      },
+      { defer: true },
+    ),
+  )
+
+  const close = (id: string, focus: { restore: () => void }) => {
+    props.onClose(id)
+    if (props.tabs().length > 0) focus.restore()
+  }
+
+  return (
+    <section
+      class="am-document-panel"
+      classList={{ "am-document-panel-visible": props.visible() }}
+      aria-label={t("agentManager.documents.title")}
+      aria-hidden={!props.visible()}
+      inert={!props.visible()}
+    >
+      <header class="am-document-header">
+        <div class="am-document-heading">
+          <Icon name="book-open-check" size="small" />
+          <span>{t("agentManager.documents.title")}</span>
+          <span class="am-document-count">{props.tabs().length}</span>
+        </div>
+        <div class="am-document-actions">
+          <Show when={selected()}>
+            <Tooltip
+              value={source() ? t("agentManager.documents.preview") : t("agentManager.documents.source")}
+              placement="top"
+            >
+              <IconButton
+                icon={source() ? "eye" : "code"}
+                size="small"
+                variant="ghost"
+                label={source() ? t("agentManager.documents.preview") : t("agentManager.documents.source")}
+                onClick={() => setSource((value) => !value)}
+              />
+            </Tooltip>
+            <Tooltip value={t("agentManager.diff.openFile")} placement="top">
+              <IconButton
+                icon="go-to-file"
+                size="small"
+                variant="ghost"
+                label={t("agentManager.diff.openFile")}
+                onClick={() => props.onOpenFile(file())}
+              />
+            </Tooltip>
+          </Show>
+          <IconButton
+            icon="close"
+            size="small"
+            variant="ghost"
+            label={t("common.close")}
+            onClick={props.onClosePanel}
+          />
+        </div>
+      </header>
+      <InspectorTabStrip
+        ids={() => props.tabs().map((tab) => tab.id)}
+        active={props.active}
+        label={t("agentManager.documents.tabs")}
+        overlay={(id) => props.tabs().find((tab) => tab.id === id)?.file ?? ""}
+        onSelect={props.onSelect}
+        onReorder={props.onReorder}
+        renderTab={(id, api) => {
+          const tab = props.tabs().find((item) => item.id === id)!
+          return (
+            <SortableClosableTab
+              id={id}
+              class="am-document-tab"
+              label={pathName(tab.file)}
+              tooltip={tab.file}
+              icon="open-file"
+              iconNode={<FileIcon node={{ path: tab.file, type: "file" }} class="am-document-tab-icon" />}
+              showKeybind={false}
+              active={props.active() === id}
+              role="tab"
+              selected={props.active() === id}
+              tabIndex={props.active() === id ? 0 : -1}
+              onKeyDown={(event) => api.focus.key(id, event)}
+              onSelect={() => props.onSelect(id)}
+              onMiddleClick={(event) => {
+                if (event.button !== 1) return
+                event.preventDefault()
+                close(id, api.focus)
+              }}
+              onClose={() => close(id, api.focus)}
+              onCloseOthers={() => props.onCloseOthers(id)}
+            />
+          )
+        }}
+      />
+      <Show when={selected()} fallback={<div class="am-document-empty">{t("agentManager.documents.empty")}</div>}>
+        <Show when={data()?.loading}>
+          <div class="am-document-state">{t("agentManager.documents.loading")}</div>
+        </Show>
+        <Show when={data()?.error}>{(error) => <div class="am-document-state am-document-error">{error()}</div>}</Show>
+        <Show when={!data()?.loading && !data()?.error && data()?.kind === "image"}>
+          <div class="am-document-image-wrap">
+            <img src={`data:${data()?.mime};base64,${data()?.data}`} alt={file()} class="am-document-image" />
+          </div>
+        </Show>
+        <Show when={!data()?.loading && !data()?.error && data()?.kind !== "image"}>
+          <div class="am-document-content">
+            <Show
+              when={!source() && isMarkdownPath(file())}
+              fallback={
+                <Dynamic component={code} file={{ name: file(), contents: content() }} class="am-document-code" />
+              }
+            >
+              <MarkdownPane
+                text={content()}
+                side="additions"
+                cache={`${file()}:document`}
+                annotations={annotations()}
+                renderAnnotation={renderAnnotation}
+                enableGutterUtility={true}
+                onGutterUtilityClick={gutter}
+                onLineNumberClick={(event) => props.onOpenFile(file(), event.lineNumber)}
+              />
+            </Show>
+          </div>
+        </Show>
+      </Show>
+      <Show when={comments().length > 0}>
+        <div class="am-diff-comments-footer">
+          <span class="am-diff-comments-count">
+            {t("agentManager.documents.comments", { count: comments().length })}
+          </span>
+          <TooltipKeybind title={t("agentManager.review.sendAllToChat")} keybind="" placement="top">
+            <Button variant="primary" size="small" onClick={sendAll}>
+              {t("agentManager.review.sendAllToChat")}
+            </Button>
+          </TooltipKeybind>
+        </div>
+      </Show>
+    </section>
+  )
+}

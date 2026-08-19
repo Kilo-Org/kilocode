@@ -8,6 +8,7 @@ import type { ApplyConflict, GitOps } from "./GitOps"
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { remoteRef, type ManagedSession, type WorktreeStateManager } from "./WorktreeStateManager"
 import { parseDiffId, scopeToSourceId } from "./diff-scope"
+import { readDocument } from "./document-reader"
 import type { AgentManagerOutMessage, WorktreeDiffEntry } from "./types"
 
 const LOCAL_DIFF_ID = "local" as const
@@ -180,6 +181,41 @@ export class WorktreeDiffController {
       return
     }
     await this.controller.requestFile(file)
+  }
+
+  /** Resolve the base-branch choices for a context and push them to the webview. */
+  public async postBranches(id: string): Promise<void> {
+    const result = await this.branches(id).catch((err) => {
+      this.ctx.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
+      return undefined
+    })
+    if (!result) return
+    this.ctx.post({
+      type: "agentManager.diffBranches",
+      sessionId: id,
+      branches: result.branches,
+      defaultBranch: result.defaultBranch,
+      autoBase: result.autoBase,
+      currentBase: result.currentBase,
+      isAuto: result.isAuto,
+      currentBranch: result.currentBranch,
+    })
+  }
+
+  /**
+   * Read one file from a worktree for the document inspector. Reuses this
+   * controller's state/root context because a document read is a worktree file
+   * read, resolved against the same directory the diff for that context uses.
+   */
+  public document(sessionId: string, file: string): null {
+    const state = this.ctx.getState()
+    const worktree = state?.getWorktree(sessionId)
+    const session = worktree ? undefined : state?.getSession(sessionId)
+    const root =
+      worktree?.path ?? (session?.worktreeId ? state?.getWorktree(session.worktreeId)?.path : this.ctx.getRoot())
+    if (!root) return null
+    this.ctx.post({ type: "agentManager.document", sessionId, file, requestedFile: file, ...readDocument(root, file) })
+    return null
   }
 
   public start(id: string): void {

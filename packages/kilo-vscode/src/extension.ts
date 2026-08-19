@@ -278,6 +278,7 @@ export function activate(context: vscode.ExtensionContext) {
   diffViewerProvider.setCommentHandler((comments, autoSend) => {
     void provider.appendReviewComments(comments, autoSend)
   })
+  provider.setDiffViewerProvider(diffViewerProvider)
   context.subscriptions.push(diffViewerProvider)
 
   // Create diff virtual provider (lightweight single-file diff for permission approval)
