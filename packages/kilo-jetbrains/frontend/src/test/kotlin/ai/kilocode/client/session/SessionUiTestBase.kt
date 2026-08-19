@@ -89,8 +89,9 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         displayMs: Long = 0,
         open: ((SessionRef) -> Unit)? = null,
         migration: MigrationUiController = FakeMigrationUiController(),
+        manager: SessionManager? = null,
     ): SessionUi {
-        val manager = open?.let { fn ->
+        val owner = manager ?: open?.let { fn ->
             object : SessionManager {
                 override fun newSession() {}
                 override fun showHistory(back: (() -> Unit)?) {}
@@ -101,7 +102,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
             project, workspace, sessions, app, scope,
             ref = SessionRef.from(id),
             displayMs = displayMs,
-            manager = manager,
+            manager = owner,
             workspaces = workspaces,
             migration = migration,
         ).apply {

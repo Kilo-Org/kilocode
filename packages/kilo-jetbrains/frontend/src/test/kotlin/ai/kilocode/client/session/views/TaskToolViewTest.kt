@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.TaskToolView
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import com.intellij.openapi.util.Disposer
@@ -146,13 +147,33 @@ class TaskToolViewTest : BasePlatformTestCase() {
         assertEquals(0, scroll.verticalScrollBar.value)
     }
 
-    private fun view(tool: Tool): TaskToolView = TaskToolView(tool).also { views.add(it) }
+    fun `test open subagent icon appears only with child session and callback`() {
+        val closed = view(task(), onOpen = null)
+        val opened = view(task(), onOpen = { _, _ -> })
+        val missing = view(task(sessionId = null), onOpen = { _, _ -> })
 
-    private fun task(children: List<Tool> = emptyList()) = Tool("part_task", "task", toolKind("task")).also {
+        assertFalse(openIcon(closed).isVisible)
+        assertTrue(openIcon(opened).isVisible)
+        assertFalse(openIcon(missing).isVisible)
+    }
+
+    fun `test open subagent icon invokes callback without toggling body`() {
+        val calls = mutableListOf<Pair<String, String>>()
+        val view = view(task(), onOpen = { id, title -> calls.add(id to title) })
+
+        openIcon(view).doClick()
+
+        assertEquals(listOf("ses_child" to "Explore Agent - Find files"), calls)
+        assertFalse(view.isExpanded())
+    }
+
+    private fun view(tool: Tool, onOpen: ((String, String) -> Unit)? = null): TaskToolView = TaskToolView(tool, onOpenSubagent = onOpen).also { views.add(it) }
+
+    private fun task(children: List<Tool> = emptyList(), sessionId: String? = "ses_child") = Tool("part_task", "task", toolKind("task")).also {
         it.state = ToolExecState.COMPLETED
         it.input = mapOf("subagent_type" to "explore", "description" to "Find files")
-        it.metadata = mapOf("sessionId" to "ses_child")
-        it.childSessionId = "ses_child"
+        it.metadata = sessionId?.let { id -> mapOf("sessionId" to id) }.orEmpty()
+        it.childSessionId = sessionId
         it.childTools = children
     }
 
@@ -171,6 +192,8 @@ class TaskToolViewTest : BasePlatformTestCase() {
         val stack = descendants(body(view)).filterIsInstance<Stack>().singleOrNull() ?: return emptyList()
         return stack.components.toList()
     }
+
+    private fun openIcon(view: TaskToolView) = descendants(view).filterIsInstance<HoverIcon>().single()
 
     private fun rowText(view: TaskToolView) = rows(view).map { row ->
         descendants(row).filterIsInstance<JBLabel>().mapNotNull { label -> label.text.takeIf { it.isNotBlank() } }.joinToString(" ")

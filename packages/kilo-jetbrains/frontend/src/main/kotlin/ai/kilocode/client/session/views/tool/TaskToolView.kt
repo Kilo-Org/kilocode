@@ -9,9 +9,12 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
+import ai.kilocode.client.session.views.base.PartHeader
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ui.components.JBLabel
@@ -31,6 +34,7 @@ import kotlin.math.abs
 class TaskToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
+    private val onOpenSubagent: ((String, String) -> Unit)? = null,
     private val parts: ToolParts = toolParts(tool),
 ) : AbstractSessionPartView(parts.header, { TaskBody(parts.glyph).scroll }), UiDataProvider {
 
@@ -41,8 +45,16 @@ class TaskToolView(
     private val rows = LinkedHashMap<String, Row>()
     private var following = false
     private var collapsed = false
+    private val open = HoverIcon().apply {
+        icon = AllIcons.Actions.Preview
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+        toolTipText = KiloBundle.message("session.part.tool.openSubagent")
+        accessibleContext.accessibleName = KiloBundle.message("session.part.tool.openSubagent")
+        addActionListener { openSubagent() }
+    }
 
     init {
+        parts.header.right(PartHeader.centered(open))
         applyStyle(style)
         sync()
         if (item.childTools.isNotEmpty()) expand()
@@ -120,7 +132,14 @@ class TaskToolView(
         changed = setForeground(parts.title, titleColor(item)) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
+        changed = setVisible(open, item.childSessionId != null && onOpenSubagent != null) || changed
         return changed
+    }
+
+    private fun openSubagent() {
+        val id = item.childSessionId ?: return
+        val title = listOf(agentTitle(item), summary(item)).filter { it.isNotBlank() }.joinToString(" - ")
+        onOpenSubagent?.invoke(id, title)
     }
 
     private fun syncRows(): Boolean {
