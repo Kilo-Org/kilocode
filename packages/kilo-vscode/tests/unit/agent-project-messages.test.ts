@@ -30,7 +30,6 @@ function setup(opts: { enabled?: boolean; workspace?: string } = {}) {
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.workspace ?? WORKSPACE,
     registry,
-    trusted: (id) => registry.get(id)?.trusted === true,
     enabled: () => opts.enabled ?? true,
     deps: { log: () => {}, exists: (dir) => fs.existsSync(dir) },
   })
@@ -90,13 +89,12 @@ describe("handleProjectMessage", () => {
       msg("agentManager.removeProject", { projectId: "prj-x" }),
       msg("agentManager.selectProject", { projectId: "prj-x" }),
       msg("agentManager.setProjectExpanded", { projectId: "prj-x", expanded: true }),
-      msg("agentManager.trustProject", { projectId: "prj-x" }),
     ]) {
       await handleProjectMessage(m, deps)
     }
     expect(calls.pick).toBe(0)
     expect(calls.activate).toEqual([])
-    expect(calls.error.length).toBe(5)
+    expect(calls.error.length).toBe(4)
   })
 
   it("adds a picked git repository to the registry", async () => {
@@ -107,7 +105,6 @@ describe("handleProjectMessage", () => {
     const id = projectIdFor(repo)
     const project = registry.get(id)
     expect(project?.root).toBe(repo)
-    expect(project?.trusted).toBe(false)
     expect(calls.push).toBe(1)
     expect(calls.error).toEqual([])
   })
@@ -146,25 +143,20 @@ describe("handleProjectMessage", () => {
     expect(calls.push).toBe(0)
   })
 
-  it("blocks selecting an untrusted project until trusted", async () => {
+  it("selects a registered project without a separate trust step", async () => {
     const repo = gitRepo()
     const { deps, registry, calls, pick } = setup()
     const id = projectIdFor(repo)
     await registry.add({ id, root: repo })
     await handleProjectMessage(msg("agentManager.selectProject", { projectId: id }), deps)
-    expect(calls.activate).toEqual([])
-    expect(calls.error.length).toBe(1)
-    await handleProjectMessage(msg("agentManager.trustProject", { projectId: id }), deps)
-    await handleProjectMessage(msg("agentManager.selectProject", { projectId: id }), deps)
     expect(calls.activate).toEqual([id])
   })
 
-  it("initializes trusted projects on expand", async () => {
+  it("initializes projects on expand", async () => {
     const repo = gitRepo()
     const { deps, registry, calls } = setup()
     const id = projectIdFor(repo)
     await registry.add({ id, root: repo })
-    await registry.setTrusted(id, true)
     await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: true }), deps)
     expect(calls.expand).toEqual([id])
     await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: false }), deps)
@@ -176,8 +168,6 @@ describe("handleProjectMessage", () => {
     const { deps, registry, storage, calls } = setup()
     const id = projectIdFor(repo)
     await registry.add({ id, root: repo })
-    await registry.setTrusted(id, true)
-
     await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: true }), deps)
 
     const restored = new ProjectRegistry(storage)
@@ -201,13 +191,13 @@ describe("handleProjectMessage", () => {
     expect(registry.list()).toEqual([])
   })
 
-  it("does not initialize untrusted projects on expand", async () => {
+  it("does not initialize missing projects on expand", async () => {
     const repo = gitRepo()
     const { deps, registry, calls } = setup()
     const id = projectIdFor(repo)
     await registry.add({ id, root: repo })
     await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: true }), deps)
-    expect(calls.expand).toEqual([])
+    expect(calls.expand).toEqual([id])
   })
 
   it("removes projects without touching the pinned fallback", async () => {
@@ -215,7 +205,6 @@ describe("handleProjectMessage", () => {
     const { deps, registry, contexts, calls } = setup()
     const id = projectIdFor(repo)
     await registry.add({ id, root: repo })
-    await registry.setTrusted(id, true)
     await handleProjectMessage(msg("agentManager.selectProject", { projectId: id }), deps)
     await handleProjectMessage(msg("agentManager.removeProject", { projectId: id }), deps)
     expect(registry.get(id)).toBeUndefined()

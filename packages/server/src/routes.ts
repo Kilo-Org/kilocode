@@ -6,6 +6,7 @@ import { EventV2 } from "@opencode-ai/core/event"
 import { Credential } from "@opencode-ai/core/credential"
 import { PermissionSaved } from "@opencode-ai/core/permission/saved"
 import { PtyTicket } from "@opencode-ai/core/pty/ticket"
+import { Pty } from "@opencode-ai/core/pty" // kilocode_change
 import { SessionV2 } from "@opencode-ai/core/session"
 import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { LocationServiceMap } from "@opencode-ai/core/location-service-map"
@@ -32,6 +33,7 @@ const applicationServices = LayerNode.group([
   SessionV2.node,
   PermissionSaved.node,
   PtyTicket.node,
+  Pty.shutdownNode, // kilocode_change
   Credential.node,
   PtyEnvironment.node,
   LocationServiceMap.node,

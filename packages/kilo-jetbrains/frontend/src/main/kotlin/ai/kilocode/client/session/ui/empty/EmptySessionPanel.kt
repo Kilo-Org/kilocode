@@ -38,6 +38,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.SwingUtilities
 
 /**
  * Empty-session panel.
@@ -54,8 +55,14 @@ class EmptySessionPanel(
     private val titles: () -> Map<String, String> = { emptyMap() },
     private val browse: (String) -> Unit = BrowserUtil::browse,
     private val timers: UiTimerSource = UiTimers,
+    private val minimal: Boolean = false,
 ) : BorderLayoutPanel(), Disposable, SessionEditorStyleTarget {
-    val view: Align = align(HAlign.CENTER, VAlign.CENTER)
+    private var style = SessionEditorStyle.current()
+    val view: Align = align(
+        HAlign.CENTER,
+        VAlign.CENTER,
+        maxW = { SessionUiStyle.SessionLayout.readableWidth(this, style.transcriptFont) },
+    )
 
     private val timer = timers.timer(ACTIVITY_MS) { syncActivity() }
     internal val recent = RecentsList(recents, controller)
@@ -65,6 +72,12 @@ class EmptySessionPanel(
     }
 
     private val feedback = EmptySessionFeedback(browse)
+
+    private val logo = JBLabel(
+        IconLoader.getIcon("/icons/kilo-content.svg", EmptySessionPanel::class.java),
+    ).apply {
+        horizontalAlignment = JBLabel.CENTER
+    }
 
     private val welcomeLabel = JBLabel(welcomeHtml()).apply {
         foreground = SessionUiStyle.Text.Secondary.foreground()
@@ -106,26 +119,22 @@ class EmptySessionPanel(
         val gap = UiStyle.Gap.pad()
         layout = BorderLayout(0, gap)
 
-        val logo = JBLabel(
-            IconLoader.getIcon("/icons/kilo-content.svg", EmptySessionPanel::class.java),
-        ).apply {
-            horizontalAlignment = JBLabel.CENTER
-        }
         val header = BorderLayoutPanel(0, gap).apply {
             isOpaque = false
             add(logo, BorderLayout.NORTH)
-            add(description.align(HAlign.CENTER, VAlign.CENTER), BorderLayout.CENTER)
+            if (!minimal) add(description.align(HAlign.CENTER, VAlign.CENTER), BorderLayout.CENTER)
         }
 
+        val actions = Stack.vertical(gap = UiStyle.Gap.lg())
+        if (!minimal) actions.next(Centerizer(historyButton, Centerizer.TYPE.HORIZONTAL))
+        actions.next(Centerizer(feedback.button, Centerizer.TYPE.HORIZONTAL))
         val south = BorderLayoutPanel().apply {
             isOpaque = false
-            add(Stack.vertical(gap = UiStyle.Gap.lg())
-                .next(Centerizer(historyButton, Centerizer.TYPE.HORIZONTAL))
-                .next(Centerizer(feedback.button, Centerizer.TYPE.HORIZONTAL)), BorderLayout.CENTER)
+            add(actions, BorderLayout.CENTER)
         }
 
         add(header, BorderLayout.NORTH)
-        if (recent.hasSessions()) add(recent, BorderLayout.CENTER)
+        if (!minimal && recent.hasSessions()) add(recent, BorderLayout.CENTER)
         add(south, BorderLayout.SOUTH)
     }
 
@@ -163,7 +172,15 @@ class EmptySessionPanel(
 
     internal fun showHistoryCursor() = historyButton.cursor.type
 
-    internal fun recentVisible() = recent.hasSessions()
+    internal fun recentVisible() = !minimal && recent.hasSessions()
+
+    internal fun historyVisible() = SwingUtilities.isDescendingFrom(historyButton, this)
+
+    internal fun feedbackVisible() = SwingUtilities.isDescendingFrom(feedback.button, this)
+
+    internal fun descriptionVisible() = SwingUtilities.isDescendingFrom(welcomeLabel, this)
+
+    internal fun logoVisible() = SwingUtilities.isDescendingFrom(logo, this)
 
     internal fun explanationText() = KiloBundle.message("session.empty.welcome")
 
@@ -248,6 +265,7 @@ class EmptySessionPanel(
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
+        this.style = style
         welcomeLabel.font = style.regularFont
         recent.applyStyle(style)
         revalidate()

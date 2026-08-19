@@ -7,27 +7,7 @@ import type { PRStatus } from "../../src/types/messages"
 import type { PRComment } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
 import { CopyButton } from "./CopyButton"
-
-function DiffHunk(props: { hunk: string }) {
-  const lines = () => props.hunk.split("\n")
-  return (
-    <div class="am-pr-diff-hunk">
-      <Index each={lines()}>
-        {(line) => {
-          const text = line()
-          const cls = text.startsWith("+")
-            ? "am-pr-diff-line-add"
-            : text.startsWith("-")
-              ? "am-pr-diff-line-del"
-              : text.startsWith("@@")
-                ? "am-pr-diff-line-meta"
-                : "am-pr-diff-line-ctx"
-          return <div class={`am-pr-diff-line ${cls}`}>{text || " "}</div>
-        }}
-      </Index>
-    </div>
-  )
-}
+import { PRCommentDiff } from "../../diff-viewer/PRCommentDiff"
 
 function CommentCard(props: { comment: PRComment; worktreeId: string }) {
   const vscode = useVSCode()
@@ -83,7 +63,9 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
 
   return (
     <div class="am-pr-panel-comment" classList={{ "am-pr-panel-comment-resolved": resolved() }}>
-      <Show when={props.comment.diffHunk}>{(hunk) => <DiffHunk hunk={hunk()} />}</Show>
+      <Show when={props.comment.diffHunk && props.comment.file}>
+        <PRCommentDiff file={props.comment.file!} hunk={props.comment.diffHunk!} />
+      </Show>
       <div class="am-pr-panel-comment-header am-pr-row">
         <span class="am-pr-panel-comment-author">{props.comment.author}</span>
         <Show when={props.comment.file}>

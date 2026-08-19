@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "Стиснути сесію",
   "command.session.export": "Експортувати запис сеансу",
 
-  "agentRequirements.skill.installed": "Встановлено",
-  "agentRequirements.skill.checkFailed": "Не вдалося перевірити навичку",
-  "agentRequirements.skill.missing": "Не встановлено",
-  "agentRequirements.mcp.connected": "Підключено",
-  "agentRequirements.mcp.checkFailed": "Не вдалося перевірити MCP",
-  "agentRequirements.mcp.missing": "Не підключено",
-  "agentRequirements.extension.installed": "Встановлено",
-  "agentRequirements.extension.checkFailed": "Не вдалося перевірити розширення VS Code",
-  "agentRequirements.extension.missing": "Не встановлено",
-  "agentRequirements.extension.description": "Встановіть відсутні розширення у VS Code.",
-  "agentRequirements.group.skills": "Навички",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "Розширення VS Code",
-  "agentRequirements.blocked.title": "Передумови агента {{agent}}",
-  "agentRequirements.blocked.description": "Цьому агенту потрібні такі інструменти, перш ніж він зможе працювати.",
-  "agentRequirements.prompt.blocked": "Спочатку завершіть необхідні перевірки, щоб використати цього агента",
-  "agentRequirements.action.openMarketplace": "Відкрити Marketplace",
-  "agentRequirements.error.unknownAgent": "Вибраного агента не знайдено.",
-  "agentRequirements.error.malformedDeclaration": "Цей агент має недійсну декларацію вимог.",
-  "agentRequirements.error.discoveryFailed": "Kilo не зміг перевірити доступні навички.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo не зміг перевірити стан сервера MCP.",
-  "agentRequirements.error.scopeMismatch": "Ця перевірка вимог агента більше не активна.",
-  "agentRequirements.error.requestFailed": "Kilo не зміг перевірити вимоги агента.",
-
   "dialog.provider.search.placeholder": "Пошук провайдера",
   "dialog.provider.empty": "Провайдерів не знайдено",
   "dialog.provider.group.other": "Інші",
@@ -857,12 +833,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Увімкнути SWE-Pruner: обрізання з урахуванням завдання великих виводів інструментів читання, пошуку та оболонки, кероване фокус-питанням, наданим агентом",
-  "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Модель для обрізання виводу інструментів; за замовчуванням — налаштована мала модель",
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",

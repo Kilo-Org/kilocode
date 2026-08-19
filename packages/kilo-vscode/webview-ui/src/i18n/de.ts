@@ -84,31 +84,6 @@ export const dict = {
   "command.session.compact": "Sitzung komprimieren",
   "command.session.export": "Sitzungsprotokoll exportieren",
 
-  "agentRequirements.skill.installed": "Installiert",
-  "agentRequirements.skill.checkFailed": "Die Skill-Prüfung ist fehlgeschlagen",
-  "agentRequirements.skill.missing": "Nicht installiert",
-  "agentRequirements.mcp.connected": "Verbunden",
-  "agentRequirements.mcp.checkFailed": "Die MCP-Prüfung ist fehlgeschlagen",
-  "agentRequirements.mcp.missing": "Nicht verbunden",
-  "agentRequirements.extension.installed": "Installiert",
-  "agentRequirements.extension.checkFailed": "Die Prüfung der VS Code-Erweiterung ist fehlgeschlagen",
-  "agentRequirements.extension.missing": "Nicht installiert",
-  "agentRequirements.extension.description": "Installiere die fehlenden Erweiterungen in VS Code.",
-  "agentRequirements.group.skills": "Skills",
-  "agentRequirements.group.mcps": "MCPs",
-  "agentRequirements.group.extensions": "VS Code-Erweiterungen",
-  "agentRequirements.blocked.title": "Voraussetzungen für den Agenten {{agent}}",
-  "agentRequirements.blocked.description":
-    "Dieser Agent benötigt die folgenden Werkzeuge, bevor er ausgeführt werden kann.",
-  "agentRequirements.prompt.blocked": "Schließe zuerst die erforderlichen Prüfungen ab, um diesen Agenten zu verwenden",
-  "agentRequirements.action.openMarketplace": "Marketplace öffnen",
-  "agentRequirements.error.unknownAgent": "Der ausgewählte Agent wurde nicht gefunden.",
-  "agentRequirements.error.malformedDeclaration": "Dieser Agent hat eine ungültige Anforderungsdeklaration.",
-  "agentRequirements.error.discoveryFailed": "Kilo konnte die verfügbaren Skills nicht prüfen.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo konnte den MCP-Serverstatus nicht prüfen.",
-  "agentRequirements.error.scopeMismatch": "Diese Prüfung der Agentenanforderungen ist nicht mehr aktiv.",
-  "agentRequirements.error.requestFailed": "Kilo konnte die Agentenanforderungen nicht prüfen.",
-
   "dialog.provider.search.placeholder": "Anbieter durchsuchen",
   "dialog.provider.empty": "Keine Anbieter gefunden",
   "dialog.provider.group.other": "Andere",
@@ -887,12 +862,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Zusätzliche schreibbare Pfade",
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner aktivieren: aufgabenbewusstes Kürzen großer Ausgaben der Lese-, Such- und Shell-Werkzeuge, gesteuert durch eine vom Agenten bereitgestellte Fokusfrage",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
-  "settings.experimental.swePrunerModel.description":
-    "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",

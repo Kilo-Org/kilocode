@@ -78,31 +78,6 @@ export const dict = {
   "command.session.compact": "Compactar sesión",
   "command.session.export": "Exportar transcripción de la sesión",
 
-  "agentRequirements.skill.installed": "Instalada",
-  "agentRequirements.skill.checkFailed": "La comprobación de la habilidad falló",
-  "agentRequirements.skill.missing": "No instalada",
-  "agentRequirements.mcp.connected": "Conectado",
-  "agentRequirements.mcp.checkFailed": "La comprobación de MCP falló",
-  "agentRequirements.mcp.missing": "No conectado",
-  "agentRequirements.extension.installed": "Instalada",
-  "agentRequirements.extension.checkFailed": "La comprobación de la extensión de VS Code falló",
-  "agentRequirements.extension.missing": "No instalada",
-  "agentRequirements.extension.description": "Instala las extensiones que faltan en VS Code.",
-  "agentRequirements.group.skills": "Habilidades",
-  "agentRequirements.group.mcps": "MCPs",
-  "agentRequirements.group.extensions": "Extensiones de VS Code",
-  "agentRequirements.blocked.title": "Requisitos previos del agente {{agent}}",
-  "agentRequirements.blocked.description":
-    "Este agente necesita las siguientes herramientas antes de poder ejecutarse.",
-  "agentRequirements.prompt.blocked": "Completa primero las comprobaciones requeridas para usar este agente",
-  "agentRequirements.action.openMarketplace": "Abrir Marketplace",
-  "agentRequirements.error.unknownAgent": "No se pudo encontrar el agente seleccionado.",
-  "agentRequirements.error.malformedDeclaration": "Este agente tiene una declaración de requisitos no válida.",
-  "agentRequirements.error.discoveryFailed": "Kilo no pudo comprobar las habilidades disponibles.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo no pudo comprobar el estado del servidor MCP.",
-  "agentRequirements.error.scopeMismatch": "Esta comprobación de requisitos del agente ya no está activa.",
-  "agentRequirements.error.requestFailed": "Kilo no pudo comprobar los requisitos del agente.",
-
   "dialog.provider.search.placeholder": "Buscar proveedores",
   "dialog.provider.empty": "No se encontraron proveedores",
   "dialog.provider.group.other": "Otro",
@@ -876,12 +851,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Activar SWE-Pruner: poda de los resultados extensos de las herramientas de lectura, búsqueda y shell que tiene en cuenta la tarea y está guiada por una pregunta de enfoque proporcionada por el agente",
-  "settings.experimental.swePrunerModel.title": "Modelo de SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Modelo usado para podar las salidas de herramientas; por defecto, el modelo pequeño configurado",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
   "settings.experimental.multiProject.description":
     "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",

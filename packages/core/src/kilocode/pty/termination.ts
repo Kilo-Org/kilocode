@@ -67,10 +67,7 @@ function descendants(root: number, rows: Array<{ pid: number; parent: number }>)
 }
 
 async function family(root: number, input: Runtime) {
-  const rows = await input.tree().catch((err) => {
-    log.debug("failed to inspect PTY process tree", { err, pid: root })
-    return []
-  })
+  const rows = await input.tree()
   return [...descendants(root, rows), root]
 }
 
@@ -90,7 +87,7 @@ function signal(proc: Process, pids: number[], value: "SIGTERM" | "SIGKILL", inp
 }
 
 async function tree(file: string = "ps", args: string[] = ["-axo", "pid=,ppid="]) {
-  return await new Promise<Array<{ pid: number; parent: number }>>((resolve) => {
+  return await new Promise<Array<{ pid: number; parent: number }>>((resolve, reject) => {
     try {
       const child = spawn(file, args, {
         stdio: ["ignore", "pipe", "ignore"],
@@ -100,9 +97,9 @@ async function tree(file: string = "ps", args: string[] = ["-axo", "pid=,ppid="]
       })
       const chunks: Buffer[] = []
       child.stdout?.on("data", (chunk: Buffer) => chunks.push(chunk))
-      child.once("error", () => resolve([]))
+      child.once("error", reject)
       child.once("close", (code) => {
-        if (code !== 0) return resolve([])
+        if (code !== 0) return reject(new Error(`process tree command exited with ${code}`))
         const rows = Buffer.concat(chunks)
           .toString("utf8")
           .trim()
@@ -113,17 +110,13 @@ async function tree(file: string = "ps", args: string[] = ["-axo", "pid=,ppid="]
           .map(([pid, parent]) => ({ pid: pid!, parent: parent! }))
         resolve(rows)
       })
-    } catch {
-      resolve([])
+    } catch (error) {
+      reject(error)
     }
   })
 }
 
-async function taskkill(
-  file: string,
-  args: string[],
-  opts: { stdio: "ignore"; windowsHide: true; timeout: number },
-) {
+async function taskkill(file: string, args: string[], opts: { stdio: "ignore"; windowsHide: true; timeout: number }) {
   return await new Promise<boolean>((resolve) => {
     try {
       const child = spawn(file, args, opts)
@@ -148,6 +141,7 @@ export async function terminate(proc: Process, input: Runtime = runtime): Promis
     if (!proc.pid) {
       direct(proc)
       if (!state.exited) await input.sleep(GRACE_MS)
+      await verify(proc, state.exited, input)
       return
     }
 
@@ -159,6 +153,7 @@ export async function terminate(proc: Process, input: Runtime = runtime): Promis
       })
       if (!killed && !state.exited) direct(proc)
       if (!state.exited) await input.sleep(GRACE_MS)
+      await verify(proc, state.exited, input)
       return
     }
 
@@ -171,9 +166,17 @@ export async function terminate(proc: Process, input: Runtime = runtime): Promis
       signal(proc, [...remaining], "SIGKILL", input)
       await input.sleep(GRACE_MS)
     }
+    await verify(proc, state.exited, input)
   } finally {
     listener.dispose()
   }
+}
+
+async function verify(proc: Process, exited: boolean, input: Runtime) {
+  if (!proc.pid) return
+  const live = (await family(proc.pid, input)).filter((pid) => input.alive(pid) && !(pid === proc.pid && exited))
+  if (!exited && input.alive(proc.pid) && !live.includes(proc.pid)) live.push(proc.pid)
+  if (live.length > 0) throw new Error(`PTY process tree is still alive: ${live.join(", ")}`)
 }
 
 export * as KiloPtyTermination from "./termination"

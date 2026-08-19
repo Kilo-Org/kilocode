@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "Compactar sessão",
   "command.session.export": "Exportar transcrição da sessão",
 
-  "agentRequirements.skill.installed": "Instalado",
-  "agentRequirements.skill.checkFailed": "A verificação da skill falhou",
-  "agentRequirements.skill.missing": "Não instalado",
-  "agentRequirements.mcp.connected": "Conectado",
-  "agentRequirements.mcp.checkFailed": "A verificação do MCP falhou",
-  "agentRequirements.mcp.missing": "Não conectado",
-  "agentRequirements.extension.installed": "Instalada",
-  "agentRequirements.extension.checkFailed": "A verificação da extensão do VS Code falhou",
-  "agentRequirements.extension.missing": "Não instalada",
-  "agentRequirements.extension.description": "Instale as extensões ausentes no VS Code.",
-  "agentRequirements.group.skills": "Skills",
-  "agentRequirements.group.mcps": "MCPs",
-  "agentRequirements.group.extensions": "Extensões do VS Code",
-  "agentRequirements.blocked.title": "Pré-requisitos do agente {{agent}}",
-  "agentRequirements.blocked.description": "Este agente precisa das seguintes ferramentas antes de poder executar.",
-  "agentRequirements.prompt.blocked": "Conclua primeiro as verificações necessárias para usar este agente",
-  "agentRequirements.action.openMarketplace": "Abrir Marketplace",
-  "agentRequirements.error.unknownAgent": "O agente selecionado não foi encontrado.",
-  "agentRequirements.error.malformedDeclaration": "Este agente tem uma declaração de requisitos inválida.",
-  "agentRequirements.error.discoveryFailed": "O Kilo não conseguiu verificar as skills disponíveis.",
-  "agentRequirements.error.mcpStatusFailed": "O Kilo não conseguiu verificar o status do servidor MCP.",
-  "agentRequirements.error.scopeMismatch": "Esta verificação de requisitos do agente não está mais ativa.",
-  "agentRequirements.error.requestFailed": "O Kilo não conseguiu verificar os requisitos do agente.",
-
   "dialog.provider.search.placeholder": "Buscar provedores",
   "dialog.provider.empty": "Nenhum provedor encontrado",
   "dialog.provider.group.other": "Outro",
@@ -873,12 +849,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Ativar SWE-Pruner: poda das saídas grandes das ferramentas de leitura, busca e shell levando em conta a tarefa, guiada por uma pergunta de foco fornecida pelo agente",
-  "settings.experimental.swePrunerModel.title": "Modelo do SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Modelo usado para podar as saídas das ferramentas; por padrão, o modelo pequeno configurado",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
   "settings.experimental.multiProject.description":
     "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",

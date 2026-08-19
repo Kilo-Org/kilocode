@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "PROSJEKTER",
   "agentManager.project.add": "Legg til prosjekt",
   "agentManager.project.remove": "Fjern fra Agent Manager",
-  "agentManager.project.trust": "Stol på",
   "agentManager.project.missing": "Repository ikke funnet",
   "agentManager.notGitRepo": "Ikke et git-repositorium",
   "agentManager.worktree.settings": "Worktree-innstillinger",
@@ -116,7 +115,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Fjern utdatert Worktree",
 
   "agentManager.dialog.project.select": "Velg prosjekt",
-  "agentManager.dialog.project.untrusted": "Stol på dette prosjektet i sidepanelet først",
   "agentManager.dialog.project.missing": "Repository ikke funnet",
   "agentManager.dialog.openWorktree": "Ny worktree",
   "agentManager.dialog.configureWorktree": "Konfigurer Nytt Worktree...",

@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "Sažmi sesiju",
   "command.session.export": "Izvezi transkript sesije",
 
-  "agentRequirements.skill.installed": "Instalirano",
-  "agentRequirements.skill.checkFailed": "Provjera vještine nije uspjela",
-  "agentRequirements.skill.missing": "Nije instalirano",
-  "agentRequirements.mcp.connected": "Povezano",
-  "agentRequirements.mcp.checkFailed": "Provjera MCP-a nije uspjela",
-  "agentRequirements.mcp.missing": "Nije povezano",
-  "agentRequirements.extension.installed": "Instalirano",
-  "agentRequirements.extension.checkFailed": "Provjera VS Code ekstenzije nije uspjela",
-  "agentRequirements.extension.missing": "Nije instalirano",
-  "agentRequirements.extension.description": "Instalirajte nedostajuće ekstenzije u VS Code.",
-  "agentRequirements.group.skills": "Vještine",
-  "agentRequirements.group.mcps": "MCP-ovi",
-  "agentRequirements.group.extensions": "VS Code ekstenzije",
-  "agentRequirements.blocked.title": "Preduslovi za agenta {{agent}}",
-  "agentRequirements.blocked.description": "Ovom agentu su potrebni sljedeći alati prije pokretanja.",
-  "agentRequirements.prompt.blocked": "Prvo dovršite potrebne provjere da biste koristili ovog agenta",
-  "agentRequirements.action.openMarketplace": "Otvori Marketplace",
-  "agentRequirements.error.unknownAgent": "Odabrani agent nije pronađen.",
-  "agentRequirements.error.malformedDeclaration": "Ovaj agent ima neispravnu deklaraciju zahtjeva.",
-  "agentRequirements.error.discoveryFailed": "Kilo nije mogao provjeriti dostupne vještine.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo nije mogao provjeriti status MCP servera.",
-  "agentRequirements.error.scopeMismatch": "Ova provjera zahtjeva agenta više nije aktivna.",
-  "agentRequirements.error.requestFailed": "Kilo nije mogao provjeriti zahtjeve agenta.",
-
   "dialog.provider.search.placeholder": "Pretraži provajdere",
   "dialog.provider.empty": "Nema pronađenih provajdera",
   "dialog.provider.group.other": "Ostalo",
@@ -867,12 +843,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Omogući SWE-Pruner: orezivanje velikih izlaza alata za čitanje i pretragu te shell alata koje uzima zadatak u obzir, vođeno fokusnim pitanjem koje pruža agent",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
-  "settings.experimental.swePrunerModel.description":
-    "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
