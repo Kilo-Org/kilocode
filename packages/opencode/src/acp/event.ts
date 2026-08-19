@@ -1,6 +1,7 @@
 import type { AgentSideConnection } from "@agentclientprotocol/sdk"
 import type {
   Event,
+  EventMessageUpdated, // kilocode_change
   EventMessagePartDelta,
   EventMessagePartUpdated,
   KiloClient,
@@ -41,8 +42,7 @@ export class Subscription {
   private readonly shellSnapshots = new Map<string, string>()
   private readonly toolStarts = new Set<string>()
   private readonly connectionWaiters = new Set<() => void>()
-  private readonly idleWaiters = new Map<string, Set<ReturnType<typeof signal>>>()
-  private readonly idleCounters = new Map<string, number>() // kilocode_change
+  private readonly idleWaiters = new Map<string, Set<ReturnType<typeof turn>>>() // kilocode_change
   private readonly permission: ACPPermission.Handler
   private connected = false
   private started = false
@@ -74,9 +74,8 @@ export class Subscription {
 
   async runUntilIdle<A>(sessionId: string, request: () => Promise<A>) {
     await this.waitUntilConnected()
-    // kilocode_change start - correlate idle waiter with per-session generation count
-    const start = this.idleCounters.get(sessionId) ?? 0
-    const waiter = signal()
+    // kilocode_change start - correlate idle waiter with the request's response message
+    const waiter = turn()
     const waiters = this.idleWaiters.get(sessionId) ?? new Set()
     waiters.add(waiter)
     this.idleWaiters.set(sessionId, waiters)
@@ -84,7 +83,9 @@ export class Subscription {
     try {
       void waiter.promise.catch(() => {})
       const response = await request()
-      if (this.connected && (this.idleCounters.get(sessionId) ?? 0) === start) {
+      const id = (response as { data?: { info?: { id?: string } } }).data?.info?.id
+      waiter.target(id ?? (await this.latest(sessionId)))
+      if (this.connected) {
         let timer: ReturnType<typeof setTimeout> | undefined
         try {
           await Promise.race([
@@ -100,10 +101,7 @@ export class Subscription {
       return response
     } finally {
       waiters.delete(waiter)
-      if (waiters.size === 0) {
-        this.idleWaiters.delete(sessionId)
-        this.idleCounters.delete(sessionId) // kilocode_change
-      }
+      if (waiters.size === 0) this.idleWaiters.delete(sessionId)
     }
     // kilocode_change end
   }
@@ -115,6 +113,9 @@ export class Subscription {
         return
       case "permission.asked":
         this.permission.handle(event)
+        return
+      case "message.updated":
+        this.message(event) // kilocode_change - correlate idle with this response message
         return
       case "message.part.updated":
         return this.handlePartUpdated(event)
@@ -212,10 +213,29 @@ export class Subscription {
   private idle(sessionId: string) {
     const waiters = this.idleWaiters.get(sessionId)
     if (!waiters) return
-    this.idleCounters.set(sessionId, (this.idleCounters.get(sessionId) ?? 0) + 1) // kilocode_change
-    this.idleWaiters.delete(sessionId)
-    for (const waiter of waiters) waiter.resolve()
+    for (const waiter of waiters) waiter.idle() // kilocode_change
   }
+
+  // kilocode_change start
+  private async latest(sessionId: string) {
+    const session = await Effect.runPromise(this.input.session.tryGet(sessionId))
+    if (!session) throw new Error(`Missing ACP session: ${sessionId}`)
+    const response = await this.input.sdk.session.messages(
+      { sessionID: sessionId, directory: session.cwd, limit: 1 },
+      { throwOnError: true },
+    )
+    const message = response.data.at(-1)
+    if (!message) throw new Error(`Missing ACP response message: ${sessionId}`)
+    return message.info.id
+  }
+
+  private message(event: EventMessageUpdated) {
+    const sessionId = event.properties.sessionID
+    const waiters = this.idleWaiters.get(sessionId)
+    if (!waiters) return
+    for (const waiter of waiters) waiter.message(event.properties.info.id)
+  }
+  // kilocode_change end
 
   private async handlePartUpdated(event: EventMessagePartUpdated) {
     const part = event.properties.part
@@ -446,5 +466,39 @@ function signal() {
     reject: (reason?: unknown) => state.reject(reason),
   }
 }
+
+// kilocode_change start
+function turn() {
+  const state = {
+    seq: 0,
+    idle: 0,
+    target: undefined as string | undefined,
+    seen: new Map<string, number>(),
+  }
+  const done = signal()
+  const check = () => {
+    if (!state.target) return
+    const seen = state.seen.get(state.target)
+    if (seen === undefined || state.idle <= seen) return
+    done.resolve()
+  }
+  return {
+    promise: done.promise,
+    reject: done.reject,
+    target(id: string) {
+      state.target = id
+      check()
+    },
+    message(id: string) {
+      state.seen.set(id, ++state.seq)
+      check()
+    },
+    idle() {
+      state.idle = ++state.seq
+      check()
+    },
+  }
+}
+// kilocode_change end
 
 export * as ACPEvent from "./event"
