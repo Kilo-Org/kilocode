@@ -89,6 +89,16 @@ describe("sendCommand dismisses pending tool requests", () => {
   })
 })
 
+describe("confirmed queued prompts retain optimistic parts", () => {
+  const source = readFile(SESSION_FILE)
+  const body = extractFunctionBody(source, "handleMessageCreated")
+
+  it("does not clear optimistic parts before canonical part events arrive", () => {
+    expect(body).toContain("Keep placeholder parts until their canonical part.updated events arrive")
+    expect(body).not.toContain("delete p[message.id]")
+  })
+})
+
 describe("static command completion contract", () => {
   const source = readFile(SESSION_FILE)
 
@@ -276,6 +286,19 @@ describe("sendMessage / sendCommand draft id contract", () => {
     )
   })
 
+  it("sendMessage and sendCommand post the agent returned by promptAgent", () => {
+    expect(extractFunctionBody(source, "sendMessage")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "sendCommand")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "promptAgent")).toContain("return resolvePromptAgent({")
+  })
+
+  it("createSession and clearCurrentSession do not pin the provisional default agent", () => {
+    expect(extractFunctionBody(source, "createSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "createSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+    expect(extractFunctionBody(source, "clearCurrentSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "clearCurrentSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+  })
+
   it("does not clear a newer pending agent when a seeded draft is promoted", () => {
     const body = extractFunctionBody(source, "handleSessionCreated")
     const draftBlock = body.match(/if \(draftID\) \{([\s\S]*?)\} else if/)
@@ -335,10 +358,10 @@ describe("PromptInput send origin contract", () => {
 
   it("captures the real or pending tab before asynchronous attachment resolution", () => {
     expect(source).toMatch(/const origin = session\.currentSessionID\(\)[\s\S]*const id = origin \?\? pendingId/)
-    expect(source.indexOf("beginPendingSend(pendingId)")).toBeLessThan(
-      source.indexOf("await terminal.resolveAttachment"),
+    expect(source.indexOf("beginPending(pendingId)")).toBeLessThan(
+      source.indexOf("const terminalFile = await terminal"),
     )
-    expect(source).toMatch(/await terminal\.resolveAttachment\(message, id\)/)
+    expect(source).toMatch(/resolveAttachment\(message, id, readTerminalContext\(props\.terminalContext\)\)/)
     expect(source).toMatch(/await git\.resolveAttachment\(message, id, context\)/)
   })
 

@@ -52,7 +52,6 @@ No CLI/SDK change and no new runtime feature.
 | Batch tool | `experimental.batch_tool` | bool | Experimental |
 | Native notebook tools | `experimental.native_notebook_tools` | bool | Experimental |
 | Continue loop on deny | `experimental.continue_loop_on_deny` | bool | Experimental |
-| SWE pruner (+ model) | `experimental.swe_pruner`, `..._model` | bool + string | Experimental |
 | MCP timeout | `experimental.mcp_timeout` | number | Experimental |
 | Per-tool toggles | `tools.<name>` | bool | Experimental |
 
@@ -61,8 +60,7 @@ entire backend (`KiloClaudeCompatSettings` + RPC getter/setter + spawn-env wirin
 exists with no UI. Exposing it is the single lowest-effort item — just a checkbox bound to the
 existing RPC, no config plumbing.
 
-⚠️ Hold back `experimental.codebase_search` (leans on indexing) and
-`experimental.image_generation` (adds a tool) — arguably "enabling a feature."
+⚠️ Hold back `experimental.image_generation` (adds a tool) — arguably "enabling a feature."
 
 ## Tier 2 — Config is easy, but honoring it needs JetBrains rendering work
 

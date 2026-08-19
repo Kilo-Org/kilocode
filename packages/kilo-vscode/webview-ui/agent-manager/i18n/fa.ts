@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "پروژه‌ها",
   "agentManager.project.add": "افزودن پروژه",
   "agentManager.project.remove": "حذف از Agent Manager",
-  "agentManager.project.trust": "اعتماد",
   "agentManager.project.missing": "مخزن یافت نشد",
   "agentManager.notGitRepo": "این یک مخزن git نیست",
 
@@ -66,6 +65,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "محلی و WORKTREE‌ها",
 
   "agentManager.terminal.new": "تب ترمینال جدید",
+  "agentManager.terminal.addCentral": "زبانه ترمینال مرکزی جدید",
+  "agentManager.terminal.addTerminal": "زبانه ترمینال جدید در نوار کناری",
   "agentManager.terminal.add": "ترمینال جدید",
   "agentManager.terminal.ended": "ترمینال پایان یافت — برای بستن، تب را ببندید",
   "agentManager.terminal.endedRestartable": "ترمینال پایان یافت - برای شروع پوسته جدید تایپ کنید یا تب را ببندید",
@@ -122,7 +123,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "حذف Worktree قدیمی",
 
   "agentManager.dialog.project.select": "انتخاب پروژه",
-  "agentManager.dialog.project.untrusted": "ابتدا در نوار کناری به این پروژه اعتماد کنید",
   "agentManager.dialog.project.missing": "مخزن یافت نشد",
   "agentManager.dialog.openWorktree": "Worktree جدید",
   "agentManager.dialog.tab.new": "جدید",

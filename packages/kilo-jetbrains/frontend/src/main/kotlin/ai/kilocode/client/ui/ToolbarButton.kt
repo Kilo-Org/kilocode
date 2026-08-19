@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui
 
+import com.intellij.util.ui.JBUI
 import java.awt.Cursor
 import javax.swing.Icon
 
@@ -13,6 +14,24 @@ internal fun toolbarButton(action: ToolbarButtonAction, fill: Boolean = false) =
     icon = action.icon
     cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     toolTipText = action.text
+    accessibleContext.accessibleName = action.text
+    addActionListener { action.handler() }
+}
+
+/**
+ * A flat, hoverable icon+label button matching the toolbar hover treatment (no platform button
+ * outline). Sizes to its content and shares [HoverIcon]'s rounded hover background.
+ */
+internal fun hoverTextButton(action: ToolbarButtonAction, tooltip: String? = null) = HoverIcon().apply {
+    icon = action.icon
+    text = action.text
+    iconTextGap = UiStyle.Gap.sm()
+    // Drop the platform button's wide default margin, then apply the platform's standard toolbar
+    // button insets so the hover pill matches a regular toolbar action button.
+    margin = JBUI.emptyInsets()
+    border = JBUI.Borders.empty(JBUI.CurrentTheme.Toolbar.toolbarButtonInsets())
+    cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+    toolTipText = tooltip ?: action.text
     accessibleContext.accessibleName = action.text
     addActionListener { action.handler() }
 }

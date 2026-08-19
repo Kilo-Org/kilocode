@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "プロジェクト",
   "agentManager.project.add": "プロジェクトを追加",
   "agentManager.project.remove": "Agent Managerから削除",
-  "agentManager.project.trust": "信頼する",
   "agentManager.project.missing": "リポジトリが見つかりません",
   "agentManager.notGitRepo": "gitリポジトリではありません",
   "agentManager.worktree.settings": "Worktree設定",
@@ -63,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "ローカル & WORKTREES",
 
   "agentManager.terminal.new": "新しいターミナルタブ",
+  "agentManager.terminal.addCentral": "新しい中央ターミナルタブ",
+  "agentManager.terminal.addTerminal": "サイドバーに新しいターミナルタブ",
   "agentManager.terminal.ended": "ターミナルが終了しました — タブを閉じて破棄",
   "agentManager.terminal.endedRestartable":
     "ターミナルが終了しました - 入力して新しいシェルを開始するか、タブを閉じてください",
@@ -118,7 +119,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "無効な Worktree を削除",
 
   "agentManager.dialog.project.select": "プロジェクトを選択",
-  "agentManager.dialog.project.untrusted": "まずサイドバーでこのプロジェクトを信頼してください",
   "agentManager.dialog.project.missing": "リポジトリが見つかりません",
   "agentManager.dialog.openWorktree": "新規ワークツリー",
   "agentManager.dialog.configureWorktree": "新規 Worktree の構成...",

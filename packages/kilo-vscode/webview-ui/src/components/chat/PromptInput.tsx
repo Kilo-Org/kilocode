@@ -52,6 +52,7 @@ import {
   isPromptBusy,
   isPathMention,
   applySandboxStates,
+  memoryRest,
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
@@ -80,7 +81,7 @@ import {
 import { ReviewComments } from "./ReviewComments"
 import { partReview, reviewBody } from "../../../../src/shared/review-comments"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
-import { parseMemoryCommand } from "../../utils/memory-command"
+import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
@@ -104,9 +105,12 @@ function beginPending(id: string | undefined) {
   if (id) beginPendingSend(id)
 }
 
+function readTerminalContext(read: (() => string | undefined) | undefined): string | undefined {
+  return read?.()
+}
+
 interface PromptInputProps {
   blocked?: () => boolean
-  blockedReason?: () => string | undefined
   /** When true, session is busy only because a suggestion is pending — treat as idle for input */
   suggesting?: () => boolean
   /** When true, session is busy only because a question is pending — treat as idle for input */
@@ -114,11 +118,13 @@ interface PromptInputProps {
   /** When true, defer prompt focus while switching to a pending question */
   deferFocusToQuestion?: () => boolean
   boxId?: string
+  terminalContext?: () => string | undefined
   pendingSessionID?: string
   /** Agent Manager can suppress automatic prompt focus when this session last
    *  used its side terminal instead. Other callers retain the old behavior. */
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
+  resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
 }
 
 function MentionItemContent(props: { item: MentionResult }) {
@@ -188,7 +194,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const hasGit = () => server.gitInstalled()
   const mention = useFileMention(vscode, sid, hasGit)
-  const terminal = useTerminalContext(vscode)
+  const terminal = useTerminalContext(props.resolveEmbeddedTerminal)
   const git = useGitChangesContext(vscode, ctx, hasGit)
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
@@ -372,7 +378,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   createEffect(
     on(draftKey, (key, prev) => {
       if (prev !== undefined && prev !== key) {
-        saveDraft(prev, untrack(text), untrack(reviewComments), untrack(imageAttach.images))
+        const val = untrack(text)
+        const comments = untrack(reviewComments)
+        const imgs = untrack(imageAttach.images)
+        if (val || comments.length > 0 || imgs.length > 0 || drafts.has(prev)) {
+          saveDraft(prev, val, comments, imgs)
+        }
       }
       const draft = drafts.get(key) ?? ""
       const pending = reviewDrafts.get(key) ?? []
@@ -405,14 +416,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   createEffect(() => {
     const msgs = session.userMessages()
     if (msgs.length === 0) return
-    const texts = msgs.map((m) => {
-      const parts = session.getParts(m.id)
-      return parts
-        .filter((part): part is TextPart => part.type === "text")
-        .map((part) => partReview(part.metadata, part.text)?.body ?? part.text.replace(REVIEW_PREFIX, ""))
-        .join("")
-    })
-    history.seed(texts)
+    const timer = setTimeout(() => {
+      const texts = msgs.map((m) => {
+        const parts = session.getParts(m.id)
+        return parts
+          .filter((part): part is TextPart => part.type === "text")
+          .map((part) => partReview(part.metadata, part.text)?.body ?? part.text.replace(REVIEW_PREFIX, ""))
+          .join("")
+      })
+      history.seed(texts)
+    }, 100)
+    onCleanup(() => clearTimeout(timer))
   })
 
   // Focus textarea when any part of the app requests it
@@ -527,8 +541,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     !props.blocked?.() &&
     (speech.state() === "recording" || (hasInput() && !speech.active()))
   const sendLabel = () => {
-    const reason = props.blockedReason?.()
-    if (reason) return reason
     if (props.blocked?.()) return language.t("prompt.action.send.blocked")
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
     return language.t("prompt.action.send")
@@ -943,7 +955,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const list = session.variantList(sid())
       if (list.length === 0) return
       const next = cycleVariant(session.currentVariant(sid()), list)
-      if (!next) return
       e.preventDefault()
       session.selectVariant(next, sid())
       return
@@ -1125,6 +1136,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return true
   }
 
+  const setMemoryText = (memory: ParsedMemoryCommand) => {
+    const rest = memoryRest(memory)
+    setText(rest)
+    if (textareaRef) {
+      textareaRef.value = rest
+      textareaRef.setSelectionRange(0, 0)
+      textareaRef.focus()
+    }
+  }
+
   const handleSend = async () => {
     const draft = text().trim()
 
@@ -1132,7 +1153,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (memory) {
       if (!runMemory(memory)) return
       history.append(draft)
-      setText("")
+      setMemoryText(memory)
       clearReviewComments()
       imageAttach.clear()
       mention.closeMention()
@@ -1196,10 +1217,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const context = ctx()
     const key = draftKey()
 
-    const terminalFile = await terminal.resolveAttachment(message, id).catch((err: Error) => {
-      showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
-      return undefined
-    })
+    const terminalFile = await terminal
+      .resolveAttachment(message, id, readTerminalContext(props.terminalContext))
+      .catch((err: Error) => {
+        showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
+        return undefined
+      })
     if (hasTerminalMention(message) && !terminalFile) {
       finishPending(pendingId)
       return
@@ -1477,19 +1500,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             }}
             onScroll={syncHighlightScroll}
             aria-disabled={isDisabled()}
-            aria-describedby={props.blockedReason?.() ? blockedHelpId() : undefined}
             rows={1}
             dir="auto"
           />
         </div>
       </div>
-      <Show when={props.blockedReason?.()} keyed>
-        {(reason) => (
-          <span id={blockedHelpId()} class="sr-only" role="status">
-            {reason}
-          </span>
-        )}
-      </Show>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
           <ModeSwitcher sessionID={sid} />
@@ -1595,7 +1610,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   size="small"
                   onClick={handleSendClick}
                   aria-disabled={!canSend()}
-                  aria-describedby={props.blockedReason?.() ? blockedHelpId() : undefined}
                   aria-label={sendLabel()}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">

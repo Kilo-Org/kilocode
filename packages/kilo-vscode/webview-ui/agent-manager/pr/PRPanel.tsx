@@ -16,11 +16,18 @@ import "./pr-panel.css"
 interface PRPanelProps {
   pr: PRStatus
   worktree?: WorktreeState
+  worktreeId: string
   onClose: () => void
   onOpenExternal: () => void
 }
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
+  let commentsRef: HTMLDivElement | undefined
+
+  function jumpToComments() {
+    commentsRef?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
   return (
     <div class="am-pr-panel am-pr-col">
       <div class="am-pr-panel-header am-pr-row">
@@ -44,19 +51,25 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           </Tooltip>
         </div>
       </div>
-      <div class="am-pr-panel-body">
-        <PRSummary pr={props.pr} />
-        <PROverview pr={props.pr} worktree={props.worktree} />
-        <Show when={(props.pr.reviewers ?? []).length > 0}>
-          <PRReviewers reviewers={props.pr.reviewers ?? []} />
-        </Show>
-        <Show when={props.pr.body}>{(body) => <PRDescription body={body()} />}</Show>
-        <Show when={props.pr.checks.total > 0}>
-          <PRChecks checks={props.pr.checks} />
-        </Show>
-        <Show when={props.pr.comments?.total ? props.pr.comments : undefined}>
-          {(comments) => <PRComments comments={comments()} />}
-        </Show>
+      <div class="am-pr-panel-body-wrap">
+        <div class="am-pr-panel-body">
+          <PRSummary pr={props.pr} onJumpToComments={jumpToComments} />
+          <PROverview pr={props.pr} worktree={props.worktree} />
+          <Show when={(props.pr.reviewers ?? []).length > 0}>
+            <PRReviewers reviewers={props.pr.reviewers ?? []} />
+          </Show>
+          <Show when={props.pr.body}>{(body) => <PRDescription body={body()} />}</Show>
+          <Show when={props.pr.checks.total > 0}>
+            <PRChecks checks={props.pr.checks} />
+          </Show>
+          <Show when={props.pr.comments?.total ? props.pr.comments : undefined}>
+            {(comments) => (
+              <div ref={commentsRef}>
+                <PRComments comments={comments()} worktreeId={props.worktreeId} />
+              </div>
+            )}
+          </Show>
+        </div>
       </div>
     </div>
   )

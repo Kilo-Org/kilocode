@@ -5,11 +5,9 @@ import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/midd
 import {
   WorkspaceRoutingMiddleware,
   WorkspaceRoutingQuery,
-  WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import { AnacondaDesktopApi } from "./anaconda-desktop"
-import { Result as AgentRequirementResult } from "@/kilocode/agent-requirements"
 import {
   Failure as AgentManagerFailure,
   Request as AgentManagerRequest,
@@ -27,6 +25,7 @@ import { SessionID } from "@/session/schema"
 import { CommandFiles } from "@/kilocode/command-files"
 
 const root = "/kilocode"
+const Scope = Schema.Literals(["global", "project"])
 
 export const RemoveSkillPayload = Schema.Struct({
   location: Schema.String,
@@ -38,12 +37,9 @@ export const RemoveCommandPayload = Schema.Struct({
 
 export const RemoveAgentPayload = Schema.Struct({
   name: Schema.String,
+  scope: Schema.optional(Scope),
 })
 
-export const AgentRequirementQuery = Schema.Struct({
-  ...WorkspaceRoutingQueryFields,
-  agent: Schema.String,
-})
 export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
 export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
 export const AgentManagerReplyPayload = Schema.Struct({ result: AgentManagerResult })
@@ -51,7 +47,6 @@ export const AgentManagerRejectPayload = Schema.Struct({ error: AgentManagerFail
 
 export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
-  agentRequirements: `${root}/agent/requirements`,
   commandFiles: `${root}/command/files`,
   removeCommand: `${root}/command/remove`,
   removeSkill: `${root}/skill/remove`,
@@ -78,16 +73,6 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.heap.snapshot",
             summary: "Write heap snapshot",
             description: "Write a heap snapshot for the CLI process to the log directory.",
-          }),
-        ),
-        HttpApiEndpoint.get("agentRequirements", KilocodePaths.agentRequirements, {
-          query: AgentRequirementQuery,
-          success: described(AgentRequirementResult, "Agent requirement status"),
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "kilocode.agentRequirements",
-            summary: "Check agent requirements",
-            description: "Check whether the selected agent's requirements are available in the request directory.",
           }),
         ),
         HttpApiEndpoint.get("commandFiles", KilocodePaths.commandFiles, {
@@ -134,7 +119,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.removeAgent",
             summary: "Remove a custom agent",
             description:
-              "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+              "Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.",
           }),
         ),
         HttpApiEndpoint.get("notebookList", KilocodePaths.notebookList, {

@@ -64,7 +64,7 @@ class HistoryLoadingTest : SessionControllerTestBase() {
         )
     }
 
-    fun `test empty explicit session history shows messages view`() {
+    fun `test empty explicit session history shows empty view`() {
         rpc.recent.add(session("ses_recent"))
 
         val c = controller("ses_test")
@@ -76,16 +76,18 @@ class HistoryLoadingTest : SessionControllerTestBase() {
         assertModelEvents("HistoryLoaded", modelEvents)
         assertControllerEvents("""
             AccountOverlayChanged hide
+            AccountOverlayChanged show loggedIn=false
             AppChanged
             WorkspaceChanged
             ViewChanged progress
-            ViewChanged session
+            ViewChanged empty
         """, events)
         assertSession(
             """
             [app: DISCONNECTED] [workspace: PENDING]
             """,
             c,
+            show = false,
         )
     }
 

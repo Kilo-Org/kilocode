@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "PROJEKTI",
   "agentManager.project.add": "Dodaj projekat",
   "agentManager.project.remove": "Ukloni iz Agent Manager-a",
-  "agentManager.project.trust": "Vjeruj",
   "agentManager.project.missing": "Repozitorij nije pronađen",
   "agentManager.notGitRepo": "Nije git repozitorij",
   "agentManager.worktree.settings": "Postavke Worktree-a",
@@ -62,6 +61,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOKALNO & WORKTREES",
 
   "agentManager.terminal.new": "Nova kartica terminala",
+  "agentManager.terminal.addCentral": "Nova centralna kartica terminala",
+  "agentManager.terminal.addTerminal": "Nova kartica terminala u bočnoj traci",
   "agentManager.terminal.ended": "terminal je završen — zatvorite karticu da biste odbacili",
   "agentManager.terminal.endedRestartable": "terminal je završen - kucajte za novu ljusku ili zatvorite karticu",
   "agentManager.terminal.setupFailed": "skripta za postavljanje nije uspjela",
@@ -117,7 +118,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Ukloni zastarjeli Worktree",
 
   "agentManager.dialog.project.select": "Odaberi projekat",
-  "agentManager.dialog.project.untrusted": "Prvo vjeruj ovom projektu na bočnoj traci",
   "agentManager.dialog.project.missing": "Repozitorij nije pronađen",
   "agentManager.dialog.openWorktree": "Novi worktree",
   "agentManager.dialog.configureWorktree": "Konfiguriši Novi Worktree...",

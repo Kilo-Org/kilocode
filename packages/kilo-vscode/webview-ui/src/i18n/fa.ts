@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "اتصال به Anaconda Desktop",
   "provider.anaconda.title.manage": "مدیریت Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "اتصال به ارائه‌دهنده",
 
@@ -74,30 +77,6 @@ export const dict = {
   "revert.disabled.agentBusy": "منتظر بمانید تا عامل کارش تمام شود",
   "command.session.compact": "فشرده‌سازی جلسه",
   "command.session.export": "صدور رونوشت جلسه",
-
-  "agentRequirements.skill.installed": "نصب شده",
-  "agentRequirements.skill.checkFailed": "بررسی مهارت ناموفق بود",
-  "agentRequirements.skill.missing": "نصب نشده",
-  "agentRequirements.mcp.connected": "متصل",
-  "agentRequirements.mcp.checkFailed": "بررسی MCP ناموفق بود",
-  "agentRequirements.mcp.missing": "متصل نیست",
-  "agentRequirements.extension.installed": "نصب شده",
-  "agentRequirements.extension.checkFailed": "بررسی افزونه VS Code ناموفق بود",
-  "agentRequirements.extension.missing": "نصب نشده",
-  "agentRequirements.extension.description": "افزونه‌های مفقود را در VS Code نصب کنید.",
-  "agentRequirements.group.skills": "مهارت‌ها",
-  "agentRequirements.group.mcps": "MCPs",
-  "agentRequirements.group.extensions": "افزونه‌های VS Code",
-  "agentRequirements.blocked.title": "پیش‌نیازهای عامل {{agent}}",
-  "agentRequirements.blocked.description": "این عامل پیش از اجرا به ابزارهای زیر نیاز دارد.",
-  "agentRequirements.prompt.blocked": "ابتدا بررسی‌های لازم را تکمیل کنید تا بتوانید از این عامل استفاده کنید",
-  "agentRequirements.action.openMarketplace": "باز کردن Marketplace",
-  "agentRequirements.error.unknownAgent": "عامل انتخاب‌شده یافت نشد.",
-  "agentRequirements.error.malformedDeclaration": "این عامل دارای اعلان پیش‌نیاز نامعتبر است.",
-  "agentRequirements.error.discoveryFailed": "Kilo نتوانست مهارت‌های موجود را بررسی کند.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo نتوانست وضعیت سرور MCP را بررسی کند.",
-  "agentRequirements.error.scopeMismatch": "این بررسی نیازمندی‌های عامل دیگر فعال نیست.",
-  "agentRequirements.error.requestFailed": "Kilo نتوانست نیازمندی‌های عامل را بررسی کند.",
 
   "dialog.provider.search.placeholder": "جستجوی ارائه‌دهندگان",
   "dialog.provider.empty": "ارائه‌دهنده‌ای یافت نشد",
@@ -267,6 +246,7 @@ export const dict = {
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
+  "notification.permission.titleSandboxEscalation": "اجازه انجام عملیات Git خارج از sandbox داده شود؟",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",
   "ui.permission.doomLoop.rule": "ادامه فراخوانی‌های {{tool}}",
@@ -820,9 +800,6 @@ export const dict = {
   "settings.experimental.lsp.description": "فعال‌سازی یکپارچه‌سازی پروتکل سرور زبان",
   "settings.experimental.batch.title": "ابزار دسته‌ای",
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
-  "settings.experimental.codebaseSearch.title": "جستجوی پایگاه کد",
-  "settings.experimental.codebaseSearch.description":
-    "فعال‌سازی جستجوی زبان طبیعی مبتنی بر هوش مصنوعی در سراسر پایگاه کد",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",
@@ -851,12 +828,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسیرهای قابل نوشتن اضافی",
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "فعال‌سازی SWE-Pruner: هرس آگاه از وظیفه برای خروجی‌های بزرگ ابزارهای خواندن، جستجو و پوسته، هدایت‌شده توسط یک سؤال تمرکز از عامل",
-  "settings.experimental.swePrunerModel.title": "مدل SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "مدل مورد استفاده برای مرور سریع خروجی‌های ابزار؛ به‌طور پیش‌فرض از مدل کوچک پیکربندی‌شده استفاده می‌کند",
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
@@ -1095,9 +1066,14 @@ export const dict = {
   "settings.display.codeEdit.description": "انتخاب کنید که بلوک‌های ویرایش کد و تفاوت در حالت باز یا بسته شروع شوند.",
   "settings.display.codeEdit.expanded": "گسترش‌یافته",
   "settings.display.codeEdit.collapsed": "جمع‌شده",
+  "settings.display.mcpTool.title": "بلوک‌های ابزار MCP و عمومی",
+  "settings.display.mcpTool.description":
+    "انتخاب کنید که بلوک‌های ابزار MCP و عمومی در حالت گسترش‌یافته یا جمع‌شده شروع شوند.",
+  "settings.display.mcpTool.expanded": "گسترش‌یافته",
+  "settings.display.mcpTool.collapsed": "جمع‌شده",
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
-    "نرخ تولید متن (توکن/ثانیه) را در آخرین پیام دستیار و در سربرگ وظیفه نمایش می‌دهد. به‌طور پیش‌فرض پنهان است تا چت شلوغ نشود.",
+    "نمایش نرخ تولید متن (tokens/sec) در جدیدترین پیام دستیار و سربرگ کار. به‌طور پیش‌فرض نمایش داده می‌شود؛ برای پنهان کردن آن در صورت نیاز، این تنظیم را غیرفعال کنید.",
   "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
   "settings.display.autoApprovalReason.description":
     "نمایش خطی در فراخوانی ابزارها که توضیح می‌دهد چرا به‌طور خودکار تأیید شده‌اند (قانون مطابق، پیش‌فرض عامل، حالت YOLO و غیره).",

@@ -107,6 +107,66 @@ object UiStyle {
                 JBColor(Color.BLACK, Color.WHITE),
             )
         }
+
+        object SessionRunning : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.SessionStatus.runningBadgeBackground",
+                JBColor(Color(0xF9, 0x73, 0x16), Color(0xC2, 0x41, 0x0C)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.SessionStatus.runningBadgeForeground",
+                Color.WHITE,
+            )
+        }
+
+        object PullRequestOpen : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.PullRequest.openBadgeBackground",
+                JBColor(Color(0x1F, 0x88, 0x3D), Color(0x23, 0x86, 0x36)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.PullRequest.openBadgeForeground",
+                Color.WHITE,
+            )
+        }
+
+        object PullRequestDraft : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.PullRequest.draftBadgeBackground",
+                JBColor(Color(0x6E, 0x77, 0x81), Color(0x6E, 0x76, 0x81)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.PullRequest.draftBadgeForeground",
+                Color.WHITE,
+            )
+        }
+
+        object PullRequestMerged : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.PullRequest.mergedBadgeBackground",
+                JBColor(Color(0x82, 0x50, 0xDF), Color(0x89, 0x57, 0xE5)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.PullRequest.mergedBadgeForeground",
+                Color.WHITE,
+            )
+        }
+
+        object PullRequestClosed : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.PullRequest.closedBadgeBackground",
+                JBColor(Color(0xCF, 0x22, 0x2E), Color(0xDA, 0x36, 0x33)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.PullRequest.closedBadgeForeground",
+                Color.WHITE,
+            )
+        }
     }
 
     /** Theme-aware colors and color math used by multiple UI surfaces. */
@@ -120,11 +180,7 @@ object UiStyle {
         /** Uses the editor background so chat cards feel native beside editor content. */
         fun editorBackground(): Color = JBColor.lazy { EditorColorsManager.getInstance().globalScheme.defaultBackground }
 
-        /**
-         * Background for rendered code fragments (markdown code blocks). Uses the editor's doc
-         * code-block attribute background and falls back to the editor background when the theme
-         * leaves it unset.
-         */
+        /** Background for code fragments when a caller explicitly wants the editor scheme's doc-code style. */
         fun codeBlockBackground(scheme: EditorColorsScheme): Color =
             scheme.getAttributes(DefaultLanguageHighlighterColors.DOC_CODE_BLOCK)?.backgroundColor ?: scheme.defaultBackground
 

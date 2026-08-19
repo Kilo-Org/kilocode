@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "PROJECTS",
   "agentManager.project.add": "Add project",
   "agentManager.project.remove": "Remove from Agent Manager",
-  "agentManager.project.trust": "Trust",
   "agentManager.project.missing": "Repository not found",
   "agentManager.notGitRepo": "Not a git repository",
 
@@ -67,6 +66,8 @@ export const dict = {
 
   "agentManager.terminal.new": "New Terminal Tab",
   "agentManager.terminal.add": "New terminal",
+  "agentManager.terminal.addCentral": "New central terminal tab",
+  "agentManager.terminal.addTerminal": "New sidebar terminal tab",
   "agentManager.terminal.ended": "terminal ended — close tab to dismiss",
   "agentManager.terminal.endedRestartable": "terminal ended - type to start a new shell or close tab to dismiss",
   "agentManager.terminal.setupFailed": "setup script failed",
@@ -126,7 +127,6 @@ export const dict = {
   "agentManager.dialog.tab.import": "Import",
   "agentManager.dialog.namePlaceholder": "Worktree name (optional)",
   "agentManager.dialog.project.select": "Select project",
-  "agentManager.dialog.project.untrusted": "Trust this project in the sidebar first",
   "agentManager.dialog.project.missing": "Repository not found",
   "agentManager.dialog.promptPlaceholder.mac": "Type a message (\u2318Enter to send)",
   "agentManager.dialog.promptPlaceholder.other": "Type a message (Ctrl+Enter to send)",

@@ -91,6 +91,7 @@ export type Event =
   | EventWorkspaceStatus1
   | EventWorktreeReady1
   | EventWorktreeFailed1
+  | EventWorktreeSetupReady1
   | EventServerConnected1
   | EventGlobalDisposed1
   | EventGlobalConfigUpdated1
@@ -209,6 +210,7 @@ export type Event =
   | EventWorkspaceStatus
   | EventWorktreeReady
   | EventWorktreeFailed
+  | EventWorktreeSetupReady
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
@@ -532,6 +534,7 @@ export type Session = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -1253,6 +1256,7 @@ export type GlobalEvent = {
     | EventWorkspaceStatus
     | EventWorktreeReady
     | EventWorktreeFailed
+    | EventWorktreeSetupReady
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
@@ -2114,6 +2118,14 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "worktree.setup.ready"
+        properties: {
+          name: string
+          branch?: string
+        }
+      }
+    | {
+        id: string
         type: "server.connected"
         properties: {
           [key: string]: unknown
@@ -2310,14 +2322,6 @@ export type AgentConfig = {
   steps?: number
   maxSteps?: number
   permission?: PermissionConfig
-  requirements?: {
-    skills?: Array<string>
-    mcps?: Array<string>
-    vscode_extensions?: Array<{
-      name: string
-      id: string
-    }>
-  }
   [key: string]:
     | unknown
     | string
@@ -2342,14 +2346,6 @@ export type AgentConfig = {
     | "info"
     | number
     | PermissionConfig
-    | {
-        skills?: Array<string>
-        mcps?: Array<string>
-        vscode_extensions?: Array<{
-          name: string
-          id: string
-        }>
-      }
     | undefined
 }
 
@@ -2560,6 +2556,7 @@ export type Config = {
   }
   terminal_command_display?: "expanded" | "collapsed"
   code_edit_display?: "expanded" | "collapsed"
+  mcp_tool_display?: "expanded" | "collapsed"
   hide_prompt_training_models?: boolean
   privacy_mode?: boolean
   /**
@@ -2692,10 +2689,8 @@ export type Config = {
   experimental?: {
     disable_paste_summary?: boolean
     batch_tool?: boolean
-    codebase_search?: boolean
     image_generation?: boolean
     image_generation_model?: string
-    agent_requirements?: boolean
     native_notebook_tools?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
@@ -2704,8 +2699,6 @@ export type Config = {
     sandbox?: boolean
     sandbox_restrict_network?: boolean
     sandbox_writable_paths?: Array<string>
-    swe_pruner?: boolean
-    swe_pruner_model?: string
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
   }
@@ -3099,14 +3092,6 @@ export type Agent = {
   prompt?: string
   options: {
     [key: string]: unknown
-  }
-  requirements?: {
-    skills?: Array<string>
-    mcps?: Array<string>
-    vscode_extensions?: Array<{
-      name: string
-      id: string
-    }>
   }
   steps?: number
 }
@@ -3917,6 +3902,10 @@ export type CommitMessageNoChangesError = {
   message: string
 }
 
+export type CommitMessageFailedError = {
+  message: string
+}
+
 export type ConfigOverlayResponse = {
   scope: "global" | "project"
   effective: Config
@@ -4149,31 +4138,6 @@ export type EffectHttpApiErrorServiceUnavailable = {
 
 export type CloudSessionImportError = {
   error: string
-}
-
-export type AgentRequirementResult = {
-  agent: string
-  directory: string
-  enabled: boolean
-  state: "disabled" | "ready" | "blocked" | "error"
-  skills: Array<{
-    name: string
-    status: "ready" | "missing" | "error"
-    message?: string
-  }>
-  mcps: Array<{
-    name: string
-    status: "ready" | "missing" | "error"
-    message?: string
-  }>
-  vscode_extensions: Array<{
-    name: string
-    id: string
-  }>
-  error?: {
-    code: "unknown_agent" | "malformed_declaration" | "discovery_failed" | "mcp_status_failed"
-    message: string
-  }
 }
 
 export type CommandFile = {
@@ -4729,6 +4693,7 @@ export type V2Event =
   | WorkspaceStatus
   | WorktreeReady
   | WorktreeFailed
+  | WorktreeSetupReady
   | ServerConnected
   | GlobalDisposed
   | GlobalConfigUpdated
@@ -5708,6 +5673,7 @@ export type RevertState = {
   snapshot?: string
   diff?: string
   files?: Array<FileDiff>
+  workspace?: "restored" | "snapshots-disabled" | "unavailable"
 }
 
 export type EventSessionNextRevertStaged = {
@@ -6185,6 +6151,15 @@ export type EventWorktreeFailed = {
   type: "worktree.failed"
   properties: {
     message: string
+  }
+}
+
+export type EventWorktreeSetupReady = {
+  id: string
+  type: "worktree.setup.ready"
+  properties: {
+    name: string
+    branch?: string
   }
 }
 
@@ -9117,6 +9092,24 @@ export type WorktreeFailed = {
   }
 }
 
+export type WorktreeSetupReady = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "worktree.setup.ready"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    name: string
+    branch?: string
+  }
+}
+
 export type ServerConnected = {
   id: string
   metadata?: {
@@ -10153,6 +10146,15 @@ export type EventWorktreeFailed1 = {
   type: "worktree.failed"
   properties: {
     message: string
+  }
+}
+
+export type EventWorktreeSetupReady1 = {
+  id: string
+  type: "worktree.setup.ready"
+  properties: {
+    name: string
+    branch?: string
   }
 }
 
@@ -15092,9 +15094,9 @@ export type CommitMessageGenerateErrors = {
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * CommitMessageNoChangesError
+   * CommitMessageNoChangesError | CommitMessageFailedError
    */
-  422: CommitMessageNoChangesError
+  422: CommitMessageNoChangesError | CommitMessageFailedError
 }
 
 export type CommitMessageGenerateError = CommitMessageGenerateErrors[keyof CommitMessageGenerateErrors]
@@ -16490,36 +16492,6 @@ export type KilocodeHeapSnapshotResponses = {
 
 export type KilocodeHeapSnapshotResponse = KilocodeHeapSnapshotResponses[keyof KilocodeHeapSnapshotResponses]
 
-export type KilocodeAgentRequirementsData = {
-  body?: never
-  path?: never
-  query: {
-    directory?: string
-    workspace?: string
-    agent: string
-  }
-  url: "/kilocode/agent/requirements"
-}
-
-export type KilocodeAgentRequirementsErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type KilocodeAgentRequirementsError = KilocodeAgentRequirementsErrors[keyof KilocodeAgentRequirementsErrors]
-
-export type KilocodeAgentRequirementsResponses = {
-  /**
-   * Agent requirement status
-   */
-  200: AgentRequirementResult
-}
-
-export type KilocodeAgentRequirementsResponse =
-  KilocodeAgentRequirementsResponses[keyof KilocodeAgentRequirementsResponses]
-
 export type KilocodeCommandFilesData = {
   body?: never
   path?: never
@@ -16611,6 +16583,7 @@ export type KilocodeRemoveSkillResponse = KilocodeRemoveSkillResponses[keyof Kil
 export type KilocodeRemoveAgentData = {
   body?: {
     name: string
+    scope?: "global" | "project"
   }
   path?: never
   query?: {

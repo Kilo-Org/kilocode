@@ -35,7 +35,7 @@ export const DisplayProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const reasoningAutoCollapse = createMemo(() => config().auto_collapse_reasoning ?? false)
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
-  const [throughputVisible, setThroughputVisible] = createSignal(false)
+  const [throughputVisible, setThroughputVisible] = createSignal(true)
   const [autoApprovalReasonVisible, setAutoApprovalReasonVisible] = createSignal(true)
 
   // Request both toggles once on mount; the extension posts back

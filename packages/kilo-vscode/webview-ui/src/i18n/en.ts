@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Connect Anaconda Desktop",
   "provider.anaconda.title.manage": "Manage Anaconda Desktop",
@@ -52,6 +54,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Connect provider",
 
@@ -73,30 +76,6 @@ export const dict = {
   "revert.disabled.agentBusy": "Wait for agent to finish",
   "command.session.compact": "Compact session",
   "command.session.export": "Export session transcript",
-
-  "agentRequirements.skill.installed": "Installed",
-  "agentRequirements.skill.checkFailed": "The skill check failed",
-  "agentRequirements.skill.missing": "Not installed",
-  "agentRequirements.mcp.connected": "Connected",
-  "agentRequirements.mcp.checkFailed": "The MCP check failed",
-  "agentRequirements.mcp.missing": "Not connected",
-  "agentRequirements.extension.installed": "Installed",
-  "agentRequirements.extension.checkFailed": "The VS Code extension check failed",
-  "agentRequirements.extension.missing": "Not installed",
-  "agentRequirements.extension.description": "Install the missing extensions in VS Code.",
-  "agentRequirements.group.skills": "Skills",
-  "agentRequirements.group.mcps": "MCPs",
-  "agentRequirements.group.extensions": "VS Code Extensions",
-  "agentRequirements.blocked.title": "{{agent}} agent prerequisites",
-  "agentRequirements.blocked.description": "This agent needs the following tools before it can run.",
-  "agentRequirements.prompt.blocked": "Complete the required checks to use this agent first",
-  "agentRequirements.action.openMarketplace": "Open Marketplace",
-  "agentRequirements.error.unknownAgent": "The selected agent could not be found.",
-  "agentRequirements.error.malformedDeclaration": "This agent has an invalid requirement declaration.",
-  "agentRequirements.error.discoveryFailed": "Kilo could not check the available skills.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo could not check MCP server status.",
-  "agentRequirements.error.scopeMismatch": "This agent requirement check is no longer active.",
-  "agentRequirements.error.requestFailed": "Kilo could not check the agent requirements.",
 
   "dialog.provider.search.placeholder": "Search providers",
   "dialog.provider.empty": "No providers found",
@@ -267,6 +246,7 @@ export const dict = {
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
+  "notification.permission.titleSandboxEscalation": "Allow Git operation outside the sandbox?",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
@@ -814,8 +794,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Enable language server protocol integration",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
-  "settings.experimental.codebaseSearch.title": "Codebase Search",
-  "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
   "settings.experimental.imageGenerationModel.title": "Image Model",
@@ -844,12 +822,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Enable SWE-Pruner: task-aware pruning of large read, search, and shell tool outputs, guided by a focus question from the agent",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner Model",
-  "settings.experimental.swePrunerModel.description":
-    "Model used to skim tool outputs; defaults to the configured small model",
   "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
   "settings.experimental.multiProject.description":
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
@@ -1082,9 +1054,13 @@ export const dict = {
   "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
   "settings.display.codeEdit.expanded": "Expanded",
   "settings.display.codeEdit.collapsed": "Collapsed",
+  "settings.display.mcpTool.title": "MCP & Generic Tool Blocks",
+  "settings.display.mcpTool.description": "Choose whether MCP and generic tool blocks start expanded or collapsed.",
+  "settings.display.mcpTool.expanded": "Expanded",
+  "settings.display.mcpTool.collapsed": "Collapsed",
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
   "settings.display.autoApprovalReason.description":
     "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",

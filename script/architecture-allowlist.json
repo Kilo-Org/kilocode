@@ -11,7 +11,6 @@
         "packages/opencode/src/kilocode/background-process/index.ts": { "count": 1, "owner": "process-runtime", "reason": "Directory-keyed background process registry" },
         "packages/opencode/src/kilocode/interactive-terminal/index.ts": { "count": 1, "owner": "terminal-runtime", "reason": "Interactive terminal manager state" },
         "packages/opencode/src/kilocode/notebook/service.ts": { "count": 1, "owner": "notebook-runtime", "reason": "Notebook cell execution service state" },
-        "packages/opencode/src/kilocode/project-id.ts": { "count": 1, "owner": "project-runtime", "reason": "Cached project identifier resolution" },
         "packages/opencode/src/kilocode/watcher.ts": { "count": 1, "owner": "watcher-runtime", "reason": "Eager location watcher subscription" }
       }
     },
@@ -24,11 +23,7 @@
     },
     "kilo-tool-process-env": {
       "description": "Direct process.env reads in Kilo-owned tools. Target: pass configuration explicitly via Tool.Context or Env.Service.",
-      "allowed": {
-        "packages/opencode/src/tool/mcp-websearch.ts": { "count": 2, "owner": "tool-runtime", "reason": "Top-level EXA_API_KEY snapshot" },
-        "packages/opencode/src/tool/warpgrep.ts": { "count": 1, "owner": "tool-runtime", "reason": "MORPH_API_KEY fallback" },
-        "packages/opencode/src/tool/websearch.ts": { "count": 4, "owner": "tool-runtime", "reason": "KILO_WEBSEARCH_PROVIDER, PARALLEL_API_KEY, EXA_API_KEY reads" }
-      }
+      "allowed": {}
     }
   }
 }

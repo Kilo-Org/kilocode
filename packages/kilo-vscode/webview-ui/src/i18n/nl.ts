@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
   "provider.anaconda.title.manage": "Anaconda Desktop beheren",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Provider verbinden",
 
@@ -74,31 +77,6 @@ export const dict = {
   "revert.disabled.agentBusy": "Wacht tot de agent klaar is",
   "command.session.compact": "Sessie comprimeren",
   "command.session.export": "Sessietranscript exporteren",
-
-  "agentRequirements.skill.installed": "Geïnstalleerd",
-  "agentRequirements.skill.checkFailed": "De skillcontrole is mislukt",
-  "agentRequirements.skill.missing": "Niet geïnstalleerd",
-  "agentRequirements.mcp.connected": "Verbonden",
-  "agentRequirements.mcp.checkFailed": "De MCP-controle is mislukt",
-  "agentRequirements.mcp.missing": "Niet verbonden",
-  "agentRequirements.extension.installed": "Geïnstalleerd",
-  "agentRequirements.extension.checkFailed": "De controle van de VS Code-extensie is mislukt",
-  "agentRequirements.extension.missing": "Niet geïnstalleerd",
-  "agentRequirements.extension.description": "Installeer de ontbrekende extensies in VS Code.",
-  "agentRequirements.group.skills": "Skills",
-  "agentRequirements.group.mcps": "MCP’s",
-  "agentRequirements.group.extensions": "VS Code-extensies",
-  "agentRequirements.blocked.title": "Vereisten voor agent {{agent}}",
-  "agentRequirements.blocked.description":
-    "Deze agent heeft de volgende tools nodig voordat deze kan worden uitgevoerd.",
-  "agentRequirements.prompt.blocked": "Voltooi eerst de vereiste controles om deze agent te gebruiken",
-  "agentRequirements.action.openMarketplace": "Marketplace openen",
-  "agentRequirements.error.unknownAgent": "De geselecteerde agent kon niet worden gevonden.",
-  "agentRequirements.error.malformedDeclaration": "Deze agent heeft een ongeldige vereistenverklaring.",
-  "agentRequirements.error.discoveryFailed": "Kilo kon de beschikbare skills niet controleren.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo kon de MCP-serverstatus niet controleren.",
-  "agentRequirements.error.scopeMismatch": "Deze controle van agentvereisten is niet meer actief.",
-  "agentRequirements.error.requestFailed": "Kilo kon de agentvereisten niet controleren.",
 
   "dialog.provider.search.placeholder": "Providers zoeken",
   "dialog.provider.empty": "Geen providers gevonden",
@@ -273,6 +251,7 @@ export const dict = {
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
+  "notification.permission.titleSandboxEscalation": "Git-bewerking buiten de sandbox toestaan?",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
   "ui.permission.doomLoop.prompt": "Mogelijke lus gedetecteerd voor het hulpmiddel {{tool}}. Doorgaan met uitvoeren?",
   "ui.permission.doomLoop.rule": "Doorgaan met {{tool}}-aanroepen",
@@ -835,9 +814,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Schakel language server protocol integratie in",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
-  "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
-  "settings.experimental.codebaseSearch.description":
-    "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
   "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
   "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
@@ -865,12 +841,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner inschakelen: taakgericht snoeien van grote uitvoer van lees-, zoek- en shelltools, gestuurd door een focusvraag van de agent",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
-  "settings.experimental.swePrunerModel.description":
-    "Model dat wordt gebruikt om tooluitvoer te snoeien; standaard het geconfigureerde kleine model",
   "settings.experimental.multiProject.title": "Multi-project Agent Manager",
   "settings.experimental.multiProject.description":
     "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
@@ -1083,10 +1053,15 @@ export const dict = {
     "Kies of blokken met codebewerkingen en verschillen standaard uitgeklapt of ingeklapt zijn.",
   "settings.display.codeEdit.expanded": "Uitgeklapt",
   "settings.display.codeEdit.collapsed": "Ingeklapt",
+  "settings.display.mcpTool.title": "Blokken met MCP- en algemene tools",
+  "settings.display.mcpTool.description":
+    "Kies of blokken met MCP- en algemene tools standaard uitgeklapt of ingeklapt zijn.",
+  "settings.display.mcpTool.expanded": "Uitgeklapt",
+  "settings.display.mcpTool.collapsed": "Ingeklapt",
 
   "settings.display.tokenThroughput.title": "Tokendoorvoer weergeven",
   "settings.display.tokenThroughput.description":
-    "Toont de tekstgeneratiesnelheid (tokens/sec) bij het laatste assistentbericht en in de taakkop. Standaard verborgen om de chat overzichtelijk te houden.",
+    "Toon de tekstgeneratiesnelheid (tokens/sec) in het meest recente assistentbericht en in de taakkoptekst. Wordt standaard weergegeven; schakel deze instelling uit om de snelheid indien nodig te verbergen.",
   "settings.display.autoApprovalReason.title": "Reden voor automatische goedkeuring weergeven",
   "settings.display.autoApprovalReason.description":
     "Toont een regel bij tool-aanroepen die uitlegt waarom ze automatisch zijn goedgekeurd (overeenkomende regel, agentstandaard, YOLO-modus, enz.).",

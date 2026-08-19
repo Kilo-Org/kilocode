@@ -242,6 +242,7 @@ describe("Truncate", () => {
   describe("cleanup", () => {
     const DAY_MS = 24 * 60 * 60 * 1000
 
+    // kilocode_change start - use IDs across the timestamp wrap and set file times explicitly
     it.live("uses file mtime when IDs wrap", () =>
       Effect.gen(function* () {
         const svc = yield* Truncate.Service
@@ -256,6 +257,7 @@ describe("Truncate", () => {
         yield* writeFileStringScoped(recent, "recent content")
         yield* fs.utimes(old, new Date(), new Date(Date.now() - 10 * DAY_MS))
         yield* fs.utimes(recent, new Date(), new Date(Date.now() - 3 * DAY_MS))
+        // kilocode_change end
         yield* svc.cleanup()
 
         expect(yield* fs.exists(old)).toBe(false)

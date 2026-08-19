@@ -2,6 +2,8 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "连接 Anaconda Desktop",
   "provider.anaconda.title.manage": "管理 Anaconda Desktop",
@@ -54,6 +56,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "连接提供商",
 
@@ -72,30 +75,6 @@ export const dict = {
   "revert.disabled.agentBusy": "等待智能体完成",
   "command.session.compact": "精简会话",
   "command.session.export": "导出会话记录",
-
-  "agentRequirements.skill.installed": "已安装",
-  "agentRequirements.skill.checkFailed": "技能检查失败",
-  "agentRequirements.skill.missing": "未安装",
-  "agentRequirements.mcp.connected": "已连接",
-  "agentRequirements.mcp.checkFailed": "MCP 检查失败",
-  "agentRequirements.mcp.missing": "未连接",
-  "agentRequirements.extension.installed": "已安装",
-  "agentRequirements.extension.checkFailed": "VS Code 扩展检查失败",
-  "agentRequirements.extension.missing": "未安装",
-  "agentRequirements.extension.description": "在 VS Code 中安装缺少的扩展。",
-  "agentRequirements.group.skills": "技能",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "VS Code 扩展",
-  "agentRequirements.blocked.title": "{{agent}} 代理前置要求",
-  "agentRequirements.blocked.description": "此代理需要以下工具后才能运行。",
-  "agentRequirements.prompt.blocked": "请先完成所需检查，然后再使用此代理",
-  "agentRequirements.action.openMarketplace": "打开 Marketplace",
-  "agentRequirements.error.unknownAgent": "找不到所选代理。",
-  "agentRequirements.error.malformedDeclaration": "此代理的要求声明无效。",
-  "agentRequirements.error.discoveryFailed": "Kilo 无法检查可用技能。",
-  "agentRequirements.error.mcpStatusFailed": "Kilo 无法检查 MCP 服务器状态。",
-  "agentRequirements.error.scopeMismatch": "此代理要求检查已不再有效。",
-  "agentRequirements.error.requestFailed": "Kilo 无法检查代理要求。",
 
   "dialog.provider.search.placeholder": "搜索提供商",
   "dialog.provider.empty": "未找到提供商",
@@ -257,6 +236,7 @@ export const dict = {
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",
   "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
+  "notification.permission.titleSandboxEscalation": "要允许在沙盒外执行 Git 操作吗？",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
   "ui.permission.doomLoop.prompt": "检测到 {{tool}} 工具可能陷入循环。是否继续运行？",
   "ui.permission.doomLoop.rule": "继续调用 {{tool}}",
@@ -802,8 +782,6 @@ export const dict = {
   "settings.experimental.lsp.description": "启用语言服务器协议集成",
   "settings.experimental.batch.title": "批量工具",
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
-  "settings.experimental.codebaseSearch.title": "代码库搜索",
-  "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
   "settings.experimental.imageGenerationModel.title": "图像模型",
@@ -829,11 +807,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "额外可写路径",
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "启用 SWE-Pruner：根据智能体提供的聚焦问题，对读取、搜索和 shell 工具的大型输出进行任务感知裁剪",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
-  "settings.experimental.swePrunerModel.description": "用于裁剪工具输出的模型;默认为已配置的小模型",
   "settings.experimental.multiProject.title": "多项目 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
@@ -1047,10 +1020,14 @@ export const dict = {
   "settings.display.codeEdit.description": "选择代码编辑块和差异块的初始状态：展开或折叠。",
   "settings.display.codeEdit.expanded": "展开",
   "settings.display.codeEdit.collapsed": "折叠",
+  "settings.display.mcpTool.title": "MCP 与通用工具块",
+  "settings.display.mcpTool.description": "选择 MCP 与通用工具块的初始状态：展开或折叠。",
+  "settings.display.mcpTool.expanded": "展开",
+  "settings.display.mcpTool.collapsed": "折叠",
 
   "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助手消息和任务标题中显示文本生成速率（令牌/秒）。默认隐藏以保持聊天简洁。",
+    "在最新的助手消息和任务标题中显示文本生成速率（tokens/sec）。默认显示；需要时禁用此设置即可隐藏。",
   "settings.display.autoApprovalReason.title": "显示自动批准原因",
   "settings.display.autoApprovalReason.description":
     "在工具调用中显示一行说明其被自动批准的原因（匹配的规则、代理默认值、YOLO 模式等）。",

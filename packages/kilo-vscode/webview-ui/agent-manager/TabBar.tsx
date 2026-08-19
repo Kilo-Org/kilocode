@@ -243,19 +243,14 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     title={props.t("agentManager.diff.toggle")}
                   >
                     <Icon name="layers" size="small" />
-                    <Show when={props.prStatus()}>
-                      {(pr) => (
-                        <Show when={pr().additions > 0 || pr().deletions > 0}>
-                          <span class="am-diff-toggle-stats">
-                            <Show when={pr().additions > 0}>
-                              <span class="am-stat-additions">+{pr().additions}</span>
-                            </Show>
-                            <Show when={pr().deletions > 0}>
-                              <span class="am-stat-deletions">−{pr().deletions}</span>
-                            </Show>
-                          </span>
+                    <Show when={hasChanges()}>
+                      <span class="am-diff-toggle-stats">
+                        <Show when={stats()!.files > 0}>
+                          <span class="am-stat-files">{stats()!.files}f</span>
                         </Show>
-                      )}
+                        <span class="am-stat-additions">+{stats()!.additions}</span>
+                        <span class="am-stat-deletions">−{stats()!.deletions}</span>
+                      </span>
                     </Show>
                   </button>
                 </TooltipKeybind>
@@ -277,7 +272,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
           {/* Terminal destination split button: the primary action
                follows the user's setting (VS Code integrated terminal
                or the embedded side panel), the dropdown picks which.
-               Cmd+Shift+T creates a terminal in the active terminal container. */}
+               Cmd+Shift+T creates a central terminal from center focus. Cmd+T creates a session in the center or a terminal in the right sidebar. */}
           <TerminalDestinationButton
             destination={props.terminalDestination}
             active={props.terminalDestinationActive}

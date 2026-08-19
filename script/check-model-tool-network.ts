@@ -31,7 +31,7 @@ const checks = [
   {
     name: "ad hoc network client",
     pattern:
-      /\bnew\s+(?:WarpGrepClient|OpenAI|QdrantClient|BedrockRuntimeClient|WebSocket|EventSource|StreamableHTTPClientTransport|SSEClientTransport)\s*\(/g,
+      /\bnew\s+(?:OpenAI|QdrantClient|BedrockRuntimeClient|WebSocket|EventSource|StreamableHTTPClientTransport|SSEClientTransport)\s*\(/g,
   },
 ]
 const allow = new Map([

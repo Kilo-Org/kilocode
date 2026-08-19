@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "项目",
   "agentManager.project.add": "添加项目",
   "agentManager.project.remove": "从 Agent Manager 移除",
-  "agentManager.project.trust": "信任",
   "agentManager.project.missing": "未找到仓库",
   "agentManager.notGitRepo": "不是 git 仓库",
   "agentManager.worktree.settings": "Worktree 设置",
@@ -62,6 +61,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "本地 & WORKTREES",
 
   "agentManager.terminal.new": "新建终端标签页",
+  "agentManager.terminal.addCentral": "新建中央终端标签页",
+  "agentManager.terminal.addTerminal": "在侧边栏新建终端标签页",
   "agentManager.terminal.ended": "终端已结束 — 关闭标签页以消除",
   "agentManager.terminal.endedRestartable": "终端已结束 - 输入以启动新 shell，或关闭标签页",
   "agentManager.terminal.setupFailed": "设置脚本失败",
@@ -112,7 +113,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
 
   "agentManager.dialog.project.select": "选择项目",
-  "agentManager.dialog.project.untrusted": "请先在侧边栏中信任此项目",
   "agentManager.dialog.project.missing": "未找到仓库",
   "agentManager.dialog.openWorktree": "新建工作树",
   "agentManager.dialog.configureWorktree": "配置新 Worktree...",

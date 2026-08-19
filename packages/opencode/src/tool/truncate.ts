@@ -51,6 +51,7 @@ const layer = Layer.effect(
     const fs = yield* FSUtil.Service
 
     const cleanup = Effect.fn("Truncate.cleanup")(function* () {
+      // kilocode_change start - use file mtimes because encoded IDs wrap
       const cutoff = Date.now() - Duration.toMillis(RETENTION)
       const entries = yield* fs.readDirectory(TRUNCATION_DIR).pipe(
         Effect.map((all) => all.filter((name) => name.startsWith("tool_"))),
@@ -63,6 +64,7 @@ const layer = Layer.effect(
         if (!mtime || mtime.getTime() >= cutoff) continue
         yield* fs.remove(file).pipe(Effect.catch(() => Effect.void))
       }
+      // kilocode_change end
     })
 
     const write = Effect.fn("Truncate.write")(function* (text: string) {

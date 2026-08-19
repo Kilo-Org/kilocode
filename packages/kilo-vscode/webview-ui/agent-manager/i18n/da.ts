@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "PROJEKTER",
   "agentManager.project.add": "Tilføj projekt",
   "agentManager.project.remove": "Fjern fra Agent Manager",
-  "agentManager.project.trust": "Godkend",
   "agentManager.project.missing": "Repository ikke fundet",
   "agentManager.notGitRepo": "Ikke et git-repository",
   "agentManager.worktree.settings": "Worktree-indstillinger",
@@ -64,6 +63,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOKAL & WORKTREES",
 
   "agentManager.terminal.new": "Ny terminalfane",
+  "agentManager.terminal.addCentral": "Ny central terminalfane",
+  "agentManager.terminal.addTerminal": "Ny terminalfane i sidepanelet",
   "agentManager.terminal.ended": "terminal afsluttet — luk fanen for at fjerne",
   "agentManager.terminal.endedRestartable": "terminal afsluttet - skriv for at starte en ny shell, eller luk fanen",
   "agentManager.terminal.setupFailed": "opsætningsscript mislykkedes",
@@ -118,7 +119,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Fjern forældet Worktree",
 
   "agentManager.dialog.project.select": "Vælg projekt",
-  "agentManager.dialog.project.untrusted": "Godkend først dette projekt i sidepanelet",
   "agentManager.dialog.project.missing": "Repository ikke fundet",
   "agentManager.dialog.openWorktree": "Ny Worktree",
   "agentManager.dialog.configureWorktree": "Konfigurer Nyt Worktree...",

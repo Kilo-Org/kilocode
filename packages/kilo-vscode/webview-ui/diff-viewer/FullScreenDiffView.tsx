@@ -61,7 +61,7 @@ import { DiffEndMarker } from "./DiffEndMarker"
 import { VirtualDiffList } from "./VirtualDiffList"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
 import { ImageDiffView } from "./ImageDiffView"
-import { createDiffRows } from "./diff-state"
+import { createDiffRows, diffSizeKey } from "./diff-state"
 import { createDiffRequests } from "./diff-requests"
 
 type DiffStyle = "unified" | "split"
@@ -802,6 +802,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                         after={{ name: diff.file, contents: diff.after }}
                                         patch={diff.patch}
                                         diffStyle={props.diffStyle}
+                                        sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle)}
                                         virtualized={shouldVirtualizeDiff(diff)}
                                         annotations={annotationsForFile(diff.file)}
                                         renderAnnotation={buildAnnotation}

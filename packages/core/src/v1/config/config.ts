@@ -129,6 +129,10 @@ export const Info = Schema.Struct({
     description:
       "Controls whether code edit and diff blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  mcp_tool_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
+    description:
+      "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
   hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
     description: "Hide Kilo Gateway models that may train on your prompts from model listings",
   }),
@@ -293,13 +297,9 @@ export const Info = Schema.Struct({
       disable_paste_summary: Schema.optional(Schema.Boolean),
       batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
       // kilocode_change start
-      codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }),
       image_generation: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI image generation" }),
       image_generation_model: Schema.optional(Schema.String).annotate({
         description: "Model ID to use for image generation (default: openrouter/auto)",
-      }),
-      agent_requirements: Schema.optional(Schema.Boolean).annotate({
-        description: "Require declared agent skills, MCPs, and VS Code extensions before VS Code prompts can run",
       }),
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
@@ -329,14 +329,6 @@ export const Info = Schema.Struct({
       sandbox_writable_paths: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
         description:
           "Additional filesystem paths the sandbox allows writes to (e.g. ['/tmp', '/var/log']). These are merged with the default writable paths when the sandbox is active.",
-      }),
-      swe_pruner: Schema.optional(Schema.Boolean).annotate({
-        description:
-          "Enable SWE-Pruner: task-aware pruning of large read, grep, and bash tool outputs guided by a focus question provided by the agent (default: false)",
-      }),
-      swe_pruner_model: Schema.optional(Schema.String).annotate({
-        description:
-          'Model used by SWE-Pruner to skim tool outputs, in "provider/model" format (default: the configured small model)',
       }),
       // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({

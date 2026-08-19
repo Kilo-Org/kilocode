@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Connecter Anaconda Desktop",
   "provider.anaconda.title.manage": "Gérer Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Connecter un fournisseur",
 
@@ -74,30 +77,6 @@ export const dict = {
   "revert.disabled.agentBusy": "Attendre la fin de l'agent",
   "command.session.compact": "Compacter la session",
   "command.session.export": "Exporter la transcription de la session",
-
-  "agentRequirements.skill.installed": "Installée",
-  "agentRequirements.skill.checkFailed": "La vérification de la compétence a échoué",
-  "agentRequirements.skill.missing": "Non installée",
-  "agentRequirements.mcp.connected": "Connecté",
-  "agentRequirements.mcp.checkFailed": "La vérification MCP a échoué",
-  "agentRequirements.mcp.missing": "Non connecté",
-  "agentRequirements.extension.installed": "Installée",
-  "agentRequirements.extension.checkFailed": "La vérification de l’extension VS Code a échoué",
-  "agentRequirements.extension.missing": "Non installée",
-  "agentRequirements.extension.description": "Installez les extensions manquantes dans VS Code.",
-  "agentRequirements.group.skills": "Compétences",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "Extensions VS Code",
-  "agentRequirements.blocked.title": "Prérequis de l’agent {{agent}}",
-  "agentRequirements.blocked.description": "Cet agent a besoin des outils suivants avant de pouvoir s’exécuter.",
-  "agentRequirements.prompt.blocked": "Terminez d’abord les vérifications requises pour utiliser cet agent",
-  "agentRequirements.action.openMarketplace": "Ouvrir Marketplace",
-  "agentRequirements.error.unknownAgent": "L’agent sélectionné est introuvable.",
-  "agentRequirements.error.malformedDeclaration": "Cet agent a une déclaration de prérequis invalide.",
-  "agentRequirements.error.discoveryFailed": "Kilo n’a pas pu vérifier les compétences disponibles.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo n’a pas pu vérifier l’état du serveur MCP.",
-  "agentRequirements.error.scopeMismatch": "Cette vérification des prérequis de l’agent n’est plus active.",
-  "agentRequirements.error.requestFailed": "Kilo n’a pas pu vérifier les prérequis de l’agent.",
 
   "dialog.provider.search.placeholder": "Rechercher des fournisseurs",
   "dialog.provider.empty": "Aucun fournisseur trouvé",
@@ -272,6 +251,7 @@ export const dict = {
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
+  "notification.permission.titleSandboxEscalation": "Autoriser l’opération Git en dehors du bac à sable ?",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",
   "ui.permission.doomLoop.rule": "Continuer les appels à {{tool}}",
@@ -856,9 +836,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Activer l'intégration du protocole de serveur de langage",
   "settings.experimental.batch.title": "Outil par lot",
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
-  "settings.experimental.codebaseSearch.title": "Recherche de code",
-  "settings.experimental.codebaseSearch.description":
-    "Activer la recherche en langage naturel par IA dans toute la base de code",
   "settings.experimental.imageGeneration.title": "Génération d'images",
   "settings.experimental.imageGeneration.description": "Activer la génération d'images par IA",
   "settings.experimental.imageGenerationModel.title": "Modèle d'image",
@@ -887,12 +864,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Chemins en écriture supplémentaires",
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Activer SWE-Pruner : élagage des sorties volumineuses des outils de lecture, de recherche et de shell, tenant compte de la tâche et guidé par une question de focalisation fournie par l’agent",
-  "settings.experimental.swePrunerModel.title": "Modèle SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Modèle utilisé pour élaguer les sorties d'outils ; par défaut, le small model configuré",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
   "settings.experimental.multiProject.description":
     "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
@@ -1143,10 +1114,15 @@ export const dict = {
     "Choisissez si les blocs de modification du code et de différences sont initialement développés ou réduits.",
   "settings.display.codeEdit.expanded": "Développés",
   "settings.display.codeEdit.collapsed": "Réduits",
+  "settings.display.mcpTool.title": "Blocs d'outils MCP et génériques",
+  "settings.display.mcpTool.description":
+    "Choisissez si les blocs d'outils MCP et génériques sont initialement développés ou réduits.",
+  "settings.display.mcpTool.expanded": "Développés",
+  "settings.display.mcpTool.collapsed": "Réduits",
 
   "settings.display.tokenThroughput.title": "Afficher le débit de tokens",
   "settings.display.tokenThroughput.description":
-    "Affiche le taux de génération de texte (tokens/s) sur le dernier message de l'assistant et dans l'en-tête de la tâche. Masqué par défaut pour garder le chat épuré.",
+    "Afficher la vitesse de génération du texte (tokens/sec) dans le dernier message de l’assistant et dans l’en-tête de la tâche. Affichée par défaut ; désactivez ce paramètre pour la masquer si nécessaire.",
   "settings.display.autoApprovalReason.title": "Afficher la raison de l'approbation automatique",
   "settings.display.autoApprovalReason.description":
     "Affiche une ligne sur les appels d'outils expliquant pourquoi ils ont été approuvés automatiquement (règle correspondante, agent par défaut, mode YOLO, etc.).",

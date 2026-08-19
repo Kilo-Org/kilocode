@@ -419,10 +419,10 @@ describe("kilocode web search config", () => {
 })
 
 describe("kilocode indexing config", () => {
-  test("ignores retired semantic indexing flags in existing configs", async () => {
+  test("ignores retired experimental flags in existing configs", async () => {
     await using tmp = await tmpdir({ git: true })
     await writeConfig(tmp.path, {
-      experimental: { semantic_indexing: true, batch_tool: true },
+      experimental: { semantic_indexing: true, codebase_search: true, batch_tool: true },
     })
 
     await provideTestInstance({
@@ -431,8 +431,79 @@ describe("kilocode indexing config", () => {
         const config = await load()
         expect(config.experimental?.batch_tool).toBe(true)
         expect(config.experimental).not.toHaveProperty("semantic_indexing")
+        expect(config.experimental).not.toHaveProperty("codebase_search")
       },
     })
+  })
+
+  test("updates a project JSON config containing retired experimental flags", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const file = path.join(tmp.path, ".kilo", "kilo.json")
+    await Filesystem.write(
+      file,
+      JSON.stringify({
+        username: "keep",
+        experimental: { codebase_search: true, batch_tool: true },
+      }),
+    )
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        await saveProject({ autoupdate: false })
+        const config = await load()
+        expect(config.username).toBe("keep")
+        expect(config.autoupdate).toBe(false)
+        expect(config.experimental?.batch_tool).toBe(true)
+        expect(config.experimental).not.toHaveProperty("codebase_search")
+      },
+    })
+
+    const written = await Bun.file(file).json()
+    expect(written.experimental.batch_tool).toBe(true)
+    expect(written.experimental).not.toHaveProperty("codebase_search")
+  })
+
+  test("updates a global JSONC config containing retired experimental flags", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    const file = path.join(globalTmp.path, "kilo.jsonc")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await Filesystem.write(
+        file,
+        [
+          "{",
+          "  // Keep the retired flag harmless until the user edits it.",
+          '  "experimental": { "codebase_search": true, "batch_tool": true }',
+          "}",
+        ].join("\n"),
+      )
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          await saveGlobal({ autoupdate: false })
+          const config = await load()
+          expect(config.autoupdate).toBe(false)
+          expect(config.experimental?.batch_tool).toBe(true)
+          expect(config.experimental).not.toHaveProperty("codebase_search")
+        },
+      })
+
+      const written = await Bun.file(file).text()
+      expect(written).toContain("Keep the retired flag harmless")
+      expect(written).toContain('"codebase_search": true')
+      expect(written).toContain('"autoupdate": false')
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
   })
 
   test("keeps global indexing enabled in global config", async () => {

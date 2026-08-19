@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Forbind Anaconda Desktop",
   "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Tilslut udbyder",
 
@@ -74,30 +77,6 @@ export const dict = {
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
   "command.session.compact": "Komprimér session",
   "command.session.export": "Eksporter sessionsudskrift",
-
-  "agentRequirements.skill.installed": "Installeret",
-  "agentRequirements.skill.checkFailed": "Skill-kontrollen mislykkedes",
-  "agentRequirements.skill.missing": "Ikke installeret",
-  "agentRequirements.mcp.connected": "Forbundet",
-  "agentRequirements.mcp.checkFailed": "MCP-kontrollen mislykkedes",
-  "agentRequirements.mcp.missing": "Ikke forbundet",
-  "agentRequirements.extension.installed": "Installeret",
-  "agentRequirements.extension.checkFailed": "Kontrollen af VS Code-udvidelsen mislykkedes",
-  "agentRequirements.extension.missing": "Ikke installeret",
-  "agentRequirements.extension.description": "Installer de manglende udvidelser i VS Code.",
-  "agentRequirements.group.skills": "Skills",
-  "agentRequirements.group.mcps": "MCP’er",
-  "agentRequirements.group.extensions": "VS Code-udvidelser",
-  "agentRequirements.blocked.title": "Forudsætninger for {{agent}}-agenten",
-  "agentRequirements.blocked.description": "Denne agent skal have følgende værktøjer, før den kan køre.",
-  "agentRequirements.prompt.blocked": "Fuldfør først de krævede kontroller for at bruge denne agent",
-  "agentRequirements.action.openMarketplace": "Åbn Marketplace",
-  "agentRequirements.error.unknownAgent": "Den valgte agent blev ikke fundet.",
-  "agentRequirements.error.malformedDeclaration": "Denne agent har en ugyldig kravdeklaration.",
-  "agentRequirements.error.discoveryFailed": "Kilo kunne ikke kontrollere de tilgængelige skills.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo kunne ikke kontrollere MCP-serverstatus.",
-  "agentRequirements.error.scopeMismatch": "Denne agentkravskontrol er ikke længere aktiv.",
-  "agentRequirements.error.requestFailed": "Kilo kunne ikke kontrollere agentkravene.",
 
   "dialog.provider.search.placeholder": "Søg udbydere",
   "dialog.provider.empty": "Ingen udbydere fundet",
@@ -269,6 +248,7 @@ export const dict = {
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
+  "notification.permission.titleSandboxEscalation": "Tillad Git-handling uden for sandkassen?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
   "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
   "ui.permission.doomLoop.rule": "Fortsæt {{tool}}-kald",
@@ -836,8 +816,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Aktiver sprogserverprotokol-integration",
   "settings.experimental.batch.title": "Batchværktøj",
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
-  "settings.experimental.codebaseSearch.title": "Kodesøgning",
-  "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
   "settings.experimental.imageGeneration.title": "Billedgenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
   "settings.experimental.imageGenerationModel.title": "Billedmodel",
@@ -864,12 +842,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Yderligere skrivbare stier",
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Aktivér SWE-Pruner: opgavebevidst beskæring af store output fra læse-, søge- og shellværktøjer, styret af et fokusspørgsmål fra agenten",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
-  "settings.experimental.swePrunerModel.description":
-    "Model til beskæring af værktøjsoutput; som standard den konfigurerede lille model",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
@@ -1108,10 +1080,14 @@ export const dict = {
     "Vælg, om blokke, der viser koderedigeringer og forskelle, starter foldet ud eller sammen.",
   "settings.display.codeEdit.expanded": "Foldet ud",
   "settings.display.codeEdit.collapsed": "Foldet sammen",
+  "settings.display.mcpTool.title": "MCP- og generiske værktøjsblokke",
+  "settings.display.mcpTool.description": "Vælg, om MCP- og generiske værktøjsblokke starter foldet ud eller sammen.",
+  "settings.display.mcpTool.expanded": "Foldet ud",
+  "settings.display.mcpTool.collapsed": "Foldet sammen",
 
   "settings.display.tokenThroughput.title": "Vis genereringshastighed",
   "settings.display.tokenThroughput.description":
-    "Viser tekstgenereringshastigheden (tokens/sek.) på den seneste assistentmeddelelse og i opgavehovedet. Skjult som standard for at holde chatten ryddig.",
+    "Vis tekstgenereringshastigheden (tokens/sec) i den seneste assistentbesked og i opgaveoverskriften. Vises som standard; deaktiver denne indstilling for at skjule den efter behov.",
   "settings.display.autoApprovalReason.title": "Vis grund til automatisk godkendelse",
   "settings.display.autoApprovalReason.description":
     "Viser en linje ved værktøjskald, der forklarer, hvorfor de blev automatisk godkendt (matchende regel, agent-standard, YOLO-tilstand osv.).",

@@ -43,7 +43,6 @@ import { KiloSessionEvent } from "@/kilocode/session/event"
 import { SessionExport } from "@/kilocode/session-export"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { carryForkDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
-import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements"
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
 import { NonNegativeInt, optionalOmitUndefined } from "@opencode-ai/core/schema"
@@ -399,8 +398,7 @@ export const Event = {
       sessionID: Schema.optional(SessionID),
       // Reuses SessionV1.Assistant.fields.error (already Schema.optional) so
       // the derived schema keeps the same discriminated-union shape on the event stream.
-      // kilocode_change - carry pre-message requirement failures over session.error
-      error: Schema.optional(Schema.Union([SessionV1.Assistant.fields.error, AgentRequirementError.EffectSchema])),
+      error: SessionV1.Assistant.fields.error,
     },
   }),
   // kilocode_change start

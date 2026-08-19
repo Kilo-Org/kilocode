@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "ПРОЕКТЫ",
   "agentManager.project.add": "Добавить проект",
   "agentManager.project.remove": "Удалить из Agent Manager",
-  "agentManager.project.trust": "Доверять",
   "agentManager.project.missing": "Репозиторий не найден",
   "agentManager.notGitRepo": "Не является git-репозиторием",
   "agentManager.worktree.settings": "Настройки Worktree",
@@ -63,6 +62,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "ЛОКАЛЬНЫЙ & WORKTREES",
 
   "agentManager.terminal.new": "Новая вкладка терминала",
+  "agentManager.terminal.addCentral": "Новая центральная вкладка терминала",
+  "agentManager.terminal.addTerminal": "Новая вкладка терминала на боковой панели",
   "agentManager.terminal.ended": "терминал завершен — закройте вкладку, чтобы скрыть",
   "agentManager.terminal.endedRestartable":
     "терминал завершен - введите текст, чтобы запустить новую оболочку, или закройте вкладку",
@@ -118,7 +119,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Удалить устаревший Worktree",
 
   "agentManager.dialog.project.select": "Выбрать проект",
-  "agentManager.dialog.project.untrusted": "Сначала подтвердите доверие к этому проекту на боковой панели",
   "agentManager.dialog.project.missing": "Репозиторий не найден",
   "agentManager.dialog.openWorktree": "Новый worktree",
   "agentManager.dialog.configureWorktree": "Настроить новое Worktree...",

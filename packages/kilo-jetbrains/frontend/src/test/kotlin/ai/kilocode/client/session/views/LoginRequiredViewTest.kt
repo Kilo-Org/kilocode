@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
@@ -166,7 +167,7 @@ class LoginRequiredViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test description uses hintFont not editor font family`() {
+    fun `test description uses secondary font not editor font family`() {
         edt {
             val view = LoginRequiredView(openProfile = {}, dismiss = {})
             view.show("Sign in required.")
@@ -179,18 +180,13 @@ class LoginRequiredViewTest : BasePlatformTestCase() {
                 "Description font should not use editor font family",
                 desc!!.font.name == "Courier New",
             )
-            assertEquals("Description font should equal hintFont", style.hintFont, desc.font)
+            assertEquals("Description font should equal secondary text font", SessionUiStyle.Text.Secondary.font(style), desc.font)
         }
     }
 
     // ------ helpers ------
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private inline fun <reified T> findAll(root: Container): List<T> =
         findAllCls(root, T::class.java)

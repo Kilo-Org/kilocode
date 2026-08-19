@@ -15,6 +15,7 @@ import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
+import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import { Skill } from "@/skill"
 import type { SessionID } from "@/session/schema"
 import {
@@ -39,12 +40,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
 
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
-    })
-
-    const agentRequirements = Effect.fn("KilocodeHttpApi.agentRequirements")(function* (ctx: {
-      query: { agent: string }
-    }) {
-      return yield* agents.requirementStatus(ctx.query.agent)
     })
 
     const commandFiles = Effect.fn("KilocodeHttpApi.commandFiles")(function* () {
@@ -95,11 +90,20 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       const agent = yield* agents.get(ctx.payload.name)
       const dirs = yield* config.directories()
       yield* Effect.tryPromise({
-        try: () => KiloAgent.remove({ name: ctx.payload.name, agent, dirs, directory: instance.directory }),
+        try: () =>
+          KiloAgent.remove({
+            name: ctx.payload.name,
+            agent,
+            dirs,
+            directory: instance.directory,
+            worktree: instance.worktree,
+            scope: ctx.payload.scope,
+          }),
         catch: (err) => err,
       }).pipe(
         Effect.catch((err) => {
-          if (KiloAgent.RemoveError.isInstance(err)) return Effect.fail(new HttpApiError.BadRequest({}))
+          if (KiloAgent.RemoveError.isInstance(err))
+            return Effect.fail(new InvalidRequestError({ message: err.data.message }))
           return Effect.die(err)
         }),
       )
@@ -167,7 +171,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
 
     return handlers
       .handle("heapSnapshot", heapSnapshot)
-      .handle("agentRequirements", agentRequirements)
       .handle("commandFiles", commandFiles)
       .handle("removeCommand", removeCommand)
       .handle("removeSkill", removeSkill)

@@ -181,8 +181,6 @@ import type {
   KilocodeAgentManagerRejectResponses,
   KilocodeAgentManagerReplyErrors,
   KilocodeAgentManagerReplyResponses,
-  KilocodeAgentRequirementsErrors,
-  KilocodeAgentRequirementsResponses,
   KilocodeCommandFilesErrors,
   KilocodeCommandFilesResponses,
   KilocodeHeapSnapshotErrors,
@@ -8075,42 +8073,6 @@ export class SessionImport extends HeyApiClient {
 
 export class Kilocode extends HeyApiClient {
   /**
-   * Check agent requirements
-   *
-   * Check whether the selected agent's requirements are available in the request directory.
-   */
-  public agentRequirements<ThrowOnError extends boolean = false>(
-    parameters: {
-      directory?: string
-      workspace?: string
-      agent: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "agent" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KilocodeAgentRequirementsResponses,
-      KilocodeAgentRequirementsErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/agent/requirements",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
    * List command files
    *
    * List commands with editable file locations for settings clients.
@@ -8227,13 +8189,14 @@ export class Kilocode extends HeyApiClient {
   /**
    * Remove a custom agent
    *
-   * Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.
+   * Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.
    */
   public removeAgent<ThrowOnError extends boolean = false>(
     parameters?: {
       directory?: string
       workspace?: string
       name?: string
+      scope?: "global" | "project"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -8245,6 +8208,7 @@ export class Kilocode extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "name" },
+            { in: "body", key: "scope" },
           ],
         },
       ],

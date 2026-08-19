@@ -7,7 +7,6 @@ export const dict = {
   "agentManager.projects": "專案",
   "agentManager.project.add": "新增專案",
   "agentManager.project.remove": "從 Agent Manager 移除",
-  "agentManager.project.trust": "信任",
   "agentManager.project.missing": "找不到儲存庫",
   "agentManager.notGitRepo": "不是 git 儲存庫",
   "agentManager.worktree.settings": "Worktree 設定",
@@ -62,6 +61,8 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "本機 & WORKTREES",
 
   "agentManager.terminal.new": "新增終端分頁",
+  "agentManager.terminal.addCentral": "新增中央終端機分頁",
+  "agentManager.terminal.addTerminal": "在側邊欄新增終端機分頁",
   "agentManager.terminal.ended": "終端已結束 — 關閉分頁以消除",
   "agentManager.terminal.endedRestartable": "終端已結束 - 輸入以啟動新的 shell，或關閉分頁",
   "agentManager.terminal.setupFailed": "設定腳本失敗",
@@ -112,7 +113,6 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
 
   "agentManager.dialog.project.select": "選擇專案",
-  "agentManager.dialog.project.untrusted": "請先在側邊欄信任此專案",
   "agentManager.dialog.project.missing": "找不到儲存庫",
   "agentManager.dialog.openWorktree": "新建工作樹",
   "agentManager.dialog.configureWorktree": "配置新 Worktree...",

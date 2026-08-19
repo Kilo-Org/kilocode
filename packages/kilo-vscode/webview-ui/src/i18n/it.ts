@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Connetti Anaconda Desktop",
   "provider.anaconda.title.manage": "Gestisci Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
   "command.provider.connect": "Connetti provider",
   "command.session.new": "Nuova sessione",
   "command.session.show.changes": "Mostra modifiche",
@@ -184,6 +187,7 @@ export const dict = {
   "notification.permission.title": "Autorizzazione richiesta",
   "notification.permission.titleSubagent": "Autorizzazione richiesta (sub-agent)",
   "notification.permission.titleSkillShell": "Eseguire i comandi shell della skill “{{skill}}”?",
+  "notification.permission.titleSandboxEscalation": "Consentire l'operazione Git al di fuori della sandbox?",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
   "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",
   "ui.permission.doomLoop.rule": "Continua le chiamate a {{tool}}",
@@ -688,8 +692,6 @@ export const dict = {
   "settings.experimental.semanticIndexing.title": "Indicizzazione semantica",
   "settings.experimental.semanticIndexing.description":
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
-  "settings.experimental.codebaseSearch.title": "Ricerca codebase",
-  "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
   "settings.experimental.imageGeneration.title": "Generazione di immagini",
   "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
   "settings.experimental.imageGenerationModel.title": "Modello di immagine",
@@ -712,12 +714,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Abilita SWE-Pruner: potatura degli output di grandi dimensioni degli strumenti di lettura, ricerca e shell, che tiene conto del compito ed è guidata da una domanda di focalizzazione fornita dall'agente",
-  "settings.experimental.swePrunerModel.title": "Modello SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Modello usato per potare le uscite degli strumenti; per impostazione predefinita, il modello piccolo configurato",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Progetto",
   "settings.experimental.multiProject.description":
     "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
@@ -968,10 +964,14 @@ export const dict = {
     "Scegli se i blocchi delle modifiche al codice e delle differenze iniziano espansi o compressi.",
   "settings.display.codeEdit.expanded": "Espansi",
   "settings.display.codeEdit.collapsed": "Compressi",
+  "settings.display.mcpTool.title": "Blocchi strumento MCP e generici",
+  "settings.display.mcpTool.description": "Scegli se i blocchi strumento MCP e generici iniziano espansi o compressi.",
+  "settings.display.mcpTool.expanded": "Espansi",
+  "settings.display.mcpTool.collapsed": "Compressi",
 
   "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
-    "Mostra la velocità di generazione del testo (token/sec) sull'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Nascosto per impostazione predefinita per mantenere la chat ordinata.",
+    "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",
   "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
   "settings.display.autoApprovalReason.description":
     "Mostra una riga sulle chiamate agli strumenti che spiega perché sono state approvate automaticamente (regola corrispondente, predefinito dell'agente, modalità YOLO, ecc.).",
@@ -1193,31 +1193,6 @@ export const dict = {
 
   // Session export
   "command.session.export": "Esporta trascrizione sessione",
-
-  "agentRequirements.skill.installed": "Installata",
-  "agentRequirements.skill.checkFailed": "Il controllo della skill non è riuscito",
-  "agentRequirements.skill.missing": "Non installata",
-  "agentRequirements.mcp.connected": "Connesso",
-  "agentRequirements.mcp.checkFailed": "Il controllo MCP non è riuscito",
-  "agentRequirements.mcp.missing": "Non connesso",
-  "agentRequirements.extension.installed": "Installata",
-  "agentRequirements.extension.checkFailed": "Il controllo dell’estensione VS Code non è riuscito",
-  "agentRequirements.extension.missing": "Non installata",
-  "agentRequirements.extension.description": "Installa le estensioni mancanti in VS Code.",
-  "agentRequirements.group.skills": "Skill",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "Estensioni VS Code",
-  "agentRequirements.blocked.title": "Prerequisiti dell’agente {{agent}}",
-  "agentRequirements.blocked.description":
-    "Questo agente richiede i seguenti strumenti prima di poter essere eseguito.",
-  "agentRequirements.prompt.blocked": "Completa prima i controlli richiesti per usare questo agente",
-  "agentRequirements.action.openMarketplace": "Apri Marketplace",
-  "agentRequirements.error.unknownAgent": "Impossibile trovare l’agente selezionato.",
-  "agentRequirements.error.malformedDeclaration": "Questo agente ha una dichiarazione dei requisiti non valida.",
-  "agentRequirements.error.discoveryFailed": "Kilo non ha potuto controllare le skill disponibili.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo non ha potuto controllare lo stato del server MCP.",
-  "agentRequirements.error.scopeMismatch": "Questo controllo dei requisiti dell’agente non è più attivo.",
-  "agentRequirements.error.requestFailed": "Kilo non ha potuto controllare i requisiti dell’agente.",
 
   // Model groups
 

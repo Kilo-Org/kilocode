@@ -61,6 +61,7 @@ export interface PRCheck {
 
 export interface PRComment {
   id: string
+  threadId: string
   author: string
   avatar?: string
   body: string
@@ -69,6 +70,7 @@ export interface PRComment {
   url?: string
   resolved: boolean
   createdAt?: number
+  diffHunk?: string
 }
 
 export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
@@ -394,6 +396,14 @@ interface PRErrorOutMessage {
   error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+interface CommentActionResultMessage {
+  type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
+  worktreeId: string
+  threadId: string
+  success: boolean
+  error?: string
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -434,6 +444,7 @@ export type AgentManagerOutMessage =
   | DiffBranchesMessage
   | PRStatusOutMessage
   | PRErrorOutMessage
+  | CommentActionResultMessage
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
@@ -497,12 +508,6 @@ interface SetProjectExpandedIn {
   type: "agentManager.setProjectExpanded"
   projectId: string
   expanded: boolean
-}
-
-/** Grant a project permission to run project-controlled scripts and load state. */
-interface TrustProjectIn {
-  type: "agentManager.trustProject"
-  projectId: string
 }
 
 interface DeleteWorktreeIn {
@@ -758,6 +763,12 @@ interface OpenPRIn {
   url?: string
 }
 
+interface CommentActionIn {
+  type: "agentManager.resolveComment" | "agentManager.unresolveComment"
+  worktreeId: string
+  threadId: string
+}
+
 interface OpenSessionsIn {
   type: "agentManager.openSessions"
   sessionIDs: string[]
@@ -800,6 +811,7 @@ interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
   mode?: "replace" | "prepend" | "focus"
+  focus?: boolean
   before?: string
   limit?: number
 }
@@ -881,6 +893,7 @@ interface RequestTerminalContextIn {
   type: "requestTerminalContext"
   requestId: string
   sessionID?: string
+  agentManagerContext?: string
 }
 
 interface ClearSessionIn {
@@ -1006,7 +1019,6 @@ export type AgentManagerInMessage =
   | ActivateSelectionIn
   | RememberTargetIn
   | SetProjectExpandedIn
-  | TrustProjectIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | PromoteSessionIn
@@ -1050,6 +1062,7 @@ export type AgentManagerInMessage =
   | SetDiffBaseBranchIn
   | RefreshPRIn
   | OpenPRIn
+  | CommentActionIn
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn

@@ -2,9 +2,9 @@ package ai.kilocode.client.settings.providers
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.model.ModelSearch
-import ai.kilocode.client.settings.base.SettingsBadge
-import ai.kilocode.client.settings.base.SettingsListCell
-import ai.kilocode.client.settings.base.SettingsListItem
+import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.rpc.dto.ProviderSettingsDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import com.intellij.icons.AllIcons
@@ -24,19 +24,19 @@ internal data class ProviderListRow(
     override val section: String,
     val actions: List<ProviderListAction>,
     override val disabled: Boolean = false,
-) : SettingsListItem {
+) : ActiveListItem {
     override val key: String get() = provider.id
     override val title: String get() = provider.name
     override val description: String get() = providerDescription(provider)
     override val icon: Icon? get() = providerIcon(provider)
-    override val badges: List<SettingsBadge>
+    override val badges: List<ActiveListBadge>
         get() = when (provider.source) {
-            "env" -> listOf(SettingsBadge(KiloBundle.message("settings.providers.badge.env")))
+            "env" -> listOf(ActiveListBadge(KiloBundle.message("settings.providers.badge.env")))
             else -> emptyList()
         }
-    override val cells: List<SettingsListCell>
+    override val cells: List<ActiveListCell>
         get() = actions.map { action ->
-            SettingsListCell(
+            ActiveListCell(
                 action.name,
                 providerListActionText(action),
                 enabled(action),

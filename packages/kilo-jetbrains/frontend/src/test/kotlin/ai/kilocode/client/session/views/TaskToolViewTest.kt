@@ -4,7 +4,6 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -31,12 +30,6 @@ class TaskToolViewTest : BasePlatformTestCase() {
         } finally {
             super.tearDown()
         }
-    }
-
-    fun `test task tool uses secondary chrome`() {
-        val base: Any = view(task())
-
-        assertTrue(base is SecondarySessionPartView)
     }
 
     fun `test task header shows agent description and count`() {
@@ -110,7 +103,7 @@ class TaskToolViewTest : BasePlatformTestCase() {
     fun `test child tool titles use target color`() {
         val view = view(task(children = listOf(child("c1", "read"), child("c2", "grep", ToolExecState.ERROR))))
 
-        assertColor(UiStyle.Colors.weak(), titleColor(view, 0))
+        assertColor(SessionUiStyle.Text.Secondary.foreground(), titleColor(view, 0))
         assertColor(UiStyle.Colors.errorLabelForeground(), titleColor(view, 1))
     }
 
