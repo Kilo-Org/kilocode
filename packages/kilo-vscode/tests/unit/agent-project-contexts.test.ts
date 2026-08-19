@@ -7,12 +7,11 @@ import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeState
 const WORKSPACE = "/repo/main"
 const PINNED = projectIdFor(WORKSPACE)
 
-function stored(id: string, trusted = false): StoredProject {
+function stored(id: string): StoredProject {
   return {
     id,
     root: `/repo/${id}`,
     order: 1,
-    trusted,
     addedAt: new Date().toISOString(),
   }
 }
@@ -30,7 +29,6 @@ function setup(
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.workspace,
     registry,
-    trusted: (id) => registry.get(id)?.trusted === true,
     enabled: () => opts.enabled ?? false,
     deps: {
       log: () => {},
@@ -58,28 +56,21 @@ describe("ProjectContexts", () => {
     expect(contexts.active()).toBeUndefined()
   })
 
-  it("falls back to the first trusted registry project without a workspace", () => {
-    const extra = stored("prj-extra", true)
+  it("falls back to the first registry project without a workspace", () => {
+    const extra = stored("prj-extra")
     const { contexts } = setup({ enabled: true, projects: [extra] })
     expect(contexts.active()?.id).toBe("prj-extra")
   })
 
   it("rejects activating registry projects when the flag is off", () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts } = setup({ workspace: WORKSPACE, enabled: false, projects: [extra] })
     expect(contexts.activate("prj-extra")).toBeUndefined()
     expect(contexts.active()?.id).toBe(PINNED)
   })
 
-  it("rejects activating untrusted projects", () => {
-    const extra = stored("prj-extra", false)
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
-    expect(contexts.activate("prj-extra")).toBeUndefined()
-    expect(contexts.active()?.id).toBe(PINNED)
-  })
-
-  it("activates trusted projects without changing accordion expansion", () => {
-    const extra = stored("prj-extra", true)
+  it("activates registered projects", () => {
+    const extra = stored("prj-extra")
     const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
     const ctx = contexts.activate("prj-extra")
     expect(ctx?.root).toBe("/repo/prj-extra")
@@ -88,7 +79,7 @@ describe("ProjectContexts", () => {
   })
 
   it("keeps explicit accordion expansion unchanged after switching", () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
     contexts.active()
     contexts.expand("prj-extra")
@@ -100,7 +91,7 @@ describe("ProjectContexts", () => {
   })
 
   it("expands without changing the active project", () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
     expect(contexts.expand("prj-extra")?.id).toBe("prj-extra")
     expect(contexts.active()?.id).toBe(PINNED)
@@ -108,7 +99,7 @@ describe("ProjectContexts", () => {
   })
 
   it("allows accordion collapse independently from active detail selection", () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
     contexts.activate("prj-extra")
     contexts.collapse("prj-extra")
@@ -117,7 +108,7 @@ describe("ProjectContexts", () => {
   })
 
   it("removes projects and falls back to the pinned project", async () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
     contexts.activate("prj-extra")
     await contexts.remove("prj-extra")
@@ -171,7 +162,7 @@ describe("ProjectContexts", () => {
   })
 
   it("isolates services between projects", () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts, created } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
     contexts.active()!.stateManager()
     contexts.activate("prj-extra")!.stateManager()
@@ -184,7 +175,6 @@ describe("ProjectContexts", () => {
     const dynamic = new ProjectContexts({
       workspaceRoot: () => ws.root,
       registry: { list: () => [], get: () => undefined },
-      trusted: () => false,
       enabled: () => false,
       deps: { log: () => {}, exists: () => true },
     })
@@ -199,13 +189,12 @@ describe("ProjectContexts", () => {
   })
 
   it("snapshots pinned first with registry projects in order", () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
     const list = contexts.snapshots()
     expect(list.map((p) => p.id)).toEqual([PINNED, "prj-extra"])
     expect(list[0]!.pinned).toBe(true)
     expect(list[0]!.active).toBe(true)
-    expect(list[0]!.trusted).toBe(true)
     expect(list[1]!.label).toBe("prj-extra")
     expect(list[1]!.initialized).toBe(false)
   })
@@ -217,7 +206,7 @@ describe("ProjectContexts", () => {
   })
 
   it("hydrates persisted project expansion without initializing the project", () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts } = setup({
       workspace: WORKSPACE,
       enabled: true,
@@ -239,13 +228,13 @@ describe("ProjectContexts", () => {
   })
 
   it("hides registry projects from snapshots when the flag is off", () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts } = setup({ workspace: WORKSPACE, enabled: false, projects: [extra] })
     expect(contexts.snapshots().map((p) => p.id)).toEqual([PINNED])
   })
 
   it("returns active ownership to pinned Local when multi-project is disabled", () => {
-    const extra = stored("prj-extra", true)
+    const extra = stored("prj-extra")
     const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
     const secondary = contexts.expand("prj-extra")!
     contexts.activate("prj-extra")
@@ -260,7 +249,7 @@ describe("ProjectContexts", () => {
   })
 
   it("dedupes registry entries that match the pinned project", () => {
-    const dupe = stored(PINNED, true)
+    const dupe = stored(PINNED)
     const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [dupe] })
     expect(contexts.snapshots().map((p) => p.id)).toEqual([PINNED])
   })

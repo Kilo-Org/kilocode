@@ -16,17 +16,6 @@ const agents = Agent.Service.of({
   list: () => Effect.succeed([info]),
   defaultInfo: () => Effect.succeed(info),
   defaultAgent: () => Effect.succeed("code"),
-  requirementStatus: () =>
-    Effect.succeed({
-      agent: "code",
-      directory: "",
-      enabled: false,
-      state: "ready",
-      skills: [],
-      mcps: [],
-      vscode_extensions: [],
-    }),
-  guardRequirements: () => Effect.void,
   generate: () => Effect.succeed({ identifier: "code", whenToUse: "", systemPrompt: "" }),
 })
 

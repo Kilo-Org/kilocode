@@ -3,7 +3,7 @@
  *
  * Extracted from AgentManagerProvider (file-size cap) and kept free of VS Code
  * imports so the flows are unit-testable. All handlers fail closed: unknown
- * projects, untrusted projects, and disabled experiments leave state untouched.
+ * projects and disabled experiments leave state untouched.
  */
 
 import simpleGit from "simple-git"
@@ -66,10 +66,6 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
     await setExpanded(m.projectId, m.expanded, deps)
     return true
   }
-  if (m.type === "agentManager.trustProject") {
-    await trustProject(m.projectId, deps)
-    return true
-  }
   return false
 }
 
@@ -77,7 +73,7 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
   if (disabled(deps)) return
   const ctx = deps.contexts.resolve(requested.projectId)
   if (!ctx || !deps.contexts.usable(requested.projectId)) {
-    deps.error("The project is unavailable. Trust it first or check that the repository still exists.")
+    deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
   const result = await deps.ready(ctx)
@@ -109,7 +105,7 @@ function finish(target: SidebarTarget, deps: ProjectMessageDeps): void {
   const previous = deps.contexts.active()?.id
   const activated = deps.contexts.activate(target.projectId)
   if (!activated) {
-    deps.error("The project is unavailable. Trust it first or check that the repository still exists.")
+    deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
   activated.peekState()?.setActiveTarget(target)
@@ -179,7 +175,7 @@ function selectProject(id: string, deps: ProjectMessageDeps): void {
   if (disabled(deps)) return
   const ctx = deps.contexts.activate(id)
   if (!ctx) {
-    deps.error("The project is unavailable. Trust it first or check that the repository still exists.")
+    deps.error("The project is unavailable. Check that the repository still exists.")
     deps.push()
     return
   }
@@ -200,11 +196,5 @@ async function setExpanded(id: string, expanded: boolean, deps: ProjectMessageDe
     if (next) deps.expand(next)
   }
   if (!expanded) deps.contexts.collapse(id)
-  deps.push()
-}
-
-async function trustProject(id: string, deps: ProjectMessageDeps): Promise<void> {
-  if (disabled(deps)) return
-  await deps.registry.setTrusted(id, true)
   deps.push()
 }

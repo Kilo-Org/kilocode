@@ -160,7 +160,9 @@ describe("agent_manager tool", () => {
     expect(schema.oneOf).toBeUndefined()
     expect(schema.allOf).toBeUndefined()
     const action = schema.properties?.action
-    expect(action && typeof action === "object" ? action.enum : undefined).toEqual(["list", "prompt", "stop", "move"])
+    expect(action && typeof action === "object" ? action.anyOf?.[0] : undefined).toEqual(
+      expect.objectContaining({ enum: ["list", "prompt", "stop", "move"] }),
+    )
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Use list first")
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Never edit")
     expect(schema.properties?.sessionID).toEqual(
@@ -187,9 +189,82 @@ describe("agent_manager tool", () => {
     ])
   })
 
+  // Flattening the operations into one object means providers with strict structured
+  // outputs must supply every property, so null has to be a legal value everywhere.
+  // Otherwise the model invents one, and an invented action beats mode and tasks.
+  test("advertises every field as nullable so strict providers can opt out of it", async () => {
+    const tool = await init()
+    const schema = ToolJsonSchema.fromTool(tool)
+
+    for (const key of ["mode", "versions", "tasks", "action", "filter", "sessionID", "prompt", "sectionID"]) {
+      const property = schema.properties?.[key]
+      const branches = property && typeof property === "object" ? property.anyOf : undefined
+      expect(
+        Array.isArray(branches) &&
+          branches.some((branch) => typeof branch === "object" && branch !== null && branch.type === "null"),
+      ).toBe(true)
+    }
+    // The advertised bounds on tasks must survive being made nullable.
+    const tasks = schema.properties?.tasks
+    expect(typeof tasks === "object" ? tasks.anyOf?.[0] : undefined).toEqual(
+      expect.objectContaining({ minItems: 1, maxItems: 20 }),
+    )
+  })
+
   test("keeps session ID validation local", () => {
     expect(Schema.is(Params)({ action: "stop", sessionID: "ses_target" })).toBe(true)
     expect(Schema.is(Params)({ action: "stop", sessionID: "invalid" })).toBe(false)
+  })
+
+  // Regression for #13029: the OpenAI Responses API forces a value for every
+  // advertised property. With action nullable the model can decline it and the
+  // start request survives; with a populated action the action wins instead.
+  test("routes a null-filled start request to start", () => {
+    const task = { prompt: "balabala...", name: "a new name", branchName: "a-new-branch", model: "", variant: "" }
+    const filled = {
+      mode: "worktree",
+      versions: false,
+      tasks: [task],
+      action: null,
+      filter: null,
+      sessionID: null,
+      prompt: null,
+      sectionID: null,
+    }
+    const decoded = Schema.decodeUnknownSync(Params)(filled) as Record<string, unknown>
+    expect("action" in decoded).toBe(false)
+    expect(decoded.mode).toBe("worktree")
+    expect(decoded.tasks).toHaveLength(1)
+
+    // The empty-string variant the issue reported must resolve the same way.
+    expect(
+      "action" in
+        (Schema.decodeUnknownSync(Params)({ ...filled, sessionID: "", prompt: "" }) as Record<string, unknown>),
+    ).toBe(false)
+  })
+
+  test("routes null-filled management requests to their action", () => {
+    const blanks = { mode: null, versions: null, tasks: null, filter: null, sectionID: null }
+    const decode = (input: unknown) => Schema.decodeUnknownSync(Params)(input) as Record<string, unknown>
+
+    expect(decode({ ...blanks, action: "list", sessionID: null, prompt: null })).toEqual({
+      action: "list",
+      filter: null,
+    })
+    expect(decode({ ...blanks, action: "stop", sessionID: "ses_target", prompt: null })).toEqual({
+      action: "stop",
+      sessionID: "ses_target",
+    })
+    expect(decode({ ...blanks, action: "move", sessionID: "ses_target", sectionID: null, prompt: null })).toEqual({
+      action: "move",
+      sessionID: "ses_target",
+      sectionID: null,
+    })
+    expect(decode({ ...blanks, action: "prompt", sessionID: "ses_target", prompt: "go" })).toEqual({
+      action: "prompt",
+      sessionID: "ses_target",
+      prompt: "go",
+    })
   })
 
   test("asks for agent_manager permission", async () => {
