@@ -35,7 +35,7 @@ type Meta = {
 }
 
 type Deps = {
-  agents: Pick<Agent.Interface, "list" | "guardRequirements">
+  agents: Pick<Agent.Interface, "list">
   config: Pick<Config.Interface, "get">
   provider: Pick<Provider.Interface, "getModel">
   sessions: Pick<Session.Interface, "updateMessage">
@@ -137,7 +137,6 @@ export const execute = Effect.fn("ModeSwitch.execute")(function* (
     })
   }
   if (target.name === source) return yield* new ActiveError({ target: target.name, available: choices })
-  yield* deps.agents.guardRequirements(target)
 
   const approval = yield* deps
     .ask({

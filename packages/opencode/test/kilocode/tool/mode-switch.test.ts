@@ -106,7 +106,6 @@ function fixture(input: {
   const deps = {
     agents: {
       list: () => Effect.succeed(available),
-      guardRequirements: () => Effect.void,
     },
     config: {
       get: () => Effect.succeed({ mode_switch_on_reject: input.action }),
