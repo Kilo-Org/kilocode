@@ -258,6 +258,7 @@ export const dict = {
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
+  "notification.permission.titleSandboxEscalation": "要允許在沙盒外執行 Git 操作嗎？",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
   "ui.permission.doomLoop.rule": "繼續呼叫 {{tool}}",
@@ -789,11 +790,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "額外可寫路徑",
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "啟用 SWE-Pruner：根據智能體提供的聚焦問題，對讀取、搜尋與 shell 工具的大型輸出進行任務感知裁剪",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
-  "settings.experimental.swePrunerModel.description": "用於裁剪工具輸出的模型;預設為已設定的小模型",
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
@@ -1010,10 +1006,14 @@ export const dict = {
   "settings.display.codeEdit.description": "選擇程式碼編輯區塊與差異區塊的初始狀態：展開或收合。",
   "settings.display.codeEdit.expanded": "展開",
   "settings.display.codeEdit.collapsed": "收合",
+  "settings.display.mcpTool.title": "MCP 與通用工具區塊",
+  "settings.display.mcpTool.description": "選擇 MCP 與通用工具區塊的初始狀態：展開或收合。",
+  "settings.display.mcpTool.expanded": "展開",
+  "settings.display.mcpTool.collapsed": "收合",
 
   "settings.display.tokenThroughput.title": "顯示權杖吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助理訊息與工作標題中顯示文字生成速率（權杖/秒）。預設隱藏，以保持對話簡潔。",
+    "在最新的助理訊息和任務標題中顯示文字生成速率（tokens/sec）。預設顯示；需要時停用此設定即可隱藏。",
   "settings.display.autoApprovalReason.title": "顯示自動核准原因",
   "settings.display.autoApprovalReason.description":
     "在工具呼叫中顯示一行說明其被自動核准的原因（符合的規則、代理預設值、YOLO 模式等）。",

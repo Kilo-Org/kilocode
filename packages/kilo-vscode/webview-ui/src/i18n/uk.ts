@@ -274,6 +274,7 @@ export const dict = {
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
+  "notification.permission.titleSandboxEscalation": "Дозволити операцію Git за межами пісочниці?",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
   "ui.permission.doomLoop.prompt":
     "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
@@ -855,12 +856,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Увімкнути SWE-Pruner: обрізання з урахуванням завдання великих виводів інструментів читання, пошуку та оболонки, кероване фокус-питанням, наданим агентом",
-  "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Модель для обрізання виводу інструментів; за замовчуванням — налаштована мала модель",
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
@@ -1068,10 +1063,15 @@ export const dict = {
     "Виберіть, чи будуть блоки редагування коду та відмінностей спочатку розгорнутими чи згорнутими.",
   "settings.display.codeEdit.expanded": "Розгорнуті",
   "settings.display.codeEdit.collapsed": "Згорнуті",
+  "settings.display.mcpTool.title": "Блоки MCP та загальних інструментів",
+  "settings.display.mcpTool.description":
+    "Виберіть, чи будуть блоки MCP та загальних інструментів спочатку розгорнутими чи згорнутими.",
+  "settings.display.mcpTool.expanded": "Розгорнуті",
+  "settings.display.mcpTool.collapsed": "Згорнуті",
 
   "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
-    "Показує швидкість генерації тексту (токенів/с) на останньому повідомленні асистента та в заголовку завдання. За замовчуванням приховано, щоб чат залишався охайним.",
+    "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",
   "settings.display.autoApprovalReason.title": "Показувати причину автосхвалення",
   "settings.display.autoApprovalReason.description":
     "Показує рядок біля викликів інструментів, що пояснює, чому їх автоматично схвалено (відповідне правило, стандартне значення агента, режим YOLO тощо).",

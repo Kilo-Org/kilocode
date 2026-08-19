@@ -59,10 +59,7 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
       onKeyDown={deps.onKeyDown}
       onSelect={() => deps.onSelect(deps.id)}
       onMiddleClick={(e: MouseEvent) => deps.onMiddleClick(deps.id, e)}
-      onClose={(e: MouseEvent) => {
-        e.stopPropagation()
-        deps.onClose(deps.id)
-      }}
+      onClose={() => deps.onClose(deps.id)}
       onCloseOthers={() => deps.onCloseOthers(deps.id)}
     />
   )

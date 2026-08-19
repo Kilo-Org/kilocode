@@ -133,6 +133,10 @@ export const Info = Schema.Struct({
     description:
       "Controls whether code edit and diff blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  mcp_tool_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
+    description:
+      "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
   hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
     description: "Hide Kilo Gateway models that may train on your prompts from model listings",
   }),
@@ -332,14 +336,6 @@ export const Info = Schema.Struct({
       sandbox_writable_paths: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
         description:
           "Additional filesystem paths the sandbox allows writes to (e.g. ['/tmp', '/var/log']). These are merged with the default writable paths when the sandbox is active.",
-      }),
-      swe_pruner: Schema.optional(Schema.Boolean).annotate({
-        description:
-          "Enable SWE-Pruner: task-aware pruning of large read, grep, and bash tool outputs guided by a focus question provided by the agent (default: false)",
-      }),
-      swe_pruner_model: Schema.optional(Schema.String).annotate({
-        description:
-          'Model used by SWE-Pruner to skim tool outputs, in "provider/model" format (default: the configured small model)',
       }),
       // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({

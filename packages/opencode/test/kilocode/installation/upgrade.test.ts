@@ -64,14 +64,18 @@ describe("Kilo installation upgrade", () => {
       () => "",
       (request) => {
         release.push(request.url)
+        if (request.url === "https://api.github.com/repos/Kilo-Org/kilocode/releases/latest") {
+          return json({ tag_name: "jetbrains/v7.0.16" })
+        }
         return json({ version: "8.8.8" })
       },
     ),
-  ).effect("reads fallback versions from the Kilo npm registry", () =>
+  ).effect("does not use polluted GitHub release tags for fallback versions", () =>
     Effect.gen(function* () {
       const result = yield* Installation.Service.use((svc) => svc.latest("unknown"))
       expect(result).toBe("8.8.8")
       expect(release).toContain(`https://registry.npmjs.org/@kilocode%2fcli/${InstallationChannel}`)
+      expect(release).not.toContain("https://api.github.com/repos/Kilo-Org/kilocode/releases/latest")
     }),
   )
 

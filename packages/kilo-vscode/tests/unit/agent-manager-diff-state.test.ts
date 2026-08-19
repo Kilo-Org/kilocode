@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { mergeWorktreeDiffs } from "../../webview-ui/diff-viewer/diff-state"
+import { diffSizeKey, mergeWorktreeDiffs } from "../../webview-ui/diff-viewer/diff-state"
 import {
   EXTREME_DIFF_CHANGED_LINES,
   allOpenFiles,
@@ -27,6 +27,18 @@ function diff(overrides: Partial<WorktreeFileDiff>): WorktreeFileDiff {
     ...overrides,
   }
 }
+
+describe("diffSizeKey", () => {
+  it("changes with rendered content, style, and review context", () => {
+    const base = diff({ summarized: false, patch: "@@ -1 +1 @@\n-old\n+new\n" })
+    const key = diffSizeKey("review-a", base, "unified")
+
+    expect(diffSizeKey("review-a", base, "unified")).toBe(key)
+    expect(diffSizeKey("review-b", base, "unified")).not.toBe(key)
+    expect(diffSizeKey("review-a", base, "split")).not.toBe(key)
+    expect(diffSizeKey("review-a", { ...base, patch: "@@ -1 +1 @@\n-old\n+newer\n" }, "unified")).not.toBe(key)
+  })
+})
 
 describe("agent manager diff state", () => {
   it("preserves loaded detail and patch when summary metadata is unchanged", () => {

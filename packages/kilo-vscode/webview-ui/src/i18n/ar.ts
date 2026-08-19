@@ -265,6 +265,7 @@ export const dict = {
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
+  "notification.permission.titleSandboxEscalation": "السماح بعملية Git خارج البيئة المعزولة؟",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
   "ui.permission.doomLoop.rule": "متابعة استدعاءات {{tool}}",
@@ -842,12 +843,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "تفعيل SWE-Pruner: تقليم المخرجات الكبيرة لأدوات القراءة والبحث وshell مع مراعاة المهمة، استنادًا إلى سؤال تركيز يقدّمه الوكيل",
-  "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
@@ -1080,10 +1075,14 @@ export const dict = {
     "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",
   "settings.display.codeEdit.expanded": "موسّعة",
   "settings.display.codeEdit.collapsed": "مطوية",
+  "settings.display.mcpTool.title": "كتل أدوات MCP والأدوات العامة",
+  "settings.display.mcpTool.description": "اختر ما إذا كانت كتل أدوات MCP والأدوات العامة تبدأ موسّعة أم مطوية.",
+  "settings.display.mcpTool.expanded": "موسّعة",
+  "settings.display.mcpTool.collapsed": "مطوية",
 
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
-    "عرض معدل توليد النص (رموز/ثانية) على آخر رسالة من المساعد وفي رأس المهمة. مخفي بشكل افتراضي للحفاظ على تنظيم المحادثة.",
+    "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",
   "settings.display.autoApprovalReason.title": "إظهار سبب الموافقة التلقائية",
   "settings.display.autoApprovalReason.description":
     "إظهار سطر عند استدعاءات الأدوات يوضح سبب الموافقة التلقائية عليها (قاعدة مطابقة، إعداد افتراضي للوكيل، وضع YOLO، إلخ).",

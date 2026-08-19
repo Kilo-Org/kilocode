@@ -260,6 +260,7 @@ export const dict = {
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",
   "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
+  "notification.permission.titleSandboxEscalation": "要允许在沙盒外执行 Git 操作吗？",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
   "ui.permission.doomLoop.prompt": "检测到 {{tool}} 工具可能陷入循环。是否继续运行？",
   "ui.permission.doomLoop.rule": "继续调用 {{tool}}",
@@ -829,11 +830,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "额外可写路径",
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "启用 SWE-Pruner：根据智能体提供的聚焦问题，对读取、搜索和 shell 工具的大型输出进行任务感知裁剪",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
-  "settings.experimental.swePrunerModel.description": "用于裁剪工具输出的模型;默认为已配置的小模型",
   "settings.experimental.multiProject.title": "多项目 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
@@ -1047,10 +1043,14 @@ export const dict = {
   "settings.display.codeEdit.description": "选择代码编辑块和差异块的初始状态：展开或折叠。",
   "settings.display.codeEdit.expanded": "展开",
   "settings.display.codeEdit.collapsed": "折叠",
+  "settings.display.mcpTool.title": "MCP 与通用工具块",
+  "settings.display.mcpTool.description": "选择 MCP 与通用工具块的初始状态：展开或折叠。",
+  "settings.display.mcpTool.expanded": "展开",
+  "settings.display.mcpTool.collapsed": "折叠",
 
   "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助手消息和任务标题中显示文本生成速率（令牌/秒）。默认隐藏以保持聊天简洁。",
+    "在最新的助手消息和任务标题中显示文本生成速率（tokens/sec）。默认显示；需要时禁用此设置即可隐藏。",
   "settings.display.autoApprovalReason.title": "显示自动批准原因",
   "settings.display.autoApprovalReason.description":
     "在工具调用中显示一行说明其被自动批准的原因（匹配的规则、代理默认值、YOLO 模式等）。",

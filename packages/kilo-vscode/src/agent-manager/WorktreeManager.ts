@@ -839,6 +839,8 @@ export class WorktreeManager {
   private async refreshBase(branch: string, requested?: string): Promise<void> {
     const remote = requested ?? (await this.resolveRemote())
     if (!remote) return
+    validateGitRef(remote, "remote")
+    validateGitRef(branch, "branch")
     const key = `${this.root}:${remote}:${branch}`
     const cached = WorktreeManager.fetchCache.get(key)
     if (cached && Date.now() - cached < WorktreeManager.FETCH_CACHE_TTL) return
@@ -849,7 +851,7 @@ export class WorktreeManager {
     const env = nonInteractiveEnv()
     await simpleGit(this.root, { unsafe: { allowUnsafeSshCommand: isKiloOwnedSshCommand(env) } })
       .env(env)
-      .fetch(remote, branch, { "--quiet": null, "--no-tags": null })
+      .raw(["fetch", "--quiet", "--no-tags", remote, `+refs/heads/${branch}:refs/remotes/${remote}/${branch}`])
     WorktreeManager.fetchCache.set(key, Date.now())
   }
 
@@ -1107,16 +1109,31 @@ export class WorktreeManager {
       if (!remotes.some((r) => r.name === forkOwner)) {
         await this.git.addRemote(forkOwner, `https://github.com/${forkOwner}/${parsed.repo}.git`)
       }
-      await this.gitExec(["fetch", forkOwner, info.headRefName])
+      await this.gitExec([
+        "fetch",
+        "--quiet",
+        "--no-tags",
+        forkOwner,
+        `+refs/heads/${info.headRefName}:refs/remotes/${forkOwner}/${info.headRefName}`,
+      ])
     } else {
       validateGitRef(info.headRefName, "branch name")
-      const ok = await this.gitTry(["fetch", "origin", info.headRefName])
+      const ref = `+refs/heads/${info.headRefName}:refs/remotes/origin/${info.headRefName}`
+      const ok = await this.gitTry(["fetch", "--quiet", "--no-tags", "origin", ref])
       if (!ok) {
         await this.gitExec([
           "fetch",
           "origin",
           `+refs/pull/${parsed.number}/head:refs/remotes/origin/${info.headRefName}`,
         ])
+      }
+      if (!(await this.gitTry(["show-ref", "--verify", "--quiet", `refs/heads/${info.headRefName}`]))) {
+        const start = `refs/remotes/origin/${info.headRefName}`
+        await this.gitExec(["branch", info.headRefName, start])
+        if (ok) {
+          await this.gitExec(["config", `branch.${info.headRefName}.remote`, "origin"])
+          await this.gitExec(["config", `branch.${info.headRefName}.merge`, `refs/heads/${info.headRefName}`])
+        }
       }
     }
   }

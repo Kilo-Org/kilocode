@@ -212,7 +212,6 @@ export const ProjectList: Component<Props> = (props) => {
         })
       }
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
-      onTrust={(projectId) => vscode.postMessage({ type: "agentManager.trustProject", projectId })}
       onExpand={(projectId, expanded) =>
         vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded })
       }

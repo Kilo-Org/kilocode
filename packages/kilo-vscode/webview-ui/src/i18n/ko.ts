@@ -273,6 +273,7 @@ export const dict = {
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
+  "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 Git 작업을 허용할까요?",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
   "ui.permission.doomLoop.rule": "{{tool}} 호출 계속",
@@ -855,12 +856,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "추가 쓰기 가능 경로",
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner 활성화: 에이전트가 제공한 초점 질문에 따라 작업 맥락을 고려하여 읽기, 검색 및 셸 도구의 대용량 출력을 프루닝합니다",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner 모델",
-  "settings.experimental.swePrunerModel.description":
-    "도구 출력을 정리하는 데 사용하는 모델. 기본값은 구성된 소형 모델입니다",
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
@@ -1089,10 +1084,14 @@ export const dict = {
   "settings.display.codeEdit.description": "코드 편집 블록과 차이점 블록을 처음부터 펼칠지 접을지 선택합니다.",
   "settings.display.codeEdit.expanded": "펼침",
   "settings.display.codeEdit.collapsed": "접힘",
+  "settings.display.mcpTool.title": "MCP 및 범용 도구 블록",
+  "settings.display.mcpTool.description": "MCP 및 범용 도구 블록을 처음부터 펼칠지 접을지 선택합니다.",
+  "settings.display.mcpTool.expanded": "펼침",
+  "settings.display.mcpTool.collapsed": "접힘",
 
   "settings.display.tokenThroughput.title": "토큰 처리량 표시",
   "settings.display.tokenThroughput.description":
-    "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(토큰/초)를 표시합니다. 채팅을 깔끔하게 유지하기 위해 기본적으로 숨겨져 있습니다.",
+    "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(tokens/sec)를 표시합니다. 기본적으로 표시되며, 필요할 때 이 설정을 비활성화하면 숨길 수 있습니다.",
   "settings.display.autoApprovalReason.title": "자동 승인 이유 표시",
   "settings.display.autoApprovalReason.description":
     "도구 호출이 자동으로 승인된 이유(일치한 규칙, 에이전트 기본값, YOLO 모드 등)를 설명하는 줄을 표시합니다.",

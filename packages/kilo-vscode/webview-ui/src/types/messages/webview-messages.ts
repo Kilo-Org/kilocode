@@ -82,6 +82,7 @@ export interface LoadMessagesRequest {
   type: "loadMessages"
   sessionID: string
   mode?: MessageLoadMode
+  focus?: boolean
   before?: string
   limit?: number
 }
@@ -591,6 +592,13 @@ export interface SyncSessionRequest {
   type: "syncSession"
   sessionID: string
   parentSessionID?: string
+  scope?: "task" | "inspector"
+}
+
+export interface UnsyncSessionRequest {
+  type: "unsyncSession"
+  sessionID: string
+  scope?: "task" | "inspector"
 }
 
 // Agent Manager worktree messages
@@ -748,12 +756,6 @@ export interface SetProjectExpandedMessage {
   type: "agentManager.setProjectExpanded"
   projectId: string
   expanded: boolean
-}
-
-// Grant a project permission to run project-controlled scripts and load state
-export interface TrustProjectMessage {
-  type: "agentManager.trustProject"
-  projectId: string
 }
 
 // Configure worktree setup script
@@ -1488,6 +1490,7 @@ export type WebviewMessage =
   | ResetReadNotificationsRequest
   | SettingsTabChangedMessage
   | SyncSessionRequest
+  | UnsyncSessionRequest
   | CreateWorktreeSessionRequest
   | RequestNotificationsMessage
   | DismissNotificationMessage
@@ -1513,7 +1516,6 @@ export type WebviewMessage =
   | ActivateSelectionMessage
   | RememberTargetMessage
   | SetProjectExpandedMessage
-  | TrustProjectMessage
   | ConfigureSetupScriptRequest
   | ConfigureRunScriptRequest
   | RunScriptRequest

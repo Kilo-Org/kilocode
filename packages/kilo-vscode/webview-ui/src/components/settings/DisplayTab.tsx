@@ -6,7 +6,7 @@ import { Switch } from "@kilocode/kilo-ui/switch"
 import { useConfig } from "../../context/config"
 import { useDisplay } from "../../context/display"
 import { useLanguage } from "../../context/language"
-import type { CodeEditDisplay, TerminalCommandDisplay } from "../../types/messages"
+import type { CodeEditDisplay, McpToolDisplay, TerminalCommandDisplay } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
 interface LayoutOption {
@@ -22,6 +22,11 @@ const TERMINAL_OPTIONS: LayoutOption[] = [
 const CODE_EDIT_OPTIONS: LayoutOption[] = [
   { value: "expanded", labelKey: "settings.display.codeEdit.expanded" },
   { value: "collapsed", labelKey: "settings.display.codeEdit.collapsed" },
+]
+
+const MCP_OPTIONS: LayoutOption[] = [
+  { value: "expanded", labelKey: "settings.display.mcpTool.expanded" },
+  { value: "collapsed", labelKey: "settings.display.mcpTool.collapsed" },
 ]
 
 const DisplayTab: Component = () => {
@@ -96,7 +101,7 @@ const DisplayTab: Component = () => {
           description={language.t("settings.display.tokenThroughput.description")}
         >
           <Switch
-            checked={Boolean(settings()["showTokenThroughput"] ?? false)}
+            checked={Boolean(settings()["showTokenThroughput"] ?? true)}
             onChange={(checked: boolean) => updateSetting("showTokenThroughput", checked)}
             hideLabel
           >
@@ -141,7 +146,6 @@ const DisplayTab: Component = () => {
         <SettingsRow
           title={language.t("settings.display.codeEdit.title")}
           description={language.t("settings.display.codeEdit.description")}
-          last
         >
           <Select
             options={CODE_EDIT_OPTIONS}
@@ -153,6 +157,28 @@ const DisplayTab: Component = () => {
               const next = o.value as CodeEditDisplay
               if (next === (config().code_edit_display ?? "collapsed")) return
               updateConfig({ code_edit_display: next })
+            }}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.mcpTool.title")}
+          description={language.t("settings.display.mcpTool.description")}
+          last
+        >
+          <Select
+            options={MCP_OPTIONS}
+            current={MCP_OPTIONS.find((o) => o.value === (config().mcp_tool_display ?? "collapsed"))}
+            value={(o) => o.value}
+            label={(o) => language.t(o.labelKey)}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value as McpToolDisplay
+              if (next === (config().mcp_tool_display ?? "collapsed")) return
+              updateConfig({ mcp_tool_display: next })
             }}
             variant="secondary"
             size="small"

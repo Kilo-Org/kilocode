@@ -25,6 +25,10 @@ export class VisibleTaskStreams {
     this.refs.delete(id)
   }
 
+  has(id: string): boolean {
+    return this.refs.has(id)
+  }
+
   setActive(active: boolean): void {
     if (this.active === active) return
     this.active = active

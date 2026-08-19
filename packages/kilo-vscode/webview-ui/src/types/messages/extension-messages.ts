@@ -769,7 +769,6 @@ export interface AgentProjectSnapshot {
   active: boolean
   expanded: boolean
   initialized: boolean
-  trusted: boolean
   missing: boolean
 }
 
