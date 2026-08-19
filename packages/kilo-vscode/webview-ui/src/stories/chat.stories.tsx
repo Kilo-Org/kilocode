@@ -317,6 +317,46 @@ export const ChatViewAgentManagerCompleted: Story = {
   },
 }
 
+/**
+ * The session dock swaps the working indicator for the session actions when a
+ * turn finishes. Toggling `busy` here drives that swap inside one mounted view
+ * so a test can assert the transcript viewport keeps its exact height.
+ */
+export const ChatViewSessionDockStability: Story = {
+  name: "ChatView — session dock keeps its height",
+  render: () => {
+    const [busy, setBusy] = createSignal(false)
+    const status = () => (busy() ? "busy" : "idle")
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
+      status,
+      statusInfo: () => ({ type: status() }),
+      statusText: () => (busy() ? "Thinking…" : undefined),
+      busySince: () => (busy() ? Date.now() - 2000 : undefined),
+      submitting: () => busy(),
+      isSubmitting: () => busy(),
+      messages: () => [{ id: "msg-001" }] as any[],
+      worktreeStats: () => ({ files: 2, additions: 164, deletions: 111 }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <ServerContext.Provider value={mockServer as any}>
+          <SessionContext.Provider value={session as any}>
+            <WorktreeModeProvider>
+              <div style={{ height: "320px", display: "flex", "flex-direction": "column" }}>
+                <button data-testid="toggle-busy" onClick={() => setBusy(!busy())}>
+                  toggle busy
+                </button>
+                <ChatView onForkSession={() => undefined} continueInWorktree />
+              </div>
+            </WorktreeModeProvider>
+          </SessionContext.Provider>
+        </ServerContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
 export const UserMessageReviewComments: Story = {
   name: "User message — interactive review comments",
   render: () => {

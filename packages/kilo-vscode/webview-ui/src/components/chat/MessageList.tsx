@@ -36,7 +36,6 @@ import type { ErrorDisplayProps } from "./ErrorDisplay"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
-import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { TurnOutcome } from "../shared/TurnOutcome"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
@@ -1364,7 +1363,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 />
               )}
             </For>
-            <WorkingIndicator />
             <TurnOutcome />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>

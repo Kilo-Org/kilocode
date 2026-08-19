@@ -489,19 +489,3 @@ export function collapseCostBreakdown(
   const aggregated = hidden.reduce((sum, e) => sum + e.cost, 0)
   return [root, ...visible, { label: summaryLabel(hidden.length), cost: aggregated }]
 }
-
-export function mergeMessages(current: Message[], incoming: Message[], mode: Exclude<MessageLoadMode, "focus">) {
-  if (mode === "reconcile") {
-    const byId = new Map<string, Message>()
-    for (const msg of current) byId.set(msg.id, msg)
-    for (const msg of incoming) byId.set(msg.id, msg)
-    return [...byId.values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  }
-  const seen = new Set<string>()
-  const source = mode === "prepend" ? [...incoming, ...current] : incoming
-  return source.filter((msg) => {
-    if (seen.has(msg.id)) return false
-    seen.add(msg.id)
-    return true
-  })
-}
