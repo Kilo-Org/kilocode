@@ -42,12 +42,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return yield* Effect.sync(() => HeapSnapshot.write())
     })
 
-    const agentRequirements = Effect.fn("KilocodeHttpApi.agentRequirements")(function* (ctx: {
-      query: { agent: string }
-    }) {
-      return yield* agents.requirementStatus(ctx.query.agent)
-    })
-
     const commandFiles = Effect.fn("KilocodeHttpApi.commandFiles")(function* () {
       const instance = yield* InstanceState.context
       const dirs = yield* config.directories()
@@ -177,7 +171,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
 
     return handlers
       .handle("heapSnapshot", heapSnapshot)
-      .handle("agentRequirements", agentRequirements)
       .handle("commandFiles", commandFiles)
       .handle("removeCommand", removeCommand)
       .handle("removeSkill", removeSkill)
