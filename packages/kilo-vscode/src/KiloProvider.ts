@@ -1046,6 +1046,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           openSessions: (ids) => this.trackOpenSessions(ids),
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
+          backgroundJobs: (sessionID) => this.fetchAndSendBackgroundJobs(sessionID),
+          cancelBackgroundJob: (jobID, sessionID) => this.cancelBackgroundJob(jobID, sessionID),
+          backgroundSubagents: (sessionID) => this.backgroundSubagents(sessionID),
         })
       ) {
         return
@@ -2813,6 +2816,48 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
     this.postMessage({ type: "speechToTextModelsLoaded" as const, models: result.models })
+  }
+
+  private async fetchAndSendBackgroundJobs(sessionID = this.currentSession?.id): Promise<void> {
+    const client = this.client
+    if (!client || this.connectionState !== "connected") return
+    try {
+      const { data } = await client.kilocode.backgroundJobs(
+        { directory: this.getWorkspaceDirectory(sessionID) },
+        { throwOnError: true },
+      )
+      this.postMessage({ type: "backgroundJobsLoaded", sessionID, jobs: data })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch background jobs:", error)
+    }
+  }
+
+  private async cancelBackgroundJob(jobID: string, sessionID = this.currentSession?.id): Promise<void> {
+    const client = this.client
+    if (!client || this.connectionState !== "connected") return
+    try {
+      await client.kilocode.backgroundJob.cancel(
+        { jobID, directory: this.getWorkspaceDirectory(sessionID) },
+        { throwOnError: true },
+      )
+      await this.fetchAndSendBackgroundJobs(sessionID)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to cancel background job:", error)
+    }
+  }
+
+  private async backgroundSubagents(sessionID: string): Promise<void> {
+    const client = this.client
+    if (!client || this.connectionState !== "connected") return
+    try {
+      await client.experimental.session.background(
+        { sessionID, directory: this.getWorkspaceDirectory(sessionID) },
+        { throwOnError: true },
+      )
+      await this.fetchAndSendBackgroundJobs(sessionID)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to background subagents:", error)
+    }
   }
 
   /**

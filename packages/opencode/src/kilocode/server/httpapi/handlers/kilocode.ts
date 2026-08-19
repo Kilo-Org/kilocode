@@ -17,6 +17,7 @@ import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import { Skill } from "@/skill"
+import { BackgroundJob } from "@/background/job"
 import type { SessionID } from "@/session/schema"
 import {
   AgentManagerRejectPayload,
@@ -27,6 +28,7 @@ import {
   RemoveCommandPayload,
   RemoveSkillPayload,
 } from "../groups/kilocode"
+import { BackgroundJobInfo } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
   Effect.gen(function* () {
@@ -37,6 +39,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const store = yield* InstanceStore.Service
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
+    const background = yield* BackgroundJob.Service
 
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
@@ -175,6 +178,28 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return usage
     })
 
+    const backgroundJobs = Effect.fn("KilocodeHttpApi.backgroundJobs")(function* () {
+      return (yield* background.list()).map((job) => ({
+        id: job.id,
+        type: job.type,
+        title: job.title,
+        status: job.status,
+        started_at: job.started_at,
+        completed_at: job.completed_at,
+        error: job.error,
+        metadata: job.metadata,
+      })) satisfies (typeof BackgroundJobInfo.Type)[]
+    })
+
+    const backgroundJobCancel = Effect.fn("KilocodeHttpApi.backgroundJobCancel")(function* (ctx: {
+      params: { jobID: string }
+    }) {
+      const job = yield* background.get(ctx.params.jobID)
+      if (!job) return yield* new HttpApiError.NotFound({})
+      yield* background.cancel(ctx.params.jobID)
+      return true
+    })
+
     return handlers
       .handle("heapSnapshot", heapSnapshot)
       .handle("agentRequirements", agentRequirements)
@@ -189,5 +214,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("agentManagerReply", agentManagerReply)
       .handle("agentManagerReject", agentManagerReject)
       .handle("sessionModelUsage", sessionModelUsage)
+      .handle("backgroundJobs", backgroundJobs)
+      .handle("backgroundJobCancel", backgroundJobCancel)
   }),
 )

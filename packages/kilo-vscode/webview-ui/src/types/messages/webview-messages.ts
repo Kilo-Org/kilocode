@@ -43,6 +43,22 @@ export interface AbortRequest {
   sessionID: string
 }
 
+export interface RequestBackgroundJobsMessage {
+  type: "requestBackgroundJobs"
+  sessionID?: string
+}
+
+export interface CancelBackgroundJobMessage {
+  type: "cancelBackgroundJob"
+  jobID: string
+  sessionID?: string
+}
+
+export interface BackgroundSubagentsMessage {
+  type: "backgroundSubagents"
+  sessionID: string
+}
+
 export interface RevertSessionRequest {
   type: "revertSession"
   sessionID: string
@@ -1406,6 +1422,9 @@ export interface DismissAgentMigrationBannerMessage {
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
+  | RequestBackgroundJobsMessage
+  | CancelBackgroundJobMessage
+  | BackgroundSubagentsMessage
   | RevertSessionRequest
   | UnrevertSessionRequest
   | DeleteMessageRequest

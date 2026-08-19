@@ -21,6 +21,29 @@ type Ctx = {
   openSessions: (ids: string[]) => void
   speechToTextModels: () => Promise<void>
   modelUsage: (message: ModelUsageMessage) => Promise<void>
+  backgroundJobs: (sessionID?: string) => Promise<void>
+  cancelBackgroundJob: (jobID: string, sessionID?: string) => Promise<void>
+  backgroundSubagents: (sessionID: string) => Promise<void>
+}
+
+async function routeBackgroundMessage(
+  message: { type: string; sessionID?: unknown; jobID?: unknown },
+  ctx: Ctx,
+): Promise<boolean | undefined> {
+  if (message.type === "requestBackgroundJobs") {
+    await ctx.backgroundJobs(typeof message.sessionID === "string" ? message.sessionID : undefined)
+    return true
+  }
+  if (message.type === "cancelBackgroundJob") {
+    if (typeof message.jobID === "string")
+      await ctx.cancelBackgroundJob(message.jobID, typeof message.sessionID === "string" ? message.sessionID : undefined)
+    return true
+  }
+  if (message.type === "backgroundSubagents") {
+    if (typeof message.sessionID === "string") await ctx.backgroundSubagents(message.sessionID)
+    return true
+  }
+  return undefined
 }
 
 export async function routeEarlyMessage(
@@ -84,5 +107,6 @@ export async function routeEarlyMessage(
     ctx.browserSettings()
     return true
   }
-  return await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post })
+  const background = await routeBackgroundMessage(message, ctx)
+  return background ?? (await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post }))
 }

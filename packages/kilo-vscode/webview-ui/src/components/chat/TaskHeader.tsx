@@ -18,6 +18,7 @@ import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-uti
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
+import { BackgroundAgents } from "./BackgroundAgents"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { TranscriptSearch } from "./TranscriptSearch"
@@ -291,6 +292,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
         </div>
       </Show>
+      <BackgroundAgents readonly={props.readonly} />
       <Show when={hasTodos()}>
         <div data-component="task-header-todos">
           <button
