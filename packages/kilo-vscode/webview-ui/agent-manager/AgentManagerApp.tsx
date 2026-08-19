@@ -146,6 +146,7 @@ import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } f
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
 import { PRPanel } from "./pr/PRPanel"
+import { openFile as openPRFile, openUrl as openPRUrl } from "./pr/pr-panel-actions"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
@@ -2681,18 +2682,8 @@ const AgentManagerContent: Component = () => {
                             url: activePR()!.pr.url,
                           })
                         }
-                        onOpenFile={(file, line) => {
-                          const id = diffCtx()
-                          if (id)
-                            vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
-                        }}
-                        onOpenUrl={(url) =>
-                          vscode.postMessage({
-                            type: "agentManager.openPR",
-                            worktreeId: activePR()!.selected,
-                            url,
-                          })
-                        }
+                        onOpenFile={(file, line) => openPRFile(vscode.postMessage, diffCtx(), file, line)}
+                        onOpenUrl={(url) => openPRUrl(vscode.postMessage, activePR()!.selected, url)}
                       />
                     </Show>
                     <Show when={subagents.tabs().length > 0}>
