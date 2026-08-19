@@ -107,16 +107,18 @@ internal class FileLog(cls: Class<*>) : KiloLog {
     private val name = cls.name
 
     companion object {
-        private val level: Level by lazy { resolveLevel() }
         private const val LIMIT = 5_000_000
         private const val ROTATIONS = 2
+        @Volatile
+        private var initialized = false
 
         private val root: java.util.logging.Logger by lazy {
             val logger = java.util.logging.Logger.getLogger("ai.kilocode")
             val payload = KiloLog.payload().entries.joinToString(" ") { "${it.key}=${it.value}" }
             logger.addHandler(handler)
             logger.useParentHandlers = false
-            logger.level = level
+            logger.level = LogConfig.julLevel()
+            initialized = true
             logger.log(Level.INFO, "environment payload: $payload")
             logger
         }
@@ -160,16 +162,9 @@ internal class FileLog(cls: Class<*>) : KiloLog {
             return dir
         }
 
-        private fun resolveLevel(): Level {
-            val prop = System.getProperty("kilo.dev.log.level") ?: return Level.INFO
-            return when (prop.uppercase()) {
-                "DEBUG" -> Level.FINE
-                "INFO" -> Level.INFO
-                "WARN", "WARNING" -> Level.WARNING
-                "ERROR" -> Level.SEVERE
-                "OFF" -> Level.OFF
-                else -> Level.ALL
-            }
+        internal fun refreshLevel() {
+            if (!initialized) return
+            root.level = LogConfig.julLevel()
         }
     }
 

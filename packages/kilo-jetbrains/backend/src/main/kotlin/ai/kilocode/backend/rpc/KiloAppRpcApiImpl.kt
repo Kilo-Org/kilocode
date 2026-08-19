@@ -13,6 +13,7 @@ import ai.kilocode.backend.cli.KiloCliPlatform
 import ai.kilocode.backend.cli.KiloProps
 import ai.kilocode.backend.cli.KiloRepoCli
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
+import ai.kilocode.log.LogConfig
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.ConfigWarningDto
@@ -22,6 +23,7 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.LoadProgressDto
+import ai.kilocode.rpc.dto.LogConfigDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
@@ -94,6 +96,10 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
     override suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto {
         app.requireReady()
         return appStateDto(app.updateConfig(patch))
+    }
+
+    override suspend fun applyLogConfig(config: LogConfigDto) {
+        LogConfig.apply(config.level, config.contentMode, config.previewMax)
     }
 
     override suspend fun refreshProfile(): ProfileDto? = app.refreshProfile()?.let(::profileDto)

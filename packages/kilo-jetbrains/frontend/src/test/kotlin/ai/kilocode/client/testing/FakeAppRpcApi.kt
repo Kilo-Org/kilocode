@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.LogConfigDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
@@ -49,6 +50,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
     val cleared = mutableListOf<String>()
     val variants = mutableListOf<ModelVariantUpdateDto>()
     val configPatches = mutableListOf<ConfigPatchDto>()
+    val logConfigs = mutableListOf<LogConfigDto>()
     var configUpdateAttempts = 0
         private set
     var configUpdateGate: CompletableDeferred<Unit>? = null
@@ -169,6 +171,11 @@ class FakeAppRpcApi : KiloAppRpcApi {
         state.value = next
         if (configUpdateReturnStale) return current
         return next
+    }
+
+    override suspend fun applyLogConfig(config: LogConfigDto) {
+        assertNotEdt("applyLogConfig")
+        logConfigs.add(config)
     }
 
     private fun applyPatch(config: ConfigDto, patch: ConfigPatchDto): ConfigDto {

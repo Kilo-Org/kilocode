@@ -161,6 +161,14 @@
         <action id="Kilo.ForceMigration"
                 class="ai.kilocode.client.actions.ForceMigrationAction"/>
 
+        <action id="Kilo.LogsConfiguration"
+                class="ai.kilocode.client.actions.LogsConfigurationAction"/>
+
+        <group id="Kilo.ToolsMenu" popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <reference ref="Kilo.LogsConfiguration"/>
+        </group>
+
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
