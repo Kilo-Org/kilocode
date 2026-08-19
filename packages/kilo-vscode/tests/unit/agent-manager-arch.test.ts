@@ -1113,7 +1113,6 @@ describe("Shared webview provider shell", () => {
       "ImageModelsProvider",
       "NotificationsProvider",
       "SessionProvider",
-      "AgentRequirementsProvider",
       "MemoryProvider",
       "FeedbackProvider",
     ])

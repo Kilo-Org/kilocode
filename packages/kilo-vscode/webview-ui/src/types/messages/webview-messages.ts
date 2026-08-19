@@ -273,14 +273,6 @@ export interface RequestSkillsMessage {
   type: "requestSkills"
 }
 
-export interface RequestAgentRequirementsMessage {
-  type: "requestAgentRequirements"
-  agent: string
-  directory: string
-  sessionID?: string
-  force?: boolean
-}
-
 export interface RequestCommandsMessage {
   type: "requestCommands"
 }
@@ -1434,7 +1426,6 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
-  | RequestAgentRequirementsMessage
   | RequestCommandsMessage
   | SendCommandRequest
   | RemoveSkillMessage
