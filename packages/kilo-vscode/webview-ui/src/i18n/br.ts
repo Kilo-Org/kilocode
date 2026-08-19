@@ -873,12 +873,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Ativar SWE-Pruner: poda das saídas grandes das ferramentas de leitura, busca e shell levando em conta a tarefa, guiada por uma pergunta de foco fornecida pelo agente",
-  "settings.experimental.swePrunerModel.title": "Modelo do SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Modelo usado para podar as saídas das ferramentas; por padrão, o modelo pequeno configurado",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
   "settings.experimental.multiProject.description":
     "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",

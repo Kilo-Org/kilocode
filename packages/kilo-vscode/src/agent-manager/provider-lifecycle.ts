@@ -42,6 +42,7 @@ export interface LifecycleHost {
   capture: (event: string, props: Record<string, unknown>) => void
   autoName: () => { enabled: boolean }
   client: () => KiloClient
+  removePtys: (directory: string) => Promise<void>
   metadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   post: (message: AgentManagerOutMessage) => void
   log: (...args: unknown[]) => void
@@ -63,8 +64,14 @@ export async function createLifecycleWorktree(
 
   const session = await host.createSession(created.result.path, created.result.branch, created.worktree.id)
   if (!session) {
+    try {
+      await host.removePtys(created.result.path)
+    } catch (error) {
+      host.log("Failed to remove worktree PTYs:", error)
+      return null
+    }
+    await ctx.worktreeManager().removeWorktree(created.result.path, created.result.branch)
     ctx.peekState()?.removeWorktree(created.worktree.id)
-    await ctx.worktreeManager().removeWorktree(created.result.path)
     host.push()
     return null
   }
@@ -100,8 +107,8 @@ export async function deleteLifecycleWorktree(
     host.log(`Worktree ${worktreeId} not found in state`)
     return null
   }
-  // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
-  // Pre-emptive skip covers any in-flight poll that already captured getWorktrees().
+  // Stop pollers before cleanup. State is removed only after PTYs and disk are gone so a failed
+  // process cleanup cannot leave a live shell rooted in an untracked worktree.
   host.skipStats(worktreeId)
   await host.removeRun(worktreeId)
   if (!(await host.clearRun(worktreeId))) {
@@ -109,19 +116,21 @@ export async function deleteLifecycleWorktree(
     host.post({ type: "error", message: "Failed to stop the Run script before deleting the worktree" })
     return null
   }
-  host.removePR(worktreeId)
-  host.forgetName(worktreeId)
-  const orphaned = state.removeWorktree(worktreeId)
-  host.stopDiffs(worktree.path, orphaned)
-  for (const s of orphaned) host.sessions.clearDirectory(s.id)
-  host.push()
-  // Disk removal after state is clean — pollers no longer reference this worktree.
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
   try {
+    await host.removePtys(worktree.path)
     await ctx.worktreeManager().removeWorktree(worktree.path, branch)
   } catch (error) {
     host.log(`Failed to remove worktree from disk: ${error}`)
+    host.unskipStats(worktreeId)
+    return null
   }
+  const orphaned = state.removeWorktree(worktreeId)
+  host.removePR(worktreeId)
+  host.forgetName(worktreeId)
+  host.stopDiffs(worktree.path, orphaned)
+  for (const s of orphaned) host.sessions.clearDirectory(s.id)
+  host.push()
   host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
   return null
 }
@@ -149,6 +158,12 @@ export async function removeStaleLifecycleWorktree(
   await host.removeRun(worktreeId)
   if (!(await host.clearRun(worktreeId))) {
     host.post({ type: "error", message: "Failed to stop the Run script before removing the worktree" })
+    return null
+  }
+  try {
+    await host.removePtys(worktree.path)
+  } catch (error) {
+    host.log(`Failed to remove stale worktree PTYs: ${error}`)
     return null
   }
   host.forgetName(worktreeId)

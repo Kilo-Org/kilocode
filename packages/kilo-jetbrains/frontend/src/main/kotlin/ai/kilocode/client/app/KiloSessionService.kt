@@ -18,6 +18,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -59,12 +60,20 @@ class KiloSessionService internal constructor(
         private val LOG = KiloLog.create(KiloSessionService::class.java)
     }
 
+    // Reflects the sessions from the most recent tracking [list]/[renameSession] call, which is
+    // scoped to a single directory. It is NOT a per-workspace source of truth: a caller listing a
+    // different directory (e.g. an Agent Manager worktree tab) overwrites it. Directory-scoped
+    // callers must consume the return value of [list]/[sessionsFor], never this flow.
     private val _sessions = MutableStateFlow<List<SessionDto>>(emptyList())
     val sessions: StateFlow<List<SessionDto>> = _sessions.asStateFlow()
 
     /** Live session status map from SSE events. */
     val statuses: StateFlow<Map<String, SessionStatusDto>> =
         stream { statuses() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
+
+    /** Live session activity map from backend global events. */
+    val activity: StateFlow<Map<String, SessionActivityDto>> =
+        stream { activity() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
 
     // ------ RPC helpers ------
 
@@ -92,7 +101,7 @@ class KiloSessionService internal constructor(
         }
     }
 
-    internal fun activity(): Map<String, SessionActivityKind> =
+    internal fun activitySnapshot(): Map<String, SessionActivityKind> =
         statuses.value
             .filterValues { it.type == "busy" }
             .mapValues { SessionActivityKind.RUNNING }
@@ -102,6 +111,13 @@ class KiloSessionService internal constructor(
         _sessions.value = result.sessions
         return result
     }
+
+    /**
+     * List sessions for [dir] without touching the shared [sessions] flow. Use this for
+     * directory-scoped views (e.g. Agent Manager worktree tabs) that maintain their own model, so a
+     * background refresh does not clobber the primary workspace's [sessions] snapshot.
+     */
+    suspend fun sessionsFor(dir: String): SessionListDto = call { list(dir) }
 
     /** Load recent sessions for the current worktree family. */
     suspend fun recent(dir: String, limit: Int): List<SessionDto> =
@@ -113,9 +129,9 @@ class KiloSessionService internal constructor(
 
     /** Create a new session. Caller awaits the result. */
     suspend fun create(dir: String): SessionDto {
-        log.info("create: dir=$dir")
+        log.info("kind=session create=true dir=${ChatLogSummary.dir(dir)}")
         val session = call { create(dir) }
-        log.info("create: id=${session.id}")
+        log.info("${ChatLogSummary.sid(session.id)} kind=session create=true ok=true dir=${ChatLogSummary.dir(dir)}")
         refresh(dir)
         return session
     }
@@ -132,7 +148,9 @@ class KiloSessionService internal constructor(
     }
 
     suspend fun deleteSession(id: String, dir: String) {
+        log.info("${ChatLogSummary.sid(id)} kind=session delete=true dir=${ChatLogSummary.dir(dir)}")
         call { delete(id, dir) }
+        log.info("${ChatLogSummary.sid(id)} kind=session delete=true ok=true dir=${ChatLogSummary.dir(dir)}")
         list(dir)
     }
 

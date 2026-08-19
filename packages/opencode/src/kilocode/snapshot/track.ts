@@ -49,9 +49,11 @@ import { PartID as PartIDSchema } from "@/session/schema"
 import type { MessageV2 } from "@/session/message-v2"
 import { KiloPartLifecycle } from "@/kilocode/session/part-lifecycle"
 import { KilocodeConfig } from "@/kilocode/config/config"
+import { capture } from "@/kilocode/instance"
 import { ConfigParse } from "@/config/parse"
 import * as Log from "@opencode-ai/core/util/log"
 import { iife } from "@/util/iife"
+import { EffectBridge } from "@/effect/bridge"
 import { makeRuntime } from "@/effect/run-service"
 import type { Config } from "@/config/config"
 // Avoid an eager `import { Session }` here: session/index.ts indirectly
@@ -473,7 +475,9 @@ export namespace KiloSnapshotTrack {
 
             if (answer === "disable") {
               log.info("user chose to disable snapshot for this project")
-              yield* Effect.promise(() =>
+              // Restore instance context across the Promise boundary; Effect.promise
+              // drops it, and persistDisable needs the project directory.
+              yield* EffectBridge.fromPromise(() =>
                 hooks.persistDisable().catch((err) => {
                   log.error("failed to persist snapshot:false to project config", { err })
                 }),
@@ -631,8 +635,11 @@ export namespace KiloSnapshotTrack {
     },
 
     async persistDisable() {
-      const directory = await currentDirectory()
-      if (!directory) return
+      const ctx = capture()
+      if (!ctx) {
+        log.error("persistDisable: no instance directory; snapshot:false was not written to project config")
+        return
+      }
       // Every field on Config.Info is Schema.optional(...), so a single-key
       // object is structurally a valid Config.Info — no cast needed.
       const patch: Config.Info = { snapshot: false }
@@ -640,8 +647,8 @@ export namespace KiloSnapshotTrack {
         Effect.gen(function* () {
           yield* KilocodeConfig.updateProjectConfig({
             fs,
-            directory: directory.directory,
-            worktree: directory.worktree,
+            directory: ctx.directory,
+            worktree: ctx.worktree,
             config: patch,
             read: (file) =>
               fs.readFileString(file).pipe(
@@ -680,19 +687,5 @@ export namespace KiloSnapshotTrack {
       })
       return applyEdits(out, edits)
     }, input)
-  }
-
-  /**
-   * Resolve the active instance directory/worktree. Runs via `Instance.current`
-   * when available; returns undefined outside of an instance context (e.g. in
-   * tests that bypass the runtime).
-   */
-  async function currentDirectory(): Promise<{ directory: string; worktree?: string } | undefined> {
-    const { Instance } = await import("@/kilocode/instance")
-    try {
-      return { directory: Instance.directory, worktree: Instance.worktree }
-    } catch {
-      return undefined
-    }
   }
 }

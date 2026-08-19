@@ -7,7 +7,7 @@ import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.PermissionRuleCandidate
 import ai.kilocode.client.session.model.PermissionRuleDecision
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.md.MdCommon
@@ -773,11 +773,11 @@ class PermissionViewTest : BasePlatformTestCase() {
 
     // ------ shared card shell ------
 
-    fun `test view contains BaseSessionQuestionPanel after show`() {
+    fun `test view contains DialogView after show`() {
         view.show(permission())
 
-        val panels = findAll<BaseQuestionView>(view)
-        assertTrue("Expected a BaseSessionQuestionPanel after show", panels.isNotEmpty())
+        val panels = findAll<DialogView>(view)
+        assertTrue("Expected a DialogView after show", panels.isNotEmpty())
     }
 
     fun `test permission icon is rendered in header`() {

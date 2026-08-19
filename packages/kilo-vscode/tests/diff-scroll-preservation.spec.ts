@@ -2,9 +2,14 @@ import { expect, test, type Page } from "@playwright/test"
 
 const GLOBALS = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
 const STORY_ID = "agentmanager--full-screen-diff-agent-edit-scroll"
+const INLINE_STORY_ID = "agentmanager--diff-panel-scroll-up"
 
 function storyUrl() {
   return `/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`
+}
+
+function inlineStoryUrl() {
+  return `/iframe.html?id=${INLINE_STORY_ID}&viewMode=story&globals=${GLOBALS}`
 }
 
 async function disableAnimations(page: Page) {
@@ -158,4 +163,61 @@ test("resets virtual measurements and scroll when the review context changes", a
   await expect(page.getByTestId("review-context")).toHaveText("changed-context")
   await expect.poll(async () => first.evaluate((el) => el.getBoundingClientRect().height)).toBe(1_200)
   await expect.poll(async () => scroller.evaluate((el) => el.scrollTop)).toBe(0)
+})
+
+test("keeps the inline diff position stable while scrolling upward", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 760 })
+  await page.goto(inlineStoryUrl(), { waitUntil: "load" })
+  await disableAnimations(page)
+  await page.waitForSelector(".am-diff-content diffs-container", { state: "attached" })
+
+  const result = await page.locator(".am-diff-content").evaluate(async (el) => {
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
+    const settle = async (count: number) => {
+      for (let i = 0; i < count; i++) await frame()
+    }
+    const seen = new Set(
+      Array.from(el.querySelectorAll("[data-file-path]"), (row) => row.getAttribute("data-file-path")),
+    )
+    let remounts = 0
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue
+          const rows = node.matches("[data-file-path]") ? [node] : Array.from(node.querySelectorAll("[data-file-path]"))
+          for (const row of rows) {
+            const file = row.getAttribute("data-file-path")
+            if (seen.has(file)) remounts++
+            seen.add(file)
+          }
+        }
+      }
+    })
+    observer.observe(el, { childList: true, subtree: true })
+
+    // Materialize every row once, then start from the settled bottom. The bug
+    // appears when upward scrolling re-creates rows above the viewport.
+    while (el.scrollTop < el.scrollHeight - el.clientHeight - 1) {
+      el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + 120)
+      await frame()
+    }
+    await settle(30)
+
+    let correction = 0
+    let range = 0
+    while (el.scrollTop > 0) {
+      const height = el.scrollHeight
+      const intended = Math.max(0, el.scrollTop - 80)
+      el.scrollTop = intended
+      await settle(2)
+      correction = Math.max(correction, Math.abs(el.scrollTop - intended))
+      range = Math.max(range, Math.abs(el.scrollHeight - height))
+    }
+    observer.disconnect()
+    return { correction, range, remounts }
+  })
+
+  expect(result.remounts).toBeGreaterThan(0)
+  expect(result.correction).toBeLessThanOrEqual(1)
+  expect(result.range).toBeLessThanOrEqual(1)
 })

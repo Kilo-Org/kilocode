@@ -148,6 +148,18 @@ describe("Agent Manager per-project session discovery", () => {
     expect(out.find((s) => s.id === "ses-root")?.title).toBe("Session ses-root")
   })
 
+  it("does not expose child sessions as project sidebar sessions", async () => {
+    const wt: Worktree = { id: "wt-1", branch: "fix", path: WT_PATH, parentBranch: "main", createdAt: "" }
+    const ctx = makeContext(ROOT, fakeState([wt]))
+    const rootSession = mkSession("ses-root", WT_PATH)
+    const child = { ...mkSession("ses-child", WT_PATH), parentID: rootSession.id }
+    const { listing } = recordingListing({ [ROOT]: [], [WT_PATH]: [child, rootSession] })
+
+    const out = await collectProjectSessions(ctx, listing)
+
+    expect(out.map((s) => s.id)).toEqual(["ses-root"])
+  })
+
   it("does not list or include sessions from unrelated-project directories", async () => {
     const wt: Worktree = { id: "wt-1", branch: "fix", path: WT_PATH, parentBranch: "main", createdAt: "" }
     const ctx = makeContext(ROOT, fakeState([wt]))
