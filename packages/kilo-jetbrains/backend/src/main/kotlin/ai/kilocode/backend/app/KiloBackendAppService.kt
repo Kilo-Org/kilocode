@@ -348,6 +348,10 @@ class KiloBackendAppService private constructor(
         if (watcher?.isActive == true) return
         watcher = cs.launch {
             connection.state.collect { next ->
+                if (preservesMigration(_appState.value, next)) {
+                    log.info("Connection ${next::class.simpleName} while migration pending — keeping migration wizard")
+                    return@collect
+                }
                 when (next) {
                     ConnectionState.Disconnected -> _appState.value = KiloAppState.Disconnected
                     is ConnectionState.Downloading -> _appState.value = KiloAppState.Downloading(next.percent, next.version, next.platform)
@@ -1047,3 +1051,18 @@ internal fun migrationGate(
     status != null -> MigrationGate.StatusSet
     else -> MigrationGate.Proceed
 }
+
+/**
+ * Whether a connection-state transition must be ignored to keep the migration wizard up.
+ *
+ * A pending migration is a higher-level gate that must survive transient connection churn — for
+ * example a health-check blip that force-reconnects the SSE. Applying [ConnectionState.Connecting],
+ * [ConnectionState.Connected], or [ConnectionState.Error] while [KiloAppState.MigrationRequired]
+ * would flip the app out of the wizard: a reconnect's `Connected` re-runs load(), which hits
+ * `migrationOffered=true` (gate=[MigrationGate.AlreadyOffered]) and drops the app into Ready,
+ * silently dismissing the wizard. Only the user resolving migration (skip/later/finish) leaves the
+ * state, via resumeAfterMigration()/load(). Mirrors the same guard in reconnect().
+ */
+internal fun preservesMigration(appState: KiloAppState, next: ConnectionState): Boolean =
+    appState is KiloAppState.MigrationRequired &&
+        (next == ConnectionState.Connecting || next is ConnectionState.Connected || next is ConnectionState.Error)

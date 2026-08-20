@@ -19,7 +19,6 @@ function snapshot(id: string, over: Partial<ProjectSnapshot> = {}): ProjectSnaps
     active: false,
     expanded: true,
     initialized: false,
-    trusted: true,
     missing: false,
     ...over,
   }
@@ -77,17 +76,10 @@ describe("hydrateExpanded", () => {
     expect(hooks.inited).toEqual([])
   })
 
-  it("skips collapsed, untrusted, and missing projects", () => {
-    const all = contexts(["collapsed", "untrusted", "missing"])
+  it("skips collapsed and missing projects", () => {
+    const all = contexts(["collapsed", "missing"])
     const hooks = all.hooks()
-    hydrateExpanded(
-      [
-        snapshot("collapsed", { expanded: false }),
-        snapshot("untrusted", { trusted: false }),
-        snapshot("missing", { missing: true }),
-      ],
-      hooks,
-    )
+    hydrateExpanded([snapshot("collapsed", { expanded: false }), snapshot("missing", { missing: true })], hooks)
     expect(hooks.pushed).toEqual([])
     expect(hooks.inited).toEqual([])
   })

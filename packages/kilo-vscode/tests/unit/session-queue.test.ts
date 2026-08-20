@@ -101,10 +101,53 @@ describe("queuedUserMessageIDs", () => {
     expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_3"])
   })
 
-  it("returns no queued messages while idle", () => {
+  it("returns no queued messages while idle without submitting flag", () => {
     const messages = [user("message_1"), user("message_2")]
 
     expect(queuedUserMessageIDs(messages, { type: "idle" })).toEqual([])
+  })
+
+  it("queues follow-ups while idle when submitting is true", () => {
+    const messages = [user("message_1"), user("message_2")]
+
+    expect(queuedUserMessageIDs(messages, { type: "idle" }, undefined, true)).toEqual(["message_2"])
+  })
+})
+
+describe("activeUserMessageID", () => {
+  it("returns undefined while idle and not submitting", () => {
+    const messages = [user("message_1")]
+
+    expect(activeUserMessageID(messages, { type: "idle" })).toBeUndefined()
+  })
+
+  it("returns the pending user message while idle when submitting is true", () => {
+    const messages = [user("message_1")]
+
+    expect(activeUserMessageID(messages, { type: "idle" }, undefined, true)).toBe("message_1")
+  })
+
+  it("returns the next pending user message after finished turn when submitting is true", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "stop", time: { created: 1, completed: 2 } }),
+      user("message_3"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "idle" }, undefined, true)).toBe("message_3")
+  })
+})
+
+describe("active queued status boundary", () => {
+  it("keeps the active assistant status visible when a follow-up is queued", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "tool-calls" }),
+      user("message_3"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
+    expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_3"])
   })
 })
 

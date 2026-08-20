@@ -46,6 +46,7 @@ jobs:
             general:
               - '**'
               - '!.changeset/**'
+              - '!.kilo/plans/**'
               - '!packages/kilo-jetbrains/**'
               - '!packages/kilo-vscode/**'
               - '!packages/kilo-docs/**'

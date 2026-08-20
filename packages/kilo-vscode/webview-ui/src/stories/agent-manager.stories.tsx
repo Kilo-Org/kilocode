@@ -28,6 +28,7 @@ import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
+import { PRComments } from "../../agent-manager/pr/PRComments"
 import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
@@ -40,6 +41,7 @@ import type { ReviewComment } from "../../diff-viewer/review-comments"
 import { createModeRouter } from "../../agent-manager/mode-router"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
+import "../../agent-manager/pr/pr-panel.css"
 
 registerVscodeToolOverrides()
 
@@ -1122,7 +1124,6 @@ const projectPickerProjects: AgentProjectSnapshot[] = [
     active: true,
     expanded: true,
     initialized: true,
-    trusted: true,
     missing: false,
   },
   {
@@ -1133,18 +1134,6 @@ const projectPickerProjects: AgentProjectSnapshot[] = [
     active: false,
     expanded: false,
     initialized: true,
-    trusted: true,
-    missing: false,
-  },
-  {
-    id: "project-untrusted",
-    root: "/workspace/sample-app",
-    label: "sample-app",
-    pinned: false,
-    active: false,
-    expanded: false,
-    initialized: false,
-    trusted: false,
     missing: false,
   },
 ]
@@ -1196,10 +1185,7 @@ export const NewWorktreeProjectDropdown: Story = {
                           projects={projectPickerProjects}
                           selected="project-main"
                           onSelect={() => undefined}
-                          labels={{
-                            untrusted: "Trust this project in the sidebar first",
-                            missing: "Repository not found",
-                          }}
+                          labels={{ missing: "Repository not found" }}
                         />
                       </DeferredPopover>
                     </div>
@@ -1355,7 +1341,6 @@ const projectA: AgentProjectSnapshot = {
   active: true,
   expanded: true,
   initialized: true,
-  trusted: true,
   missing: false,
 }
 const projectB: AgentProjectSnapshot = {
@@ -1366,7 +1351,6 @@ const projectB: AgentProjectSnapshot = {
   active: false,
   expanded: true,
   initialized: true,
-  trusted: true,
   missing: false,
 }
 
@@ -1501,4 +1485,84 @@ export const MultiProjectSidebar: Story = {
       </StoryProviders>
     )
   },
+}
+
+// ---------------------------------------------------------------------------
+// PR panel — review comments
+// ---------------------------------------------------------------------------
+
+const prComments: NonNullable<PRStatus["comments"]> = {
+  total: 4,
+  unresolved: 2,
+  comments: [
+    {
+      id: "PRRC_1",
+      threadId: "PRRT_1",
+      author: "octocat",
+      body: "This throws when `gh` is missing. Can we guard it and fall back to the cached status?",
+      file: "packages/kilo-vscode/src/agent-manager/gh.ts",
+      line: 42,
+      url: "https://github.com/org/repo/pull/8594#discussion_r1",
+      resolved: false,
+      outdated: false,
+      diffHunk:
+        '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
+      replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
+    },
+    {
+      id: "PRRC_2",
+      threadId: "PRRT_2",
+      author: "hubot",
+      body: "The timeout should be a constant so the poller and the mutation cannot drift apart.",
+      file: "packages/kilo-vscode/src/agent-manager/pr/PRActions.ts",
+      line: 8,
+      url: "https://github.com/org/repo/pull/8594#discussion_r2",
+      resolved: false,
+      outdated: true,
+    },
+    {
+      id: "PRRC_3",
+      threadId: "PRRT_3",
+      author: "octocat",
+      body: "nit: rename this variable to `threads`.\n\nIt reads better next to the loop below.",
+      file: "packages/kilo-vscode/src/agent-manager/pr/am-pr-utils.ts",
+      line: 71,
+      url: "https://github.com/org/repo/pull/8594#discussion_r3",
+      resolved: true,
+      outdated: false,
+    },
+    {
+      id: "PRRC_4",
+      threadId: "PRRT_4",
+      author: "hubot",
+      body: "Good catch, fixed in a9f21c3.",
+      file: "packages/kilo-vscode/webview-ui/agent-manager/pr/PRComments.tsx",
+      line: 118,
+      url: "https://github.com/org/repo/pull/8594#discussion_r4",
+      resolved: true,
+      outdated: false,
+    },
+  ],
+}
+
+export const PRPanelComments: Story = {
+  name: "PR panel — review comments",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)" }}>
+        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRPanelComments200: Story = {
+  name: "PR panel — review comments (narrow)",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)" }}>
+        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+      </div>
+    </StoryProviders>
+  ),
 }

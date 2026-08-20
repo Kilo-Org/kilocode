@@ -188,6 +188,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test active views are children of message list panel`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -299,6 +300,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test connection panel is unaffected by active question view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
         showConnection()
@@ -319,6 +321,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test connection panel is unaffected by active permission view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
         showConnection()
@@ -339,6 +342,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test active question view renders inside message scroll view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -352,6 +356,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test active permission view renders inside message scroll view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -580,7 +585,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         }
     }
 
-    fun `test empty explicit session id shows message body`() {
+    fun `test empty explicit session id shows empty panel`() {
         rpc.recent.add(session("ses_recent"))
         settle()
         rpc.recentCalls.clear()
@@ -588,8 +593,9 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         ui = newUi(id = "ses_test")
         settle()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
-        assertNull(find(ui, EmptySessionPanel::class.java))
+        val panel = find<EmptySessionPanel>(ui)
+        assertSame(panel.view, scrollView())
+        assertNull(find(ui, SessionMessageListPanel::class.java))
         assertTrue(rpc.recentCalls.isEmpty())
     }
 
@@ -609,7 +615,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         rpc.historyGate!!.complete(Unit)
         settle()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        val panel = find<EmptySessionPanel>(ui)
+        assertSame(panel.view, scrollView())
         assertTrue(rpc.recentCalls.isEmpty())
     }
 
@@ -630,7 +637,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         rpc.historyGate!!.complete(Unit)
         settle()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        val panel = find<EmptySessionPanel>(ui)
+        assertSame(panel.view, scrollView())
         assertTrue(rpc.recentCalls.isEmpty())
     }
 
@@ -763,7 +771,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertFalse(overlay.isVisible)
     }
 
-    fun `test explicit session does not show overlay`() {
+    fun `test non-empty explicit session does not show overlay`() {
+        rpc.history.add(MessageWithPartsDto(message("msg1"), emptyList()))
         ui = newUi(id = "ses_test")
         settle()
 

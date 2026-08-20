@@ -218,6 +218,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Створено",
   "ui.patch.action.moved": "Переміщено",
   "ui.patch.action.patched": "Застосовано патч",
+  "ui.patch.action.plan": "План", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} відповідей",
   "ui.question.answer.none": "(немає відповіді)",
@@ -245,6 +246,5 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.tool.codesearch": "Пошук коду",
-  "ui.tool.swePruned": "SWE-Pruner · збережено {{kept}} з {{total}} рядків",
   // kilocode_change end
 }

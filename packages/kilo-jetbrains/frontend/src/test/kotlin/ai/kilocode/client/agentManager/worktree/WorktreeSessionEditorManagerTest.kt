@@ -5,12 +5,12 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.MigrationUiController
-import ai.kilocode.client.migration.MigrationUiSelections
+import ai.kilocode.client.migration.FakeMigrationUiController
 import ai.kilocode.client.migration.MigrationUiState
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -21,6 +21,8 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.LegacyMigrationDetectionDto
+import ai.kilocode.rpc.dto.MigrationProviderInfoDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -33,7 +35,6 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.MutableStateFlow
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -50,6 +51,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private val requested = mutableListOf<JComponent>()
     private val notified = mutableListOf<Pair<String, String?>>()
     private val ui = mutableListOf<SessionUi>()
+    private val migration = FakeMigrationUiController()
 
     override fun setUp() {
         super.setUp()
@@ -75,6 +77,20 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         } finally {
             super.tearDown()
         }
+    }
+
+    fun `test empty panel is minimal`() {
+        val manager = manager()
+        val controller = controller()
+        flush()
+
+        val panel = edt { manager.emptyPanel(testRootDisposable, controller) }
+
+        assertTrue(panel.logoVisible())
+        assertTrue(panel.feedbackVisible())
+        assertFalse(panel.descriptionVisible())
+        assertFalse(panel.historyVisible())
+        assertFalse(panel.recentVisible())
     }
 
     fun `test new session creates and opens a persisted session`() {
@@ -313,6 +329,57 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(adoptedNames.isEmpty())
     }
 
+    fun `test shows empty session panel when create fails then creates on retry`() {
+        rpc.createThrows = IllegalStateException("Kilo backend is not ready")
+        rpc.session = session("ses_new", updated = 4.0).copy(title = "New session")
+        val manager = manager()
+
+        edt { manager.start() }
+        flush()
+
+        // No real session yet, but the editor shows the empty session panel instead of a blank void.
+        assertTrue(edt { manager.component.getComponent(0) } is SessionUi)
+        assertEquals(listOf(DIR to null), created)
+
+        // Backend recovers -> starting again creates and shows the real session.
+        rpc.createThrows = null
+        edt { manager.start() }
+        flush()
+
+        assertEquals(listOf(DIR to null, DIR to "ses_new"), created)
+        assertTrue(edt { manager.component.getComponent(0) } is SessionUi)
+    }
+
+    fun `test session appears after migration completes`() {
+        rpc.createThrows = IllegalStateException("Kilo backend is not ready")
+        rpc.session = session("ses_new", updated = 4.0).copy(title = "New session")
+        val manager = manager()
+
+        // Editor opened while the backend is paused for migration: only the empty panel shows.
+        migration._state.value = MigrationUiState.Needed(detection = detection())
+        flush()
+        edt { manager.start() }
+        flush()
+        assertEquals(listOf(DIR to null), created)
+
+        // Migration finishes -> the manager re-runs start() and the real session appears.
+        rpc.createThrows = null
+        migration._state.value = MigrationUiState.Hidden
+        flush()
+
+        assertEquals(listOf(DIR to null, DIR to "ses_new"), created)
+    }
+
+    private fun detection() = LegacyMigrationDetectionDto(
+        providers = listOf(MigrationProviderInfoDto("profile1", "anthropic", "claude-3", true, true, "anthropic")),
+        mcpServers = emptyList(),
+        customModes = emptyList(),
+        sessions = emptyList(),
+        defaultModel = null,
+        settings = null,
+        hasData = true,
+    )
+
     private fun manager(
         controller: WorktreeSessionListController = WorktreeSessionListController(sessions, DIR, coroutines.scope, telemetry = { _, _ -> }),
         del: (String, (Boolean, String?) -> Unit) -> Unit = controller::delete,
@@ -341,7 +408,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
                     ref = ref,
                     manager = owner,
                     workspaces = workspaces,
-                    migration = FakeMigration,
+                    migration = migration,
                     timers = timers,
                 ).also {
                     ui.add(it)
@@ -354,6 +421,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             request = { requested += it },
             notify = { title, content -> notified += title to content },
             cs = coroutines.scope,
+            migration = migration,
             adopt = adopt,
             onAdopted = onAdopted,
         )
@@ -366,6 +434,15 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         title = "Session $id",
         version = "1",
         time = SessionTimeDto(created = 0.0, updated = updated),
+    )
+
+    private fun controller() = SessionController(
+        parent = testRootDisposable,
+        sessions = sessions,
+        workspace = workspace,
+        app = app,
+        cs = coroutines.scope,
+        timers = timers,
     )
 
     private fun flush() = coroutines.drain()
@@ -400,13 +477,4 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         const val DIR = "/repo/.kilo/worktrees/feature-x"
         const val TIMEOUT = "kilo.session.inactive.disposeTimeoutMs"
     }
-}
-
-private object FakeMigration : MigrationUiController {
-    override val state = MutableStateFlow<MigrationUiState>(MigrationUiState.Hidden)
-    override fun check() {}
-    override fun start(selections: MigrationUiSelections) {}
-    override fun skip() {}
-    override fun later() {}
-    override fun finish() {}
 }
