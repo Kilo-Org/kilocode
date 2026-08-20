@@ -4700,6 +4700,7 @@ describe("ProviderTransform.variants", () => {
       expect(result.high).toEqual({ reasoningEffort: "high" })
     })
 
+    // kilocode_change start
     test("omits the generic output cap when an exact max_completion_tokens value is configured", () => {
       const model = createMockModel({
         id: "cerebras/gpt-oss-120b",
@@ -4739,6 +4740,7 @@ describe("ProviderTransform.variants", () => {
 
       expect(result).toBe(32_000)
     })
+    // kilocode_change end
   })
 
   describe("@ai-sdk/togetherai", () => {

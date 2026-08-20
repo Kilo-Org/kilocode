@@ -1724,6 +1724,7 @@ export function maxOutputTokens(model: Provider.Model, outputTokenMax = OUTPUT_T
   return Math.min(model.limit.output, outputTokenMax) || outputTokenMax
 }
 
+// kilocode_change start
 export function maxOutputTokensForRequest(input: {
   model: Provider.Model
   options: Record<string, any>
@@ -1734,6 +1735,7 @@ export function maxOutputTokensForRequest(input: {
   }
   return input.maxOutputTokens
 }
+// kilocode_change end
 
 type JsonRecord = Record<string, unknown>
 

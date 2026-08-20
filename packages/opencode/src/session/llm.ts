@@ -312,11 +312,13 @@ const live: Layer.Layer<
           temperature: prepared.params.temperature,
           topP: prepared.params.topP,
           topK: prepared.params.topK,
+          // kilocode_change start
           maxOutputTokens: ProviderTransform.maxOutputTokensForRequest({
             model: input.model,
             options: prepared.params.options,
             maxOutputTokens: prepared.params.maxOutputTokens,
           }),
+          // kilocode_change end
           providerOptions: prepared.params.options,
           headers: prepared.headers,
           abort: input.abort,
@@ -392,6 +394,7 @@ const live: Layer.Layer<
         topK: prepared.params.topK,
         providerOptions: ProviderTransform.providerOptions(input.model, prepared.params.options),
         activeTools: Object.keys(prepared.tools).filter((x) => x !== "invalid"),
+        // kilocode_change start
         tools: prepared.tools,
         toolChoice: input.toolChoice,
         maxOutputTokens: ProviderTransform.maxOutputTokensForRequest({
@@ -399,6 +402,7 @@ const live: Layer.Layer<
           options: prepared.params.options,
           maxOutputTokens: prepared.params.maxOutputTokens,
         }),
+        // kilocode_change end
         abortSignal: input.abort,
         ...KiloLLM.timeout({ options: prepared.params.options, fallback: item.options, log: l }), // kilocode_change
         headers: prepared.headers,
