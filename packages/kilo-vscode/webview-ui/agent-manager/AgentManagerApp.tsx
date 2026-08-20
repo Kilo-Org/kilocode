@@ -179,9 +179,9 @@ import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { SubagentPanel } from "./SubagentPanel"
-import { createSubagentTabs } from "./subagent-tabs"
 import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { createDocumentInspector } from "./documents/state"
+import { createSubagentController } from "./subagent-tabs"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
@@ -290,7 +290,6 @@ const AgentManagerContent: Component = () => {
   const sections = () => registry.active().sections()
   const setSections = (v: Parameters<Setter<SectionState[]>>[0]) => registry.active().setSections(v)
 
-  // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
 
@@ -310,7 +309,6 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // Diff, PR, terminal, and subagent views share one inspector width.
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
@@ -336,8 +334,12 @@ const AgentManagerContent: Component = () => {
     },
     () => setSidePanel(null),
   )
-  const subagents = createSubagentTabs({
+  const subagentCtl = createSubagentController({
+    project: currentProjectId,
     current: session.currentSessionID,
+    selection,
+    parts: session.getSessionToolParts,
+    visible: () => sidePanel() === SidePanel.Subagents,
     sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
     unsync: (id) => session.unsyncSession(id, "inspector"),
     show: () => {
@@ -347,6 +349,7 @@ const AgentManagerContent: Component = () => {
     },
     hide: () => setSidePanel(null),
   })
+  const subagents = subagentCtl.tabs
   const markdown = createMarkdownRender(vscode)
   const worktreeStats = () => registry.active().worktreeStats()
 
@@ -470,7 +473,6 @@ const AgentManagerContent: Component = () => {
       { defer: true },
     ),
   )
-  // Ambient setup reveal restores the panel after success unless the user engaged.
   const ambientSetup = createAmbientSetup({
     terms,
     selection: () => {
@@ -482,7 +484,6 @@ const AgentManagerContent: Component = () => {
   })
   const cancelAmbientSetup = ambientSetup.cancel
 
-  // Inline delete confirmation: tracks which worktree is awaiting a second click/press
   const [pendingDelete, setPendingDelete] = createSignal<string | null>(null)
   let pendingDeleteTimer: ReturnType<typeof setTimeout> | undefined
   const cancelPendingDelete = () => {
@@ -590,7 +591,6 @@ const AgentManagerContent: Component = () => {
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
 
-  // Drag-and-drop state for tab reordering
   const [draggingTab, setDraggingTab] = createSignal<string | undefined>()
 
   const freezeTabs = () => {
@@ -599,7 +599,6 @@ const AgentManagerContent: Component = () => {
   }
 
   const releaseTabs = () => setTabWidths(false)
-  // Tab ordering: context key → ordered session ID array (recovered from extension state)
   const worktreeTabOrder = () => registry.active().tabOrder()
   const setWorktreeTabOrder: Setter<Record<string, string[]>> = (v) => registry.active().setTabOrder(v)
   // Sidebar worktree order (persisted to extension state)
@@ -2451,6 +2450,9 @@ const AgentManagerContent: Component = () => {
           documentsOpen={documentInspector.isOpen}
           documentsAvailable={documentInspector.available}
           onToggleDocuments={documentInspector.toggle}
+          subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
+          subagentsOpen={() => sidePanel() === SidePanel.Subagents}
+          onToggleSubagents={subagentCtl.toolbar.toggle}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
           terminalKeybind={() => kb().showTerminal ?? ""}
