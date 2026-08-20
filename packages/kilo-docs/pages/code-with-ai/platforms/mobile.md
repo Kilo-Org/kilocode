@@ -92,13 +92,15 @@ While the CLI is connected, the agent can deliver a file to your phone with the 
 
 ## Reviewing GitHub pull requests
 
-Open a pull request from a PR link to review it without leaving the app:
+The PR review home lists pull requests that are waiting for your review. You can also open any pull request by pasting its link. Recently opened PRs appear on the home screen; an entry that failed to open shows a **Retry** button, and every entry has a **Remove** button.
+
+Each pull request opens with:
 
 - **Overview** — PR state and CI checks at a glance.
-- **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
+- **Files** — syntax-highlighted diffs with line-level comments and a file navigator that loads files as you scroll, so large pull requests open quickly.
 - **Discussion** — review threads with replies, resolve/unresolve, and reactions.
 
-Comments you leave are collected into a pending review on your device and submitted to GitHub as a single review. When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch — all from the app.
+Comments you leave are collected into a pending review on your device and submitted to GitHub as a single review. If the pull request changes after you queue comments, the outdated comments are marked and stay in your queue so you can edit or remove them; when you submit, only comments that still match the current pull request are sent. When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch — all from the app.
 
 PR review uses your connected GitHub account; the app asks you to connect GitHub if you have not already.
 

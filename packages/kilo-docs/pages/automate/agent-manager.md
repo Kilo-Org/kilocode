@@ -113,15 +113,25 @@ When the selected worktree branch has an associated pull request, the toolbar sh
 - Reviewers and their review states
 - The PR description
 - CI checks with per-check status and duration, each with a link to open the check in the browser
-- Review comments, each with the diff hunk it was left on and actions to copy the comment or resolve the thread
+- Review comments, each with the diff hunk it was left on and actions to send the comment to the agent, resolve the thread, copy it, open the file, or open it on GitHub
 
 Click the link icon in the panel header to open the PR in your browser. The panel refreshes through the same `gh` polling as the badges, so it requires the GitHub CLI to be installed and authenticated.
 
 #### Review comments
 
-Each review comment shows the author, the file and line it applies to, and the code diff hunk the comment was left on, so you can read feedback without opening the PR in a browser.
+Each review comment shows the author, the file and line it applies to, and the code diff hunk the comment was left on, so you can read feedback without opening the PR in a browser. Threads include their replies.
 
-Click **Resolve comment** on a comment to resolve the corresponding GitHub review thread directly from the panel. Resolved threads show a **Resolved** badge and appear dimmed, and can be reopened with **Unresolve comment**. Resolving writes to GitHub through `gh`; if it fails (for example, because of missing permissions), an error is shown on the comment.
+Unresolved threads stay expanded. Threads left on outdated code start collapsed and are marked **Outdated**. Resolved threads collapse into a **Resolved (N)** group at the bottom of the comments section — expand the group to see them, and use **Unresolve** on a comment to reopen its thread.
+
+Each comment card offers these actions:
+
+- **Send to agent** — sends the comment, with its diff context and replies, to the agent as a structured review comment so it can address the feedback in the worktree. Sent comments show a **Sent** badge.
+- **Resolve** / **Unresolve** — resolves or reopens the corresponding GitHub review thread directly from the panel. Resolving writes to GitHub through `gh`; if it fails (for example, because of missing permissions), an error is shown on the comment.
+- **Copy comment** — copies the comment as Markdown.
+- **Open file** — opens the file the comment applies to in the editor.
+- **Open on GitHub** — opens the comment on GitHub in your browser.
+
+To hand all outstanding feedback to the agent at once, click **Send N unresolved to agent** at the top of the comments section. When a terminal is active in the side panel, the button sends the comments to that terminal instead.
 
 Click the comments row in the PR summary at the top of the panel to jump straight to the comments section. On long PRs, a floating **↑** button appears once you scroll down and scrolls back to the top.
 
@@ -276,6 +286,8 @@ When an agent delegates work to a subagent, the subagent's tool block in chat sh
 ## Terminals
 
 Each session has a dedicated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session. If the embedded terminal is already visible but the prompt has focus, the same shortcut focuses the terminal without hiding it. Press it again while the terminal has focus to hide the panel.
+
+Type `@terminal` in the Agent Manager chat to attach the focused terminal's output to your message, including embedded Run and Setup terminal tabs. In the sidebar, `@terminal` uses your active VS Code terminal instead.
 
 ### Choosing the Terminal Destination
 
