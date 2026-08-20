@@ -466,6 +466,13 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       run.promise(
         Effect.gen(function* () {
           const ctx = context(args, opts)
+          // Propagate MCP App UI metadata from the tool definition so hosts can preload the UI resource
+          const mcpAppMeta = flags.experimentalMcpApps && (entry.def._meta as { ui?: { resourceUri?: string } } | undefined)?.ui?.resourceUri
+            ? { mcpApp: { resourceUri: (entry.def._meta as { ui: { resourceUri: string } }).ui.resourceUri, serverId: entry.clientName } }
+            : undefined
+          if (mcpAppMeta) {
+            yield* input.processor.metadata(opts.toolCallId, { metadata: mcpAppMeta })
+          }
           yield* plugin.trigger(
             "tool.execute.before",
             { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
@@ -539,6 +546,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             ...result.metadata,
             truncated: truncated.truncated,
             ...(truncated.truncated && { outputPath: truncated.outputPath }),
+            ...mcpAppMeta,
           }
 
           const output = {

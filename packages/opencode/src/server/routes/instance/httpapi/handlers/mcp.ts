@@ -1,13 +1,22 @@
 import { MCP } from "@/mcp"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Effect, Schema } from "effect"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import { McpServerNotFoundError } from "../errors"
-import { AddPayload, AuthCallbackPayload, StatusMap, UnsupportedOAuthError } from "../groups/mcp"
+import {
+  AddPayload,
+  AuthCallbackPayload,
+  CallToolPayload,
+  ReadResourcePayload,
+  StatusMap,
+  UnsupportedOAuthError,
+} from "../groups/mcp"
 
 export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handlers) =>
   Effect.gen(function* () {
     const mcp = yield* MCP.Service
+    const flags = yield* RuntimeFlags.Service
 
     const status = Effect.fn("McpHttpApi.status")(function* () {
       return yield* mcp.status()
@@ -98,6 +107,59 @@ export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handler
       return true
     })
 
+    const readResource = Effect.fn("McpHttpApi.readResource")(function* (ctx: {
+      payload: typeof ReadResourcePayload.Type
+    }) {
+      if (!flags.experimentalMcpApps) {
+        return yield* Effect.fail(new HttpApiError.NotFound({}))
+      }
+      const { uri, server } = ctx.payload
+      if (!server) {
+        return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      }
+      const result = yield* mcp.readResource(server, uri)
+      if (!result) {
+        return yield* Effect.fail(new HttpApiError.NotFound({}))
+      }
+      const content = result.contents[0]
+      if (!content) {
+        return yield* Effect.fail(new HttpApiError.NotFound({}))
+      }
+      return {
+        uri: content.uri,
+        ...(content.mimeType ? { mimeType: content.mimeType } : {}),
+        ...("text" in content && content.text ? { text: content.text } : {}),
+        ...("blob" in content && content.blob ? { blob: content.blob } : {}),
+      }
+    })
+
+    const callTool = Effect.fn("McpHttpApi.callTool")(function* (ctx: {
+      payload: typeof CallToolPayload.Type
+    }) {
+      if (!flags.experimentalMcpApps) {
+        return yield* Effect.fail(new HttpApiError.NotFound({}))
+      }
+      const { server, name, arguments: args } = ctx.payload
+      const clients = yield* mcp.clients()
+      const client = clients[server]
+      if (!client) {
+        return yield* Effect.fail(new HttpApiError.NotFound({}))
+      }
+      const result = yield* Effect.tryPromise({
+        try: () => client.callTool({ name, arguments: args ?? {} }),
+        catch: (error) => error,
+      }).pipe(
+        Effect.mapError(() => new HttpApiError.BadRequest({})),
+      )
+      return {
+        content: (result as { content: unknown[] }).content ?? [],
+        ...((result as { isError?: boolean }).isError ? { isError: true } : {}),
+        ...((result as { structuredContent?: Record<string, unknown> }).structuredContent
+          ? { structuredContent: (result as { structuredContent: Record<string, unknown> }).structuredContent }
+          : {}),
+      }
+    })
+
     return handlers
       .handle("status", status)
       .handle("add", add)
@@ -107,5 +169,7 @@ export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handler
       .handle("authRemove", authRemove)
       .handle("connect", connect)
       .handle("disconnect", disconnect)
+      .handle("readResource", readResource)
+      .handle("callTool", callTool)
   }),
 )

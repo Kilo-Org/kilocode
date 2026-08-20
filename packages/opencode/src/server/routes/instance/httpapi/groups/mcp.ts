@@ -29,6 +29,31 @@ export class UnsupportedOAuthError extends Schema.ErrorClass<UnsupportedOAuthErr
   { httpApiStatus: 400 },
 ) {}
 
+export const ReadResourcePayload = Schema.Struct({
+  uri: Schema.String,
+  server: Schema.optional(Schema.String),
+})
+
+const ReadResourceContent = Schema.Struct({
+  uri: Schema.String,
+  mimeType: Schema.optional(Schema.String),
+  text: Schema.optional(Schema.String),
+  blob: Schema.optional(Schema.String),
+  meta: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+})
+
+export const CallToolPayload = Schema.Struct({
+  server: Schema.String,
+  name: Schema.String,
+  arguments: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+})
+
+const CallToolResponse = Schema.Struct({
+  content: Schema.Array(Schema.Unknown),
+  isError: Schema.optional(Schema.Boolean),
+  structuredContent: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+})
+
 export const McpPaths = {
   status: "/mcp",
   auth: "/mcp/:name/auth",
@@ -36,6 +61,8 @@ export const McpPaths = {
   authAuthenticate: "/mcp/:name/auth/authenticate",
   connect: "/mcp/:name/connect",
   disconnect: "/mcp/:name/disconnect",
+  readResource: "/experimental/resource/read",
+  callTool: "/experimental/mcp/call-tool",
 } as const
 
 export const McpApi = HttpApi.make("mcp")
@@ -134,6 +161,32 @@ export const McpApi = HttpApi.make("mcp")
           OpenApi.annotations({
             identifier: "mcp.disconnect",
             description: "Disconnect an MCP server.",
+          }),
+        ),
+        HttpApiEndpoint.post("readResource", McpPaths.readResource, {
+          query: WorkspaceRoutingQuery,
+          payload: ReadResourcePayload,
+          success: described(ReadResourceContent, "Resource content"),
+          error: [HttpApiError.NotFound, HttpApiError.BadRequest],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "mcp.readResource",
+            summary: "Read MCP resource",
+            description:
+              "Read a resource from a connected MCP server by URI. Used by MCP Apps to load UI resources.",
+          }),
+        ),
+        HttpApiEndpoint.post("callTool", McpPaths.callTool, {
+          query: WorkspaceRoutingQuery,
+          payload: CallToolPayload,
+          success: described(CallToolResponse, "Tool call result"),
+          error: [HttpApiError.NotFound, HttpApiError.BadRequest],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "mcp.callTool",
+            summary: "Call MCP tool",
+            description:
+              "Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.",
           }),
         ),
       )
