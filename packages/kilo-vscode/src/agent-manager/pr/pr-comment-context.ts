@@ -4,7 +4,7 @@
  * the file, so the lines below the comment are read from disk and attached to
  * the thread.
  */
-import { readFile, stat } from "node:fs/promises"
+import { readFile, realpath, stat } from "node:fs/promises"
 import path from "node:path"
 import type { PRComment } from "../types"
 
@@ -32,7 +32,11 @@ function anchor(hunk: string): string | undefined {
 }
 
 async function lines(dir: string, file: string): Promise<string[] | undefined> {
-  const full = path.join(dir, file)
+  const root = await realpath(dir).catch(() => undefined)
+  const full = await realpath(path.resolve(dir, file)).catch(() => undefined)
+  if (!root || !full) return undefined
+  const rel = path.relative(root, full)
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return undefined
   const info = await stat(full).catch(() => undefined)
   if (!info?.isFile() || info.size > SIZE) return undefined
   const hit = cache.get(full)

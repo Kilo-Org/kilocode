@@ -102,7 +102,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
   // expanded card and the scroll position, so the last list for this PR stays.
   const comments = createMemo<{ number: number; value: NonNullable<PRStatus["comments"]> } | undefined>((prev) => {
     const next = props.pr.comments
-    if (next?.total) return { number: props.pr.number, value: next }
+    if (next) return { number: props.pr.number, value: next }
     if (prev && prev.number === props.pr.number) return prev
     return undefined
   })

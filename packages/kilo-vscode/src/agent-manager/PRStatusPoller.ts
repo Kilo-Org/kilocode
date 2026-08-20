@@ -249,7 +249,7 @@ export class PRStatusPoller {
       const pr = await this.cachedFetchPR(wt.branch, wt.path)
       if (!pr || this.stale(generation)) {
         if (this.stale(generation)) return
-        const hash = `${worktreeId}:none`
+        const hash = `${worktreeId}:${wt.branch}:none`
         if (this.lastHash.get(worktreeId) === hash) return
         this.lastHash.set(worktreeId, hash)
         this.options.onStatus(worktreeId, null)

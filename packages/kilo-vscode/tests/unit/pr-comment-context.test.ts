@@ -99,6 +99,14 @@ describe("withContext", () => {
     expect(items.map((item) => item.after)).toEqual([undefined, undefined, undefined, undefined])
   })
 
+  it("rejects a comment path outside the worktree", async () => {
+    const dir = await repo()
+    await writeFile(path.join(path.dirname(dir), "outside.ts"), SOURCE.join("\n"))
+    const [item] = await withContext(dir, [thread({ file: "../outside.ts" })])
+
+    expect(item!.after).toBeUndefined()
+  })
+
   it("keeps every thread, in order, whatever the files say", async () => {
     const dir = await repo()
     const items = await withContext(dir, [thread({ threadId: "a" }), thread({ threadId: "b", outdated: true })])
