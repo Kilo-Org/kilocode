@@ -133,7 +133,7 @@ export const {
       },
       console_state: emptyConsoleState,
       capabilities: {
-        experimentalBackgroundSubagents: false,
+        experimentalBackgroundSubagents: true, // kilocode_change - background subagents are enabled by default
       },
       provider_auth: {},
       config: {},
@@ -834,7 +834,13 @@ export const {
               setStore("provider", reconcile(providers.providers))
               setStore("provider_default", reconcile(providers.default))
               setStore("provider_next", reconcile(providerList))
-              setStore("capabilities", "experimentalBackgroundSubagents", capabilities?.backgroundSubagents === true)
+              // kilocode_change start - fail closed when the backend omits the capability
+              setStore(
+                "capabilities",
+                "experimentalBackgroundSubagents",
+                capabilities?.backgroundSubagents === true,
+              )
+              // kilocode_change end
               setStore("console_state", reconcile(consoleState))
               setStore("agent", reconcile(agents))
               setStore("config", reconcile(config))

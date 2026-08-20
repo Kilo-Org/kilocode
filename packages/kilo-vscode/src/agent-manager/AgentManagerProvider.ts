@@ -677,7 +677,7 @@ export class AgentManagerProvider implements Disposable {
       })
       return null
     }
-
+    if (m.type === "loadMessages" && m.focus === false) return msg
     if (m.type === "loadMessages") {
       this.activeSessionId = m.sessionID
       this.terminalManager.syncOnSessionSwitch(m.sessionID)
