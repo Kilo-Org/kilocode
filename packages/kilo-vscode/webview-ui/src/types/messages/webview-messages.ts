@@ -45,13 +45,15 @@ export interface AbortRequest {
 
 export interface RequestBackgroundJobsMessage {
   type: "requestBackgroundJobs"
-  sessionID?: string
+  sessionID: string
+  requestID: string
 }
 
 export interface CancelBackgroundJobMessage {
   type: "cancelBackgroundJob"
   jobID: string
-  sessionID?: string
+  sessionID: string
+  requestID: string
 }
 
 export interface BackgroundSubagentsMessage {
@@ -1128,6 +1130,7 @@ export interface OpenSubAgentViewerRequest {
   type: "openSubAgentViewer"
   sessionID: string
   title?: string
+  parentSessionID?: string
 }
 
 // Preview an image attachment in VS Code's built-in image viewer

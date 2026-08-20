@@ -547,14 +547,20 @@ export const kiloScenarios: Scenario[] = [
       object(body.totals)
       check(body.models.length === 0, "a new session should have no model usage")
     }),
-  http.protected.get("/kilocode/background-jobs", "kilocode.backgroundJobs").json(200, (body) => {
-    array(body)
-    for (const item of body) {
-      object(item)
-      check(typeof item.id === "string", "background job should include an id")
-      check(typeof item.status === "string", "background job should include a status")
-    }
-  }),
+  http.protected
+    .get("/kilocode/background-jobs", "kilocode.backgroundJobs")
+    .at((ctx) => ({
+      path: "/kilocode/background-jobs?sessionID=ses_httpapi_missing",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      array(body)
+      for (const item of body) {
+        object(item)
+        check(typeof item.id === "string", "background job should include an id")
+        check(typeof item.status === "string", "background job should include a status")
+      }
+    }),
   http.protected
     .post("/kilocode/background-jobs/{jobID}/cancel", "kilocode.backgroundJob.cancel")
     .at((ctx) => ({

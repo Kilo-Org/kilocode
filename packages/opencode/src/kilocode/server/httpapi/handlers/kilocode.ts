@@ -28,8 +28,9 @@ import {
   RemoveAgentPayload,
   RemoveCommandPayload,
   RemoveSkillPayload,
+  BackgroundJobInfo,
+  BackgroundJobsQuery,
 } from "../groups/kilocode"
-import { BackgroundJobInfo } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
   Effect.gen(function* () {
@@ -174,17 +175,21 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return usage
     })
 
-    const backgroundJobs = Effect.fn("KilocodeHttpApi.backgroundJobs")(function* () {
-      return (yield* background.list()).map((job) => ({
-        id: job.id,
-        type: job.type,
-        title: job.title,
-        status: job.status,
-        started_at: job.started_at,
-        completed_at: job.completed_at,
-        error: job.error,
-        metadata: job.metadata,
-      })) satisfies (typeof BackgroundJobInfo.Type)[]
+    const backgroundJobs = Effect.fn("KilocodeHttpApi.backgroundJobs")(function* (ctx: {
+      query: typeof BackgroundJobsQuery.Type
+    }) {
+      return (yield* background.list())
+        .filter((job) => job.metadata?.parentSessionId === ctx.query.sessionID)
+        .map((job) => ({
+          id: job.id,
+          type: job.type,
+          title: job.title,
+          status: job.status,
+          started_at: job.started_at,
+          completed_at: job.completed_at,
+          error: job.error,
+          metadata: job.metadata,
+        })) satisfies (typeof BackgroundJobInfo.Type)[]
     })
 
     const backgroundJobCancel = Effect.fn("KilocodeHttpApi.backgroundJobCancel")(function* (ctx: {
@@ -194,7 +199,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       if (!job) return yield* new HttpApiError.NotFound({})
       const sessionID = SessionID.make(typeof job.metadata?.sessionId === "string" ? job.metadata.sessionId : job.id)
       yield* runState.cancel(sessionID)
-      yield* background.cancel(ctx.params.jobID)
       return true
     })
 

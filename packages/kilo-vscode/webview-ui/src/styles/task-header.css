@@ -224,22 +224,6 @@
   [data-component="button"] {
     flex-shrink: 0;
   }
-
-  &[data-wide-actions="true"] [data-slot="task-header-agent-main"] {
-    flex: 0 1 auto;
-    width: auto;
-    max-width: min(100%, 760px);
-    padding-block: 5px;
-  }
-
-  &[data-wide-actions="true"] [data-slot="task-header-agent-status-label"] {
-    margin-left: 4px;
-  }
-
-  &[data-wide-actions="true"] [data-slot="task-header-agent-label"] {
-    flex: 0 1 auto;
-    max-width: 620px;
-  }
 }
 
 /* ============================================

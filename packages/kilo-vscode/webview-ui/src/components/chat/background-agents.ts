@@ -37,6 +37,10 @@ export interface BackgroundAgent {
   question?: QuestionRequest
 }
 
+export function showBackgroundAgent(agent: BackgroundAgent, hidden: ReadonlySet<string>): boolean {
+  return agent.status === "running" || !hidden.has(agent.jobID)
+}
+
 function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value : undefined
 }
@@ -52,10 +56,7 @@ function working(status: SessionStatusInfo | undefined): boolean {
   return status?.type === "busy" || status?.type === "retry"
 }
 
-export function backgroundAgents(
-  tools: ToolPart[],
-  status: Record<string, SessionStatusInfo>,
-): BackgroundAgent[] {
+export function backgroundAgents(tools: ToolPart[], status: Record<string, SessionStatusInfo>): BackgroundAgent[] {
   const agents: BackgroundAgent[] = []
   const latest = new Map<string, ToolPart>()
   for (const part of tools) {

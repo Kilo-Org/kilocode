@@ -27,5 +27,10 @@ export function openSubagent(input: OpenSubagent) {
     )
     return
   }
-  input.post({ type: "openSubAgentViewer", sessionID: input.sessionID, title: input.title })
+  input.post({
+    type: "openSubAgentViewer",
+    sessionID: input.sessionID,
+    title: input.title,
+    parentSessionID: input.parentSessionID,
+  })
 }

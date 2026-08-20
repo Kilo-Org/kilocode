@@ -1148,7 +1148,6 @@ export const dict = {
   "task.backgroundAgents.running.one": "1 個背景 Agent",
   "task.backgroundAgents.running.many": "{{count}} 個背景 Agent",
   "task.backgroundAgents.open": "開啟背景 Agent",
-  "task.backgroundAgents.openShort": "開啟",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",
   "task.backgroundAgents.foreground": "前景 Agent 執行中",

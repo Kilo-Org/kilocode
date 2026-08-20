@@ -15922,6 +15922,15 @@
               "type": "string"
             },
             "required": false
+          },
+          {
+            "name": "sessionID",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses"
+            },
+            "required": true
           }
         ],
         "responses": {
@@ -16019,7 +16028,7 @@
             }
           }
         },
-        "description": "List background subagent jobs for the current instance.",
+        "description": "List background subagent jobs owned by one parent session.",
         "summary": "List background jobs",
         "x-codeSamples": [
           {
@@ -16092,7 +16101,7 @@
             }
           }
         },
-        "description": "Cancel one background subagent job.",
+        "description": "Cancel one background subagent job and its session tree.",
         "summary": "Cancel background job",
         "x-codeSamples": [
           {

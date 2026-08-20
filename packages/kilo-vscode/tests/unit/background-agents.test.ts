@@ -3,6 +3,7 @@ import {
   backgroundAgents,
   backgroundJobAgents,
   foregroundAgent,
+  showBackgroundAgent,
 } from "../../webview-ui/src/components/chat/background-agents"
 import type {
   BackgroundJobInfo,
@@ -231,6 +232,35 @@ describe("backgroundAgents", () => {
 
     expect(rows[0]?.question?.id).toBe("question")
     expect(rows[1]?.permission?.id).toBe("permission")
+  })
+
+  it("keeps attention state on a running row for collapsed summaries", () => {
+    const jobs: BackgroundJobInfo[] = [
+      {
+        id: "job_waiting",
+        type: "task",
+        title: "Waiting",
+        status: "running",
+        started_at: 1,
+        metadata: { parentSessionId: "parent", sessionId: "child", background: true },
+      },
+    ]
+    const rows = backgroundJobAgents(jobs, "parent", [], [{ id: "question", sessionID: "child" } as QuestionRequest])
+
+    expect(rows.filter((row) => row.question || row.permission)).toHaveLength(1)
+  })
+
+  it("shows a restarted running job after its earlier result was dismissed", () => {
+    const hidden = new Set(["job"])
+    const agent = {
+      id: "child",
+      status: "running" as const,
+      startedAt: 1,
+      jobID: "job",
+    }
+
+    expect(showBackgroundAgent(agent, hidden)).toBe(true)
+    expect(showBackgroundAgent({ ...agent, status: "completed" }, hidden)).toBe(false)
   })
 
   it("finds a running foreground child that can be promoted", () => {

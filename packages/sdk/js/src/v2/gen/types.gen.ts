@@ -16882,9 +16882,10 @@ export type KilocodeSessionModelUsageResponse =
 export type KilocodeBackgroundJobsData = {
   body?: never
   path?: never
-  query?: {
+  query: {
     directory?: string
     workspace?: string
+    sessionID: string
   }
   url: "/kilocode/background-jobs"
 }

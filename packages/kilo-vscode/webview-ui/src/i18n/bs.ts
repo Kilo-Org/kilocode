@@ -1214,7 +1214,6 @@ export const dict = {
   "task.backgroundAgents.running.one": "1 agent u pozadini",
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
-  "task.backgroundAgents.openShort": "Otvori",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
   "task.backgroundAgents.foreground": "Agent u prvom planu radi",

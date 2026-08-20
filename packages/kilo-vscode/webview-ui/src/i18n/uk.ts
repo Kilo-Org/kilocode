@@ -1181,7 +1181,6 @@ export const dict = {
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
   "task.backgroundAgents.open": "Відкрити фонового агента",
-  "task.backgroundAgents.openShort": "Відкрити",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
   "task.backgroundAgents.foreground": "Агент на передньому плані працює",

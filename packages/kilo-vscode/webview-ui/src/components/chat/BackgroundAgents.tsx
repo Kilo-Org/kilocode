@@ -19,7 +19,13 @@ import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
-import { backgroundAgents, backgroundJobAgents, foregroundAgent, type BackgroundAgent } from "./background-agents"
+import {
+  backgroundAgents,
+  backgroundJobAgents,
+  foregroundAgent,
+  showBackgroundAgent,
+  type BackgroundAgent,
+} from "./background-agents"
 import { openSubagent } from "./open-subagent"
 
 export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
@@ -32,24 +38,38 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
   const [loaded, setLoaded] = createSignal(false)
   const [hidden, setHidden] = createSignal<Set<string>>(new Set())
   const [mounted, setMounted] = createSignal(false)
+  let pending: string | undefined
+  let revision = 0
 
   createEffect(
     on(session.currentSessionID, () => {
       setHidden(new Set<string>())
       setLoaded(false)
       setJobs([])
+      pending = undefined
       if (mounted()) requestJobs()
     }),
   )
 
-  const requestJobs = () => vscode.postMessage({ type: "requestBackgroundJobs", sessionID: session.currentSessionID() })
+  const requestJobs = () => {
+    const id = session.currentSessionID()
+    if (!id || pending) return
+    pending = `${id}:${++revision}`
+    vscode.postMessage({ type: "requestBackgroundJobs", sessionID: id, requestID: pending })
+  }
 
   onMount(() => {
-    if (props.readonly) return
     setMounted(true)
     const unsub = vscode.onMessage((message) => {
       if (message.type !== "backgroundJobsLoaded") return
-      if (message.sessionID && message.sessionID !== session.currentSessionID()) return
+      if (message.sessionID !== session.currentSessionID()) return
+      if (message.requestID !== pending) return
+      pending = undefined
+      if (message.error) {
+        setJobs([])
+        setLoaded(false)
+        return
+      }
       setJobs(message.jobs)
       setLoaded(true)
     })
@@ -75,7 +95,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     return fallback()
   })
 
-  const visible = createMemo(() => agents().filter((agent) => !hidden().has(agent.jobID)))
+  const visible = createMemo(() => agents().filter((agent) => showBackgroundAgent(agent, hidden())))
   const foreground = createMemo(() => {
     const id = session.currentSessionID()
     return id ? foregroundAgent(session.getSessionToolParts(id), session.allStatusMap()) : undefined
@@ -89,6 +109,8 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     if (running === total) return language.t("task.backgroundAgents.running.many", { count: String(total) })
     return language.t("task.backgroundAgents.summary", { running: String(running), total: String(total) })
   })
+
+  const waiting = createMemo(() => visible().filter((agent) => agent.permission || agent.question).length)
 
   const label = (agent: BackgroundAgent) =>
     agent.description ?? agent.agent ?? language.t("task.backgroundAgents.untitled")
@@ -114,7 +136,10 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
   const cancelAgent = (event: MouseEvent, agent: BackgroundAgent) => {
     event.stopPropagation()
     if (agent.status !== "running") return
-    vscode.postMessage({ type: "cancelBackgroundJob", jobID: agent.jobID, sessionID: session.currentSessionID() })
+    const id = session.currentSessionID()
+    if (!id) return
+    pending = `${id}:${++revision}`
+    vscode.postMessage({ type: "cancelBackgroundJob", jobID: agent.jobID, sessionID: id, requestID: pending })
   }
 
   const background = () => {
@@ -122,18 +147,44 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     if (id) vscode.postMessage({ type: "backgroundSubagents", sessionID: id })
   }
 
-  const hideFinished = () => setHidden(new Set(agents().filter((agent) => agent.status !== "running").map((agent) => agent.jobID)))
+  const hideFinished = () =>
+    setHidden(
+      new Set(
+        agents()
+          .filter((agent) => agent.status !== "running")
+          .map((agent) => agent.jobID),
+      ),
+    )
 
   return (
-    <Show when={!props.readonly && (visible().length > 0 || foreground())}>
-      <div data-component="task-header-agents" data-wide-actions={worktree ? "true" : undefined}>
+    <Show when={visible().length > 0 || (!props.readonly && foreground())}>
+      <div data-component="task-header-agents">
         <div data-slot="task-header-agents-toolbar">
           <Show when={visible().length > 0}>
-            <button data-slot="task-header-todos-trigger" onClick={() => setOpen((value) => !value)} aria-expanded={open()}>
-              <Show when={visible().some((agent) => agent.status === "running")} fallback={<Icon name="task" size="small" />}>
-                <Spinner />
+            <button
+              data-slot="task-header-todos-trigger"
+              onClick={() => setOpen((value) => !value)}
+              aria-expanded={open()}
+              aria-label={waiting() > 0 ? language.t("task.backgroundAgents.waiting") : undefined}
+            >
+              <Show
+                when={waiting() > 0}
+                fallback={
+                  <Show
+                    when={visible().some((agent) => agent.status === "running")}
+                    fallback={<Icon name="task" size="small" />}
+                  >
+                    <Spinner />
+                  </Show>
+                }
+              >
+                <Icon name="warning" size="small" />
               </Show>
-              <span data-slot="task-header-todos-summary">{summary()}</span>
+              <span data-slot="task-header-todos-summary">
+                <Show when={waiting() > 0} fallback={summary()}>
+                  {language.t("task.backgroundAgents.waiting")}
+                </Show>
+              </span>
               <Icon
                 name="chevron-down"
                 size="small"
@@ -142,7 +193,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
               />
             </button>
           </Show>
-          <Show when={foreground()}>
+          <Show when={!props.readonly && foreground()}>
             <Button
               variant="ghost"
               size="small"
@@ -152,7 +203,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
               {language.t("task.backgroundAgents.continueInBackground")}
             </Button>
           </Show>
-          <Show when={visible().some((agent) => agent.status !== "running")}>
+          <Show when={!props.readonly && visible().some((agent) => agent.status !== "running")}>
             <Button
               icon="close-small"
               variant="ghost"
@@ -160,7 +211,9 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
               aria-label={language.t("task.backgroundAgents.clearFinished")}
               onClick={hideFinished}
             >
-              <span data-slot="task-header-agent-action-label">{language.t("task.backgroundAgents.clearFinished")}</span>
+              <span data-slot="task-header-agent-action-label">
+                {language.t("task.backgroundAgents.clearFinished")}
+              </span>
             </Button>
           </Show>
         </div>
@@ -184,13 +237,17 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
                     aria-label={`${language.t("task.backgroundAgents.open")}: ${label(agent)}`}
                     onClick={() => openAgent(agent)}
                   >
-                    <span data-slot="task-header-agent-label" dir="auto">{label(agent)}</span>
+                    <span data-slot="task-header-agent-label" dir="auto">
+                      {label(agent)}
+                    </span>
                     <span data-slot="task-header-agent-status-label">{status(agent)}</span>
                     <Show when={agent.permission || agent.question}>
-                      <span data-slot="task-header-agent-attention-label">{language.t("task.backgroundAgents.needsInput")}</span>
+                      <span data-slot="task-header-agent-attention-label">
+                        {language.t("task.backgroundAgents.needsInput")}
+                      </span>
                     </Show>
                   </button>
-                  <Show when={agent.status === "running"}>
+                  <Show when={!props.readonly && agent.status === "running"}>
                     <Button
                       icon="stop"
                       variant="ghost"
@@ -198,10 +255,12 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
                       aria-label={`${language.t("task.backgroundAgents.cancel")}: ${label(agent)}`}
                       onClick={(event: MouseEvent) => cancelAgent(event, agent)}
                     >
-                      <span data-slot="task-header-agent-action-label">{language.t("task.backgroundAgents.cancel")}</span>
+                      <span data-slot="task-header-agent-action-label">
+                        {language.t("task.backgroundAgents.cancel")}
+                      </span>
                     </Button>
                   </Show>
-                  <Show when={agent.status !== "running"}>
+                  <Show when={!props.readonly && agent.status !== "running"}>
                     <Button
                       icon="close-small"
                       variant="ghost"
@@ -212,7 +271,9 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
                         setHidden((current) => new Set(current).add(agent.jobID))
                       }}
                     >
-                      <span data-slot="task-header-agent-action-label">{language.t("task.backgroundAgents.dismiss")}</span>
+                      <span data-slot="task-header-agent-action-label">
+                        {language.t("task.backgroundAgents.dismiss")}
+                      </span>
                     </Button>
                   </Show>
                 </div>

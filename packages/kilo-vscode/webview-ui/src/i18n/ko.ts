@@ -1188,7 +1188,6 @@ export const dict = {
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
-  "task.backgroundAgents.openShort": "열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
   "task.backgroundAgents.foreground": "포그라운드 에이전트 실행 중",

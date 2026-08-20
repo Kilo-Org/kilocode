@@ -1209,7 +1209,6 @@ export const dict = {
   "task.backgroundAgents.running.one": "1 baggrundsagent",
   "task.backgroundAgents.running.many": "{{count}} baggrundsagenter",
   "task.backgroundAgents.open": "Åbn baggrundsagent",
-  "task.backgroundAgents.openShort": "Åbn",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Fortsæt i baggrunden",
   "task.backgroundAgents.foreground": "Forgrundsagenten kører",

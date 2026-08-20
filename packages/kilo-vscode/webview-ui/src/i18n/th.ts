@@ -1185,7 +1185,6 @@ export const dict = {
   "task.backgroundAgents.running.one": "เอเจนต์เบื้องหลัง 1 ตัว",
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
-  "task.backgroundAgents.openShort": "เปิด",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
   "task.backgroundAgents.foreground": "เอเจนต์เบื้องหน้ากำลังทำงาน",

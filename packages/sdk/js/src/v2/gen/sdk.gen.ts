@@ -7694,7 +7694,7 @@ export class BackgroundJob extends HeyApiClient {
   /**
    * Cancel background job
    *
-   * Cancel one background subagent job.
+   * Cancel one background subagent job and its session tree.
    */
   public cancel<ThrowOnError extends boolean = false>(
     parameters: {
@@ -8308,12 +8308,13 @@ export class Kilocode extends HeyApiClient {
   /**
    * List background jobs
    *
-   * List background subagent jobs for the current instance.
+   * List background subagent jobs owned by one parent session.
    */
   public backgroundJobs<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
+      sessionID: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -8324,6 +8325,7 @@ export class Kilocode extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "sessionID" },
           ],
         },
       ],

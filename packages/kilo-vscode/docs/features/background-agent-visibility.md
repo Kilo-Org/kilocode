@@ -48,13 +48,16 @@ Rejected: the action row above the composer (`ChatView.renderActions`). It is al
 
 ## State source
 
-No new backend route and no new extension service. The data is already in the webview:
+The webview uses the Kilo-owned background-job API for authoritative lifecycle state. A task-part fallback keeps running agents visible while the first request is loading:
 
 | Need | Source |
 |---|---|
 | the current session's task parts | `session.getSessionToolParts(id)`, the per-session tool index |
-| child session id, description, `background` flag | `task` tool part metadata, same lookup order as `childID()` |
-| live running state | `session.allStatusMap()`, which covers child sessions |
+| child session id, description, `background` flag | background-job metadata and `task` tool part metadata |
+| lifecycle state | `GET /kilocode/background-jobs` |
+| per-agent cancellation | `POST /kilocode/background-jobs/:jobID/cancel`, resolved in the owning parent directory and cancelling the child session tree |
+| foreground promotion | the existing `experimental.session.background` route |
+| child permission/question attention | scoped session permission and question state |
 | child sessions stay tracked while the card is closed | `KiloProvider` auto-adopts them from task parts |
 
 The per-session tool index matters for correctness, not only cost. `allParts()` holds the parts of every loaded session, so deriving from it would make one session's strip list agents started by another session, which is wrong in Agent Manager where several sessions are loaded at once. The index is keyed by session, so the strip lists only agents this session started. Agents started by a sub-agent appear in that sub-agent's own header, not in the root strip.
@@ -63,16 +66,18 @@ An agent counts as running only when its child session status is `busy` or `retr
 
 ## Implementation
 
-1. `webview-ui/src/components/chat/open-subagent.ts`
+1. `packages/opencode/src/kilocode/server/httpapi/`
+   Kilo-owned parent-scoped background-job list and cancellation routes.
+2. `webview-ui/src/components/chat/open-subagent.ts`
    Shared helper holding the Agent Manager vs sidebar branch. Extracted from `TaskToolExpanded.openInTab` so the task card and the strip cannot drift apart.
-2. `webview-ui/src/components/chat/background-agents.ts`
-   Pure derivation: `backgroundAgents(parts, status)` returns running background agents, deduplicated by child session id, in transcript order.
-3. `webview-ui/src/components/chat/BackgroundAgents.tsx`
+3. `webview-ui/src/components/chat/background-agents.ts`
+   Pure derivation for backend lifecycle rows and the running-task fallback.
+4. `webview-ui/src/components/chat/BackgroundAgents.tsx`
    The strip. Collapsed by default, reuses the `task-header-todos-*` slots, opens an agent through the shared helper.
-4. `TaskHeader.tsx` renders `<BackgroundAgents />` above the to-do strip.
-5. `styles/task-header.css` adds `[data-component="task-header-agents"]`.
-6. `i18n/en.ts` adds `task.backgroundAgents.*`. Other locales fall back to English, because non-English dictionaries are `Partial`.
-7. `tests/unit/background-agents.test.ts` covers the derivation with real part shapes.
+5. `TaskHeader.tsx` renders `<BackgroundAgents />` above the to-do strip.
+6. `styles/task-header.css` adds `[data-component="task-header-agents"]`.
+7. `i18n/*.ts` adds the localized `task.backgroundAgents.*` strings.
+8. `tests/unit/background-agents.test.ts` covers lifecycle derivation, attention attribution, and promotion discovery.
 
 ## Concurrency
 
@@ -80,16 +85,8 @@ Opening an agent from the strip while its task card is also open is safe. `Visib
 
 The strip itself does not sync any child session. It only reads status, so listing agents stays cheap and full part streaming happens on open.
 
-## Known limit
+## Known limits
 
-The webview only knows sessions it has loaded. After a webview reload, an agent whose parent session is not loaded again will not be listed, although it keeps running and still delivers its result into the parent transcript.
-
-If that gap matters in practice, the fix is a Kilo-owned `GET` returning `BackgroundJob.list()` under `packages/opencode/src/kilocode/server/httpapi/`, which needs no changes to shared upstream files. Not built yet, deliberately.
-
-## Follow-ups
-
-- **Permission attribution.** With several agents running, each blocked agent produces an anonymous permission prompt. Prompts should name the agent and expose a `1 of N` queue, matching `FooterSubagentState.permissions` in the CLI. This is the most valuable follow-up.
-- **Per-row cancel.** Abort the child session, which already cancels the job through `SessionRunState.cancel`.
-- **Elapsed time per row.** Needs a ticking timer, deferred to keep the first version free of re-render cost.
-- **Keybindings for CLI parity.** `kilo-code.new.viewBackgroundAgents` (CLI `session.child.first`) and `kilo-code.new.backgroundSubagents` (CLI `session.background`).
-- **Finished agents.** Currently the row disappears when the agent finishes, because the completion text is injected into the parent transcript. Revisit only if users report missing the transition.
+- The strip marks agents that need permission or question input, but the user must open the child inspector or editor tab to answer it.
+- The strip has no elapsed-time counter or dedicated keyboard shortcut.
+- Finished rows can be dismissed locally, but dismissal does not delete the child session or backend job record.

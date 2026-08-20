@@ -1180,7 +1180,6 @@ export const dict = {
   "task.backgroundAgents.running.one": "وكيل خلفي واحد",
   "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",
-  "task.backgroundAgents.openShort": "فتح",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
   "task.backgroundAgents.foreground": "الوكيل الأمامي قيد التشغيل",

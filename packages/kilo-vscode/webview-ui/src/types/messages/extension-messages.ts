@@ -20,8 +20,10 @@ import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/ana
 
 export interface BackgroundJobsLoadedMessage {
   type: "backgroundJobsLoaded"
-  sessionID?: string
+  sessionID: string
+  requestID: string
   jobs: BackgroundJobInfo[]
+  error?: string
 }
 
 export interface BackgroundJobInfo {
@@ -32,7 +34,11 @@ export interface BackgroundJobInfo {
   started_at: number
   completed_at?: number
   error?: string
-  metadata?: Record<string, unknown>
+  metadata?: {
+    parentSessionId?: string
+    sessionId?: string
+    background?: boolean
+  }
 }
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"

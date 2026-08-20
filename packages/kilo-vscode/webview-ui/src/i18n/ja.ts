@@ -1201,7 +1201,6 @@ export const dict = {
   "task.backgroundAgents.running.one": "バックグラウンドエージェント 1 件",
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
-  "task.backgroundAgents.openShort": "開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
   "task.backgroundAgents.foreground": "フォアグラウンドエージェントが実行中",

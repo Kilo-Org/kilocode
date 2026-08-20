@@ -5,6 +5,7 @@ import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/midd
 import {
   WorkspaceRoutingMiddleware,
   WorkspaceRoutingQuery,
+  WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import { AnacondaDesktopApi } from "./anaconda-desktop"
@@ -36,6 +37,11 @@ export const BackgroundJobInfo = Schema.Struct({
   completed_at: Schema.optional(Schema.Number),
   error: Schema.optional(Schema.String),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+})
+
+export const BackgroundJobsQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  sessionID: SessionID,
 })
 
 export const RemoveSkillPayload = Schema.Struct({
@@ -220,13 +226,13 @@ export const KilocodeApi = HttpApi.make("kilocode")
           }),
         ),
         HttpApiEndpoint.get("backgroundJobs", KilocodePaths.backgroundJobs, {
-          query: WorkspaceRoutingQuery,
+          query: BackgroundJobsQuery,
           success: described(Schema.Array(BackgroundJobInfo), "Background jobs"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "kilocode.backgroundJobs",
             summary: "List background jobs",
-            description: "List background subagent jobs for the current instance.",
+            description: "List background subagent jobs owned by one parent session.",
           }),
         ),
         HttpApiEndpoint.post("backgroundJobCancel", KilocodePaths.backgroundJobCancel, {
@@ -238,7 +244,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
           OpenApi.annotations({
             identifier: "kilocode.backgroundJob.cancel",
             summary: "Cancel background job",
-            description: "Cancel one background subagent job.",
+            description: "Cancel one background subagent job and its session tree.",
           }),
         ),
       )

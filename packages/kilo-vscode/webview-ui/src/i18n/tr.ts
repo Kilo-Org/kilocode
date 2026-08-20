@@ -1182,7 +1182,6 @@ export const dict = {
   "task.backgroundAgents.running.one": "1 arka plan ajanı",
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
-  "task.backgroundAgents.openShort": "Aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.foreground": "Ön plan ajanı çalışıyor",
