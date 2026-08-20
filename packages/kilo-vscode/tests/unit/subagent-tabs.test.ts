@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
-import { createSubagentTabs } from "../../webview-ui/agent-manager/subagent-tabs"
+import { availableSubagents, createSubagentTabs } from "../../webview-ui/agent-manager/subagent-tabs"
 
 function scene() {
   const [current] = createSignal<string | undefined>("parent")
@@ -88,5 +88,69 @@ describe("Agent Manager subagent tabs", () => {
       expect(item.tabs.active()).toBe("two")
       dispose()
     })
+  })
+
+  it("keeps tabs and active children separate for each context", () => {
+    createRoot((dispose) => {
+      const [context, setContext] = createSignal("worktree-a")
+      const calls = {
+        synced: [] as Array<[string, string | undefined]>,
+        unsynced: [] as string[],
+        shown: 0,
+        hidden: 0,
+      }
+      const item = createSubagentTabs({
+        current: () => "parent",
+        context: () => context(),
+        sync: (id, parent) => calls.synced.push([id, parent]),
+        unsync: (id) => calls.unsynced.push(id),
+        show: () => calls.shown++,
+        hide: () => calls.hidden++,
+      })
+
+      item.open("child-a", "A", "parent-a")
+      setContext("worktree-b")
+      item.open("child-b", "B", "parent-b")
+
+      expect(item.tabs().map((tab) => tab.id)).toEqual(["child-b"])
+      expect(item.active()).toBe("child-b")
+      setContext("worktree-a")
+      expect(item.tabs().map((tab) => tab.id)).toEqual(["child-a"])
+      expect(item.active()).toBe("child-a")
+      expect(calls.synced).toEqual([
+        ["child-a", "parent-a"],
+        ["child-b", "parent-b"],
+      ])
+      dispose()
+    })
+  })
+
+  it("finds direct subagent sessions in task tool parts", () => {
+    const tabs = availableSubagents([
+      {
+        id: "task-1",
+        type: "tool",
+        tool: "task",
+        state: {
+          status: "completed",
+          input: { description: "Inspect files", subagent_type: "explore" },
+          output: "",
+          title: "",
+        },
+        metadata: { sessionId: "child-1" },
+      },
+      {
+        id: "task-2",
+        type: "tool",
+        tool: "task",
+        state: { status: "running", input: { subagent_type: "general" } },
+        metadata: { sessionId: "child-2" },
+      },
+    ])
+
+    expect(tabs).toEqual([
+      { id: "child-1", title: "Inspect files" },
+      { id: "child-2", title: "general" },
+    ])
   })
 })

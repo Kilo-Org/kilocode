@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/upstream-merge",
-  "version": "7.4.22",
+  "version": "7.4.23",
   "private": true,
   "type": "module",
   "description": "Scripts for automating upstream opencode merges into Kilo",

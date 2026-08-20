@@ -14,13 +14,20 @@ import { expect, test, type Page } from "@playwright/test"
 const GLOBALS = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
 const STORY_ID = "chat--chat-view-session-dock-stability"
 
-async function openStory(page: Page) {
+async function openStory(page: Page, motion = false) {
   await page.setViewportSize({ width: 720, height: 640 })
   await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
-  await page.addStyleTag({
-    content: `*, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }`,
-  })
+  // Geometry assertions need settled layout, so motion is off unless the test is
+  // about the motion itself.
+  if (!motion) {
+    await page.addStyleTag({
+      content: `*, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }`,
+    })
+  }
   await page.waitForSelector('[data-component="session-dock"]')
+  // Every assertion here is a width or a position, so nothing may be measured
+  // while the bundled font is still swapping in.
+  await page.evaluate(() => document.fonts.ready)
 }
 
 async function geometry(page: Page) {
@@ -124,6 +131,89 @@ test("the counter keeps its width as it ticks", async ({ page }) => {
   })
 
   expect(wide).toBe(before)
+})
+
+// Both motion preferences are emulated explicitly: the swap has two different
+// behaviours and neither should depend on the ambient default.
+test.describe("status swap", () => {
+  test("a status change glides the cluster instead of jumping", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    await openStory(page, true)
+    await page.getByTestId("toggle-busy").click()
+    const label = page.locator(".working-status")
+    await expect(label).toBeVisible()
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+
+    // "Thinking…" to "Searching the codebase" is wide enough that a bare label
+    // swap moved the centered spinner by tens of pixels in a single frame.
+    const swap = await page.evaluate(async () => {
+      const spinner = document.querySelector('.working-indicator [data-component="spinner"]')
+      const box = document.querySelector(".working-status")
+      const next = document.querySelector('[data-testid="next-status"]')
+      if (!(spinner instanceof Element) || !(box instanceof HTMLElement) || !(next instanceof HTMLElement))
+        throw new Error("indicator missing")
+
+      const left = () => spinner.getBoundingClientRect().left
+      const start = left()
+      const duration = getComputedStyle(box).transitionDuration
+      next.click()
+
+      const frames: { left: number; width: string; lines: number }[] = []
+      for (let i = 0; i < 6; i++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve))
+        frames.push({
+          left: left(),
+          width: box.style.width,
+          lines: box.querySelectorAll(".working-status-line").length,
+        })
+      }
+      return { start, duration, frames }
+    })
+
+    // The width is animated rather than reassigned.
+    expect(swap.duration).not.toBe("0s")
+    // In the frame of the swap the box still holds the outgoing width, so the
+    // spinner starts from exactly where it was instead of teleporting.
+    expect(Math.abs(swap.frames[0]!.left - swap.start)).toBeLessThanOrEqual(1)
+    expect(swap.frames[0]!.width).not.toBe("")
+    // Both labels are mounted for the crossfade.
+    expect(swap.frames[0]!.lines).toBe(2)
+    // and the cluster only ever travels toward its new position.
+    for (const [i, frame] of swap.frames.entries()) {
+      if (i === 0) continue
+      expect(frame.left).toBeLessThanOrEqual(swap.frames[i - 1]!.left)
+    }
+
+    // Once the glide lands, the lock is released and only the new label is left.
+    await page.waitForFunction(() => !document.querySelector(".working-status[data-swap]"))
+    expect(await label.evaluate((el) => el.style.width)).toBe("")
+    expect(await label.locator(".working-status-line").count()).toBe(1)
+    const settled = await page
+      .locator('.working-indicator [data-component="spinner"]')
+      .evaluate((el) => el.getBoundingClientRect().left)
+    expect(settled).toBeLessThan(swap.start)
+  })
+
+  test("reduced motion cuts to the new status instead of animating it", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await openStory(page, true)
+    await page.getByTestId("toggle-busy").click()
+    await expect(page.locator(".working-status")).toBeVisible()
+    await page.getByTestId("next-status").click()
+
+    const swap = await page.locator(".working-status").evaluate((el) => {
+      const old = el.querySelector(".working-status-line[data-old]")
+      return {
+        glide: getComputedStyle(el).transitionDuration,
+        // The outgoing copy has no fade to carry it away, so it must not paint on
+        // top of the new label.
+        old: old ? getComputedStyle(old).display : "absent",
+      }
+    })
+
+    expect(swap.glide).toBe("0s")
+    expect(["absent", "none"]).toContain(swap.old)
+  })
 })
 
 test("a wrapped narrow-sidebar actions row is not clipped", async ({ page }) => {
