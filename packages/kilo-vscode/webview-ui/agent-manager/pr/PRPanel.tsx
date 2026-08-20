@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { Component, Show, createSignal } from "solid-js"
+import { Component, Show } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { WorktreeState } from "../../src/types/messages"
@@ -17,23 +17,15 @@ interface PRPanelProps {
   pr: PRStatus
   worktree?: WorktreeState
   worktreeId: string
+  activeTerminalId?: string
   onClose: () => void
   onOpenExternal: () => void
+  onOpenFile?: (file: string, line?: number) => void
+  onOpenUrl?: (url: string) => void
 }
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
-  let bodyRef: HTMLDivElement | undefined
   let commentsRef: HTMLDivElement | undefined
-  const [showScrollTop, setShowScrollTop] = createSignal(false)
-
-  function onScroll(e: Event) {
-    const el = e.target as HTMLDivElement
-    setShowScrollTop(el.scrollTop > 100)
-  }
-
-  function scrollToTop() {
-    bodyRef?.scrollTo({ top: 0, behavior: "smooth" })
-  }
 
   function jumpToComments() {
     commentsRef?.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -63,7 +55,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
         </div>
       </div>
       <div class="am-pr-panel-body-wrap">
-        <div class="am-pr-panel-body" ref={bodyRef} onScroll={onScroll}>
+        <div class="am-pr-panel-body">
           <PRSummary pr={props.pr} onJumpToComments={jumpToComments} />
           <PROverview pr={props.pr} worktree={props.worktree} />
           <Show when={(props.pr.reviewers ?? []).length > 0}>
@@ -76,18 +68,17 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <Show when={props.pr.comments?.total ? props.pr.comments : undefined}>
             {(comments) => (
               <div ref={commentsRef}>
-                <PRComments comments={comments()} worktreeId={props.worktreeId} />
+                <PRComments
+                  comments={comments()}
+                  worktreeId={props.worktreeId}
+                  activeTerminalId={props.activeTerminalId}
+                  onOpenFile={props.onOpenFile}
+                  onOpenUrl={props.onOpenUrl}
+                />
               </div>
             )}
           </Show>
         </div>
-        <Show when={showScrollTop()}>
-          <Tooltip value="Scroll to top" placement="left">
-            <button class="am-pr-scroll-top" onClick={scrollToTop}>
-              ↑
-            </button>
-          </Tooltip>
-        </Show>
       </div>
     </div>
   )

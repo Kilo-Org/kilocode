@@ -186,34 +186,90 @@
 }
 
 /* ============================================
+   Session Dock
+   ============================================ */
+
+/* The single row between the transcript and the composer. Both states occupy the
+   same grid cell and only one is visible, so the row is always exactly as tall
+   as the taller state at the current width. Swapping the working indicator for
+   the session actions therefore never resizes the transcript viewport and never
+   shifts the conversation text.
+
+   The height cannot be a fixed pixel value: the actions row wraps to a second
+   line in a narrow sidebar (see the container query in session-actions.css), and
+   a hard-coded height clipped it behind the composer. */
+.session-dock {
+  /* Tracks the natural width of the actions row (measured at 434px: New Session,
+     Fork Session, Move to Worktree, and the diff stats), so the two dock states
+     read as one centered component on wide surfaces. Deliberately px and not ch:
+     a font-relative lane changes width with the webview font metrics. */
+  --session-dock-lane: 440px;
+  display: grid;
+  box-sizing: border-box;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.session-dock:not([data-active]) {
+  display: none;
+}
+
+.session-dock-state {
+  display: flex;
+  grid-area: 1 / 1;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Hidden rather than unmounted, so the inactive state keeps reserving its height
+   and the row cannot resize when the two swap. */
+.session-dock-state:not([data-active]) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ============================================
    Working Indicator
    ============================================ */
 
 .working-indicator {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px 16px;
   font-size: var(--kilo-font-size-12);
   color: var(--vscode-descriptionForeground);
 }
 
-.working-indicator-slot {
-  /* Offset the session actions appearing when work finishes. */
-  min-height: 10px;
-  flex-shrink: 0;
+/* On a wide surface (Agent Manager) the dock spans the whole composer. The lane
+   caps how far a long status label may stretch before it ellipsizes, so the
+   indicator stays a centered cluster on the same axis as the actions row instead
+   of reaching for both edges. */
+.session-dock-state > .working-indicator {
+  width: 100%;
+  max-width: var(--session-dock-lane);
+  margin-inline: auto;
 }
 
+/* Sized to its text rather than stretched, so the spinner, the label, and the
+   counter stay one cluster. Stretching it pushed the counter onto the far edge of
+   whatever surface the dock spanned. */
 .working-text {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Reserving the width keeps the cluster still while the counter ticks: tabular
+   digits alone still reflow when the value gains a character (9s to 10s). */
 .working-elapsed {
   flex-shrink: 0;
+  min-width: 3.5ch;
+  text-align: right;
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
 }
@@ -331,7 +387,6 @@
 
 .chat-view .message-list-content > .revert-banner,
 .chat-view .message-list-content > [data-component="question-dock"],
-.chat-view .message-list-content > .working-indicator-slot,
 .chat-view .message-list-content > .vscode-session-turn[role="status"],
 .chat-view .message-list-content > [data-component="suggest-bar"] {
   width: calc(100% - 8px);
@@ -340,7 +395,7 @@
 }
 
 .chat-view .prompt-input-container,
-.chat-view .new-task-button-wrapper {
+.chat-view .session-dock {
   box-sizing: border-box;
   width: min(
     calc(100% - var(--chat-gutter) - var(--chat-gutter) - var(--chat-scrollbar-width) - 8px),

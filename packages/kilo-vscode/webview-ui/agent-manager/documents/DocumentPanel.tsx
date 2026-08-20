@@ -344,11 +344,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
           <span class="am-diff-comments-count">
             {t("agentManager.documents.comments", { count: props.comments.length })}
           </span>
-          <TooltipKeybind
-            title={t("agentManager.review.sendAllToChat")}
-            keybind={sendAllKeybind(t)}
-            placement="top"
-          >
+          <TooltipKeybind title={t("agentManager.review.sendAllToChat")} keybind={sendAllKeybind(t)} placement="top">
             <Button variant="primary" size="small" onClick={sendAll}>
               {t("agentManager.review.sendAllToChat")}
             </Button>

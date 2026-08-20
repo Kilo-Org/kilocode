@@ -2,11 +2,14 @@ import { describe, expect, it } from "bun:test"
 import {
   parsePRResult,
   checkStatus,
+  commentsSig,
   formatCheckDuration,
+  ghErrorReason,
   parseComments,
   parseReviewers,
 } from "../../src/agent-manager/pr/am-pr-utils"
 import type { GhThread, GhReviewRequest, GhReview } from "../../src/agent-manager/pr/am-pr-types"
+import type { PRComment } from "../../src/agent-manager/types"
 
 // --- parsePRResult ---
 
@@ -248,8 +251,10 @@ describe("parseComments", () => {
         line: 10,
         url: "https://url",
         resolved: true,
+        outdated: false,
         createdAt: new Date("2024-01-01T00:00:00Z").getTime(),
         diffHunk: undefined,
+        replies: undefined,
       },
     ])
   })
@@ -278,15 +283,15 @@ describe("parseComments", () => {
     expect(parseComments(threads)[0]?.author).toBe("unknown")
   })
 
-  it("only uses the first comment of each thread", () => {
+  it("keeps later thread comments as replies of the first one", () => {
     const threads: GhThread[] = [
       {
         id: "PRT_t2",
         isResolved: false,
         comments: {
           nodes: [
-            { id: "first", body: "first comment" },
-            { id: "second", body: "second comment" },
+            { id: "first", body: "first comment", author: { login: "alice" } },
+            { id: "second", body: "second comment", author: { login: "bob" } },
           ],
         },
       },
@@ -294,6 +299,82 @@ describe("parseComments", () => {
     const result = parseComments(threads)
     expect(result).toHaveLength(1)
     expect(result[0]?.id).toBe("first")
+    expect(result[0]?.replies).toEqual([{ author: "bob", body: "second comment" }])
+  })
+
+  it("marks an outdated thread", () => {
+    const threads: GhThread[] = [
+      { id: "PRT_t3", isResolved: false, isOutdated: true, comments: { nodes: [{ id: "c4", body: "stale" }] } },
+    ]
+    expect(parseComments(threads)[0]?.outdated).toBe(true)
+  })
+
+  it("falls back to the original line when the thread has no current line", () => {
+    const threads: GhThread[] = [
+      {
+        id: "PRT_t4",
+        isResolved: false,
+        isOutdated: true,
+        comments: { nodes: [{ id: "c5", body: "moved", path: "src/foo.ts", originalLine: 42 }] },
+      },
+    ]
+    expect(parseComments(threads)[0]?.line).toBe(42)
+  })
+})
+
+// --- commentsSig ---
+
+describe("commentsSig", () => {
+  const thread = (overrides: Partial<PRComment> = {}): PRComment => ({
+    id: "c1",
+    threadId: "PRRT_1",
+    author: "alice",
+    body: "looks good",
+    resolved: false,
+    outdated: false,
+    ...overrides,
+  })
+
+  it("returns an empty signature when there are no comments", () => {
+    expect(commentsSig()).toBe("")
+  })
+
+  it("changes when a reply is added, which thread counts alone cannot detect", () => {
+    const before = commentsSig([thread()])
+    const after = commentsSig([thread({ replies: [{ author: "bob", body: "guard it" }] })])
+    expect(after).not.toBe(before)
+  })
+
+  it("changes when a body is edited, even when the length stays the same", () => {
+    expect(commentsSig([thread({ body: "looks fine" })])).not.toBe(commentsSig([thread()]))
+    expect(commentsSig([thread({ replies: [{ author: "bob", body: "guard it" }] })])).not.toBe(
+      commentsSig([thread({ replies: [{ author: "bob", body: "guard me" }] })]),
+    )
+  })
+
+  it("changes when a thread moves line", () => {
+    expect(commentsSig([thread({ line: 5 })])).not.toBe(commentsSig([thread()]))
+  })
+
+  it("stays stable for unchanged comments", () => {
+    expect(commentsSig([thread()])).toBe(commentsSig([thread()]))
+  })
+})
+
+// --- ghErrorReason ---
+
+describe("ghErrorReason", () => {
+  it("keeps the last meaningful line and strips the gh prefix", () => {
+    const message = "Command failed: gh api graphql -f query=mutation...\ngh: Resource not accessible by integration"
+    expect(ghErrorReason(message)).toBe("Resource not accessible by integration")
+  })
+
+  it("falls back to the raw message when there is nothing else", () => {
+    expect(ghErrorReason("  boom  ")).toBe("boom")
+  })
+
+  it("truncates very long output", () => {
+    expect(ghErrorReason("x".repeat(500)).length).toBe(200)
   })
 })
 

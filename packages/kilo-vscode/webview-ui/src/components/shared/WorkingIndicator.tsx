@@ -2,6 +2,10 @@
  * WorkingIndicator component
  * Shows a spinner, status text, and elapsed time counter while the agent is active.
  * Matches the v1.0.25 working indicator UX.
+ *
+ * Purely visual: `SessionDock` decides when this renders (see `showsWorking`).
+ * Keeping the decision in one place is what stops the dock from resizing when
+ * a turn starts or ends.
  */
 
 import { type Component, Show, createSignal, createEffect, onCleanup } from "solid-js"
@@ -78,16 +82,6 @@ export const WorkingIndicator: Component = () => {
     return `${m}m ${rem}s`
   }
 
-  const blocked = () => {
-    const id = session.currentSessionID()
-    const perms = session
-      .permissions()
-      .filter((p) => p.sessionID === id && !(p.tool && ["todowrite", "todoread"].includes(p.toolName)))
-    const questions = session.questions().filter((q) => q.sessionID === id)
-    const suggestions = session.suggestions().filter((s) => s.sessionID === id)
-    return perms.length > 0 || questions.length > 0 || suggestions.length > 0
-  }
-
   const isRetrying = () => session.statusInfo().type === "retry"
 
   const handleCancelRetry = () => {
@@ -98,26 +92,22 @@ export const WorkingIndicator: Component = () => {
   }
 
   return (
-    <div class="working-indicator-slot">
-      <Show when={session.submitting() || (session.status() !== "idle" && !blocked())}>
-        <div class="working-indicator">
-          <Spinner />
-          <span class="working-text">{statusText()}</span>
-          <Show when={elapsed() > 0}>
-            <span class="working-elapsed">{formatElapsed()}</span>
-          </Show>
-          <Show when={isRetrying()}>
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={handleCancelRetry}
-              class="working-cancel"
-              style={{ "font-weight": "600", color: "var(--vscode-errorForeground, #f85149)" }}
-            >
-              {language.t("ui.sessionTurn.cancel") || "Cancel"}
-            </Button>
-          </Show>
-        </div>
+    <div class="working-indicator">
+      <Spinner />
+      <span class="working-text">{statusText()}</span>
+      <Show when={elapsed() > 0}>
+        <span class="working-elapsed">{formatElapsed()}</span>
+      </Show>
+      <Show when={isRetrying()}>
+        <Button
+          variant="secondary"
+          size="small"
+          onClick={handleCancelRetry}
+          class="working-cancel"
+          style={{ "font-weight": "600", color: "var(--vscode-errorForeground, #f85149)" }}
+        >
+          {language.t("ui.sessionTurn.cancel") || "Cancel"}
+        </Button>
       </Show>
     </div>
   )
