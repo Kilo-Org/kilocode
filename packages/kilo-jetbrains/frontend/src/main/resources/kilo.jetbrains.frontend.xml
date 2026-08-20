@@ -84,6 +84,14 @@
                 key="settings.autoApprove.displayName"/>
 
         <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.advanced"
+                groupWeight="-2"
+                instance="ai.kilocode.client.settings.AdvancedConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.advanced.displayName"/>
+
+        <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
                 id="ai.kilocode.jetbrains.settings.agentBehavior.agents"
                 instance="ai.kilocode.client.settings.agents.AgentsConfigurable"

@@ -181,6 +181,10 @@ import type {
   KilocodeAgentManagerRejectResponses,
   KilocodeAgentManagerReplyErrors,
   KilocodeAgentManagerReplyResponses,
+  KilocodeBackgroundJobCancelErrors,
+  KilocodeBackgroundJobCancelResponses,
+  KilocodeBackgroundJobsErrors,
+  KilocodeBackgroundJobsResponses,
   KilocodeCommandFilesErrors,
   KilocodeCommandFilesResponses,
   KilocodeHeapSnapshotErrors,
@@ -7686,6 +7690,44 @@ export class AgentManager extends HeyApiClient {
   }
 }
 
+export class BackgroundJob extends HeyApiClient {
+  /**
+   * Cancel background job
+   *
+   * Cancel one background subagent job and its session tree.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters: {
+      jobID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "jobID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeBackgroundJobCancelResponses,
+      KilocodeBackgroundJobCancelErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs/{jobID}/cancel",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
@@ -8263,6 +8305,42 @@ export class Kilocode extends HeyApiClient {
     })
   }
 
+  /**
+   * List background jobs
+   *
+   * List background subagent jobs owned by one parent session.
+   */
+  public backgroundJobs<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeBackgroundJobsResponses,
+      KilocodeBackgroundJobsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs",
+      ...options,
+      ...params,
+    })
+  }
+
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
@@ -8276,6 +8354,11 @@ export class Kilocode extends HeyApiClient {
   private _agentManager?: AgentManager
   get agentManager(): AgentManager {
     return (this._agentManager ??= new AgentManager({ client: this.client }))
+  }
+
+  private _backgroundJob?: BackgroundJob
+  get backgroundJob(): BackgroundJob {
+    return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport

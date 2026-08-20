@@ -91,6 +91,14 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         context.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(context)
 
+        val advanced = ActionLink(KiloBundle.message("settings.advanced.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, AdvancedConfigurable.ID)
+        }
+        advanced.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
+        panel.next(advanced)
+
         return panel
     }
 
