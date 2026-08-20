@@ -32936,58 +32936,6 @@
           },
           "permission": {
             "$ref": "#/components/schemas/PermissionConfig"
-          },
-          "requirements": {
-            "type": "object",
-            "properties": {
-              "skills": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "\\S"
-                },
-                "minItems": 1,
-                "maxItems": 20
-              },
-              "mcps": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "\\S"
-                },
-                "minItems": 1,
-                "maxItems": 20
-              },
-              "vscode_extensions": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 128,
-                      "pattern": "\\S"
-                    },
-                    "id": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 128,
-                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
-                    }
-                  },
-                  "required": ["name", "id"],
-                  "additionalProperties": false
-                },
-                "minItems": 1,
-                "maxItems": 20
-              }
-            },
-            "additionalProperties": false
           }
         },
         "additionalProperties": {}
@@ -33602,6 +33550,10 @@
             "enum": ["expanded", "collapsed"]
           },
           "code_edit_display": {
+            "type": "string",
+            "enum": ["expanded", "collapsed"]
+          },
+          "mcp_tool_display": {
             "type": "string",
             "enum": ["expanded", "collapsed"]
           },
@@ -35184,58 +35136,6 @@
           },
           "options": {
             "type": "object"
-          },
-          "requirements": {
-            "type": "object",
-            "properties": {
-              "skills": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "\\S"
-                },
-                "minItems": 1,
-                "maxItems": 20
-              },
-              "mcps": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "\\S"
-                },
-                "minItems": 1,
-                "maxItems": 20
-              },
-              "vscode_extensions": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 128,
-                      "pattern": "\\S"
-                    },
-                    "id": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 128,
-                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
-                    }
-                  },
-                  "required": ["name", "id"],
-                  "additionalProperties": false
-                },
-                "minItems": 1,
-                "maxItems": 20
-              }
-            },
-            "additionalProperties": false
           },
           "steps": {
             "type": "number"
