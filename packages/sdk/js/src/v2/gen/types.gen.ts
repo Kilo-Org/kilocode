@@ -2709,6 +2709,8 @@ export type Config = {
     image_generation_model?: string
     native_notebook_tools?: boolean
     speech_to_text_model?: string
+    speech_to_text_base_url?: string
+    speech_to_text_api_key?: string
     openTelemetry?: boolean
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean

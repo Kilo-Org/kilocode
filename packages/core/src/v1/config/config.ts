@@ -307,6 +307,13 @@ export const Info = Schema.Struct({
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),
+      speech_to_text_base_url: Schema.optional(Schema.String).annotate({
+        description:
+          "Base URL of an OpenAI-compatible transcription API to use instead of the Kilo Gateway, for example https://api.openai.com/v1",
+      }),
+      speech_to_text_api_key: Schema.optional(Schema.String).annotate({
+        description: "API key sent as a bearer token to the custom speech-to-text base URL",
+      }),
       openTelemetry: Schema.Boolean.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(true))).annotate({
         description: "Enable telemetry. Set to false to opt-out.",
       }),

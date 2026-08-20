@@ -748,8 +748,16 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "圖像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "預設 (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription": "傳送到自訂轉錄端點的模型 ID，例如 whisper-1。",
+  "settings.models.speechToTextBaseUrl.title": "語音轉文字基礎 URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "使用相容 OpenAI 的轉錄 API 取代 Kilo Gateway。模型從 /models 讀取，音訊傳送到 /audio/transcriptions。留空則使用 Kilo Gateway。",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "語音轉文字 API 金鑰",
+  "settings.models.speechToTextApiKey.description": "傳送到自訂轉錄基礎 URL 的 Bearer 權杖。儲存在你的 Kilo 設定檔中。",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "啟用並登入 Kilo 供應商以使用 Speech to Text。Speech to Text 目前僅支援透過 Kilo Gateway 使用。",
+    "啟用並登入 Kilo 供應商以使用 Speech to Text，或在下方設定自訂轉錄基礎 URL。",
   "settings.models.speechToTextModel.title": "語音轉文字模型",
   "settings.models.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.nativeNotebookTools.title": "原生筆記本工具",

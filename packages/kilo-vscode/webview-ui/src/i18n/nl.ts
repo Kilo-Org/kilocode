@@ -820,8 +820,18 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Model-ID die naar uw eigen transcriptie-eindpunt wordt gestuurd, bijvoorbeeld whisper-1.",
+  "settings.models.speechToTextBaseUrl.title": "Spraak-naar-tekst-basis-URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Gebruik een OpenAI-compatibele transcriptie-API in plaats van Kilo Gateway. Modellen worden gelezen van /models en audio gaat naar /audio/transcriptions. Laat leeg om Kilo Gateway te gebruiken.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Spraak-naar-tekst-API-sleutel",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-token dat naar de eigen transcriptie-basis-URL wordt gestuurd. Opgeslagen in uw Kilo-configuratiebestand.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
+    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken, of stel hieronder een eigen transcriptie-basis-URL in.",
   "settings.models.speechToTextModel.title": "Spraak-naar-tekst-model",
   "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.nativeNotebookTools.title": "Native notebooktools",

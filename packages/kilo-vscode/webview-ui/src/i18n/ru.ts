@@ -819,8 +819,18 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
   "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Идентификатор модели, отправляемый в ваш собственный эндпоинт транскрипции, например whisper-1.",
+  "settings.models.speechToTextBaseUrl.title": "Базовый URL речи в текст",
+  "settings.models.speechToTextBaseUrl.description":
+    "Использовать совместимый с OpenAI API транскрипции вместо Kilo Gateway. Модели читаются из /models, аудио отправляется в /audio/transcriptions. Оставьте пустым, чтобы использовать Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Ключ API речи в текст",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-токен, отправляемый на собственный базовый URL транскрипции. Хранится в файле конфигурации Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text. В настоящее время Speech to Text поддерживается только с Kilo Gateway.",
+    "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text, либо укажите ниже свой базовый URL транскрипции.",
   "settings.models.speechToTextModel.title": "Модель речи в текст",
   "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",

@@ -816,8 +816,18 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "画像生成モデル",
   "settings.experimental.imageGenerationModel.placeholder": "デフォルト (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "カスタム文字起こしエンドポイントに送信するモデル ID です。例: whisper-1。",
+  "settings.models.speechToTextBaseUrl.title": "音声認識ベース URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Kilo Gateway の代わりに OpenAI 互換の文字起こし API を使用します。モデルは /models から読み込まれ、音声は /audio/transcriptions に送信されます。空欄にすると Kilo Gateway を使用します。",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "音声認識 API キー",
+  "settings.models.speechToTextApiKey.description":
+    "カスタム文字起こしベース URL に送信するベアラートークンです。Kilo の設定ファイルに保存されます。",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインしてください。現在、Speech to Text は Kilo Gateway でのみサポートされています。",
+    "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインするか、下でカスタム文字起こしベース URL を設定してください。",
   "settings.models.speechToTextModel.title": "音声認識モデル",
   "settings.models.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",

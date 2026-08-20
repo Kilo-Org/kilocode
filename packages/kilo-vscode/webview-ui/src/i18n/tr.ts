@@ -812,8 +812,18 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "Görüntü oluşturma modeli",
   "settings.experimental.imageGenerationModel.placeholder": "Varsayılan (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Kendi transkripsiyon uç noktanıza gönderilen model kimliği, örneğin whisper-1.",
+  "settings.models.speechToTextBaseUrl.title": "Sesten metne temel URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Kilo Gateway yerine OpenAI uyumlu bir transkripsiyon API'si kullanın. Modeller /models adresinden okunur, ses /audio/transcriptions adresine gönderilir. Kilo Gateway kullanmak için boş bırakın.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Sesten metne API anahtarı",
+  "settings.models.speechToTextApiKey.description":
+    "Kendi transkripsiyon temel URL'nize gönderilen bearer belirteci. Kilo yapılandırma dosyanızda saklanır.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın. Speech to Text şu anda yalnızca Kilo Gateway ile desteklenmektedir.",
+    "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın ya da aşağıda kendi transkripsiyon temel URL'nizi ayarlayın.",
   "settings.models.speechToTextModel.title": "Sesten metne modeli",
   "settings.models.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
   "settings.experimental.nativeNotebookTools.title": "Yerel Not Defteri Araçları",
