@@ -619,6 +619,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "کلید API Qdrant",
   "settings.indexing.qdrantApiKey.description": "کلید API اختیاری برای نمونه Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "کلید API اختیاری",
+  "settings.indexing.valkeyUrl.title": "URL Valkey",
+  "settings.indexing.valkeyUrl.description": "URL اتصال به ذخیره‌ساز برداری Valkey.",
+  "settings.indexing.valkeyPassword.title": "رمز عبور Valkey",
+  "settings.indexing.valkeyPassword.description": "رمز عبور احراز هویت اختیاری برای Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "رمز عبور اختیاری",
   "settings.indexing.fileExtensions.title": "پسوندهای فایل",
   "settings.indexing.fileExtensions.description":
     "فهرست مجاز با جداکننده کاما. برای استفاده از پیش‌فرض‌های داخلی خالی بگذارید.",

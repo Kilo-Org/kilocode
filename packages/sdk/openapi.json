@@ -32616,7 +32616,7 @@
           },
           "vectorStore": {
             "type": "string",
-            "enum": ["lancedb", "qdrant"]
+            "enum": ["lancedb", "qdrant", "valkey"]
           },
           "kilo": {
             "type": "object",
@@ -32739,6 +32739,18 @@
             "type": "object",
             "properties": {
               "directory": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "valkey": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "password": {
                 "type": "string"
               }
             },

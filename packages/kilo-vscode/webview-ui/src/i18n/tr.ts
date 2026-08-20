@@ -655,6 +655,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API anahtarı",
   "settings.indexing.qdrantApiKey.description": "Qdrant örneği için isteğe bağlı API anahtarı.",
   "settings.indexing.qdrantApiKey.placeholder": "İsteğe bağlı API anahtarı",
+  "settings.indexing.valkeyUrl.title": "Valkey URL'si",
+  "settings.indexing.valkeyUrl.description": "Valkey vektör deposu için bağlantı URL'si.",
+  "settings.indexing.valkeyPassword.title": "Valkey parolası",
+  "settings.indexing.valkeyPassword.description": "Valkey için isteğe bağlı kimlik doğrulama parolası.",
+  "settings.indexing.valkeyPassword.placeholder": "İsteğe bağlı parola",
   "settings.indexing.fileExtensions.title": "Dosya Uzantıları",
   "settings.indexing.fileExtensions.description":
     "Virgülle ayrılmış izin listesi. Yerleşik varsayılanları kullanmak için boş bırakın.",

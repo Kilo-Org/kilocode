@@ -666,6 +666,11 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Chave de API do Qdrant",
   "settings.indexing.qdrantApiKey.description": "Chave de API opcional para a instância do Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Chave de API opcional",
+  "settings.indexing.valkeyUrl.title": "URL do Valkey",
+  "settings.indexing.valkeyUrl.description": "URL de conexão para o armazenamento vetorial Valkey.",
+  "settings.indexing.valkeyPassword.title": "Senha do Valkey",
+  "settings.indexing.valkeyPassword.description": "Senha de autenticação opcional para o Valkey.",
+  "settings.indexing.valkeyPassword.placeholder": "Senha opcional",
   "settings.indexing.fileExtensions.title": "Extensões de arquivo",
   "settings.indexing.fileExtensions.description":
     "Lista de permissões separada por vírgulas. Deixe em branco para usar os padrões integrados.",
