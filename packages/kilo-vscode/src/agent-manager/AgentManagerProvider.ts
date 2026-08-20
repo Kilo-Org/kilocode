@@ -35,6 +35,8 @@ import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
+import { discardWorktree as discard } from "./discard-worktree"
+import { removePtys as cleanupPtys } from "./pty-cleanup"
 import { executeVscodeTask } from "./task-runner"
 import { runWorktreeSetupScript } from "./setup-script-task"
 import { RunController } from "./run/controller"
@@ -176,6 +178,7 @@ export class AgentManagerProvider implements Disposable {
       push: () => this.pushState(),
       setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
       session: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
+      removePtys: (directory) => this.removePtys(directory),
       register: (sid, dir) => this.registerWorktreeSession(sid, dir),
       ready: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
       log: (...args) => this.log(...args),
@@ -640,7 +643,6 @@ export class AgentManagerProvider implements Disposable {
       })
       return null
     }
-
     if (
       m.type === "requestSandboxDefault" ||
       m.type === "setSandboxDefault" ||
@@ -665,9 +667,9 @@ export class AgentManagerProvider implements Disposable {
       this.activeSessionId = m.draftID
       return msg
     }
-
     if (m.type === "requestTerminalContext") {
-      if (!m.sessionID || this.terminalManager.prepareContext(m.sessionID)) return msg
+      const ready = this.terminalManager.prepareContext(m.sessionID, m.agentManagerContext)
+      if (ready) return msg
       this.panel?.postMessage({
         type: "terminalContextError",
         requestId: m.requestId,
@@ -1030,26 +1032,21 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  /** Remove a worktree whose session could not be safely initialized. */
-  private async discardWorktree(id: string, dir: string, branch: string, sessionId?: string): Promise<void> {
-    this.getStateManager()?.removeWorktree(id)
-    this.pushState()
-
-    if (sessionId) {
-      try {
-        await this.connectionService
-          .getClient()
-          .session.delete({ sessionID: sessionId, directory: dir }, { throwOnError: true })
-      } catch (err) {
-        this.log(`Failed to delete session ${sessionId} after worktree setup failed:`, err)
-      }
-    }
-
+  private async removePtys(directory: string): Promise<void> {
+    const release = await this.terminalRouter.blockDirectory(directory)
     try {
-      await this.getWorktreeManager()?.removeWorktree(dir, branch)
-    } catch (err) {
-      this.log(`Failed to remove worktree ${id} after setup failed:`, err)
+      await this.terminalRouter.closeDirectory(directory)
+      await cleanupPtys((dir) => this.connectionService.getClientAsync(dir), directory)
+    } finally {
+      release()
     }
+  }
+
+  private async discardWorktree(id: string, dir: string, branch: string, sessionId?: string): Promise<void> {
+    const ctx = this.context
+    if (!ctx) return
+    // The helper clears PTYs before ctx.worktreeManager().removeWorktree(dir, branch).
+    return discard(ctx, this.lifecycleHost, id, dir, branch, sessionId)
   }
 
   /** Send worktreeSetup.ready + pushState after worktree creation. */
@@ -1115,6 +1112,7 @@ export class AgentManagerProvider implements Disposable {
           return true
         },
         cleanupWorktree: async (wid, dir) => {
+          await this.removePtys(dir)
           this.getStateManager()?.removeWorktree(wid)
           await this.getWorktreeManager()?.removeWorktree(dir)
           this.pushState()
@@ -1487,6 +1485,7 @@ export class AgentManagerProvider implements Disposable {
       capture: (event, props) => this.host.capture(event, props),
       autoName: () => this.host.autoBranchNaming(),
       client: () => this.connectionService.getClient(),
+      removePtys: (directory) => this.removePtys(directory),
       metadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),

@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.export": "Oturum dökümünü dışa aktar",
 
-  "agentRequirements.skill.installed": "Yüklü",
-  "agentRequirements.skill.checkFailed": "Yetenek denetimi başarısız oldu",
-  "agentRequirements.skill.missing": "Yüklü değil",
-  "agentRequirements.mcp.connected": "Bağlı",
-  "agentRequirements.mcp.checkFailed": "MCP denetimi başarısız oldu",
-  "agentRequirements.mcp.missing": "Bağlı değil",
-  "agentRequirements.extension.installed": "Yüklü",
-  "agentRequirements.extension.checkFailed": "VS Code uzantısı denetimi başarısız oldu",
-  "agentRequirements.extension.missing": "Yüklü değil",
-  "agentRequirements.extension.description": "Eksik uzantıları VS Code içinde yükleyin.",
-  "agentRequirements.group.skills": "Yetenekler",
-  "agentRequirements.group.mcps": "MCP’ler",
-  "agentRequirements.group.extensions": "VS Code Uzantıları",
-  "agentRequirements.blocked.title": "{{agent}} ajanı ön koşulları",
-  "agentRequirements.blocked.description": "Bu ajanın çalışmadan önce aşağıdaki araçlara ihtiyacı var.",
-  "agentRequirements.prompt.blocked": "Bu ajanı kullanmak için önce gerekli denetimleri tamamlayın",
-  "agentRequirements.action.openMarketplace": "Marketplace’i Aç",
-  "agentRequirements.error.unknownAgent": "Seçili ajan bulunamadı.",
-  "agentRequirements.error.malformedDeclaration": "Bu ajanın geçersiz bir gereksinim bildirimi var.",
-  "agentRequirements.error.discoveryFailed": "Kilo mevcut yetenekleri denetleyemedi.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo MCP sunucu durumunu denetleyemedi.",
-  "agentRequirements.error.scopeMismatch": "Bu ajan gereksinimi denetimi artık etkin değil.",
-  "agentRequirements.error.requestFailed": "Kilo ajan gereksinimlerini denetleyemedi.",
-
   "dialog.provider.search.placeholder": "Sağlayıcı ara",
   "dialog.provider.empty": "Sağlayıcı bulunamadı",
   "dialog.provider.group.other": "Diğer",
@@ -856,12 +832,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner'ı etkinleştir: ajan tarafından sağlanan bir odak sorusunun yönlendirmesiyle okuma, arama ve kabuk araçlarının büyük çıktılarının göreve duyarlı olarak budanması",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner Modeli",
-  "settings.experimental.swePrunerModel.description":
-    "Araç çıktılarını budamak için kullanılan model; varsayılan olarak yapılandırılmış küçük model",
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",

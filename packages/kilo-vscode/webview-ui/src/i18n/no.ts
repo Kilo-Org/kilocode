@@ -81,30 +81,6 @@ export const dict = {
   "command.session.compact": "Komprimer sesjon",
   "command.session.export": "Eksporter sesjonsutskrift",
 
-  "agentRequirements.skill.installed": "Installert",
-  "agentRequirements.skill.checkFailed": "Skill-sjekken mislyktes",
-  "agentRequirements.skill.missing": "Ikke installert",
-  "agentRequirements.mcp.connected": "Tilkoblet",
-  "agentRequirements.mcp.checkFailed": "MCP-sjekken mislyktes",
-  "agentRequirements.mcp.missing": "Ikke tilkoblet",
-  "agentRequirements.extension.installed": "Installert",
-  "agentRequirements.extension.checkFailed": "Sjekken av VS Code-utvidelsen mislyktes",
-  "agentRequirements.extension.missing": "Ikke installert",
-  "agentRequirements.extension.description": "Installer de manglende utvidelsene i VS Code.",
-  "agentRequirements.group.skills": "Skills",
-  "agentRequirements.group.mcps": "MCP-er",
-  "agentRequirements.group.extensions": "VS Code-utvidelser",
-  "agentRequirements.blocked.title": "Forutsetninger for agenten {{agent}}",
-  "agentRequirements.blocked.description": "Denne agenten trenger følgende verktøy før den kan kjøre.",
-  "agentRequirements.prompt.blocked": "Fullfør først de nødvendige sjekkene for å bruke denne agenten",
-  "agentRequirements.action.openMarketplace": "Åpne Marketplace",
-  "agentRequirements.error.unknownAgent": "Den valgte agenten ble ikke funnet.",
-  "agentRequirements.error.malformedDeclaration": "Denne agenten har en ugyldig kravdeklarasjon.",
-  "agentRequirements.error.discoveryFailed": "Kilo kunne ikke sjekke tilgjengelige skills.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo kunne ikke sjekke MCP-serverstatus.",
-  "agentRequirements.error.scopeMismatch": "Denne sjekken av agentkrav er ikke lenger aktiv.",
-  "agentRequirements.error.requestFailed": "Kilo kunne ikke sjekke agentkravene.",
-
   "dialog.provider.search.placeholder": "Søk etter leverandører",
   "dialog.provider.empty": "Ingen leverandører funnet",
   "dialog.provider.group.other": "Andre",
@@ -827,12 +803,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Aktiver SWE-Pruner: oppgavebevisst beskjæring av store utdata fra lese-, søke- og shell-verktøy, styrt av et fokusspørsmål fra agenten",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner-modell",
-  "settings.experimental.swePrunerModel.description":
-    "Modell som brukes til å beskjære verktøyutdata; som standard den konfigurerte lille modellen",
   "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",

@@ -745,7 +745,6 @@ export const NewWorktreeDialog: Component<{
                     setProjectOpen(false)
                   }}
                   labels={{
-                    untrusted: t("agentManager.dialog.project.untrusted"),
                     missing: t("agentManager.dialog.project.missing"),
                   }}
                 />

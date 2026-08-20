@@ -53,6 +53,7 @@ import {
   initialOpenFiles,
   isDiffExpandable,
   isLargeDiffFile,
+  reconcileOpenFiles,
   sanitizeOpenFiles,
   shouldVirtualizeDiff,
   toggleOpenFiles,
@@ -134,7 +135,52 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   })
   const localComposer = createReviewComposer()
   const composer = () => props.composer ?? localComposer
-  const [open, setOpen] = createSignal<string[]>([])
+  const [manualOpen, setManualOpen] = createSignal<Record<string, string[]>>({})
+  const [knownFiles, setKnownFiles] = createSignal<Record<string, string[]>>({})
+  const open = createMemo(() => {
+    const key = props.sessionKey ?? ""
+    const diffs = props.diffs
+    if (diffs.length === 0) return []
+    const manual = manualOpen()[key]
+    if (manual) return sanitizeOpenFiles(diffs, manual)
+    return initialOpenFiles(diffs)
+  })
+  createEffect(
+    on(
+      () => [props.sessionKey, props.diffs] as const,
+      ([key, diffs]) => {
+        if (diffs.length === 0) return
+        const id = key ?? ""
+        const manual = manualOpen()[id]
+        const result = reconcileOpenFiles(diffs, manual, knownFiles()[id] ?? [])
+        setKnownFiles((prev) => ({ ...prev, [id]: result.known }))
+        if (!manual || !result.open) return
+        if (result.open.length === manual.length && result.open.every((file, index) => file === manual[index])) return
+        setManualOpen((prev) => ({ ...prev, [id]: result.open! }))
+      },
+    ),
+  )
+  const setOpen = (files: string[] | ((prev: string[]) => string[])) => {
+    const key = props.sessionKey ?? ""
+    const current = open()
+    const next = typeof files === "function" ? files(current) : files
+    setManualOpen((prev) => ({ ...prev, [key]: sanitizeOpenFiles(props.diffs, next) }))
+  }
+
+  const [manualActiveFile, setManualActiveFile] = createSignal<Record<string, string | null>>({})
+  const activeFile = createMemo(() => {
+    const key = props.sessionKey ?? ""
+    const diffs = props.diffs
+    if (diffs.length === 0) return null
+    const manual = manualActiveFile()[key]
+    if (manual && diffs.some((d) => d.file === manual)) return manual
+    return diffs[0]?.file ?? null
+  })
+  const setActiveFile = (file: string | null) => {
+    const key = props.sessionKey ?? ""
+    setManualActiveFile((prev) => ({ ...prev, [key]: file }))
+  }
+
   const [draft, setDraft] = createSignal<ReviewDraft | null>(reviewComposerDraft(composer()))
   const [editing, setEditing] = createSignal<string | null>(reviewComposerEdit(composer()))
   const speechKeys = createMemo(() => {
@@ -152,15 +198,10 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     label: t,
     keys: speechKeys,
   })
-  const [activeFile, setActiveFile] = createSignal<string | null>(null)
   const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
   let draftMeta: AnnotationMeta | null = composer().draft
   let editMeta: AnnotationMeta | null = composer().edit
-  // Initialize each worktree with every file expanded, then preserve manual
-  // collapse state while adding and removing files from live summaries.
-  let initializedKey: string | undefined
-  let known = new Set<string>()
   let rootRef: HTMLDivElement | undefined
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
@@ -213,50 +254,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     })
     focusRoot()
   }
-
-  // Unified open-state effect: tracks both sessionKey and diffs in a single effect
-  // to eliminate the race condition between the old separate sessionKey-reset and
-  // diffs-watch effects. Uses the session key to decide when initialization is needed
-  // vs when we just prune stale entries from the open list.
-  createEffect(
-    on(
-      () => [props.sessionKey, props.diffs] as const,
-      ([key, diffs]) => {
-        if (diffs.length === 0) {
-          // No diffs yet — clear active file only for a new key; keep current
-          // selection for transient empty updates in the same key.
-          if (key !== initializedKey) setActiveFile(null)
-          return
-        }
-
-        const fileSet = new Set(diffs.map((diff) => diff.file))
-
-        // Keep active file in sync — pick first if current is stale
-        const current = activeFile()
-        if (!current || !diffs.some((d) => d.file === current)) {
-          setActiveFile(diffs[0]!.file)
-        }
-
-        // New context: initialize open state from the diff policy.
-        if (key !== initializedKey) {
-          initializedKey = key
-          known = fileSet
-          setOpen(initialOpenFiles(diffs))
-          return
-        }
-
-        // Preserve manual collapse state for known files, while keeping newly
-        // arriving files expanded when a live summary grows.
-        const added = diffs.filter((diff) => !known.has(diff.file)).map((diff) => diff.file)
-        known = fileSet
-        setOpen((prev) => {
-          const next = sanitizeOpenFiles(diffs, [...prev.filter((file) => fileSet.has(file)), ...added])
-          if (next.length === prev.length && next.every((file, index) => file === prev[index])) return prev
-          return next
-        })
-      },
-    ),
-  )
 
   createEffect(
     on(
