@@ -5,16 +5,16 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.SessionCodeScroll
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
-import ai.kilocode.client.session.views.base.PartHeader
-import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.session.views.base.HeaderOpenAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ui.components.JBLabel
@@ -25,6 +25,7 @@ import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.Rectangle
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
@@ -36,7 +37,7 @@ class TaskToolView(
     private val selection: SessionSelection? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
     private val parts: ToolParts = toolParts(tool),
-) : AbstractSessionPartView(parts.header, { TaskBody(parts.glyph).scroll }), UiDataProvider {
+) : AbstractSessionPartView(parts.header, { TaskBody(parts.glyph).scroll }), UiDataProvider, SessionCopyTarget {
 
     override val contentId: String = tool.id
 
@@ -45,23 +46,28 @@ class TaskToolView(
     private val rows = LinkedHashMap<String, Row>()
     private var following = false
     private var collapsed = false
-    private val open = HoverIcon().apply {
-        icon = AllIcons.Actions.Preview
-        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
-        toolTipText = KiloBundle.message("session.part.tool.openSubagent")
-        accessibleContext.accessibleName = KiloBundle.message("session.part.tool.openSubagent")
-        addActionListener { openSubagent() }
-    }
+    // Same hover open-in-editor affordance as the edit/patch and modified-files cards.
+    private val open = HeaderOpenAction(
+        SessionViewIcons.openDiff,
+        KiloBundle.message("session.part.tool.openSubagent"),
+        ::openSubagent,
+    )
 
     init {
-        parts.header.right(PartHeader.centered(open))
+        parts.header.right(open.anchor)
         applyStyle(style)
         sync()
         if (item.childTools.isNotEmpty()) expand()
     }
 
+    override val copyEligible: Boolean get() = item.childSessionId != null && onOpenSubagent != null
+    override val copyAnchor: JComponent get() = open.anchor
+    override val copyToolbar: JComponent get() = open.button
+
+    override fun copyText(): String? = null
+
     override fun uiDataSnapshot(sink: DataSink) {
-        selection?.provideCopy(sink) { copyText() }
+        selection?.provideCopy(sink) { copyDump() }
     }
 
     @RequiresEdt
@@ -132,7 +138,6 @@ class TaskToolView(
         changed = setForeground(parts.title, titleColor(item)) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
-        changed = setVisible(open, item.childSessionId != null && onOpenSubagent != null) || changed
         return changed
     }
 
@@ -224,7 +229,7 @@ class TaskToolView(
         return maxOf(0, view.height - scroll.viewport.extentSize.height)
     }
 
-    private fun copyText(): String = buildString {
+    private fun copyDump(): String = buildString {
         append(agentTitle(item))
         val desc = item.input["description"].orEmpty()
         if (desc.isNotBlank()) append(" - ").append(desc)

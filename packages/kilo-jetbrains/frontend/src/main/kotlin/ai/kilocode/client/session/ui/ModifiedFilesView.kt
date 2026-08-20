@@ -8,11 +8,11 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
-import ai.kilocode.client.session.ui.selection.hoverPlaceholder
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
+import ai.kilocode.client.session.views.base.HeaderOpenAction
 import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.tool.EditFileChange
 import ai.kilocode.client.session.views.tool.POPUP_OPTS
@@ -21,9 +21,7 @@ import ai.kilocode.client.session.views.tool.setFont
 import ai.kilocode.client.session.views.tool.setForeground
 import ai.kilocode.client.session.views.tool.setIcon
 import ai.kilocode.client.ui.DiffBars
-import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
@@ -53,14 +51,14 @@ class ModifiedFilesView private constructor(
     init {
         body.parent = this
         body.overflow = ::openDiffViewer
-        parts.diff.addActionListener { openDiffViewer() }
+        parts.open.button.addActionListener { openDiffViewer() }
         isVisible = false
         applyStyle(style)
     }
 
     override val copyEligible: Boolean get() = diffs.isNotEmpty()
-    override val copyAnchor: JComponent get() = parts.anchor
-    override val copyToolbar: JComponent get() = parts.diff
+    override val copyAnchor: JComponent get() = parts.open.anchor
+    override val copyToolbar: JComponent get() = parts.open.button
 
     fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?, turnId: String) {
         this.openDiff = openDiff
@@ -75,7 +73,7 @@ class ModifiedFilesView private constructor(
         this.diffs = diffs
         if (files == next) {
             val visible = next.isNotEmpty()
-            parts.diff.isEnabled = visible
+            parts.open.enabled = visible
             if (isVisible == visible) return false
             isVisible = visible
             revalidate()
@@ -89,7 +87,7 @@ class ModifiedFilesView private constructor(
         if (isVisible != visible) isVisible = visible
         if (!visible) collapse()
         parts.update(files.size, additions, deletions)
-        parts.diff.isEnabled = visible
+        parts.open.enabled = visible
         if (isExpanded()) body.updateFiles(files)
         revalidate()
         repaint()
@@ -157,17 +155,15 @@ class ModifiedFilesView private constructor(
         val glyph = JBLabel()
         val title = JBLabel(KiloBundle.message("session.changes.modified"))
         val count = JBLabel()
-        val diff = toolbarButton(
-            ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff")) {},
-        ).apply { isEnabled = false }
-        val anchor = hoverPlaceholder(diff)
+        val open = HeaderOpenAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff")) {}
+            .apply { enabled = false }
         val bars = DiffBars(0, 0)
         // Left-aligned header: icon, title, file count, sticks change badge, open-in-diff.
         val panel = PartHeader().apply {
             leading(glyph)
             left(title)
             titleGap()
-            left(count, PartHeader.centered(bars), anchor)
+            left(count, PartHeader.centered(bars), open.anchor)
         }
 
         @RequiresEdt

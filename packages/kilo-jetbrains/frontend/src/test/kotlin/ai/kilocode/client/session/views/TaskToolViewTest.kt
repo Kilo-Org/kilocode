@@ -147,17 +147,17 @@ class TaskToolViewTest : BasePlatformTestCase() {
         assertEquals(0, scroll.verticalScrollBar.value)
     }
 
-    fun `test open subagent icon appears only with child session and callback`() {
+    fun `test open subagent action is eligible only with child session and callback`() {
         val closed = view(task(), onOpen = null)
         val opened = view(task(), onOpen = { _, _ -> })
         val missing = view(task(sessionId = null), onOpen = { _, _ -> })
 
-        assertFalse(openIcon(closed).isVisible)
-        assertTrue(openIcon(opened).isVisible)
-        assertFalse(openIcon(missing).isVisible)
+        assertFalse(closed.copyEligible)
+        assertTrue(opened.copyEligible)
+        assertFalse(missing.copyEligible)
     }
 
-    fun `test open subagent icon invokes callback without toggling body`() {
+    fun `test open subagent action invokes callback without toggling body`() {
         val calls = mutableListOf<Pair<String, String>>()
         val view = view(task(), onOpen = { id, title -> calls.add(id to title) })
 
@@ -193,7 +193,8 @@ class TaskToolViewTest : BasePlatformTestCase() {
         return stack.components.toList()
     }
 
-    private fun openIcon(view: TaskToolView) = descendants(view).filterIsInstance<HoverIcon>().single()
+    // The open button is a hover overlay, not a header child, so read it from the copy toolbar.
+    private fun openIcon(view: TaskToolView) = view.copyToolbar as HoverIcon
 
     private fun rowText(view: TaskToolView) = rows(view).map { row ->
         descendants(row).filterIsInstance<JBLabel>().mapNotNull { label -> label.text.takeIf { it.isNotBlank() } }.joinToString(" ")
