@@ -188,6 +188,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Đã tạo",
   "ui.patch.action.moved": "Đã di chuyển",
   "ui.patch.action.patched": "Đã vá",
+  "ui.patch.action.plan": "Kế hoạch", // kilocode_change
   "ui.question.subtitle.answered": "{{count}} đã trả lời",
   "ui.question.answer.none": "(không có câu trả lời)",
   "ui.question.review.notAnswered": "(chưa trả lời)",

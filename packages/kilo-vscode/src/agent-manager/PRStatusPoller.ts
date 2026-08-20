@@ -5,7 +5,14 @@ import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
-import { parsePRResult, checkStatus, formatCheckDuration, parseComments, parseReviewers } from "./pr/am-pr-utils"
+import {
+  parsePRResult,
+  checkStatus,
+  commentsSig,
+  formatCheckDuration,
+  parseComments,
+  parseReviewers,
+} from "./pr/am-pr-utils"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./pr/am-pr-types"
 
 interface PRStatusPollerOptions {
@@ -273,7 +280,7 @@ export class PRStatusPoller {
       }
 
       const reviewersSig = reviewers.map((r) => `${r.login}:${r.state}`).join(",")
-      const hash = `${worktreeId}:${pr.number}:${pr.title}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${reviewersSig}:${pr.body ?? ""}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}`
+      const hash = `${worktreeId}:${pr.number}:${pr.title}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${reviewersSig}:${pr.body ?? ""}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}:${commentsSig(comments?.comments)}`
       if (this.lastHash.get(worktreeId) === hash) return
       this.lastHash.set(worktreeId, hash)
 
@@ -489,13 +496,15 @@ export class PRStatusPoller {
               nodes {
                 id
                 isResolved
-                comments(first: 1) {
+                isOutdated
+                comments(first: 10) {
                   nodes {
                     id
                     author { login avatarUrl }
                     body
                     path
                     line
+                    originalLine
                     url
                     createdAt
                     diffHunk

@@ -193,6 +193,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Creato",
   "ui.patch.action.moved": "Spostato",
   "ui.patch.action.patched": "Modificato",
+  "ui.patch.action.plan": "Piano", // kilocode_change
   "ui.question.subtitle.answered": "{{count}} risposte",
   "ui.question.answer.none": "(nessuna risposta)",
   "ui.question.review.notAnswered": "(senza risposta)",

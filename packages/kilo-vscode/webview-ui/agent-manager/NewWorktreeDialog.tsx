@@ -475,7 +475,7 @@ export const NewWorktreeDialog: Component<{
       modelID: sel?.modelID,
       agent: selectedAgent,
       variant: isCompare ? undefined : effectiveVariant(),
-      baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
+      baseBranch: effectiveBaseBranch(),
       branchName: customBranch,
       modelAllocations: allocations,
       sandbox: sandboxVisible() ? sandboxOverride() : undefined,
