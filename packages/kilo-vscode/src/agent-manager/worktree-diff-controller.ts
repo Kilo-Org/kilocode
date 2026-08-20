@@ -8,6 +8,7 @@ import type { ApplyConflict, GitOps } from "./GitOps"
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { remoteRef, type ManagedSession, type WorktreeStateManager } from "./WorktreeStateManager"
 import { parseDiffId, scopeToSourceId } from "./diff-scope"
+import { readDocument } from "../documents/document-reader"
 import type { AgentManagerOutMessage, WorktreeDiffEntry } from "./types"
 
 const LOCAL_DIFF_ID = "local" as const
@@ -180,6 +181,50 @@ export class WorktreeDiffController {
       return
     }
     await this.controller.requestFile(file)
+  }
+
+  /** Resolve the base-branch choices for a context and push them to the webview. */
+  public async postBranches(id: string): Promise<void> {
+    const result = await this.branches(id).catch((err) => {
+      this.ctx.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
+      return undefined
+    })
+    if (!result) return
+    this.ctx.post({
+      type: "agentManager.diffBranches",
+      sessionId: id,
+      branches: result.branches,
+      defaultBranch: result.defaultBranch,
+      autoBase: result.autoBase,
+      currentBase: result.currentBase,
+      isAuto: result.isAuto,
+      currentBranch: result.currentBranch,
+    })
+  }
+
+  /**
+   * Read one file from a worktree for the document inspector. Reuses this
+   * controller's state/root context because a document read is a worktree file
+   * read, resolved against the same directory the diff for that context uses.
+   */
+  public document(sessionId: string, file: string, contextKey?: string): null {
+    void this.ready("stateReady rejected, continuing document resolve:").then(() => {
+      const state = this.ctx.getState()
+      const worktree = sessionId === LOCAL_DIFF_ID ? undefined : state?.getWorktree(sessionId)
+      const session = worktree || sessionId === LOCAL_DIFF_ID ? undefined : state?.getSession(sessionId)
+      const root =
+        sessionId === LOCAL_DIFF_ID
+          ? this.ctx.getRoot()
+          : (worktree?.path ??
+            (session?.worktreeId
+              ? state?.getWorktree(session.worktreeId)?.path
+              : session
+                ? this.ctx.getRoot()
+                : undefined))
+      const result = root ? readDocument(root, file) : { error: "The document context is no longer available." }
+      this.ctx.post({ type: "agentManager.document", sessionId, file, requestedFile: file, contextKey, ...result })
+    })
+    return null
   }
 
   public start(id: string): void {

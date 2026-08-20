@@ -1427,10 +1427,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (!exists) {
       el.classList.remove("file-link-candidate")
       el.classList.remove("file-link")
+      el.classList.remove("plan-document-link")
       el.removeAttribute("data-file-candidate")
       el.removeAttribute("data-file-path")
+      el.removeAttribute("data-file-kind")
       el.removeAttribute("data-file-line")
       el.removeAttribute("data-file-col")
+      el.removeAttribute("title")
       return
     }
     // Strip ./ prefix for the click handler — VS Code resolves relative
@@ -1440,6 +1443,16 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     el.classList.add("file-link")
     el.setAttribute("data-file-path", clean)
     el.removeAttribute("data-file-candidate")
+    // A plan document gets a document glyph and a localized kind hint instead of
+    // an inline badge, so the reference stays readable inside a sentence.
+    el.classList.remove("plan-document-link")
+    el.removeAttribute("data-file-kind")
+    el.removeAttribute("title")
+    if (/(?:^|\/)(?:plans|\.plans?)\/.*\.md$/i.test(clean)) {
+      el.classList.add("plan-document-link")
+      el.setAttribute("data-file-kind", "plan")
+      el.setAttribute("title", i18n.t("ui.patch.action.plan"))
+    }
   }
 
   const dispatch = (el: HTMLElement, p: string) => {
@@ -2053,9 +2066,9 @@ ToolRegistry.register({
               animate={props.reveal}
               onClick={data.openFile ? () => data.openFile!(filepath) : undefined}
             />
-          )}
+    )}
         </For>
-        <Show when={images().length > 0}>
+      <Show when={images().length > 0}>
           <div data-slot="tool-read-images">
             <For each={images()}>
               {(file) => (
@@ -2941,7 +2954,9 @@ ToolRegistry.register({
 
                                     <span
                                       data-slot="apply-patch-filename"
-                                      classList={{ clickable: !!data.openFile }}
+                                      classList={{
+                                        clickable: !!data.openFile,
+                                      }}
                                       onClick={(e: MouseEvent) => {
                                         if (!data.openFile) return
                                         e.stopPropagation()

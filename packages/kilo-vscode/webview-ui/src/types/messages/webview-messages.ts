@@ -885,6 +885,37 @@ export interface AgentManagerOpenFileRequest {
   column?: number
 }
 
+export interface AgentManagerRequestDocumentMessage {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
+}
+
+export interface DocumentRequestMessage {
+  type: "document.request"
+  sessionId?: string
+  file: string
+  contextKey?: string
+}
+
+export interface DocumentOpenFileMessage {
+  type: "document.openFile"
+  file: string
+  line?: number
+  column?: number
+}
+
+export interface DocumentCloseMessage {
+  type: "document.close"
+}
+
+export interface DocumentSendCommentsMessage {
+  type: "document.sendComments"
+  comments: ReviewCommentEntry[]
+  autoSend?: boolean
+}
+
 // Create multiple worktree sessions for the same prompt (multi-version mode)
 export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
@@ -1415,6 +1446,10 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | DocumentRequestMessage
+  | DocumentOpenFileMessage
+  | DocumentCloseMessage
+  | DocumentSendCommentsMessage
   | SendMessageRequest
   | AbortRequest
   | RequestBackgroundJobsMessage
@@ -1547,6 +1582,7 @@ export type WebviewMessage =
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
+  | AgentManagerRequestDocumentMessage
   | CreateMultiVersionRequest
   | SetTabOrderRequest
   | SetWorktreeOrderRequest

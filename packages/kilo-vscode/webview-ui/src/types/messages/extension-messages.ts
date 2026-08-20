@@ -332,6 +332,28 @@ export interface AppendReviewCommentsMessage {
   autoSend?: boolean
 }
 
+export interface DocumentResultMessage {
+  type: "document.result"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
+export interface DocumentOpenMessage {
+  type: "document.open"
+  sessionId?: string
+  contextKey: string
+  file: string
+  line?: number
+  column?: number
+}
+
 export interface AppendReviewCommentsToTerminalMessage {
   type: "appendReviewCommentsToTerminal"
   comments: ReviewCommentEntry[]
@@ -991,6 +1013,19 @@ export interface AgentManagerWorktreeDiffFileMessage {
   diff: WorktreeFileDiff | null
 }
 
+export interface AgentManagerDocumentMessage {
+  type: "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
 // Agent Manager: Diff loading state (extension → webview)
 export interface AgentManagerWorktreeDiffLoadingMessage {
   type: "agentManager.worktreeDiffLoading"
@@ -1143,6 +1178,16 @@ export interface DiffViewerDiffFileMessage {
 
 export interface DiffViewerMarkdownRenderMessage {
   type: "diffViewer.markdownRender"
+  render: boolean
+}
+
+export interface DiffViewerInitialFileMessage {
+  type: "diffViewer.initialFile"
+  file?: string
+}
+
+export interface DiffViewerInitialMarkdownMessage {
+  type: "diffViewer.initialMarkdown"
   render: boolean
 }
 
@@ -1307,6 +1352,8 @@ export interface AgentManagerFocusContextRequestedMessage {
 }
 
 export type ExtensionMessage =
+  | DocumentResultMessage
+  | DocumentOpenMessage
   | AgentManagerFocusContextRequestedMessage
   | ReadyMessage
   | FontSizeChangedMessage
@@ -1425,6 +1472,7 @@ export type ExtensionMessage =
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffFileMessage
+  | AgentManagerDocumentMessage
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerWorktreeDiffNoticeMessage
   | AgentManagerApplyWorktreeDiffResultMessage
@@ -1456,6 +1504,8 @@ export type ExtensionMessage =
   | DiffViewerRevertFileResultMessage
   | DiffViewerDiffFileMessage
   | DiffViewerMarkdownRenderMessage
+  | DiffViewerInitialFileMessage
+  | DiffViewerInitialMarkdownMessage
   | SetAvailableSourcesMessage
   | DiffViewerCapabilitiesMessage
   | DiffViewerNoticeMessage

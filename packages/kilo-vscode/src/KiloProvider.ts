@@ -464,6 +464,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private createWorktreeHandler: ((baseBranch?: string, branchName?: string) => Promise<void>) | null = null
 
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
+  private diffViewerProvider: import("./diff/DiffViewerProvider").DiffViewerProvider | undefined
+  private documentViewerProvider: import("./DocumentViewerProvider").DocumentViewerProvider | undefined
   private remoteService: RemoteStatusService | null = null
   private unsubscribeRemote: (() => void) | null = null
 
@@ -559,6 +561,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
     this.diffVirtualProvider = provider
+  }
+
+  public setDiffViewerProvider(provider: import("./diff/DiffViewerProvider").DiffViewerProvider): void {
+    this.diffViewerProvider = provider
+  }
+
+  public setDocumentViewerProvider(provider: import("./DocumentViewerProvider").DocumentViewerProvider): void {
+    this.documentViewerProvider = provider
   }
 
   getTelemetryProperties(): Record<string, unknown> {
@@ -1601,6 +1611,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // the live currentSession — see editor-actions.ts's validateFiles case.
       dir: (sessionID) => this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
       diff: this.diffVirtualProvider,
+      openMarkdown: (file, sessionID) => {
+        if (!this.documentViewerProvider) return false
+        this.documentViewerProvider.openFromCommand({
+          sessionId: sessionID,
+          directory: this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
+          file,
+        })
+        return true
+      },
       storage: this.extensionContext?.globalStorageUri,
       post: (msg) => this.postMessage(msg),
     })
