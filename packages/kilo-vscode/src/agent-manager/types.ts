@@ -59,6 +59,11 @@ export interface PRCheck {
   duration?: string
 }
 
+export interface PRCommentReply {
+  author: string
+  body: string
+}
+
 export interface PRComment {
   id: string
   threadId: string
@@ -69,8 +74,10 @@ export interface PRComment {
   line?: number
   url?: string
   resolved: boolean
+  outdated: boolean
   createdAt?: number
   diffHunk?: string
+  replies?: PRCommentReply[]
 }
 
 export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
@@ -362,6 +369,19 @@ interface WorktreeDiffFileMessage {
   diff: WorktreeDiffEntry | null
 }
 
+interface DocumentMessage {
+  type: "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
 interface RevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
   sessionId: string
@@ -440,6 +460,7 @@ export type AgentManagerOutMessage =
   | WorktreeDiffNoticeMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | DocumentMessage
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
@@ -787,6 +808,13 @@ interface OpenFileIn {
   column?: number
 }
 
+interface RequestDocumentIn {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
+}
+
 // Pass-through messages intercepted for side effects
 interface GenericOpenFileIn {
   type: "openFile"
@@ -1066,6 +1094,7 @@ export type AgentManagerInMessage =
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn
+  | RequestDocumentIn
   | GenericOpenFileIn
   | PreviewImageIn
   | SaveImageIn

@@ -56,7 +56,7 @@ import {
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
-import type { ExtensionMessage, ReviewComment, SendMessageFailedMessage, TextPart } from "../../types/messages"
+import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
@@ -84,7 +84,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
 
-function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
+function mergeReviewComments(current: ReviewCommentEntry[], incoming: ReviewCommentEntry[]): ReviewCommentEntry[] {
   if (incoming.length === 0) return current
   const map = new Map(current.map((item) => [item.id, item]))
   for (const item of incoming) {
@@ -232,7 +232,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const saveDraft = (
     key: string,
     next: string,
-    comments: ReviewComment[],
+    comments: ReviewCommentEntry[],
     imgs: ImageAttachment[],
     scroll = textareaRef?.scrollTop ?? scrollDrafts.get(key) ?? 0,
   ) => savePromptDraft(key, next, comments, imgs, scroll)
@@ -244,7 +244,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   const [text, setText] = createSignal("")
-  const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
+  const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
@@ -358,7 +358,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const speech = useSpeechToText(vscode, server, language)
   const speechModels = useSpeechToTextModels()
 
-  const replaceReviewComments = (next: ReviewComment[]) => {
+  const replaceReviewComments = (next: ReviewCommentEntry[]) => {
     setReviewComments(next)
     if (next.length === 0) {
       reviewDrafts.delete(draftKey())
