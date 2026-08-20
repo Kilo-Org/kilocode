@@ -2707,6 +2707,7 @@ const AgentManagerContent: Component = () => {
                     <DocumentPanelHost
                       inspector={documentInspector}
                       onClosePanel={() => setSidePanel(null)}
+                      onSendAll={focusCtl.focus}
                       activeTerminalId={terms.activeId()}
                       visible={documentInspector.isOpen}
                     />

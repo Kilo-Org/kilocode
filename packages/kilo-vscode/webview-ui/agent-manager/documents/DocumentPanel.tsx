@@ -38,6 +38,7 @@ export interface DocumentPanelProps {
   onReorder: (from: string, to: string) => void
   onOpenFile: (file: string, line?: number, column?: number) => void
   onClosePanel: () => void
+  onSendAll?: () => void
   activeTerminalId?: string
   visible: Accessor<boolean>
 }
@@ -190,7 +191,8 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     if (props.comments.length === 0) return
     sendReviewComments(props.comments, props.activeTerminalId)
     updateComments([])
-    focusRoot()
+    if (props.onSendAll) props.onSendAll()
+    else focusRoot()
   }
 
   createEffect(

@@ -1952,6 +1952,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-diff-panel:focus,
+.am-document-panel:focus,
 .am-review-layout:focus {
   outline: none;
 }

@@ -5,6 +5,7 @@ import { createDocumentInspector } from "./state"
 interface Props {
   inspector: ReturnType<typeof createDocumentInspector>
   onClosePanel: () => void
+  onSendAll?: () => void
   activeTerminalId?: string
   visible: Accessor<boolean>
 }
@@ -22,6 +23,7 @@ export const DocumentPanelHost: Component<Props> = (props) => (
     onReorder={props.inspector.documents.reorder}
     onOpenFile={props.inspector.openFile}
     onClosePanel={props.onClosePanel}
+    onSendAll={props.onSendAll}
     activeTerminalId={props.activeTerminalId}
     visible={props.visible}
   />
