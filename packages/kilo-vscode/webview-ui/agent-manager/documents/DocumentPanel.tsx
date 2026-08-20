@@ -57,6 +57,23 @@ function virtualDiff(file: string, content: string): WorktreeFileDiff {
   }
 }
 
+function sendAllKeybind(t: (key: string) => string): string {
+  return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
+    ? t("agentManager.review.sendAllShortcut.mac")
+    : t("agentManager.review.sendAllShortcut.other")
+}
+
+function handleSendAllKeyDown(event: KeyboardEvent, comments: ReviewComment[], send: () => void): void {
+  if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return
+  const target = event.target
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
+  if (target instanceof HTMLElement && target.isContentEditable) return
+  if (comments.length === 0) return
+  event.preventDefault()
+  event.stopPropagation()
+  send()
+}
+
 export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   const { t } = useLanguage()
   const code = useCodeComponent()
@@ -67,6 +84,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   let draftMeta: AnnotationMeta | null = null
   let editMeta: AnnotationMeta | null = null
   let nextId = 0
+  let rootRef: HTMLElement | undefined
 
   const selected = createMemo(() => {
     const id = props.active()
@@ -159,9 +177,14 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     setDraft(next)
   }
   const sendAll = () => {
-    if (comments().length === 0) return
-    sendReviewComments(comments(), props.activeTerminalId)
-    updateComments(props.comments.filter((item) => item.file !== file()))
+    if (props.comments.length === 0) return
+    sendReviewComments(props.comments, props.activeTerminalId)
+    updateComments([])
+    focusRoot()
+  }
+
+  const focusRoot = () => {
+    requestAnimationFrame(() => rootRef?.focus())
   }
 
   createEffect(
@@ -206,6 +229,9 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
       aria-label={t("agentManager.documents.title")}
       aria-hidden={!props.visible()}
       inert={!props.visible()}
+      onKeyDown={(event) => handleSendAllKeyDown(event, props.comments, sendAll)}
+      tabIndex={-1}
+      ref={rootRef}
     >
       <header class="am-document-header">
         <div class="am-document-heading">
@@ -313,12 +339,16 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
           </div>
         </Show>
       </Show>
-      <Show when={comments().length > 0}>
+      <Show when={props.comments.length > 0}>
         <div class="am-diff-comments-footer">
           <span class="am-diff-comments-count">
-            {t("agentManager.documents.comments", { count: comments().length })}
+            {t("agentManager.documents.comments", { count: props.comments.length })}
           </span>
-          <TooltipKeybind title={t("agentManager.review.sendAllToChat")} keybind="" placement="top">
+          <TooltipKeybind
+            title={t("agentManager.review.sendAllToChat")}
+            keybind={sendAllKeybind(t)}
+            placement="top"
+          >
             <Button variant="primary" size="small" onClick={sendAll}>
               {t("agentManager.review.sendAllToChat")}
             </Button>
