@@ -7,6 +7,7 @@ import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
 import { WorkspaceRoutingMiddleware, WorkspaceRoutingQuery } from "../middleware/workspace-routing"
 import { described } from "./metadata"
+import { McpApps } from "@/kilocode/mcp/apps" // kilocode_change - MCP Apps schemas live in Kilo-owned code
 
 export const AddPayload = Schema.Struct({
   name: Schema.String,
@@ -28,32 +29,6 @@ export class UnsupportedOAuthError extends Schema.ErrorClass<UnsupportedOAuthErr
   { error: Schema.String },
   { httpApiStatus: 400 },
 ) {}
-
-// kilocode_change start - MCP Apps experimental resource/tool endpoints
-export const ReadResourcePayload = Schema.Struct({
-  uri: Schema.String,
-  server: Schema.String,
-})
-
-const ReadResourceContent = Schema.Struct({
-  uri: Schema.String,
-  mimeType: Schema.optional(Schema.String),
-  text: Schema.optional(Schema.String),
-  blob: Schema.optional(Schema.String),
-})
-
-export const CallToolPayload = Schema.Struct({
-  server: Schema.String,
-  name: Schema.String,
-  arguments: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
-})
-
-const CallToolResponse = Schema.Struct({
-  content: Schema.Array(Schema.Unknown),
-  isError: Schema.optional(Schema.Boolean),
-  structuredContent: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
-})
-// kilocode_change end
 
 export const McpPaths = {
   status: "/mcp",
@@ -167,8 +142,8 @@ export const McpApi = HttpApi.make("mcp")
         // kilocode_change start - MCP Apps experimental endpoints
         HttpApiEndpoint.post("readResource", McpPaths.readResource, {
           query: WorkspaceRoutingQuery,
-          payload: ReadResourcePayload,
-          success: described(ReadResourceContent, "Resource content"),
+          payload: McpApps.ReadResourcePayload,
+          success: described(McpApps.ReadResourceContent, "Resource content"),
           error: [HttpApiError.NotFound, HttpApiError.BadRequest],
         }).annotateMerge(
           OpenApi.annotations({
@@ -180,8 +155,8 @@ export const McpApi = HttpApi.make("mcp")
         ),
         HttpApiEndpoint.post("callTool", McpPaths.callTool, {
           query: WorkspaceRoutingQuery,
-          payload: CallToolPayload,
-          success: described(CallToolResponse, "Tool call result"),
+          payload: McpApps.CallToolPayload,
+          success: described(McpApps.CallToolResponse, "Tool call result"),
           error: [HttpApiError.NotFound, HttpApiError.BadRequest],
         }).annotateMerge(
           OpenApi.annotations({

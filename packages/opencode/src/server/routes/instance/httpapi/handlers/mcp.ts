@@ -5,7 +5,7 @@ import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import { McpServerNotFoundError } from "../errors"
 import { AddPayload, AuthCallbackPayload, StatusMap, UnsupportedOAuthError } from "../groups/mcp"
-import { CallToolPayload, ReadResourcePayload } from "../groups/mcp" // kilocode_change
+import { McpApps } from "@/kilocode/mcp/apps" // kilocode_change
 
 export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handlers) =>
   Effect.gen(function* () {
@@ -101,48 +101,9 @@ export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handler
       return true
     })
 
-    // kilocode_change start - MCP Apps experimental resource/tool endpoints
-    const readResource = Effect.fn("McpHttpApi.readResource")(function* (ctx: {
-      payload: typeof ReadResourcePayload.Type
-    }) {
-      if (!flags.experimentalMcpApps) {
-        return yield* Effect.fail(new HttpApiError.NotFound({}))
-      }
-      const result = yield* mcp.readResource(ctx.payload.server, ctx.payload.uri)
-      const content = result?.contents[0]
-      if (!content) {
-        return yield* Effect.fail(new HttpApiError.NotFound({}))
-      }
-      return {
-        uri: content.uri,
-        ...(content.mimeType ? { mimeType: content.mimeType } : {}),
-        ...("text" in content && content.text ? { text: content.text } : {}),
-        ...("blob" in content && content.blob ? { blob: content.blob } : {}),
-      }
-    })
-
-    const callTool = Effect.fn("McpHttpApi.callTool")(function* (ctx: {
-      payload: typeof CallToolPayload.Type
-    }) {
-      if (!flags.experimentalMcpApps) {
-        return yield* Effect.fail(new HttpApiError.NotFound({}))
-      }
-      const client = (yield* mcp.clients())[ctx.payload.server]
-      if (!client) {
-        return yield* Effect.fail(new HttpApiError.NotFound({}))
-      }
-      const result = yield* Effect.tryPromise(() =>
-        client.callTool({ name: ctx.payload.name, arguments: ctx.payload.arguments ?? {} }),
-      ).pipe(
-        Effect.tapError((err) => Effect.logError("MCP callTool failed", { error: err })),
-        Effect.mapError(() => new HttpApiError.BadRequest({})),
-      )
-      return {
-        content: result.content ?? [],
-        ...(result.isError ? { isError: true } : {}),
-        ...(result.structuredContent ? { structuredContent: result.structuredContent } : {}),
-      }
-    })
+    // kilocode_change start - MCP Apps experimental resource/tool endpoints; logic lives in @/kilocode/mcp/apps
+    const readResource = McpApps.readResource(mcp, flags)
+    const callTool = McpApps.callTool(mcp, flags)
     // kilocode_change end
 
     return handlers

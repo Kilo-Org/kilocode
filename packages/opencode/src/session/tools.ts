@@ -27,6 +27,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 // kilocode_change start
 import { Config } from "@/config/config"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
+import { McpApps } from "@/kilocode/mcp/apps"
 // kilocode_change end
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -467,11 +468,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         Effect.gen(function* () {
           const ctx = context(args, opts)
           // kilocode_change start - propagate MCP App UI metadata so hosts can preload the UI resource
-          const ui = (entry.def._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
-          const mcpAppMeta =
-            flags.experimentalMcpApps && ui?.resourceUri
-              ? { mcpApp: { resourceUri: ui.resourceUri, serverId: entry.clientName } }
-              : undefined
+          const mcpAppMeta = McpApps.toolMetadata(entry, flags)
           if (mcpAppMeta) {
             yield* input.processor.metadata(opts.toolCallId, { metadata: mcpAppMeta })
           }
