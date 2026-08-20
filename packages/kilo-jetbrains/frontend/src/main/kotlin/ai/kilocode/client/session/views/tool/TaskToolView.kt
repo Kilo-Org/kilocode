@@ -59,9 +59,11 @@ class TaskToolView(
     )
 
     init {
-        // Place the open action right after the summary text (like the edit/patch card), not pinned
-        // to the far right: the summary lives in the flexible header slot, so append it there.
-        (parts.slot as Stack).next(open.anchor)
+        // Mirror the edit/patch cards: move the summary and the open action into the non-fit left
+        // group so the anchor always reserves its width right after the text. Left in the fill slot
+        // (a fitHorizontal stack), a long summary would clip the trailing anchor to zero width and
+        // the hover open control could fail to appear.
+        parts.header.left(parts.sub, open.anchor)
         applyStyle(style)
         sync()
         if (item.childTools.isNotEmpty()) expand()

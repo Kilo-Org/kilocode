@@ -239,11 +239,29 @@ class TaskToolViewTest : BasePlatformTestCase() {
         assertEquals(2, rows(view).size)
     }
 
+    fun `test open action reserves width even with a long summary`() {
+        val view = view(task(children = listOf(child("c1", "read")), description = "d".repeat(400)))
+        // A narrow header would starve a trailing child in the fill slot; the left group must not.
+        realize(view, JBUI.scale(320), JBUI.scale(160))
+
+        val anchor = view.copyAnchor
+        assertTrue(anchor.preferredSize.width > 0)
+        assertEquals(anchor.preferredSize.width, anchor.width)
+    }
+
+    private fun realize(component: Component, width: Int, height: Int) {
+        component.setSize(width, height)
+        if (component is Container) {
+            component.doLayout()
+            component.components.forEach { realize(it, it.width, it.height) }
+        }
+    }
+
     private fun view(tool: Tool, onOpen: ((String, String) -> Unit)? = null): TaskToolView = TaskToolView(tool, onOpenSubagent = onOpen).also { views.add(it) }
 
-    private fun task(children: List<Tool> = emptyList(), sessionId: String? = "ses_child") = Tool("part_task", "task", toolKind("task")).also {
+    private fun task(children: List<Tool> = emptyList(), sessionId: String? = "ses_child", description: String = "Find files") = Tool("part_task", "task", toolKind("task")).also {
         it.state = ToolExecState.COMPLETED
-        it.input = mapOf("subagent_type" to "explore", "description" to "Find files")
+        it.input = mapOf("subagent_type" to "explore", "description" to description)
         it.metadata = sessionId?.let { id -> mapOf("sessionId" to id) }.orEmpty()
         it.childSessionId = sessionId
         it.childTools = children
