@@ -99,7 +99,7 @@ class PermissionView(
     }
 
     private var md: MdView? = null
-    private val diffViews = mutableListOf<PermissionDiffView>()
+    private var diffView: PermissionDiffView? = null
 
     private val ID_DENY = "deny"
     private val ID_RUN = "run"
@@ -165,13 +165,13 @@ class PermissionView(
     fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
         this.openDiff = openDiff
         this.sessionId = sessionId
-        for (view in diffViews) view.setDiffOpener(openDiff, sessionId, requestId)
+        diffView?.setDiffOpener(openDiff, sessionId, requestId)
     }
 
     @RequiresEdt
     fun setHoverSink(sink: (PartView, Boolean) -> Unit) {
         hover = sink
-        for (view in diffViews) view.hover = sink
+        diffView?.hover = sink
     }
 
     /** Hide this view and clear the active request id. */
@@ -195,9 +195,7 @@ class PermissionView(
         desc.foreground = SessionUiStyle.Text.Secondary.foreground()
         rules.applyStyle(style)
         md?.let { applyCodeStyle(it) }
-        for (dv in diffViews) {
-            dv.applyStyle(style)
-        }
+        diffView?.applyStyle(style)
     }
 
     @RequiresEdt
@@ -208,16 +206,26 @@ class PermissionView(
 
     @RequiresEdt
     private fun syncDiffs(diffs: List<PermissionFileDiff>) {
-        disposeDiffs()
-        diffRow.isVisible = diffs.isNotEmpty()
-        if (diffs.isNotEmpty()) {
+        if (diffs.isEmpty()) {
+            disposeDiffs()
+            return
+        }
+        // Retain the card across the RESPONDING/ERROR re-renders of the same request so an
+        // expanded inline preview is not torn down; setDiffs updates it in place. The card is
+        // disposed in hideView when the request resolves, so a new request always starts fresh.
+        val existing = diffView
+        if (existing != null) {
+            existing.setDiffOpener(openDiff, sessionId, requestId)
+            existing.setDiffs(diffs)
+        } else {
             val dv = PermissionDiffView(diffs, openFile, selection)
             dv.setDiffOpener(openDiff, sessionId, requestId)
             dv.hover = hover
             dv.applyStyle(style)
-            diffViews.add(dv)
+            diffView = dv
             diffRow.add(dv)
         }
+        diffRow.isVisible = true
         diffRow.revalidate()
         diffRow.repaint()
     }
@@ -418,8 +426,8 @@ class PermissionView(
 
     @RequiresEdt
     private fun disposeDiffs() {
-        for (view in diffViews) Disposer.dispose(view)
-        diffViews.clear()
+        diffView?.let(Disposer::dispose)
+        diffView = null
         diffRow.removeAll()
         diffRow.isVisible = false
     }
@@ -443,7 +451,7 @@ class PermissionView(
     internal fun runButtonForTest() = buttons(this).first { it.text == KiloBundle.message("session.permission.allow") || it.text == KiloBundle.message("session.permission.allow.once") }
     internal fun denyButtonForTest() = buttons(this).first { it.text == KiloBundle.message("session.permission.reject") }
     internal fun codeLabelsForTest() = codeEditors()
-    internal fun diffViewsForTest() = diffViews.toList()
+    internal fun diffViewsForTest() = listOfNotNull(diffView)
     internal fun headerFontForTest() = textAreas(this).first { it.font.isBold }.font
     internal fun rulesForTest() = rules
 

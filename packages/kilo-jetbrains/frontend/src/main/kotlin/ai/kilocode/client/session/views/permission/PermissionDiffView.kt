@@ -42,7 +42,9 @@ internal class PermissionDiffView private constructor(
 
     @RequiresEdt
     fun setDiffs(value: List<PermissionFileDiff>) {
-        render(value.map(::dto))
+        val dtos = value.map(::dto)
+        if (items == dtos) return
+        render(dtos)
     }
 
     @RequiresEdt

@@ -1147,6 +1147,39 @@ class PermissionViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test diff view is retained and keeps expansion across same-request re-render`() {
+        fun request(state: PermissionRequestState) = Permission(
+            id = "perm_retain_diff",
+            sessionId = "ses",
+            name = "edit",
+            patterns = listOf("src/A.kt"),
+            always = emptyList(),
+            meta = PermissionMeta(
+                fileDiffs = listOf(
+                    PermissionFileDiff(
+                        file = "src/A.kt",
+                        patch = "@@ -1 +1 @@\n-old\n+new",
+                        additions = 1,
+                        deletions = 1,
+                    ),
+                ),
+            ),
+            state = state,
+        )
+
+        view.show(request(PermissionRequestState.PENDING))
+        val diff = view.diffViewsForTest().single()
+        diff.expand()
+        assertTrue(diff.isExpanded())
+
+        // The RESPONDING tick re-renders the same request; the card must survive so the
+        // expanded inline preview is not torn down.
+        view.show(request(PermissionRequestState.RESPONDING))
+
+        assertSame(diff, view.diffViewsForTest().single())
+        assertTrue("Expanded preview should persist across re-render", diff.isExpanded())
+    }
+
     fun `test stale rule command fields are released on rebuild`() {
         val base = EditorFactory.getInstance().allEditors.size
         view.show(permissionWithRules("perm_rules_rebuild", listOf("git status *")))
