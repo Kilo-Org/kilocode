@@ -198,12 +198,16 @@ export const ChatViewSessionDockStability: Story = {
   name: "ChatView — session dock keeps its height",
   render: () => {
     const [busy, setBusy] = createSignal(false)
+    // Statuses of deliberately different widths: the label swap is what used to
+    // shove the centered spinner sideways.
+    const labels = ["Thinking…", "Searching the codebase", "Making edits"]
+    const [step, setStep] = createSignal(0)
     const status = () => (busy() ? "busy" : "idle")
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
       status,
       statusInfo: () => ({ type: status() }),
-      statusText: () => (busy() ? "Thinking…" : undefined),
+      statusText: () => (busy() ? labels[step() % labels.length] : undefined),
       busySince: () => (busy() ? Date.now() - 2000 : undefined),
       submitting: () => busy(),
       isSubmitting: () => busy(),
@@ -218,6 +222,9 @@ export const ChatViewSessionDockStability: Story = {
               <div style={{ height: "320px", display: "flex", "flex-direction": "column" }}>
                 <button data-testid="toggle-busy" onClick={() => setBusy(!busy())}>
                   toggle busy
+                </button>
+                <button data-testid="next-status" onClick={() => setStep(step() + 1)}>
+                  next status
                 </button>
                 <ChatView onForkSession={() => undefined} continueInWorktree />
               </div>
