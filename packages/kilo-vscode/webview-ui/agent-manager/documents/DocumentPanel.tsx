@@ -112,6 +112,11 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
 
   const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const comments = () => props.comments.filter((item) => item.file === file())
+  const focusRoot = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => rootRef?.focus())
+    })
+  }
   const addComment = (path: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
     updateComments([
       ...props.comments,
@@ -120,6 +125,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     setDraft(null)
     draftMeta = null
     composer.draft = null
+    focusRoot()
   }
   const sendComment = (path: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
     sendReviewComments(
@@ -129,23 +135,27 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     setDraft(null)
     draftMeta = null
     composer.draft = null
+    focusRoot()
   }
   const updateComment = (id: string, text: string) => {
     updateComments(props.comments.map((item) => (item.id === id ? { ...item, comment: text } : item)))
     setEditing(null)
     editMeta = null
     composer.edit = null
+    focusRoot()
   }
   const deleteComment = (id: string) => {
     updateComments(props.comments.filter((item) => item.id !== id))
     setEditing(null)
     editMeta = null
     composer.edit = null
+    focusRoot()
   }
   const cancelDraft = () => {
     setDraft(null)
     draftMeta = null
     composer.draft = null
+    focusRoot()
   }
   const annotations = (): DiffLineAnnotation<AnnotationMeta>[] => {
     const result = buildFileAnnotations(file(), comments(), editing(), draft(), draftMeta, editMeta)
@@ -181,10 +191,6 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     sendReviewComments(props.comments, props.activeTerminalId)
     updateComments([])
     focusRoot()
-  }
-
-  const focusRoot = () => {
-    requestAnimationFrame(() => rootRef?.focus())
   }
 
   createEffect(
