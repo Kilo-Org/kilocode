@@ -96,6 +96,7 @@ import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-mo
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
 import { MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
 import { formatMarkdownTables } from "../../util/markdown"
+import { live, liveAssistantMarkdown, liveReasoningCode, mark, wait } from "../../kilocode/live-output"
 // kilocode_change end
 import { LocationProvider } from "../../context/location"
 
@@ -420,6 +421,53 @@ export function Session() {
       navigate({ type: "home" })
     })
   })
+
+  // kilocode_change start - resync a busy session when the store stops changing
+  const seen = new Map<string, string>()
+  const attempt = new Map<string, number>()
+  const watch = new Map<string, ReturnType<typeof setTimeout>>()
+  const clear = (sessionID: string) => {
+    const timer = watch.get(sessionID)
+    if (timer) clearTimeout(timer)
+    watch.delete(sessionID)
+  }
+  const arm = (sessionID: string) => {
+    clear(sessionID)
+    const n = attempt.get(sessionID) ?? 0
+    watch.set(
+      sessionID,
+      setTimeout(() => {
+        watch.delete(sessionID)
+        if (!live(sync.data.session_status[sessionID])) return
+        attempt.set(sessionID, n + 1)
+        void sync.session.sync(sessionID, { force: true }).finally(() => {
+          if (live(sync.data.session_status[sessionID])) arm(sessionID)
+        })
+      }, wait(n)),
+    )
+  }
+  createEffect(() => {
+    const sessionID = route.sessionID
+    const list = sync.data.message[sessionID] ?? []
+    const tail = list.at(-1)
+    const parts = tail ? (sync.data.part[tail.id] ?? []) : []
+    const status = sync.data.session_status[sessionID]
+    const sig = mark({ status, last: tail, parts })
+    if (!live(status)) {
+      seen.delete(sessionID)
+      attempt.delete(sessionID)
+      clear(sessionID)
+      return
+    }
+    if (seen.get(sessionID) === sig) return
+    seen.set(sessionID, sig)
+    attempt.set(sessionID, 0)
+    arm(sessionID)
+  })
+  onCleanup(() => {
+    for (const sessionID of [...watch.keys()]) clear(sessionID)
+  })
+  // kilocode_change end
 
   let lastSwitch: string | undefined = undefined
   event.onSync("message.part.updated.1", (evt) => {
@@ -1827,8 +1875,7 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
           <box paddingLeft={inMinimal() ? 2 : 0} marginTop={1}>
             <code
               filetype="markdown"
-              drawUnstyledText={false}
-              streaming={true}
+              {...liveReasoningCode(isDone())} // kilocode_change
               syntaxStyle={syntax()}
               content={summary().body}
               conceal={ctx.conceal()}
@@ -1900,7 +1947,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
       <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3} marginTop={1} flexShrink={0}>
         <markdown
           syntaxStyle={syntax()}
-          streaming={true}
+          {...liveAssistantMarkdown(props.part.time?.end !== undefined || !!props.message.time.completed)} // kilocode_change
           internalBlockMode="top-level"
           content={content()} // kilocode_change
           tableOptions={{ style: "grid" }}
