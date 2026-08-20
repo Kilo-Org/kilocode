@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Keep TUI session output visible after message IDs wrap, instead of hiding new turns until the session is reopened
+Fix TUI sessions where new turns stopped appearing until the session was reopened
