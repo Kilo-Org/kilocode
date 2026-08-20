@@ -54,7 +54,9 @@ class TaskToolView(
     )
 
     init {
-        parts.header.right(open.anchor)
+        // Place the open action right after the summary text (like the edit/patch card), not pinned
+        // to the far right: the summary lives in the flexible header slot, so append it there.
+        (parts.slot as Stack).next(open.anchor)
         applyStyle(style)
         sync()
         if (item.childTools.isNotEmpty()) expand()
