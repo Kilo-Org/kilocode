@@ -2743,7 +2743,7 @@ export class Vcs extends HeyApiClient {
     parameters: {
       directory?: string
       workspace?: string
-      mode: "git" | "branch"
+      mode: "git" | "branch" | "last-commit"
       context?: number
     },
     options?: Options<never, ThrowOnError>,

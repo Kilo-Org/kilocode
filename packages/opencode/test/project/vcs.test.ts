@@ -332,4 +332,37 @@ describe("Vcs diff", () => {
       }),
     { git: true },
   )
+
+  // kilocode_change start
+  it.instance(
+    "diff('last-commit') returns changes from the most recent commit only",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* write(path.join(test.directory, "stale.txt"), "old\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "first"])
+        yield* write(path.join(test.directory, "fresh.txt"), "new\n")
+        yield* write(path.join(test.directory, "stale.txt"), "changed\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "second"])
+        yield* write(path.join(test.directory, "uncommitted.txt"), "working\n")
+
+        const vcs = yield* init()
+        const diff = yield* vcs.diff("last-commit")
+
+        const files = diff.map((item) => item.file).sort()
+        expect(files).toEqual(["fresh.txt", "stale.txt"])
+        expect(diff.find((item) => item.file === "uncommitted.txt")).toBeUndefined()
+        const fresh = diff.find((item) => item.file === "fresh.txt")
+        expect(fresh?.patch).toContain("diff --git")
+        expect(fresh?.patch).toContain("+new")
+        const stale = diff.find((item) => item.file === "stale.txt")
+        expect(stale?.patch).toContain("diff --git")
+        expect(stale?.patch).toContain("-old")
+        expect(stale?.patch).toContain("+changed")
+      }),
+    { git: true },
+  )
+  // kilocode_change end
 })
