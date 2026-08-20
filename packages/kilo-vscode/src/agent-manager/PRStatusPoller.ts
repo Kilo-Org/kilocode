@@ -14,6 +14,7 @@ import {
   parseReviewers,
 } from "./pr/am-pr-utils"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./pr/am-pr-types"
+import { withContext } from "./pr/pr-comment-context"
 
 interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
@@ -482,10 +483,14 @@ export class PRStatusPoller {
     }
   }
 
+  /**
+   * Undefined on failure, never an empty thread list: the panel keeps the
+   * comments it already shows instead of collapsing the section mid-review.
+   */
   private async fetchComments(
     prNumber: number,
     cwd: string,
-  ): Promise<{ total: number; unresolved: number; comments: PRComment[] }> {
+  ): Promise<{ total: number; unresolved: number; comments: PRComment[] } | undefined> {
     try {
       const repo = await this.getRepoInfo(cwd)
       const query = `query($owner: String!, $repo: String!, $number: Int!) {
@@ -533,12 +538,12 @@ export class PRStatusPoller {
       )
       const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
       const threads = pr?.reviewThreads
-      const comments = parseComments((threads?.nodes ?? []) as GhThread[])
+      const comments = await withContext(cwd, parseComments((threads?.nodes ?? []) as GhThread[]))
       const totalCount = threads?.totalCount ?? comments.length
       return { total: totalCount, unresolved: comments.filter((c) => !c.resolved).length, comments }
     } catch (err) {
       this.options.log("Failed to fetch PR comments:", err)
-      return { total: 0, unresolved: 0, comments: [] }
+      return undefined
     }
   }
 }
