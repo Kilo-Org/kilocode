@@ -231,9 +231,14 @@ open class Stack(
         }
 
         private fun dim(comp: Component, kind: Int): Dimension {
-            if (kind == MIN) return comp.minimumSize
-            if (kind == MAX) return comp.maximumSize
-            return comp.preferredSize
+            val min = comp.minimumSize
+            if (kind == MIN) return min
+            val max = comp.maximumSize
+            val cw = max.width.coerceAtLeast(min.width)
+            val ch = max.height.coerceAtLeast(min.height)
+            if (kind == MAX) return Dimension(cw, ch)
+            val pref = comp.preferredSize
+            return Dimension(bound(pref.width, min.width, cw), bound(pref.height, min.height, ch))
         }
     }
 
