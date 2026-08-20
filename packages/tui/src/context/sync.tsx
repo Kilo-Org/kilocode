@@ -38,6 +38,7 @@ import path from "path"
 import { useKV } from "./kv"
 import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { appendTerminalOutput } from "@/kilocode/interactive-terminal/output" // kilocode_change
+import { at, recent, slot } from "../kilocode/message-order" // kilocode_change
 import { useToast } from "../ui/toast" // kilocode_change
 import { usePermission } from "./permission"
 
@@ -58,14 +59,6 @@ function search<T>(items: T[], target: string, key: (item: T) => string) {
   }
   return { found: false, index: left }
 }
-
-// kilocode_change start
-function compareMessage(a: Message, b: Message) {
-  return a.time.created - b.time.created || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
-}
-
-const messageKey = (message: Message) => String(message.time.created).padStart(16, "0") + message.id
-// kilocode_change end
 
 export const {
   context: SyncContext,
@@ -509,7 +502,7 @@ export const {
             setStore("message", event.properties.info.sessionID, [event.properties.info])
             break
           }
-          const result = search(messages, messageKey(event.properties.info), messageKey)
+          const result = slot(messages, event.properties.info) // kilocode_change - order by created time, ids wrap
           if (result.found) {
             setStore("message", event.properties.info.sessionID, result.index, reconcile(event.properties.info))
             break
@@ -545,13 +538,13 @@ export const {
         case "message.removed": {
           touchMessage(event.properties.sessionID, event.properties.messageID)
           const messages = store.message[event.properties.sessionID]
-          const index = messages.findIndex((message) => message.id === event.properties.messageID)
-          if (index !== -1) {
+          const result = at(messages, event.properties.messageID) // kilocode_change - list is time-ordered, not id-sorted
+          if (result.found) {
             setStore(
               "message",
               event.properties.sessionID,
               produce((draft) => {
-                draft.splice(index, 1)
+                draft.splice(result.index, 1)
               }),
             )
           }
@@ -688,7 +681,7 @@ export const {
             setStore("message", info.sessionID, [info])
             break
           }
-          const match = search(messages, messageKey(info), messageKey)
+          const match = slot(messages, info) // kilocode_change - order by created time, ids wrap
           if (match.found) {
             setStore("message", info.sessionID, match.index, reconcile(info))
             break
@@ -718,12 +711,12 @@ export const {
           touchMessage(event.data.sessionID, event.data.messageID)
           const messages = store.message[event.data.sessionID]
           if (!messages) break
-          const index = messages.findIndex((item) => item.id === event.data.messageID)
-          if (index === -1) break
+          const match = at(messages, event.data.messageID) // kilocode_change - list is time-ordered, not id-sorted
+          if (!match.found) break
           setStore(
             "message",
             event.data.sessionID,
-            produce((draft) => draft.splice(index, 1)),
+            produce((draft) => draft.splice(match.index, 1)),
           )
           break
         }
@@ -1016,10 +1009,11 @@ export const {
                     (message) => tracker.messages.has(message.id) && !infos.some((item) => item.id === message.id),
                   ),
                 )
-                infos.sort(compareMessage)
-                const removed = infos.slice(0, -100)
-                const visible = infos.slice(-100)
+                // kilocode_change start - window by created time so wrapped ids stay visible
+                const visible = recent(infos)
                 const visibleIDs = new Set(visible.map((message) => message.id))
+                const removed = infos.filter((message) => !visibleIDs.has(message.id))
+                // kilocode_change end
                 for (const message of messages.data ?? []) {
                   if (!visibleIDs.has(message.info.id)) {
                     delete draft.part[message.info.id]

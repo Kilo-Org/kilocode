@@ -25,8 +25,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let settling = false
   let settleTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
-  let lastTop = 0
-  let lastHeight = 0
 
   const [store, setStore] = createStore({
     contentRef: undefined as HTMLElement | undefined,
@@ -103,9 +101,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     const input = userActivity.consumeScroll()
     const distance = distanceFromBottom(scroll)
-    const moved = Math.abs(scroll.scrollTop - lastTop) > 1 && Math.abs(scroll.scrollHeight - lastHeight) <= 1
-    lastTop = scroll.scrollTop
-    lastHeight = scroll.scrollHeight
 
     if (!canScroll(scroll)) return
 
@@ -114,9 +109,9 @@ export function createAutoScroll(options: AutoScrollOptions) {
       return
     }
 
-    // Virtualizer and layout remeasurement can emit scroll before the
-    // ResizeObserver restores bottom-follow. Only user input should pause it.
-    if (!store.userScrolled && !input && !userActivity.isRecent() && !moved) return
+    // Virtualizer and layout corrections can move the viewport without
+    // changing content height. Only an input event should pause auto-follow.
+    if (!store.userScrolled && !input && !userActivity.isRecent()) return
 
     stop()
   }
@@ -209,8 +204,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     if (!el) return
 
-    lastTop = el.scrollTop
-    lastHeight = el.scrollHeight
     updateOverflowAnchor(el)
     cleanup = userActivity.listen(el)
   }

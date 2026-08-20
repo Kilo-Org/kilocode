@@ -33053,7 +33053,7 @@
                 },
                 "ai_sdk_provider": {
                   "type": "string",
-                  "enum": ["alibaba", "anthropic", "mistral", "openai", "openai-compatible", "openrouter"]
+                  "enum": ["anthropic", "openai", "openai-compatible", "openrouter"]
                 },
                 "release_date": {
                   "type": "string"
@@ -34268,7 +34268,7 @@
           },
           "ai_sdk_provider": {
             "type": "string",
-            "enum": ["alibaba", "anthropic", "mistral", "openai", "openai-compatible", "openrouter"]
+            "enum": ["anthropic", "openai", "openai-compatible", "openrouter"]
           }
         },
         "required": [
