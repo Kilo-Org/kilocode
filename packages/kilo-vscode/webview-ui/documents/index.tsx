@@ -33,11 +33,6 @@ const App: Component = () => {
         return
       }
       if (item.type === "document.result") docs.onMessage(item as DocumentMessage)
-      if (item.type === "appendReviewComments" && Array.isArray(item.comments)) {
-        comments.setComments([...comments.comments(), ...item.comments])
-        if (item.autoSend)
-          vscode.postMessage({ type: "document.sendComments", comments: item.comments, autoSend: true })
-      }
     })
     const review = (event: MessageEvent) => {
       if (event.data?.type !== "appendReviewComments" || !Array.isArray(event.data.comments)) return

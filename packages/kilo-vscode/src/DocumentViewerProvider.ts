@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { ReviewCommentEntry } from "./shared/review-comments"
 import { readDocument } from "./documents/document-reader"
+import { openRelativeFile } from "./review-utils"
 import { buildWebviewHtml } from "./utils"
 import type { KiloConnectionService } from "./services/cli-backend"
 
@@ -98,13 +99,12 @@ export class DocumentViewerProvider implements vscode.Disposable {
     }
     if (message.type === "document.openFile" && typeof message.file === "string") {
       const context = this.contexts.get(this.currentKey)
-      this.openFromCommand({
-        file: message.file,
-        sessionId: context?.sessionId,
-        directory: context?.directory,
-        line: typeof message.line === "number" ? message.line : undefined,
-        column: typeof message.column === "number" ? message.column : undefined,
-      })
+      openRelativeFile(
+        context?.directory,
+        message.file,
+        typeof message.line === "number" ? message.line : undefined,
+        typeof message.column === "number" ? message.column : undefined,
+      )
       return
     }
     if (message.type === "document.close") this.panel?.dispose()
