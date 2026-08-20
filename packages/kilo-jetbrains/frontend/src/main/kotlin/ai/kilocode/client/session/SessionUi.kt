@@ -29,6 +29,7 @@ import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
+import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.popup.HeaderPopupController
 import ai.kilocode.client.session.ui.SessionDropOverlay
@@ -367,6 +368,7 @@ class SessionUi(
         )
         permission = PermissionView(
             reply = { id, dto, rules -> controller.replyPermission(id, dto, rules) },
+            openFile = fileLinks::open,
             selection = selection,
             focus = focus,
         )
@@ -662,6 +664,13 @@ class SessionUi(
             ApplicationManager.getApplication().invokeLater {
                 if (disposed) return@invokeLater
                 applyStyle(SessionEditorStyle.current())
+            }
+        })
+        bus.subscribe(ApprovalReasonVisibilityListener.TOPIC, ApprovalReasonVisibilityListener { visible ->
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                if (!this::messageBody.isInitialized) return@invokeLater
+                messageBody.syncApprovalReasons(visible)
             }
         })
     }
