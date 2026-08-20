@@ -906,6 +906,8 @@ export interface TerminalMessageHandlerDeps {
   state: TerminalStateControls
   activate: (id: string) => void
   saveTabMemory: () => void
+  /** Remember the current session before a central terminal is selected. */
+  rememberSession?: () => void
   setSelection: (sel: string | typeof LOCAL) => void
   showError: (message: string) => void
   postMessage: (message: unknown) => void
@@ -960,6 +962,7 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
     }
     return
   }
+  deps.rememberSession?.()
   deps.state.add(key === LOCAL ? null : key, term)
   deps.onCreated?.(target, msg.terminalId)
   deps.saveTabMemory()

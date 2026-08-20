@@ -62,7 +62,7 @@ import type {
   LocalGitStats,
   ManagedSessionState,
   PRStatus,
-  ReviewComment,
+  ReviewCommentEntry,
   RunStatus,
   SectionState,
   TerminalDestination,
@@ -328,13 +328,13 @@ export interface AppendChatBoxMessage {
 
 export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
-  comments: ReviewComment[]
+  comments: ReviewCommentEntry[]
   autoSend?: boolean
 }
 
 export interface AppendReviewCommentsToTerminalMessage {
   type: "appendReviewCommentsToTerminal"
-  comments: ReviewComment[]
+  comments: ReviewCommentEntry[]
   autoSend?: boolean
   targetTerminalId: string
 }
@@ -1302,7 +1302,12 @@ export interface ClipboardWriteResultMessage {
   error?: string
 }
 
+export interface AgentManagerFocusContextRequestedMessage {
+  type: "agentManager.focusContextRequested"
+}
+
 export type ExtensionMessage =
+  | AgentManagerFocusContextRequestedMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage

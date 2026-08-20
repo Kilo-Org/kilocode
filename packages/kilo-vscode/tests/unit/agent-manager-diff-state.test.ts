@@ -6,6 +6,7 @@ import {
   expandableOpenFiles,
   initialOpenFiles,
   isDiffExpandable,
+  reconcileOpenFiles,
   sanitizeOpenFiles,
   shouldVirtualizeDiff,
   toggleOpenFiles,
@@ -146,6 +147,20 @@ describe("agent manager diff state", () => {
     expect(toggleOpenFiles(diffs, ["stale.ts"])).toEqual(files)
     expect(toggleOpenFiles(diffs, ["src/app.ts"])).toEqual(files)
     expect(toggleOpenFiles(diffs, files)).toEqual([])
+  })
+
+  it("opens newly arriving files while preserving a manual collapse", () => {
+    const current = [diff({ file: "src/app.ts" }), diff({ file: "src/new.ts" })]
+    expect(reconcileOpenFiles(current, ["src/app.ts"], ["src/app.ts"])).toEqual({
+      open: ["src/app.ts", "src/new.ts"],
+      known: ["src/app.ts", "src/new.ts"],
+    })
+  })
+
+  it("does not initialize a manual empty snapshot until the first state exists", () => {
+    const current = [diff({ file: "src/app.ts" })]
+    expect(reconcileOpenFiles(current, undefined, [])).toEqual({ open: undefined, known: ["src/app.ts"] })
+    expect(reconcileOpenFiles(current, [], ["src/app.ts"])).toEqual({ open: [], known: ["src/app.ts"] })
   })
 
   it("opens images while preventing other non-text diffs from entering open state", () => {

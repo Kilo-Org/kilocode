@@ -590,7 +590,7 @@ describe("GitStatsPoller", () => {
     expect(emitted.length).toBe(1)
   })
 
-  it("falls back to <remote>/HEAD when no upstream and no <remote>/<branch>", async () => {
+  it("uses advertised remote HEAD when local <remote>/HEAD is stale", async () => {
     const emitted: Array<{
       branch: string
       files: number
@@ -599,11 +599,15 @@ describe("GitStatsPoller", () => {
       ahead: number
       behind: number
     }> = []
+    const bases: string[] = []
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => "/workspace",
-      source: source(async () => diff(10, 4), "my-feature"),
+      source: source(async (_dir, base) => {
+        bases.push(base)
+        return diff(10, 4)
+      }, "my-feature"),
       onStats: () => undefined,
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
@@ -619,8 +623,9 @@ describe("GitStatsPoller", () => {
         // myfork/my-feature does not exist
         if (args[0] === "rev-parse" && args[1] === "--verify" && args[2] === "myfork/my-feature")
           throw new Error("no ref")
-        // myfork/HEAD resolves to the default branch
-        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/myfork/HEAD") return "myfork/develop"
+        // The remote moved to develop, but this clone still records master.
+        if (args[0] === "ls-remote") return "ref: refs/heads/develop\tHEAD\nabc123\tHEAD"
+        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/myfork/HEAD") return "myfork/master"
         if (args[0] === "branch") return "my-feature"
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t5"
         return ""
@@ -632,6 +637,7 @@ describe("GitStatsPoller", () => {
     poller.stop()
 
     expect(emitted[0]).toEqual({ branch: "my-feature", files: 1, additions: 10, deletions: 4, ahead: 5, behind: 0 })
+    expect(bases[0]).toBe("myfork/develop")
   })
 
   it("falls back to workingTreeStats when no tracking, no default branch, and no remote refs exist", async () => {

@@ -318,7 +318,7 @@ type ContextRequestMessage =
   | { type: "requestFileSearch"; query: string; requestId: string; sessionID?: string }
   | { type: "requestSessionSearch"; requestId: string; sessionID?: string }
   | { type: "requestFilePicker"; requestId: string }
-  | { type: "requestTerminalContext"; requestId: string; sessionID?: string }
+  | { type: "requestTerminalContext"; requestId: string; sessionID?: string; agentManagerContext?: string }
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
@@ -987,6 +987,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private setupWebviewMessageHandler(webview: vscode.Webview): void {
     this.webviewMessageDisposable?.dispose()
+    this.setFocusTarget("other")
     this.autocompleteConfigDisposable?.dispose()
     this.autocompleteConfigDisposable = watchAutocompleteConfig((msg) => this.postMessage(msg))
     this.indexingConfigDisposable?.dispose()
@@ -1539,11 +1540,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable = watchWorkStyleConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
   }
 
-  private handleWebviewFocusMessage(message: TypedWebviewMessage & { focused?: unknown }): void {
-    if (message.type !== "webviewFocusChanged") return
-    if (this.opts.focusContext) {
+  private handleWebviewFocusMessage(message: TypedWebviewMessage & { focused?: unknown; target?: unknown }): void {
+    if (message.type === "webviewFocusChanged" && this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, message.focused === true)
     }
+    if (message.type === "webviewFocusChanged" && message.focused === true) {
+      if (this.opts.focusTargetContext) this.postMessage({ type: "agentManager.focusContextRequested" })
+      return
+    }
+    if (message.type === "webviewFocusChanged" && message.focused !== true) {
+      this.setFocusTarget("other")
+      return
+    }
+    if (message.type !== "agentManagerFocusChanged") return
+    const target =
+      message.target === "prompt" || message.target === "mainTerminal" || message.target === "sideTerminal"
+        ? message.target
+        : "other"
+    this.setFocusTarget(target)
+  }
+
+  private setFocusTarget(target: "prompt" | "mainTerminal" | "sideTerminal" | "other"): void {
+    const contexts = this.opts.focusTargetContext
+    if (!contexts) return
+    void vscode.commands.executeCommand("setContext", contexts.prompt, target === "prompt")
+    void vscode.commands.executeCommand("setContext", contexts.mainTerminal, target === "mainTerminal")
+    void vscode.commands.executeCommand("setContext", contexts.sideTerminal, target === "sideTerminal")
   }
 
   private handleChildSyncMessage(
@@ -5135,6 +5157,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)
     }
+    this.setFocusTarget("other")
     this.unsubscribeRemote?.()
     this.streams.focus(undefined)
     this.connectionService.unregisterVisible(this.instanceId)

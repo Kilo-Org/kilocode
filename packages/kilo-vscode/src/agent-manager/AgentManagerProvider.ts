@@ -643,7 +643,6 @@ export class AgentManagerProvider implements Disposable {
       })
       return null
     }
-
     if (
       m.type === "requestSandboxDefault" ||
       m.type === "setSandboxDefault" ||
@@ -668,9 +667,9 @@ export class AgentManagerProvider implements Disposable {
       this.activeSessionId = m.draftID
       return msg
     }
-
     if (m.type === "requestTerminalContext") {
-      if (!m.sessionID || this.terminalManager.prepareContext(m.sessionID)) return msg
+      const ready = this.terminalManager.prepareContext(m.sessionID, m.agentManagerContext)
+      if (ready) return msg
       this.panel?.postMessage({
         type: "terminalContextError",
         requestId: m.requestId,

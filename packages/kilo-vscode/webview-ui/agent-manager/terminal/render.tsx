@@ -91,7 +91,11 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
  * exists; that boundary never flips under a live xterm, since removing
  * the last terminal disposes its instance first.
  */
-export function renderTerminalLayer(props: { state: TerminalStateControls; onFocusPrompt: () => void }): JSX.Element {
+export function renderTerminalLayer(props: {
+  state: TerminalStateControls
+  onFocusPrompt: () => void
+  onFocusChange?: (focused: boolean) => void
+}): JSX.Element {
   const layerActive = () => props.state.activeId() !== undefined
   const slotVisible = (termId: string, contextKey: string) =>
     props.state.activeId() === termId && props.state.currentKey() === contextKey
@@ -110,7 +114,11 @@ export function renderTerminalLayer(props: { state: TerminalStateControls; onFoc
                   active={visible()}
                   focusSerial={focusSerial(props.state, term.id)}
                   font={term.font}
-                  onFocusChange={(focused) => props.state.setFocusedId(focused ? term.id : undefined)}
+                  onFocusChange={(focused) => {
+                    if (focused) props.state.setFocusedId(term.id)
+                    else if (props.state.focusedId() === term.id) props.state.setFocusedId(undefined)
+                    props.onFocusChange?.(focused)
+                  }}
                   onFocusPrompt={props.onFocusPrompt}
                   onTitleChange={(title) => props.state.setTitle(term.id, title)}
                 />
@@ -138,6 +146,7 @@ export function renderSideTerminalLayer(props: {
   contextKey: Accessor<string>
   visible: Accessor<boolean>
   onFocusPrompt: () => void
+  onFocusChange?: (focused: boolean) => void
 }): JSX.Element {
   return (
     <div class={`am-side-terminal-layer ${props.visible() ? "am-side-terminal-layer-active" : ""}`}>
@@ -158,7 +167,11 @@ export function renderSideTerminalLayer(props: {
                 font={term.font}
                 status={() => props.state.scriptStatus(term.id)}
                 restartable={term.kind === undefined}
-                onFocusChange={(focused) => props.state.setFocusedId(focused ? term.id : undefined)}
+                onFocusChange={(focused) => {
+                  if (focused) props.state.setFocusedId(term.id)
+                  else if (props.state.focusedId() === term.id) props.state.setFocusedId(undefined)
+                  props.onFocusChange?.(focused)
+                }}
                 onFocusPrompt={props.onFocusPrompt}
                 onTitleChange={(title) => props.state.setTitle(term.id, title)}
               />
