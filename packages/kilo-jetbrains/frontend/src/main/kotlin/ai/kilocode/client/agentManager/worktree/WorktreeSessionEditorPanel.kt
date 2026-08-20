@@ -105,7 +105,18 @@ class WorktreeSessionEditorPanel(
             (row as? SessionRow)?.session?.takeIf { canRename(it) || canDelete(it) }
         }),
     )
-    private val prHeader = WorktreePrHeaderView(openWorktree = ::openInNewFrame, openEnabled = worktree.directory.isNotBlank(), openDiff = ::openBranchDiff, openTerminal = ::openTerminal)
+    private val run = if (project != null && worktree.directory.isNotBlank()) {
+        WorktreeRunControl(project, this, worktree.directory, frame = ::openInNewFrame)
+    } else {
+        null
+    }
+    private val prHeader = WorktreePrHeaderView(
+        openWorktree = ::openInNewFrame,
+        openEnabled = worktree.directory.isNotBlank(),
+        openDiff = ::openBranchDiff,
+        openTerminal = ::openTerminal,
+        run = run?.button,
+    )
     private val splitter = OnePixelSplitter(false, 0.25f)
     private var started = false
     private var stats: WorktreeStatsDto? = null
