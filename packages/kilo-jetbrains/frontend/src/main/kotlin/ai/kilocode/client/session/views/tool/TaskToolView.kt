@@ -5,6 +5,8 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.SessionCodeScroll
+import ai.kilocode.client.session.ui.popup.HeaderPopupBody
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -15,8 +17,10 @@ import ai.kilocode.client.session.views.base.HeaderOpenAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -176,6 +180,40 @@ class TaskToolView(
             body.rows.repaint()
         }
         return changed
+    }
+
+    /**
+     * Collapsed-card hover preview. Unlike the edit/patch popups, which build fresh snapshot content,
+     * this hosts the *live* [TaskBodyScroll] — the same instance the in-place expanded card uses — so
+     * streaming child tools keep updating inside the popup while the card stays collapsed.
+     */
+    @RequiresEdt
+    override fun headerPopup(): HeaderPopupRequest? =
+        popup("tool", "task", item.childTools.isNotEmpty()) { taskPopupBody() }
+
+    @RequiresEdt
+    private fun taskPopupBody(): HeaderPopupBody {
+        val scroll = taskBody()
+        syncRows()
+        val owner = Disposer.newDisposable("Task popup body")
+        // The live body is only reparented into the popup, never rebuilt. On hide, detach it so it
+        // returns to a reusable state — unless the card already reclaimed it by expanding — and never
+        // dispose the shared component itself.
+        Disposer.register(owner, Disposable { if (!isExpanded()) detachBody(scroll) })
+        return HeaderPopupBody(
+            scroll,
+            owner,
+            SessionUiStyle.Colors.codeBlockBackground(),
+            SessionUiStyle.View.Popup.WIDE_MAX_WIDTH,
+        )
+    }
+
+    @RequiresEdt
+    private fun detachBody(scroll: TaskBodyScroll) {
+        val parent = scroll.parent ?: return
+        parent.remove(scroll)
+        parent.revalidate()
+        parent.repaint()
     }
 
     private fun taskBody() = bodyComponent() as TaskBodyScroll

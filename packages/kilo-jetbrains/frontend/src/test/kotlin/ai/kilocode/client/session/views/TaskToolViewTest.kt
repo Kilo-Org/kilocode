@@ -167,6 +167,54 @@ class TaskToolViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
     }
 
+    fun `test task popup only shows when collapsed with children`() {
+        val view = view(task(children = listOf(child("c1", "read"))))
+        assertTrue(view.isExpanded())
+        assertNull(view.headerPopup())
+
+        view.collapse()
+        assertNotNull(view.headerPopup())
+
+        val empty = view(task(children = emptyList()))
+        assertNull(empty.headerPopup())
+    }
+
+    fun `test collapsed task popup hosts the live expanded body`() {
+        val view = view(task(children = listOf(child("c1", "read"))))
+        val live = scroll(view)
+        assertNotNull(live)
+
+        view.collapse()
+        assertNull(scroll(view))
+
+        val popup = view.headerPopup()!!.build()
+        try {
+            // The popup hosts the same live scroll instance, not a rebuilt snapshot.
+            assertTrue(descendants(popup.component).any { it === live })
+        } finally {
+            Disposer.dispose(popup.disposable)
+        }
+
+        // Disposing the popup detaches the shared body without destroying it; re-expanding reuses it.
+        assertNull(live!!.parent)
+        view.expand()
+        assertSame(live, scroll(view))
+    }
+
+    fun `test collapsed task popup reflects streaming child updates`() {
+        val view = view(task(children = listOf(child("c1", "read"))))
+        view.collapse()
+
+        val popup = view.headerPopup()!!.build()
+        try {
+            assertEquals(1, popupRows(popup.component).size)
+            view.update(task(children = listOf(child("c1", "read"), child("c2", "grep"))))
+            assertEquals(2, popupRows(popup.component).size)
+        } finally {
+            Disposer.dispose(popup.disposable)
+        }
+    }
+
     private fun view(tool: Tool, onOpen: ((String, String) -> Unit)? = null): TaskToolView = TaskToolView(tool, onOpenSubagent = onOpen).also { views.add(it) }
 
     private fun task(children: List<Tool> = emptyList(), sessionId: String? = "ses_child") = Tool("part_task", "task", toolKind("task")).also {
@@ -195,6 +243,9 @@ class TaskToolViewTest : BasePlatformTestCase() {
 
     // The open button is a hover overlay, not a header child, so read it from the copy toolbar.
     private fun openIcon(view: TaskToolView) = view.copyToolbar as HoverIcon
+
+    private fun popupRows(component: Component): List<Component> =
+        descendants(component).filterIsInstance<Stack>().single().components.toList()
 
     private fun rowText(view: TaskToolView) = rows(view).map { row ->
         descendants(row).filterIsInstance<JBLabel>().mapNotNull { label -> label.text.takeIf { it.isNotBlank() } }.joinToString(" ")
