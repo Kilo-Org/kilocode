@@ -1197,3 +1197,147 @@ it.instance(
   { config: cfg },
   30_000,
 )
+
+// ── SessionResumeImport.discover (discovery endpoint logic) ───────────────
+//
+// The HTTP endpoint (POST /kilocode/session-resume/discover) delegates to
+// SessionResumeImport.discover. These tests drive that shared entry point
+// directly with fixtures written under redirected discovery roots (via the
+// ResumeRoots test seam), the same seam the slash-command picker uses. Discovery
+// must never write to any session.
+
+it.instance(
+  "discover enumerates a Claude transcript with a preview",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+
+      expect(result.sessions.length).toBe(1)
+      const entry = result.sessions[0]
+      expect(entry.id).toBe(fixtureUUID)
+      expect(entry.format).toBe("claude")
+      expect(entry.path).toContain(`${fixtureUUID}.jsonl`)
+      expect(entry.messages).toBeGreaterThanOrEqual(10)
+      expect(entry.version).toBe(SessionResume.SUPPORTED_CLAUDE_MAJOR)
+      expect(typeof entry.title).toBe("string")
+      expect((entry.title ?? "").length).toBeGreaterThan(0)
+      expect(entry.mtime).toBeGreaterThan(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover enumerates a Codex transcript with a preview",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const content = yield* codexFixtureForCwdAt(dir)
+      yield* withCodexFixtureAt(roots.codex, content, fixtureUUID)
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir, formats: ["codex"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { codex: roots.codex }),
+      )
+
+      expect(result.sessions.length).toBe(1)
+      const entry = result.sessions[0]
+      expect(entry.id).toBe(fixtureUUID)
+      expect(entry.format).toBe("codex")
+      expect(entry.messages).toBeGreaterThanOrEqual(8)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover returns both formats sorted most-recent-first",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const claude = yield* Effect.promise(() => claudeFixture())
+      const codex = yield* codexFixtureForCwdAt(dir)
+
+      const claudeID = "11111111-1111-4111-8111-111111111111"
+      const codexID = "22222222-2222-4222-8222-222222222222"
+
+      yield* withClaudeFixtureAt(roots.claude, dir, claude, claudeID)
+      // Make the Codex transcript newer so it sorts first.
+      const codexFile = yield* withCodexFixtureAt(roots.codex, codex, codexID)
+      yield* Effect.sync(() => {
+        const now = Date.now()
+        fs.utimesSync(codexFile, new Date(now), new Date(now))
+      })
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude, codex: roots.codex }),
+      )
+
+      const ids = result.sessions.map((s) => s.id)
+      expect(ids).toContain(claudeID)
+      expect(ids).toContain(codexID)
+      // Sorted descending by mtime.
+      for (let i = 1; i < result.sessions.length; i++) {
+        expect(result.sessions[i - 1].mtime).toBeGreaterThanOrEqual(result.sessions[i].mtime)
+      }
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover returns an empty list when no transcripts exist",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude, codex: roots.codex }),
+      )
+
+      expect(result.sessions.length).toBe(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover skips unparseable transcripts and reports them as dropped, writing nothing",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const roots = yield* tmpRoots()
+
+      const goodID = "33333333-3333-4333-8333-333333333333"
+      const badID = "44444444-4444-4444-8444-444444444444"
+      const good = yield* Effect.promise(() => claudeFixture())
+
+      yield* withClaudeFixtureAt(roots.claude, dir, good, goodID)
+      yield* withClaudeFixtureAt(roots.claude, dir, claudeInvalidVersion, badID)
+
+      const result = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+
+      const ids = result.sessions.map((s) => s.id)
+      expect(ids).toContain(goodID)
+      expect(ids).not.toContain(badID)
+      expect(result.dropped.some((d) => d.includes(badID))).toBe(true)
+
+      // Discovery is read-only: the caller's session stays empty.
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBe(0)
+    }),
+  { config: cfg },
+  30_000,
+)

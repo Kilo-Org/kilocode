@@ -211,6 +211,8 @@ import type {
   KilocodeSessionImportSessionResponses,
   KilocodeSessionModelUsageErrors,
   KilocodeSessionModelUsageResponses,
+  KilocodeSessionResumeDiscoverErrors,
+  KilocodeSessionResumeDiscoverResponses,
   KilocodeSessionResumeImportErrors,
   KilocodeSessionResumeImportResponses,
   KiloEditErrors,
@@ -8239,6 +8241,49 @@ export class SessionResume extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-resume",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Discover importable external session transcripts
+   *
+   * Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each so callers can list importable sessions before importing. Read-only; writes nothing.
+   */
+  public discover<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      cwd?: string
+      formats?: Array<"claude" | "codex">
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "cwd" },
+            { in: "body", key: "formats" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeSessionResumeDiscoverResponses,
+      KilocodeSessionResumeDiscoverErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-resume/discover",
       ...options,
       ...params,
       headers: {

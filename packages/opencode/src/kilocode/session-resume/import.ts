@@ -11,7 +11,9 @@
 // TUI) can trigger a Claude Code / Codex import through the CLI server without
 // reimplementing it.
 
-import { Effect } from "effect"
+import fs from "node:fs"
+import path from "node:path"
+import { Effect, Option } from "effect"
 import * as InstanceState from "@/effect/instance-state"
 import { Agent } from "@/agent/agent"
 import { Provider } from "@/provider/provider"
@@ -207,5 +209,149 @@ export namespace SessionResumeImport {
       messages: result.messages,
       dropped: result.dropped,
     } satisfies Result
+  })
+
+  // ── Discovery ───────────────────────────────────────────────────────
+
+  export type DiscoverInput = {
+    /**
+     * Directory whose external sessions to enumerate. Defaults to the current
+     * instance directory (the project the caller is working in), matching how
+     * the `/resume-claude` / `/resume-codex` slash commands scope discovery.
+     */
+    cwd?: string
+    /** Formats to enumerate. Defaults to both `claude` and `codex`. */
+    formats?: SessionResume.Format[]
+  }
+
+  /** A single discovered, importable external session. */
+  export type Discovered = {
+    /** Session UUID parsed from the transcript filename. */
+    id: string
+    /** Detected transcript format. */
+    format: SessionResume.Format
+    /** Absolute path to the JSONL transcript on the CLI host's filesystem. */
+    path: string
+    /** Last-modified time (epoch ms), most recent first. */
+    mtime: number
+    /** Source harness major version. */
+    version: number
+    /** First user message text (single line, clamped), if any. */
+    title?: string
+    /** Number of user + assistant steps in the transcript. */
+    messages: number
+    /** Source model reference (`providerID/modelID`), if the transcript records one. */
+    model?: { providerID: string; modelID: string }
+  }
+
+  export type DiscoverResult = {
+    /** Discovered sessions, most recently modified first. */
+    sessions: Discovered[]
+    /** Human-readable reasons for transcripts that were found but could not be previewed. */
+    dropped: string[]
+  }
+
+  /** Whether an error is a "directory does not exist" filesystem error. */
+  const isMissing = (err: unknown): boolean =>
+    typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === "ENOENT"
+
+  /** Parse the session UUID out of a Claude/Codex JSONL filename. */
+  const idFromFile = (format: SessionResume.Format, file: string): string | undefined => {
+    const base = path.basename(file, ".jsonl")
+    if (format === "claude") return SessionResume.isUUID(base) ? base : undefined
+    // Codex filenames look like `rollout-<timestamp>-<uuid>.jsonl`.
+    const tail = base.slice(-36)
+    return SessionResume.isUUID(tail) ? tail : undefined
+  }
+
+  type DescribeResult = { entry?: Discovered; dropped?: string }
+
+  /** Build a preview entry for one discovered transcript file. */
+  const describe = (format: SessionResume.Format, file: string) =>
+    Effect.gen(function* () {
+      const id = idFromFile(format, file)
+      if (!id) return { dropped: `Skipped ${path.basename(file)}: no session id in filename` } satisfies DescribeResult
+
+      const p = yield* Effect.tryPromise({
+        try: () => SessionResume.parse(file),
+        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+      }).pipe(Effect.map(SessionResume.preview))
+
+      const mtime = yield* Effect.try({
+        try: () => fs.statSync(file).mtimeMs,
+        catch: () => new Error("stat failed"),
+      }).pipe(Effect.orElseSucceed(() => 0))
+
+      return {
+        entry: {
+          id,
+          format,
+          path: file,
+          mtime,
+          version: p.version,
+          title: p.title,
+          messages: p.messages,
+          model: p.model,
+        } satisfies Discovered,
+      } satisfies DescribeResult
+    }).pipe(
+      Effect.catch((err) =>
+        Effect.succeed({ dropped: `Skipped ${path.basename(file)}: ${err.message}` } satisfies DescribeResult),
+      ),
+    )
+
+  /**
+   * Enumerate importable Claude Code / Codex sessions for a directory.
+   *
+   * This is the read-only companion to `fromContent`: it scans the harness
+   * transcript locations (via `SessionResume.discover*`) and previews each one
+   * so callers can list importable sessions before choosing which content to
+   * POST to the import endpoint. It never writes anything.
+   */
+  export const discover = Effect.fn("SessionResumeImport.discover")(function* (input?: DiscoverInput) {
+    const ctx = yield* InstanceState.context
+    const cwd = input?.cwd ?? ctx.directory
+    const formats = input?.formats ?? (["claude", "codex"] as SessionResume.Format[])
+
+    // Test-only seam so integration tests can redirect discovery roots without
+    // touching the real home directory. Mirrors handleResume in prompt.ts.
+    const roots = Option.getOrUndefined(yield* Effect.serviceOption(SessionResume.ResumeRoots)) ?? {}
+
+    const files: { format: SessionResume.Format; file: string }[] = []
+    const dropped: string[] = []
+
+    // A missing harness directory (nothing ever recorded here) is not an error —
+    // treat it as "no sessions". Any other read failure is surfaced as dropped.
+    const enumerate = (format: SessionResume.Format, run: () => string[] | Promise<string[]>) =>
+      Effect.tryPromise({
+        try: () => Promise.resolve(run()),
+        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+      }).pipe(
+        Effect.catch((err) => {
+          if (isMissing(err)) return Effect.succeed<string[]>([])
+          dropped.push(`${format} discovery failed: ${err.message}`)
+          return Effect.succeed<string[]>([])
+        }),
+      )
+
+    if (formats.includes("claude")) {
+      const claude = yield* enumerate("claude", () => SessionResume.discoverClaude({ cwd, ...roots }))
+      for (const file of claude) files.push({ format: "claude", file })
+    }
+
+    if (formats.includes("codex")) {
+      const codex = yield* enumerate("codex", () => SessionResume.discoverCodex({ cwd, ...roots }))
+      for (const file of codex) files.push({ format: "codex", file })
+    }
+
+    const sessions: Discovered[] = []
+    for (const item of files) {
+      const result = yield* describe(item.format, item.file)
+      if (result.entry) sessions.push(result.entry)
+      if (result.dropped) dropped.push(result.dropped)
+    }
+
+    sessions.sort((a, b) => b.mtime - a.mtime)
+    return { sessions, dropped } satisfies DiscoverResult
   })
 }

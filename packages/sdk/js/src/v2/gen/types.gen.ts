@@ -4443,6 +4443,51 @@ export type SessionResumeFailedError = {
   message: string
 }
 
+export type KilocodeSessionResumeModel = {
+  providerID: string
+  modelID: string
+}
+
+export type KilocodeSessionResumeDiscovered = {
+  /**
+   * Session UUID parsed from the transcript filename.
+   */
+  id: string
+  /**
+   * Detected transcript format.
+   */
+  format: "claude" | "codex"
+  /**
+   * Absolute path to the JSONL transcript on the CLI host.
+   */
+  path: string
+  /**
+   * Last-modified time (epoch ms).
+   */
+  mtime: number
+  /**
+   * Source harness major version.
+   */
+  version: number
+  title?: string
+  /**
+   * Number of user + assistant steps in the transcript.
+   */
+  messages: number
+  model?: KilocodeSessionResumeModel
+}
+
+export type KilocodeSessionResumeDiscoverResult = {
+  /**
+   * Discovered importable sessions, most recently modified first.
+   */
+  sessions: Array<KilocodeSessionResumeDiscovered>
+  /**
+   * Human-readable reasons for transcripts that were found but could not be previewed.
+   */
+  dropped: Array<string>
+}
+
 export type MemoryApiClientError = {
   name: "MemoryApiClientError"
   data: {
@@ -17823,6 +17868,43 @@ export type KilocodeSessionResumeImportResponses = {
 
 export type KilocodeSessionResumeImportResponse =
   KilocodeSessionResumeImportResponses[keyof KilocodeSessionResumeImportResponses]
+
+export type KilocodeSessionResumeDiscoverData = {
+  body?: {
+    cwd?: string
+    formats?: Array<"claude" | "codex">
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-resume/discover"
+}
+
+export type KilocodeSessionResumeDiscoverErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * SessionResumeFailedError
+   */
+  422: SessionResumeFailedError
+}
+
+export type KilocodeSessionResumeDiscoverError =
+  KilocodeSessionResumeDiscoverErrors[keyof KilocodeSessionResumeDiscoverErrors]
+
+export type KilocodeSessionResumeDiscoverResponses = {
+  /**
+   * Discovered importable sessions
+   */
+  200: KilocodeSessionResumeDiscoverResult
+}
+
+export type KilocodeSessionResumeDiscoverResponse =
+  KilocodeSessionResumeDiscoverResponses[keyof KilocodeSessionResumeDiscoverResponses]
 
 export type SuggestionListData = {
   body?: never

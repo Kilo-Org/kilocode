@@ -3,7 +3,11 @@ import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { SessionResumeImport } from "@/kilocode/session-resume/import"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import { SessionResumeFailedError, SessionResumePayload } from "../groups/session-resume"
+import {
+  SessionResumeDiscoverPayload,
+  SessionResumeFailedError,
+  SessionResumePayload,
+} from "../groups/session-resume"
 
 export const sessionResumeHandlers = HttpApiBuilder.group(InstanceHttpApi, "session-resume", (handlers) =>
   Effect.gen(function* () {
@@ -30,6 +34,22 @@ export const sessionResumeHandlers = HttpApiBuilder.group(InstanceHttpApi, "sess
       }
     })
 
-    return handlers.handle("import", doImport)
+    const doDiscover = Effect.fn("SessionResumeHttpApi.discover")(function* (ctx: {
+      payload: typeof SessionResumeDiscoverPayload.Type
+    }) {
+      const result = yield* SessionResumeImport.discover({
+        cwd: ctx.payload.cwd,
+        formats: ctx.payload.formats ? [...ctx.payload.formats] : undefined,
+      }).pipe(
+        Effect.catch((err) =>
+          NamedError.Unknown.isInstance(err)
+            ? Effect.fail(new SessionResumeFailedError({ message: err.data.message }))
+            : Effect.fail(err),
+        ),
+      )
+      return { sessions: result.sessions, dropped: result.dropped }
+    })
+
+    return handlers.handle("import", doImport).handle("discover", doDiscover)
   }),
 )
