@@ -29,7 +29,9 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useProvider } from "../../context/provider"
 import type { EnrichedModel } from "../../context/provider"
 import { useSession, SessionContext } from "../../context/session"
+import { modelSelectionScope } from "../../context/session-model-selector"
 import { useLanguage } from "../../context/language"
+import { useWorktreeMode } from "../../context/worktree-mode"
 import { useVSCode } from "../../context/vscode"
 import type { ModelSelection } from "../../types/messages"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
@@ -1145,17 +1147,20 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
 interface ModelSelectorProps {
   sessionID?: Accessor<string | undefined>
+  portal?: boolean
 }
 
 export const ModelSelector: Component<ModelSelectorProps> = (props) => {
   const session = useSession()
+  const worktree = useWorktreeMode()
   const id = () => props.sessionID?.()
 
   return (
     <ModelSelectorBase
       value={session.selected(id())}
+      portal={props.portal}
       onSelect={(providerID, modelID) => {
-        session.selectModel(providerID, modelID, id())
+        session.selectModel(providerID, modelID, id(), modelSelectionScope(!!worktree))
       }}
       onPick={() => {
         requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
