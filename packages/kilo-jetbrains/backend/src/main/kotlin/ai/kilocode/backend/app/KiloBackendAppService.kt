@@ -792,7 +792,7 @@ class KiloBackendAppService private constructor(
                 delay(RETRY_DELAY_MS)
             }
         }
-        log.error("$name: all $MAX_RETRIES attempts failed")
+        log.warn("$name: all $MAX_RETRIES attempts failed${last.error?.let { ": ${error(it)}" } ?: ""}")
         return last
     }
 

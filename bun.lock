@@ -32,7 +32,7 @@
     },
     "packages/client": {
       "name": "@opencode-ai/client",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@opencode-ai/protocol": "workspace:*",
         "@opencode-ai/schema": "workspace:*",
@@ -56,7 +56,7 @@
     },
     "packages/codemode": {
       "name": "@opencode-ai/codemode",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "acorn": "8.15.0",
         "effect": "catalog:",
@@ -70,7 +70,7 @@
     },
     "packages/core": {
       "name": "@opencode-ai/core",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "bin": {
         "opencode": "./bin/opencode",
       },
@@ -168,7 +168,7 @@
     },
     "packages/effect-drizzle-sqlite": {
       "name": "@opencode-ai/effect-drizzle-sqlite",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
@@ -182,7 +182,7 @@
     },
     "packages/effect-sqlite-node": {
       "name": "@opencode-ai/effect-sqlite-node",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "effect": "catalog:",
       },
@@ -194,7 +194,7 @@
     },
     "packages/http-recorder": {
       "name": "@opencode-ai/http-recorder",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@effect/platform-node": "4.0.0-beta.83",
         "@effect/platform-node-shared": "4.0.0-beta.83",
@@ -215,7 +215,7 @@
     },
     "packages/httpapi-codegen": {
       "name": "@opencode-ai/httpapi-codegen",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "effect": "catalog:",
         "prettier": "3.6.2",
@@ -228,7 +228,7 @@
     },
     "packages/kilo-console": {
       "name": "@kilocode/kilo-console",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@kilocode/kilo-indexing": "workspace:*",
         "@kilocode/kilo-web-ui": "workspace:*",
@@ -251,7 +251,7 @@
     },
     "packages/kilo-docs": {
       "name": "@kilocode/kilo-docs",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@docsearch/css": "^4",
         "@docsearch/js": "^4",
@@ -281,7 +281,7 @@
     },
     "packages/kilo-gateway": {
       "name": "@kilocode/kilo-gateway",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@ai-sdk/anthropic": "3.0.82",
         "@ai-sdk/openai": "3.0.88",
@@ -315,7 +315,7 @@
     },
     "packages/kilo-i18n": {
       "name": "@kilocode/kilo-i18n",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "devDependencies": {
         "@tsconfig/node22": "catalog:",
         "@types/bun": "catalog:",
@@ -325,7 +325,7 @@
     },
     "packages/kilo-indexing": {
       "name": "@kilocode/kilo-indexing",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@aws-sdk/client-bedrock-runtime": "3.1005.0",
         "@aws-sdk/credential-provider-ini": "3.972.31",
@@ -361,7 +361,7 @@
     },
     "packages/kilo-memory": {
       "name": "@kilocode/kilo-memory",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "effect": "catalog:",
         "zod": "catalog:",
@@ -375,7 +375,7 @@
     },
     "packages/kilo-sandbox": {
       "name": "@kilocode/sandbox",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@anthropic-ai/sandbox-runtime": "catalog:",
         "effect": "catalog:",
@@ -390,7 +390,7 @@
     },
     "packages/kilo-telemetry": {
       "name": "@kilocode/kilo-telemetry",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@kilocode/kilo-gateway": "workspace:*",
         "posthog-node": "4.4.0",
@@ -404,7 +404,7 @@
     },
     "packages/kilo-ui": {
       "name": "@kilocode/kilo-ui",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "0.13.11",
@@ -442,7 +442,7 @@
     },
     "packages/kilo-vscode": {
       "name": "kilo-code",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
         "@kilocode/kilo-gateway": "workspace:*",
@@ -515,7 +515,7 @@
     },
     "packages/kilo-web-ui": {
       "name": "@kilocode/kilo-web-ui",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@kilocode/kilo-ui": "workspace:*",
         "@kobalte/core": "catalog:",
@@ -532,7 +532,7 @@
     },
     "packages/llm": {
       "name": "@opencode-ai/llm",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@opencode-ai/schema": "workspace:*",
         "@smithy/eventstream-codec": "4.2.14",
@@ -551,7 +551,7 @@
     },
     "packages/opencode": {
       "name": "@kilocode/cli",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "bin": {
         "kilo": "./bin/kilo",
         "kilocode": "./bin/kilo",
@@ -719,7 +719,7 @@
     },
     "packages/plugin": {
       "name": "@kilocode/plugin",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@ai-sdk/provider": "3.0.8",
         "@kilocode/sdk": "workspace:*",
@@ -748,7 +748,7 @@
     },
     "packages/plugin-atomic-chat": {
       "name": "@kilocode/plugin-atomic-chat",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@kilocode/plugin": "workspace:*",
       },
@@ -762,7 +762,7 @@
     },
     "packages/protocol": {
       "name": "@opencode-ai/protocol",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@opencode-ai/schema": "workspace:*",
         "effect": "catalog:",
@@ -775,7 +775,7 @@
     },
     "packages/schema": {
       "name": "@opencode-ai/schema",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "effect": "catalog:",
       },
@@ -787,7 +787,7 @@
     },
     "packages/script": {
       "name": "@opencode-ai/script",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "semver": "^7.6.3",
       },
@@ -798,7 +798,7 @@
     },
     "packages/sdk-next": {
       "name": "@opencode-ai/sdk-next",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@opencode-ai/client": "workspace:*",
         "@opencode-ai/core": "workspace:*",
@@ -813,7 +813,7 @@
     },
     "packages/sdk/js": {
       "name": "@kilocode/sdk",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "cross-spawn": "catalog:",
       },
@@ -828,7 +828,7 @@
     },
     "packages/server": {
       "name": "@opencode-ai/server",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@opencode-ai/core": "workspace:*",
         "@opencode-ai/protocol": "workspace:*",
@@ -843,7 +843,7 @@
     },
     "packages/session-ui": {
       "name": "@opencode-ai/session-ui",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "catalog:",
@@ -888,7 +888,7 @@
     },
     "packages/storybook": {
       "name": "@opencode-ai/storybook",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "devDependencies": {
         "@opencode-ai/session-ui": "workspace:*",
         "@opencode-ai/ui": "workspace:*",
@@ -913,7 +913,7 @@
     },
     "packages/tui": {
       "name": "@opencode-ai/tui",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@kilocode/plugin": "workspace:*",
         "@kilocode/sdk": "workspace:*",
@@ -939,7 +939,7 @@
     },
     "packages/ui": {
       "name": "@opencode-ai/ui",
-      "version": "7.4.22",
+      "version": "7.4.23",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "catalog:",

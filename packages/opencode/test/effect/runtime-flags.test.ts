@@ -15,8 +15,21 @@ describe("RuntimeFlags", () => {
       const flags = yield* readFlags.pipe(Effect.provide(fromConfig({})))
 
       expect(flags.autoShare).toBe(false)
+      expect(flags.experimentalBackgroundSubagents).toBe(true) // kilocode_change
     }),
   )
+
+  // kilocode_change start - preserve the background-subagent kill switch
+  it.effect("allows disabling background subagents explicitly", () =>
+    Effect.gen(function* () {
+      const flags = yield* readFlags.pipe(
+        Effect.provide(fromConfig({ KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS: "false" })),
+      )
+
+      expect(flags.experimentalBackgroundSubagents).toBe(false)
+    }),
+  )
+  // kilocode_change end
 
   it.effect("layer parses plugin flags from the active ConfigProvider", () =>
     Effect.gen(function* () {
@@ -51,7 +64,6 @@ describe("RuntimeFlags", () => {
       expect(flags.enableExperimentalModels).toBe(true)
       expect(flags.enableQuestionTool).toBe(true)
       expect(flags.experimentalReferences).toBe(true)
-      expect(flags.experimentalBackgroundSubagents).toBe(true)
       expect(flags.experimentalLspTy).toBe(false)
       expect(flags.experimentalLspTool).toBe(true)
       expect(flags.experimentalOxfmt).toBe(true)

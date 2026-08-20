@@ -197,6 +197,24 @@ export const kiloScenarios: Scenario[] = [
       body: { name: "httpapi-mcp", config: { type: "remote", url: "https://mcp-edit.example.test" } },
     }))
     .json(200, object),
+  // MCP Apps experimental endpoints are gated behind experimentalMcpApps; the exerciser runs with the
+  // flag off, so both routes return 404 before touching any MCP client.
+  http.protected
+    .post("/experimental/resource/read", "mcp.readResource")
+    .at((ctx) => ({
+      path: "/experimental/resource/read",
+      headers: ctx.headers(),
+      body: { server: "httpapi-missing", uri: "ui://httpapi/missing" },
+    }))
+    .status(404),
+  http.protected
+    .post("/experimental/mcp/call-tool", "mcp.callTool")
+    .at((ctx) => ({
+      path: "/experimental/mcp/call-tool",
+      headers: ctx.headers(),
+      body: { server: "httpapi-missing", name: "noop", arguments: {} },
+    }))
+    .status(404),
   http.protected.get("/config/sources", "config.sources").json(200, object),
   http.protected.get("/tui/config", "tui.config.get").json(200, object),
   http.protected.get("/tui/keybinds", "tui.keybind.list").json(200, object),
@@ -547,6 +565,27 @@ export const kiloScenarios: Scenario[] = [
       object(body.totals)
       check(body.models.length === 0, "a new session should have no model usage")
     }),
+  http.protected
+    .get("/kilocode/background-jobs", "kilocode.backgroundJobs")
+    .at((ctx) => ({
+      path: "/kilocode/background-jobs?sessionID=ses_httpapi_missing",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      array(body)
+      for (const item of body) {
+        object(item)
+        check(typeof item.id === "string", "background job should include an id")
+        check(typeof item.status === "string", "background job should include a status")
+      }
+    }),
+  http.protected
+    .post("/kilocode/background-jobs/{jobID}/cancel", "kilocode.backgroundJob.cancel")
+    .at((ctx) => ({
+      path: route("/kilocode/background-jobs/{jobID}/cancel", { jobID: "job_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
   http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()

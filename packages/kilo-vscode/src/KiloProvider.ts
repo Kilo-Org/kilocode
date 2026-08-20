@@ -464,6 +464,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private createWorktreeHandler: ((baseBranch?: string, branchName?: string) => Promise<void>) | null = null
 
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
+  private diffViewerProvider: import("./diff/DiffViewerProvider").DiffViewerProvider | undefined
+  private documentViewerProvider: import("./DocumentViewerProvider").DocumentViewerProvider | undefined
   private remoteService: RemoteStatusService | null = null
   private unsubscribeRemote: (() => void) | null = null
 
@@ -559,6 +561,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
     this.diffVirtualProvider = provider
+  }
+
+  public setDiffViewerProvider(provider: import("./diff/DiffViewerProvider").DiffViewerProvider): void {
+    this.diffViewerProvider = provider
+  }
+
+  public setDocumentViewerProvider(provider: import("./DocumentViewerProvider").DocumentViewerProvider): void {
+    this.documentViewerProvider = provider
   }
 
   getTelemetryProperties(): Record<string, unknown> {
@@ -1023,6 +1033,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           openSessions: (ids) => this.trackOpenSessions(ids),
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
+          backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),
+          cancelBackgroundJob: (jobID, sessionID, requestID) => this.cancelBackgroundJob(jobID, sessionID, requestID),
+          backgroundSubagents: (sessionID) => this.backgroundSubagents(sessionID),
         })
       ) {
         return
@@ -1212,7 +1225,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.handleReload().catch((e) => console.error("[Kilo New] KiloProvider: Reload failed:", e))
           break
         case "openSubAgentViewer":
-          vscode.commands.executeCommand("kilo-code.new.openSubAgentViewer", message.sessionID, message.title)
+          vscode.commands.executeCommand(
+            "kilo-code.new.openSubAgentViewer",
+            message.sessionID,
+            message.title,
+            this.getWorkspaceDirectory(message.parentSessionID),
+          )
           break
         case "saveImage":
           return saveImage(this.getWorkspaceDirectory(this.currentSession?.id), message)
@@ -1592,6 +1610,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // the live currentSession — see editor-actions.ts's validateFiles case.
       dir: (sessionID) => this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
       diff: this.diffVirtualProvider,
+      openMarkdown: (file, sessionID) => {
+        if (!this.documentViewerProvider) return false
+        this.documentViewerProvider.openFromCommand({
+          sessionId: sessionID,
+          directory: this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
+          file,
+        })
+        return true
+      },
       storage: this.extensionContext?.globalStorageUri,
       post: (msg) => this.postMessage(msg),
     })
@@ -2019,7 +2046,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
     // Replace competes for the spinner and cancels earlier loads; prepend/reconcile run in parallel.
-    const abort = mode === "replace" ? new AbortController() : undefined
+    const abort = mode === "replace" && options.focus !== false ? new AbortController() : undefined
     if (abort) {
       this.loadMessagesAbort?.abort()
       this.loadMessagesAbort = abort
@@ -2797,6 +2824,67 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
     this.postMessage({ type: "speechToTextModelsLoaded" as const, models: result.models })
+  }
+
+  private async fetchAndSendBackgroundJobs(sessionID: string, requestID: string): Promise<void> {
+    const client = this.client
+    if (!client || this.connectionState !== "connected") {
+      this.postMessage({ type: "backgroundJobsLoaded", sessionID, requestID, jobs: [], error: "Not connected" })
+      return
+    }
+    try {
+      const { data } = await client.kilocode.backgroundJobs(
+        { directory: this.getWorkspaceDirectory(sessionID), sessionID },
+        { throwOnError: true },
+      )
+      this.postMessage({ type: "backgroundJobsLoaded", sessionID, requestID, jobs: data })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch background jobs:", error)
+      this.postMessage({
+        type: "backgroundJobsLoaded",
+        sessionID,
+        requestID,
+        jobs: [],
+        error: getErrorMessage(error) || "Failed to fetch background jobs",
+      })
+    }
+  }
+
+  private async cancelBackgroundJob(jobID: string, sessionID: string, requestID: string): Promise<void> {
+    const client = this.client
+    if (!client || this.connectionState !== "connected") {
+      this.postMessage({ type: "backgroundJobsLoaded", sessionID, requestID, jobs: [], error: "Not connected" })
+      return
+    }
+    try {
+      await client.kilocode.backgroundJob.cancel(
+        { jobID, directory: this.getWorkspaceDirectory(sessionID) },
+        { throwOnError: true },
+      )
+      await this.fetchAndSendBackgroundJobs(sessionID, requestID)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to cancel background job:", error)
+      this.postMessage({
+        type: "backgroundJobsLoaded",
+        sessionID,
+        requestID,
+        jobs: [],
+        error: getErrorMessage(error) || "Failed to cancel background job",
+      })
+    }
+  }
+
+  private async backgroundSubagents(sessionID: string): Promise<void> {
+    const client = this.client
+    if (!client || this.connectionState !== "connected") return
+    try {
+      await client.experimental.session.background(
+        { sessionID, directory: this.getWorkspaceDirectory(sessionID) },
+        { throwOnError: true },
+      )
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to background subagents:", error)
+    }
   }
 
   /**

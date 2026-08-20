@@ -10,6 +10,9 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartHeader
+import ai.kilocode.client.session.views.tool.ApprovalReasonTarget
+import ai.kilocode.client.session.views.tool.ToolApprovalFooter
+import ai.kilocode.client.session.views.tool.approvalReasonsVisible
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.TodoDto
@@ -19,8 +22,11 @@ import com.intellij.util.ui.JBUI
 import java.awt.Font
 import javax.swing.JComponent
 
-class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
-    AbstractSessionPartView(parts.header, parts.list, expanded = true) {
+class TodoWriteView(
+    tool: Tool,
+    private val parts: TodoParts = todoParts(),
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { parts.list }, { footer }, expanded = true), ApprovalReasonTarget {
 
     override val contentId = tool.id
 
@@ -62,7 +68,15 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
         changed = setFont(parts.title, style.boldEditorFont) || changed
         changed = setFont(parts.sub, style.transcriptFont) || changed
         parts.list.applyStyle(style)
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     fun labelText(): String = listOf(parts.title.text, parts.sub.text).filter { it.isNotBlank() }.joinToString(" ")
@@ -89,6 +103,7 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
             hiddenBefore = data.before,
             hiddenAfter = data.after,
         )
+        footer.update(item, approvalReasonsVisible())
         syncExpandable(true)
         refresh()
     }

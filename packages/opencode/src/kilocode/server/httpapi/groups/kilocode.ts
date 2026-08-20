@@ -5,6 +5,7 @@ import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/midd
 import {
   WorkspaceRoutingMiddleware,
   WorkspaceRoutingQuery,
+  WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import { AnacondaDesktopApi } from "./anaconda-desktop"
@@ -26,6 +27,22 @@ import { CommandFiles } from "@/kilocode/command-files"
 
 const root = "/kilocode"
 const Scope = Schema.Literals(["global", "project"])
+
+export const BackgroundJobInfo = Schema.Struct({
+  id: Schema.String,
+  type: Schema.String,
+  title: Schema.optional(Schema.String),
+  status: Schema.Literals(["running", "completed", "error", "cancelled"]),
+  started_at: Schema.Number,
+  completed_at: Schema.optional(Schema.Number),
+  error: Schema.optional(Schema.String),
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+})
+
+export const BackgroundJobsQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  sessionID: SessionID,
+})
 
 export const RemoveSkillPayload = Schema.Struct({
   location: Schema.String,
@@ -58,6 +75,8 @@ export const KilocodePaths = {
   agentManagerReply: `${root}/agent-manager/:requestID/reply`,
   agentManagerReject: `${root}/agent-manager/:requestID/reject`,
   sessionModelUsage: `/session/:sessionID/model-usage`,
+  backgroundJobs: `${root}/background-jobs`,
+  backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -204,6 +223,28 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.sessionModelUsage",
             summary: "Get session model usage",
             description: "Get token usage and direct cost by model for the complete top-level session tree.",
+          }),
+        ),
+        HttpApiEndpoint.get("backgroundJobs", KilocodePaths.backgroundJobs, {
+          query: BackgroundJobsQuery,
+          success: described(Schema.Array(BackgroundJobInfo), "Background jobs"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.backgroundJobs",
+            summary: "List background jobs",
+            description: "List background subagent jobs owned by one parent session.",
+          }),
+        ),
+        HttpApiEndpoint.post("backgroundJobCancel", KilocodePaths.backgroundJobCancel, {
+          params: { jobID: Schema.String },
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Background job cancelled"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.backgroundJob.cancel",
+            summary: "Cancel background job",
+            description: "Cancel one background subagent job and its session tree.",
           }),
         ),
       )

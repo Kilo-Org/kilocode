@@ -8,12 +8,13 @@
  * a turn starts or ends.
  */
 
-import { type Component, Show, createSignal, createEffect, onCleanup } from "solid-js"
+import { type Component, Show, createSignal, createEffect, createMemo, onCleanup } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { StatusText } from "./StatusText"
 import { tracksElapsed } from "./working-indicator-utils"
 
 export const WorkingIndicator: Component = () => {
@@ -61,18 +62,15 @@ export const WorkingIndicator: Component = () => {
     onCleanup(() => clearInterval(id))
   })
 
-  const statusText = () => {
+  // Memoized so an unchanged label never reaches `StatusText`: the status is
+  // recomputed on every streamed part, and each pass through would otherwise
+  // replay the swap animation.
+  const statusText = createMemo(() => {
     const info = session.statusInfo()
-    if (info.type === "retry") {
-      const countdown = retryCountdown()
-      const retryMsg = info.message || language.t("session.status.retry")
-      return countdown > 0 ? `${retryMsg} (${countdown}s)` : retryMsg
-    }
-    if (info.type === "offline") {
-      return info.message || language.t("session.status.offline")
-    }
+    if (info.type === "retry") return info.message || language.t("session.status.retry")
+    if (info.type === "offline") return info.message || language.t("session.status.offline")
     return session.statusText() ?? language.t("ui.sessionTurn.status.thinking")
-  }
+  })
 
   const formatElapsed = () => {
     const s = elapsed()
@@ -84,6 +82,10 @@ export const WorkingIndicator: Component = () => {
 
   const isRetrying = () => session.statusInfo().type === "retry"
 
+  // The counter's slot is reserved for exactly as long as the turn is timed, so a
+  // state that never counts (a retry with no start time) keeps the row compact.
+  const timing = () => tracksElapsed(session.status(), session.submitting(), session.busySince())
+
   const handleCancelRetry = () => {
     const sid = session.currentSessionID()
     if (sid) {
@@ -94,9 +96,18 @@ export const WorkingIndicator: Component = () => {
   return (
     <div class="working-indicator">
       <Spinner />
-      <span class="working-text">{statusText()}</span>
-      <Show when={elapsed() > 0}>
-        <span class="working-elapsed">{formatElapsed()}</span>
+      <StatusText text={statusText()} />
+      {/* Kept out of the label: a countdown inside the morphing text would swap it
+          once a second, and every tick would read as a new status. */}
+      <Show when={isRetrying() && retryCountdown() > 0}>
+        <span class="working-count">({retryCountdown()}s)</span>
+      </Show>
+      {/* Laid out for the whole turn and only faded until the first tick: mounting
+          the counter a second in shifted the whole cluster sideways. */}
+      <Show when={timing()}>
+        <span class="working-elapsed" data-empty={elapsed() > 0 ? undefined : ""}>
+          {formatElapsed()}
+        </span>
       </Show>
       <Show when={isRetrying()}>
         <Button

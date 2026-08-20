@@ -27,6 +27,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/documents/DocumentPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/ImageDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownDiffView.tsx"),
@@ -525,6 +526,12 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = body("onSessionMessage")
     expect(text).toContain("loadMessages")
     expect(text).toContain("syncOnSessionSwitch")
+  })
+
+  it("does not activate inspector-only transcript loads", () => {
+    const text = body("onSessionMessage")
+    expect(text).toContain("m.focus === false")
+    expect(text.indexOf("m.focus === false")).toBeLessThan(text.indexOf("this.activeSessionId = m.sessionID"))
   })
 
   it("terminal context reveals the terminal associated with the originating session", () => {

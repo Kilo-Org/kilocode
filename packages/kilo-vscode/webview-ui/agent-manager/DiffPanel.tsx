@@ -92,6 +92,7 @@ interface DiffPanelProps {
   onExpand?: () => void
   onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string, line?: number) => void
+  onOpenDocument?: (relativePath: string) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
   activeTerminalId?: string
@@ -646,6 +647,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                   onClick={(e: MouseEvent) => {
                                     e.stopPropagation()
                                     props.onOpenFile?.(diff.file)
+                                  }}
+                                />
+                              </Tooltip>
+                            </Show>
+                            <Show when={isMarkdownFile(diff.file) && props.onOpenDocument && !isDeleted()}>
+                              <Tooltip value={t("agentManager.documents.preview")} placement="top">
+                                <IconButton
+                                  icon="book-open-check"
+                                  size="small"
+                                  variant="ghost"
+                                  label={t("agentManager.documents.preview")}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    props.onOpenDocument?.(diff.file)
                                   }}
                                 />
                               </Tooltip>

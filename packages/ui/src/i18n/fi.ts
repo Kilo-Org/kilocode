@@ -170,6 +170,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Luotu",
   "ui.patch.action.moved": "Siirretty",
   "ui.patch.action.patched": "Paikattu",
+  "ui.patch.action.plan": "Suunnitelma", // kilocode_change
   "ui.question.subtitle.answered": "Vastatut kysymykset: {{count}}",
   "ui.question.answer.none": "(ei vastausta)",
   "ui.question.review.notAnswered": "(ei vastattu)",

@@ -677,7 +677,7 @@ export class AgentManagerProvider implements Disposable {
       })
       return null
     }
-
+    if (m.type === "loadMessages" && m.focus === false) return msg
     if (m.type === "loadMessages") {
       this.activeSessionId = m.sessionID
       this.terminalManager.syncOnSessionSwitch(m.sessionID)
@@ -854,39 +854,21 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.requestDiffBranches") {
-      void this.sendDiffBranches(m.sessionId, m.scope)
+      void this.diffs.postBranches(composeDiffId(m.sessionId, normalizeScope(m.scope)))
       return null
     }
     if (m.type === "agentManager.setDiffBaseBranch") {
       void this.diffs
         .setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch)
         .catch((err) => this.log("Failed to set diff base:", err instanceof Error ? err.message : String(err)))
-        .then(() => void this.sendDiffBranches(m.sessionId, m.scope))
+        .then(() => void this.diffs.postBranches(composeDiffId(m.sessionId, normalizeScope(m.scope))))
       return null
     }
     if (m.type === "agentManager.openFile") {
       this.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
       return null
     }
-  }
-
-  private async sendDiffBranches(sessionId: string, scope?: string): Promise<void> {
-    const id = composeDiffId(sessionId, normalizeScope(scope))
-    const result = await this.diffs.branches(id).catch((err) => {
-      this.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
-      return undefined
-    })
-    if (!result) return
-    this.postToWebview({
-      type: "agentManager.diffBranches",
-      sessionId: id,
-      branches: result.branches,
-      defaultBranch: result.defaultBranch,
-      autoBase: result.autoBase,
-      currentBase: result.currentBase,
-      isAuto: result.isAuto,
-      currentBranch: result.currentBranch,
-    })
+    if (m.type === "agentManager.requestDocument") return this.diffs.document(m.sessionId, m.file, m.contextKey)
   }
 
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {

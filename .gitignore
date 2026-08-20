@@ -67,6 +67,11 @@ tsconfig.tsbuildinfo
 .kilocode/yarn.lock
 .kilocode/node_modules
 
+# Runtime-generated per-directory TUI config (e.g. written by `PATCH /tui/config`
+# during local testing); should never be committed.
+packages/*/.kilo/tui.json
+packages/*/.kilo/tui.jsonc
+
 # Test Artifacts
 packages/app/.artifacts/
 packages/opencode/.artifacts/

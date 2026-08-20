@@ -174,6 +174,7 @@ export const dict: Record<Keys, string> = {
   "ui.patch.action.created": "Opprettet",
   "ui.patch.action.moved": "Flyttet",
   "ui.patch.action.patched": "Oppdatert",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} besvart",
   "ui.question.answer.none": "(ingen svar)",

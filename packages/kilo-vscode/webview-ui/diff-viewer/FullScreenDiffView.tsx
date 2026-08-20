@@ -91,6 +91,7 @@ interface FullScreenDiffViewProps {
   onMarkdownRenderChange?: (render: boolean) => void
   onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string, line?: number) => void
+  initialFile?: string
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
   activeTerminalId?: string
@@ -202,6 +203,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   let nextId = 0
   let draftMeta: AnnotationMeta | null = composer().draft
   let editMeta: AnnotationMeta | null = composer().edit
+  let initialFileKey: string | undefined
   let rootRef: HTMLDivElement | undefined
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
@@ -255,6 +257,18 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     focusRoot()
   }
 
+  createEffect(
+    on(
+      () => [props.sessionKey, props.diffs, props.initialFile] as const,
+      ([key, diffs, initial]) => {
+        if (!initial || !diffs.some((diff) => diff.file === initial)) return
+        const next = `${key ?? ""}:${initial}`
+        if (initialFileKey === next) return
+        initialFileKey = next
+        setActiveFile(initial)
+      },
+    ),
+  )
   createEffect(
     on(
       () => props.sessionKey,

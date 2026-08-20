@@ -37,6 +37,10 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
         assertEquals("ai.kilocode.jetbrains.settings.context", ContextConfigurable.ID)
     }
 
+    fun `test child advanced id matches xml registration`() {
+        assertEquals("ai.kilocode.jetbrains.settings.advanced", AdvancedConfigurable.ID)
+    }
+
     fun `test child provider and behavior ids match xml registration`() {
         assertEquals("ai.kilocode.jetbrains.settings.providers", ProvidersConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior", AgentBehaviorConfigurable.ID)
@@ -111,7 +115,7 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
         edt {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
-            assertEquals(listOf("User Profile", "Models", "Providers", "Agent Behavior", "Auto-Approve", "Context"), labels)
+            assertEquals(listOf("User Profile", "Models", "Providers", "Agent Behavior", "Auto-Approve", "Context", "Advanced"), labels)
         }
     }
 

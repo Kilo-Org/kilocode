@@ -1383,7 +1383,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
         onLoadOlder={() => session.loadOlderMessages()}
         onWheel={(deltaY: number) => {
           const el = scrollEl()
-          if (el) el.scrollTop += deltaY
+          if (!el) return
+          if (deltaY < 0 && el.scrollHeight - el.clientHeight > 1) autoScroll.pause()
+          el.scrollTop += deltaY
         }}
         height={height}
         hasOlder={session.hasOlderMessages}

@@ -275,6 +275,7 @@ function getWebviewsConfig() {
       kiloclaw: "webview-ui/kiloclaw/index.tsx",
       marketplace: "webview-ui/marketplace/index.tsx",
       "diff-viewer": "webview-ui/diff-viewer/index.tsx",
+      documents: "webview-ui/documents/index.tsx",
       "diff-virtual": "webview-ui/diff-virtual/index.tsx",
       webview: "webview-ui/src/index.tsx",
     },
