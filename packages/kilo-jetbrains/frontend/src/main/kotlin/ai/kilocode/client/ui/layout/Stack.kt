@@ -218,7 +218,7 @@ open class Stack(
                             if (seen) main = safe(main, space ?: gap)
                             seen = true
                             ready = true
-                            val dim = dim(entry.comp, kind, cross(parent))
+                            val dim = dim(entry.comp, kind)
                             main = safe(main, if (axis.vertical) dim.height else dim.width)
                             cross = maxOf(cross, if (axis.vertical) dim.width else dim.height)
                         }
@@ -230,23 +230,10 @@ open class Stack(
             return Dimension(safe(w, ins.left + ins.right), safe(h, ins.top + ins.bottom))
         }
 
-        private fun dim(comp: Component, kind: Int, cross: Int): Dimension {
-            if (cross > 0) {
-                if (axis.vertical) {
-                    comp.setSize(cross, comp.height.coerceAtLeast(1))
-                } else {
-                    comp.setSize(comp.width.coerceAtLeast(1), cross)
-                }
-            }
+        private fun dim(comp: Component, kind: Int): Dimension {
             if (kind == MIN) return comp.minimumSize
             if (kind == MAX) return comp.maximumSize
             return comp.preferredSize
-        }
-
-        private fun cross(parent: Container): Int {
-            val ins = parent.insets
-            if (axis.vertical) return maxOf(0, parent.width - ins.left - ins.right)
-            return maxOf(0, parent.height - ins.top - ins.bottom)
         }
     }
 
