@@ -612,6 +612,29 @@ describe("Cloud import parts cleanup contract", () => {
   })
 })
 
+describe("Optimistic parts preservation and smooth status contract", () => {
+  const source = readFile(SESSION_FILE)
+
+  it("handleMessageCreated preserves optimistic parts instead of deleting them", () => {
+    const created = extractFunctionBody(source, "handleMessageCreated")
+    expect(created).not.toMatch(/delete\s+p\[message\.id\]/)
+    expect(created).toContain("pendingOptimistic.get(message.sessionID)")
+  })
+
+  it("handlePartUpdated replaces matching optimistic parts in place", () => {
+    const updated = extractFunctionBody(source, "handlePartUpdated")
+    expect(updated).toContain("optimisticParts.get(effectiveMessageID)")
+    expect(updated).toContain("mergeOptimisticPart")
+  })
+
+  it("statusText derives status from the active turn instead of queued follow-ups", () => {
+    const match = source.match(/const statusText = createMemo<string \| undefined>\(\(\) => \{([\s\S]*?)\n  \}\)/)
+    expect(match).not.toBeNull()
+    expect(match![1]).toContain("activeUserMessageID(msgs, statusInfo()")
+    expect(match![1]).toContain('language.t("ui.sessionTurn.status.thinking")')
+  })
+})
+
 describe("KiloConnectionService pruneSession contract", () => {
   const source = readFile(CONNECTION_SERVICE_FILE)
 

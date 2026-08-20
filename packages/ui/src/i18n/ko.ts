@@ -171,6 +171,7 @@ export const dict = {
   "ui.patch.action.created": "생성됨",
   "ui.patch.action.moved": "이동됨",
   "ui.patch.action.patched": "패치됨",
+  "ui.patch.action.plan": "계획", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}}개 답변됨",
   "ui.question.answer.none": "(답변 없음)",

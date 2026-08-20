@@ -11,6 +11,7 @@ import {
   versionedName,
 } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+import { GitOps } from "../../src/agent-manager/GitOps"
 import type { PRInfo } from "../../src/agent-manager/git-import"
 import simpleGit from "simple-git"
 
@@ -46,9 +47,9 @@ async function createTempRepo(): Promise<string> {
   return dir
 }
 
-function createManager(root: string): WorktreeManager {
+function createManager(root: string, ops?: GitOps): WorktreeManager {
   const logs: string[] = []
-  return new WorktreeManager(root, (msg) => logs.push(msg))
+  return new WorktreeManager(root, (msg) => logs.push(msg), ops)
 }
 
 // Test-only helper to verify metadata writes keep the temp worktree checkout clean.
@@ -1043,6 +1044,26 @@ describe("WorktreeManager.resolveStartPoint", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.resolveBaseBranch", () => {
+  it("uses the shared remote default instead of stale local metadata", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    gitExec(["git", "-C", clone, "branch", "master"])
+    gitExec(["git", "-C", clone, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/master"])
+    const ops = new GitOps({
+      log: () => undefined,
+      runGit: async (args) => {
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
+        if (args[0] === "ls-remote") return "ref: refs/heads/main\tHEAD\nabc123\tHEAD"
+        return ""
+      },
+    })
+    const mgr = createManager(clone, ops)
+
+    expect(await mgr.resolveBaseBranch()).toEqual({ branch: "main", remote: "origin" })
+    expect((await simpleGit(clone).raw(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])).trim()).toBe(
+      "origin/master",
+    )
+  })
+
   it("returns bare branch + remote when origin remote and tracking ref exist", async () => {
     const { clone } = await createTempRepoWithOrigin()
     const mgr = createManager(clone)

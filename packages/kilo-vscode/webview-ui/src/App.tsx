@@ -121,6 +121,11 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   const open = (filePath: string, line?: number, column?: number, sessionID?: string) => {
+    const event = new CustomEvent("kilo:open-file", {
+      cancelable: true,
+      detail: { filePath, line, column, sessionID },
+    })
+    if (!window.dispatchEvent(event)) return
     vscode.postMessage({ type: "openFile", filePath, line, column, sessionID })
   }
 
