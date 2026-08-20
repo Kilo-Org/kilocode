@@ -1,18 +1,21 @@
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
-import { InstanceState } from "@/effect/instance-state"
+import { InstanceRef } from "@/effect/instance-ref"
+import { registerDisposer } from "@/effect/instance-registry"
 import { makeRuntime } from "@/effect/run-service"
+import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { appendTerminalOutput } from "@/kilocode/interactive-terminal/output"
 import { model as modelEnv } from "@/kilocode/process/env"
 import { Identifier } from "@/id/id"
-import { Instance, type InstanceContext } from "@/kilocode/instance"
+import { capture, Instance, type InstanceContext } from "@/kilocode/instance"
 import { SessionID } from "@/session/schema"
 import { Shell } from "@opencode-ai/core/shell"
 import { NonNegativeInt, PositiveInt, optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
 import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Disp, Proc } from "@opencode-ai/core/pty/driver"
-import { Context, Effect, Layer, Schema, Types } from "effect"
+import { Context, Effect, Layer, LayerMap, Schema, Types } from "effect"
+import * as Scope from "effect/Scope"
 import path from "path"
 import stripAnsi from "strip-ansi"
 import z from "zod"
@@ -135,9 +138,12 @@ export namespace InteractiveTerminal {
     terminals: Map<ID, Active>
   }
 
-  class StateService extends Context.Service<StateService, { readonly get: () => Effect.Effect<State> }>()(
-    "@kilocode/InteractiveTerminal.State",
-  ) {}
+  class StateService extends Context.Service<StateService, State>()("@kilocode/InteractiveTerminal.State") {}
+
+  class RuntimeService extends Context.Service<
+    RuntimeService,
+    { readonly get: (ctx: InstanceContext) => Effect.Effect<State, never, Scope.Scope> }
+  >()("@kilocode/InteractiveTerminal.Runtime") {}
 
   function clone(info: Info): Info {
     return { ...info, time: { ...info.time } }
@@ -358,32 +364,52 @@ export namespace InteractiveTerminal {
   }
 
   const stateLayer = Layer.effect(
-    StateService,
+    RuntimeService,
     Effect.gen(function* () {
-      const ref = yield* InstanceState.make(
-        Effect.fn("InteractiveTerminal.state")(function* (ctx) {
-          const state: State = { ctx, dir: ctx.directory, terminals: new Map() }
-          yield* Effect.addFinalizer(() =>
-            Effect.promise(async () => {
-              await Promise.all(
-                Array.from(state.terminals.values()).map((active) =>
-                  finish(state, active, { closedBy: "abort", kill: true, silent: true }),
-                ),
+      const states = yield* LayerMap.make(
+        (_dir: string) =>
+          Layer.effect(
+            StateService,
+            Effect.gen(function* () {
+              const ctx = yield* InstanceRef
+              if (!ctx) return yield* Effect.die(new Error("Instance context not available"))
+              const state: State = { ctx, dir: ctx.directory, terminals: new Map() }
+              yield* Effect.addFinalizer(() =>
+                Effect.promise(async () => {
+                  await Promise.all(
+                    Array.from(state.terminals.values()).map((active) =>
+                      finish(state, active, { closedBy: "abort", kill: true, silent: true }),
+                    ),
+                  )
+                  state.terminals.clear()
+                }),
               )
-              state.terminals.clear()
+              return state
             }),
-          )
-          return state
-        }),
+          ),
+        { idleTimeToLive: Number.POSITIVE_INFINITY },
       )
-      return StateService.of({ get: () => InstanceState.get(ref) })
+
+      const off = registerDisposer((dir) => Effect.runPromise(states.invalidate(dir)))
+      yield* Effect.addFinalizer(() => Effect.sync(off))
+
+      return RuntimeService.of({
+        get: (ctx) =>
+          states.contextEffect(ctx.directory).pipe(
+            Effect.provideService(InstanceRef, ctx),
+            Effect.map((value) => Context.get(value, StateService)),
+          ),
+      })
     }),
   )
 
-  const runtime = makeRuntime(StateService, stateLayer)
+  const runtime = makeRuntime(RuntimeService, stateLayer)
+  KiloShutdown.register(() => runtime.dispose())
 
   function state() {
-    return runtime.runPromise((service) => service.get())
+    const ctx = capture()
+    if (!ctx) return Promise.reject(new Error("Instance context not available"))
+    return runtime.runPromise((service) => service.get(ctx).pipe(Effect.scoped))
   }
 
   export async function run(input: RunInput) {

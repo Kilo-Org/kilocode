@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.platform.rpc.RemoteApiProviderService
@@ -64,6 +65,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Observe live session status changes. */
     suspend fun statuses(): Flow<Map<String, SessionStatusDto>>
+
+    /** Observe live per-session activity with the session's directory. */
+    suspend fun activity(): Flow<Map<String, SessionActivityDto>>
 
     /** Register a worktree directory override for a session. */
     suspend fun setDirectory(id: String, directory: String)

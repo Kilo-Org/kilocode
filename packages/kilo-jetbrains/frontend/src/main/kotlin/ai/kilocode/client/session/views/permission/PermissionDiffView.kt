@@ -1,44 +1,102 @@
 package ai.kilocode.client.session.views.permission
 
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionDiffOpener
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.PermissionFileDiff
-import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.ChangesCardView
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.views.tool.PatchBody
 import ai.kilocode.client.ui.DiffStatBadge
-import ai.kilocode.client.ui.layout.Stack
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.components.BorderLayoutPanel
+import ai.kilocode.rpc.dto.DiffFileDto
+import com.intellij.util.concurrency.annotations.RequiresEdt
 
 /**
- * Renders a single [PermissionFileDiff] inside a permission card as a compact diff-stat badge.
- * Patch content and file path are intentionally not displayed here; the permission target row
- * already shows the path.
+ * Renders proposed file changes inside a permission card with the same expandable body, popup
+ * preview, and full diff-editor affordance used for modified files.
  */
-class PermissionDiffView(
-    private val diff: PermissionFileDiff,
-) : BorderLayoutPanel(), SessionEditorStyleTarget {
+internal class PermissionDiffView private constructor(
+    openFile: SessionFileOpener,
+    selection: SessionSelection?,
+    parts: ChangesCardView.Header,
+    body: PatchBody,
+) : ChangesCardView(openFile, selection, parts, body, linkFiles = false) {
+    override val contentId = CONTENT_ID
 
-    private val badge = DiffStatBadge(diff.additions, diff.deletions)
+    private var requestId: String? = null
 
-    init {
-        isOpaque = false
-
-        val row = buildRow()
-        addToCenter(row)
+    constructor(
+        diffs: List<PermissionFileDiff>,
+        openFile: SessionFileOpener,
+        selection: SessionSelection?,
+    ) : this(openFile, selection, permissionHeader(), PatchBody(selection, openFile, linkFiles = false)) {
+        setDiffs(diffs)
     }
 
-    override fun applyStyle(style: SessionEditorStyle) {
-        // Badge colors are theme-derived and update through Swing repainting.
+    @RequiresEdt
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?, requestId: String?) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+        this.requestId = requestId
     }
 
-    private fun buildRow() = JBUI.Panels.simplePanel().apply {
-        isOpaque = false
-        border = JBUI.Borders.empty()
-
-        val inner = Stack.horizontal()
-        inner.add(badge)
-        addToCenter(inner)
+    @RequiresEdt
+    fun setDiffs(value: List<PermissionFileDiff>) {
+        val dtos = value.map(::dto)
+        if (items == dtos) return
+        render(dtos)
     }
 
-    // Test helpers
-    internal fun badgeForTest() = badge
+    @RequiresEdt
+    internal fun bodyCreated() = cardBodyCreated()
+
+    @RequiresEdt
+    internal fun badgeForTest() = parts.badge as DiffStatBadge
+
+    @RequiresEdt
+    internal fun openDiffForTest() = openDiffViewer()
+
+    @RequiresEdt
+    internal fun openDiffEnabledForTest() = parts.diff.isEnabled
+
+    @RequiresEdt
+    internal fun openDiffButtonForTest() = parts.diff
+
+    @RequiresEdt
+    internal fun openDiffAnchorForTest() = parts.anchor
+
+    @RequiresEdt
+    internal fun codeEditorsForTest() = cardCodeEditors()
+
+    @RequiresEdt
+    internal fun countTextForTest() = parts.count.text
+
+    override val popupKind = "permission"
+    override val popupName = "diff"
+
+    override fun openable(dto: DiffFileDto) = hasOpenableContent(dto)
+
+    override fun diffTitle() = KiloBundle.message("session.permission.diff")
+
+    override fun diffToken() = "permission:${sessionId ?: "pending"}:${requestId ?: "pending"}"
+
+    private companion object {
+        const val CONTENT_ID = "permission-diff"
+    }
 }
+
+private fun permissionHeader(): ChangesCardView.Header {
+    val badge = DiffStatBadge(0, 0)
+    return ChangesCardView.Header(KiloBundle.message("session.permission.diff"), badge, badge)
+}
+
+private fun dto(diff: PermissionFileDiff) = DiffFileDto(
+    file = diff.file,
+    additions = diff.additions,
+    deletions = diff.deletions,
+    patch = diff.patch,
+    before = diff.before,
+    after = diff.after,
+)
+
+private fun hasOpenableContent(dto: DiffFileDto) = !dto.patch.isNullOrBlank() || dto.before != null || dto.after != null

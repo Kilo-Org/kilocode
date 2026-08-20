@@ -416,6 +416,45 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseChatEvent - tool part parses typed approval metadata`() {
+            val data = globalEvent("""
+                "type": "message.part.updated",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "part": {
+                        "id": "part_bash",
+                        "sessionID": "ses_1",
+                        "messageID": "msg_1",
+                        "type": "tool",
+                        "tool": "bash",
+                        "callID": "call_bash",
+                        "state": {
+                            "status": "completed",
+                            "input": { "command": "pwd" },
+                            "metadata": {
+                                "approval": {
+                                    "source": "global",
+                                    "rule": { "permission": "bash", "pattern": "pwd", "action": "allow" },
+                                    "outsideWorkspace": true,
+                                    "outsideWorkspacePath": "/tmp/project"
+                                }
+                            }
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("message.part.updated", data) as ChatEventDto.PartUpdated
+
+            assertEquals("global", result.part.approval?.source)
+            assertEquals("bash", result.part.approval?.rulePermission)
+            assertEquals("pwd", result.part.approval?.rulePattern)
+            assertEquals("allow", result.part.approval?.ruleAction)
+            assertEquals(true, result.part.approval?.outsideWorkspace)
+            assertEquals("/tmp/project", result.part.approval?.outsideWorkspacePath)
+        }
+
+        @Test
         fun `parseChatEvent - empty top metadata todos overrides fallback todos`() {
             val data = globalEvent("""
                 "type": "message.part.updated",

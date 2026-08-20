@@ -194,6 +194,7 @@ export const dict = {
   "ui.patch.action.created": "作成済み",
   "ui.patch.action.moved": "移動済み",
   "ui.patch.action.patched": "パッチ適用済み",
+  "ui.patch.action.plan": "計画", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}}件回答済み",
   "ui.question.answer.none": "(回答なし)",
@@ -233,6 +234,5 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "変更あり",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}} 行中 {{kept}} 行を保持",
   // kilocode_change end
 }

@@ -1,6 +1,8 @@
 package ai.kilocode.client
 
+import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.notification.Notification
+import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.project.Project
@@ -22,12 +24,33 @@ object KiloNotifications {
         notification.notify(project)
     }
 
+    /** Error notification with a single expiring action (e.g. a retry). */
+    fun error(project: Project?, title: String, content: String?, actionLabel: String, action: () -> Unit) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup(GROUP)
+            ?.createNotification(title, content ?: "", NotificationType.ERROR)
+            ?: Notification(GROUP, title, content ?: "", NotificationType.ERROR)
+        notification.addAction(NotificationAction.createSimpleExpiring(actionLabel) { action() })
+        notification.notify(project)
+    }
+
     fun info(title: String, content: String? = null) {
         val project = ProjectManager.getInstance().openProjects.firstOrNull { !it.isDefault }
         val notification = NotificationGroupManager.getInstance()
             .getNotificationGroup(GROUP)
             ?.createNotification(title, content ?: "", NotificationType.INFORMATION)
             ?: Notification(GROUP, title, content ?: "", NotificationType.INFORMATION)
+        notification.notify(project)
+    }
+
+    fun suggestion(project: Project?, title: String, content: String?, actionLabel: String, action: () -> Unit) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup(GROUP)
+            ?.createNotification(title, content ?: "", NotificationType.INFORMATION)
+            ?: Notification(GROUP, title, content ?: "", NotificationType.INFORMATION)
+        notification.setSuggestionType(true)
+        notification.addAction(NotificationAction.createSimpleExpiring(actionLabel) { action() })
+        notification.addAction(NotificationAction.createSimpleExpiring(KiloBundle.message("common.dont.show.again")) {})
         notification.notify(project)
     }
 }

@@ -72,7 +72,6 @@ import { NotificationsProvider } from "../src/context/notifications"
 import { FeedbackProvider } from "../src/context/feedback"
 import { MemoryProvider } from "../src/context/memory"
 import { SessionProvider, useSession } from "../src/context/session"
-import { AgentRequirementsProvider } from "../src/context/agent-requirements"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
@@ -93,7 +92,7 @@ import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
 import { applyRunStatus } from "./project/run-status"
 import { clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
-import { selectLocalAction, selectWorktreeAction } from "./selection-actions"
+import { createSessionRestore, selectLocalAction, selectWorktreeAction } from "./selection-actions"
 import { DataBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
 import { useLanguage } from "../src/context/language"
@@ -142,10 +141,11 @@ import {
   resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
 } from "./terminal"
+import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
-import { PRPanel } from "./pr/PRPanel"
+import { PRPanelHost } from "./pr/PRPanelHost"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
@@ -178,9 +178,13 @@ import { initialMessage, seedInitialVariant } from "./initial-message"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
+import { SubagentPanel } from "./SubagentPanel"
+import { DocumentPanelHost } from "./documents/DocumentPanelHost"
+import { createDocumentInspector } from "../documents/state"
+import { createSubagentController } from "./subagent-tabs"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
-import { createChatFocus, createPromptFocus, hasQuestionOption } from "./focus"
+import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
 import { usePendingCreate } from "./pending-create"
 import { defaultBase as projectDefaultBase } from "./project/default-base"
 import "./agent-manager.css"
@@ -286,7 +290,6 @@ const AgentManagerContent: Component = () => {
   const sections = () => registry.active().sections()
   const setSections = (v: Parameters<Setter<SectionState[]>>[0]) => registry.active().setSections(v)
 
-  // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
 
@@ -306,8 +309,6 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // Diff and terminal views share one inspector width, restored from webview
-  // state so the user's divider position survives panel reloads.
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
@@ -321,20 +322,44 @@ const AgentManagerContent: Component = () => {
   const reviewComposer = createReviewComposer()
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
+  const documentInspector = createDocumentInspector(
+    vscode,
+    selection,
+    currentProjectId,
+    () => sidePanel() === SidePanel.Documents,
+    () => {
+      setHistory(false)
+      setReviewActive(false)
+      setSidePanel(SidePanel.Documents)
+    },
+    () => setSidePanel(null),
+  )
+  const subagentCtl = createSubagentController({
+    project: currentProjectId,
+    current: session.currentSessionID,
+    selection,
+    parts: session.getSessionToolParts,
+    visible: () => sidePanel() === SidePanel.Subagents,
+    sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
+    unsync: (id) => session.unsyncSession(id, "inspector"),
+    show: () => {
+      setHistory(false)
+      setReviewActive(false)
+      setSidePanel(SidePanel.Subagents)
+    },
+    hide: () => setSidePanel(null),
+  })
+  const subagents = subagentCtl.tabs
   const markdown = createMarkdownRender(vscode)
-  // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const worktreeStats = () => registry.active().worktreeStats()
 
   const prStatuses = () => registry.active().prStatuses()
-
   const runStatuses = () => registry.active().runStatuses()
   const setRunStatuses: Setter<Record<string, RunStatus>> = (v) => registry.active().setRunStatuses(v)
   const runScriptConfigured = () => registry.active().runScriptConfigured()
   const setRunScriptConfigured = (v: Parameters<Setter<boolean>>[0]) => registry.active().setRunScriptConfigured(v)
 
-  // Local repo git stats (branch name, diff additions/deletions, commits)
   const localStats = () => registry.active().localStats()
-
   const projectLive = createProjectLive({
     ensure: (pid) => (pid ? registry.ensure(pid) : registry.active()),
     active: isActivePayload,
@@ -349,22 +374,25 @@ const AgentManagerContent: Component = () => {
     fontSize: readFontSize(),
   })
 
-  /** Namespace key so worktree/local ids from different projects never collide. */
   const nsKey = (sel: string) => `${currentProjectId() ?? "single"}:${sel}`
-
-  // Per-sidebar-context terminal state. `terms.activeId` holds the id of the focused
-  // terminal tab, if any — takes precedence over session/pending/review when deriving
-  // the visible tab. Contexts are project-keyed: every project reuses LOCAL and ids like "0".
   const terms = createTerminalState(() => {
     const sel = selection()
     return sel === null ? null : nsKey(sel)
+  })
+  const resolveTerminal = createEmbeddedTerminalReader({
+    key: (context) => nsKey(context ?? LOCAL),
+    local: LOCAL,
+    side: (key) => terms.sidesForContext(key),
+    tabs: (key) => terms.forSelection(key),
+    focused: terms.focusedId,
+    sideActive: terms.sideActiveFor,
+    active: terms.activeId,
   })
   const requestChatFocus = createChatFocus({
     term: () => terms.activeId(),
     history,
     review: reviewActive,
   })
-
   createEffect(
     on(
       () => {
@@ -383,25 +411,20 @@ const AgentManagerContent: Component = () => {
   type FocusOwner = "prompt" | { terminal: string }
   const focusMemory = new Map<string, FocusOwner>()
   const prompt = createPromptFocus(terms, requestChatFocus)
-  const focusKey = () => {
-    const context = terms.sideKey()
-    const sessionID = session.currentSessionID() ?? activePendingId() ?? "new"
-    return `${context}:${sessionID}`
-  }
+  const focusKey = () => `${terms.sideKey()}:${session.currentSessionID() ?? activePendingId() ?? "new"}`
   const forgetSessionFocus = (sessionID: string) => {
     for (const key of focusMemory.keys()) if (key.endsWith(`:${sessionID}`)) focusMemory.delete(key)
   }
   const forgetContextFocus = (context: string) => {
     for (const key of focusMemory.keys()) if (key.startsWith(`${context}:`)) focusMemory.delete(key)
   }
-  const forgetTerminalFocus = (terminalID: string) => {
-    for (const [key, owner] of focusMemory) {
-      if (owner !== "prompt" && owner.terminal === terminalID) focusMemory.delete(key)
-    }
-  }
-  const rememberPromptFocus = (focused: boolean) => {
-    if (focused) focusMemory.set(focusKey(), "prompt")
-  }
+  let restoreSession: () => "none" | "ready" | "pending" = () => "none"
+  const focusCtl = createFocusBridge({
+    prompt,
+    post: (target) => vscode.postMessage({ type: "agentManagerFocusChanged", target }),
+    remember: () => focusMemory.set(focusKey(), "prompt"),
+    restore: () => restoreSession(),
+  })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
   const focusOnDraftChange = () => {
     const key = focusKey()
@@ -450,7 +473,6 @@ const AgentManagerContent: Component = () => {
       { defer: true },
     ),
   )
-  // Ambient setup reveal restores the panel after success unless the user engaged.
   const ambientSetup = createAmbientSetup({
     terms,
     selection: () => {
@@ -462,7 +484,6 @@ const AgentManagerContent: Component = () => {
   })
   const cancelAmbientSetup = ambientSetup.cancel
 
-  // Inline delete confirmation: tracks which worktree is awaiting a second click/press
   const [pendingDelete, setPendingDelete] = createSignal<string | null>(null)
   let pendingDeleteTimer: ReturnType<typeof setTimeout> | undefined
   const cancelPendingDelete = () => {
@@ -482,15 +503,9 @@ const AgentManagerContent: Component = () => {
   )
   onCleanup(() => clearTimeout(pendingDeleteTimer))
 
-  // Per-context tab memory lives in the active project's store: maps sidebar
-  // selection ("local" or a worktree id) -> last active session/pending ID
   const tabMemory = () => registry.active().tabMemory.all()
 
-  const reviewOpen = createMemo(() => {
-    const sel = selection()
-    if (sel === null) return false
-    return reviewOpenByContext()[sel] === true
-  })
+  const reviewOpen = createMemo(() => selection() !== null && reviewOpenByContext()[selection()!] === true)
 
   const setReviewOpenForContext = (context: string, open: boolean) => {
     setReviewOpenByContext((prev) => {
@@ -576,7 +591,6 @@ const AgentManagerContent: Component = () => {
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
 
-  // Drag-and-drop state for tab reordering
   const [draggingTab, setDraggingTab] = createSignal<string | undefined>()
 
   const freezeTabs = () => {
@@ -585,7 +599,6 @@ const AgentManagerContent: Component = () => {
   }
 
   const releaseTabs = () => setTabWidths(false)
-  // Tab ordering: context key → ordered session ID array (recovered from extension state)
   const worktreeTabOrder = () => registry.active().tabOrder()
   const setWorktreeTabOrder: Setter<Record<string, string[]>> = (v) => registry.active().setTabOrder(v)
   // Sidebar worktree order (persisted to extension state)
@@ -933,9 +946,6 @@ const AgentManagerContent: Component = () => {
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
 
-  // Sidebar previous/next + numeric-shortcut nav. Multi-project mode traverses
-  // every expanded project and atomically activates via activateSelection;
-  // single-project mode keeps the legacy in-process path.
   const projectNav = createProjectNav(
     {
       multiProject,
@@ -1198,13 +1208,12 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
-      else if (msg.action === "focusInput") prompt.focus()
+      else if (msg.action === "focusInput") focusCtl.focus()
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
-      else if (msg.action === "newTerminal") {
-        if (terms.sideFocusedId()) termHandlers.addSide()
-        else termHandlers.requestNew()
-      } else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
+      else if (msg.action === "newTerminalTab") termHandlers.requestNew()
+      else if (msg.action === "newSideTerminal") termHandlers.addSide()
+      else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
         if (!mode.dispatch(1)) cycleAgent(1)
       } else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) {
         if (!mode.dispatch(-1)) cycleAgent(-1)
@@ -1214,7 +1223,17 @@ const AgentManagerContent: Component = () => {
         if (match) projectNav.jump(parseInt(match[1]!) - 1)
       }
     }
+    const subagent = (event: Event) => {
+      const detail = (event as CustomEvent<{ sessionID?: unknown; title?: unknown; parentSessionID?: unknown }>).detail
+      if (typeof detail?.sessionID !== "string") return
+      subagents.open(
+        detail.sessionID,
+        typeof detail.title === "string" ? detail.title : undefined,
+        typeof detail.parentSessionID === "string" ? detail.parentSessionID : undefined,
+      )
+    }
     window.addEventListener("message", handler)
+    window.addEventListener("agentManager.openSubagent", subagent)
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
@@ -1228,8 +1247,8 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n", "d", "e", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent browser defaults for shift variants (new terminal, close worktree,
-      // advanced/new/open worktree, open PR, terminal cycling)
+      // Prevent browser defaults for shift variants (new central terminal,
+      // close worktree, advanced/new/open worktree, open PR, terminal cycling)
       if (["t", "m", "w", "n", "o", "r", "[", "]"].includes(e.key.toLowerCase()) && e.shiftKey) {
         e.preventDefault()
       }
@@ -1244,10 +1263,6 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", preventDefaults, true)
 
-    // Cmd/Ctrl+/ toggles the terminal even when VS Code's webview keybinding
-    // forwarding drops the key before it reaches the workbench (reported with
-    // the prompt input focused). When forwarding does work, the extension
-    // echoes the shortcut back as an action message and sideCtl dedupes it.
     const shortcut = (e: KeyboardEvent) => sideCtl.press(e)
     window.addEventListener("keydown", shortcut, true)
 
@@ -1263,6 +1278,7 @@ const AgentManagerContent: Component = () => {
       confirmDeleteWorktree(sel)
     }
     window.addEventListener("keydown", deleteKeyHandler)
+    onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
 
     // Reveal the ⌘/Ctrl+1-9 jump badges on all sidebar items while the modifier is held.
     // Capture phase so the terminal's key handlers can't swallow them; blur resets state
@@ -1283,6 +1299,7 @@ const AgentManagerContent: Component = () => {
     const onWindowFocus = () => {
       document.body.style.pointerEvents = ""
       document.body.style.overflow = ""
+      focusCtl.report()
       restoreFocus()
     }
     window.addEventListener("focus", onWindowFocus)
@@ -1343,13 +1360,14 @@ const AgentManagerContent: Component = () => {
       state: terms,
       activate: termHandlers.activate,
       saveTabMemory,
+      rememberSession: tabs.remember,
       setSelection,
       showError: (message) =>
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
       postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
 
-      onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(terminalId),
+      onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(focusMemory, terminalId),
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
         // Setup output is informational: reveal without stealing focus, and
@@ -1459,6 +1477,8 @@ const AgentManagerContent: Component = () => {
         const ev = msg as AgentManagerKeybindingsMessage
         setKb(ev.bindings)
       }
+
+      if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
 
       if (msg.type === "agentManager.state") applyState(msg)
 
@@ -1612,8 +1632,6 @@ const AgentManagerContent: Component = () => {
     }
   })
 
-  // Diff context = sidebar selection (worktree id or LOCAL), stable across
-  // session tab switches inside the context so the git scopes don't refetch.
   const diffCtx = createMemo(() => selection() ?? undefined)
 
   // Active session within the diff context. The Session scope follows it, so
@@ -1663,8 +1681,6 @@ const AgentManagerContent: Component = () => {
     />
   )
 
-  // Start/stop diff watch when the panel opens/closes, the review tab opens,
-  // or the composite id (context, scope, active session) changes.
   createEffect(() => {
     const panel = diffOpen()
     const active = reviewActive()
@@ -2002,6 +2018,28 @@ const AgentManagerContent: Component = () => {
       }
     })
   }
+  const handleNewTabForCurrentSelection = () => {
+    const sel = selection()
+    if (sel === LOCAL) {
+      addPendingTab()
+      return "ready" as const
+    }
+    if (sel) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
+    return "pending" as const
+  }
+  const tabs = createSessionRestore({
+    terminal: terms.activeId,
+    selection,
+    remembered: (sel) => registry.active().sessionRestore.get(sel),
+    sessions: activeTabs,
+    current: session.currentSessionID,
+    pending: activePendingId,
+    isPending,
+    select: selectSessionTab,
+    create: handleNewTabForCurrentSelection,
+    remember: (sel, id) => registry.active().sessionRestore.set(sel, id),
+  })
+  restoreSession = tabs.restore
   const termHandlers = createTerminalHandlers({
     state: terms,
     tabIds: () => tabIds(),
@@ -2058,7 +2096,6 @@ const AgentManagerContent: Component = () => {
     closeReviewTab()
   }
 
-  // Drag-and-drop handlers for tab reordering
   const tabLookup = createMemo(() => new Map(activeTabs().map((s) => [s.id, s])))
   const tabIds = createMemo(() => {
     const ids = activeTabs().map((s) => s.id)
@@ -2157,6 +2194,10 @@ const AgentManagerContent: Component = () => {
   // Close the currently active tab via keyboard shortcut.
   // If no tabs remain, fall through to close the selected worktree.
   const closeActiveTab = () => {
+    if (sidePanel() === SidePanel.Subagents && subagents.active()) {
+      subagents.close(subagents.active()!)
+      return
+    }
     // A focused side terminal owns Cmd+W while its panel is visible.
     // Closing a chat tab out from under the user's cursor would be surprising.
     if (sidePanel() === SidePanel.Terminal && terms.sideFocusedId()) {
@@ -2188,17 +2229,6 @@ const AgentManagerContent: Component = () => {
         : undefined
     if (!target) return
     handleCloseTab(target.id)
-  }
-
-  // Cmd+T: add a new tab strictly to the current selection (no side effects)
-  const handleNewTabForCurrentSelection = () => {
-    const sel = selection()
-    if (sel === LOCAL) {
-      addPendingTab()
-    } else if (sel) {
-      // Pass the captured worktree ID directly to avoid race conditions
-      vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
-    }
   }
 
   // Close the currently selected worktree with a confirmation dialog
@@ -2417,6 +2447,12 @@ const AgentManagerContent: Component = () => {
           prStatus={() => activePR()?.pr}
           prOpen={prOpen}
           onTogglePR={togglePRPanel}
+          documentsOpen={documentInspector.isOpen}
+          documentsAvailable={documentInspector.available}
+          onToggleDocuments={documentInspector.toggle}
+          subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
+          subagentsOpen={() => sidePanel() === SidePanel.Subagents}
+          onToggleSubagents={subagentCtl.toolbar.toggle}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
           terminalKeybind={() => kb().showTerminal ?? ""}
@@ -2487,7 +2523,11 @@ const AgentManagerContent: Component = () => {
             >
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
                 {/* Keep terminal tabs mounted so output streams across worktree switches. */}
-                {renderTerminalLayer({ state: terms, onFocusPrompt: prompt.focus })}
+                {renderTerminalLayer({
+                  state: terms,
+                  onFocusPrompt: focusCtl.focus,
+                  onFocusChange: focusCtl.report,
+                })}
                 {/* Session-less context (e.g. a worktree mid-provisioning): the
                     empty state lives in the main pane so the side terminal
                     panel can render next to it. */}
@@ -2544,10 +2584,12 @@ const AgentManagerContent: Component = () => {
                     readonly={readOnly()}
                     continueInWorktree={selection() === LOCAL}
                     promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                    terminalContext={() => selection() ?? undefined}
                     deferFocusToQuestion={hasQuestionOption}
                     pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
                     focusOnDraftChange={focusOnDraftChange}
-                    onFocusChange={rememberPromptFocus}
+                    onFocusChange={focusCtl.prompt}
+                    resolveEmbeddedTerminal={resolveTerminal}
                   />
                   <Show when={readOnly()}>
                     <div class="am-readonly-banner">
@@ -2587,7 +2629,7 @@ const AgentManagerContent: Component = () => {
                   mounted while a side terminal is alive — hidden via
                   .am-side-host-hidden (absolute + opacity), never
                   unmounted, so xterm render loops keep streaming. */}
-              <Show when={sidePanel() !== null || terms.sides().length > 0}>
+              <Show when={sidePanel() !== null || terms.sides().length > 0 || subagents.tabs().length > 0}>
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
                   style={{ width: `${panelWidth()}px` }}
@@ -2634,33 +2676,51 @@ const AgentManagerContent: Component = () => {
                           if (id)
                             vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
                         }}
+                        onOpenDocument={documentInspector.open}
                         onRevertFile={metrics.use("revert_file", "side_review", revertCtl.revert)}
                         revertingFiles={revertCtl.reverting()}
                         activeTerminalId={terms.activeId()}
                       />
                     </Show>
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
-                      <PRPanel
+                      <PRPanelHost
                         pr={activePR()!.pr}
                         worktree={activePR()!.wt}
                         worktreeId={activePR()!.selected}
+                        activeTerminalId={terms.activeId()}
+                        sessionId={diffCtx()}
                         onClose={() => setSidePanel(null)}
-                        onOpenExternal={() =>
-                          vscode.postMessage({
-                            type: "agentManager.openPR",
-                            worktreeId: activePR()!.selected,
-                            url: activePR()!.pr.url,
-                          })
-                        }
                       />
                     </Show>
+                    <Show when={subagents.tabs().length > 0}>
+                      <SubagentPanel
+                        tabs={subagents.tabs}
+                        active={subagents.active}
+                        visible={() => sidePanel() === SidePanel.Subagents}
+                        nextKeybind={kb().nextTab ?? ""}
+                        closeKeybind={kb().closeTab ?? ""}
+                        onSelect={subagents.select}
+                        onClose={subagents.close}
+                        onCloseOthers={subagents.closeOthers}
+                        onReorder={subagents.reorder}
+                        onClosePanel={() => setSidePanel(null)}
+                      />
+                    </Show>
+                    <DocumentPanelHost
+                      inspector={documentInspector}
+                      onClosePanel={() => setSidePanel(null)}
+                      onSendAll={focusCtl.focus}
+                      activeTerminalId={terms.activeId()}
+                      visible={documentInspector.isOpen}
+                    />
                     <SideTerminalPanel
                       state={terms}
                       contextKey={terms.sideKey}
                       visible={() => sidePanel() === SidePanel.Terminal}
                       nextKeybind={kb().nextTerminal ?? ""}
                       closeKeybind={kb().closeTab ?? ""}
-                      onFocusPrompt={prompt.focus}
+                      onFocusPrompt={focusCtl.focus}
+                      onFocusChange={focusCtl.report}
                       onSelect={(id) => termHandlers.selectSide(id)}
                       onClose={(id) => {
                         cancelAmbientSetup()
@@ -2723,7 +2783,6 @@ const AgentManagerContent: Component = () => {
     </div>
   )
 }
-
 export const AgentManagerApp: Component = () => {
   return (
     <ProviderShell.Root>

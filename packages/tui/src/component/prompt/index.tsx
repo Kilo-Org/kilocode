@@ -55,7 +55,6 @@ import { useArgs } from "../../context/args"
 // kilocode_change start
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
-import * as AgentRequirements from "@/kilocode/cli/agent-requirements"
 import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
 import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
 // kilocode_change end
@@ -1086,29 +1085,6 @@ export function Prompt(props: PromptProps) {
       void promptModelWarning()
       return false
     }
-
-    // kilocode_change start - gate TUI sends on declared agent requirements
-    const requirements = await AgentRequirements.check({
-      client: sdk.client,
-      agent: agent.name,
-      directory: project.instance.directory() || sdk.directory || process.cwd(),
-    }).catch((error) => {
-      toast.show({
-        message: errorMessage(error),
-        variant: "error",
-      })
-      return undefined
-    })
-    if (!requirements) return false
-    if (!requirements.ok) {
-      toast.show({
-        title: "Agent requirements",
-        message: requirements.error.data.message,
-        variant: "error",
-      })
-      return false
-    }
-    // kilocode_change end
 
     const workspaceSession = props.sessionID ? sync.session.get(props.sessionID) : undefined
     const workspaceID = workspaceSession?.workspaceID

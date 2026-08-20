@@ -101,7 +101,7 @@ const DisplayTab: Component = () => {
           description={language.t("settings.display.tokenThroughput.description")}
         >
           <Switch
-            checked={Boolean(settings()["showTokenThroughput"] ?? false)}
+            checked={Boolean(settings()["showTokenThroughput"] ?? true)}
             onChange={(checked: boolean) => updateSetting("showTokenThroughput", checked)}
             hideLabel
           >

@@ -9,6 +9,8 @@ export enum SidePanel {
   Diff = "diff",
   PR = "pr",
   Terminal = "terminal",
+  Subagents = "subagents",
+  Documents = "documents",
 }
 
 function viewportWidth(viewport: number): number {

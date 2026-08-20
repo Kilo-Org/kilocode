@@ -78,30 +78,6 @@ export const dict = {
   "command.session.compact": "Сжать сессию",
   "command.session.export": "Экспортировать запись сеанса",
 
-  "agentRequirements.skill.installed": "Установлено",
-  "agentRequirements.skill.checkFailed": "Не удалось проверить навык",
-  "agentRequirements.skill.missing": "Не установлено",
-  "agentRequirements.mcp.connected": "Подключено",
-  "agentRequirements.mcp.checkFailed": "Не удалось проверить MCP",
-  "agentRequirements.mcp.missing": "Не подключено",
-  "agentRequirements.extension.installed": "Установлено",
-  "agentRequirements.extension.checkFailed": "Не удалось проверить расширение VS Code",
-  "agentRequirements.extension.missing": "Не установлено",
-  "agentRequirements.extension.description": "Установите отсутствующие расширения в VS Code.",
-  "agentRequirements.group.skills": "Навыки",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "Расширения VS Code",
-  "agentRequirements.blocked.title": "Требования агента {{agent}}",
-  "agentRequirements.blocked.description": "Этому агенту нужны следующие инструменты перед запуском.",
-  "agentRequirements.prompt.blocked": "Сначала выполните необходимые проверки, чтобы использовать этого агента",
-  "agentRequirements.action.openMarketplace": "Открыть Marketplace",
-  "agentRequirements.error.unknownAgent": "Выбранный агент не найден.",
-  "agentRequirements.error.malformedDeclaration": "У этого агента недопустимое объявление требований.",
-  "agentRequirements.error.discoveryFailed": "Kilo не смог проверить доступные навыки.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo не смог проверить состояние сервера MCP.",
-  "agentRequirements.error.scopeMismatch": "Эта проверка требований агента больше не активна.",
-  "agentRequirements.error.requestFailed": "Kilo не смог проверить требования агента.",
-
   "dialog.provider.search.placeholder": "Поиск провайдеров",
   "dialog.provider.empty": "Провайдеры не найдены",
   "dialog.provider.group.other": "Другие",
@@ -270,6 +246,7 @@ export const dict = {
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
+  "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
@@ -862,12 +839,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "Включить SWE-Pruner: обрезка больших объёмов вывода инструментов чтения, поиска и командной оболочки с учётом задачи и на основе предоставленного агентом фокус-вопроса",
-  "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "Модель для обрезки вывода инструментов; по умолчанию — настроенная малая модель",
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
@@ -1117,7 +1088,7 @@ export const dict = {
 
   "settings.display.tokenThroughput.title": "Показывать пропускную способность токенов",
   "settings.display.tokenThroughput.description":
-    "Отображает скорость генерации текста (токенов/с) в последнем сообщении ассистента и в заголовке задачи. По умолчанию скрыто, чтобы не загромождать чат.",
+    "Показывать скорость генерации текста (tokens/sec) в последнем сообщении ассистента и в заголовке задачи. Показывается по умолчанию; отключите этот параметр, чтобы при необходимости скрыть её.",
   "settings.display.autoApprovalReason.title": "Показывать причину автоодобрения",
   "settings.display.autoApprovalReason.description":
     "Показывает строку у вызовов инструментов, объясняющую, почему они были одобрены автоматически (совпавшее правило, значение агента по умолчанию, режим YOLO и т. д.).",
@@ -1234,6 +1205,22 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} задач выполнено",
   "task.todos.allDone": "{{count}} задач выполнено",
+  "task.backgroundAgents.running.one": "1 фоновый агент",
+  "task.backgroundAgents.running.many": "Фоновых агентов: {{count}}",
+  "task.backgroundAgents.open": "Открыть фонового агента",
+  "task.backgroundAgents.cancel": "Остановить",
+  "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
+  "task.backgroundAgents.foreground": "Агент на переднем плане выполняется",
+  "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
+  "task.backgroundAgents.needsInput": "Требуется ввод",
+  "task.backgroundAgents.dismiss": "Скрыть",
+  "task.backgroundAgents.clearFinished": "Очистить завершённые",
+  "task.backgroundAgents.summary": "Фоновые агенты: {{running}} из {{total}} выполняются",
+  "task.backgroundAgents.status.running": "Выполняется",
+  "task.backgroundAgents.status.completed": "Готово",
+  "task.backgroundAgents.status.cancelled": "Отменено",
+  "task.backgroundAgents.status.error": "Ошибка",
+  "task.backgroundAgents.untitled": "Фоновый агент",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",
   "settings.saveBar.save": "Сохранить",

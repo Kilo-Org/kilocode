@@ -1,21 +1,23 @@
 package ai.kilocode.client.settings.rules
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
-import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsToggle
-import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TEST_WAIT_MS
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.testing.pumpEdt
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.openapi.actionSystem.impl.ActionButton
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
@@ -23,7 +25,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
@@ -51,8 +52,8 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
             val panel = ui
             if (panel != null) edt { panel.dispose() }
             ui = null
-            if (::uiCoroutines.isInitialized) uiCoroutines.close(::pump)
-            if (::appCoroutines.isInitialized) appCoroutines.close(::pump)
+            if (::uiCoroutines.isInitialized) uiCoroutines.close()
+            if (::appCoroutines.isInitialized) appCoroutines.close()
         } finally {
             super.tearDown()
         }
@@ -303,18 +304,18 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         app._state.value = state
     }
 
-    private fun click(list: JBList<SettingsListItem>, panel: RulesSettingsUi, key: String, id: String) {
+    private fun click(list: JBList<ActiveListItem>, panel: RulesSettingsUi, key: String, id: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
             val idx = rows(panel).indexOfFirst { it.key == key }
             list.selectedIndex = idx
-            val area = settingsListCellBounds(list, idx, selected = true).getValue(id)
+            val area = activeListCellBounds(list, idx, selected = true).getValue(id)
             click(list, center(area))
         }
     }
 
-    private fun doubleClick(list: JBList<SettingsListItem>, panel: RulesSettingsUi, key: String) {
+    private fun doubleClick(list: JBList<ActiveListItem>, panel: RulesSettingsUi, key: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -325,28 +326,28 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: RulesSettingsUi): List<SettingsListItem> {
+    private fun rows(panel: RulesSettingsUi): List<ActiveListItem> {
         val list = rulesList(panel)
         val model = list.model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun rulesList(panel: RulesSettingsUi) = components(panel).filterIsInstance<JBList<SettingsListItem>>().single()
+    private fun rulesList(panel: RulesSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
 
     private fun toggle(panel: RulesSettingsUi): SettingsToggle = components(panel).filterIsInstance<SettingsToggle>().single()
 
-    private fun scrollFor(panel: RulesSettingsUi, list: JBList<SettingsListItem>) = components(panel)
+    private fun scrollFor(panel: RulesSettingsUi, list: JBList<ActiveListItem>) = components(panel)
         .filterIsInstance<JBScrollPane>()
         .single { pane -> pane.viewport.view === list.parent }
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<SettingsListItem>, point: Point) {
+    private fun click(list: JBList<ActiveListItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<SettingsListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),
@@ -358,30 +359,24 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         MouseEvent.BUTTON1,
     )
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flushUntil(done: () -> Boolean) {
-        repeat(200) {
+        val end = System.nanoTime() + TEST_WAIT_MS * 1_000_000
+        while (true) {
             flush()
             if (done()) return
+            if (System.nanoTime() >= end) break
+            Thread.sleep(1)
         }
         flush()
         assertTrue(done())
     }
 
     private fun flush() {
-        appCoroutines.drain(::pump)
-        uiCoroutines.drain(::pump)
-        pump()
-    }
-
-    private fun pump() {
-        edt { UIUtil.dispatchAllInvocationEvents() }
+        appCoroutines.drain()
+        uiCoroutines.drain()
+        pumpEdt()
     }
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {

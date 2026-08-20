@@ -13,7 +13,6 @@ interface ProjectsSectionProps {
   onAdd: () => void
   onSelect: (id: string) => void
   onRemove: (id: string) => void
-  onTrust: (id: string) => void
   onExpand: (id: string, expanded: boolean) => void
   count: (id: string) => number | undefined
   tools?: JSX.Element
@@ -67,12 +66,6 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                     <Show when={project().missing}>
                       <Icon name="warning" size="small" />
                     </Show>
-                    <Show when={!project().trusted && !project().missing}>
-                      <span class="am-project-trust">
-                        <Icon name="lock" size="small" />
-                        {props.t("agentManager.project.trust")}
-                      </span>
-                    </Show>
                   </>
                 }
                 actions={
@@ -91,13 +84,9 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                 }
                 onToggle={() => {
                   if (project().missing) return
-                  if (!project().trusted) {
-                    props.onTrust(project().id)
-                    return
-                  }
                   const expanded = !project().expanded
                   props.onExpand(project().id, expanded)
-                  if (!project().active && project().trusted) props.onSelect(project().id)
+                  if (!project().active) props.onSelect(project().id)
                 }}
               />
               <Show when={project().expanded}>

@@ -201,6 +201,7 @@ export const dict = {
   "ui.patch.action.created": "Créé",
   "ui.patch.action.moved": "Déplacé",
   "ui.patch.action.patched": "Correctif appliqué",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "Réponses : {{count}}",
   "ui.question.answer.none": "(pas de réponse)",
@@ -240,6 +241,5 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "Modifié",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} lignes conservées sur {{total}}",
   // kilocode_change end
 }

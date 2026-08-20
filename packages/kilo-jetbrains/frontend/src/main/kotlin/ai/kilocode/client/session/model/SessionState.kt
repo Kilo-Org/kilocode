@@ -22,10 +22,12 @@ sealed class SessionState {
 
     data class Error(val message: String, val kind: String? = null) : SessionState()
 
+    data class TurnEnded(val outcome: Outcome, val tone: OutcomeTone) : SessionState()
+
     data class LoginRequired(val message: String) : SessionState()
 
     fun isBusy(): Boolean = when (this) {
-        is Idle, is Loading, is Error, is LoginRequired -> false
+        is Idle, is Loading, is Error, is TurnEnded, is LoginRequired -> false
         else -> true
     }
 }

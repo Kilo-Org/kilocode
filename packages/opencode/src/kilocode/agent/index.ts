@@ -2,6 +2,7 @@
 import { Permission } from "@/permission"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
+import { Wildcard } from "@opencode-ai/core/util/wildcard"
 import * as Truncate from "../../tool/truncate"
 import { Config } from "../../config/config"
 import type { Info as AgentInfo } from "../../agent/agent"
@@ -174,6 +175,10 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
       [Truncate.GLOB]: "allow",
     },
     ...mcp,
+    // After the MCP rules: a server named `agent`/`notebook` emits `agent_*`/`notebook_*`,
+    // which wildcard-match these tools and would otherwise reopen them.
+    ...guardedDenies,
+    task: "deny",
   })
 }
 
@@ -201,6 +206,76 @@ function restrictions(user: Permission.Ruleset) {
 
 function askEditGuard() {
   return Permission.fromConfig({ edit: "deny" })
+}
+
+// Tools that mutate the workspace or execute code. Config rules never widen these for a
+// read-only mode, whatever pattern they use: the config is partly machine-written, so an
+// "always allow" in code mode or the allow-everything toggle would otherwise hand ask and
+// plan the arbitrary execution reported in #12053. Opt a single mode in with
+// `agent.<name>.permission`, which merges after patchAgents in agent.ts.
+// Exported so KiloTask.inherited carries the same set into delegated sessions; a tool
+// guarded here but not there would be reachable again through a subagent.
+export const guarded = [
+  "bash",
+  "task",
+  "notebook_edit",
+  "notebook_execute",
+  "write",
+  "agent_manager",
+  "repo_clone",
+  "interactive_terminal",
+]
+
+// Derived from `guarded` so the two cannot drift. `bash` and `task` carry their own rules
+// in the guards, so they are denied there instead.
+const guardedDenies = Object.fromEntries(
+  guarded
+    .filter((permission) => permission !== "bash" && permission !== "task")
+    .map((permission) => [permission, "deny" as const]),
+)
+
+// Permissions no config rule may re-tune. `task` is excluded on purpose: Plan legitimately
+// delegates, so `task: "ask"` is honored while guardedDenies still blocks its one target.
+const sealed = guarded.filter((permission) => permission !== "task")
+
+// Reapplies the guard after `user`, in three layers:
+//   1. the catch-all deny (which keeps `*` rules from enabling unknown project/plugin
+//      tools) plus the read-only allowlist, or the deny would strand read/grep/plan_exit
+//   2. the user's rules re-expanded onto safe permissions by exact name, so global tuning
+//      still works without matching a custom tool
+//   3. the bash, MCP and guarded-deny ceilings
+// User denies still land last via denies()/restrictions().
+function baseline(
+  rules: Permission.Ruleset,
+  user: Permission.Ruleset,
+  mcp: Record<string, "allow" | "ask" | "deny"> = {},
+) {
+  const known = new Set(
+    rules
+      .map((rule) => rule.permission)
+      .filter((permission) => permission !== "*" && !Object.hasOwn(mcp, permission) && !sealed.includes(permission)),
+  )
+  return [
+    ...rules.filter((rule) => rule.permission === "*" || known.has(rule.permission)),
+    ...user.flatMap((rule) =>
+      [...known]
+        .filter((permission) => Wildcard.match(permission, rule.permission))
+        .map((permission) => ({ ...rule, permission })),
+    ),
+    ...rules.filter(
+      (rule) =>
+        rule.permission === "bash" ||
+        Object.hasOwn(mcp, rule.permission) ||
+        (rule.action === "deny" &&
+          guarded.includes(rule.permission) &&
+          // A blanket deny is an absolute ceiling. A deny aimed at one target — Plan's
+          // `task: { general: "deny" }` — is only a default, which the user may lift by
+          // naming that exact target, as upstream's per-subagent opt-in does. A wildcard
+          // never qualifies, so no catch-all reaches it.
+          (rule.pattern === "*" ||
+            !user.some((item) => item.permission === rule.permission && item.pattern === rule.pattern))),
+    ),
+  ]
 }
 
 // Upstream v1.14.33 builds Agent state outside the Instance ALS, so reading
@@ -276,6 +351,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     },
     edit: planEditRules(worktree),
     ...mcp,
+    ...guardedDenies,
   })
 }
 
@@ -444,13 +520,15 @@ export function patchAgents(
 
   // Patch plan mode
   if (agents.plan) {
+    const guard = planGuard(worktree, kilo.mcpRules)
     agents.plan = {
       ...agents.plan,
       description: "Plan mode. Can only edit plan files; all other filesystem mutations are denied.",
       permission: Permission.merge(
         defaults,
-        planGuard(worktree, kilo.mcpRules),
+        guard,
         user,
+        baseline(guard, user, kilo.mcpRules),
         planEditGuard(worktree),
         restrictions(user),
       ),
@@ -550,12 +628,20 @@ export function patchAgents(
   }
 
   // Add ask agent
+  const guard = askGuard(kilo.mcpRules)
   agents.ask = {
     name: "ask",
     description: "Get answers and explanations without making changes to the codebase.",
     prompt: PROMPT_ASK,
     options: {},
-    permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
+    permission: Permission.merge(
+      defaults,
+      guard,
+      user,
+      baseline(guard, user, kilo.mcpRules),
+      askEditGuard(),
+      denies(user),
+    ),
     mode: "primary",
     native: true,
   }

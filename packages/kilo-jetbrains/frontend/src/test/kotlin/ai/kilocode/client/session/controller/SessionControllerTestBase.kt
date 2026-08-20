@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.session.model.SessionModel
@@ -35,7 +36,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.ui.UIUtil
+import ai.kilocode.client.testing.pumpEdt
 import java.awt.event.HierarchyEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -122,7 +123,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             Disposer.dispose(parent)
-            coroutines.close { edt { UIUtil.dispatchAllInvocationEvents() } }
+            coroutines.close()
         } finally {
             super.tearDown()
         }
@@ -254,29 +255,20 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     private suspend fun settleFast() {
         repeat(3) {
             delay(1)
-            edt { UIUtil.dispatchAllInvocationEvents() }
+            pumpEdt()
         }
     }
 
     private fun drain(force: Boolean) {
         coroutines.drain {
-            edt {
-                if (force) controllers.forEach { it.flushEvents() }
-                UIUtil.dispatchAllInvocationEvents()
-            }
+            if (force) edt { controllers.forEach { it.flushEvents() } }
+            pumpEdt()
         }
     }
 
-    protected fun edt(block: () -> Unit) {
-        ApplicationManager.getApplication().invokeAndWait(block)
-    }
+    protected fun edt(block: () -> Unit) = edtWait(block)
 
-    protected fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    protected fun <T> edt(block: () -> T): T = edtWait(block)
 
     /** Emit a chat event into the fake RPC flow. */
     protected fun emit(event: ChatEventDto, flush: Boolean = true) {
