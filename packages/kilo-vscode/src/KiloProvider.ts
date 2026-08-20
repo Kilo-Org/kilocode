@@ -465,6 +465,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private diffViewerProvider: import("./diff/DiffViewerProvider").DiffViewerProvider | undefined
+  private documentViewerProvider: import("./DocumentViewerProvider").DocumentViewerProvider | undefined
   private remoteService: RemoteStatusService | null = null
   private unsubscribeRemote: (() => void) | null = null
 
@@ -564,6 +565,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   public setDiffViewerProvider(provider: import("./diff/DiffViewerProvider").DiffViewerProvider): void {
     this.diffViewerProvider = provider
+  }
+
+  public setDocumentViewerProvider(provider: import("./DocumentViewerProvider").DocumentViewerProvider): void {
+    this.documentViewerProvider = provider
   }
 
   getTelemetryProperties(): Record<string, unknown> {
@@ -1598,8 +1603,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       dir: (sessionID) => this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
       diff: this.diffVirtualProvider,
       openMarkdown: (file, sessionID) => {
-        if (!this.diffViewerProvider) return false
-        this.diffViewerProvider.openFromCommand({ sessionId: sessionID, file })
+        if (!this.documentViewerProvider) return false
+        this.documentViewerProvider.openFromCommand({
+          sessionId: sessionID,
+          directory: this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
+          file,
+        })
         return true
       },
       storage: this.extensionContext?.globalStorageUri,

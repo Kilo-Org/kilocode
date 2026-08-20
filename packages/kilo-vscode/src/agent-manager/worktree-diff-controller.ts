@@ -8,7 +8,7 @@ import type { ApplyConflict, GitOps } from "./GitOps"
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { remoteRef, type ManagedSession, type WorktreeStateManager } from "./WorktreeStateManager"
 import { parseDiffId, scopeToSourceId } from "./diff-scope"
-import { readDocument } from "./document-reader"
+import { readDocument } from "../documents/document-reader"
 import type { AgentManagerOutMessage, WorktreeDiffEntry } from "./types"
 
 const LOCAL_DIFF_ID = "local" as const

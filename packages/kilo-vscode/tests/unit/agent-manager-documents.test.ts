@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
-import { createDocumentComments, createDocuments } from "../../webview-ui/agent-manager/documents/state"
+import { createDocumentComments, createDocuments } from "../../webview-ui/documents/state"
 import type { AgentManagerDocumentMessage } from "../../webview-ui/src/types/messages"
 
 describe("Agent Manager document state", () => {

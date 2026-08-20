@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { readDocument } from "../../src/agent-manager/document-reader"
+import { readDocument } from "../../src/documents/document-reader"
 
 function workspace() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "kilo-document-"))

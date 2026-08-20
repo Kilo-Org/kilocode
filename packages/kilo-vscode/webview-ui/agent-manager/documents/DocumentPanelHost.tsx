@@ -1,6 +1,6 @@
 import type { Accessor, Component } from "solid-js"
-import { DocumentPanel } from "./DocumentPanel"
-import { createDocumentInspector } from "./state"
+import { DocumentPanel } from "../../documents/DocumentPanel"
+import { createDocumentInspector } from "../../documents/state"
 
 interface Props {
   inspector: ReturnType<typeof createDocumentInspector>

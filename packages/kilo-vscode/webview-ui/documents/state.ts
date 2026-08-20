@@ -1,11 +1,23 @@
 import { createSignal, onCleanup, onMount, type Accessor } from "solid-js"
-import type { useVSCode } from "../../src/context/vscode"
-import type { ReviewComment } from "../../diff-viewer/review-comments"
-import type { AgentManagerDocumentMessage } from "../../src/types/messages"
+import type { useVSCode } from "../src/context/vscode"
+import type { ReviewComment } from "../diff-viewer/review-comments"
+export interface DocumentMessage {
+  type?: "document.result" | "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
 
 export interface DocumentTab {
   id: string
   file: string
+  sessionId?: string
   line?: number
   column?: number
 }
@@ -32,6 +44,8 @@ export function createDocuments(
   vscode: ReturnType<typeof useVSCode>,
   context: Accessor<string | null>,
   session: Accessor<string | null> = context,
+  send: (sessionId: string, file: string, contextKey: string) => void = (sessionId, file, contextKey) =>
+    vscode.postMessage({ type: "agentManager.requestDocument", sessionId, file, contextKey }),
 ) {
   const [tabs, setTabs] = createSignal<Record<string, DocumentTab[]>>({})
   const [active, setActive] = createSignal<Record<string, string | undefined>>({})
@@ -42,12 +56,12 @@ export function createDocuments(
   const selected = () => active()[current()]
   const document = (file: string) => data()[key(current(), file)]
 
-  const request = (file: string, sessionId = session() ?? "") => {
+  const request = (file: string, sessionId = session() ?? "", contextKey = current()) => {
     const ctx = current()
     if (!ctx) return
     const id = key(ctx, file)
     setData((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { file }), file, loading: true, error: undefined } }))
-    vscode.postMessage({ type: "agentManager.requestDocument", sessionId, file, contextKey: ctx })
+    send(sessionId, file, contextKey)
   }
 
   const open = (file: string, sessionId = session() ?? "", line?: number, column?: number) => {
@@ -57,9 +71,9 @@ export function createDocuments(
       const list = prev[ctx] ?? []
       const id = key(ctx, file)
       if (list.some((tab) => tab.id === id)) {
-        return { ...prev, [ctx]: list.map((tab) => (tab.id === id ? { ...tab, line, column } : tab)) }
+        return { ...prev, [ctx]: list.map((tab) => (tab.id === id ? { ...tab, sessionId, line, column } : tab)) }
       }
-      return { ...prev, [ctx]: [...list, { id, file, line, column }] }
+      return { ...prev, [ctx]: [...list, { id, file, sessionId, line, column }] }
     })
     setActive((prev) => ({ ...prev, [ctx]: key(ctx, file) }))
     request(file, sessionId)
@@ -72,7 +86,7 @@ export function createDocuments(
     const tab = (tabs()[ctx] ?? []).find((item) => item.id === id)
     if (!tab) return
     setActive((prev) => ({ ...prev, [ctx]: id }))
-    if (!document(tab.file)) request(tab.file)
+    if (!document(tab.file)) request(tab.file, tab.sessionId)
   }
 
   const close = (id: string) => {
@@ -107,7 +121,7 @@ export function createDocuments(
     setTabs((prev) => ({ ...prev, [ctx]: next }))
   }
 
-  const onMessage = (message: AgentManagerDocumentMessage) => {
+  const onMessage = (message: DocumentMessage) => {
     const id = key(message.contextKey ?? message.sessionId, message.requestedFile ?? message.file)
     setData((prev) => ({
       ...prev,
@@ -164,7 +178,7 @@ export function createDocumentInspector(
   onMount(() => {
     const handler = (event: Event) => handleDocumentOpen(event, open)
     const message = vscode.onMessage((item) => {
-      if (item.type === "agentManager.document") documents.onMessage(item)
+      if (item.type === "document.result" || item.type === "agentManager.document") documents.onMessage(item)
     })
     window.addEventListener("kilo:open-file", handler)
     onCleanup(() => {

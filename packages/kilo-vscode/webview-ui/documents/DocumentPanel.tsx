@@ -1,9 +1,9 @@
 import { Dynamic } from "solid-js/web"
 import { Component, Show, Accessor, createMemo, createSignal, createEffect, on } from "solid-js"
-import { MarkdownPane } from "../../diff-viewer/MarkdownDiffView"
+import { MarkdownPane } from "../diff-viewer/MarkdownDiffView"
 import { isMarkdownPath, type DocumentData, type DocumentTab } from "./state"
-import { InspectorTabStrip } from "../InspectorTabStrip"
-import { SortableClosableTab } from "../ClosableTab"
+import { InspectorTabStrip } from "../agent-manager/InspectorTabStrip"
+import { SortableClosableTab } from "../agent-manager/ClosableTab"
 import { useCodeComponent } from "@kilocode/kilo-ui/context/code"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -11,8 +11,8 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
-import type { WorktreeFileDiff } from "../../src/types/messages"
-import type { ReviewComment } from "../../diff-viewer/review-comments"
+import type { WorktreeFileDiff } from "../src/types/messages"
+import type { ReviewComment } from "../diff-viewer/review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
@@ -22,9 +22,9 @@ import {
   type AnnotationMeta,
   type ReviewComposer,
   type ReviewDraft,
-} from "../../diff-viewer/review-annotations"
-import { lineCount } from "../../diff-viewer/review-comments"
-import { useLanguage } from "../../src/context/language"
+} from "../diff-viewer/review-annotations"
+import { lineCount } from "../diff-viewer/review-comments"
+import { useLanguage } from "../src/context/language"
 
 export interface DocumentPanelProps {
   tabs: Accessor<DocumentTab[]>

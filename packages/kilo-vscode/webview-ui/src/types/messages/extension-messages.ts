@@ -309,6 +309,28 @@ export interface AppendReviewCommentsMessage {
   autoSend?: boolean
 }
 
+export interface DocumentResultMessage {
+  type: "document.result"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
+export interface DocumentOpenMessage {
+  type: "document.open"
+  sessionId?: string
+  contextKey: string
+  file: string
+  line?: number
+  column?: number
+}
+
 export interface AppendReviewCommentsToTerminalMessage {
   type: "appendReviewCommentsToTerminal"
   comments: ReviewCommentEntry[]
@@ -1307,6 +1329,8 @@ export interface AgentManagerFocusContextRequestedMessage {
 }
 
 export type ExtensionMessage =
+  | DocumentResultMessage
+  | DocumentOpenMessage
   | AgentManagerFocusContextRequestedMessage
   | ReadyMessage
   | FontSizeChangedMessage
