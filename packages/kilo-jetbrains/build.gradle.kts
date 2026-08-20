@@ -276,9 +276,6 @@ tasks.withType<RunIdeTask> {
     systemProperty("kilo.dev.log.chat.preview.max", preview)
     systemProperty("kilo.dev.storage.isolated", isolated.get().toString())
     systemProperty("kilo.dev.worktree.root", worktreeRoot.get())
-    providers.gradleProperty("kilo.dev.forceUnsupportedWorkspace").orNull?.let {
-        systemProperty("kilo.dev.forceUnsupportedWorkspace", it)
-    }
 }
 
 tasks.named<Delete>("clean") {
