@@ -121,9 +121,13 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
   const base = AgentManagerPermission.harden(
     permission,
     pattern,
-    ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset)),
+    ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset), ruleset),
   ) // kilocode_change
-  const saved = AgentManagerPermission.harden(permission, pattern, evalFn(permission, pattern, ...overrides)) // kilocode_change
+  const saved = AgentManagerPermission.harden(
+    permission,
+    pattern,
+    ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ...overrides), overrides.flat()),
+  ) // kilocode_change
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
   if (base.action === "ask") {

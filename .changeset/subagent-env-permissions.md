@@ -3,4 +3,4 @@
 "kilo-code": patch
 ---
 
-Include the spawned subagent's own permission rules in the child session permission ruleset. This lets user-configured subagents explicitly allow reading `.env` files, while still inheriting parent denials and keeping `.env` hardening for broad `read: "*": "allow"`.
+Honor explicit `read: "*.env": "allow"` (and `*.env.*`) when resolving env reads, even if a later broad `read: "*"` rule would otherwise be hardened back to ask. Do not copy a subagent's full agent ruleset into `session.permission`, which made nested subagents inherit the delegator's deny catch-all.
