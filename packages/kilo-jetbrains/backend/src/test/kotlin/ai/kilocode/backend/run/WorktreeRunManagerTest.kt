@@ -24,6 +24,8 @@ import com.intellij.execution.process.NopProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.ProgramRunner
+import com.intellij.openapi.externalSystem.model.ProjectSystemId
+import com.intellij.openapi.externalSystem.service.execution.ExternalSystemRunConfiguration
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
@@ -36,6 +38,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.jdom.Element
 import java.io.OutputStream
+import java.nio.file.Path
 
 class WorktreeRunManagerTest : BasePlatformTestCase() {
     private lateinit var cs: CoroutineScope
@@ -103,6 +106,42 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
 
         assertTrue(mgr.run(settings.uniqueID, wt).ok)
         assertSame(clone, launched[1])
+    }
+
+    fun testNestedWorkingDirectoryIsRebasedOntoWorktree() = runBlocking {
+        val type = register(paramsType("kilo.test.params.nested"))
+        val settings = add(type, "dev")
+        val source = settings.configuration as ParamsConfig
+        val repo = requireNotNull(project.basePath)
+        source.workingDirectory = "$repo/packages/kilo-jetbrains"
+        val wt = "$repo/.kilo/worktrees/nested-wt"
+
+        assertTrue(manager().run(settings.uniqueID, wt).ok)
+        val cfg = launched.single().configuration as ParamsConfig
+        assertEquals(Path.of("$wt/packages/kilo-jetbrains").toString(), cfg.workingDirectory)
+        // The user's own configuration must stay untouched.
+        assertEquals("$repo/packages/kilo-jetbrains", source.workingDirectory)
+    }
+
+    fun testGradleNestedProjectPathIsRebasedOntoWorktree() = runBlocking {
+        val type = register(esType("kilo.test.es.nested"))
+        val settings = add(type, "runIdeSplitMode")
+        val source = settings.configuration as ExternalSystemRunConfiguration
+        val repo = requireNotNull(project.basePath)
+        source.settings.externalProjectPath = "$repo/packages/kilo-jetbrains"
+        source.settings.taskNames = listOf(":runIdeSplitMode")
+        val wt = "$repo/.kilo/worktrees/gradle-wt"
+
+        assertTrue(manager().run(settings.uniqueID, wt).ok)
+        val cfg = launched.single().configuration as ExternalSystemRunConfiguration
+        assertEquals(Path.of("$wt/packages/kilo-jetbrains").toString(), cfg.settings.externalProjectPath)
+        // Subproject task names stay resolvable because the project path kept its subdirectory.
+        assertEquals(listOf(":runIdeSplitMode"), cfg.settings.taskNames)
+        assertEquals(wt, cfg.settings.env[WorktreeRunAdapter.WORKTREE_ENV])
+        assertEquals(repo, cfg.settings.env[WorktreeRunAdapter.REPO_ENV])
+        // Cloning an external-system config must not mutate the user's own configuration.
+        assertEquals("$repo/packages/kilo-jetbrains", source.settings.externalProjectPath)
+        assertTrue(source.settings.env.isEmpty())
     }
 
     fun testRunRejectsUnknownAndUnsupported() = runBlocking {
@@ -218,6 +257,14 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     private fun plainType(id: String) = TestType(id) { project, factory, name -> PlainConfig(project, factory, name) }
 
     private fun moduleType(id: String) = TestType(id) { project, factory, name -> ModuleParamsConfig(project, factory, name) }
+
+    private fun esType(id: String) = TestType(id) { project, factory, name ->
+        ExternalSystemRunConfiguration(ProjectSystemId("KILO_TEST"), project, factory, name).also {
+            // A blank path makes the platform look up the registered external system on clone,
+            // which does not exist for a synthetic test id; seed it so cloning stays local.
+            it.settings.externalProjectPath = project.basePath
+        }
+    }
 
     private class TestType(
         id: String,
