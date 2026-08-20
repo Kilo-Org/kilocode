@@ -195,6 +195,15 @@ describe("formatCheckDuration", () => {
     expect(formatCheckDuration("2024-01-01T00:00:00Z", undefined)).toBeUndefined()
   })
 
+  it("returns undefined for invalid timestamps", () => {
+    expect(formatCheckDuration("not a date", "2024-01-01T00:01:00Z")).toBeUndefined()
+    expect(formatCheckDuration("2024-01-01T00:00:00Z", "not a date")).toBeUndefined()
+  })
+
+  it("returns undefined when completedAt is before startedAt", () => {
+    expect(formatCheckDuration("2024-01-01T00:01:00Z", "2024-01-01T00:00:00Z")).toBeUndefined()
+  })
+
   it("formats sub-minute durations in seconds", () => {
     expect(formatCheckDuration("2024-01-01T00:00:00Z", "2024-01-01T00:00:45Z")).toBe("45s")
   })

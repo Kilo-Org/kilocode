@@ -57,7 +57,10 @@ export function checkStatus(state: string): CheckStatus {
 
 export function formatCheckDuration(startedAt?: string, completedAt?: string): string | undefined {
   if (!startedAt || !completedAt) return undefined
-  const secs = Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000)
+  const start = new Date(startedAt).getTime()
+  const end = new Date(completedAt).getTime()
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return undefined
+  const secs = Math.round((end - start) / 1000)
   return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`
 }
 
