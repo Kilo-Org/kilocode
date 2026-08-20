@@ -4,7 +4,10 @@ import { Context, Deferred, Duration, Effect, Exit, Layer, Schema, Scope } from 
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
+import { GlobalBus } from "@/bus/global"
 import type { Provider } from "@opencode-ai/core/models-dev"
+import { ModelsDev } from "@opencode-ai/schema/models-dev"
+import * as ModelsRefresh from "@opencode-ai/core/kilocode/models-refresh"
 import * as Log from "@opencode-ai/core/util/log"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
@@ -56,6 +59,16 @@ const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional
 const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
 type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
 
+// Identity of a committed catalog. Only the fields a picker renders matter here: when this
+// changes after an earlier commit, a later fetch replaced what clients are already showing
+// (typically the bundled models.dev fallback losing to a live Kilo Gateway response).
+function signature(models: Models) {
+  return Object.entries(models)
+    .map(([id, model]) => `${id}\t${model.name}`)
+    .sort()
+    .join("\n")
+}
+
 export const layer: Layer.Layer<
   Service,
   never,
@@ -72,6 +85,20 @@ export const layer: Layer.Layer<
     const active = new Map<string, Cell>()
     const versions = new Map<string, number>()
     const failures = new Map<string, Failure>()
+    const committed = new Map<string, string>()
+
+    // Derived provider snapshots (Provider.list, and therefore /provider and /config/providers)
+    // are cached per instance, so a late catalog has to invalidate them before clients refetch.
+    // The wire event is what stops an already-open TUI from sitting on the fallback catalog
+    // until the next dispose/bootstrap.
+    const announce = Effect.fn("ModelCache.announce")(function* (providerID: string) {
+      log.info("catalog replaced after initial load", { providerID })
+      yield* ModelsRefresh.notify()
+      GlobalBus.emit("event", {
+        directory: "global",
+        payload: { type: ModelsDev.Event.Refreshed.type, properties: {} },
+      })
+    })
 
     const getFailure = Effect.fn("ModelCache.getFailure")(function* (providerID: string) {
       return failures.get(providerID)
@@ -215,7 +242,7 @@ export const layer: Layer.Layer<
       )
 
     const commit = (providerID: string, version: number, entry: Cell, result: Result) =>
-      Effect.sync(() => {
+      Effect.gen(function* () {
         if ((versions.get(providerID) ?? 0) !== version) return result.models
         if (result.error) {
           failures.set(providerID, result.error)
@@ -227,6 +254,10 @@ export const layer: Layer.Layer<
         entry.view.timestamp = Date.now()
         active.set(providerID, entry)
         log.info("models fetched and cached", { providerID, count: Object.keys(result.models).length })
+        const next = signature(result.models)
+        const previous = committed.get(providerID)
+        committed.set(providerID, next)
+        if (previous !== undefined && previous !== next) yield* announce(providerID)
         return result.models
       })
 
@@ -257,6 +288,10 @@ export const layer: Layer.Layer<
                 if (Exit.isSuccess(exit)) {
                   entry.cached = { result: exit.value, expires: Date.now() + Duration.toMillis(ttl) }
                   yield* commit(entry.providerID, flight.version, entry, exit.value)
+                } else if (!committed.has(entry.providerID)) {
+                  // A failed load leaves callers on whatever fallback they had. Record it as an
+                  // empty catalog so the fetch that eventually succeeds counts as a replacement.
+                  committed.set(entry.providerID, signature({}))
                 }
               }
               yield* Deferred.done(done, exit)
@@ -316,6 +351,9 @@ export const layer: Layer.Layer<
       )
       active.delete(providerID)
       failures.delete(providerID)
+      // An org switch clears the cache and rebootstraps; the next commit is a first load,
+      // not a late replacement, so it must not announce.
+      committed.delete(providerID)
       if (entries.some(([, entry]) => entry.view.models)) {
         log.info("cache cleared", { providerID })
         return
