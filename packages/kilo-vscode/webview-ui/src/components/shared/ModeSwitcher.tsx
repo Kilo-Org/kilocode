@@ -10,6 +10,7 @@
 import { type Accessor, Component, createSignal, onCleanup, For, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { AgentInfo } from "../../types/messages"
@@ -135,9 +136,16 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
         open={open()}
         onOpenChange={onOpen}
         triggerAs={Button}
-        triggerProps={{ variant: "ghost", size: "small" }}
+        triggerProps={{
+          variant: "ghost",
+          size: "small",
+          get "aria-label"() {
+            return `Current mode: ${triggerLabel()}`
+          },
+        }}
         trigger={
           <>
+            <Icon name="selector" size="small" />
             <span class="mode-switcher-trigger-label">{triggerLabel()}</span>
             <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
               <path d="M8 4l4 5H4l4-5z" />
@@ -164,24 +172,31 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
                   onClick={() => pick(agent.name)}
                   onFocus={() => setFocused(i())}
                 >
-                  <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
-                    <span class="mode-switcher-item-name">{formatAgentLabel(agent)}</span>
-                    <Show when={agent.deprecated}>
-                      <span
-                        style={{
-                          "font-size": "var(--kilo-font-size-10)",
-                          padding: "1px 5px",
-                          "border-radius": "3px",
-                          background: "var(--vscode-editorWarning-foreground, #cca700)",
-                          color: "var(--vscode-editorWarning-foreground-text, #1e1e1e)",
-                        }}
-                      >
-                        {language.t("settings.agentBehaviour.badge.deprecated")}
-                      </span>
+                  <div class="mode-switcher-item-copy">
+                    <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
+                      <span class="mode-switcher-item-name">{formatAgentLabel(agent)}</span>
+                      <Show when={agent.deprecated}>
+                        <span
+                          style={{
+                            "font-size": "var(--kilo-font-size-10)",
+                            padding: "1px 5px",
+                            "border-radius": "3px",
+                            background: "var(--vscode-editorWarning-foreground, #cca700)",
+                            color: "var(--vscode-editorWarning-foreground-text, #1e1e1e)",
+                          }}
+                        >
+                          {language.t("settings.agentBehaviour.badge.deprecated")}
+                        </span>
+                      </Show>
+                    </div>
+                    <Show when={agent.description}>
+                      <span class="mode-switcher-item-desc">{agent.description}</span>
                     </Show>
                   </div>
-                  <Show when={agent.description}>
-                    <span class="mode-switcher-item-desc">{agent.description}</span>
+                  <Show when={agent.name === props.value}>
+                    <span class="mode-switcher-item-check" aria-hidden="true">
+                      <Icon name="check-small" size="small" />
+                    </span>
                   </Show>
                 </div>
               )}

@@ -503,7 +503,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "存取專案目錄之外的檔案",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "偵測具有相同輸入的重複工具呼叫",
-
   "session.delete.title": "刪除工作階段",
   "session.delete.confirm": '刪除工作階段 "{{name}}"?',
   "session.delete.button": "刪除工作階段",
@@ -1190,4 +1189,11 @@ export const dict = {
   "chat.search.invalidRegex": "規則運算式無效",
   "chat.search.noResults": "無結果",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
+  "ui.permission.toolLabel.modeSwitch": "切換模式",
+  "ui.permission.modeSwitch.prompt": "將模式從 {{source}} 切換到 {{target}} — 原因：{{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "取消模式切換時",
+  "settings.agentBehaviour.modeSwitchReject.description": "選擇目前工作要在現有模式中繼續還是停止。",
+  "settings.agentBehaviour.modeSwitchReject.continue": "繼續工作",
+  "settings.agentBehaviour.modeSwitchReject.stop": "停止工作",
+  "settings.autoApprove.tool.mode_switch": "切換模式。允許代理在另一個內建模式中繼續目前的工作。",
 } satisfies Partial<Record<Keys, string>>

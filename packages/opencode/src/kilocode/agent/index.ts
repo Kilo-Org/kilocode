@@ -168,6 +168,7 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     list: "allow",
     skill: "allow",
     question: "allow",
+    mode_switch: "ask",
     webfetch: "allow",
     websearch: "allow",
     semantic_search: "allow",
@@ -325,6 +326,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
   return Permission.fromConfig({
     "*": "deny",
     question: "allow",
+    mode_switch: "ask",
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
@@ -580,6 +582,7 @@ export function patchAgents(
       defaults,
       Permission.fromConfig({
         question: "allow",
+        mode_switch: "ask",
         suggest: "allow", // kilocode_change
         plan_enter: "allow",
         semantic_search: "allow",
@@ -605,6 +608,7 @@ export function patchAgents(
         glob: "allow",
         list: "allow",
         question: "allow",
+        mode_switch: "ask",
         skill: "allow",
         suggest: "allow", // kilocode_change
         task: "allow",

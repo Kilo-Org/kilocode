@@ -39,4 +39,11 @@ describe("splitConfigByScope", () => {
     })
     expect(split.project).toEqual({})
   })
+
+  it("writes mode-switch rejection behavior to shared global config", () => {
+    const split = splitConfigByScope({ mode_switch_on_reject: "stop" })
+
+    expect(split.global).toEqual({ mode_switch_on_reject: "stop" })
+    expect(split.project).toEqual({})
+  })
 })

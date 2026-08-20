@@ -141,6 +141,7 @@ const layer = Layer.effect(
         const baseDefaults = Permission.fromConfig({ // kilocode_change
           "*": "allow",
           doom_loop: "ask",
+          mode_switch: "ask", // kilocode_change - gate agent-initiated mode changes through normal policy
           external_directory: {
             "*": "ask",
             ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),

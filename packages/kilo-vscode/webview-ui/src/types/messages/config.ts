@@ -131,6 +131,7 @@ export interface BrowserSettings {
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
+export type ModeSwitchOnReject = "continue" | "stop"
 export type McpToolDisplay = "expanded" | "collapsed"
 
 export interface Config {
@@ -151,6 +152,7 @@ export interface Config {
   skills?: SkillsConfig
   snapshot?: boolean
   remote_control?: boolean
+  mode_switch_on_reject?: ModeSwitchOnReject
   terminal_command_display?: TerminalCommandDisplay
   code_edit_display?: CodeEditDisplay
   mcp_tool_display?: McpToolDisplay

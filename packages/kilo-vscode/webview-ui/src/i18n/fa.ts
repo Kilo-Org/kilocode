@@ -480,7 +480,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "دسترسی به فایل‌های خارج از پوشه پروژه",
   "settings.permissions.tool.doom_loop.title": "حلقه بی‌پایان",
   "settings.permissions.tool.doom_loop.description": "تشخیص فراخوانی‌های تکراری ابزار با ورودی یکسان",
-
   "session.delete.title": "حذف جلسه",
   "session.delete.confirm": "حذف جلسه «{{name}}»؟",
   "session.delete.button": "حذف جلسه",
@@ -1255,4 +1254,13 @@ export const dict = {
   "chat.search.invalidRegex": "عبارت منظم نامعتبر",
   "chat.search.noResults": "نتیجه‌ای یافت نشد",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
+  "ui.permission.toolLabel.modeSwitch": "تغییر حالت",
+  "ui.permission.modeSwitch.prompt": "تغییر حالت از {{source}} به {{target}} — دلیل: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "هنگام لغو تغییر حالت",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "انتخاب کنید که وظیفه فعلی در حالت موجود ادامه یابد یا متوقف شود.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "ادامه وظیفه",
+  "settings.agentBehaviour.modeSwitchReject.stop": "توقف وظیفه",
+  "settings.autoApprove.tool.mode_switch":
+    "تغییر حالت. به عامل اجازه می‌دهد وظیفه فعلی را در حالت داخلی دیگری ادامه دهد.",
 }

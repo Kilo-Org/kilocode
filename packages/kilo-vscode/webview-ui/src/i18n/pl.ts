@@ -524,7 +524,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Dostęp do plików poza katalogiem projektu",
   "settings.permissions.tool.doom_loop.title": "Zapętlenie",
   "settings.permissions.tool.doom_loop.description": "Wykrywanie powtarzających się wywołań narzędzi (doom loop)",
-
   "session.delete.title": "Usuń sesję",
   "session.delete.confirm": 'Usunąć sesję "{{name}}"?',
   "session.delete.button": "Usuń sesję",
@@ -1260,4 +1259,13 @@ export const dict = {
   "chat.search.invalidRegex": "Nieprawidłowe wyrażenie regularne",
   "chat.search.noResults": "Brak wyników",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
+  "ui.permission.toolLabel.modeSwitch": "Przełącz tryb",
+  "ui.permission.modeSwitch.prompt": "Przełącz tryb z {{source}} na {{target}} — Powód: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Gdy przełączenie trybu zostanie anulowane",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Wybierz, czy bieżące zadanie ma być kontynuowane w dotychczasowym trybie, czy zatrzymane.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Kontynuuj zadanie",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Zatrzymaj zadanie",
+  "settings.autoApprove.tool.mode_switch":
+    "Przełączanie trybów. Pozwala agentom wznowić bieżące zadanie w innym wbudowanym trybie.",
 }

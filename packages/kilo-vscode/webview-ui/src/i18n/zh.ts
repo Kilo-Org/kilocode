@@ -543,7 +543,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "访问项目目录之外的文件",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "检测具有相同输入的重复工具调用",
-
   "session.delete.title": "删除会话",
   "session.delete.confirm": '删除会话 "{{name}}"？',
   "session.delete.button": "删除会话",
@@ -1186,4 +1185,11 @@ export const dict = {
   "chat.search.invalidRegex": "正则表达式无效",
   "chat.search.noResults": "无结果",
   "chat.search.searchingHistory": "正在搜索更早的消息…",
+  "ui.permission.toolLabel.modeSwitch": "切换模式",
+  "ui.permission.modeSwitch.prompt": "将模式从 {{source}} 切换到 {{target}} — 原因：{{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "模式切换被取消时",
+  "settings.agentBehaviour.modeSwitchReject.description": "选择当前任务是在现有模式下继续还是停止。",
+  "settings.agentBehaviour.modeSwitchReject.continue": "继续任务",
+  "settings.agentBehaviour.modeSwitchReject.stop": "停止任务",
+  "settings.autoApprove.tool.mode_switch": "切换模式。允许代理在另一个内置模式中继续当前任务。",
 } satisfies Partial<Record<Keys, string>>

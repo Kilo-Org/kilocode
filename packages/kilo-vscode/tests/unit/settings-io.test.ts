@@ -167,6 +167,12 @@ describe("parseImport", () => {
     if (result.ok) expect(result.config.model).toBe("test-model")
   })
 
+  it("preserves the shared mode-switch rejection setting", () => {
+    const result = parseImport(JSON.stringify({ mode_switch_on_reject: "stop" }))
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.config.mode_switch_on_reject).toBe("stop")
+  })
+
   it("preserves task subagent model and variant settings", () => {
     const json = JSON.stringify({
       subagent_model: "anthropic/claude-sonnet-4",

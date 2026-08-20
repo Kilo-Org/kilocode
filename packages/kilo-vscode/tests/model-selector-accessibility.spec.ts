@@ -303,8 +303,10 @@ test("settings and mode editing expose distinct model field purposes", async ({ 
 test("mode picker focuses the selected mode as it opens", async ({ page }) => {
   await load(page, "prompt-input--default-420")
 
-  await page.getByRole("button", { name: "Code", exact: true }).click()
-  await expect(page.locator(".mode-switcher-item.selected")).toBeFocused()
+  await page.getByRole("button", { name: "Current mode: Code", exact: true }).click()
+  const selected = page.locator(".mode-switcher-item.selected")
+  await expect(selected).toBeFocused()
+  await expect(selected.locator(".mode-switcher-item-check")).toBeVisible()
 })
 
 test("variant picker focuses the selected effort as it opens", async ({ page }) => {

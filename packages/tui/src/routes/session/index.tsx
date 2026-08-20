@@ -95,6 +95,8 @@ import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
 import { MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
+import { ModeSwitch } from "@/kilocode/cli/cmd/tui/routes/session/mode-switch"
+import { ModeSwitchTui } from "@/kilocode/cli/cmd/tui/routes/session/mode-switch-ui"
 import { formatMarkdownTables } from "../../util/markdown"
 // kilocode_change end
 import { LocationProvider } from "../../context/location"
@@ -435,6 +437,15 @@ export function Session() {
       lastSwitch = part.id
     }
   })
+
+  // kilocode_change start - follow agent-initiated mode switches in the active TUI session
+  onCleanup(
+    event.on("session.next.agent.switched", (evt) => {
+      const agent = ModeSwitch.switched(route.sessionID, evt)
+      if (agent) local.agent.set(agent)
+    }),
+  )
+  // kilocode_change end
 
   let seeded = false
   let scroll: ScrollBoxRenderable
@@ -1921,6 +1932,7 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
 
   // Hide tool if showDetails is false and tool completed successfully
   const shouldHide = createMemo(() => {
+    if (props.part.tool === "mode_switch") return false // kilocode_change - keep mode transitions visible
     if (ctx.showDetails()) return false
     if (props.part.state.status !== "completed") return false
     return true
@@ -1968,6 +1980,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         </Match>
         <Match when={display() === "semantic_search"}>
           <SemanticSearch {...toolprops} />
+        </Match>
+        <Match when={display() === "mode_switch"}>
+          <ModeSwitchTui.Tool input={toolprops.input} metadata={toolprops.metadata} part={props.part} />
         </Match>
         {/* kilocode_change end */}
         <Match when={display() === "webfetch"}>
@@ -3057,6 +3072,7 @@ const toolDisplays = new Set([
   "background_process",
   "interactive_terminal",
   "semantic_search",
+  "mode_switch",
   // kilocode_change end
 ])
 

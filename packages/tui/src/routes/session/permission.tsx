@@ -18,7 +18,10 @@ import { useTuiConfig } from "../../config"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { normalizeUrls } from "@/kilocode/util/url"
-import { MemoryPermissionRegistry } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
+import {
+  MemoryPermissionRegistry,
+  type PermissionInfo,
+} from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
 import { skillShellPrompt } from "@/kilocode/skills/display"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
@@ -216,7 +219,8 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
       </Match>
       <Match when={store.stage === "permission"}>
         {(() => {
-          const info = () => {
+          // kilocode_change - keep Kilo permission renderers in the type system so heading/options are visible
+          const info = (): PermissionInfo => {
             const permission = props.request.permission
             const data = input()
 
@@ -461,7 +465,8 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             <box flexDirection="column" gap={0}>
               <box flexDirection="row" gap={1} flexShrink={0}>
                 <text fg={theme.warning}>{"△"}</text>
-                <text fg={theme.text}>Permission required</text>
+                {/* kilocode_change - allow Kilo permission renderers to provide focused approval copy */}
+                <text fg={theme.text}>{current.heading ?? "Permission required"}</text>
               </box>
               <box flexDirection="row" gap={1} paddingLeft={2} flexShrink={0}>
                 <text fg={theme.textMuted} flexShrink={0}>
@@ -483,13 +488,14 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             </box>
           )
 
-          // kilocode_change start - skill shell batches are never persisted: only Allow / Reject
+          // kilocode_change start - skill shell and sandbox escalation batches never persisted; protected config hides "Always"
           const options: Record<string, string> =
-            props.request.metadata?.["skillShell"] || props.request.metadata?.["sandboxEscalation"]
+            current.options ??
+            (props.request.metadata?.["skillShell"] || props.request.metadata?.["sandboxEscalation"]
               ? { once: "Allow", reject: "Reject" }
               : props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
                 ? { once: "Allow once", reject: "Reject" }
-                : { once: "Allow once", always: "Allow always", reject: "Reject" }
+                : { once: "Allow once", always: "Allow always", reject: "Reject" })
           // kilocode_change end
 
           const body = (

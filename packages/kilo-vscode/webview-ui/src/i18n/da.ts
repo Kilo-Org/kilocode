@@ -566,7 +566,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Få adgang til filer uden for projektmappen",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Opdag gentagne værktøjskald med identisk input",
-
   "session.delete.title": "Slet session",
   "session.delete.confirm": 'Slet session "{{name}}"?',
   "session.delete.button": "Slet session",
@@ -1255,4 +1254,13 @@ export const dict = {
   "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
   "chat.search.noResults": "Ingen resultater",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
+  "ui.permission.toolLabel.modeSwitch": "Skift tilstand",
+  "ui.permission.modeSwitch.prompt": "Skift tilstand fra {{source}} til {{target}} — Årsag: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Når et tilstandsskift annulleres",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Vælg, om den aktuelle opgave skal fortsætte i sin nuværende tilstand eller stoppe.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Fortsæt opgaven",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Stop opgaven",
+  "settings.autoApprove.tool.mode_switch":
+    "Skift tilstand. Giver agenter mulighed for at fortsætte den aktuelle opgave i en anden indbygget tilstand.",
 }

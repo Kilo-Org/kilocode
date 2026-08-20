@@ -1,6 +1,7 @@
 import type { PermissionRequest } from "@kilocode/sdk/v2"
 import { useTheme } from "@tui/context/theme"
 import { MemoryPermissionRegistry } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
+import { ModeSwitchTui } from "@/kilocode/cli/cmd/tui/routes/session/mode-switch-ui"
 
 function MemoryBody(props: { request: PermissionRequest }) {
   const { theme } = useTheme()
@@ -14,6 +15,7 @@ function MemoryBody(props: { request: PermissionRequest }) {
 
 export namespace MemoryPermission {
   export function register() {
+    MemoryPermissionRegistry.register("mode_switch", ModeSwitchTui.permission)
     MemoryPermissionRegistry.register("kilo_memory_save", (request) => {
       const action = String(request.metadata?.action ?? "save")
       return {

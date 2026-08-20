@@ -559,7 +559,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "เข้าถึงไฟล์นอกไดเรกทอรีโปรเจกต์",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "ตรวจจับการเรียกเครื่องมือซ้ำด้วยข้อมูลนำเข้าเหมือนกัน",
-
   "session.delete.title": "ลบเซสชัน",
   "session.delete.confirm": 'ลบเซสชัน "{{name}}" หรือไม่?',
   "session.delete.button": "ลบเซสชัน",
@@ -1231,4 +1230,11 @@ export const dict = {
   "chat.search.invalidRegex": "นิพจน์ทั่วไปไม่ถูกต้อง",
   "chat.search.noResults": "ไม่มีผลลัพธ์",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
+  "ui.permission.toolLabel.modeSwitch": "สลับโหมด",
+  "ui.permission.modeSwitch.prompt": "สลับโหมดจาก {{source}} เป็น {{target}} — เหตุผล: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "เมื่อยกเลิกการสลับโหมด",
+  "settings.agentBehaviour.modeSwitchReject.description": "เลือกว่างานปัจจุบันจะดำเนินต่อในโหมดเดิมหรือหยุด",
+  "settings.agentBehaviour.modeSwitchReject.continue": "ทำงานต่อ",
+  "settings.agentBehaviour.modeSwitchReject.stop": "หยุดงาน",
+  "settings.autoApprove.tool.mode_switch": "สลับโหมด อนุญาตให้เอเจนต์ทำงานปัจจุบันต่อในโหมดในตัวอื่นได้",
 }

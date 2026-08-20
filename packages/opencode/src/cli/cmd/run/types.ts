@@ -254,6 +254,20 @@ export type FooterEvent =
       type: "model"
       model: string
     }
+  // kilocode_change start - emit the full PromptModel when mode_switch repaints the
+  // active model mid-turn so the footer can update its currentModel signal (used by
+  // writeTurnSummary and any other currentModel consumer).
+  | {
+      type: "model.switch"
+      model: NonNullable<RunInput["model"]>
+    }
+  // kilocode_change end
+  // kilocode_change start
+  | {
+      type: "agent"
+      agent: string
+    }
+  // kilocode_change end
   | {
       type: "turn.send"
       queue: number

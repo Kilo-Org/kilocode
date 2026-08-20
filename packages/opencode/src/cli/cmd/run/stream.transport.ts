@@ -76,6 +76,8 @@ type StreamInput = {
   limits: () => Record<string, number>
   providers?: () => RunProvider[]
   footer: FooterApi
+  onAgentChange?: (agent: string) => void // kilocode_change
+  onModelChange?: (model: { providerID: string; id: string; variant?: string }) => void // kilocode_change
   trace?: Trace
   signal?: AbortSignal
 }
@@ -133,6 +135,8 @@ type TransportService = {
 class Service extends Context.Service<Service, TransportService>()("@opencode/RunStreamTransport") {}
 
 function sid(event: Event): string | undefined {
+  if (event.type === "session.updated") return event.properties.sessionID // kilocode_change
+
   if (event.type === "message.updated") {
     return event.properties.sessionID
   }
@@ -150,6 +154,8 @@ function sid(event: Event): string | undefined {
   if (
     event.type === "session.next.shell.started" ||
     event.type === "session.next.shell.ended" ||
+    event.type === "session.next.agent.switched" || // kilocode_change - keeps mid-turn agent switches in scope
+    event.type === "session.next.model.switched" || // kilocode_change - keeps mid-turn model switches in scope
     event.type === "permission.asked" ||
     event.type === "permission.replied" ||
     event.type === "question.asked" ||
@@ -220,6 +226,21 @@ function active(event: Event, sessionID: string): boolean {
   if (event.type === "message.part.delta" || event.type === "message.part.updated") {
     return false
   }
+
+  // kilocode_change start - session.updated fires for any session in the instance and at
+  // prompt intake before the assistant starts streaming; treating it as turn activity
+  // would let the 250ms idle poll complete the turn before any assistant work runs.
+  // session.next.{agent,model}.switched are published mid-turn and must not arm turn
+  // completion either; the turn is still active while the destination mode continues
+  // the task.
+  if (
+    event.type === "session.updated" ||
+    event.type === "session.next.agent.switched" ||
+    event.type === "session.next.model.switched"
+  ) {
+    return false
+  }
+  // kilocode_change end
 
   if (event.type !== "session.status") {
     return true
@@ -891,6 +912,33 @@ function createLayer(input: StreamInput) {
         }
 
         const applyEvent = Effect.fn("RunStreamTransport.applyEvent")(function* (event: Event) {
+          // kilocode_change start - session.updated only fires at prompt intake / post-turn,
+          // so an approved mid-turn mode switch never reaches onAgentChange. Also watch the
+          // V2 session.next.{agent,model}.switched events so the footer label and
+          // state.model stay in sync with the destination mode mid-turn.
+          if (event.type === "session.next.agent.switched") {
+            if (event.properties.sessionID === input.sessionID) {
+              input.onAgentChange?.(event.properties.agent)
+            }
+          } else if (event.type === "session.next.model.switched") {
+            if (event.properties.sessionID === input.sessionID) {
+              input.onModelChange?.({
+                providerID: event.properties.model.providerID,
+                id: event.properties.model.id,
+                ...(event.properties.model.variant
+                  ? { variant: event.properties.model.variant }
+                  : {}),
+              })
+            }
+          } else if (
+            event.type === "session.updated" &&
+            event.properties.sessionID === input.sessionID &&
+            typeof event.properties.info.agent === "string"
+          ) {
+            input.onAgentChange?.(event.properties.info.agent)
+          }
+          // kilocode_change end
+
           if (event.type === "message.part.delta" && event.properties.sessionID === input.sessionID) {
             if (replayedParts.has(event.properties.partID)) {
               const seen = state.data.text.get(event.properties.partID) ?? ""
@@ -1161,7 +1209,15 @@ function createLayer(input: StreamInput) {
                 if (booting || replaying) {
                   if (sessionID) {
                     input.trace?.write("recv.event", event)
-                    buffered.push(event)
+                    // kilocode_change start - session.updated fires for every session in the
+                    // instance (title, touch, revert) and would otherwise pile up in buffered
+                    // for the process lifetime for any session we never track. Keep
+                    // buffering for tracked sessions so main-session updates still
+                    // reach applyEvent once the run leaves the booting/replaying phase.
+                    if (event.type !== "session.updated" || tracked(sessionID)) {
+                      buffered.push(event)
+                    }
+                    // kilocode_change end
                   }
                   return
                 }
@@ -1169,7 +1225,13 @@ function createLayer(input: StreamInput) {
                 if (!tracked(sessionID)) {
                   if (sessionID) {
                     input.trace?.write("recv.event", event)
-                    buffered.push(event)
+                    // kilocode_change start - session.updated fires for every session in the
+                    // instance (title, touch, revert) and would otherwise pile up in buffered
+                    // for the process lifetime for any session we never track.
+                    if (event.type !== "session.updated") {
+                      buffered.push(event)
+                    }
+                    // kilocode_change end
                   }
                   return
                 }

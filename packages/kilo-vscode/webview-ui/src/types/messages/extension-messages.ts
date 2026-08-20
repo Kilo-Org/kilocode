@@ -193,6 +193,12 @@ export interface SessionUpdatedMessage {
   session: SessionUpdate
 }
 
+export interface SessionAgentSwitchedMessage {
+  type: "sessionAgentSwitched"
+  sessionID: string
+  agent: string
+}
+
 export interface SessionDeletedMessage {
   type: "sessionDeleted"
   sessionID: string
@@ -1305,6 +1311,7 @@ export type ExtensionMessage =
   | SessionCreatedMessage
   | SessionForkedMessage
   | SessionUpdatedMessage
+  | SessionAgentSwitchedMessage
   | SessionDeletedMessage
   | MessageRemovedMessage
   | MessagesLoadedMessage

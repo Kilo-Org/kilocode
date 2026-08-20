@@ -192,6 +192,10 @@ export class RunFooter implements FooterApi {
   private setProviders: Setter<RunProvider[] | undefined>
   private currentModel: Accessor<RunInput["model"]>
   private setCurrentModel: Setter<RunInput["model"]>
+  // kilocode_change start - reactive agent label so the footer repaints after an in-flight mode switch
+  private agentLabel: Accessor<string>
+  private setAgentLabel: Setter<string>
+  // kilocode_change end
   private variants: Accessor<string[]>
   private setVariants: Setter<string[]>
   private currentVariant: Accessor<string | undefined>
@@ -271,6 +275,11 @@ export class RunFooter implements FooterApi {
     const [currentModel, setCurrentModel] = createSignal<RunInput["model"]>(options.model)
     this.currentModel = currentModel
     this.setCurrentModel = setCurrentModel
+    // kilocode_change start - reactive agent label so the footer repaints after an in-flight mode switch
+    const [agentLabel, setAgentLabel] = createSignal(options.agentLabel)
+    this.agentLabel = agentLabel
+    this.setAgentLabel = setAgentLabel
+    // kilocode_change end
     const [variants, setVariants] = createSignal<string[]>([])
     this.variants = variants
     this.setVariants = setVariants
@@ -403,7 +412,7 @@ export class RunFooter implements FooterApi {
       this.flushing = this.flushing
         .then(() =>
           this.scrollback.writeTurnSummary({
-            agent: this.options.agentLabel,
+            agent: this.agentLabel(), // kilocode_change - read the reactive label instead of the captured options value
             model: current ? modelInfo(this.providers(), current).model : this.state().model,
             duration: next.duration,
           }),
@@ -413,6 +422,22 @@ export class RunFooter implements FooterApi {
         })
       return
     }
+
+    // kilocode_change start - update the reactive agent label so the live footer repaints after a mode switch
+    if (next.type === "agent") {
+      this.setAgentLabel(next.agent)
+      return
+    }
+
+    // Update the reactive current model so the next turn summary reflects an
+    // in-flight model switch from mode_switch. The live footer label is already
+    // updated via the `model` patch event above; this keeps `currentModel` in
+    // sync so writeTurnSummary picks up the destination model on the next idle.
+    if (next.type === "model.switch") {
+      this.setCurrentModel(next.model)
+      return
+    }
+    // kilocode_change end
 
     if (next.type === "catalog") {
       if (this.isGone) {

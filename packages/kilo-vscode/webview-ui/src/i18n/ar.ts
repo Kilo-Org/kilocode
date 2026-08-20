@@ -514,7 +514,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "الوصول إلى الملفات خارج دليل المشروع",
   "settings.permissions.tool.doom_loop.title": "حلقة الموت",
   "settings.permissions.tool.doom_loop.description": "اكتشاف استدعاءات الأدوات المتكررة بمدخلات متطابقة",
-
   "session.delete.title": "حذف الجلسة",
   "session.delete.confirm": 'حذف الجلسة "{{name}}"؟',
   "session.delete.button": "حذف الجلسة",
@@ -1226,4 +1225,12 @@ export const dict = {
   "chat.search.invalidRegex": "تعبير عادي غير صالح",
   "chat.search.noResults": "لا توجد نتائج",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
+  "ui.permission.toolLabel.modeSwitch": "تبديل الوضع",
+  "ui.permission.modeSwitch.prompt": "تبديل الوضع من {{source}} إلى {{target}} — السبب: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "عند إلغاء تبديل الوضع",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "اختر ما إذا كانت المهمة الحالية ستستمر في وضعها الحالي أو تتوقف.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "متابعة المهمة",
+  "settings.agentBehaviour.modeSwitchReject.stop": "إيقاف المهمة",
+  "settings.autoApprove.tool.mode_switch": "تبديل الأوضاع. يسمح للوكلاء باستئناف المهمة الحالية في وضع مدمج آخر.",
 }

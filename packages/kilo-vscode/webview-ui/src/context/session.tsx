@@ -1089,14 +1089,15 @@ export const SessionProvider: ParentComponent = (props) => {
     if (message.type === "extensionDataReady") queueModelUsageRefresh()
   }
 
-  function handleExtensionMessage(message: ExtensionMessage): void {
-    // Route suggestion messages (extracted to stay within complexity limit)
-    routeSuggestionMessage(message)
-    if (handleModelUsageMessage(message)) return
-    refreshModelUsageForMessage(message)
-    if (handleStreamMessage(message)) return
-    handleCommandCompletion(message)
-    cah.handleMessage(message)
+  function handleAgentSelectionMessage(message: ExtensionMessage): boolean {
+    if (message.type === "sessionAgentSwitched") {
+      handleAgentSwitched(message.sessionID, message.agent)
+      return true
+    }
+    return false
+  }
+
+  function routeExtensionMessage(message: ExtensionMessage): void {
     switch (message.type) {
       case "sessionCreated":
         handleSessionCreated(message.session, message.draftID)
@@ -1240,6 +1241,18 @@ export const SessionProvider: ParentComponent = (props) => {
         setWorktreeStats({ files: message.files, additions: message.additions, deletions: message.deletions })
         break
     }
+  }
+
+  function handleExtensionMessage(message: ExtensionMessage): void {
+    // Route suggestion messages (extracted to stay within complexity limit)
+    routeSuggestionMessage(message)
+    if (handleModelUsageMessage(message)) return
+    refreshModelUsageForMessage(message)
+    if (handleStreamMessage(message)) return
+    handleCommandCompletion(message)
+    cah.handleMessage(message)
+    if (handleAgentSelectionMessage(message)) return
+    routeExtensionMessage(message)
   }
 
   // Handle messages from extension
@@ -1952,9 +1965,21 @@ export const SessionProvider: ParentComponent = (props) => {
     const prev = store.sessions[session.id]?.revert
     const next = session.revert ?? undefined
     setStore("sessions", session.id, session)
+    if (session.agent && agentNames().has(session.agent) && !store.agentSelections[session.id]) {
+      setStore("agentSelections", session.id, session.agent)
+    }
     if (!changed || (prev?.messageID === next?.messageID && prev?.partID === next?.partID)) return
     clearClose(session.id)
     resetTodos(session.id, next)
+  }
+
+  function handleAgentSwitched(sessionID: string, agent: string) {
+    const names = agentNames()
+    if (!names.has(agent)) return
+    const existing = store.agentSelections[sessionID]
+    if (existing === agent) return
+    if (existing && store.sessions[sessionID]?.agent !== existing) return
+    setStore("agentSelections", sessionID, agent)
   }
 
   function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[]) {

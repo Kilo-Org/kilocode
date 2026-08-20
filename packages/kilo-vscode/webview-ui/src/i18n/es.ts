@@ -570,7 +570,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Acceder a archivos fuera del directorio del proyecto",
   "settings.permissions.tool.doom_loop.title": "Bucle Infinito",
   "settings.permissions.tool.doom_loop.description": "Detectar llamadas a herramientas repetidas con entrada idéntica",
-
   "session.delete.title": "Eliminar sesión",
   "session.delete.confirm": '¿Eliminar sesión "{{name}}"?',
   "session.delete.button": "Eliminar sesión",
@@ -1271,4 +1270,13 @@ export const dict = {
   "chat.search.invalidRegex": "Expresión regular no válida",
   "chat.search.noResults": "Sin resultados",
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
+  "ui.permission.toolLabel.modeSwitch": "Cambiar modo",
+  "ui.permission.modeSwitch.prompt": "Cambiar modo de {{source}} a {{target}} — Motivo: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Cuando se cancela un cambio de modo",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Elige si la tarea actual continúa en su modo existente o se detiene.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Continuar tarea",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Detener tarea",
+  "settings.autoApprove.tool.mode_switch":
+    "Cambiar de modo. Permite que los agentes retomen la tarea actual en otro modo integrado.",
 }

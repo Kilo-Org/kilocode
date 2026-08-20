@@ -1,7 +1,13 @@
 import type { JSX } from "solid-js"
 import type { PermissionRequest } from "@kilocode/sdk/v2"
 
-export type PermissionInfo = { icon: string; title: string; body: JSX.Element }
+export type PermissionInfo = {
+  icon: string
+  heading?: string
+  title: string
+  body: JSX.Element
+  options?: Record<string, string>
+}
 export type PermissionRenderer = (request: PermissionRequest) => PermissionInfo
 
 export namespace MemoryPermissionRegistry {
