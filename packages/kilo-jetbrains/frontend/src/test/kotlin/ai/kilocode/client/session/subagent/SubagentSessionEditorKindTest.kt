@@ -64,6 +64,15 @@ class SubagentSessionEditorKindTest : BasePlatformTestCase() {
         assertEquals(KiloBundle.message("session.subagent.title"), SubagentSessionEditorKind.title(subagentSessionParams("ses_child", "/repo")))
     }
 
+    fun testSubagentTitleCacheEvictsLeastRecentlyUsed() {
+        val cache = service<SubagentTitleCache>()
+        repeat(200) { cache.put("ses_$it", "Title $it") }
+
+        // Oldest untouched entries are evicted; recent ones survive.
+        assertNull(cache.title("ses_0"))
+        assertEquals("Title 199", cache.title("ses_199"))
+    }
+
     fun testSubagentSessionKindRequiresSessionAndDirectory() {
         assertFalse(SubagentSessionEditorKind.isValid(subagentSessionParams("", "/repo")))
         assertFalse(SubagentSessionEditorKind.isValid(subagentSessionParams("ses_child", "")))

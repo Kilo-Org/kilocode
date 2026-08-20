@@ -19,6 +19,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.client.session.subagent.SubagentSessionEditorKind
 import ai.kilocode.client.session.subagent.SubagentTitleCache
+import ai.kilocode.client.session.subagent.ensureSubagentSessionEditorKind
 import ai.kilocode.client.session.subagent.subagentSessionParams
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
@@ -891,6 +892,7 @@ class SessionUi(
     @RequiresEdt
     private fun openSubagent(sessionId: String, title: String) {
         service<SubagentTitleCache>().put(sessionId, title)
+        ensureSubagentSessionEditorKind()
         project.service<KiloVfsManager>().open(
             SubagentSessionEditorKind.ID,
             subagentSessionParams(sessionId, workspace.directory),
