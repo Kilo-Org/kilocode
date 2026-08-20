@@ -3,11 +3,14 @@ import type { Provider } from "@/provider/provider"
 import type { MessageV2 } from "@/session/message-v2"
 import { Token } from "@/util/token"
 import type { ModelMessage } from "ai"
+import { dimensions } from "@opencode-ai/core/kilocode/image-size" // kilocode_change
 
 // Token.estimate undercounts provider tokenizers, especially for code and JSON payloads.
 const FACTOR = 1.3
 const MEDIA = "[encoded media]"
 const MEDIA_TOKENS = Token.estimate(MEDIA)
+const IMAGE_TILE = 512
+const IMAGE_TILE_TOKENS = 256
 
 type Payload = {
   messages: ModelMessage[]
@@ -45,6 +48,7 @@ export namespace KiloSessionOverflow {
 
   export function measure(input: Payload) {
     let extra = 0
+    let vision = 0
     const normalized = JSON.stringify(input.messages, function (this: unknown, key, value: unknown) {
       if (!["data", "url", "image"].includes(key)) return value
       if (!this || typeof this !== "object" || !("type" in this)) return value
@@ -54,6 +58,7 @@ export namespace KiloSessionOverflow {
           ? Math.ceil(value.byteLength / 4)
           : Token.estimate(typeof value === "string" ? value : (JSON.stringify(value) ?? ""))
       extra += Math.max(0, tokens - MEDIA_TOKENS)
+      vision += Math.max(0, image(this, value) - MEDIA_TOKENS)
       return MEDIA
     })
     const messages = Token.estimate(normalized)
@@ -68,9 +73,34 @@ export namespace KiloSessionOverflow {
       ),
     )
     return {
-      normalized: Math.ceil((messages + tools) * FACTOR),
-      raw: Math.ceil((raw + tools) * FACTOR),
+      normalized: Math.ceil((messages + tools + vision) * FACTOR),
+      raw: Math.ceil((raw + tools + vision) * FACTOR),
       continuation: continued(input.messages),
+    }
+  }
+
+  function image(parent: unknown, value: unknown) {
+    if (!parent || typeof parent !== "object" || !("type" in parent)) return 0
+    const type = String(parent.type)
+    if (type !== "image" && type !== "file" && type !== "media") return 0
+    if (
+      type !== "image" &&
+      (!("mediaType" in parent) || typeof parent.mediaType !== "string" || !parent.mediaType.startsWith("image/"))
+    )
+      return 0
+    const encoded = typeof value === "string" && value.includes(",") ? value.slice(value.indexOf(",") + 1) : value
+    const bytes =
+      typeof encoded === "string"
+        ? Buffer.from(encoded, "base64")
+        : encoded instanceof Uint8Array
+          ? Buffer.from(encoded)
+          : undefined
+    if (!bytes) return 0
+    try {
+      const size = dimensions(bytes)
+      return Math.ceil(size.width / IMAGE_TILE) * Math.ceil(size.height / IMAGE_TILE) * IMAGE_TILE_TOKENS
+    } catch {
+      return 0
     }
   }
 

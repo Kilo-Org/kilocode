@@ -7,7 +7,7 @@ import { FileSystem } from "../filesystem"
 import { DecodeError, PixelLimitError, ResizerUnavailableError, SizeError } from "../image" // kilocode_change
 import { allowed, dimensions, MAX_DIMENSION, MAX_PIXELS } from "../kilocode/image-size" // kilocode_change
 
-const JPEG_QUALITIES = [80, 85, 70, 55, 40]
+const JPEG_QUALITIES = [85, 80, 70, 55, 40] // kilocode_change - prefer higher quality before reducing it
 
 export const make = Effect.gen(function* () {
   ;(globalThis as typeof globalThis & { __OPENCODE_PHOTON_WASM_PATH?: string }).__OPENCODE_PHOTON_WASM_PATH =

@@ -3,7 +3,6 @@ import { LLMError, ProviderErrorEvent } from "./schema"
 
 const patterns = [
   /prompt is too long/i,
-  /request_too_large/i,
   /input is too long for requested model/i,
   /exceeds the context window/i,
   /exceeds (?:the )?(?:model'?s )?maximum context length(?: of [\d,]+ tokens?|\s*\([\d,]+\))/i,
@@ -20,7 +19,6 @@ const patterns = [
   /context window exceeds limit/i,
   /exceeded model token limit/i,
   /context[_ ]length[_ ]exceeded/i,
-  /request entity too large/i,
   /context length is only \d+ tokens/i,
   /input length.*exceeds.*context length/i,
   /prompt too long; exceeded (?:max )?context length/i,
@@ -42,7 +40,7 @@ const exclusions = [
 
 export const isContextOverflow = (message: string) =>
   !exclusions.some((pattern) => pattern.test(message)) &&
-  (patterns.some((pattern) => pattern.test(message)) || /^4(00|13)\s*(status code)?\s*\(no body\)/i.test(message))
+  (patterns.some((pattern) => pattern.test(message)) || /^400\s*(status code)?\s*\(no body\)/i.test(message)) // kilocode_change - 413 is a payload limit, not a context signal
 
 export const isContextOverflowFailure = (failure: unknown) =>
   failure instanceof LLMError

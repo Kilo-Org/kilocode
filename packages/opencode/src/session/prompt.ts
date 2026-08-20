@@ -89,6 +89,7 @@ import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
+import { MAX_BYTES as MAX_MEDIA_BYTES, encodedBytes as encodedMediaBytes } from "@/kilocode/session/media" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -138,14 +139,10 @@ function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (
-    input: PromptInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error>
+  readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error> // kilocode_change
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
-  readonly command: (
-    input: CommandInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
+  readonly command: (input: CommandInput) => Effect.Effect<SessionV1.WithParts, Image.Error | Error> // kilocode_change
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -979,14 +976,18 @@ export const layer = Layer.effect(
                     synthetic: true,
                     text: `[Binary MCP resource attached: ${filename ?? uri} (${mime})]`,
                   })
-                  pieces.push({
+                  // kilocode_change start - normalize MCP images before persistence
+                  const file: MessageV2.FilePart = {
+                    id: PartID.ascending(),
                     messageID: info.id,
                     sessionID: input.sessionID,
                     type: "file",
                     mime,
                     filename,
                     url: `data:${mime};base64,${c.blob}`,
-                  })
+                  }
+                  pieces.push(file.mime.startsWith("image/") ? yield* image.normalize(file).pipe(Effect.orDie) : file)
+                  // kilocode_change end
                 }
               }
             } else {
@@ -1733,6 +1734,29 @@ export const layer = Layer.effect(
           let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
             Effect.provideService(Database.Service, database),
           )
+          let mediaBytes = encodedMediaBytes(modelMsgs)
+          // kilocode_change start - strip historical media before rejecting an oversized current turn
+          if (mediaBytes > MAX_MEDIA_BYTES) {
+            msgs = KiloSessionPrompt.stripHistoricalMedia(msgs)
+            modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
+              Effect.provideService(Database.Service, database),
+            )
+            mediaBytes = encodedMediaBytes(modelMsgs)
+          }
+          // kilocode_change end
+          // kilocode_change start - reject an over-budget current-turn media request
+          if (mediaBytes > MAX_MEDIA_BYTES) {
+            handle.message.error = new MessageV2.APIError({
+              message: `Image attachments exceed the ${Math.round(MAX_MEDIA_BYTES / (1024 * 1024))} MiB request limit. Remove an image or send the images in separate messages.`,
+              isRetryable: false,
+            }).toObject()
+            handle.message.finish = "error"
+            yield* sessions.updateMessage(handle.message)
+            yield* events.publish(Session.Event.Error, { sessionID, error: handle.message.error })
+            closeReasons.set(sessionID, "error")
+            return "break" as const
+          }
+          // kilocode_change end
           const size = Buffer.byteLength(JSON.stringify(modelMsgs))
           if (size > REQUEST_PRUNE_BYTES) {
             yield* compaction.prune({ sessionID, reason: "payload-limit" })
@@ -2518,7 +2542,10 @@ export const PromptInput = Schema.Struct({
 // `parts` type from the exported Schema input types so callers see a proper
 // tagged union.
 type PartInputUnion =
-  MessageV2.TextPartInput | MessageV2.FilePartInput | MessageV2.AgentPartInput | MessageV2.SubtaskPartInput
+  | MessageV2.TextPartInput
+  | MessageV2.FilePartInput
+  | MessageV2.AgentPartInput
+  | MessageV2.SubtaskPartInput
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext

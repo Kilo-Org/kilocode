@@ -81,9 +81,11 @@ const layer = Layer.effect(
       const normalize = yield* loadAdapter
       return yield* normalize(resource, content, {
         autoResize: image.auto_resize ?? true,
-        maxWidth: image.max_width ?? 2_000,
-        maxHeight: image.max_height ?? 2_000,
-        maxBase64Bytes: image.max_base64_bytes ?? 5 * 1024 * 1024,
+        // kilocode_change start - keep prompt images below common provider limits
+        maxWidth: image.max_width ?? 1_600,
+        maxHeight: image.max_height ?? 1_600,
+        maxBase64Bytes: image.max_base64_bytes ?? 1.5 * 1024 * 1024,
+        // kilocode_change end
       })
     })
     return Service.of({ normalize })

@@ -375,7 +375,6 @@ describe("Kilo preflight compaction", () => {
     expect(usage.normalized).toBeLessThan(100)
     expect(usage.raw).toBeGreaterThan(100_000)
   })
-
   test("still compacts oversized text when the request includes media", () => {
     const conf = cfg({ threshold_percent: 75 })
     const mdl = model({ context: 200_000, output: 32_000 })
