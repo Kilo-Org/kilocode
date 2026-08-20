@@ -699,6 +699,69 @@ export const PromptRailManyPrompts: Story = {
   },
 }
 
+const correctionTurns = Array.from({ length: 30 }, (_, i) =>
+  railTurn(300 + i, `Virtualized prompt ${i + 1}`, `Virtualized answer ${i + 1}.`),
+)
+const correctionActive = railTurn(400, "Continue streaming", "Initial streamed response.")
+const correctionMessages = [...correctionTurns.flatMap((turn) => turn.messages), ...correctionActive.messages]
+const correctionAssistant = correctionActive.messages[1]!
+correctionAssistant.finish = "tool-calls"
+const correctionParts = Object.assign(
+  {},
+  ...correctionTurns.map((turn) => turn.parts),
+  correctionActive.parts,
+) as Record<string, any[]>
+const correctionData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: correctionMessages },
+  part: correctionParts,
+}
+
+export const MessageListLayoutCorrection: Story = {
+  name: "MessageList - follow after layout correction",
+  render: () => {
+    const [output, setOutput] = createSignal("Initial streamed response.")
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      messages: () => correctionMessages,
+      userMessages: () => correctionMessages.filter((msg) => msg.role === "user"),
+      getParts: (id: string) => {
+        if (id !== correctionAssistant.id) return correctionParts[id] ?? []
+        const part = correctionParts[id]![0]!
+        return [{ ...part, text: output() }]
+      },
+    }
+    return (
+      <StoryProviders data={correctionData} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div
+            class="auto-scroll-correction-fixture"
+            style={{ height: "100vh", display: "flex", "flex-direction": "column" }}
+          >
+            <style>{`
+              .auto-scroll-correction-controls {
+                position: fixed;
+                inset: 8px 8px auto auto;
+                z-index: 10;
+              }
+            `}</style>
+            <div class="auto-scroll-correction-controls">
+              <button
+                type="button"
+                data-testid="append-stream"
+                onClick={() => setOutput((value) => `${value}\n\n${"More streamed output. ".repeat(30)}`)}
+              >
+                Append stream
+              </button>
+            </div>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
 export const MessageListToolToQueuedUserSpacing: Story = {
   name: "MessageList — queued users stay at bottom",
   render: () => {
