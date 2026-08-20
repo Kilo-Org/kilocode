@@ -32,7 +32,8 @@ class TaskToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool),
-) : AbstractSessionPartView(parts.header, { TaskBody(parts.glyph).scroll }), UiDataProvider {
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { TaskBody(parts.glyph).scroll }, { footer }), UiDataProvider, ApprovalReasonTarget {
 
     override val contentId: String = tool.id
 
@@ -60,6 +61,7 @@ class TaskToolView(
         val follow = tailVisible()
         var changed = sync()
         changed = syncRows() || changed
+        changed = syncApprovalReason(approvalReasonsVisible()) || changed
         if (content.childTools.isNotEmpty() && !collapsed) changed = expand() || changed
         followTail(follow || fresh)
         if (changed) refresh()
@@ -98,6 +100,7 @@ class TaskToolView(
         changed = setFont(parts.sub, style.smallEditorFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
         for (row in rows.values) changed = row.applyStyle(style) || changed
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
     }
 
@@ -105,8 +108,15 @@ class TaskToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight()
+        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight() + footerHeight()
         return Dimension(size.width, minOf(size.height, height))
+    }
+
+    @RequiresEdt
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     private fun sync(): Boolean {
@@ -120,6 +130,7 @@ class TaskToolView(
         changed = setForeground(parts.title, titleColor(item)) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
+        changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
     }
 
