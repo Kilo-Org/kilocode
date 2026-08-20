@@ -7,7 +7,12 @@ import java.awt.LayoutManager2
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-enum class StackAxis { VERTICAL, HORIZONTAL }
+class StackAxis private constructor(val vertical: Boolean) {
+    companion object {
+        val VERTICAL = StackAxis(true)
+        val HORIZONTAL = StackAxis(false)
+    }
+}
 
 /**
  * A transparent one-dimensional layout panel for rows and columns.
@@ -91,7 +96,7 @@ open class Stack(
             val ins = parent.insets
             val w = maxOf(0, parent.width - ins.left - ins.right)
             val h = maxOf(0, parent.height - ins.top - ins.bottom)
-            if (axis == StackAxis.HORIZONTAL && fit) {
+            if (!axis.vertical && fit) {
                 fit(parent, ins.left, ins.top, w, h)
                 return
             }
@@ -113,11 +118,11 @@ open class Stack(
                         if (entry.comp.isVisible) {
                             if (seen) {
                                 val gap = space ?: gap
-                                if (axis == StackAxis.VERTICAL) y += gap else x += gap
+                                if (axis.vertical) y += gap else x += gap
                             }
                             seen = true
                             ready = true
-                            if (axis == StackAxis.VERTICAL) {
+                            if (axis.vertical) {
                                 entry.comp.setSize(w, entry.comp.height.coerceAtLeast(1))
                             } else {
                                 entry.comp.setSize(entry.comp.width.coerceAtLeast(1), h)
@@ -125,18 +130,18 @@ open class Stack(
                             val pref = entry.comp.preferredSize
                             val min = entry.comp.minimumSize
                             val max = entry.comp.maximumSize
-                            val cw = if (axis == StackAxis.VERTICAL) {
+                            val cw = if (axis.vertical) {
                                 w
                             } else {
                                 bound(pref.width, min.width, max.width)
                             }
-                            val ch = if (axis == StackAxis.HORIZONTAL) {
+                            val ch = if (!axis.vertical) {
                                 h
                             } else {
                                 bound(pref.height, min.height, max.height)
                             }
                             entry.comp.setBounds(x, y, cw, ch)
-                            if (axis == StackAxis.VERTICAL) y += ch else x += cw
+                            if (axis.vertical) y += ch else x += cw
                         }
                     }
                 }
@@ -185,14 +190,14 @@ open class Stack(
             return items
         }
 
-        override fun minimumLayoutSize(parent: Container) = size(parent, Size.MIN)
-        override fun preferredLayoutSize(parent: Container) = size(parent, Size.PREF)
-        override fun maximumLayoutSize(target: Container) = size(target, Size.MAX)
+        override fun minimumLayoutSize(parent: Container) = size(parent, MIN)
+        override fun preferredLayoutSize(parent: Container) = size(parent, PREF)
+        override fun maximumLayoutSize(target: Container) = size(target, MAX)
         override fun getLayoutAlignmentX(target: Container) = 0.5f
         override fun getLayoutAlignmentY(target: Container) = 0.5f
         override fun invalidateLayout(target: Container) = Unit
 
-        private fun size(parent: Container, kind: Size): Dimension {
+        private fun size(parent: Container, kind: Int): Dimension {
             val ins = parent.insets
             var main = 0
             var cross = 0
@@ -213,56 +218,29 @@ open class Stack(
                             if (seen) main = safe(main, space ?: gap)
                             seen = true
                             ready = true
-                            val dim = dim(entry.comp, kind, cross(parent))
-                            main = safe(main, if (axis == StackAxis.VERTICAL) dim.height else dim.width)
-                            cross = maxOf(cross, if (axis == StackAxis.VERTICAL) dim.width else dim.height)
+                            val dim = dim(entry.comp, kind)
+                            main = safe(main, if (axis.vertical) dim.height else dim.width)
+                            cross = maxOf(cross, if (axis.vertical) dim.width else dim.height)
                         }
                     }
                 }
             }
-
-            val w = if (axis == StackAxis.VERTICAL) cross else main
-            val h = if (axis == StackAxis.VERTICAL) main else cross
+            val w = if (axis.vertical) cross else main
+            val h = if (axis.vertical) main else cross
             return Dimension(safe(w, ins.left + ins.right), safe(h, ins.top + ins.bottom))
         }
 
-        private fun dim(comp: Component, kind: Size, cross: Int): Dimension {
-            if (kind == Size.MIN) return comp.minimumSize
+        private fun dim(comp: Component, kind: Int): Dimension {
             val min = comp.minimumSize
-            if (kind == Size.MAX) {
-                val max = comp.maximumSize
-                return Dimension(maxOf(min.width, max.width), maxOf(min.height, max.height))
-            }
-            if (cross > 0) {
-                if (axis == StackAxis.VERTICAL) {
-                    comp.setSize(cross, comp.height.coerceAtLeast(1))
-                } else {
-                    comp.setSize(comp.width.coerceAtLeast(1), cross)
-                }
-            }
-            val pref = comp.preferredSize
+            if (kind == MIN) return min
             val max = comp.maximumSize
-            return Dimension(
-                bound(pref.width, min.width, max.width),
-                bound(pref.height, min.height, max.height),
-            )
+            val cw = max.width.coerceAtLeast(min.width)
+            val ch = max.height.coerceAtLeast(min.height)
+            if (kind == MAX) return Dimension(cw, ch)
+            val pref = comp.preferredSize
+            return Dimension(bound(pref.width, min.width, cw), bound(pref.height, min.height, ch))
         }
-
-        private fun cross(parent: Container): Int {
-            val ins = parent.insets
-            if (axis == StackAxis.VERTICAL) return maxOf(0, parent.width - ins.left - ins.right)
-            return maxOf(0, parent.height - ins.top - ins.bottom)
-        }
-
-        private sealed interface Entry {
-            data class Child(val comp: Component) : Entry
-            data class Gap(val size: Int) : Entry
-        }
-
-        private data class Item(val comp: Component, val gap: Int, val width: Int)
     }
-
-    private enum class Size { MIN, PREF, MAX }
 
     companion object {
         fun vertical(gap: Int = 0) = Stack(StackAxis.VERTICAL, gap)
@@ -278,24 +256,33 @@ private fun filler(axis: StackAxis, size: Int) = object : JComponent() {
         isOpaque = false
     }
 
-    override fun getMinimumSize() = dim()
-    override fun getPreferredSize() = dim()
+    override fun getPreferredSize(): Dimension = dim()
+    override fun getMinimumSize(): Dimension = dim()
     override fun getMaximumSize(): Dimension {
-        if (axis == StackAxis.VERTICAL) return Dimension(Int.MAX_VALUE, size)
+        if (axis.vertical) return Dimension(Int.MAX_VALUE, size)
         return Dimension(size, Int.MAX_VALUE)
     }
 
     private fun dim(): Dimension {
-        if (axis == StackAxis.VERTICAL) return Dimension(0, size)
+        if (axis.vertical) return Dimension(0, size)
         return Dimension(size, 0)
     }
 }
 
-private fun bound(value: Int, min: Int, max: Int) = value.coerceIn(min, maxOf(min, max))
-
-private fun safe(a: Int, b: Int): Int {
-    val sum = a.toLong() + b.toLong()
-    if (sum > Int.MAX_VALUE) return Int.MAX_VALUE
-    if (sum < 0) return 0
-    return sum.toInt()
+private sealed class Entry {
+    data class Child(val comp: Component) : Entry()
+    data class Gap(val size: Int) : Entry()
 }
+
+private data class Item(val comp: Component, val gap: Int, val width: Int)
+
+private const val MIN = 0
+private const val PREF = 1
+private const val MAX = 2
+
+private fun safe(value: Int, extra: Int): Int {
+    val next = value.toLong() + extra.toLong()
+    return next.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+}
+
+private fun bound(value: Int, min: Int, max: Int): Int = value.coerceAtLeast(min).coerceAtMost(max)
