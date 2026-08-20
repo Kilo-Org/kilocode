@@ -234,6 +234,12 @@
    ============================================ */
 
 .working-indicator {
+  /* Kept under the SWAP budget in StatusText.tsx, which releases the width lock
+     only after the glide has landed. */
+  --working-status-glide: 420ms;
+  --working-status-fade: 240ms;
+  --working-status-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,15 +259,59 @@
   margin-inline: auto;
 }
 
+/* The hidden state stays laid out to reserve the row height, so the spinner and
+   the label shimmer would otherwise animate for the whole idle session. */
+.session-dock-state:not([data-active]) .working-indicator * {
+  animation-play-state: paused;
+}
+
 /* Sized to its text rather than stretched, so the spinner, the label, and the
    counter stay one cluster. Stretching it pushed the counter onto the far edge of
-   whatever surface the dock spanned. */
-.working-text {
+   whatever surface the dock spanned.
+
+   The cluster is centered, so every label change moved the spinner by half the
+   width delta. `StatusText` locks this box to the outgoing width and releases it
+   to the incoming one, which turns that jump into a single short glide. */
+.working-status {
+  display: inline-grid;
   flex: 0 1 auto;
   min-width: 0;
+  /* The clip is only meant to bite horizontally. The padding gives the labels room
+     to travel vertically, and the matching negative margin keeps the row the exact
+     height it was. `overflow-y: visible` is not an option: paired with a hidden
+     axis it computes to auto and turns the label into a scroll container. */
+  padding-block: 0.75em;
+  margin-block: -0.75em;
   overflow: hidden;
-  text-overflow: ellipsis;
+  transition: width var(--working-status-glide) var(--working-status-ease);
+}
+
+/* Set by StatusText while the label does not fit, so the cut reads as truncation
+   rather than a label that lost its last few characters. */
+.working-status[data-clip] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent);
+}
+
+/* Both labels share the one cell, so the outgoing copy never widens the box. */
+.working-status-line {
+  grid-area: 1 / 1;
+  justify-self: start;
   white-space: nowrap;
+  animation: working-status-in var(--working-status-fade) var(--working-status-ease) both;
+}
+
+/* Rises out of the way as the incoming label rises in, so the swap reads as one
+   line being rewritten rather than two labels crossfading in place. */
+.working-status-line[data-old] {
+  animation-name: working-status-out;
+  animation-duration: calc(var(--working-status-fade) * 0.75);
+}
+
+/* Sweep between the two greys the indicator already uses, instead of the shared
+   text tokens the transcript tools shimmer with. */
+.working-status [data-component="text-shimmer"] {
+  --text-shimmer-base-color: var(--vscode-descriptionForeground);
+  --text-shimmer-peak-color: var(--vscode-foreground);
 }
 
 /* Reserving the width keeps the cluster still while the counter ticks: tabular
@@ -272,6 +322,64 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
+  transition: opacity var(--working-status-fade) var(--working-status-ease);
+}
+
+/* Before the first tick the counter holds its slot without showing a stale 0s. */
+.working-elapsed[data-empty] {
+  opacity: 0;
+}
+
+/* Same treatment for the retry countdown: it ticks every second, so it is a
+   fixed-width sibling of the label instead of part of the morphing text. */
+.working-count {
+  flex-shrink: 0;
+  min-width: 5ch;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+@keyframes working-status-in {
+  from {
+    opacity: 0;
+    filter: blur(1.5px);
+    transform: translateY(0.45em);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes working-status-out {
+  from {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    filter: blur(1.5px);
+    transform: translateY(-0.45em);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .working-status {
+    transition-duration: 0ms;
+  }
+
+  .working-status-line {
+    animation: none;
+  }
+
+  /* Without its fade the outgoing copy would sit on top of the new label. */
+  .working-status-line[data-old] {
+    display: none;
+  }
 }
 
 /* ============================================
