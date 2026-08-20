@@ -236,7 +236,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals("new", edt { (list.selectedValue as ActiveListItem).key })
     }
 
-    fun `test session rows match history visuals`() {
+    fun `test running session row shows the activity icon and no badge`() {
         manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING)
         val session = session("ses_1", nowSeconds())
         rpc.listed += session
@@ -246,9 +246,9 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val row = row("ses_1")
 
         assertEquals("Session ses_1", row.title)
-        assertNull(row.icon)
+        assertSame(WorktreeIcons.running, row.icon)
         assertNull(row.description)
-        assertEquals(listOf(ActiveListBadge(SessionActivityKind.RUNNING.label(), SessionActivityKind.RUNNING.style())), row.badges)
+        assertEquals(emptyList<ActiveListBadge>(), row.badges)
         assertNull(row.trailing)
         assertEquals(HistoryTime.title(HistoryTime.section(LocalHistoryItem(session))), row.section)
     }

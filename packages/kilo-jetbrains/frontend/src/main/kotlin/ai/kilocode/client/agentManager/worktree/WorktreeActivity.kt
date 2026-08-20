@@ -1,7 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.session.SessionActivityKind
-import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 
@@ -10,10 +9,6 @@ internal fun aggregateWorktreeActivity(
 ): Map<String, SessionActivityKind> = activity.values
     .groupBy { normalize(it.directory) }
     .mapValues { (_, items) -> items.map { kind(it.kind) }.minBy(::rank) }
-
-internal fun worktreeActivityBadge(kind: SessionActivityKind): ActiveListBadge {
-    return ActiveListBadge(kind.label(), kind.style())
-}
 
 internal fun normalizeWorktreePath(path: String): String = normalize(path)
 

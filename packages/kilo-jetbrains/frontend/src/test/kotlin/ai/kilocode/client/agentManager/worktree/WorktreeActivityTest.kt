@@ -55,12 +55,4 @@ class WorktreeActivityTest {
         assertEquals(mapOf("/repo/wt" to SessionActivityKind.RUNNING), result)
         assertEquals("/repo/wt", normalizeWorktreePath("/repo/wt/"))
     }
-
-    @Test
-    fun `worktree activity badges use shared session activity styles`() {
-        assertEquals(SessionActivityKind.RUNNING.style(), worktreeActivityBadge(SessionActivityKind.RUNNING).style)
-        assertEquals(SessionActivityKind.QUESTION.style(), worktreeActivityBadge(SessionActivityKind.QUESTION).style)
-        assertEquals(SessionActivityKind.PERMISSION.style(), worktreeActivityBadge(SessionActivityKind.PERMISSION).style)
-        assertEquals(SessionActivityKind.RUNNING.label(), worktreeActivityBadge(SessionActivityKind.RUNNING).text)
-    }
 }

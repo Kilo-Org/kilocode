@@ -453,7 +453,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(emptyList<ActiveListBadge>(), row.badges)
     }
 
-    fun `test worktree row shows error activity icon`() {
+    fun `test worktree row uses the idle dot for error activity`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         val activity = MutableStateFlow(mapOf(
             "ses_1" to SessionActivityDto(item.path, SessionActivityKindDto.ERROR),
@@ -464,7 +464,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        assertSame(SessionActivityKind.ERROR.icon(), row(panel, 0).icon)
+        assertSame(WorktreeIcons.idle, row(panel, 0).icon)
     }
 
     fun `test worktree row shows metrics from status service`() {

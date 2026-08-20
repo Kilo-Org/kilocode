@@ -8,7 +8,7 @@ import com.intellij.util.ui.JBUI
 
 class WorktreeIconsTest : BasePlatformTestCase() {
     fun `test running session resolves to the animated spinner`() {
-        assertSame(WorktreeIcons.running, WorktreeIcons.forRow(locked = false, pending = false, kind = SessionActivityKind.RUNNING))
+        assertSame(WorktreeIcons.running, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.RUNNING))
     }
 
     fun `test running icon is animated and sized to the row icon`() {
@@ -18,17 +18,22 @@ class WorktreeIconsTest : BasePlatformTestCase() {
     }
 
     fun `test pending outranks running and uses the platform spinner`() {
-        assertSame(WorktreeIcons.spinner, WorktreeIcons.forRow(locked = false, pending = true, kind = SessionActivityKind.RUNNING))
+        assertSame(WorktreeIcons.spinner, WorktreeIcons.forRow(pending = true, kind = SessionActivityKind.RUNNING))
     }
 
-    fun `test non-running kinds keep the activity badge`() {
-        val error = WorktreeIcons.forRow(locked = false, pending = false, kind = SessionActivityKind.ERROR)
-        assertSame(SessionActivityKind.ERROR.icon(), error)
-        assertNotSame(WorktreeIcons.running, error)
+    fun `test waiting kinds resolve to the attention glyph`() {
+        assertSame(SessionActivityKind.QUESTION.icon(), WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.QUESTION))
+        assertSame(SessionActivityKind.PLAN.icon(), WorktreeIcons.forKind(SessionActivityKind.PLAN))
     }
 
-    fun `test locked and plain rows keep their static icons`() {
-        assertSame(WorktreeIcons.locked, WorktreeIcons.forRow(locked = true, pending = false, kind = null))
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(locked = false, pending = false, kind = null))
+    fun `test idle and errored rows use the idle dot`() {
+        assertSame(WorktreeIcons.idle, WorktreeIcons.forRow(pending = false, kind = null))
+        assertSame(WorktreeIcons.idle, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR))
+        assertSame(WorktreeIcons.idle, WorktreeIcons.forKind(null))
+    }
+
+    fun `test idle dot matches the status icon size`() {
+        assertEquals(WorktreeIcons.running.iconWidth, WorktreeIcons.idle.iconWidth)
+        assertEquals(WorktreeIcons.running.iconHeight, WorktreeIcons.idle.iconHeight)
     }
 }

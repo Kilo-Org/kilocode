@@ -349,29 +349,25 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test worktree icons prefer pending then activity then locked then branch`() {
+    fun `test worktree row icons show only while running or waiting`() {
         assertSame(
             WorktreeIcons.spinner,
-            WorktreeIcons.forRow(locked = false, pending = true, kind = SessionActivityKind.RUNNING),
+            WorktreeIcons.forRow(pending = true, kind = SessionActivityKind.RUNNING),
         )
         assertSame(
-            SessionActivityKind.RUNNING.icon(),
-            WorktreeIcons.forRow(locked = true, pending = false, kind = SessionActivityKind.RUNNING),
+            WorktreeIcons.running,
+            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.RUNNING),
         )
         assertSame(
             SessionActivityKind.QUESTION.icon(),
-            WorktreeIcons.forRow(locked = false, pending = false, kind = SessionActivityKind.QUESTION),
+            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.QUESTION),
         )
         assertSame(
             SessionActivityKind.PLAN.icon(),
-            WorktreeIcons.forRow(locked = false, pending = false, kind = SessionActivityKind.PLAN),
+            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.PLAN),
         )
-        assertSame(
-            SessionActivityKind.ERROR.icon(),
-            WorktreeIcons.forRow(locked = false, pending = false, kind = SessionActivityKind.ERROR),
-        )
-        assertSame(WorktreeIcons.locked, WorktreeIcons.forRow(locked = true, pending = false))
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(locked = false, pending = false))
+        assertSame(WorktreeIcons.idle, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR))
+        assertSame(WorktreeIcons.idle, WorktreeIcons.forRow(pending = false, kind = null))
     }
 
     fun `test worktree icons load at the same size`() {
