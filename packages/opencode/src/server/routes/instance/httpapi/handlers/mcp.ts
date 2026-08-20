@@ -1,22 +1,16 @@
 import { MCP } from "@/mcp"
-import { RuntimeFlags } from "@/effect/runtime-flags"
+import { RuntimeFlags } from "@/effect/runtime-flags" // kilocode_change
 import { Effect, Schema } from "effect"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import { McpServerNotFoundError } from "../errors"
-import {
-  AddPayload,
-  AuthCallbackPayload,
-  CallToolPayload,
-  ReadResourcePayload,
-  StatusMap,
-  UnsupportedOAuthError,
-} from "../groups/mcp"
+import { AddPayload, AuthCallbackPayload, StatusMap, UnsupportedOAuthError } from "../groups/mcp"
+import { CallToolPayload, ReadResourcePayload } from "../groups/mcp" // kilocode_change
 
 export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handlers) =>
   Effect.gen(function* () {
     const mcp = yield* MCP.Service
-    const flags = yield* RuntimeFlags.Service
+    const flags = yield* RuntimeFlags.Service // kilocode_change
 
     const status = Effect.fn("McpHttpApi.status")(function* () {
       return yield* mcp.status()
@@ -107,21 +101,15 @@ export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handler
       return true
     })
 
+    // kilocode_change start - MCP Apps experimental resource/tool endpoints
     const readResource = Effect.fn("McpHttpApi.readResource")(function* (ctx: {
       payload: typeof ReadResourcePayload.Type
     }) {
       if (!flags.experimentalMcpApps) {
         return yield* Effect.fail(new HttpApiError.NotFound({}))
       }
-      const { uri, server } = ctx.payload
-      if (!server) {
-        return yield* Effect.fail(new HttpApiError.BadRequest({}))
-      }
-      const result = yield* mcp.readResource(server, uri)
-      if (!result) {
-        return yield* Effect.fail(new HttpApiError.NotFound({}))
-      }
-      const content = result.contents[0]
+      const result = yield* mcp.readResource(ctx.payload.server, ctx.payload.uri)
+      const content = result?.contents[0]
       if (!content) {
         return yield* Effect.fail(new HttpApiError.NotFound({}))
       }
@@ -139,26 +127,23 @@ export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handler
       if (!flags.experimentalMcpApps) {
         return yield* Effect.fail(new HttpApiError.NotFound({}))
       }
-      const { server, name, arguments: args } = ctx.payload
-      const clients = yield* mcp.clients()
-      const client = clients[server]
+      const client = (yield* mcp.clients())[ctx.payload.server]
       if (!client) {
         return yield* Effect.fail(new HttpApiError.NotFound({}))
       }
-      const result = yield* Effect.tryPromise({
-        try: () => client.callTool({ name, arguments: args ?? {} }),
-        catch: (error) => error,
-      }).pipe(
+      const result = yield* Effect.tryPromise(() =>
+        client.callTool({ name: ctx.payload.name, arguments: ctx.payload.arguments ?? {} }),
+      ).pipe(
+        Effect.tapError((err) => Effect.logError("MCP callTool failed", { error: err })),
         Effect.mapError(() => new HttpApiError.BadRequest({})),
       )
       return {
-        content: (result as { content: unknown[] }).content ?? [],
-        ...((result as { isError?: boolean }).isError ? { isError: true } : {}),
-        ...((result as { structuredContent?: Record<string, unknown> }).structuredContent
-          ? { structuredContent: (result as { structuredContent: Record<string, unknown> }).structuredContent }
-          : {}),
+        content: result.content ?? [],
+        ...(result.isError ? { isError: true } : {}),
+        ...(result.structuredContent ? { structuredContent: result.structuredContent } : {}),
       }
     })
+    // kilocode_change end
 
     return handlers
       .handle("status", status)
@@ -169,7 +154,7 @@ export const mcpHandlers = HttpApiBuilder.group(InstanceHttpApi, "mcp", (handler
       .handle("authRemove", authRemove)
       .handle("connect", connect)
       .handle("disconnect", disconnect)
-      .handle("readResource", readResource)
-      .handle("callTool", callTool)
+      .handle("readResource", readResource) // kilocode_change
+      .handle("callTool", callTool) // kilocode_change
   }),
 )

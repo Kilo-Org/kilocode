@@ -102,7 +102,7 @@ const withCodeMode = testEffect(
               inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
             } as MCPToolDef,
             client: {} as MCP.McpTool["client"],
-            clientName: "weather",
+            clientName: "weather", // kilocode_change
           },
         }),
       clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
@@ -135,7 +135,7 @@ const withRestrictedCodeMode = testEffect(
               inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
             } as MCPToolDef,
             client: {} as MCP.McpTool["client"],
-            clientName: "weather",
+            clientName: "weather", // kilocode_change
           },
         }),
       clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),

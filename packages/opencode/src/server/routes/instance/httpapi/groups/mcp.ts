@@ -29,9 +29,10 @@ export class UnsupportedOAuthError extends Schema.ErrorClass<UnsupportedOAuthErr
   { httpApiStatus: 400 },
 ) {}
 
+// kilocode_change start - MCP Apps experimental resource/tool endpoints
 export const ReadResourcePayload = Schema.Struct({
   uri: Schema.String,
-  server: Schema.optional(Schema.String),
+  server: Schema.String,
 })
 
 const ReadResourceContent = Schema.Struct({
@@ -39,7 +40,6 @@ const ReadResourceContent = Schema.Struct({
   mimeType: Schema.optional(Schema.String),
   text: Schema.optional(Schema.String),
   blob: Schema.optional(Schema.String),
-  meta: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 })
 
 export const CallToolPayload = Schema.Struct({
@@ -53,6 +53,7 @@ const CallToolResponse = Schema.Struct({
   isError: Schema.optional(Schema.Boolean),
   structuredContent: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 })
+// kilocode_change end
 
 export const McpPaths = {
   status: "/mcp",
@@ -61,8 +62,8 @@ export const McpPaths = {
   authAuthenticate: "/mcp/:name/auth/authenticate",
   connect: "/mcp/:name/connect",
   disconnect: "/mcp/:name/disconnect",
-  readResource: "/experimental/resource/read",
-  callTool: "/experimental/mcp/call-tool",
+  readResource: "/experimental/resource/read", // kilocode_change
+  callTool: "/experimental/mcp/call-tool", // kilocode_change
 } as const
 
 export const McpApi = HttpApi.make("mcp")
@@ -163,6 +164,7 @@ export const McpApi = HttpApi.make("mcp")
             description: "Disconnect an MCP server.",
           }),
         ),
+        // kilocode_change start - MCP Apps experimental endpoints
         HttpApiEndpoint.post("readResource", McpPaths.readResource, {
           query: WorkspaceRoutingQuery,
           payload: ReadResourcePayload,
@@ -189,6 +191,7 @@ export const McpApi = HttpApi.make("mcp")
               "Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.",
           }),
         ),
+        // kilocode_change end
       )
       .annotateMerge(
         OpenApi.annotations({
