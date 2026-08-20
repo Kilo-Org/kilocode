@@ -233,7 +233,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
     }
 
-    fun `test refresh selects active worktree editor`() {
+    fun `test refresh keeps existing selection`() {
         val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
         rpc.listed += first
@@ -247,6 +247,26 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             ensureWorktreeSessionEditorKind()
             project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(second), focus = true)
             list.selectedIndex = 0
+            panel.refresh()
+        }
+        flush()
+
+        assertEquals(first.id, edt { (list.selectedValue as ActiveListItem).key })
+    }
+
+    fun `test refresh uses active worktree editor when no selection exists`() {
+        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        rpc.listed += first
+        rpc.listed += second
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            ensureWorktreeSessionEditorKind()
+            project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(second), focus = true)
             panel.refresh()
         }
         flush()

@@ -64,4 +64,18 @@ class UiStyleTest : BasePlatformTestCase() {
         assertSame(UiStyle.Badge.PullRequestMerged, style(GhState.MERGED))
         assertSame(UiStyle.Badge.PullRequestClosed, style(GhState.CLOSED))
     }
+
+    fun `test pull request badges use soft accent backgrounds`() {
+        val styles = listOf(
+            UiStyle.Badge.PullRequestOpen,
+            UiStyle.Badge.PullRequestDraft,
+            UiStyle.Badge.PullRequestMerged,
+            UiStyle.Badge.PullRequestClosed,
+        )
+
+        styles.forEach { style ->
+            assertTrue(style.bg().alpha < Color.WHITE.alpha)
+            assertEquals(Color.WHITE.alpha, style.fg().alpha)
+        }
+    }
 }

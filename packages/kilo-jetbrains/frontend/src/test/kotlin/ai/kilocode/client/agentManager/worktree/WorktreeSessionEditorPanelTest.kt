@@ -14,9 +14,9 @@ import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
@@ -236,7 +236,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals("new", edt { (list.selectedValue as ActiveListItem).key })
     }
 
-    fun `test running session row shows the activity icon and no badge`() {
+    fun `test running session row shows activity badge without leading icon`() {
         manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING)
         val session = session("ses_1", nowSeconds())
         rpc.listed += session
@@ -246,11 +246,23 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val row = row("ses_1")
 
         assertEquals("Session ses_1", row.title)
-        assertSame(WorktreeIcons.running, row.icon)
+        assertNull(row.icon)
         assertNull(row.description)
-        assertEquals(emptyList<ActiveListBadge>(), row.badges)
+        assertEquals(KiloBundle.message("session.part.tool.running"), row.badges.single().text)
         assertNull(row.trailing)
         assertEquals(HistoryTime.title(HistoryTime.section(LocalHistoryItem(session))), row.section)
+    }
+
+    fun `test plan session row shows activity badge without leading icon`() {
+        manager.kinds = mapOf("ses_1" to SessionActivityKind.PLAN)
+        rpc.listed += session("ses_1", nowSeconds())
+        edt { controller.reload() }
+        flush()
+
+        val row = row("ses_1")
+
+        assertNull(row.icon)
+        assertEquals(KiloBundle.message("history.badge.plan"), row.badges.single().text)
     }
 
     fun `test session row shows the live agent title over the listed placeholder`() {

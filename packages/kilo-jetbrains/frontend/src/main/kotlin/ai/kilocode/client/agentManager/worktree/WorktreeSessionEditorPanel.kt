@@ -14,6 +14,7 @@ import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.list.ActiveList
+import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListEditOptions
@@ -575,7 +576,11 @@ class WorktreeSessionEditorPanel(
             return name
         }
         override val tooltip: String get() = title
-        override val icon: Icon? get() = WorktreeIcons.forKind(kind)
+        override val badges: List<ActiveListBadge>
+            get() {
+                if (deleting) return emptyList()
+                return listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
+            }
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
     }

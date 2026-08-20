@@ -145,7 +145,7 @@ class AgentManagerPanel(
     }
 
     fun refresh() {
-        selected = currentEditorWorktree()
+        selected = selected ?: currentEditorWorktree()
         controller.reload()
         project?.service<WorktreeStatusService>()?.refreshStats()
         project?.service<WorktreeStatusService>()?.refreshPr()
