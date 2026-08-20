@@ -194,6 +194,8 @@ async function provisionVersion(
       await ctx.worktreeManager().removeWorktree(wt.result.path, wt.result.branch)
       ctx.peekState()?.removeWorktree(wt.worktree.id)
       host.push()
+    } catch (error) {
+      host.log("Failed to remove worktree after session creation failed:", error)
     } finally {
       release()
     }

@@ -17,22 +17,12 @@ export async function discardWorktree(
     return
   }
 
-  if (sessionId) {
-    try {
-      await host.client().session.delete({ sessionID: sessionId, directory: dir }, { throwOnError: true })
-    } catch (error) {
-      host.log(`Failed to delete session ${sessionId} after worktree setup failed:`, error)
-      return
-    }
-  }
-
   try {
     if (sessionId) {
       try {
         await host.client().session.delete({ sessionID: sessionId, directory: dir }, { throwOnError: true })
       } catch (error) {
         host.log(`Failed to delete session ${sessionId} after worktree setup failed:`, error)
-        return
       }
     }
     await ctx.worktreeManager().removeWorktree(dir, branch)

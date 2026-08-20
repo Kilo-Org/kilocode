@@ -75,6 +75,8 @@ export async function createLifecycleWorktree(
       await ctx.worktreeManager().removeWorktree(created.result.path, created.result.branch)
       ctx.peekState()?.removeWorktree(created.worktree.id)
       host.push()
+    } catch (error) {
+      host.log("Failed to remove worktree after session creation failed:", error)
     } finally {
       release()
     }
