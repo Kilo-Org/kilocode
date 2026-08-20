@@ -6,10 +6,9 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { isPRReviewComment } from "../../../../src/shared/review-comments"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import { useWorktreeMode } from "../../context/worktree-mode"
-import { isPRReviewComment } from "../../../../src/shared/review-comments"
 import type { ReviewCommentEntry } from "../../types/messages"
 import { fileName } from "./prompt-input-utils"
 
@@ -24,13 +23,9 @@ interface ReviewCommentsProps {
 export const ReviewComments: Component<ReviewCommentsProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
-  const worktree = useWorktreeMode()
   const dialog = useDialog()
   const author = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? item.author : "")
-  const side = (item: ReviewCommentEntry) => {
-    if (isPRReviewComment(item)) return ""
-    return item.side === "deletions" ? "-" : "+"
-  }
+  const side = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? "" : item.side === "deletions" ? "-" : "+")
   const line = (item: ReviewCommentEntry) => (item.line ? `${side(item)}${item.line}` : "")
   const body = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? item.body : item.comment)
   const snippet = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? item.diffHunk : item.selectedText)
@@ -42,17 +37,18 @@ export const ReviewComments: Component<ReviewCommentsProps> = (props) => {
 
   const open = (item: ReviewCommentEntry) => {
     if (!item.file) return
-    if (worktree && props.sessionID) {
+    const event = new CustomEvent("kilo:open-file", {
+      cancelable: true,
+      detail: { filePath: item.file, line: item.line, column: 1, sessionID: props.sessionID },
+    })
+    if (window.dispatchEvent(event))
       vscode.postMessage({
-        type: "agentManager.openFile",
-        sessionId: props.sessionID,
+        type: "openFile",
         filePath: item.file,
         line: item.line,
+        column: 1,
+        sessionID: props.sessionID,
       })
-      dialog.close()
-      return
-    }
-    vscode.postMessage({ type: "openFile", filePath: item.file, line: item.line, column: 1 })
     dialog.close()
   }
 
@@ -134,7 +130,11 @@ export const ReviewComments: Component<ReviewCommentsProps> = (props) => {
         <For each={props.comments}>
           {(item) => (
             <div class="prompt-review-chip">
-              <button type="button" class="prompt-review-chip-body" onClick={() => show(item)}>
+              <button
+                type="button"
+                class="prompt-review-chip-body"
+                onClick={() => (isPRReviewComment(item) ? show(item) : open(item))}
+              >
                 <span class="prompt-review-chip-icon">
                   <Icon name={isPRReviewComment(item) ? "github" : "comment"} size="small" />
                 </span>

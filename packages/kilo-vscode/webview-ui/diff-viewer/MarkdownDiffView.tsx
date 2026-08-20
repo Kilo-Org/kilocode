@@ -24,7 +24,7 @@ export function isMarkdownFile(file: string): boolean {
   return /\.(md|mdx|markdown)$/i.test(file)
 }
 
-interface PaneProps {
+export interface MarkdownPaneProps {
   title?: string
   text: string
   side: AnnotationSide
@@ -36,7 +36,7 @@ interface PaneProps {
   onLineNumberClick: ((event: { annotationSide: AnnotationSide; lineNumber: number }) => void) | undefined
 }
 
-const MarkdownPane: Component<PaneProps> = (props) => {
+export const MarkdownPane: Component<MarkdownPaneProps> = (props) => {
   let pane: HTMLElement | undefined
   let body: HTMLDivElement | undefined
   const interactive = () =>
