@@ -434,14 +434,17 @@ class SessionUi(
         )
         connection = ConnectionPanel(this, controller)
         root.addOverlay(connection) { pane, child ->
-            val size = child.preferredSize
             val point = SwingUtilities.convertPoint(prompt.parent ?: root.content, prompt.x, prompt.y, pane)
             val gap = SessionUiStyle.View.contentGap()
+            val wide = (prompt.width - gap * 2).coerceAtLeast(0)
+            // Fix the banner width before measuring so its word-wrapped detail height is known.
+            child.setSize(wide, child.height)
+            val height = child.preferredSize.height.coerceAtMost((point.y - gap).coerceAtLeast(0))
             java.awt.Rectangle(
                 point.x + gap,
-                point.y - size.height - gap,
-                (prompt.width - gap * 2).coerceAtLeast(0),
-                size.height,
+                point.y - height - gap,
+                wide,
+                height,
             )
         }
 
