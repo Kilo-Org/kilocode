@@ -384,7 +384,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertTrue("Should render old line after expansion, got: $expanded", expanded.contains("old"))
         assertTrue("Should render new line after expansion, got: $expanded", expanded.contains("new"))
         assertFalse("Should strip hunk marker in editor preview, got: $expanded", expanded.contains("@@"))
-        assertTrue("Permission diffs should render proposed filenames as plain text", findAll<JBLabel>(diffs.single()).any { it.text == "A.kt" })
+        assertFalse("Single-file permission diffs should not render an extra filename", findAll<JBLabel>(diffs.single()).any { it.text == "A.kt" })
         assertTrue("Permission diffs should not render proposed filenames as links", findAll<FileLinkLabel>(diffs.single()).isEmpty())
         assertTrue(diffs.single().bodyCreated())
 
@@ -562,6 +562,10 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertTrue("Should render second file diff after expansion, got: $expanded", expanded.contains("c"))
         assertTrue("Should render second file diff after expansion, got: $expanded", expanded.contains("d"))
         assertFalse("Should strip hunk markers in editor preview, got: $expanded", expanded.contains("@@"))
+        val labels = findAll<JBLabel>(diffs.single()).map { it.text }
+        assertTrue("Multi-file permission diffs should render filenames as plain text", labels.contains("A.kt"))
+        assertTrue("Multi-file permission diffs should render filenames as plain text", labels.contains("B.kt"))
+        assertTrue("Permission diffs should not render filenames as links", findAll<FileLinkLabel>(diffs.single()).isEmpty())
     }
 
     fun `test rule controls render collapsed when candidates exist`() {

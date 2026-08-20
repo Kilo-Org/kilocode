@@ -4,6 +4,7 @@ import ai.kilocode.client.diff.DiffLineNumbers
 import ai.kilocode.client.diff.installDiffGutter
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -159,10 +160,14 @@ class PatchBody(
             // (gutter reinit) and freezes; defer to the diff tab, which streams diffs off the EDT.
             panel.next(diffOverflowPanel(open))
         } else {
-            files.filter { it.patch.isNotBlank() }.forEachIndexed { index, file ->
+            val patched = files.filter { it.patch.isNotBlank() }
+            val named = patched.size > 1
+            patched.forEachIndexed { index, file ->
                 if (index > 0) panel.gap(JBUI.scale(SessionUiStyle.View.Code.BLOCK_GAP))
-                panel.next(header(file))
-                panel.gap(UiStyle.Gap.sm())
+                if (named) {
+                    panel.next(header(file))
+                    panel.gap(UiStyle.Gap.sm())
+                }
                 val md = MdViewFactory.create(style, selection, MdCodeBlockFactory.default(opts))
                 Disposer.register(disposable, md)
                 applyMd(md)
@@ -225,8 +230,27 @@ class PatchBody(
             ?: emptyList()).forEach { installDiffGutter(it, rows) }
     }
 
-    private companion object {
-        val DIFF_OPTS = MdCodeBlockOptions(
+    companion object {
+        @RequiresEdt
+        internal fun popup(
+            selection: SessionSelection?,
+            openFile: SessionFileOpener,
+            files: List<EditFileChange>,
+            style: SessionEditorStyle,
+            linkFiles: Boolean,
+            overflow: () -> Unit,
+        ): HeaderPopupBody {
+            val owner = Disposer.newDisposable("Patch popup body")
+            val body = PatchBody(selection, openFile, POPUP_OPTS, linkFiles).also {
+                it.parent = owner
+                it.overflow = overflow
+            }
+            val panel = body.mountFiles(files)
+            body.applyStyle(style)
+            return HeaderPopupBody(panel, owner, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
+        }
+
+        private val DIFF_OPTS = MdCodeBlockOptions(
             border = MdCodeBlockBorder.None,
             maxLines = SessionUiStyle.View.Tool.DIFF_LINES,
             verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
