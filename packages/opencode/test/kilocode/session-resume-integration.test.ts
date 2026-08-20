@@ -44,6 +44,7 @@ import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { SessionResume } from "../../src/kilocode/session-resume"
+import { SessionResumeImport } from "../../src/kilocode/session-resume/import"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer, TestInstance, disposeAllInstances } from "../fixture/fixture"
@@ -1046,6 +1047,152 @@ it.instance(
           }
         }
       }
+    }),
+  { config: cfg },
+  30_000,
+)
+
+// ── SessionResumeImport.fromContent (shared endpoint logic) ───────────────
+//
+// The HTTP endpoint (POST /kilocode/session-resume) passes raw JSONL content
+// straight to SessionResumeImport.fromContent. These tests exercise that shared
+// entry point directly — no file discovery, no slash command — since that is the
+// path every thin client (VS Code, CLI) uses through the server.
+
+it.instance(
+  "fromContent imports raw Claude JSONL into an empty session",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const content = yield* Effect.promise(() => claudeFixture())
+
+      const result = yield* SessionResumeImport.fromContent({
+        sessionID: chat.id,
+        content,
+        agent: "build",
+      })
+
+      expect(result.format).toBe("claude")
+      expect(result.messages).toBeGreaterThanOrEqual(10)
+      expect(typeof result.messageID).toBe("string")
+
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBeGreaterThanOrEqual(10)
+      expect(msgs[0].info.role).toBe("user")
+
+      const last = msgs[msgs.length - 1]
+      expect(last.info.role).toBe("assistant")
+      expect(last.info.id).toBe(result.messageID)
+      const notice = last.parts.find((p) => p.type === "text")
+      expect(notice?.type === "text" && notice.text).toContain("imported from an external session")
+
+      // Imported tool parts must decode through the canonical SessionV1 schema.
+      const tools = msgs.flatMap((m) => m.parts.filter((p) => p.type === "tool"))
+      expect(tools.length).toBeGreaterThan(0)
+      for (const part of tools) {
+        const decoded = Schema.decodeUnknownSync(SessionV1.ToolPart)(part)
+        expect(decoded.type).toBe("tool")
+      }
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent imports raw Codex JSONL into an empty session",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const content = yield* Effect.promise(() => codexFixture())
+
+      const result = yield* SessionResumeImport.fromContent({
+        sessionID: chat.id,
+        content,
+        agent: "build",
+      })
+
+      expect(result.format).toBe("codex")
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBeGreaterThanOrEqual(8)
+      expect(msgs[0].info.role).toBe("user")
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent rejects a nonempty session and writes nothing",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { sessions, chat } = yield* boot()
+      const content = yield* Effect.promise(() => claudeFixture())
+
+      const seeded = yield* sessions.updateMessage({
+        id: MessageID.ascending(),
+        role: "user",
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        time: { created: Date.now() },
+      })
+
+      const exit = yield* Effect.exit(SessionResumeImport.fromContent({ sessionID: chat.id, content, agent: "build" }))
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("new Kilo session")
+      }
+
+      const msgs = yield* sessions.messages({ sessionID: chat.id })
+      expect(msgs.length).toBe(1)
+      expect(msgs[0].info.id).toBe(seeded.id)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent rejects a transcript with no user messages",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const content = [
+        '{"type":"assistant","version":"2.42.0","message":{"role":"assistant","content":[{"type":"text","text":"Hi"}]}}',
+      ].join("\n")
+
+      const exit = yield* Effect.exit(SessionResumeImport.fromContent({ sessionID: chat.id, content, agent: "build" }))
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("no user messages")
+      }
+
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBe(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent rejects unparseable transcript content",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+
+      const exit = yield* Effect.exit(
+        SessionResumeImport.fromContent({ sessionID: chat.id, content: "{not json", agent: "build" }),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("Failed to parse session transcript")
+      }
+
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBe(0)
     }),
   { config: cfg },
   30_000,
