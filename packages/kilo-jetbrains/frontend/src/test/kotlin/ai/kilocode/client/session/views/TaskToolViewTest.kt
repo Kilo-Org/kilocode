@@ -201,8 +201,27 @@ class TaskToolViewTest : BasePlatformTestCase() {
         assertSame(live, scroll(view))
     }
 
+    fun `test collapsed task popup is a bounded scrollable box`() {
+        val view = view(task(children = children(40)))
+        view.collapse()
+
+        val popup = view.headerPopup()!!.build()
+        try {
+            // Fixed height cap, width bounded by the wide popup cap, and both scrollbars present so
+            // streaming content scrolls instead of resizing the balloon.
+            assertEquals(JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT), popup.component.preferredSize.height)
+            assertTrue(popup.component.preferredSize.width <= JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH))
+            val scrolls = descendants(popup.component).filterIsInstance<JBScrollPane>()
+            assertTrue(scrolls.any { it.horizontalScrollBarPolicy == ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED })
+            assertTrue(scrolls.any { it.verticalScrollBarPolicy == ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED })
+        } finally {
+            Disposer.dispose(popup.disposable)
+        }
+    }
+
     fun `test collapsed task popup reflects streaming child updates`() {
         val view = view(task(children = listOf(child("c1", "read"))))
+        val live = scroll(view)
         view.collapse()
 
         val popup = view.headerPopup()!!.build()
@@ -213,6 +232,11 @@ class TaskToolViewTest : BasePlatformTestCase() {
         } finally {
             Disposer.dispose(popup.disposable)
         }
+
+        assertNull(live!!.parent)
+        view.expand()
+        assertSame(live, scroll(view))
+        assertEquals(2, rows(view).size)
     }
 
     private fun view(tool: Tool, onOpen: ((String, String) -> Unit)? = null): TaskToolView = TaskToolView(tool, onOpenSubagent = onOpen).also { views.add(it) }

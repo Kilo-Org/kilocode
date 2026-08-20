@@ -50,6 +50,7 @@ class TaskToolView(
     private val rows = LinkedHashMap<String, Row>()
     private var following = false
     private var collapsed = false
+    private var popup: HeaderPopupBody? = null
     // Same hover open-in-editor affordance as the edit/patch and modified-files cards.
     private val open = HeaderOpenAction(
         SessionViewIcons.openDiff,
@@ -86,7 +87,10 @@ class TaskToolView(
         changed = syncRows() || changed
         if (content.childTools.isNotEmpty() && !collapsed) changed = expand() || changed
         followTail(follow || fresh)
-        if (changed) refresh()
+        if (changed) {
+            refresh()
+            refreshPopup()
+        }
     }
 
     @RequiresEdt
@@ -178,6 +182,8 @@ class TaskToolView(
         if (changed) {
             body.rows.revalidate()
             body.rows.repaint()
+            body.revalidate()
+            body.repaint()
         }
         return changed
     }
@@ -199,13 +205,32 @@ class TaskToolView(
         // The live body is only reparented into the popup, never rebuilt. On hide, detach it so it
         // returns to a reusable state — unless the card already reclaimed it by expanding — and never
         // dispose the shared component itself.
-        Disposer.register(owner, Disposable { if (!isExpanded()) detachBody(scroll) })
-        return HeaderPopupBody(
+        val body = HeaderPopupBody(
             scroll,
             owner,
             SessionUiStyle.Colors.codeBlockBackground(),
             SessionUiStyle.View.Popup.WIDE_MAX_WIDTH,
+            // Fixed, bounded box so streaming child tools scroll instead of resizing the balloon:
+            // a 60-char floor width, the shared height cap, and both scrollbars.
+            minWidth = scroll.getFontMetrics(style.smallEditorFont).charWidth('m') * POPUP_MIN_CHARS,
+            fixedHeight = true,
+            horizontal = true,
         )
+        popup = body
+        Disposer.register(owner, Disposable {
+            if (popup === body) popup = null
+            if (!isExpanded()) detachBody(scroll)
+        })
+        return body
+    }
+
+    // The popup hosts the live body, so parent-view updates just revalidate it for the scrollbars to
+    // track the new content height; the balloon keeps its bounded size instead of resizing.
+    @RequiresEdt
+    private fun refreshPopup() {
+        val body = popup ?: return
+        body.component.revalidate()
+        body.component.repaint()
     }
 
     @RequiresEdt
@@ -320,6 +345,7 @@ class TaskToolView(
     override fun dumpLabel() = "TaskToolView#$contentId(${labelText()})"
 
     companion object {
+        private const val POPUP_MIN_CHARS = 60
         fun canRender(content: Tool): Boolean = content.name == "task"
     }
 }
