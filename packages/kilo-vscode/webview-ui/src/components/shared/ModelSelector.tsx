@@ -30,6 +30,7 @@ import { useProvider } from "../../context/provider"
 import type { EnrichedModel } from "../../context/provider"
 import { useSession, SessionContext } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useWorktreeMode } from "../../context/worktree-mode"
 import { useVSCode } from "../../context/vscode"
 import type { ModelSelection } from "../../types/messages"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
@@ -1149,13 +1150,14 @@ interface ModelSelectorProps {
 
 export const ModelSelector: Component<ModelSelectorProps> = (props) => {
   const session = useSession()
+  const worktree = useWorktreeMode()
   const id = () => props.sessionID?.()
 
   return (
     <ModelSelectorBase
       value={session.selected(id())}
       onSelect={(providerID, modelID) => {
-        session.selectModel(providerID, modelID, id())
+        session.selectModel(providerID, modelID, id(), worktree ? "session" : "global")
       }}
       onPick={() => {
         requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))

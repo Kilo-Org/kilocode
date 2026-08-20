@@ -73,7 +73,7 @@ import {
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
-import { getAgentModel } from "./session-model-store"
+import { getAgentModel, type ModelSelectionScope } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
@@ -191,7 +191,7 @@ interface SessionContextValue {
   configModel: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   configModelForAgent: (agent: string) => ModelSelection | null
-  selectModel: (providerID: string, modelID: string, sessionID?: string) => void
+  selectModel: (providerID: string, modelID: string, sessionID?: string, scope?: ModelSelectionScope) => void
   hasModelOverride: (sessionID?: string) => boolean
   clearModelOverride: (sessionID?: string) => void
 
@@ -635,23 +635,25 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "recordModelUsage", providerID, modelID })
   }
 
-  function applyModel(agentName: string, selection: ModelSelection, sessionID?: string) {
+  function applyModel(
+    agentName: string,
+    selection: ModelSelection,
+    sessionID?: string,
+    scope: ModelSelectionScope = sessionID ? "session" : "global",
+  ) {
     pushRecent(selection)
-    if (sessionID) {
-      setStore("sessionOverrides", sessionID, selection)
-      return
+    if (scope === "global") {
+      // Remember ordinary sidebar picks per mode, even when a session is open.
+      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
+      setStore("modelSelections", agentName, selection)
+      vscode.postMessage({
+        type: "persistModelSelection",
+        agent: agentName,
+        providerID: selection.providerID,
+        modelID: selection.modelID,
+      })
     }
-    // Always remember the per-mode model choice so switching modes restores
-    // the last-used model (mirrors CLI TUI's model.json behavior).
-    setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-    setStore("modelSelections", agentName, selection)
-    // Persist to model.json via the extension host
-    vscode.postMessage({
-      type: "persistModelSelection",
-      agent: agentName,
-      providerID: selection.providerID,
-      modelID: selection.modelID,
-    })
+    if (sessionID) setStore("sessionOverrides", sessionID, selection)
   }
 
   const variants = createSessionVariants({

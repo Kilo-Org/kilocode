@@ -47,4 +47,23 @@ describe("model selector", () => {
     expect(models).toEqual([{ id: "session", selection: model }])
     expect(variants).toEqual([{ value: "high", session: "session" }])
   })
+
+  it("passes the requested selection scope to the state transition", () => {
+    const selected = { providerID: "kilo", modelID: "old" }
+    const scopes: Array<string | undefined> = []
+    const selector = createModelSelector({
+      current: () => "session",
+      agent: () => "code",
+      selected: () => selected,
+      variant: () => undefined,
+      apply: (_agent, _selection, _id, scope) => scopes.push(scope),
+      set: () => undefined,
+      carry: () => undefined,
+      hide: () => undefined,
+    })
+
+    selector.select("kilo", "new", "session", "global")
+
+    expect(scopes).toEqual(["global"])
+  })
 })

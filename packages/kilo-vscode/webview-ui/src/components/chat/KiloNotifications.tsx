@@ -4,6 +4,7 @@ import { useVSCode } from "../../context/vscode"
 import { useSession } from "../../context/session"
 import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
+import { useWorktreeMode } from "../../context/worktree-mode"
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 import { stripSubProviderPrefix } from "../shared/model-selector-utils"
@@ -14,6 +15,7 @@ export const KiloNotifications: Component<{ sessionID?: Accessor<string | undefi
   const session = useSession()
   const provider = useProvider()
   const language = useLanguage()
+  const worktree = useWorktreeMode()
   const [index, setIndex] = createSignal(0)
   const sessionID = () => props.sessionID?.() ?? session.currentSessionID() ?? session.draftSessionID()
 
@@ -78,7 +80,7 @@ export const KiloNotifications: Component<{ sessionID?: Accessor<string | undefi
   const handleTryModel = () => {
     const suggestion = suggestedModel()
     if (!suggestion) return
-    session.selectModel(suggestion.providerID, suggestion.modelID, sessionID())
+    session.selectModel(suggestion.providerID, suggestion.modelID, sessionID(), worktree ? "session" : "global")
     vscode.postMessage({
       type: "telemetry",
       event: TelemetryEventName.NOTIFICATION_CLICKED,
