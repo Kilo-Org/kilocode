@@ -1034,8 +1034,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
           backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),
-          cancelBackgroundJob: (jobID, sessionID, requestID) =>
-            this.cancelBackgroundJob(jobID, sessionID, requestID),
+          cancelBackgroundJob: (jobID, sessionID, requestID) => this.cancelBackgroundJob(jobID, sessionID, requestID),
           backgroundSubagents: (sessionID) => this.backgroundSubagents(sessionID),
         })
       ) {

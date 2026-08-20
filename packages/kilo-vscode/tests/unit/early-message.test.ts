@@ -51,10 +51,7 @@ describe("routeEarlyMessage background jobs", () => {
     } as Ctx
 
     expect(
-      await routeEarlyMessage(
-        { type: "requestBackgroundJobs", sessionID: "ses_parent", requestID: "request-1" },
-        ctx,
-      ),
+      await routeEarlyMessage({ type: "requestBackgroundJobs", sessionID: "ses_parent", requestID: "request-1" }, ctx),
     ).toBe(true)
     expect(calls).toEqual([["ses_parent", "request-1"]])
   })
