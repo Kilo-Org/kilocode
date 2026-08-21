@@ -15,6 +15,7 @@ import { WorktreeImporter } from "../../src/agent-manager/worktree-importer"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const EDIT_PREVIEW_PANEL_FILE = path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx")
 const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
@@ -22,6 +23,7 @@ const CSS_FILES = [
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
@@ -31,6 +33,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/ImageDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/VirtualDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownAnnotationLayer.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/markdown-comment-ranges.ts"),
   path.join(ROOT, "webview-ui/diff-viewer/DiffEndMarker.tsx"),
@@ -163,6 +166,30 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const unused = defined.filter((c) => !tsx.includes(c!))
 
     expect(unused, `Classes defined in CSS but not used in TSX: ${unused.join(", ")}`).toEqual([])
+  })
+})
+
+describe("Agent Manager edit preview", () => {
+  it("provides a visible close action", () => {
+    const source = fs.readFileSync(EDIT_PREVIEW_PANEL_FILE, "utf-8")
+    expect(source).toContain('icon="close"')
+    expect(source).toContain('class="am-edit-preview-close"')
+    expect(source).toContain("onClick={props.state.close}")
+  })
+
+  it("drives every stacked file from one shared style control", () => {
+    const source = fs.readFileSync(EDIT_PREVIEW_PANEL_FILE, "utf-8")
+    expect(source).toContain("RadioGroup")
+    expect(source).toContain("styleSelect={false}")
+  })
+
+  it("sizes stacked files to their own diff instead of a fixed height", () => {
+    const css = readAllCss()
+    expect(css).toContain(".am-edit-preview-files > .am-review-layout")
+    expect(css).not.toContain("flex: 0 0 min(420px, 50%)")
+    const view = fs.readFileSync(path.join(ROOT, "webview-ui/diff-viewer/VirtualDiffView.tsx"), "utf-8")
+    expect(view).toContain("value.fileDiff.hunks.length")
+    expect(view).toContain("virtualized={heavy()}")
   })
 })
 
@@ -528,6 +555,12 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("syncOnSessionSwitch")
   })
 
+  it("does not activate inspector-only transcript loads", () => {
+    const text = body("onSessionMessage")
+    expect(text).toContain("m.focus === false")
+    expect(text.indexOf("m.focus === false")).toBeLessThan(text.indexOf("this.activeSessionId = m.sessionID"))
+  })
+
   it("terminal context reveals the terminal associated with the originating session", () => {
     const text = body("onSessionMessage")
     const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID, m.agentManagerContext)")
@@ -771,7 +804,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
         `${creating}|create|add:false|push|${setup}|setup|session|state-session|register|ready|${success}|log`,
       )
       expect(await run(kind, "setup")).toBe(
-        `${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed`,
+        `${creating}|create|add:false|push|${setup}|setup|disk|state-remove|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|disk|state-remove|push|setup failed|setup failed`,
       )
       const duplicate = branch
         ? 'Branch "topic" is already checked out in another worktree'

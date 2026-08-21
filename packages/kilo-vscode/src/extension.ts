@@ -490,9 +490,12 @@ export function activate(context: vscode.ExtensionContext) {
         diffViewerProvider.openFromCommand(arg)
       },
     ),
-    vscode.commands.registerCommand("kilo-code.new.openSubAgentViewer", (sessionID: string, title?: string) => {
-      subAgentViewerProvider.openPanel(sessionID, title)
-    }),
+    vscode.commands.registerCommand(
+      "kilo-code.new.openSubAgentViewer",
+      (sessionID: string, title?: string, directory?: string) => {
+        subAgentViewerProvider.openPanel(sessionID, title, directory)
+      },
+    ),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {
       agentManagerProvider.postMessage({ type: "action", action: "sessionPrevious" })
     }),

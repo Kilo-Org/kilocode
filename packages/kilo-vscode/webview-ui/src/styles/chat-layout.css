@@ -21,6 +21,7 @@
   --chat-readable-width: 98ch;
   --chat-gutter: clamp(16px, 4cqi, 48px);
   --chat-scrollbar-width: 10px;
+  --prompt-gutter: max(var(--prompt-min-gutter), 2cqi);
 }
 
 /* ============================================
@@ -505,20 +506,18 @@
 .chat-view .prompt-input-container,
 .chat-view .session-dock {
   box-sizing: border-box;
-  width: min(
-    calc(100% - var(--chat-gutter) - var(--chat-gutter) - var(--chat-scrollbar-width) - 8px),
-    var(--chat-readable-width)
-  );
+  width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width));
   margin-inline: auto;
+}
+
+.chat-view .prompt-input-container {
+  margin-block: var(--prompt-gutter);
 }
 
 .chat-view .chat-input > .startup-error-banner,
 .chat-view .chat-input > [data-component="permission-shortcuts"] {
   box-sizing: border-box;
-  width: min(
-    calc(100% - var(--chat-gutter) - var(--chat-gutter) - var(--chat-scrollbar-width) - 8px),
-    var(--chat-readable-width)
-  );
+  width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width));
   margin-inline: auto;
 }
 
@@ -550,7 +549,7 @@
 }
 
 .chat-input:has(> [data-component="permission-shortcuts"]) > .prompt-input-container {
-  margin-top: 0;
+  margin-top: var(--prompt-gutter);
 }
 
 .chat-input > [data-component="permission-shortcuts"] {

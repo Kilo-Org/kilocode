@@ -179,6 +179,6 @@
     "solid-js@1.9.12": "patches/solid-js@1.9.12.patch",
     "@ai-sdk/openai-compatible@2.0.48": "patches/@ai-sdk%2Fopenai-compatible@2.0.48.patch"
   },
-  "version": "7.4.22",
+  "version": "7.4.23",
   "peerDependencies": {}
 }

@@ -146,6 +146,9 @@ export const dict = {
   "agentManager.diff.revertFile": "ย้อนกลับไฟล์",
   "agentManager.diff.revertSuccess": "ย้อนกลับไฟล์แล้ว",
   "agentManager.diff.revertError": "ย้อนกลับล้มเหลว",
+  "agentManager.editPreview.title": "ตัวอย่างการแก้ไข",
+  "agentManager.editPreview.close": "ปิดตัวอย่างการแก้ไข",
+  "agentManager.editPreview.openInPanel": "ดูการเปลี่ยนแปลงในแผง",
   "agentManager.diff.applyBranchOnly":
     "นำไปใช้ได้เฉพาะกับ diff ของ Branch ทั้งหมดเท่านั้น สลับไปที่ขอบเขต Branch เพื่อใช้งาน",
   "agentManager.open.button": "เปิด",

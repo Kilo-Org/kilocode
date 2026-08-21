@@ -364,6 +364,16 @@
   margin: 6px 8px 0;
 }
 
+.am-pr-diff-context-marker {
+  padding: 2px 8px;
+  color: var(--text-weak);
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.4;
+  text-align: center;
+}
+
 .am-pr-panel-description {
   line-height: 1.5;
   padding: 2px 0 4px;

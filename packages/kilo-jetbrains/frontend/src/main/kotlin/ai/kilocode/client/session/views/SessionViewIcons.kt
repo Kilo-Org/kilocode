@@ -26,6 +26,7 @@ object SessionViewIcons {
     val ruleDeny = icon("close-small")
     val ruleDenyActive = icon("close-small-active")
     val search = icon("magnifying-glass-menu")
+    val shield: Icon = IconLoader.getIcon("/icons/shield.svg", SessionViewIcons::class.java)
     val task = icon("task")
     val warning = icon("warning")
     val windowCursor = icon("window-cursor")

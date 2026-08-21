@@ -183,15 +183,22 @@ async function provisionVersion(
 
   const session = await host.createSession(wt.result.path, wt.result.branch, wt.worktree.id)
   if (!session) {
+    let releasePtyCleanup: () => void
     try {
-      await host.removePtys(wt.result.path)
+      releasePtyCleanup = await host.acquirePtyCleanup(wt.result.path)
     } catch (error) {
       host.log("Failed to remove worktree PTYs:", error)
       return null
     }
-    await ctx.worktreeManager().removeWorktree(wt.result.path, wt.result.branch)
-    ctx.peekState()?.removeWorktree(wt.worktree.id)
-    host.push()
+    try {
+      await ctx.worktreeManager().removeWorktree(wt.result.path, wt.result.branch)
+      ctx.peekState()?.removeWorktree(wt.worktree.id)
+      host.push()
+    } catch (error) {
+      host.log("Failed to remove worktree after session creation failed:", error)
+    } finally {
+      releasePtyCleanup()
+    }
     host.log(`Failed to create session for version ${spec.index + 1}`)
     return null
   }

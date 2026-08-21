@@ -22,7 +22,8 @@ class ToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, mode = ToolBodyMode.EDITOR),
-) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }), UiDataProvider {
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget {
 
     override val contentId: String = tool.id
 
@@ -55,7 +56,7 @@ class ToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight()
+        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight() + footerHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -68,6 +69,7 @@ class ToolView(
         if (was != content.name || !canExpand(content)) changed = collapse() || changed
         changed = sync() || changed
         changed = syncBody() || changed
+        changed = syncApprovalReason(approvalReasonsVisible()) || changed
         if (changed) refresh()
     }
 
@@ -132,7 +134,15 @@ class ToolView(
         changed = setFont(parts.link, style.smallEditorFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
         changed = applyBodyStyle() || changed
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     private fun sync(): Boolean {
@@ -146,6 +156,7 @@ class ToolView(
             body.foreground = bodyColor()
             changed = true
         }
+        changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
     }
 

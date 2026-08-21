@@ -17,7 +17,9 @@ import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import { Skill } from "@/skill"
-import type { SessionID } from "@/session/schema"
+import { BackgroundJob } from "@/background/job"
+import { SessionRunState } from "@/session/run-state"
+import { SessionID } from "@/session/schema"
 import {
   AgentManagerRejectPayload,
   AgentManagerReplyPayload,
@@ -26,6 +28,8 @@ import {
   RemoveAgentPayload,
   RemoveCommandPayload,
   RemoveSkillPayload,
+  BackgroundJobInfo,
+  BackgroundJobsQuery,
 } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
@@ -37,6 +41,8 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const store = yield* InstanceStore.Service
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
+    const background = yield* BackgroundJob.Service
+    const runState = yield* SessionRunState.Service
 
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
@@ -169,6 +175,33 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return usage
     })
 
+    const backgroundJobs = Effect.fn("KilocodeHttpApi.backgroundJobs")(function* (ctx: {
+      query: typeof BackgroundJobsQuery.Type
+    }) {
+      return (yield* background.list())
+        .filter((job) => job.metadata?.parentSessionId === ctx.query.sessionID)
+        .map((job) => ({
+          id: job.id,
+          type: job.type,
+          title: job.title,
+          status: job.status,
+          started_at: job.started_at,
+          completed_at: job.completed_at,
+          error: job.error,
+          metadata: job.metadata,
+        })) satisfies (typeof BackgroundJobInfo.Type)[]
+    })
+
+    const backgroundJobCancel = Effect.fn("KilocodeHttpApi.backgroundJobCancel")(function* (ctx: {
+      params: { jobID: string }
+    }) {
+      const job = yield* background.get(ctx.params.jobID)
+      if (!job) return yield* new HttpApiError.NotFound({})
+      const sessionID = SessionID.make(typeof job.metadata?.sessionId === "string" ? job.metadata.sessionId : job.id)
+      yield* runState.cancel(sessionID)
+      return true
+    })
+
     return handlers
       .handle("heapSnapshot", heapSnapshot)
       .handle("commandFiles", commandFiles)
@@ -182,5 +215,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("agentManagerReply", agentManagerReply)
       .handle("agentManagerReject", agentManagerReject)
       .handle("sessionModelUsage", sessionModelUsage)
+      .handle("backgroundJobs", backgroundJobs)
+      .handle("backgroundJobCancel", backgroundJobCancel)
   }),
 )

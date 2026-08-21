@@ -283,7 +283,10 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           onRemoveStale={() => post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })}
           onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
           onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}
-          onOpenPR={() => post({ type: "agentManager.openPR", worktreeId: worktree.id })}
+          onOpenPR={() => {
+            const url = props.prs?.[worktree.id]?.url
+            post({ type: "agentManager.openPR", worktreeId: worktree.id, ...(url ? { url } : {}) })
+          }}
         />
       </div>
     )
