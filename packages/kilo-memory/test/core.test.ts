@@ -5,6 +5,7 @@ import path from "path"
 import { Memory } from "../src/memory"
 import { MemoryDigest } from "../src/capture/digest"
 import { MemoryFiles } from "../src/storage/store"
+import { MemoryFs } from "../src/storage/fs"
 import { MemoryIndexer } from "../src/recall/indexer"
 import { MemoryOperations } from "../src/capture/operations"
 import { MemoryPaths } from "../src/storage/paths"
@@ -273,6 +274,12 @@ describe("memory core package", () => {
 
       await expect(Memory.enable({ root: link })).rejects.toThrow("memory path rejects symlink")
     })
+  })
+
+  test("trusts only system home aliases on Linux", () => {
+    expect(MemoryFs.trusted("/home", "linux")).toBe(true)
+    expect(MemoryFs.trusted("/home/user", "linux")).toBe(false)
+    expect(MemoryFs.trusted("/tmp/home", "linux")).toBe(false)
   })
 
   test("uses unicode-safe project and memory identifiers", async () => {
