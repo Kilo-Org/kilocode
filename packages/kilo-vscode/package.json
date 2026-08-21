@@ -1070,6 +1070,12 @@
           "scope": "application",
           "description": "Allow Agent Manager to manage sessions and worktrees across multiple repositories as projects. The current workspace repository is always the default project; additional projects can be added and persist across restarts."
         },
+        "kilo-code.new.experimental.compactToolActivity": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Collapse consecutive tool calls and thoughts in the chat transcript into a single summarized activity row. Open the row to see the original reasoning and tool cards."
+        },
         "kilo-code.new.agentManager.terminalButtonDestination": {
           "type": "string",
           "scope": "application",

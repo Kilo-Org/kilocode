@@ -5,6 +5,10 @@
  * individually for maximum verbosity in the VS Code sidebar context.
  *
  * Active questions render inline via QuestionDock; permissions are in the bottom dock.
+ *
+ * Compact activity rows call this component with one correctly-owned part at a
+ * time. The renderer stays canonical; the activity row only controls whether the
+ * existing card is mounted.
  */
 
 import { Component, For, Show, createMemo, type JSX } from "solid-js"
@@ -102,6 +106,8 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
 interface AssistantMessageProps {
   message: SDKAssistantMessage
   parts?: SDKPart[]
+  /** Rendered inside an activity detail list, where cards start closed. */
+  activityDetail?: boolean
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
   /** id of the part containing the current chat-search match, if any — forces
@@ -149,7 +155,7 @@ function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
   )
 }
 
-function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?: boolean }) {
+function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?: boolean; activityDetail?: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
   const language = useLanguage()
@@ -169,8 +175,8 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?:
             status={state()?.status}
             defaultOpen={props.defaultOpen}
             forceOpen={props.forceOpen}
-            animate
-            reveal={state()?.status === "pending" || state()?.status === "running"}
+            animate={!props.activityDetail}
+            reveal={!props.activityDetail && (state()?.status === "pending" || state()?.status === "running")}
           />
         </ToolApprovalProvider>
       )}
@@ -247,134 +253,132 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
         ([] as TimelinePart[]),
     ),
   )
-  return (
-    <>
-      <For each={parts()}>
-        {(part) => {
-          // Upstream PART_MAPPING["tool"] returns null for todowrite/todoread,
-          // so we detect them here and render via ToolRegistry directly.
-          const isUpstreamSuppressed =
-            part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
+  const renderPart = (part: SDKPart) => {
+    // Upstream PART_MAPPING["tool"] returns null for todowrite/todoread,
+    // so we detect them here and render via ToolRegistry directly.
+    const isUpstreamSuppressed =
+      part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
 
-          // Active question tool parts render the interactive QuestionDock inline
-          const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
+    // Active question tool parts render the interactive QuestionDock inline
+    const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
 
-          // Active suggestion tool parts render the interactive SuggestBar inline
-          const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
-          const bash = createMemo(() => {
-            if (part.type !== "tool") return
-            const tool = part as unknown as ToolPart
-            if (tool.tool !== "bash") return
-            if (tool.state?.status === "error") return
-            return part
-          })
-          const planExit = createMemo(() => {
-            if (!planExitInfo(part)) return
-            return part as unknown as ToolPart
-          })
-          const forceOpen = createMemo(() => !!props.forceOpenPartID && part.id === props.forceOpenPartID)
+    // Active suggestion tool parts render the interactive SuggestBar inline
+    const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
+    const bash = createMemo(() => {
+      if (part.type !== "tool") return
+      const tool = part as unknown as ToolPart
+      if (tool.tool !== "bash") return
+      if (tool.state?.status === "error") return
+      return part
+    })
+    const planExit = createMemo(() => {
+      if (!planExitInfo(part)) return
+      return part as unknown as ToolPart
+    })
+    const forceOpen = createMemo(() => !!props.forceOpenPartID && part.id === props.forceOpenPartID)
 
-          // Lights up when this part is behind the hovered/focused task-timeline
-          // bar, using that bar's own color so the two stay easy to correlate.
-          const highlighted = createMemo(() => {
-            const h = props.highlight?.()
-            return h?.msgId === props.message.id && h?.partId === part.id
-          })
+    // Lights up when this part is behind the hovered/focused task-timeline
+    // bar, using that bar's own color so the two stay easy to correlate.
+    const highlighted = createMemo(() => {
+      const h = props.highlight?.()
+      return h?.msgId === props.message.id && h?.partId === part.id
+    })
 
-          // Throughput badge renders inside the copy/feedback action row of the
-          // text part that carries the copy button (the last text part of the
-          // message), pushed to the right of the buttons rather than below the
-          // message. Only built for that part so non-text parts skip the work.
-          const throughputEl = createMemo<JSX.Element | undefined>(() => {
-            if (!throughputVisible()) return undefined
-            const metrics = throughput()
-            if (!metrics) return undefined
-            if (part.id !== props.showAssistantCopyPartID) return undefined
-            return <ThroughputBadge metrics={metrics} />
-          })
+    // Throughput badge renders inside the copy/feedback action row of the
+    // text part that carries the copy button (the last text part of the
+    // message), pushed to the right of the buttons rather than below the
+    // message. Only built for that part so non-text parts skip the work.
+    const throughputEl = createMemo<JSX.Element | undefined>(() => {
+      if (!throughputVisible()) return undefined
+      const metrics = throughput()
+      if (!metrics) return undefined
+      if (part.id !== props.showAssistantCopyPartID) return undefined
+      return <ThroughputBadge metrics={metrics} />
+    })
 
-          return (
-            <Show
-              when={
-                isUpstreamSuppressed ||
-                activeQuestion() ||
-                activeSuggestion() ||
-                bash() ||
-                planExit() ||
-                PART_MAPPING[part.type]
-              }
-            >
-              <div
-                data-component="tool-part-wrapper"
-                data-part-type={part.type}
-                data-part-id={part.id}
-                data-timeline-highlight={highlighted() ? "" : undefined}
-                style={
-                  highlighted() ? { "--timeline-color": timelineColor(part as unknown as TimelinePart) } : undefined
+    return (
+      <Show
+        when={
+          isUpstreamSuppressed ||
+          activeQuestion() ||
+          activeSuggestion() ||
+          bash() ||
+          planExit() ||
+          PART_MAPPING[part.type]
+        }
+      >
+        <div
+          data-component="tool-part-wrapper"
+          data-part-type={part.type}
+          data-part-id={part.id}
+          data-timeline-highlight={highlighted() ? "" : undefined}
+          style={highlighted() ? { "--timeline-color": timelineColor(part as unknown as TimelinePart) } : undefined}
+        >
+          <Show
+            when={activeQuestion()}
+            fallback={
+              <Show
+                when={activeSuggestion()}
+                fallback={
+                  <Show
+                    when={planExit()}
+                    fallback={
+                      <Show
+                        when={bash()}
+                        fallback={
+                          <Show
+                            when={isUpstreamSuppressed}
+                            fallback={
+                              <Part
+                                part={part}
+                                message={props.message as SDKMessage}
+                                showAssistantCopyPartID={props.showAssistantCopyPartID}
+                                defaultOpen={
+                                  props.activityDetail ? false : toolDefaultOpen(part, open(), edit(), mcp())
+                                }
+                                forceOpen={forceOpen()}
+                                forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
+                                reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                feedback={props.feedback}
+                                throughput={throughputEl()}
+                                animate={
+                                  !props.activityDetail &&
+                                  part.type === "tool" &&
+                                  ((part as unknown as ToolPart).state?.status === "pending" ||
+                                    (part as unknown as ToolPart).state?.status === "running")
+                                }
+                              />
+                            }
+                          >
+                            <TodoToolCard part={part as unknown as ToolPart} forceOpen={forceOpen()} />
+                          </Show>
+                        }
+                      >
+                        {(tool) => (
+                          <BashToolCard
+                            part={tool() as unknown as ToolPart}
+                            defaultOpen={props.activityDetail ? false : open()}
+                            forceOpen={forceOpen()}
+                            activityDetail={props.activityDetail}
+                          />
+                        )}
+                      </Show>
+                    }
+                  >
+                    {(tp) => <PlanExitCard part={tp()} />}
+                  </Show>
                 }
               >
-                <Show
-                  when={activeQuestion()}
-                  fallback={
-                    <Show
-                      when={activeSuggestion()}
-                      fallback={
-                        <Show
-                          when={planExit()}
-                          fallback={
-                            <Show
-                              when={bash()}
-                              fallback={
-                                <Show
-                                  when={isUpstreamSuppressed}
-                                  fallback={
-                                    <Part
-                                      part={part}
-                                      message={props.message as SDKMessage}
-                                      showAssistantCopyPartID={props.showAssistantCopyPartID}
-                                      defaultOpen={toolDefaultOpen(part, open(), edit(), mcp())}
-                                      forceOpen={forceOpen()}
-                                      forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
-                                      reasoningAutoCollapse={display.reasoningAutoCollapse()}
-                                      feedback={props.feedback}
-                                      throughput={throughputEl()}
-                                      animate={
-                                        part.type === "tool" &&
-                                        ((part as unknown as ToolPart).state?.status === "pending" ||
-                                          (part as unknown as ToolPart).state?.status === "running")
-                                      }
-                                    />
-                                  }
-                                >
-                                  <TodoToolCard part={part as unknown as ToolPart} forceOpen={forceOpen()} />
-                                </Show>
-                              }
-                            >
-                              {(tool) => (
-                                <BashToolCard
-                                  part={tool() as unknown as ToolPart}
-                                  defaultOpen={open()}
-                                  forceOpen={forceOpen()}
-                                />
-                              )}
-                            </Show>
-                          }
-                        >
-                          {(tp) => <PlanExitCard part={tp()} />}
-                        </Show>
-                      }
-                    >
-                      {(req) => <SuggestBar request={req()} />}
-                    </Show>
-                  }
-                >
-                  {(req) => <QuestionDock request={req()} />}
-                </Show>
-              </div>
-            </Show>
-          )
-        }}
-      </For>
-    </>
-  )
+                {(req) => <SuggestBar request={req()} />}
+              </Show>
+            }
+          >
+            {(req) => <QuestionDock request={req()} />}
+          </Show>
+        </div>
+      </Show>
+    )
+  }
+
+  return <For each={parts()}>{renderPart}</For>
 }

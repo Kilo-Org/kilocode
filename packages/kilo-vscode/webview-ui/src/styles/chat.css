@@ -22,6 +22,7 @@
 @import "./history.css";
 @import "./notifications.css";
 @import "./tool-overrides.css";
+@import "./tool-activity.css";
 @import "./question-dock.css";
 @import "./plan-exit.css";
 @import "./suggest-bar.css";

@@ -865,6 +865,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
+  "settings.experimental.compactToolActivity.title": "Kompakte Werkzeugaktivität",
+  "settings.experimental.compactToolActivity.description":
+    "Aufeinanderfolgende Werkzeugaufrufe und Gedankengänge zu einer zusammengefassten Aktivitätszeile zusammenfassen. Erweitern Sie einen Schritt, um die vollständige Werkzeugkarte wieder anzuzeigen.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",
@@ -1122,6 +1125,10 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "{{count}} verwendetes Werkzeug",
+  "chat.activity.count_other": "{{count}} verwendete Werkzeuge",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primäres Modell für Gespräche",

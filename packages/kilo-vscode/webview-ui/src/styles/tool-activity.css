@@ -1,0 +1,205 @@
+/** Compact tool activity: a stable summary and one flat detail list. */
+
+[data-component="tool-activity"] {
+  --activity-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --activity-fade: 200ms;
+  --activity-chip: 24px;
+  --activity-overlap: -6px;
+
+  margin-block: 2px;
+}
+
+.chat-view [data-component="tool-activity"] {
+  width: 100%;
+  max-width: var(--chat-readable-width);
+  margin-inline: auto;
+}
+
+[data-slot="tool-activity-header"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% + 12px);
+  min-height: 26px;
+  margin-inline: -6px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-family: inherit;
+  font-size: var(--kilo-font-size-12);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+[data-slot="tool-activity-header"]:hover {
+  background-color: var(--vscode-list-hoverBackground, var(--surface-raised-base-hover));
+  color: var(--vscode-foreground, var(--text-strong));
+}
+
+[data-slot="tool-activity-header"]:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+[data-slot="tool-activity-arrow"] {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: inherit;
+  transition: transform var(--activity-fade) var(--activity-ease);
+}
+
+[data-component="tool-activity"][data-open] [data-slot="tool-activity-arrow"] {
+  transform: rotate(180deg);
+}
+
+[data-slot="tool-activity-chips"] {
+  flex-shrink: 0;
+}
+
+[data-slot="tool-activity-chips-inner"] {
+  display: flex;
+  align-items: center;
+}
+
+[data-slot="tool-activity-chip"] {
+  position: relative;
+  z-index: calc(10 - var(--i, 0));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--activity-chip);
+  height: var(--activity-chip);
+  margin-right: var(--activity-overlap);
+  border: 1px solid var(--border-base, currentColor);
+  border-radius: 50%;
+  background-color: var(--surface-raised-base, var(--vscode-editorWidget-background));
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: var(--kilo-font-size-10, 10px);
+  line-height: 1;
+}
+
+[data-slot="tool-activity-chip"]:last-child {
+  margin-right: 0;
+}
+
+[data-component="tool-activity"][data-cascade] [data-slot="tool-activity-chip"] {
+  animation: activity-chip-in 320ms var(--activity-ease) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+[data-slot="tool-activity-chip"] [data-component="icon"],
+[data-slot="tool-activity-chip"] [data-component="spinner"] {
+  width: 13px;
+  height: 13px;
+}
+
+[data-slot="tool-activity-chip"][data-live],
+[data-slot="tool-activity-header"]:hover [data-slot="tool-activity-chip"] {
+  color: var(--vscode-foreground, var(--text-strong));
+}
+
+[data-slot="tool-activity-chip"][data-extra] {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+[data-slot="tool-activity-label"] {
+  --working-status-glide: 420ms;
+  --working-status-fade: 240ms;
+  --working-status-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+[data-slot="tool-activity-label-line"] {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-slot="tool-activity-label"] [data-component="tool-count-summary"] {
+  color: inherit;
+}
+
+[data-slot="tool-activity-label-line"][data-status] .working-status {
+  max-width: 100%;
+}
+
+[data-slot="tool-activity-label-line"][data-status] [data-component="text-shimmer"] {
+  --text-shimmer-base-color: var(--vscode-descriptionForeground);
+  --text-shimmer-peak-color: var(--vscode-foreground);
+}
+
+/* The direct cards keep the normal transcript alignment. There is no step row,
+   second chevron, or extra nested indent between the summary and the content. */
+[data-slot="tool-activity-details"] {
+  display: flex;
+  flex-direction: column;
+  padding-top: 2px;
+  animation: activity-detail-in var(--activity-fade) var(--activity-ease) both;
+}
+
+/* Details remain the canonical BasicTool and reasoning components. Their
+   detail-less and expandable variants have different intrinsic trigger heights,
+   so give every existing trigger the same list-row floor in this one surface. */
+html[data-theme="kilo-vscode"]
+  [data-component="tool-activity"]
+  [data-slot="tool-activity-details"]
+  [data-component="tool-part-wrapper"]
+  [data-component="collapsible"].tool-collapsible
+  > [data-slot="collapsible-trigger"],
+html[data-theme="kilo-vscode"]
+  [data-component="tool-activity"]
+  [data-slot="tool-activity-details"]
+  [data-component="reasoning-part"]
+  [data-component="collapsible"].tool-collapsible
+  > [data-slot="collapsible-trigger"] {
+  min-height: 28px;
+}
+
+@keyframes activity-chip-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.8);
+    filter: blur(1.5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes activity-detail-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="tool-activity"][data-cascade] [data-slot="tool-activity-chip"],
+  [data-slot="tool-activity-details"] {
+    animation: none;
+  }
+
+  [data-slot="tool-activity-arrow"] {
+    transition-duration: 0ms;
+  }
+}

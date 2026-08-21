@@ -831,6 +831,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
+  "settings.experimental.compactToolActivity.title": "فعالیت فشرده ابزار",
+  "settings.experimental.compactToolActivity.description":
+    "فراخوانی‌های پی‌درپی ابزار و استدلال‌ها را در یک ردیف فعالیت خلاصه‌شده جمع می‌کند. برای نمایش دوباره کارت کامل ابزار، یک مرحله را باز کنید.",
   "settings.experimental.mcpTimeout.title": "زمان‌وقفه MCP (میلی‌ثانیه)",
   "settings.experimental.mcpTimeout.description": "زمان‌وقفه برای درخواست‌های سرور MCP بر حسب میلی‌ثانیه",
   "settings.experimental.remote.title": "کنترل از راه دور",
@@ -1081,6 +1084,10 @@ export const dict = {
   "chat.throughput.tooltip":
     "میانگین {{speed}} توکن/ثانیه برای این نوبت. شامل توکن‌های خروجی و استدلال می‌شود؛ زمان اجرای ابزار و انتظار را شامل نمی‌شود.",
   "chat.throughput.tooltip.missing": "معیارهای توان عملیاتی برای این نوبت در دسترس نیست.",
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "از {{count}} ابزار استفاده شد",
+  "chat.activity.count_other": "از {{count}} ابزار استفاده شد",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "مدل پیش‌فرض",
   "settings.providers.defaultModel.description": "مدل اصلی برای مکالمات",

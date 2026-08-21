@@ -835,6 +835,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
+  "settings.experimental.compactToolActivity.title": "Kompakt Araç Etkinliği",
+  "settings.experimental.compactToolActivity.description":
+    "Ardışık araç çağrılarını ve düşünceleri tek bir özet etkinlik satırında daraltır. Tam araç kartını yeniden görmek için bir adımı genişletin.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -1057,6 +1060,10 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "{{count}} araç kullanıldı",
+  "chat.activity.count_other": "{{count}} araç kullanıldı",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "Varsayılan Model",
   "settings.providers.defaultModel.description": "Sohbetler için birincil model",

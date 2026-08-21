@@ -657,6 +657,11 @@ export interface AutoApprovalReasonSettingLoadedMessage {
   visible: boolean
 }
 
+export interface CompactToolActivitySettingLoadedMessage {
+  type: "compactToolActivitySettingLoaded"
+  enabled: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -1364,6 +1369,7 @@ export type ExtensionMessage =
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
+  | CompactToolActivitySettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage

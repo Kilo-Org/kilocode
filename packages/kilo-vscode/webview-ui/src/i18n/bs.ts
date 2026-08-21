@@ -846,6 +846,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
+  "settings.experimental.compactToolActivity.title": "Sažeta aktivnost alata",
+  "settings.experimental.compactToolActivity.description":
+    "Sažmi uzastopne pozive alata i razmišljanja u jedan sažeti red aktivnosti. Proširi korak da ponovo prikažeš cijelu karticu alata.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1101,6 +1104,10 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "{{count}} korišten alat",
+  "chat.activity.count_other": "Broj korištenih alata: {{count}}",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
