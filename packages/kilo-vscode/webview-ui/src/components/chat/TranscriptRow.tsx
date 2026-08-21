@@ -3,6 +3,7 @@ import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import type { AssistantMessage as SDKAssistantMessage, Part as SDKPart, SnapshotFileDiff } from "@kilocode/sdk/v2"
+import type { Message } from "../../types/messages"
 import type { TranscriptRow } from "../../context/transcript-rows"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
 import { useSession } from "../../context/session"
@@ -11,6 +12,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useFeedback } from "../../context/feedback"
 import { AssistantMessage } from "./AssistantMessage"
+import { ToolActivityGroup } from "./ToolActivityGroup"
 import { ErrorDisplay, type ErrorDisplayProps } from "./ErrorDisplay"
 import { VscodeUserMessage } from "./VscodeUserMessage"
 
@@ -26,6 +28,10 @@ interface TranscriptRowViewProps {
   activeSearchPartID?: string
   /** For a multi-file apply_patch match, the specific file within that part. */
   activeSearchPartFile?: string
+  activityOpen?: (key: string) => boolean
+  activityCascade?: (key: string) => boolean
+  onActivityOpenChange?: (key: string, open: boolean) => void
+  onActivityCascade?: (key: string) => void
 }
 
 export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
@@ -36,14 +42,44 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
   const feedback = useFeedback()
   const i18n = useI18n()
 
-  createEffect(() => session.hydrateParts([props.row.message.id]))
+  const messages = () =>
+    props.row.type === "activity"
+      ? [...new Set(props.row.items.map((item) => item.message.id))]
+      : [props.row.message.id]
+  const message = () => (props.row.type === "activity" ? props.row.items[0]?.message : props.row.message)
 
-  const open = () => vscode.postMessage({ type: "openChanges", turnId: props.row.message.id })
+  createEffect((prev: string | undefined) => {
+    const ids = messages()
+    const key = ids.join("\0")
+    if (key === prev) return prev
+    session.hydrateParts(ids)
+    return key
+  })
+
+  const open = () => {
+    const id = message()?.id
+    if (id) vscode.postMessage({ type: "openChanges", turnId: id })
+  }
+
+  const controls = (msg: Message) => ({
+    enabled: feedback.telemetryEnabled(),
+    rating: feedback.getRating(msg.id),
+    onRate: (next: "up" | "down" | null) =>
+      feedback.rate({
+        messageID: msg.id,
+        sessionID: msg.sessionID,
+        parentMessageID: msg.parentID ?? "",
+        providerID: msg.providerID ?? msg.model?.providerID ?? "",
+        modelID: msg.modelID ?? msg.model?.modelID ?? "",
+        variant: msg.model?.variant,
+        next,
+      }),
+  })
 
   return (
     <div
       class="vscode-session-turn"
-      data-message={props.row.message.id}
+      data-message={message()?.id}
       data-row={props.row.type}
       data-row-key={props.row.key}
       data-row-index={props.index}
@@ -92,20 +128,35 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               forceOpenPartID={props.activeSearchPartID}
               forceOpenFile={props.activeSearchPartFile}
               highlight={props.highlight}
-              feedback={{
-                enabled: feedback.telemetryEnabled(),
-                rating: feedback.getRating(row().message.id),
-                onRate: (next) =>
-                  feedback.rate({
-                    messageID: row().message.id,
-                    sessionID: row().message.sessionID,
-                    parentMessageID: row().message.parentID ?? "",
-                    providerID: row().message.providerID ?? row().message.model?.providerID ?? "",
-                    modelID: row().message.modelID ?? row().message.model?.modelID ?? "",
-                    variant: row().message.model?.variant,
-                    next,
-                  }),
-              }}
+              feedback={controls(row().message)}
+            />
+          </div>
+        )}
+      </Show>
+
+      <Show when={props.row.type === "activity" ? props.row : undefined}>
+        {(row) => (
+          <div class="vscode-session-turn-assistant">
+            <ToolActivityGroup
+              groupKey={row().key}
+              items={row().items}
+              live={row().working}
+              open={props.activityOpen?.(row().key) === true}
+              cascade={props.activityCascade?.(row().key) !== false}
+              forced={props.activeSearchPartID}
+              onOpenChange={(open) => props.onActivityOpenChange?.(row().key, open)}
+              onCascade={() => props.onActivityCascade?.(row().key)}
+              render={(item) => (
+                <AssistantMessage
+                  message={item().message as unknown as SDKAssistantMessage}
+                  parts={[item().part] as unknown as SDKPart[]}
+                  activityDetail
+                  forceOpenPartID={props.activeSearchPartID}
+                  forceOpenFile={props.activeSearchPartFile}
+                  highlight={props.highlight}
+                  feedback={controls(item().message)}
+                />
+              )}
             />
           </div>
         )}

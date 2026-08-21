@@ -770,6 +770,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
+  "settings.experimental.compactToolActivity.title": "精簡工具活動",
+  "settings.experimental.compactToolActivity.description":
+    "將連續的工具呼叫和思考收合為單一摘要列。展開步驟即可還原完整的工具卡片。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -998,6 +1001,11 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "已使用 {{count}} 個工具",
+  "chat.activity.count_other": "已使用 {{count}} 個工具",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "預設模型",
   "settings.providers.defaultModel.description": "對話的主要模型",

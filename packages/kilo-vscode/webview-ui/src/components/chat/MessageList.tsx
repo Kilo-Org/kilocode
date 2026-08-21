@@ -27,6 +27,8 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { useDisplay } from "../../context/display"
+import { isRenderable } from "../../utils/transcript-parts"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { useProvider } from "../../context/provider"
 import { useWorktreeMode } from "../../context/worktree-mode"
@@ -104,6 +106,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
+  const display = useDisplay()
   const provider = useProvider()
   const i18n = useI18n()
   const data = useData()
@@ -206,10 +209,52 @@ export const MessageList: Component<MessageListProps> = (props) => {
         live: new Set(active ? [active] : []),
         hidden: session.isErrorHidden,
         revert: revert(),
+        compact: display.compactToolActivity(),
+        renderable: (part, message) => isRenderable(part as never, message as never),
       },
       prev,
     )
   })
+
+  // Activity disclosure belongs to this mounted transcript, not to SDK parts or
+  // module state. Virtualized remounts keep the user's choice, while a session
+  // switch cannot inherit another session's open groups or replay history.
+  const [activities, setActivities] = createSignal<ReadonlySet<string>>(new Set<string>())
+  const cascades = new Set<string>()
+  let activitySession = session.currentSessionID()
+  createEffect(() => {
+    const id = session.currentSessionID()
+    if (id === activitySession) return
+    activitySession = id
+    cascades.clear()
+    setActivities(new Set<string>())
+  })
+  createEffect(() => {
+    const present = new Set(
+      rows()
+        .filter((row) => row.type === "activity")
+        .map((row) => row.key),
+    )
+    for (const key of cascades) {
+      if (!present.has(key)) cascades.delete(key)
+    }
+    setActivities((current) => {
+      if ([...current].every((key) => present.has(key))) return current
+      return new Set([...current].filter((key) => present.has(key)))
+    })
+  })
+  const activityOpen = (key: string) => activities().has(key)
+  const activityCascade = (key: string) => !cascades.has(key)
+  const changeActivity = (key: string, open: boolean) => {
+    setActivities((current) => {
+      if (current.has(key) === open) return current
+      const next = new Set(current)
+      if (open) next.add(key)
+      else next.delete(key)
+      return next
+    })
+  }
+  const markActivity = (key: string) => cascades.add(key)
 
   const search = useTranscriptSearch()
 
@@ -251,7 +296,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
       ranges.push({ start: pos, end: pos + text.length, partId, file })
       pos += text.length
     }
-    for (const part of row.parts) {
+    const parts = row.type === "activity" ? row.items.map((item) => item.part) : row.parts
+    for (const part of parts) {
       switch (part.type) {
         case "text":
           if (!part.synthetic) push(markdown ? stripMarkdownLinkUrls(part.text) : part.text, part.id)
@@ -1024,10 +1070,19 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const onScrollToMessage = (e: Event) => {
     const detail = (e as CustomEvent<{ id: string; partId?: string }>).detail
     if (!detail?.id) return
-    const matches = rows().filter((r) => r.type === "assistant" && r.message.id === detail.id)
+    const matches = rows().filter(
+      (row) =>
+        (row.type === "assistant" && row.message.id === detail.id) ||
+        (row.type === "activity" && row.items.some((item) => item.message.id === detail.id)),
+    )
     // Long messages split into multiple rows (chunks); land on the chunk that
     // actually contains the clicked part, not just the message's first chunk.
-    const row = matches.find((r) => r.type === "assistant" && r.parts.some((p) => p.id === detail.partId)) ?? matches[0]
+    const row =
+      matches.find((item) => {
+        if (item.type === "assistant") return item.parts.some((part) => part.id === detail.partId)
+        if (item.type === "activity") return item.items.some((entry) => entry.part.id === detail.partId)
+        return false
+      }) ?? matches[0]
     if (!row) return
     jump(row.key)
   }
@@ -1332,6 +1387,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearch={activeKey() === row.key}
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                        activityOpen={activityOpen}
+                        activityCascade={activityCascade}
+                        onActivityOpenChange={changeActivity}
+                        onActivityCascade={markActivity}
                       />
                     )}
                   </Virtualizer>
@@ -1345,6 +1404,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearch={activeKey() === key}
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
+                      activityOpen={activityOpen}
+                      activityCascade={activityCascade}
+                      onActivityOpenChange={changeActivity}
+                      onActivityCascade={markActivity}
                     />
                   )}
                 </For>
@@ -1360,6 +1423,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearch={activeKey() === row.key}
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                  activityOpen={activityOpen}
+                  activityCascade={activityCascade}
+                  onActivityOpenChange={changeActivity}
+                  onActivityCascade={markActivity}
                 />
               )}
             </For>

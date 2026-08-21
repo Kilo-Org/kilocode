@@ -217,6 +217,19 @@ const ExperimentalTab: Component = () => {
           </Switch>
         </SettingsRow>
 
+        <SettingsRow
+          title={language.t("settings.experimental.compactToolActivity.title")}
+          description={language.t("settings.experimental.compactToolActivity.description")}
+        >
+          <Switch
+            checked={settings().compactToolActivity === true}
+            onChange={(checked) => applySetting("compactToolActivity", checked, "experimental.compactToolActivity")}
+            hideLabel
+          >
+            {language.t("settings.experimental.compactToolActivity.title")}
+          </Switch>
+        </SettingsRow>
+
         {/* MCP timeout */}
         <SettingsRow
           title={language.t("settings.experimental.mcpTimeout.title")}

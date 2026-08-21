@@ -831,6 +831,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
   "settings.experimental.multiProject.description":
     "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
+  "settings.experimental.compactToolActivity.title": "กิจกรรมเครื่องมือแบบย่อ",
+  "settings.experimental.compactToolActivity.description":
+    "ยุบการเรียกใช้เครื่องมือและการคิดที่ต่อเนื่องกันเป็นแถวกิจกรรมสรุปเดียว ขยายขั้นตอนเพื่อแสดงการ์ดเครื่องมือแบบเต็มอีกครั้ง",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1073,6 +1076,10 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "ใช้เครื่องมือ {{count}} รายการแล้ว",
+  "chat.activity.count_other": "ใช้เครื่องมือ {{count}} รายการแล้ว",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",

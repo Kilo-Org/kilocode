@@ -26,6 +26,9 @@ interface DisplayContextValue {
   throughputVisible: Accessor<boolean>
   // Whether the "why was this tool call approved" line renders on tool calls.
   autoApprovalReasonVisible: Accessor<boolean>
+  // Experimental transcript density: collapse runs of tool/reasoning parts into
+  // one summarized activity row. Off keeps the flat one-card-per-part transcript.
+  compactToolActivity: Accessor<boolean>
 }
 
 export const DisplayContext = createContext<DisplayContextValue>()
@@ -37,12 +40,14 @@ export const DisplayProvider: ParentComponent = (props) => {
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
   const [throughputVisible, setThroughputVisible] = createSignal(true)
   const [autoApprovalReasonVisible, setAutoApprovalReasonVisible] = createSignal(true)
+  const [compactToolActivity, setCompactToolActivity] = createSignal(false)
 
-  // Request both toggles once on mount; the extension posts back
+  // Request the toggles once on mount; the extension posts back
   // (and onDidChangeConfiguration forwards subsequent edits).
   onMount(() => {
     vscode.postMessage({ type: "requestThroughputSetting" })
     vscode.postMessage({ type: "requestAutoApprovalReasonSetting" })
+    vscode.postMessage({ type: "requestCompactToolActivitySetting" })
   })
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
@@ -50,6 +55,7 @@ export const DisplayProvider: ParentComponent = (props) => {
     if (message.type === "fontSizeChanged") setFontSizeSignal(clampFontSize(message.fontSize))
     if (message.type === "throughputSettingLoaded") setThroughputVisible(Boolean(message.visible))
     if (message.type === "autoApprovalReasonSettingLoaded") setAutoApprovalReasonVisible(Boolean(message.visible))
+    if (message.type === "compactToolActivitySettingLoaded") setCompactToolActivity(Boolean(message.enabled))
   })
 
   createEffect(() => {
@@ -71,6 +77,7 @@ export const DisplayProvider: ParentComponent = (props) => {
         },
         throughputVisible,
         autoApprovalReasonVisible,
+        compactToolActivity,
       }}
     >
       {/* Bridges the toggle into kilo-ui's generic gate so every tool render hides the line consistently. */}

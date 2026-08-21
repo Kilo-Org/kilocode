@@ -823,6 +823,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
+  "settings.experimental.compactToolActivity.title": "نشاط الأدوات المختصر",
+  "settings.experimental.compactToolActivity.description":
+    "طي استدعاءات الأدوات والأفكار المتتالية في صف نشاط واحد ملخّص. وسّع خطوة لاستعادة بطاقة الأداة الكاملة.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1067,6 +1070,10 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "{{count}} أداة مستخدمة",
+  "chat.activity.count_other": "تم استخدام {{count}} من الأدوات",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "النموذج الافتراضي",
   "settings.providers.defaultModel.description": "النموذج الأساسي للمحادثات",

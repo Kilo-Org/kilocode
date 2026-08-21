@@ -836,6 +836,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
+  "settings.experimental.compactToolActivity.title": "도구 활동 간소화",
+  "settings.experimental.compactToolActivity.description":
+    "연속된 도구 호출과 생각을 하나의 요약 활동 행으로 접습니다. 단계를 펼치면 전체 도구 카드를 다시 볼 수 있습니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
@@ -1076,6 +1079,11 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "{{count}}개 도구 사용됨",
+  "chat.activity.count_other": "{{count}}개 도구 사용됨",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "기본 모델",
   "settings.providers.defaultModel.description": "대화의 기본 모델",

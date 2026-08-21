@@ -18,6 +18,8 @@ const assistant = (id: string, parentID: string, opts: Partial<Message> = {}): M
   ...opts,
 })
 const part = (id: string, messageID: string): Part => ({ id, messageID, type: "text", text: id })
+const toolPart = (id: string, messageID: string, tool: string, status = "completed"): Part =>
+  ({ id, messageID, type: "tool", callID: `${id}-call`, tool, state: { status, input: {} } }) as unknown as Part
 const lookup = (values: Record<string, Part[]>) => (id: string) => values[id] ?? []
 
 describe("transcriptRows", () => {
@@ -231,6 +233,21 @@ describe("partitionRows", () => {
     expect(result.direct.map((row) => row.type)).toEqual(["assistant", "diff", "error"])
   })
 
+  it("keeps a compact activity mounted when final assistant text arrives", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1")
+    const a2 = assistant("a2", "u1")
+    const rows = transcriptRows(
+      messageTurns([u1, a1, a2]),
+      lookup({ a1: [toolPart("t1", "a1", "read")], a2: [part("say", "a2")] }),
+      { compact: true, live: new Set(["u1"]) },
+    )
+    const result = partitionRows(rows, new Set(["u1"]))
+
+    expect(result.virtual.map((row) => row.type)).toEqual(["user"])
+    expect(result.direct.map((row) => row.type)).toEqual(["activity", "assistant"])
+  })
+
   it("returns a completed suffix to virtual history after queue handoff", () => {
     const u1 = user("u1")
     const a1 = assistant("a1", "u1")
@@ -290,5 +307,209 @@ describe("partitionRows", () => {
     expect(result.direct.map((row) => row.type)).toEqual(["assistant"])
     expect(result.queued.map((row) => row.turn)).toEqual(["u2"])
     expect(result.queued[0]).toMatchObject({ type: "user", queued: true })
+  })
+})
+
+describe("transcriptRows compact tool activity", () => {
+  it("merges the per-step assistant rows into one explicit activity row", () => {
+    // The agent emits one assistant message per step, so without coalescing the
+    // activity group would only ever see the single part in each row.
+    const u1 = user("u1")
+    const steps = ["a1", "a2", "a3", "a4"].map((id) => assistant(id, "u1"))
+    const parts = {
+      a1: [toolPart("t1", "a1", "read")],
+      a2: [toolPart("t2", "a2", "read")],
+      a3: [toolPart("t3", "a3", "grep")],
+      a4: [part("say", "a4")],
+    }
+    const turns = messageTurns([u1, ...steps])
+
+    const flat = transcriptRows(turns, lookup(parts))
+    expect(flat.filter((row) => row.type === "assistant").map((row) => row.parts.length)).toEqual([1, 1, 1, 1])
+
+    const rows = transcriptRows(turns, lookup(parts), { compact: true })
+    const activity = rows.find((row) => row.type === "activity")
+    const assistants = rows.filter((row) => row.type === "assistant")
+    expect(activity?.items.map((item) => item.part.id)).toEqual(["t1", "t2", "t3"])
+    expect(activity?.items.map((item) => item.message.id)).toEqual(["a1", "a2", "a3"])
+    expect(activity?.key).toBe("u1:activity:t1")
+    expect(assistants.map((row) => row.key)).toEqual(["u1:assistant:a4:say"])
+  })
+
+  it("ignores bookkeeping parts that never render", () => {
+    // Each assistant message also carries step-start/step-finish parts. Treating
+    // one of those as a blocker stopped every run from coalescing at all.
+    const u1 = user("u1")
+    const steps = ["a1", "a2", "a3"].map((id) => assistant(id, "u1"))
+    const step = (id: string, messageID: string): Part => ({ id, messageID, type: "step-start" }) as unknown as Part
+    const parts = {
+      a1: [step("s1", "a1"), toolPart("t1", "a1", "read")],
+      a2: [step("s2", "a2"), toolPart("t2", "a2", "grep")],
+      a3: [step("s3", "a3"), toolPart("t3", "a3", "bash")],
+    }
+    const turns = messageTurns([u1, ...steps])
+    const renderable = (part: Part) => part.type !== "step-start"
+
+    // Without the predicate the step parts block every merge.
+    const blocked = transcriptRows(turns, lookup(parts), { compact: true })
+    expect(blocked.filter((row) => row.type === "assistant")).toHaveLength(3)
+
+    const rows = transcriptRows(turns, lookup(parts), { compact: true, renderable })
+    const activity = rows.find((row) => row.type === "activity")
+    expect(rows.filter((row) => row.type === "assistant")).toHaveLength(0)
+    expect(activity?.items.map((item) => item.part.id)).toEqual(["t1", "t2", "t3"])
+  })
+
+  it("breaks a run on a row that must keep its own card", () => {
+    const u1 = user("u1")
+    const steps = ["a1", "a2", "a3", "a4"].map((id) => assistant(id, "u1"))
+    const parts = {
+      a1: [toolPart("t1", "a1", "read")],
+      a2: [toolPart("t2", "a2", "question", "running")],
+      a3: [toolPart("t3", "a3", "read")],
+      a4: [toolPart("t4", "a4", "grep")],
+    }
+
+    const rows = transcriptRows(messageTurns([u1, ...steps]), lookup(parts), { compact: true })
+
+    expect(rows.map((row) => row.type)).toEqual(["user", "activity", "assistant", "activity"])
+    const activity = rows.filter((row) => row.type === "activity")
+    expect(activity.map((row) => row.items.map((item) => item.part.id))).toEqual([["t1"], ["t3", "t4"]])
+  })
+
+  it("keeps the row key stable as a run grows from one step to many", () => {
+    // The streaming row is looked up by key, so a key that changed when the second
+    // step arrived remounted the row mid-turn and lost the scroll anchor.
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1")
+    const a2 = assistant("a2", "u1")
+    const one = { a1: [toolPart("t1", "a1", "read")] }
+    const two = { ...one, a2: [toolPart("t2", "a2", "grep")] }
+
+    const first = transcriptRows(messageTurns([u1, a1]), lookup(one), { compact: true })
+    const grown = transcriptRows(messageTurns([u1, a1, a2]), lookup(two), { compact: true })
+
+    const key = first.find((row) => row.type === "activity")!.key
+    expect(key).toBe("u1:activity:t1")
+    expect(grown.filter((row) => row.type === "activity").map((row) => row.key)).toEqual([key])
+  })
+
+  it("does not split a live activity for an empty assistant step", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1")
+    const a2 = assistant("a2", "u1")
+    const rows = transcriptRows(messageTurns([u1, a1, a2]), lookup({ a1: [toolPart("t1", "a1", "read")] }), {
+      compact: true,
+      live: new Set(["u1"]),
+    })
+
+    expect(rows.map((row) => row.type)).toEqual(["user", "activity"])
+    const activity = rows.find((row) => row.type === "activity")
+    expect(activity?.key).toBe("u1:activity:t1")
+    expect(activity?.working).toBe(true)
+  })
+
+  it("never merges across turns", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1")
+    const u2 = user("u2")
+    const a2 = assistant("a2", "u2")
+    const parts = { a1: [toolPart("t1", "a1", "read")], a2: [toolPart("t2", "a2", "read")] }
+
+    const rows = transcriptRows(messageTurns([u1, a1, u2, a2]), lookup(parts), { compact: true })
+
+    expect(rows.map((row) => `${row.turn}:${row.type}`)).toEqual(["u1:user", "u1:activity", "u2:user", "u2:activity"])
+  })
+
+  it("keeps each activity item bound to its real assistant message", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1", { modelID: "model-one" })
+    const a2 = assistant("a2", "u1", { modelID: "model-two" })
+    const rows = transcriptRows(
+      messageTurns([u1, a1, a2]),
+      lookup({ a1: [toolPart("t1", "a1", "read")], a2: [toolPart("t2", "a2", "grep")] }),
+      { compact: true },
+    )
+
+    const activity = rows.find((row) => row.type === "activity")
+    expect(activity?.items.map((item) => [item.part.messageID, item.message.id, item.message.modelID])).toEqual([
+      ["a1", "a1", "model-one"],
+      ["a2", "a2", "model-two"],
+    ])
+  })
+
+  it("replaces an updated item without changing the activity row key or earlier item identity", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1")
+    const a2 = assistant("a2", "u1")
+    const t1 = toolPart("t1", "a1", "read")
+    const t2 = toolPart("t2", "a2", "grep", "running")
+    const first = transcriptRows(messageTurns([u1, a1, a2]), lookup({ a1: [t1], a2: [t2] }), {
+      compact: true,
+      live: new Set(["u1"]),
+    })
+    const done = { ...t2, state: { ...t2.state, status: "completed" } } as Part
+    const second = transcriptRows(
+      messageTurns([u1, a1, a2]),
+      lookup({ a1: [t1], a2: [done] }),
+      { compact: true, live: new Set(["u1"]) },
+      first,
+    )
+
+    const before = first.find((row) => row.type === "activity")!
+    const after = second.find((row) => row.type === "activity")!
+    expect(after.key).toBe(before.key)
+    expect(after.items[0]).toBe(before.items[0])
+    expect(after.items[0]!.part).toBe(t1)
+    expect(after.items[1]!.part).toBe(done)
+    expect(after.working).toBe(true)
+  })
+
+  it("shares existing activity items when a later tool is appended", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1")
+    const a2 = assistant("a2", "u1")
+    const t1 = toolPart("t1", "a1", "read")
+    const first = transcriptRows(messageTurns([u1, a1]), lookup({ a1: [t1] }), { compact: true })
+    const second = transcriptRows(
+      messageTurns([u1, a1, a2]),
+      lookup({ a1: [t1], a2: [toolPart("t2", "a2", "grep")] }),
+      { compact: true },
+      first,
+    )
+
+    const before = first.find((row) => row.type === "activity")!
+    const after = second.find((row) => row.type === "activity")!
+    expect(after.items).toHaveLength(2)
+    expect(after.items[0]).toBe(before.items[0])
+  })
+
+  it("keeps failed tools outside activity rows", () => {
+    const u1 = user("u1")
+    const steps = ["a1", "a2", "a3"].map((id) => assistant(id, "u1"))
+    const rows = transcriptRows(
+      messageTurns([u1, ...steps]),
+      lookup({
+        a1: [toolPart("t1", "a1", "read")],
+        a2: [toolPart("t2", "a2", "bash", "error")],
+        a3: [toolPart("t3", "a3", "grep")],
+      }),
+      { compact: true },
+    )
+
+    expect(rows.map((row) => row.type)).toEqual(["user", "activity", "assistant", "activity"])
+  })
+
+  it("leaves rows untouched when the flag is off", () => {
+    const u1 = user("u1")
+    const steps = ["a1", "a2"].map((id) => assistant(id, "u1"))
+    const parts = { a1: [toolPart("t1", "a1", "read")], a2: [toolPart("t2", "a2", "read")] }
+    const turns = messageTurns([u1, ...steps])
+
+    const off = transcriptRows(turns, lookup(parts))
+    expect(off.filter((row) => row.type === "assistant").map((row) => row.key)).toEqual([
+      "u1:assistant:a1:t1",
+      "u1:assistant:a2:t2",
+    ])
   })
 })

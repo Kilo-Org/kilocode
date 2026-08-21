@@ -1,4 +1,5 @@
 import type { Message, Part } from "../types/messages"
+import { category, settled } from "../components/chat/tool-activity"
 import { visibleParts, type MessageTurn, type RevertBoundary } from "./session-queue"
 
 interface TranscriptMeta {
@@ -25,6 +26,20 @@ export interface TranscriptAssistantRow extends TranscriptMeta {
   copy?: string
 }
 
+export interface TranscriptActivityItem {
+  key: string
+  message: Message
+  part: Part
+}
+
+export interface TranscriptActivityRow extends TranscriptMeta {
+  type: "activity"
+  key: string
+  items: TranscriptActivityItem[]
+  /** True while this activity, rather than only its turn, is still active. */
+  working: boolean
+}
+
 export interface TranscriptDiffRow extends TranscriptMeta {
   type: "diff"
   key: string
@@ -39,10 +54,28 @@ export interface TranscriptErrorRow extends TranscriptMeta {
   error: NonNullable<Message["error"]>
 }
 
-export type TranscriptRow = TranscriptUserRow | TranscriptAssistantRow | TranscriptDiffRow | TranscriptErrorRow
+export type TranscriptRow =
+  | TranscriptUserRow
+  | TranscriptAssistantRow
+  | TranscriptActivityRow
+  | TranscriptDiffRow
+  | TranscriptErrorRow
 
 export interface TranscriptOptions {
   size?: number
+  /**
+   * Compact tool activity. The agent emits one assistant message per step, so a
+   * run of tool calls is spread across many messages and therefore many rows.
+   * Grouping inside a single row would only ever see one or two parts, so rows
+   * whose parts are all groupable are coalesced here first.
+   */
+  compact?: boolean
+  /**
+   * The same predicate AssistantMessage renders with. Rows carry bookkeeping parts
+   * such as `step-start` that never reach the DOM, and treating one of those as a
+   * blocker would stop every run from coalescing.
+   */
+  renderable?: (part: Part, message: Message) => boolean
   queued?: ReadonlySet<string>
   live?: ReadonlySet<string>
   hidden?: (id: string) => boolean
@@ -84,6 +117,22 @@ function meta(a: TranscriptRow, b: TranscriptRow) {
   return a.turn === b.turn && a.partial === b.partial && a.queued === b.queued && a.live === b.live
 }
 
+function sameActivity(a: TranscriptActivityRow, b: TranscriptActivityRow) {
+  if (a.working !== b.working || a.items.length !== b.items.length) return false
+  return a.items.every((item, index) => {
+    const other = b.items[index]
+    return item.message === other?.message && item.part === other.part
+  })
+}
+
+function shareActivity(row: TranscriptActivityRow, prev: TranscriptActivityRow) {
+  const prior = new Map(prev.items.map((item) => [item.key, item]))
+  row.items = row.items.map((item) => {
+    const old = prior.get(item.key)
+    return old?.message === item.message && old.part === item.part ? old : item
+  })
+}
+
 function equal(a: TranscriptRow, b: TranscriptRow) {
   if (a.type !== b.type || !meta(a, b)) return false
   if (a.type === "user" && b.type === "user") {
@@ -93,6 +142,9 @@ function equal(a: TranscriptRow, b: TranscriptRow) {
   }
   if (a.type === "assistant" && b.type === "assistant") {
     return a.message === b.message && same(a.parts, b.parts) && a.copy === b.copy
+  }
+  if (a.type === "activity" && b.type === "activity") {
+    return sameActivity(a, b)
   }
   if (a.type === "diff" && b.type === "diff") {
     return a.message === b.message && same(a.diffs, b.diffs)
@@ -191,12 +243,101 @@ export function transcriptRows(
     }
   }
 
-  if (prev.length === 0) return rows
+  const merged = opts.compact ? coalesce(rows, opts.renderable ?? (() => true)) : rows
+
+  if (prev.length === 0) return merged
   const prior = new Map(prev.map((row) => [row.key, row]))
-  return rows.map((row) => {
+  return merged.map((row) => {
     const old = prior.get(row.key)
+    if (row.type === "activity" && old?.type === "activity") shareActivity(row, old)
     return old && equal(old, row) ? old : row
   })
+}
+
+/**
+ * Turn groupable assistant parts into explicit activity rows. Each item keeps its
+ * real owning message, so rendering a run across assistant messages never lends
+ * every part the first message's identity.
+ *
+ * This works at part level rather than row level. A text or standalone tool ends
+ * the current activity, but groupable parts before and after it still get their
+ * own stable rows even when all three happen to share one transcript chunk.
+ */
+function coalesce(rows: TranscriptRow[], renderable: (part: Part, message: Message) => boolean): TranscriptRow[] {
+  const out: TranscriptRow[] = []
+  let run: TranscriptActivityItem[] = []
+  let base: TranscriptMeta | undefined
+
+  const flush = () => {
+    if (run.length === 0) return
+    const first = run[0]!
+    out.push({
+      ...base!,
+      type: "activity",
+      key: `${base!.turn}:activity:${first.part.id}`,
+      items: run.slice(),
+      working: run.some((item) => !settled(item.part as never)),
+    })
+    run = []
+    base = undefined
+  }
+
+  for (const row of rows) {
+    if (row.type !== "assistant") {
+      flush()
+      out.push(row)
+      continue
+    }
+
+    const shown = row.parts.filter((part) => renderable(part, row.message))
+    // A new assistant step can exist briefly before its first visible part. It
+    // contributes no DOM, so it must not split the trailing activity and make the
+    // summary disappear and return between subagent events.
+    if (shown.length === 0) continue
+
+    const loose: Part[] = []
+    const emit = () => {
+      if (loose.length === 0) return
+      out.push({
+        ...row,
+        key: `${row.turn}:assistant:${row.message.id}:${loose[0]!.id}`,
+        parts: loose.splice(0),
+      })
+    }
+    for (const part of shown) {
+      if (category(part as never)) {
+        emit()
+        if (base && base.turn !== row.turn) flush()
+        base ??= {
+          turn: row.turn,
+          partial: row.partial,
+          queued: row.queued,
+          live: row.live,
+        }
+        base.partial ||= row.partial
+        base.queued ||= row.queued
+        base.live ||= row.live
+        run.push({ key: part.id, message: row.message, part })
+        continue
+      }
+
+      flush()
+      loose.push(part)
+    }
+    emit()
+  }
+  flush()
+
+  // A turn remains live in the gap between one completed tool and the next tool
+  // part arriving. Keep only its trailing activity present-tense through that
+  // gap; an activity followed by text or another standalone surface is finished.
+  for (let index = 0; index < out.length; index += 1) {
+    const row = out[index]
+    if (row?.type !== "activity" || row.working || !row.live) continue
+    const later = out.slice(index + 1).some((item) => item.turn === row.turn)
+    if (!later) row.working = true
+  }
+  return out
 }
 
 export function partitionRows(rows: TranscriptRow[], direct: ReadonlySet<string> = new Set()): TranscriptPartition {
@@ -207,9 +348,19 @@ export function partitionRows(rows: TranscriptRow[], direct: ReadonlySet<string>
   if (!turn || !direct.has(turn)) return { virtual: visible, direct: [], queued }
 
   let boundary = -1
+  let activity = false
   for (let i = 0; i < visible.length; i += 1) {
     const row = visible[i]!
-    if (row.turn === turn && row.type === "assistant") boundary = i
+    if (row.turn !== turn) continue
+    // Keep the whole compact activity suffix outside Virtua until the turn hands
+    // off. Moving a settled activity into the virtualizer when final text starts
+    // would unmount and remount the summary at the most visible moment.
+    if (row.type === "activity") {
+      if (boundary === -1) boundary = i
+      activity = true
+      continue
+    }
+    if (row.type === "assistant" && !activity) boundary = i
   }
 
   // The selected turn has no renderable assistant row.

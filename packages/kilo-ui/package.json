@@ -60,6 +60,7 @@
     "./scroll-view": "./src/components/scroll-view.tsx",
     "./file": "./src/components/file.tsx",
     "./motion-spring": "./src/components/motion-spring.tsx",
+    "./tool-count-summary": "./src/components/tool-count-summary.tsx",
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",
     "./text-reveal": "./src/components/text-reveal.tsx",
