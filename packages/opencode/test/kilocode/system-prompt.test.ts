@@ -141,4 +141,13 @@ describe("environmentDetails", () => {
     expect(result).toContain("Workspace root folder: /repo/.kilo/worktrees/feature")
     expect(result).toContain("Active file: src/app.ts")
   })
+
+  test("prefixes the block with an explicit textual separator", () => {
+    const result = environmentDetails({
+      directory: "/repo/.kilo/worktrees/feature",
+      activeFile: "src/app.ts",
+    })
+
+    expect(result.startsWith("\n\n<environment_details>")).toBe(true)
+  })
 })
