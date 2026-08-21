@@ -20,6 +20,7 @@ import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { childID } from "../../context/session-utils"
+import { openSubagent } from "./open-subagent"
 import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
@@ -124,16 +125,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     e.stopPropagation()
     const id = childSessionId()
     if (!id) return
-    const title = description()
-    if (worktree) {
-      window.dispatchEvent(
-        new CustomEvent("agentManager.openSubagent", {
-          detail: { sessionID: id, title, parentSessionID: session.currentSessionID() },
-        }),
-      )
-      return
-    }
-    vscode.postMessage({ type: "openSubAgentViewer", sessionID: id, title })
+    openSubagent({
+      sessionID: id,
+      title: description(),
+      parentSessionID: session.currentSessionID(),
+      worktree: !!worktree,
+      post: vscode.postMessage,
+    })
   }
 
   const trigger = () => (

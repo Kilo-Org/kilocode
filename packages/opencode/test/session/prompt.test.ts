@@ -550,6 +550,40 @@ it.instance("loop calls LLM and returns assistant message", () =>
   }),
 )
 
+// kilocode_change start - guard provider-compatible max-step request shape
+it.instance(
+  "loop sends max steps instruction as a user message",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig((url) => ({
+        ...providerCfg(url),
+        agent: { build: { steps: 1 } },
+      }))
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Pinned" })
+      yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        noReply: true,
+        parts: [{ type: "text", text: "finish at the limit" }],
+      })
+      yield* llm.text("summary")
+
+      yield* prompt.loop({ sessionID: chat.id })
+
+      const inputs = yield* llm.inputs
+      const messages = inputs.at(-1)?.messages
+      if (!Array.isArray(messages)) throw new Error("expected LLM messages")
+      expect(messages.at(-1)).toMatchObject({
+        role: "user",
+        content: expect.stringContaining("MAXIMUM STEPS REACHED"),
+      })
+    }),
+  30_000,
+)
+// kilocode_change end
+
 noLLMServer.instance(
   "new prompt dismisses a pending question",
   () =>

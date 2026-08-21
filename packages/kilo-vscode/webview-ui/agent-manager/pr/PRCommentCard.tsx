@@ -35,7 +35,7 @@ export function PRCommentCard(props: Props) {
   }
 
   return (
-    <div class="am-pr-comment" classList={{ "am-pr-comment-open": props.open }}>
+    <div class="am-pr-comment" classList={{ "am-pr-comment-open": props.open }} data-thread-id={props.comment.threadId}>
       <button
         type="button"
         class="am-pr-comment-head am-pr-row"
@@ -60,7 +60,12 @@ export function PRCommentCard(props: Props) {
 
       <Show when={props.open}>
         <Show when={props.comment.diffHunk && props.comment.file}>
-          <PRCommentDiff file={props.comment.file!} hunk={props.comment.diffHunk!} />
+          <PRCommentDiff
+            file={props.comment.file!}
+            line={props.comment.line}
+            hunk={props.comment.diffHunk!}
+            after={props.comment.after}
+          />
         </Show>
         <div class="am-pr-comment-body">
           <Markdown text={props.comment.body} />

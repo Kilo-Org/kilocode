@@ -86,6 +86,9 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                   if (project().missing) return
                   const expanded = !project().expanded
                   props.onExpand(project().id, expanded)
+                }}
+                onClick={() => {
+                  if (project().missing) return
                   if (!project().active) props.onSelect(project().id)
                 }}
               />

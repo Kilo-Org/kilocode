@@ -15,7 +15,13 @@ import {
   type PRReviewCommentData,
   type ReviewCommentData,
 } from "../../src/shared/review-comments"
-import { githubUrl, prMarkdown, prPayload, preview } from "../../webview-ui/agent-manager/pr/pr-comment-payload"
+import {
+  displayHunk,
+  githubUrl,
+  prMarkdown,
+  prPayload,
+  preview,
+} from "../../webview-ui/agent-manager/pr/pr-comment-payload"
 import type { PRComment } from "../../webview-ui/agent-manager/pr/pr-types"
 
 function pr(overrides: Partial<PRReviewCommentData> = {}): PRReviewCommentData {
@@ -138,6 +144,102 @@ describe("prPayload", () => {
     expect(lines[0]).toBe("line 0")
     expect(lines[1]).toBe("...")
     expect(payload.diffHunk?.endsWith("line 79")).toBe(true)
+  })
+
+  it("crops a full-file hunk around the commented line", () => {
+    const hunk = ["@@ -1 +1,80 @@", ...Array.from({ length: 80 }, (_, i) => `+line ${i + 1}`)].join("\n")
+    const view = displayHunk(hunk, 70)
+    const lines = view.patch.split("\n")
+
+    expect(lines).toHaveLength(8)
+    expect(lines[0]).toBe("@@ -1,0 +67,7 @@")
+    expect(lines[1]).toBe("+line 67")
+    expect(lines).toContain("+line 70")
+    expect(lines.at(-1)).toBe("+line 73")
+    expect(view.top).toBe(true)
+    expect(view.bottom).toBe(true)
+  })
+
+  // GitHub truncates diffHunk at the commented line, so hunk length says nothing
+  // about how much context a comment deserves. Every card renders one window:
+  // three lines, the commented line, then three more from the hunk when it has
+  // them and from the worktree when it does not.
+  it("renders the same window whatever the hunk length", () => {
+    const build = (count: number) =>
+      [`@@ -0,0 +1,${count} @@`, ...Array.from({ length: count }, (_, i) => `+line ${i + 1}`)].join("\n")
+    const short = displayHunk(build(34), 34)
+    const long = displayHunk(build(172), 168)
+
+    expect(short.lines.map((item) => item.text)).toEqual(["31", "32", "33", "34"].map((n) => `+line ${n}`))
+    expect(long.lines.map((item) => item.text)).toEqual(
+      ["165", "166", "167", "168", "169", "170", "171"].map((n) => `+line ${n}`),
+    )
+    expect(short.top).toBe(true)
+    expect(short.bottom).toBe(false)
+    expect(long.top).toBe(true)
+    expect(long.bottom).toBe(true)
+  })
+
+  // A hunk stops at the commented line, so a warning about what runs next has
+  // nothing to point at. The worktree lines continue the snippet as context.
+  it("continues the snippet with worktree lines below the commented line", () => {
+    const hunk = [
+      "@@ -1,1 +1,3 @@",
+      " function open() {",
+      "+  const event = build()",
+      "+  event.preventDefault()",
+    ].join("\n")
+    const view = displayHunk(hunk, 3, ["  return dispatch(event)", "}", "", "extra"])
+
+    expect(view.patch.split("\n")).toEqual([
+      "@@ -1,4 +1,6 @@",
+      " function open() {",
+      "+  const event = build()",
+      "+  event.preventDefault()",
+      "   return dispatch(event)",
+      " }",
+      " ",
+    ])
+    expect(view.bottom).toBe(true)
+  })
+
+  it("keeps the GitHub window when the worktree has no matching context", () => {
+    const hunk = [
+      "@@ -1,1 +1,3 @@",
+      " function open() {",
+      "+  const event = build()",
+      "+  event.preventDefault()",
+    ].join("\n")
+    const view = displayHunk(hunk, 3)
+
+    expect(view.lines).toHaveLength(3)
+    expect(view.bottom).toBe(false)
+  })
+
+  it("gives the agent the worktree context too", () => {
+    const hunk = ["@@ -1,1 +1,2 @@", " function open() {", "+  event.preventDefault()"].join("\n")
+    const payload = prPayload(thread({ diffHunk: hunk, line: 2, after: ["  return dispatch(event)", "}"] }))
+
+    expect(payload.diffHunk?.split("\n")).toEqual([
+      "@@ -1,3 +1,4 @@",
+      " function open() {",
+      "+  event.preventDefault()",
+      "   return dispatch(event)",
+      " }",
+      "...",
+    ])
+  })
+
+  it("gives the agent more of the hunk than the card renders", () => {
+    const hunk = ["@@ -0,0 +1,80 @@", ...Array.from({ length: 80 }, (_, i) => `+line ${i + 1}`)].join("\n")
+    const payload = prPayload(thread({ diffHunk: hunk, line: 40 }))
+    const lines = payload.diffHunk?.split("\n") ?? []
+
+    expect(lines[0]).toBe("@@ -0,0 +16,33 @@")
+    expect(lines[1]).toBe("...")
+    expect(lines).toContain("+line 40")
+    expect(lines.at(-1)).toBe("...")
+    expect(lines.length).toBeGreaterThan(displayHunk(hunk, 40).lines.length)
   })
 
   it("caps a single-line hunk by characters", () => {

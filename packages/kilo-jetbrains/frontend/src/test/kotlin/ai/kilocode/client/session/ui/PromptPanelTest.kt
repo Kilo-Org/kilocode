@@ -18,7 +18,10 @@ import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.test.CopyProviderSink
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.ide.actions.UndoRedoAction
@@ -691,6 +694,46 @@ class PromptPanelTest : BasePlatformTestCase() {
         val items = waitForLookupItems(editor)
 
         assertTrue("items=$items", items.contains("new"))
+    }
+
+    fun `test slash lookup reopens while typing after it closes`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        // The whole-token set does not open a lookup (matches a paste / programmatic set, not typing).
+        field.text = "/n"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+        assertNull("no lookup expected before typing", LookupManager.getActiveLookup(editor))
+
+        // A single keystroke inside the slash token reopens the completion, simulating the popup
+        // having closed during fast typing.
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(editor.caretModel.offset, "e")
+        }
+        editor.caretModel.moveToOffset(editor.document.textLength)
+
+        val items = waitForLookupItems(editor)
+        assertTrue("items=$items", items.contains("new"))
+    }
+
+    fun `test slash lookup refreshes when server commands load`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "/deploy"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+
+        invokeCompletionAction(editor)
+        val before = waitForLookupItems(editor)
+        assertFalse("before=$before", before.contains("deploy"))
+
+        rpc.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY, commands = listOf(CommandDto("deploy")))
+
+        assertTrue("expected deploy after load", waitForLookupItem(editor, "deploy"))
     }
 
     fun `test prompt completion lookup is positioned above caret`() {
@@ -1521,6 +1564,16 @@ class PromptPanelTest : BasePlatformTestCase() {
             Thread.sleep(20)
         }
         return LookupManager.getActiveLookup(editor)?.items.orEmpty().map { it.lookupString }
+    }
+
+    private fun waitForLookupItem(editor: Editor, value: String): Boolean {
+        repeat(50) {
+            UIUtil.dispatchAllInvocationEvents()
+            val items = LookupManager.getActiveLookup(editor)?.items.orEmpty().map { it.lookupString }
+            if (items.contains(value)) return true
+            Thread.sleep(20)
+        }
+        return false
     }
 
     private fun acceptLookup(editor: Editor) {

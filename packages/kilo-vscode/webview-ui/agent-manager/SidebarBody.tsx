@@ -40,6 +40,7 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 /** Everything the legacy single-project sidebar body reads from the app. */
 export interface SidebarBodyProps {
   t: LanguageContextValue["t"]
+  projectId?: string
   selection: () => string | null
   currentSessionID: () => string | undefined
   selectLocal: () => void
@@ -340,9 +341,15 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                     : undefined
                                 }
                                 runStatus={props.runStatuses()[wt.id]}
-                                onOpenPR={props.track("open_pull_request", "worktree_menu", () =>
-                                  vscode.postMessage({ type: "agentManager.openPR", worktreeId: wt.id }),
-                                )}
+                                onOpenPR={props.track("open_pull_request", "worktree_menu", () => {
+                                  const url = props.prStatuses()[wt.id]?.url
+                                  vscode.postMessage({
+                                    type: "agentManager.openPR",
+                                    projectId: props.projectId,
+                                    worktreeId: wt.id,
+                                    ...(url ? { url } : {}),
+                                  })
+                                })}
                                 sections={props.sections()}
                                 currentSectionId={wt.sectionId}
                                 onMoveToSection={(secId) => props.moveToSection([wt.id], secId)}

@@ -122,7 +122,12 @@ function rememberTarget(projectId: string, target: SidebarTarget, deps: ProjectM
   // Never persist a target the project does not have: the webview can race a
   // project switch and still hold the previous project's selection.
   if (target.kind === "worktree" && !state.getWorktree(target.worktreeId)) return
-  if (target.kind === "session" && !state.getSession(target.sessionId)) return
+  if (
+    target.kind === "session" &&
+    !state.getSession(target.sessionId) &&
+    !deps.contexts.get(projectId)?.hasLiveSession(target.sessionId)
+  )
+    return
   state.setActiveTarget(target)
 }
 

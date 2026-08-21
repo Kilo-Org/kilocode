@@ -1772,7 +1772,7 @@ export const layer = Layer.effect(
             system,
             messages: [
               ...modelMsgs,
-              ...(isLastStep ? [{ role: "assistant" as const, content: MAX_STEPS_PROMPT }] : []),
+              ...(isLastStep ? [{ role: "user" as const, content: MAX_STEPS_PROMPT }] : []), // kilocode_change - avoid provider-incompatible assistant prefill
             ],
             tools,
             model,

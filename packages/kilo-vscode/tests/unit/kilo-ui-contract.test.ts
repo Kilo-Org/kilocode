@@ -182,6 +182,11 @@ describe("Edit tool diff-first click contract (source)", () => {
     expect(editBlock).toMatch(/props\.input\.oldString\s*\?\?\s*""/)
     expect(editBlock).toMatch(/props\.input\.newString\s*\?\?\s*""/)
   })
+
+  it("edit file names leave the parent trigger responsible for inline expansion", () => {
+    expect(editBlock).not.toContain("handleFileClick")
+    expect(editBlock).toContain("handleOpenDiffClick")
+  })
 })
 
 describe("Write and apply_patch patch rendering contracts (source)", () => {
@@ -197,11 +202,38 @@ describe("Write and apply_patch patch rendering contracts (source)", () => {
     expect(writeBlock).toContain('mode="diff"')
   })
 
+  it("write file names leave the parent trigger responsible for inline expansion", () => {
+    expect(writeBlock).not.toContain("handleFileClick")
+    expect(writeBlock).toContain("handleOpenDiffClick")
+  })
+
   it("apply_patch tool can render from patch metadata without before/after", () => {
     expect(patchBlock).toContain("file.patch")
     expect(patchBlock).toContain("normalize({")
     expect(patchBlock).toContain("file: file.relativePath")
     expect(patchBlock).toContain('mode="diff"')
+  })
+
+  it("apply_patch tool exposes the diff action for each file", () => {
+    expect(patchBlock).toContain("data.openDiff")
+    expect(patchBlock).toContain("const allDiffAction = ()")
+    expect(patchBlock).toContain("{allDiffAction()}")
+    expect(patchBlock).not.toContain("data.openFile(file.filePath)")
+  })
+
+  it("apply_patch skips files whose patch has no parsable hunks", () => {
+    expect(patchBlock).toContain("value.fileDiff.hunks.length")
+    expect(patchBlock).toContain('file.type === "add"')
+    expect(patchBlock).toContain("diff.additions === 0")
+    expect(patchBlock).toContain("diff.deletions === 0")
+    expect(patchBlock).toContain("hunk.additionLines")
+    expect(patchBlock).toContain("hunk.deletionLines")
+  })
+
+  it("apply_patch open action preserves every file in a multi-file payload", () => {
+    expect(patchBlock).toContain("const diffs = files().flatMap")
+    expect(patchBlock).toContain("files: diffs")
+    expect(patchBlock).toContain("diffs.length === 1 ? first")
   })
 })
 

@@ -14,6 +14,10 @@ type EditorOpenMessage = {
   sessionID?: string
 }
 
+function isMarkdownFile(file: string): boolean {
+  return /\.(md|mdx|markdown)$/i.test(file)
+}
+
 function openExternal(url: unknown): void {
   if (typeof url !== "string") return
   void vscode.env.openExternal(vscode.Uri.parse(url))
@@ -76,6 +80,7 @@ export function handleEditorAction(
   opts: {
     dir: (sessionID?: string) => string
     diff?: DiffVirtualProvider
+    openMarkdown?: (file: string, sessionID?: string) => boolean
     storage?: vscode.Uri
     post?: (msg: unknown) => void
   },
@@ -84,7 +89,10 @@ export function handleEditorAction(
     // Resolve the directory from the session the file reference was rendered
     // for (when the webview provides it), not whatever session happens to be
     // current — mirrors the validateFiles case below.
-    if (message.filePath) openFile(opts.dir(message.sessionID), message.filePath, message.line, message.column)
+    if (message.filePath) {
+      if (isMarkdownFile(message.filePath) && opts.openMarkdown?.(message.filePath, message.sessionID)) return true
+      openFile(opts.dir(message.sessionID), message.filePath, message.line, message.column)
+    }
     return true
   }
   if (message.type === "openContent") {

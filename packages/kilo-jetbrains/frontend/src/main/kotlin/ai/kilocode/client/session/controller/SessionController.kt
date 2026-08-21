@@ -2390,6 +2390,14 @@ class SessionController(
             )
         }
 
+        if (workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) {
+            return SessionControllerEvent.ConnectionChanged.ShowError(
+                KiloBundle.message("session.connection.unsupported"),
+                unsupported(workspace.error, directory),
+                "workspace",
+            )
+        }
+
         if (app.status == KiloAppStatusDto.READY && workspace.status == KiloWorkspaceStatusDto.READY && app.warnings.isNotEmpty()) {
             return SessionControllerEvent.ConnectionChanged.ShowWarning(
                 summary(app.warnings.size),
@@ -2586,6 +2594,18 @@ private fun summary(count: Int): String {
     val base = KiloBundle.message("session.connection.warning.config")
     if (count <= 1) return base
     return "$base ($count)"
+}
+
+private fun unsupported(reason: String?, directory: String): String {
+    val detail = when (reason) {
+        "devcontainer_virtual_filesystem" -> KiloBundle.message("session.connection.unsupported.devcontainer")
+        "wsl_virtual_filesystem" -> KiloBundle.message("session.connection.unsupported.wsl")
+        "invalid_virtual_path" -> KiloBundle.message("session.connection.unsupported.invalid")
+        else -> KiloBundle.message("session.connection.unsupported.unknown")
+    }
+    val path = KiloBundle.message("session.connection.unsupported.path", directory)
+    val options = KiloBundle.message("session.connection.unsupported.options")
+    return "$path\n\n$detail\n\n$options"
 }
 
 private const val KILO_PROVIDER = "kilo"

@@ -200,6 +200,25 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(messages, pv.parent)
     }
 
+    fun `test readonly session omits prompt and active reply views`() {
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val readonly: Boolean get() = true
+        }
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = owner)
+        settle()
+        layoutReadonly()
+
+        assertNull(find(ui, PromptPanel::class.java))
+        assertNull(find(ui, QuestionView::class.java))
+        assertNull(find(ui, PermissionView::class.java))
+        assertSame(scrollComponent(), ui.defaultFocusedComponent)
+        assertTrue(find<SessionMessageListPanel>(ui).parent != null)
+    }
+
     fun `test header is docked above shared scroll pane and hidden while empty`() {
         val root = find<SessionRootPanel>(ui)
         val header = find<SessionHeaderPanel>(ui)
@@ -274,6 +293,29 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
         assertTrue(connection.detailsVisible())
         assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+    }
+
+    fun `test expanded connection panel is capped to transcript height`() {
+        ui.setSize(800, 260)
+        layout()
+        val root = find<SessionRootPanel>(ui)
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
+
+        connection.onEvent(SessionControllerEvent.ConnectionChanged.ShowError(
+            "CLI startup failed",
+            lines(60),
+        ))
+        layout()
+        connection.clickSummary()
+        layout()
+        val pane = connection.components.filterIsInstance<JBScrollPane>().single()
+        pane.doLayout()
+
+        assertTrue(connection.detailsVisible())
+        assertEquals(0, connection.y)
+        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+        assertTrue(pane.viewport.extentSize.height < pane.viewport.view.preferredSize.height)
     }
 
     fun `test connection panel is unaffected by active question view`() {
@@ -783,6 +825,17 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
     private fun promptPoint(root: SessionRootPanel, prompt: PromptPanel) =
         SwingUtilities.convertPoint(prompt.parent, prompt.x, prompt.y, root.overlay)
+
+    private fun layoutReadonly() {
+        ui.doLayout()
+        val root = find<SessionRootPanel>(ui)
+        root.doLayout()
+        root.content.doLayout()
+        scrollComponent().doLayout()
+        (scrollView() as? java.awt.Container)?.doLayout()
+    }
+
+    private fun lines(count: Int) = (1..count).joinToString("\n") { "line $it" }
 
     private class Row(override val sessionViewKind: SessionView.Kind) : JPanel(), SessionView {
         override fun getPreferredSize() = Dimension(100, 10)
