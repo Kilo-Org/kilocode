@@ -415,10 +415,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
       }
       const part = yield* ProviderShared.wrappedSystemUpdate("Anthropic Messages", message)
       const block = { type: "text" as const, text: part.text, cache_control: cacheControl(breakpoints, part.cache) }
-      const previous = messages.at(-1)
-      if (previous?.role === "user")
-        messages[messages.length - 1] = { role: "user", content: [...previous.content, block] }
-      else messages.push({ role: "user", content: [block] })
+      ProviderShared.appendUserMessage(messages, { role: "user", content: [block] }) // kilocode_change
       continue
     }
 
@@ -435,10 +432,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
         }
         return yield* ProviderShared.unsupportedContent("Anthropic Messages", "user", ["text", "media"])
       }
-      const previous = messages.at(-1) // kilocode_change
-      if (previous?.role === "user") // kilocode_change
-        messages[messages.length - 1] = { role: "user", content: [...previous.content, ...content] } // kilocode_change
-      else messages.push({ role: "user", content }) // kilocode_change
+      ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
       continue
     }
 
@@ -485,10 +479,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
         cache_control: cacheControl(breakpoints, part.cache),
       })
     }
-    const previous = messages.at(-1) // kilocode_change
-    if (previous?.role === "user") // kilocode_change
-      messages[messages.length - 1] = { role: "user", content: [...previous.content, ...content] } // kilocode_change
-    else messages.push({ role: "user", content }) // kilocode_change
+    ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
   }
 
   return messages

@@ -309,10 +309,7 @@ const lowerMessages = Effect.fn("BedrockConverse.lowerMessages")(function* (
     if (message.role === "system") {
       const part = yield* ProviderShared.wrappedSystemUpdate("Bedrock Converse", message)
       const content = textWithCache(breakpoints, part.text, part.cache)
-      const previous = messages.at(-1)
-      if (previous?.role === "user")
-        messages[messages.length - 1] = { role: "user", content: [...previous.content, ...content] }
-      else messages.push({ role: "user", content })
+      ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
       continue
     }
 
@@ -330,10 +327,7 @@ const lowerMessages = Effect.fn("BedrockConverse.lowerMessages")(function* (
           continue
         }
       }
-      const previous = messages.at(-1) // kilocode_change
-      if (previous?.role === "user") // kilocode_change
-        messages[messages.length - 1] = { role: "user", content: [...previous.content, ...content] } // kilocode_change
-      else messages.push({ role: "user", content }) // kilocode_change
+      ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
       continue
     }
 
@@ -375,10 +369,7 @@ const lowerMessages = Effect.fn("BedrockConverse.lowerMessages")(function* (
       const cachePoint = BedrockCache.block(breakpoints, part.cache)
       if (cachePoint) content.push(cachePoint)
     }
-    const previous = messages.at(-1) // kilocode_change
-    if (previous?.role === "user") // kilocode_change
-      messages[messages.length - 1] = { role: "user", content: [...previous.content, ...content] } // kilocode_change
-    else messages.push({ role: "user", content }) // kilocode_change
+    ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
   }
 
   return messages
