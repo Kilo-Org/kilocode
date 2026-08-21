@@ -8,13 +8,13 @@ export const Image = Schema.Struct({
     description: "Resize images before sending them to the model when they exceed configured limits (default: true)",
   }),
   max_width: Schema.optional(PositiveInt).annotate({
-    description: "Maximum image width before resizing or rejecting the attachment (default: 2000)",
+    description: "Maximum image width before resizing or rejecting the attachment (default: 1600)", // kilocode_change
   }),
   max_height: Schema.optional(PositiveInt).annotate({
-    description: "Maximum image height before resizing or rejecting the attachment (default: 2000)",
+    description: "Maximum image height before resizing or rejecting the attachment (default: 1600)", // kilocode_change
   }),
   max_base64_bytes: Schema.optional(PositiveInt).annotate({
-    description: "Maximum base64 payload bytes for an image attachment (default: 5242880)",
+    description: "Maximum base64 payload bytes for an image attachment (default: 1572864)", // kilocode_change
   }),
 }).annotate({ identifier: "ImageAttachmentConfig" })
 export type Image = Schema.Schema.Type<typeof Image>

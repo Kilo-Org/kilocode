@@ -1524,7 +1524,10 @@ describe("session.message-v2.fromError", () => {
         isRetryable: false,
       })
       const result = MessageV2.fromError(error, { providerID })
-      expect(SessionV1.ContextOverflowError.isInstance(result)).toBe(true)
+      // kilocode_change start - 413 without context text is a payload error
+      expect(SessionV1.ContextOverflowError.isInstance(result)).toBe(message !== "413 status code (no body)")
+      if (message === "413 status code (no body)") expect(SessionV1.APIError.isInstance(result)).toBe(true)
+      // kilocode_change end
     })
   })
 
@@ -1547,6 +1550,27 @@ describe("session.message-v2.fromError", () => {
     const result = MessageV2.fromError(error, { providerID })
     expect(SessionV1.ContextOverflowError.isInstance(result)).toBe(true)
   })
+
+  // kilocode_change start - distinguish request payload errors from context overflow
+  test("reports request payload errors separately from context overflow", () => {
+    const result = MessageV2.fromError(
+      new APICallError({
+        message: "Request Entity Too Large",
+        url: "https://example.com",
+        requestBodyValues: {},
+        statusCode: 413,
+        responseHeaders: { "content-type": "text/plain" },
+        responseBody: "FUNCTION_PAYLOAD_TOO_LARGE",
+        isRetryable: false,
+      }),
+      { providerID },
+    )
+
+    expect(SessionV1.ContextOverflowError.isInstance(result)).toBe(false)
+    expect(SessionV1.APIError.isInstance(result)).toBe(true)
+    if (SessionV1.APIError.isInstance(result)) expect(result.data.message).toContain("payload")
+  })
+  // kilocode_change end
 
   test("does not classify 429 no body as context overflow", () => {
     const result = MessageV2.fromError(

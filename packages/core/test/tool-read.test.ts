@@ -390,7 +390,7 @@ describe("ReadTool", () => {
       })
 
       expect(result.type).toBe("error")
-      if (result.type === "error") expect(result.value).toContain("exceeding configured limits 4x2000")
+      if (result.type === "error") expect(result.value).toContain("exceeding configured limits 4x1600") // kilocode_change
     }),
   )
 
@@ -429,7 +429,7 @@ describe("ReadTool", () => {
       if (media?.type !== "file") return
       const resized = photon.PhotonImage.new_from_byteslice(Buffer.from(media.uri.split(",")[1] ?? "", "base64"))
       expect(resized.get_width()).toBeLessThanOrEqual(4)
-      expect(resized.get_height()).toBeLessThanOrEqual(2_000)
+      expect(resized.get_height()).toBeLessThanOrEqual(1_600) // kilocode_change
       resized.free()
     }),
   )

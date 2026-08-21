@@ -1,8 +1,11 @@
 import { describe, it, expect } from "bun:test"
 import {
   ACCEPTED_IMAGE_TYPES,
+  getBase64ByteLength,
+  getImageDimensions,
   isAcceptedImageType,
   isDragLeavingComponent,
+  isStaticImageType,
 } from "../../webview-ui/src/hooks/image-attachments-utils"
 
 describe("ACCEPTED_IMAGE_TYPES", () => {
@@ -35,6 +38,38 @@ describe("isAcceptedImageType", () => {
   it("returns false for image types not in the accepted list", () => {
     expect(isAcceptedImageType("image/svg+xml")).toBe(false)
     expect(isAcceptedImageType("image/bmp")).toBe(false)
+  })
+})
+
+describe("isStaticImageType", () => {
+  it("returns true for canvas-safe static formats", () => {
+    expect(isStaticImageType("image/png")).toBe(true)
+    expect(isStaticImageType("image/jpeg")).toBe(true)
+    expect(isStaticImageType("image/webp")).toBe(true)
+  })
+
+  it("returns false for animated GIFs", () => {
+    expect(isStaticImageType("image/gif")).toBe(false)
+  })
+})
+
+describe("getImageDimensions", () => {
+  it("preserves aspect ratio while limiting the longest side", () => {
+    expect(getImageDimensions(3840, 2160)).toEqual({ width: 1600, height: 900 })
+    expect(getImageDimensions(1000, 2000)).toEqual({ width: 800, height: 1600 })
+  })
+
+  it("does not enlarge images already within the limit", () => {
+    expect(getImageDimensions(800, 600)).toEqual({ width: 800, height: 600 })
+  })
+})
+
+describe("getBase64ByteLength", () => {
+  it("returns the encoded payload length", () => {
+    expect(getBase64ByteLength(0)).toBe(0)
+    expect(getBase64ByteLength(1)).toBe(4)
+    expect(getBase64ByteLength(3)).toBe(4)
+    expect(getBase64ByteLength(4)).toBe(8)
   })
 })
 

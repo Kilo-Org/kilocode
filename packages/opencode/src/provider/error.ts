@@ -189,13 +189,27 @@ export type ParsedAPICallError =
 export function parseAPICallError(input: { providerID: ProviderV2.ID; error: APICallError }): ParsedAPICallError {
   const m = message(input.providerID, input.error)
   const body = json(input.error.responseBody)
-  if (isContextOverflow(m) || input.error.statusCode === 413 || body?.error?.code === "context_length_exceeded") {
+  // kilocode_change start - distinguish request payload failures from context overflow
+  const payload = input.error.statusCode === 413 || /request entity too large|function_payload_too_large/i.test(m)
+  if (payload && body?.error?.code !== "context_length_exceeded") {
+    return {
+      type: "api_error",
+      message: "Provider request payload is too large. Reduce or remove image attachments and try again.",
+      statusCode: input.error.statusCode,
+      isRetryable: false,
+      responseBody: input.error.responseBody,
+    }
+  }
+  // kilocode_change end
+  // kilocode_change start - preserve explicit context overflow classification
+  if (isContextOverflow(m) || body?.error?.code === "context_length_exceeded") {
     return {
       type: "context_overflow",
       message: m,
       responseBody: input.error.responseBody,
     }
   }
+  // kilocode_change end
 
   const metadata = input.error.url ? { url: input.error.url } : undefined
   return {
