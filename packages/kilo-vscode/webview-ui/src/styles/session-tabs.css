@@ -267,11 +267,11 @@
 }
 
 .session-tab-switcher-meta {
-  color: var(--text-weak);
+  color: var(--text-base);
 }
 
 .session-tab-switcher-status {
-  color: var(--text-weak);
+  color: var(--text-base);
   font-weight: 500;
   line-height: 1;
   text-transform: uppercase;

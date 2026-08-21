@@ -146,7 +146,7 @@ import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
-import { PRPanel } from "./pr/PRPanel"
+import { PRPanelHost } from "./pr/PRPanelHost"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
@@ -180,7 +180,9 @@ import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { SubagentPanel } from "./SubagentPanel"
-import { attachSubagentEvent, createSubagentTabs } from "./subagent-tabs"
+import { DocumentPanelHost } from "./documents/DocumentPanelHost"
+import { createDocumentInspector } from "../documents/state"
+import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
 import { EditPreviewPanel } from "./EditPreviewPanel"
 import { createAgentManagerEditPreview, createEditPreviewContextGuard } from "./edit-preview"
 import { buildShortcutCategories } from "./shortcuts"
@@ -303,8 +305,6 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // Diff, PR, terminal, and subagent views share one inspector width, restored
-  // from webview state so the user's divider position survives panel reloads.
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
@@ -322,8 +322,24 @@ const AgentManagerContent: Component = () => {
     diffStyle.setStyle(style)
     vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
   }
-  const subagents = createSubagentTabs({
+  const documentInspector = createDocumentInspector(
+    vscode,
+    selection,
+    currentProjectId,
+    () => sidePanel() === SidePanel.Documents,
+    () => {
+      setHistory(false)
+      setReviewActive(false)
+      setSidePanel(SidePanel.Documents)
+    },
+    () => setSidePanel(null),
+  )
+  const subagentCtl = createSubagentController({
+    project: currentProjectId,
     current: session.currentSessionID,
+    selection,
+    parts: session.getSessionToolParts,
+    visible: () => sidePanel() === SidePanel.Subagents,
     sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
     unsync: (id) => session.unsyncSession(id, "inspector"),
     show: () => {
@@ -333,6 +349,7 @@ const AgentManagerContent: Component = () => {
     },
     hide: () => setSidePanel(null),
   })
+  const subagents = subagentCtl.tabs
   const editPreview = createAgentManagerEditPreview(
     setHistory,
     setReviewActive,
@@ -349,7 +366,6 @@ const AgentManagerContent: Component = () => {
     editPreview.close,
   )
   const markdown = createMarkdownRender(vscode)
-  // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const worktreeStats = () => registry.active().worktreeStats()
   const prStatuses = () => registry.active().prStatuses()
   const runStatuses = () => registry.active().runStatuses()
@@ -470,7 +486,6 @@ const AgentManagerContent: Component = () => {
       { defer: true },
     ),
   )
-  // Ambient setup reveal restores the panel after success unless the user engaged.
   const ambientSetup = createAmbientSetup({
     terms,
     selection: () => {
@@ -482,7 +497,6 @@ const AgentManagerContent: Component = () => {
   })
   const cancelAmbientSetup = ambientSetup.cancel
 
-  // Inline delete confirmation: tracks which worktree is awaiting a second click/press
   const [pendingDelete, setPendingDelete] = createSignal<string | null>(null)
   let pendingDeleteTimer: ReturnType<typeof setTimeout> | undefined
   const cancelPendingDelete = () => {
@@ -502,15 +516,9 @@ const AgentManagerContent: Component = () => {
   )
   onCleanup(() => clearTimeout(pendingDeleteTimer))
 
-  // Per-context tab memory lives in the active project's store: maps sidebar
-  // selection ("local" or a worktree id) -> last active session/pending ID
   const tabMemory = () => registry.active().tabMemory.all()
 
-  const reviewOpen = createMemo(() => {
-    const sel = selection()
-    if (sel === null) return false
-    return reviewOpenByContext()[sel] === true
-  })
+  const reviewOpen = createMemo(() => selection() !== null && reviewOpenByContext()[selection()!] === true)
 
   const setReviewOpenForContext = (context: string, open: boolean) => {
     setReviewOpenByContext((prev) => {
@@ -596,7 +604,6 @@ const AgentManagerContent: Component = () => {
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
 
-  // Drag-and-drop state for tab reordering
   const [draggingTab, setDraggingTab] = createSignal<string | undefined>()
 
   const freezeTabs = () => {
@@ -605,7 +612,6 @@ const AgentManagerContent: Component = () => {
   }
 
   const releaseTabs = () => setTabWidths(false)
-  // Tab ordering: context key → ordered session ID array (recovered from extension state)
   const worktreeTabOrder = () => registry.active().tabOrder()
   const setWorktreeTabOrder: Setter<Record<string, string[]>> = (v) => registry.active().setTabOrder(v)
   // Sidebar worktree order (persisted to extension state)
@@ -953,9 +959,6 @@ const AgentManagerContent: Component = () => {
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
 
-  // Sidebar previous/next + numeric-shortcut nav. Multi-project mode traverses
-  // every expanded project and atomically activates via activateSelection;
-  // single-project mode keeps the legacy in-process path.
   const projectNav = createProjectNav(
     {
       multiProject,
@@ -1264,10 +1267,6 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", preventDefaults, true)
 
-    // Cmd/Ctrl+/ toggles the terminal even when VS Code's webview keybinding
-    // forwarding drops the key before it reaches the workbench (reported with
-    // the prompt input focused). When forwarding does work, the extension
-    // echoes the shortcut back as an action message and sideCtl dedupes it.
     const shortcut = (e: KeyboardEvent) => sideCtl.press(e)
     window.addEventListener("keydown", shortcut, true)
 
@@ -1637,8 +1636,6 @@ const AgentManagerContent: Component = () => {
     }
   })
 
-  // Diff context = sidebar selection (worktree id or LOCAL), stable across
-  // session tab switches inside the context so the git scopes don't refetch.
   const diffCtx = createMemo(() => selection() ?? undefined)
 
   // Active session within the diff context. The Session scope follows it, so
@@ -1688,8 +1685,6 @@ const AgentManagerContent: Component = () => {
     />
   )
 
-  // Start/stop diff watch when the panel opens/closes, the review tab opens,
-  // or the composite id (context, scope, active session) changes.
   createEffect(() => {
     const panel = diffOpen()
     const active = reviewActive()
@@ -2099,7 +2094,6 @@ const AgentManagerContent: Component = () => {
     closeReviewTab()
   }
 
-  // Drag-and-drop handlers for tab reordering
   const tabLookup = createMemo(() => new Map(activeTabs().map((s) => [s.id, s])))
   const tabIds = createMemo(() => {
     const ids = activeTabs().map((s) => s.id)
@@ -2451,6 +2445,12 @@ const AgentManagerContent: Component = () => {
           prStatus={() => activePR()?.pr}
           prOpen={prOpen}
           onTogglePR={togglePRPanel}
+          documentsOpen={documentInspector.isOpen}
+          documentsAvailable={documentInspector.available}
+          onToggleDocuments={documentInspector.toggle}
+          subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
+          subagentsOpen={() => sidePanel() === SidePanel.Subagents}
+          onToggleSubagents={subagentCtl.toolbar.toggle}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
           terminalKeybind={() => kb().showTerminal ?? ""}
@@ -2674,24 +2674,20 @@ const AgentManagerContent: Component = () => {
                           if (id)
                             vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
                         }}
+                        onOpenDocument={documentInspector.open}
                         onRevertFile={metrics.use("revert_file", "side_review", revertCtl.revert)}
                         revertingFiles={revertCtl.reverting()}
                         activeTerminalId={terms.activeId()}
                       />
                     </Show>
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
-                      <PRPanel
+                      <PRPanelHost
                         pr={activePR()!.pr}
                         worktree={activePR()!.wt}
                         worktreeId={activePR()!.selected}
+                        activeTerminalId={terms.activeId()}
+                        sessionId={diffCtx()}
                         onClose={() => setSidePanel(null)}
-                        onOpenExternal={() =>
-                          vscode.postMessage({
-                            type: "agentManager.openPR",
-                            worktreeId: activePR()!.selected,
-                            url: activePR()!.pr.url,
-                          })
-                        }
                       />
                     </Show>
                     <Show when={subagents.tabs().length > 0}>
@@ -2711,6 +2707,13 @@ const AgentManagerContent: Component = () => {
                     <Show when={editPreview.preview()}>
                       <EditPreviewPanel state={editPreview} visible={() => sidePanel() === SidePanel.EditPreview} />
                     </Show>
+                    <DocumentPanelHost
+                      inspector={documentInspector}
+                      onClosePanel={() => setSidePanel(null)}
+                      onSendAll={focusCtl.focus}
+                      activeTerminalId={terms.activeId()}
+                      visible={documentInspector.isOpen}
+                    />
                     <SideTerminalPanel
                       state={terms}
                       contextKey={terms.sideKey}

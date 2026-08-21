@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation, ReviewComment, TerminalDestination, TerminalPlacement } from "./agent-manager"
+import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
@@ -40,6 +40,24 @@ export interface SendMessageRequest {
 
 export interface AbortRequest {
   type: "abort"
+  sessionID: string
+}
+
+export interface RequestBackgroundJobsMessage {
+  type: "requestBackgroundJobs"
+  sessionID: string
+  requestID: string
+}
+
+export interface CancelBackgroundJobMessage {
+  type: "cancelBackgroundJob"
+  jobID: string
+  sessionID: string
+  requestID: string
+}
+
+export interface BackgroundSubagentsMessage {
+  type: "backgroundSubagents"
   sessionID: string
 }
 
@@ -867,6 +885,37 @@ export interface AgentManagerOpenFileRequest {
   column?: number
 }
 
+export interface AgentManagerRequestDocumentMessage {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
+}
+
+export interface DocumentRequestMessage {
+  type: "document.request"
+  sessionId?: string
+  file: string
+  contextKey?: string
+}
+
+export interface DocumentOpenFileMessage {
+  type: "document.openFile"
+  file: string
+  line?: number
+  column?: number
+}
+
+export interface DocumentCloseMessage {
+  type: "document.close"
+}
+
+export interface DocumentSendCommentsMessage {
+  type: "document.sendComments"
+  comments: ReviewCommentEntry[]
+  autoSend?: boolean
+}
+
 // Create multiple worktree sessions for the same prompt (multi-version mode)
 export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
@@ -1059,7 +1108,7 @@ export interface OpenDiffVirtualRequest {
 
 export interface DiffViewerSendCommentsRequest {
   type: "diffViewer.sendComments"
-  comments: ReviewComment[]
+  comments: ReviewCommentEntry[]
   autoSend: boolean
 }
 
@@ -1118,6 +1167,7 @@ export interface OpenSubAgentViewerRequest {
   type: "openSubAgentViewer"
   sessionID: string
   title?: string
+  parentSessionID?: string
 }
 
 // Preview an image attachment in VS Code's built-in image viewer
@@ -1396,8 +1446,15 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | DocumentRequestMessage
+  | DocumentOpenFileMessage
+  | DocumentCloseMessage
+  | DocumentSendCommentsMessage
   | SendMessageRequest
   | AbortRequest
+  | RequestBackgroundJobsMessage
+  | CancelBackgroundJobMessage
+  | BackgroundSubagentsMessage
   | RevertSessionRequest
   | UnrevertSessionRequest
   | DeleteMessageRequest
@@ -1525,6 +1582,7 @@ export type WebviewMessage =
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
+  | AgentManagerRequestDocumentMessage
   | CreateMultiVersionRequest
   | SetTabOrderRequest
   | SetWorktreeOrderRequest

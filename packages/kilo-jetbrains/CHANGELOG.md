@@ -4,6 +4,96 @@
 
 ### Minor Changes
 
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`1500843`](https://github.com/Kilo-Org/kilocode/commit/1500843a342d66b56bc64ac26fa6f9d60e7d255f) - Show the collapsed hover preview on more transcript cards: grep, glob, other tool calls, and to-dos now open the same popup that shell and diffs use.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`46eac53`](https://github.com/Kilo-Org/kilocode/commit/46eac53716dd4c5eb31e782f55f08bcf13772ad7) - Reveal rename and delete buttons on hover in JetBrains session history, rename sessions through an inline popover instead of a modal dialog, and move the selection to the neighbouring session after deleting the selected one.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`b1a8893`](https://github.com/Kilo-Org/kilocode/commit/b1a8893f142807085c4312efac62379fbcc953d5) - Show provider errors and interrupted or failed turns in the JetBrains chat instead of returning silently to idle.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`919d312`](https://github.com/Kilo-Org/kilocode/commit/919d312fa4e14f44f0ad88283bbf60a1bb8a79a0) - Show an activity badge on each Agent Manager worktree row, reflecting whether that worktree's sessions are running or waiting on a question or permission — even when the worktree's editor tab is not open.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`a678e54`](https://github.com/Kilo-Org/kilocode/commit/a678e549f5381db7625cc61e0897e9cb54465595) - Name Agent Manager worktrees from the first session's title. When a worktree still uses its default branch name, the title the agent generates for its first session becomes the worktree name — updating both the worktree list and the editor live as the name arrives. Placeholder session names are ignored so only the real agent title is adopted, and worktrees you have renamed yourself are left untouched. The worktree session list now also shows agent-generated session titles as they stream in.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`4100415`](https://github.com/Kilo-Org/kilocode/commit/4100415acab6efaacf438ccb0648e29acd7b22a2) - Show worktree change counts, ahead/behind counts, and pull request badges in JetBrains Agent Manager worktree rows and editor headers.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`106b5f4`](https://github.com/Kilo-Org/kilocode/commit/106b5f4d5aea047e21a0ddc923d98e49c78ccef8) - Add an "Open worktree in new window" button to the Agent Manager worktree toolbar that opens the worktree directory in a new IDE frame. The project is opened on the backend/host, so it also works in remote development.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`b6bd9f2`](https://github.com/Kilo-Org/kilocode/commit/b6bd9f224c8c7dda632bfa16f961211f66f49a25) - Support managing sessions directly from Agent Manager worktree editor tabs, start a new session when opening an empty worktree editor, and hide non-Agent-Manager git worktrees from the worktree list.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`1d964e0`](https://github.com/Kilo-Org/kilocode/commit/1d964e08254bf06de4c395bcc63a71b12f37142b) - Add a Terminal button to the Agent Manager worktree header that opens (or focuses) a terminal in the worktree's directory, reusing one terminal tab per worktree. The terminal tab is labelled with the same worktree name shown in the worktree list and editor tab, and it updates when the worktree is renamed or its pull request changes. The worktree header actions now use flat, hoverable toolbar buttons, and the branch-changes badge shows the changed-file count and lines added/removed, opening the branch diff when clicked.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`d522ff8`](https://github.com/Kilo-Org/kilocode/commit/d522ff80e25e220c46cda6ed621e29025c302259) - Support renaming Agent Manager worktrees and worktree sessions from the JetBrains plugin.
+
+### Patch Changes
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`f3d1134`](https://github.com/Kilo-Org/kilocode/commit/f3d11341c4b6d47a047e7f04dd46817e64a77bb1) - Use equal-height rows by default in Agent Manager and settings lists, keeping variable-height rows only for provider settings.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`e8a40e1`](https://github.com/Kilo-Org/kilocode/commit/e8a40e1502c03a996d1452c2c9cf49c99f288e83) - Remove borders around JetBrains prompt bubbles and markdown code surfaces, and round the collapsed card hover highlight and markdown code blocks to match the prompt bubble.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`8db5a8c`](https://github.com/Kilo-Org/kilocode/commit/8db5a8c5c962bcbd3093e7561e224350d3a11f4c) - Center JetBrains session content at a 98-column readable width on wide panels.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`579245d`](https://github.com/Kilo-Org/kilocode/commit/579245d8f24310f93a923f3a630922141341a386) - Use the standard prompt with mode, model, and effort controls when creating new worktrees.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`d1ae907`](https://github.com/Kilo-Org/kilocode/commit/d1ae907746e0fc74c1f7f85d933db4214665fd3c) - Show worktree row actions in a hover menu instead of inline rename and delete buttons.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`430306e`](https://github.com/Kilo-Org/kilocode/commit/430306e37dc26b87c57df77c34f9c9f9b76dffb0) - Show synchronized Agent Manager and worktree editor banners when Git or GitHub CLI PR status checks need installation or authorization.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`aafde0b`](https://github.com/Kilo-Org/kilocode/commit/aafde0bf7e1b3263aacbff3a9c476af89dc2929d) - Show Agent Manager row actions only while hovering worktree and session rows.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`3e617c1`](https://github.com/Kilo-Org/kilocode/commit/3e617c12aa6204e3aea48ef692f1e5b6b3c35dfb) - Fix action button border artifacts in JetBrains Islands Light session dialogs.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`aadf773`](https://github.com/Kilo-Org/kilocode/commit/aadf773f281c837bf53a1978bb9d0ccc4ea5e707) - Show a Beta badge on the Agent Manager tool window tab.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`89532bb`](https://github.com/Kilo-Org/kilocode/commit/89532bb897102ca64369a67dd62513e72d92828b) - Show pull request titles and clearer multi-line badge tooltips in the Agent Manager worktree list.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`b2015b8`](https://github.com/Kilo-Org/kilocode/commit/b2015b864208601aa290a1c05c7eb1384e0e7034) - Keep the JetBrains plugin connected when the optional profile request returns Bad Request.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`06fc620`](https://github.com/Kilo-Org/kilocode/commit/06fc620ba01cd725345d4bc457a1acb67a65a820) - Refresh the session UI colors around three tunable roles — session background, code-block background (shared by code blocks, the prompt bubble, and the input), and foreground — and apply them correctly on first paint instead of only after switching themes.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`340172a`](https://github.com/Kilo-Org/kilocode/commit/340172af19bff6d31840984da600d4849b6db231) - Use a unified secondary text style for JetBrains session UI labels.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`e5193c5`](https://github.com/Kilo-Org/kilocode/commit/e5193c5493fb9b76e899aee7cb35ad7af9bf637a) - Fix the Agent Manager panel showing a deleted worktree again after switching tabs when the git removal did not actually succeed. Locked worktrees are now marked in the list, the delete dialog asks for explicit confirmation before force-removing a locked worktree, a failed deletion shows a notification with a one-click force-delete retry, and selecting a worktree opens a dedicated worktree session editor tab.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`38e8220`](https://github.com/Kilo-Org/kilocode/commit/38e822042c2fe9ee074f72a4001e8e2852e6ba9c) - Move the JetBrains Agent Manager selection to the neighbouring worktree after deleting the one on screen, instead of jumping unpredictably.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`319d1f4`](https://github.com/Kilo-Org/kilocode/commit/319d1f485917266cc4a56d620c903afa2e96125d) - Improve Agent Manager worktree activity refreshes and keep worktree list filtering responsive.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`15efe98`](https://github.com/Kilo-Org/kilocode/commit/15efe98cb8a36859acbd8aaac31b22d31d94d36e) - Match IntelliJ Project view open and focus behavior for Agent Manager worktrees and sessions.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`916548a`](https://github.com/Kilo-Org/kilocode/commit/916548a8cc55b69f9a9f08341db4569f6f7dcaeb) - Keep JetBrains Agent Manager worktrees in a stable creation order after switching panels or reloading.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`5b0acee`](https://github.com/Kilo-Org/kilocode/commit/5b0acee0167aa333895c611d6681a7ed40f7c777) - Show worktree sessions as deleting while removal is in progress and notify when deletion fails.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`a89936b`](https://github.com/Kilo-Org/kilocode/commit/a89936bf8e197358b8be6ce40a319a75d3478ae1) - Use the shared active list for session history rows with hover-revealed local delete actions.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`ff8e470`](https://github.com/Kilo-Org/kilocode/commit/ff8e47030057f6d3191ca4c1c26d374dceb4d8ff) - Always outline JetBrains prompt bubbles and use a rounder prompt bubble shape.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`a417b22`](https://github.com/Kilo-Org/kilocode/commit/a417b220fa75ceef14c2653afff2b227bb78757f) - Polish the JetBrains session prompt background, editor-tab focus ring, and centered jump-to-bottom button alignment.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`f5ff70e`](https://github.com/Kilo-Org/kilocode/commit/f5ff70ea3b26c9eb7994193cb9f8371691bdd73c) - Improve the New Worktree base branch selector with fuzzy matching, default fallback, and validation for unknown branches.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`9f1afe1`](https://github.com/Kilo-Org/kilocode/commit/9f1afe1057b0c15f9e123d992a7503d284d544df) - Refine transcript card spacing, plan-ready styling, and diff scrollbar layout, and remove the stray stripe and gap left by empty messages at the top of turns.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`c22ca3a`](https://github.com/Kilo-Org/kilocode/commit/c22ca3ab7bac81b638d1441f5ef52459e287e6c5) - Keep JetBrains chat sessions pinned to the bottom during viewport resizes, expandable view changes, and action dialog reveals when already following the transcript.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`706a3c3`](https://github.com/Kilo-Org/kilocode/commit/706a3c3ce74110f2c0433b7a416ee9ddc02770a4) - Keep JetBrains session prompts visible in themes where the panel and editor backgrounds match.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`0209c64`](https://github.com/Kilo-Org/kilocode/commit/0209c649fdf918b17b4e578dd70bc38befa5cd24) - Improve JetBrains session card header clicks and align raised content backgrounds with the editor surface.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`bf0c6c7`](https://github.com/Kilo-Org/kilocode/commit/bf0c6c7a9ecec955c0b367bcec722b28d00c49d6) - Keep JetBrains session status and copy controls visually bounded to the transcript area.
+
+- [#13215](https://github.com/Kilo-Org/kilocode/pull/13215) [`ae3eb9b`](https://github.com/Kilo-Org/kilocode/commit/ae3eb9b405c4992cc3da9bbcb273e242887ca2ed) - Show the empty session panel for empty JetBrains worktree sessions.
+
+- [#13092](https://github.com/Kilo-Org/kilocode/pull/13092) [`5496466`](https://github.com/Kilo-Org/kilocode/commit/5496466bff9a3a3e1e5cd9b964a1e3d61fb6130e) - Render the JetBrains session backdrop consistently and keep transcript hover backgrounds from getting stuck.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`5ab0ba2`](https://github.com/Kilo-Org/kilocode/commit/5ab0ba24b3934a04ad9dc02b0fc67cc888a34c0c) - Keep the Agent Manager worktree selection in sync with the active editor tab.
+
+- [#12433](https://github.com/Kilo-Org/kilocode/pull/12433) [`89163e7`](https://github.com/Kilo-Org/kilocode/commit/89163e7e02bdf86b4c0f19bc6eba93e08d105afc) - Show Agent Manager worktree sessions with History-style activity badges, relative timestamps, and date sections.
+
+## 7.5.0
+
+### Minor Changes
+
 - [#13015](https://github.com/Kilo-Org/kilocode/pull/13015) [`62923ad`](https://github.com/Kilo-Org/kilocode/commit/62923adb518371d1659ea65e5519768e4abf231b) - Include the active editor file, open files, visible files, and selected text in JetBrains chat context by default, with a Context settings toggle to disable it. Files matched by `.kilocodeignore` (or `.gitignore` plus `.env` files) are excluded, and the default shell is reported to the agent.
 
 - [#12895](https://github.com/Kilo-Org/kilocode/pull/12895) [`a340d61`](https://github.com/Kilo-Org/kilocode/commit/a340d61716b6fdec89943bff438c151b513fd1f3) - Log whether the JetBrains plugin downloads Core or uses the bundled/cached version, and mark the Core version shown in the popup as "Bundled" when it wasn't downloaded.
@@ -153,11 +243,13 @@
 ## [7.1.0-rc.2] - 2026-08-18
 
 ### Added
+
 - Add the JetBrains Agent Manager beta for creating, opening, organizing, renaming, and deleting worktree-based tasks and their sessions from the IDE.
 - Show worktree activity, change, ahead/behind, and pull request badges in Agent Manager, with clearer row actions, menus, and tooltips.
 - Support opening Agent Manager worktrees in new windows and dedicated terminal tabs.
 
 ### Fixed
+
 - Improve JetBrains chat readability and scrolling with centered readable width, refreshed prompt chrome, stable tail-follow behavior, and clearer failed-turn outcome cards.
 - Unblock JetBrains release verification by replacing internal and override-only IntelliJ API usage with verifier-safe public API paths.
 - Keep the migration wizard visible across reconnects and restore worktree session creation after migration completes.
@@ -168,16 +260,19 @@
 - Remove duplicated skill catalog content from Kilo Core prompts to reduce request size while preserving lazy skill loading.
 
 ### Changed
+
 - Reuse the session modal layout for the JetBrains migration wizard.
 
 ## [7.1.0-rc.1] - 2026-08-18
 
 ### Added
+
 - Add the JetBrains Agent Manager beta for creating, opening, organizing, renaming, and deleting worktree-based tasks and their sessions from the IDE.
 - Show worktree activity, change, ahead/behind, and pull request badges in Agent Manager, with clearer row actions, menus, and tooltips.
 - Support opening Agent Manager worktrees in new windows and dedicated terminal tabs.
 
 ### Fixed
+
 - Improve JetBrains chat readability and scrolling with centered readable width, refreshed prompt chrome, stable tail-follow behavior, and clearer failed-turn outcome cards.
 - Keep Ask and Plan modes read-only even when broad global permission rules are configured.
 - Preserve project-level snapshot disabling across restarts after choosing to disable snapshots from the slow-repo prompt.
@@ -189,10 +284,12 @@
 ### Added
 
 ### Fixed
+
 - Improve JetBrains chat readability with refreshed session surfaces, softer spacing, clearer prompt bubbles, and more consistent hover states.
 - Make JetBrains CLI downloads more reliable by retrying transient failures and rate limits, and by avoiding authentication on public CLI asset fetches.
 
 ### Changed
+
 - Update the JetBrains plugin CLI pin to Kilo Core 7.4.22.
 - Refresh Kilo Core with upstream provider, model variant, and session runtime updates.
 

@@ -58,6 +58,12 @@ export interface TabBarProps {
   prStatus: () => PRStatus | undefined
   prOpen: () => boolean
   onTogglePR: () => void
+  documentsOpen: () => boolean
+  documentsAvailable: () => boolean
+  onToggleDocuments: () => void
+  subagentsAvailable: () => boolean
+  subagentsOpen: () => boolean
+  onToggleSubagents: () => void
   terminalDestination: () => TerminalDestination
   terminalDestinationActive: () => boolean
   terminalKeybind: () => string
@@ -231,6 +237,30 @@ export const TabBar: Component<TabBarProps> = (props) => (
                       />
                     </Tooltip>
                   )}
+                </Show>
+                <Show when={props.documentsAvailable()}>
+                  <Tooltip value={props.t("agentManager.documents.toggle")} placement="bottom">
+                    <IconButton
+                      icon="book-open-check"
+                      size="small"
+                      variant="ghost"
+                      label={props.t("agentManager.documents.toggle")}
+                      class={props.documentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleDocuments}
+                    />
+                  </Tooltip>
+                </Show>
+                <Show when={props.subagentsAvailable()}>
+                  <Tooltip value="Subagents" placement="bottom">
+                    <IconButton
+                      icon="task"
+                      size="small"
+                      variant="ghost"
+                      label="Subagents"
+                      class={props.subagentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleSubagents}
+                    />
+                  </Tooltip>
                 </Show>
                 <TooltipKeybind
                   title={props.t("agentManager.diff.toggle")}

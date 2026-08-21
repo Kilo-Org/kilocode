@@ -10,6 +10,7 @@ import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
 import { resolveComment, unresolveComment } from "./pr/PRActions"
+import { ghErrorReason, mergePRStatus } from "./pr/am-pr-utils"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
@@ -31,6 +32,8 @@ interface PanelLike {
 export class PRStatusBridge {
   readonly poller: PRStatusPoller
   private readonly cache = new Map<string, AgentManagerOutMessage>()
+  /** Branch each cached PR was found on, so a branch switch still clears it. */
+  private readonly branches = new Map<string, string>()
   private readonly host: PRBridgeHost
   private lastErrorNotified: "gh_missing" | "gh_auth" | "fetch_failed" | undefined
 
@@ -124,6 +127,7 @@ export class PRStatusBridge {
             worktreeId: id,
             threadId,
             success: false,
+            error: ghErrorReason(msg),
           })
         },
       )
@@ -135,11 +139,13 @@ export class PRStatusBridge {
   /** Remove cached status for a deleted worktree. */
   remove(worktreeId: string): void {
     this.cache.delete(worktreeId)
+    this.branches.delete(worktreeId)
   }
 
   reset(): void {
     this.poller.stop()
     this.cache.clear()
+    this.branches.clear()
     this.lastErrorNotified = undefined
   }
 
@@ -158,29 +164,57 @@ function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
     semaphore: host.semaphore,
     onStatus: (id: string, pr: PRStatus | null, err?: "gh_missing" | "gh_auth" | "fetch_failed") => {
       if (err) {
-        // Don't forward errors to the webview when we have prior PR data
-        // (in-memory cache or persisted prNumber) — that would overwrite
-        // the live badge with pr:null. Only forward when there's truly no
-        // prior data (first poll failed, nothing persisted).
-        if (!bridge["cache"].has(id) && !host.hasPersistedPR(id))
-          host.postToWebview({
-            type: "agentManager.prStatus",
-            worktreeId: id,
-            pr: null,
-            error: err,
-          } as AgentManagerOutMessage)
-        // Always forward auth/missing errors so the webview can show a toast,
-        // regardless of whether prior data exists. Deduplicate per error type
-        // so multiple failing worktrees don't produce multiple toasts.
-        if (err === "gh_auth" || err === "gh_missing") bridge.notifyError(err)
+        reportError(bridge, host, id, err)
         return
       }
-      const msg = { type: "agentManager.prStatus", worktreeId: id, pr, error: err } as AgentManagerOutMessage
-      bridge["cache"].set(id, msg)
-      bridge["lastErrorNotified"] = undefined
-      host.postToWebview(msg)
-      host.updateWorktreePR(id, pr?.number, pr?.url, pr?.state)
+      accept(bridge, host, id, pr)
     },
     log: (...args: unknown[]) => host.log(...args),
   }
+}
+
+function reportError(
+  bridge: PRStatusBridge,
+  host: PRBridgeHost,
+  id: string,
+  err: "gh_missing" | "gh_auth" | "fetch_failed",
+): void {
+  // Don't forward errors to the webview when we have prior PR data
+  // (in-memory cache or persisted prNumber) — that would overwrite
+  // the live badge with pr:null. Only forward when there's truly no
+  // prior data (first poll failed, nothing persisted).
+  if (!bridge["cache"].has(id) && !host.hasPersistedPR(id))
+    host.postToWebview({
+      type: "agentManager.prStatus",
+      worktreeId: id,
+      pr: null,
+      error: err,
+    } as AgentManagerOutMessage)
+  // Always forward auth/missing errors so the webview can show a toast,
+  // regardless of whether prior data exists. Deduplicate per error type
+  // so multiple failing worktrees don't produce multiple toasts.
+  if (err === "gh_auth" || err === "gh_missing") bridge.notifyError(err)
+}
+
+function accept(bridge: PRStatusBridge, host: PRBridgeHost, id: string, pr: PRStatus | null): void {
+  const cached = bridge["cache"].get(id)
+  const prev = cached?.type === "agentManager.prStatus" ? cached.pr : null
+  const branch = host.getWorktrees().find((w: Worktree) => w.id === id)?.branch
+  // `gh` answers "no pull request" for a rate limit, a network blip, or an
+  // unresolvable fork ref exactly as it does for a branch that never had one. A
+  // PR cannot leave a branch, so on the same branch the known PR is kept:
+  // forwarding pr:null would unmount the panel and throw away the comment the
+  // user is reading.
+  if (!pr && prev && branch !== undefined && bridge["branches"].get(id) === branch) {
+    host.log(`PR status: keeping PR #${prev.number} for ${id}, empty result on ${branch}`)
+    return
+  }
+  const merged = pr && prev ? mergePRStatus(prev, pr) : pr
+  const msg = { type: "agentManager.prStatus", worktreeId: id, pr: merged } as AgentManagerOutMessage
+  bridge["cache"].set(id, msg)
+  if (pr && branch !== undefined) bridge["branches"].set(id, branch)
+  if (!pr) bridge["branches"].delete(id)
+  bridge["lastErrorNotified"] = undefined
+  host.postToWebview(msg)
+  host.updateWorktreePR(id, pr?.number, pr?.url, pr?.state)
 }
