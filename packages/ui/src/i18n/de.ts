@@ -181,6 +181,7 @@ export const dict = {
   "ui.patch.action.created": "Erstellt",
   "ui.patch.action.moved": "Verschoben",
   "ui.patch.action.patched": "Gepatched",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} beantwortet",
   "ui.question.answer.none": "(keine Antwort)",
@@ -233,7 +234,6 @@ export const dict = {
   "ui.mermaid.copyPng": "PNG kopieren",
   "ui.mermaid.downloadSvg": "SVG herunterladen",
   "ui.mermaid.downloadPng": "PNG herunterladen",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} von {{total}} Zeilen behalten",
   "ui.message.deleteQueued": "Nachricht in Warteschlange löschen",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

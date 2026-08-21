@@ -223,7 +223,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [idle]
             """,
-            m, show = true,
+            m, show = false,
         )
     }
 
@@ -239,7 +239,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [idle]
             """,
-            m, show = true,
+            m, show = false,
         )
     }
 

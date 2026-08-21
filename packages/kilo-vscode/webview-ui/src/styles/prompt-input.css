@@ -2,9 +2,13 @@
    Prompt Input
    ============================================ */
 
+:root {
+  --prompt-min-gutter: 6px;
+}
+
 .prompt-input-container {
   position: relative;
-  margin: 12px;
+  margin: var(--prompt-min-gutter);
   border-radius: 0.25rem;
   background-color: var(--input-base, var(--vscode-input-background, #3c3c3c));
   border: 1px solid var(--border-weak-base, var(--vscode-input-border, #3c3c3c));

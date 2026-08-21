@@ -201,6 +201,7 @@ export const dict = {
   "ui.patch.action.created": "Oluşturuldu",
   "ui.patch.action.moved": "Taşındı",
   "ui.patch.action.patched": "Yamalandı",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} yanıtlandı",
   "ui.question.answer.none": "(yanıt yok)",
@@ -235,7 +236,6 @@ export const dict = {
   "ui.mermaid.copyPng": "PNG kopyala",
   "ui.mermaid.downloadSvg": "SVG indir",
   "ui.mermaid.downloadPng": "PNG indir",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}} satırdan {{kept}} tanesi korundu",
   "ui.message.deleteQueued": "Kuyruktaki mesajı sil",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

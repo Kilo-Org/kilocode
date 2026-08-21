@@ -9,6 +9,7 @@ import ai.kilocode.client.session.history.HistoryController
 import ai.kilocode.client.session.history.HistoryDataKeys
 import ai.kilocode.client.session.history.HistoryPanel
 import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.Question
@@ -86,6 +87,21 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         val provider = manager.component as DataProvider
 
         assertSame(manager, provider.getData(SessionManager.KEY.name))
+    }
+
+    fun `test host empty panel is full recents panel`() {
+        rpc.recent.add(session("ses_recent"))
+        val manager = manager()
+        val controller = controller()
+        settle()
+
+        val panel = manager.emptyPanel(testRootDisposable, controller)
+
+        assertTrue(panel.logoVisible())
+        assertTrue(panel.feedbackVisible())
+        assertTrue(panel.descriptionVisible())
+        assertTrue(panel.historyVisible())
+        assertTrue(panel.recentVisible())
     }
 
     fun `test new session replaces active component`() {
@@ -723,6 +739,15 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     }
 
     private fun active(manager: SessionSidePanelManager) = manager.component.getComponent(0) as JPanel
+
+    private fun controller() = SessionController(
+        parent = testRootDisposable,
+        sessions = sessions,
+        workspace = workspace,
+        app = app,
+        cs = coroutines.scope,
+        timers = timers,
+    )
 
     private fun empty(panel: JPanel): Boolean {
         var empty = false

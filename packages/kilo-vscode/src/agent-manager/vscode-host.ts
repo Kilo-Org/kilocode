@@ -110,6 +110,11 @@ export class VscodeHost implements Host {
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
       rootDirectory: opts.workspaceRoot,
       disableViewedRegistration: true,
+      focusTargetContext: {
+        prompt: "kilo-code.new.agentManagerPromptFocused",
+        mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",
+        sideTerminal: "kilo-code.new.agentManagerSideTerminalFocused",
+      },
       routeService: this.routes,
       projectQualifier: () => {
         const projectId = opts.projectId?.()
@@ -298,7 +303,7 @@ export class VscodeHost implements Host {
     }
   }
 
-  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }> {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }

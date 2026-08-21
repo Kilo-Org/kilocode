@@ -106,7 +106,9 @@ const layer: Layer.Layer<Service, never, Project.Service | InstanceBootstrap.Ser
 
     const disposeContext = Effect.fn("InstanceStore.disposeContext")(function* (ctx: InstanceContext) {
       yield* Effect.logInfo("disposing instance", { directory: ctx.directory })
-      yield* Effect.promise(() => instanceContext.provide(ctx, () => runDisposers(ctx.directory))) // kilocode_change
+      yield* Effect.promise(() =>
+        instanceContext.provide(ctx, () => runDisposers(ctx.directory, WorkspaceContext.workspaceID)),
+      ) // kilocode_change
       yield* emitDisposed({ directory: ctx.directory, project: ctx.project.id })
     })
 
@@ -152,8 +154,8 @@ const layer: Layer.Layer<Service, never, Project.Service | InstanceBootstrap.Ser
               const exit = yield* Deferred.await(previous.deferred).pipe(Effect.exit)
               yield* Effect.promise(() =>
                 Exit.isSuccess(exit)
-                  ? instanceContext.provide(exit.value, () => runDisposers(directory))
-                  : runDisposers(directory),
+                  ? instanceContext.provide(exit.value, () => runDisposers(directory, WorkspaceContext.workspaceID))
+                  : runDisposers(directory, WorkspaceContext.workspaceID),
               )
               // kilocode_change end
               yield* emitDisposed({ directory, project: input.project?.id })

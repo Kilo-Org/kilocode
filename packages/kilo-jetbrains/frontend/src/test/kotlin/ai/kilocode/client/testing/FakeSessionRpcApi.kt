@@ -123,6 +123,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var creates = 0
         private set
 
+    /** When set, [create] throws it after incrementing [creates] — simulates a paused backend. */
+    var createThrows: Exception? = null
+
     data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
     data class CommandCall(val id: String, val directory: String, val command: String, val arguments: String, val prompt: PromptDto)
@@ -134,6 +137,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun create(directory: String): SessionDto {
         assertNotEdt("create")
         creates++
+        createThrows?.let { throw it }
         return session
     }
 

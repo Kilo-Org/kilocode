@@ -1,5 +1,8 @@
 package ai.kilocode.client
 
+import ai.kilocode.client.agentManager.SidePanelKeys
+import ai.kilocode.client.agentManager.SidePanelMode
+import ai.kilocode.client.agentManager.applySidePanelMode
 import ai.kilocode.client.util.edtWait
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.wm.ToolWindow
@@ -19,5 +22,13 @@ class KiloToolWindowFactoryTest : BasePlatformTestCase() {
         assertEquals("Agent Manager (Beta)", content.description)
         assertEquals(true, content.getUserData(ToolWindow.SHOW_CONTENT_ICON))
         assertEquals(ComponentOrientation.RIGHT_TO_LEFT, content.getUserData(Content.TAB_LABEL_ORIENTATION_KEY))
+    }
+
+    fun `test content records side panel mode`() = edtWait {
+        val content = ContentFactory.getInstance().createContent(JPanel(), "Branch", false)
+
+        content.applySidePanelMode(SidePanelMode.CHAT)
+
+        assertEquals(SidePanelMode.CHAT, content.getUserData(SidePanelKeys.CONTENT_MODE))
     }
 }

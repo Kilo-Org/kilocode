@@ -2,6 +2,7 @@ package ai.kilocode.client.app
 
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.rpc.dto.AgentCreateDto
+import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.SkillDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -96,6 +97,35 @@ class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
         assertTrue(ok)
         assertEquals(listOf(Triple("/test", "/test/plan/SKILL.md", "# Saved")), rpc.skillSaves)
         assertEquals("# Saved", rpc.skills.single().content)
+    }
+
+    fun `test loadCommandFiles propagates rpc failure`() = runBlocking {
+        rpc.commandFilesError = RuntimeException("boom")
+
+        assertFailsWith<RuntimeException> {
+            withContext(Dispatchers.Default) { service.loadCommandFiles("/test") }
+        }
+    }
+
+    fun `test refreshCommandFiles returns previous rows on rpc failure`() = runBlocking {
+        val fallback = listOf(CommandFileDto("plan", location = "/test/.kilo/workflows/plan.md"))
+        rpc.commandFilesError = RuntimeException("boom")
+
+        val items = withContext(Dispatchers.Default) { service.refreshCommandFiles("/test", fallback) }
+
+        assertEquals(fallback, items)
+    }
+
+    fun `test saveCommands forwards all edits`() = runBlocking {
+        rpc.commandFiles = listOf(CommandFileDto("plan", location = "/test/.kilo/workflows/plan.md"))
+
+        val ok = withContext(Dispatchers.Default) {
+            service.saveCommands("/test", mapOf("/test/.kilo/workflows/plan.md" to "# Saved"))
+        }
+
+        assertTrue(ok)
+        assertEquals(listOf(Triple("/test", "/test/.kilo/workflows/plan.md", "# Saved")), rpc.commandSaves)
+        assertEquals("# Saved", rpc.commandFiles.single().content)
     }
 
     fun `test mcpStatus forwards directory`() = runBlocking {

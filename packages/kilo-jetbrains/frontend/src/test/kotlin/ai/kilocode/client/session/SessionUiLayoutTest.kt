@@ -188,6 +188,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test active views are children of message list panel`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -197,6 +198,25 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
         assertSame(messages, qv.parent)
         assertSame(messages, pv.parent)
+    }
+
+    fun `test readonly session omits prompt and active reply views`() {
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val readonly: Boolean get() = true
+        }
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = owner)
+        settle()
+        layoutReadonly()
+
+        assertNull(find(ui, PromptPanel::class.java))
+        assertNull(find(ui, QuestionView::class.java))
+        assertNull(find(ui, PermissionView::class.java))
+        assertSame(scrollComponent(), ui.defaultFocusedComponent)
+        assertTrue(find<SessionMessageListPanel>(ui).parent != null)
     }
 
     fun `test header is docked above shared scroll pane and hidden while empty`() {
@@ -275,7 +295,31 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
     }
 
+    fun `test expanded connection panel is capped to transcript height`() {
+        ui.setSize(800, 260)
+        layout()
+        val root = find<SessionRootPanel>(ui)
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
+
+        connection.onEvent(SessionControllerEvent.ConnectionChanged.ShowError(
+            "CLI startup failed",
+            lines(60),
+        ))
+        layout()
+        connection.clickSummary()
+        layout()
+        val pane = connection.components.filterIsInstance<JBScrollPane>().single()
+        pane.doLayout()
+
+        assertTrue(connection.detailsVisible())
+        assertEquals(0, connection.y)
+        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+        assertTrue(pane.viewport.extentSize.height < pane.viewport.view.preferredSize.height)
+    }
+
     fun `test connection panel is unaffected by active question view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
         showConnection()
@@ -296,6 +340,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test connection panel is unaffected by active permission view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
         showConnection()
@@ -316,6 +361,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test active question view renders inside message scroll view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -329,6 +375,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test active permission view renders inside message scroll view`() {
+        rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -557,7 +604,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         }
     }
 
-    fun `test empty explicit session id shows message body`() {
+    fun `test empty explicit session id shows empty panel`() {
         rpc.recent.add(session("ses_recent"))
         settle()
         rpc.recentCalls.clear()
@@ -565,8 +612,9 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         ui = newUi(id = "ses_test")
         settle()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
-        assertNull(find(ui, EmptySessionPanel::class.java))
+        val panel = find<EmptySessionPanel>(ui)
+        assertSame(panel.view, scrollView())
+        assertNull(find(ui, SessionMessageListPanel::class.java))
         assertTrue(rpc.recentCalls.isEmpty())
     }
 
@@ -586,7 +634,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         rpc.historyGate!!.complete(Unit)
         settle()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        val panel = find<EmptySessionPanel>(ui)
+        assertSame(panel.view, scrollView())
         assertTrue(rpc.recentCalls.isEmpty())
     }
 
@@ -607,7 +656,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         rpc.historyGate!!.complete(Unit)
         settle()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        val panel = find<EmptySessionPanel>(ui)
+        assertSame(panel.view, scrollView())
         assertTrue(rpc.recentCalls.isEmpty())
     }
 
@@ -740,7 +790,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertFalse(overlay.isVisible)
     }
 
-    fun `test explicit session does not show overlay`() {
+    fun `test non-empty explicit session does not show overlay`() {
+        rpc.history.add(MessageWithPartsDto(message("msg1"), emptyList()))
         ui = newUi(id = "ses_test")
         settle()
 
@@ -774,6 +825,17 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
     private fun promptPoint(root: SessionRootPanel, prompt: PromptPanel) =
         SwingUtilities.convertPoint(prompt.parent, prompt.x, prompt.y, root.overlay)
+
+    private fun layoutReadonly() {
+        ui.doLayout()
+        val root = find<SessionRootPanel>(ui)
+        root.doLayout()
+        root.content.doLayout()
+        scrollComponent().doLayout()
+        (scrollView() as? java.awt.Container)?.doLayout()
+    }
+
+    private fun lines(count: Int) = (1..count).joinToString("\n") { "line $it" }
 
     private class Row(override val sessionViewKind: SessionView.Kind) : JPanel(), SessionView {
         override fun getPreferredSize() = Dimension(100, 10)
