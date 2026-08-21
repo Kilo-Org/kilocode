@@ -183,7 +183,7 @@ open class AttachmentCard(
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             val arc = JBUI.scale(SessionUiStyle.View.Attachment.CORNER_ARC)
-            g2.color = SessionUiStyle.View.Surface.bgColor()
+            g2.color = SessionUiStyle.Colors.codeBlockBackground()
             g2.fillRoundRect(0, 0, width, height, arc, arc)
             g2.color = SessionUiStyle.View.Outline.color()
             g2.drawRoundRect(0, 0, width - 1, height - 1, arc, arc)

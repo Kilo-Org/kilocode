@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ui.AnimatedIcon
@@ -36,7 +37,7 @@ class RevertProgress(onCancel: () -> Unit) : JPanel(), SessionEditorStyleTarget 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         label.font = style.regularFont
-        label.foreground = UiStyle.Colors.fg()
+        label.foreground = SessionUiStyle.Colors.foreground()
         cancel.font = style.regularFont
         revalidate()
         repaint()

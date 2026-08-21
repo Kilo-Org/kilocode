@@ -36,7 +36,7 @@ function scene(init: {
         w.ids.map((id, i) => ({ id, createdAt: new Date(1700000000000 + wi * 1000 + i).toISOString() })),
       ),
     managedSessions: () => state.worktreeSessions.flatMap((w) => w.ids.map((id) => ({ id, worktreeId: w.key }))),
-    reviewOpenByContext: () => state.review,
+    reviewOpen: (key) => state.review[key] === true,
     terminalIdsFor: (key) => state.terminals[key] ?? [],
   }
   return { state, sync: createTabOrderSync(deps), deps }
@@ -53,7 +53,7 @@ function render(deps: TabOrderSyncDeps, key: string): string[] {
           .filter((s) => deps.managedSessions().some((ms) => ms.id === s.id && ms.worktreeId === key))
           .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
           .map((s) => s.id)
-  const withReview = deps.reviewOpenByContext()[key] === true ? [...sids, deps.REVIEW_TAB_ID] : sids
+  const withReview = deps.reviewOpen(key) ? [...sids, deps.REVIEW_TAB_ID] : sids
   const base = [...withReview, ...deps.terminalIdsFor(key)]
   return applyTabOrder(
     base.map((id) => ({ id })),
@@ -187,7 +187,7 @@ describe("createTabOrderSync persistence filter", () => {
       localSessionIDs: () => state.localIds,
       sessions: () => [],
       managedSessions: () => [],
-      reviewOpenByContext: () => state.review,
+      reviewOpen: (key) => state.review[key] === true,
       terminalIdsFor: (key) => state.terminals[key] ?? [],
     })
     filteredSync.append("LOCAL", "pending_1")

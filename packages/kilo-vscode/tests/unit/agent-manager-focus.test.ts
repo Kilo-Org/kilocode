@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test"
 import { Window } from "happy-dom"
-import { focusQuestionOption, hasQuestionOption, preservesTextFocus } from "../../webview-ui/agent-manager/focus"
+import {
+  agentManagerFocusTarget,
+  focusQuestionOption,
+  hasQuestionOption,
+  preservesTextFocus,
+} from "../../webview-ui/agent-manager/focus"
 import { isTextControl } from "../../webview-ui/src/utils/focus"
 
 describe("Agent Manager focus", () => {
@@ -70,5 +75,28 @@ describe("Agent Manager focus", () => {
     expect(preservesTextFocus(prompt)).toBe(false)
     expect(isTextControl(editor)).toBe(true)
     expect(isTextControl(button)).toBe(false)
+  })
+
+  it("resolves prompt and terminal focus from the active DOM owner", () => {
+    const window = new Window()
+    const prompt = window.document.createElement("textarea")
+    const main = window.document.createElement("div")
+    const side = window.document.createElement("div")
+    const mainHost = window.document.createElement("div")
+    const sideHost = window.document.createElement("div")
+    prompt.className = "prompt-input"
+    main.className = "am-terminal-layer"
+    side.className = "am-side-terminal-layer"
+    mainHost.className = "am-terminal-host"
+    sideHost.className = "am-terminal-host"
+    main.append(mainHost)
+    side.append(sideHost)
+
+    expect(agentManagerFocusTarget(prompt)).toBe("prompt")
+    expect(agentManagerFocusTarget(mainHost)).toBe("mainTerminal")
+    expect(agentManagerFocusTarget(sideHost)).toBe("sideTerminal")
+    expect(agentManagerFocusTarget(window.document.body)).toBe("other")
+    expect(agentManagerFocusTarget(mainHost, true)).toBe("prompt")
+    expect(agentManagerFocusTarget(prompt, true)).toBe("prompt")
   })
 })

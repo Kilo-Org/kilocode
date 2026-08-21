@@ -45,4 +45,20 @@ class MessageViewTest : BasePlatformTestCase() {
         assertTrue("prompt bubble is a direct child", wrapIndex >= 0)
         assertTrue("question result stays below the prompt bubble", resultIndex > wrapIndex)
     }
+
+    // An empty message must stay hidden so SessionLayout skips it (no stray gap/stripe at the top of a
+    // turn), and must reappear as soon as content arrives — then hide again if that content is removed.
+    fun `test empty message is hidden until content arrives`() {
+        val msg = Message(MessageDto("m1", "ses", "user", MessageTimeDto(0.0)))
+        val view = MessageView(msg, openFile = { _, _ -> })
+        assertFalse("empty message starts hidden", view.isVisible)
+
+        val text = Text("p1").also { it.content.append("hi") }
+        msg.parts["p1"] = text
+        view.upsertPart(text)
+        assertTrue("message shows once it has content", view.isVisible)
+
+        view.removePart("p1")
+        assertFalse("message hides again when content is removed", view.isVisible)
+    }
 }

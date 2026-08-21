@@ -3,6 +3,7 @@ import { HttpRouter } from "effect/unstable/http"
 import { parse } from "./assertions"
 import { runtime, type Runtime } from "./runtime"
 import type { ActiveScenario, BackendApp, CallResult, CaptureMode, SeededContext } from "./types"
+import type { Method, RequestSpec } from "./types" // kilocode_change
 
 type CallOptions = {
   auth?: {
@@ -16,6 +17,23 @@ export function call(scenario: ActiveScenario, ctx: SeededContext<unknown>, opti
     capture(await app(await runtime(), options).request(toRequest(scenario, ctx)), scenario.capture),
   )
 }
+
+// kilocode_change start
+export function request(method: Method, spec: RequestSpec) {
+  return Effect.promise(async () =>
+    capture(
+      await app(await runtime(), {}).request(
+        new Request(new URL(spec.path, "http://localhost"), {
+          method,
+          headers: spec.body === undefined ? spec.headers : { "content-type": "application/json", ...spec.headers },
+          body: spec.body === undefined ? undefined : JSON.stringify(spec.body),
+        }),
+      ),
+      "full",
+    ),
+  )
+}
+// kilocode_change end
 
 export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" | "valid" = "missing") {
   return Effect.promise(async () => {

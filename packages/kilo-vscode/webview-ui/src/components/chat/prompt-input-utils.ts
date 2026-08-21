@@ -1,3 +1,5 @@
+import { type ParsedMemoryCommand } from "../../utils/memory-command"
+
 export type SandboxDefaultState = {
   desired: boolean
   enabled: boolean
@@ -149,4 +151,16 @@ export function isQuestioning(blocked: boolean, questions: number): boolean {
 export function isPathMention(text: string): boolean {
   const path = text.replace(/^@/, "")
   return path !== "terminal" && path !== "git-changes"
+}
+
+/**
+ * The text that should remain in the prompt input after a memory command is
+ * submitted. No-argument memory operations (e.g. rebuild, on, status, inspect)
+ * typed with trailing free text (e.g. "/memory rebuild hello") keep that text in
+ * the input instead of discarding it; the parser reports the unconsumed
+ * remainder as `rest`. Argument-taking operations (remember, correct, forget,
+ * auto, purge) consume their text, so nothing remains.
+ */
+export function memoryRest(cmd: ParsedMemoryCommand): string {
+  return "rest" in cmd ? (cmd.rest ?? "") : ""
 }

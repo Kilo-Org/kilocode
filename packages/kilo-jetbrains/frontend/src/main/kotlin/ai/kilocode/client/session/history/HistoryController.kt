@@ -5,9 +5,9 @@ import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.edt
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.SessionDto
-import com.intellij.openapi.application.ApplicationManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,7 +64,7 @@ class HistoryController(
         reloadCloud()
     }
 
-    internal fun activity() = sessions.activity()
+    internal fun activity() = sessions.activitySnapshot()
 
     fun reloadLocal() {
         edt { local.start() }
@@ -220,15 +220,6 @@ class HistoryController(
             url
         }
     }
-}
-
-private fun edt(block: () -> Unit) {
-    val app = ApplicationManager.getApplication()
-    if (app.isDispatchThread) {
-        block()
-        return
-    }
-    app.invokeLater(block)
 }
 
 private fun localItem(session: SessionDto) = LocalHistoryItem(session)

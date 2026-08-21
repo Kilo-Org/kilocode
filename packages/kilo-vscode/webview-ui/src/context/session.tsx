@@ -51,6 +51,7 @@ import type {
   MessageLoadMode,
   ToolPart,
 } from "../types/messages"
+import { agentProject, isStaleAgentSession } from "./session-project"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import {
   computeStatus,
@@ -62,10 +63,14 @@ import {
   buildSessionToolParts,
   childID,
   dropSet,
+  emptyPageState,
+  messageParts,
   reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
   upsertSessionToolPart,
+  type MessageMutation,
+  type MessagePageState,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
@@ -73,39 +78,23 @@ import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { mergeParts } from "./session-parts"
+import { mergeOptimisticPart, mergeParts } from "./session-parts"
 import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { state as todoState } from "./todo-revert"
 import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
-import { visibleMessages as filterVisibleMessages } from "./session-queue"
+import { activeUserMessageID, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
-import { createDraftAgentSeed } from "./session-agent"
+import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
-
-type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
-
-interface MessagePageState {
-  loadingInitial: boolean
-  loadingOlder: boolean
-  before?: string
-  hasMore: boolean
-  lastMutation?: MessageMutation
-}
-
-const emptyPageState: MessagePageState = {
-  loadingInitial: false,
-  loadingOlder: false,
-  hasMore: false,
-}
 
 // Store structure for messages and parts
 interface SessionStore {
@@ -240,7 +229,7 @@ interface SessionContextValue {
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
   variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
-  selectVariant: (value: string, sessionID?: string) => void
+  selectVariant: (value: string | undefined, sessionID?: string) => void
 
   // Model favorites
   recentModels: Accessor<ModelSelection[]>
@@ -298,11 +287,13 @@ interface SessionContextValue {
   clearCurrentSession: () => void
   loadSessions: () => void
   loadOlderMessages: () => boolean
-  selectSession: (id: string) => void
+  selectSession: (id: string, options?: { focus?: boolean }) => void
+  releaseSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
   exportSessionTranscript: (id: string) => void
-  syncSession: (sessionID: string) => void
+  syncSession: (sessionID: string, parentSessionID?: string, scope?: "task" | "inspector") => void
+  unsyncSession: (sessionID: string, scope?: "task" | "inspector") => void
 
   // Cloud session preview
   cloudPreviewId: Accessor<string | null>
@@ -323,6 +314,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
+  const [agentProjectId, setAgentProjectId] = createSignal<string | undefined>()
+
+  const trackAgentProject = (message: ExtensionMessage): boolean => {
+    if (message.type !== "agentManager.projects" && message.type !== "agentManager.selectionActivated") return false
+    setAgentProjectId(agentProject(message))
+    return true
+  }
   const [draftSessionID, setDraftSessionID] = createSignal<string | undefined>()
   const [userClearedSession, setUserClearedSession] = createSignal(false)
 
@@ -469,6 +467,9 @@ export const SessionProvider: ParentComponent = (props) => {
   // Tracks optimistic messageIDs that haven't been confirmed by the server yet.
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
   const pendingOptimistic = new Map<string, Set<string>>()
+  // Keeps optimistic parts visible between message.updated and their canonical
+  // message.part.updated events.
+  const optimisticParts = new Map<string, Set<string>>()
   // Sessions can be created/imported while an older list request is still in flight.
   // Keep them until a later list payload confirms them or deletion arrives.
   const freshSessions = new Set<string>()
@@ -717,8 +718,11 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   function promptAgent(sessionID?: string) {
-    const name = agentForScope(sessionID)
-    return name !== defaultAgent() ? name : undefined
+    return resolvePromptAgent({
+      sessionID,
+      selections: store.agentSelections,
+      pending: pendingAgentSelection(),
+    })
   }
 
   function hideErrors(sid: string) {
@@ -1248,9 +1252,15 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Handle messages from extension
   onMount(() => {
-    const unsubscribe = vscode.onMessage(handleExtensionMessage)
+    const unsubscribeProject = vscode.onMessage(trackAgentProject)
+    const unsubscribe = vscode.onMessage((message) => {
+      if (!isStaleAgentSession(message, agentProjectId())) handleExtensionMessage(message)
+    })
     setModelUsageReady(true)
-    onCleanup(unsubscribe)
+    onCleanup(() => {
+      unsubscribeProject()
+      unsubscribe()
+    })
   })
 
   // Event handlers
@@ -1386,7 +1396,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (prefs.model && prefs.variant) {
       const agent = prefs.agent ?? store.agentSelections[sessionID] ?? defaultAgent()
       const key = variantKey(prefs.model, agent, sessionID)
-      if (!store.variantSelections[key]) setStore("variantSelections", key, prefs.variant)
+      if (store.variantSelections[key] === undefined) setStore("variantSelections", key, prefs.variant)
     }
   }
 
@@ -1400,24 +1410,21 @@ export const SessionProvider: ParentComponent = (props) => {
     return [...merged, ...orphans]
   }
 
-  function setTools(sessionID: string, tools: ToolPart[]) {
-    setStore("toolParts", sessionID, reconcileSessionToolParts(tools))
+  function setTools(sessionID: string, tools: ToolPart[], mode?: MessageLoadMode) {
+    setStore("toolParts", sessionID, mode === "replace" ? tools : reconcileSessionToolParts(tools))
   }
 
-  function rebuildToolParts(sessionID: string, messages: Message[], parts?: Record<string, Part[]>) {
+  function rebuildToolParts(
+    sessionID: string,
+    messages: Message[],
+    parts?: Record<string, Part[]>,
+    mode?: MessageLoadMode,
+  ) {
     const tools = buildSessionToolParts(
       messages,
-      (msg) => parts?.[msg.id] ?? store.parts[msg.id] ?? stash.peek(msg.id) ?? msg.parts,
+      (msg) => parts?.[msg.id] ?? stash.peek(msg.id) ?? untrack(() => store.parts[msg.id]) ?? msg.parts,
     )
-    setTools(sessionID, tools)
-  }
-
-  function messageParts(messages: Message[]): Record<string, Part[]> {
-    const parts: Record<string, Part[]> = {}
-    for (const msg of messages) {
-      if (msg.parts && msg.parts.length > 0) parts[msg.id] = msg.parts
-    }
-    return parts
+    setTools(sessionID, tools, mode)
   }
 
   function patchToolPart(sessionID: string | undefined, messageID: string, part: Part) {
@@ -1486,28 +1493,31 @@ export const SessionProvider: ParentComponent = (props) => {
         setStore("messages", sessionID, reconcile(merged, { key: "id" }))
       }
 
-      for (const msg of messages) {
+      const cutoff = Math.max(0, messages.length - 15)
+      for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i]!
         const parts = msg.parts ?? []
-        if (mode === "reconcile" && store.parts[msg.id]) {
-          // Reconcile on a message already hydrated into the reactive store:
-          // write parts directly so visible turns pick up server corrections,
-          // but do not erase proven newer streamed text absent from a stale snapshot.
+        if (mode === "reconcile" && store.parts[msg.id] && !optimisticParts.has(msg.id)) {
           const merged = mergeParts(store.parts[msg.id], parts, input.since ?? Number.POSITIVE_INFINITY)
           setStore("parts", msg.id, reconcile(merged, { key: "id" }))
           stash.remove(msg.id)
           continue
         }
         if (parts.length > 0) {
+          optimisticParts.delete(msg.id)
           loadedParts[msg.id] = parts
-          // Stash parts outside the reactive store. They hydrate on demand
-          // when the virtualizer renders the corresponding turn.
-          stash.put(msg.id, parts)
+          if (i >= cutoff) {
+            setStore("parts", msg.id, parts)
+            stash.remove(msg.id)
+          } else {
+            stash.put(msg.id, parts)
+          }
           continue
         }
         if (mode === "reconcile") stash.remove(msg.id)
       }
 
-      rebuildToolParts(sessionID, merged, loadedParts)
+      rebuildToolParts(sessionID, merged, loadedParts, mode)
 
       // "reconcile" is a background tail refresh, not a page navigation —
       // preserve the existing pagination cursor/hasMore so "load earlier"
@@ -1547,21 +1557,11 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleMessageCreated(message: Message) {
     if (message.role === "assistant") clearSessionDraftDiscarded(message.sessionID)
     // Message confirmed by server — no longer optimistic.
-    // Clear placeholder parts so they don't duplicate alongside real parts
-    // arriving via individual part.updated events (the server's message.updated
-    // SSE event does NOT include parts).
+    // Keep placeholder parts until their canonical part.updated events arrive.
+    // The message.updated SSE event does not include parts, so clearing them
+    // here makes a queued prompt render only its status during that gap.
     const pending = pendingOptimistic.get(message.sessionID)
-    const wasOptimistic = pending?.has(message.id)
     pending?.delete(message.id)
-
-    if (wasOptimistic) {
-      setStore(
-        "parts",
-        produce((p) => {
-          delete p[message.id]
-        }),
-      )
-    }
 
     const exists = (store.messages[message.sessionID] ?? []).some((msg) => msg.id === message.id)
     setStore("messages", message.sessionID, (msgs = []) => {
@@ -1583,6 +1583,7 @@ export const SessionProvider: ParentComponent = (props) => {
     recoverPrefs(message.sessionID, [message])
 
     if (message.parts && message.parts.length > 0) {
+      optimisticParts.delete(message.id)
       stash.remove(message.id)
       setStore("parts", message.id, message.parts)
     }
@@ -1618,6 +1619,19 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore("parts", effectiveMessageID, stashed)
     }
 
+    const current = store.parts[effectiveMessageID] ?? []
+    const index = current.findIndex((item) => item.id === part.id)
+    const pending = optimisticParts.get(effectiveMessageID)
+    if (index < 0 && pending) {
+      const merged = mergeOptimisticPart(current, pending, part)
+      setStore("parts", effectiveMessageID, merged.parts)
+      if (merged.replaced) {
+        pending.delete(merged.replaced)
+        if (pending.size === 0) optimisticParts.delete(effectiveMessageID)
+      }
+      return
+    }
+
     setStore(
       "parts",
       produce((parts) => {
@@ -1625,11 +1639,12 @@ export const SessionProvider: ParentComponent = (props) => {
           parts[effectiveMessageID] = []
         }
 
-        const existingIndex = parts[effectiveMessageID].findIndex((p) => p.id === part.id)
+        const list = parts[effectiveMessageID]
+        const existingIndex = list.findIndex((p) => p.id === part.id)
 
         if (existingIndex >= 0) {
           // Update existing part
-          const existing = parts[effectiveMessageID][existingIndex]
+          const existing = list[existingIndex]
           if (
             delta?.type === "text-delta" &&
             delta.textDelta &&
@@ -1648,7 +1663,7 @@ export const SessionProvider: ParentComponent = (props) => {
           }
         } else {
           // Add new part
-          parts[effectiveMessageID].push(part)
+          list.push(part)
         }
       }),
     )
@@ -1699,6 +1714,7 @@ export const SessionProvider: ParentComponent = (props) => {
           delete map[sessionID]
         }),
       )
+      for (const msg of store.messages[sessionID] ?? []) optimisticParts.delete(msg.id)
       // Session is idle - any remaining pending optimistic IDs are either
       // already confirmed (messageCreated removed them) or orphaned (queued
       // callbacks were dropped on abort). Clean up the tracking set; the
@@ -1827,6 +1843,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!message.messageID && sid) aborts.clear(sid)
     if (sid && message.messageID) {
       pendingOptimistic.get(sid)?.delete(message.messageID)
+      optimisticParts.delete(message.messageID)
       stash.remove(message.messageID)
       batch(() => {
         setStore("messages", sid, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
@@ -1852,8 +1869,10 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function visibleToolParts(sessionID: string, messages: Message[]): ToolPart[] {
+    const tools = store.toolParts[sessionID]
+    if (!tools || tools.length === 0 || messages.length === 0) return []
     const ids = new Set(messages.map((msg) => msg.id))
-    return (store.toolParts[sessionID] ?? []).filter((part) => !part.messageID || ids.has(part.messageID))
+    return tools.filter((part) => !part.messageID || ids.has(part.messageID))
   }
 
   /**
@@ -1866,8 +1885,9 @@ export const SessionProvider: ParentComponent = (props) => {
     const queue = [rootID]
     while (queue.length > 0) {
       const sid = queue.pop()!
+      const tools = store.toolParts[sid]
+      if (!tools || tools.length === 0 || !tools.some((t) => t.tool === "task")) continue
       for (const p of visibleToolParts(sid, source(sid))) {
-        // Webview ToolState omits runtime metadata; task parts still carry it from the backend.
         const child = childID(
           p as {
             type: string
@@ -1985,6 +2005,7 @@ export const SessionProvider: ParentComponent = (props) => {
       // Collect message IDs so we can clean up their parts (store + stash)
       const msgs = store.messages[sessionID] ?? []
       const msgIds = msgs.map((m) => m.id)
+      for (const id of msgIds) optimisticParts.delete(id)
       for (const id of msgIds) stash.remove(id)
       clearHiddenErrors(msgIds)
 
@@ -2048,6 +2069,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
+    optimisticParts.delete(messageID)
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
     dropMessageTools(sessionID, messageID)
     clearHiddenErrors([messageID])
@@ -2204,19 +2226,24 @@ export const SessionProvider: ParentComponent = (props) => {
     pendingOptimistic.set(sid, pending)
 
     const parts: Part[] = []
+    const partIds = new Set<string>()
     if (text) {
+      const partId = Identifier.ascending("part")
+      partIds.add(partId)
       parts.push({
         type: "text" as const,
-        id: Identifier.ascending("part"),
+        id: partId,
         messageID,
         text,
         metadata: review ? reviewMetadata(review) : undefined,
       })
     }
     for (const file of files ?? []) {
+      const partId = Identifier.ascending("part")
+      partIds.add(partId)
       parts.push({
         type: "file" as const,
-        id: Identifier.ascending("part"),
+        id: partId,
         messageID,
         mime: file.mime,
         url: file.url,
@@ -2224,9 +2251,9 @@ export const SessionProvider: ParentComponent = (props) => {
         source: file.source,
       })
     }
-
     setStore("messages", sid, (msgs = []) => [...msgs, temp])
     setStore("parts", messageID, parts)
+    if (parts.length > 0) optimisticParts.set(messageID, new Set(parts.map((part) => part.id)))
     patchPage(sid, { lastMutation: "append" })
     queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
   }
@@ -2549,9 +2576,9 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    // Reset agent selection to default for the new session (model overrides persist)
+    // Clear the pending agent so the picker shows the default and send omits it
     agentDrafts.prune(draftSessionID())
-    setPendingAgentSelection(defaultAgent())
+    setPendingAgentSelection(null)
     vscode.postMessage({ type: "createSession" })
   }
 
@@ -2562,7 +2589,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setDraftSessionID(undefined)
     setCloudPreviewId(null)
     setLoading(false)
-    setPendingAgentSelection(defaultAgent())
+    setPendingAgentSelection(null)
     vscode.postMessage({ type: "clearSession" })
   }
 
@@ -2592,41 +2619,49 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Session whose message fetch was deferred because the backend was offline at
   // selection time. Replayed by the reconnect effect below.
-  let deferredFetch: string | undefined
+  let deferredFetch: { id: string; focus: boolean } | undefined
 
-  function selectSession(id: string) {
+  function selectSession(id: string, options: { focus?: boolean } = {}) {
     // Cloud preview sessions use a separate keyed path (selectCloudSession).
     if (id.startsWith("cloud:")) {
       console.warn("[Kilo New] Cannot select cloud preview session via selectSession")
       return
     }
     const ready = loaded().has(id)
-    // Reflect the selection locally and synchronously so the chat always tracks
-    // the sidebar/tab selection. These are local signals and need no backend, so
-    // they update even while disconnected. Bailing out here when not connected
-    // froze the chat on the previous session while the side diff (resolved from
-    // the worktree selection) still moved (the reported "only the diff changes").
-    agentDrafts.prune(draftSessionID())
-    setCloudPreviewId(null)
-    setCurrentSessionID(id)
-    setDraftSessionID(id)
-    setUserClearedSession(false)
-    setLoading(!ready)
-    if (!ready) patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
+    batch(() => {
+      agentDrafts.prune(draftSessionID())
+      setCloudPreviewId(null)
+      setCurrentSessionID(id)
+      setDraftSessionID(id)
+      setUserClearedSession(false)
+      setLoading(!ready)
+      if (!ready) patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
+    })
     // Only the message fetch needs the backend. Defer it while offline and let
     // the reconnect effect replay it. We defer even for cached sessions: the
     // load message is what re-focuses the backend (focusSession, contextSessionID,
     // SSE tracking, active worktree) and runs the reconcile self-heal, so skipping
     // it would leave the extension focused on the previously selected session.
+    const focus = options.focus !== false
     if (!server.isConnected()) {
-      deferredFetch = id
+      deferredFetch = { id, focus }
       return
     }
     deferredFetch = undefined
-    loadFocusedMessages(id, ready)
+    loadFocusedMessages(id, ready, focus)
   }
 
-  function loadFocusedMessages(id: string, ready: boolean) {
+  function loadFocusedMessages(id: string, ready: boolean, focus = true) {
+    if (!focus) {
+      vscode.postMessage({
+        type: "loadMessages",
+        sessionID: id,
+        mode: "replace",
+        focus: false,
+        limit: MESSAGE_PAGE_LIMIT,
+      })
+      return
+    }
     vscode.postMessage(
       ready
         ? { type: "loadMessages", sessionID: id, mode: "focus" }
@@ -2641,10 +2676,10 @@ export const SessionProvider: ParentComponent = (props) => {
   createEffect(
     on(server.isConnected, (connected) => {
       if (!connected) return
-      const id = deferredFetch
+      const pending = deferredFetch
       deferredFetch = undefined
-      if (!id || id !== currentSessionID()) return
-      loadFocusedMessages(id, loaded().has(id))
+      if (!pending || pending.id !== currentSessionID()) return
+      loadFocusedMessages(pending.id, loaded().has(pending.id), pending.focus)
     }),
   )
 
@@ -2725,9 +2760,9 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? store.messages[id] || [] : []
   }
 
-  const getParts = (messageID: string) => {
-    return store.parts[messageID] || stash.peek(messageID) || []
-  }
+  // Keep off-screen history in the non-reactive stash, but track live parts so
+  // newly streamed messages invalidate the transcript.
+  const getParts = (messageID: string) => stash.peek(messageID) ?? store.parts[messageID] ?? []
 
   const getSessionToolParts = (sessionID: string) => store.toolParts[sessionID] ?? []
 
@@ -2832,8 +2867,12 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
   }
 
-  function syncSession(sessionID: string) {
-    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID: currentSessionID() })
+  function syncSession(sessionID: string, parentSessionID = currentSessionID(), scope: "task" | "inspector" = "task") {
+    vscode.postMessage({ type: "syncSession", sessionID, parentSessionID, scope })
+  }
+
+  function unsyncSession(sessionID: string, scope: "task" | "inspector" = "task") {
+    vscode.postMessage({ type: "unsyncSession", sessionID, scope })
   }
 
   const todos = () => {
@@ -2881,16 +2920,23 @@ export const SessionProvider: ParentComponent = (props) => {
     return buildCostBreakdown(id, costs, familyLabels(), language.t("context.stats.thisSession"))
   })
 
-  // Status text derived from last assistant message parts
+  // Status text derived from current turn's assistant message parts
   const statusText = createMemo<string | undefined>(() => {
     if (status() === "idle") return undefined
+    const thinking = language.t("ui.sessionTurn.status.thinking")
     const fallback = language.t("ui.sessionTurn.status.consideringNextSteps")
     const id = currentSessionID()
     const msgs = messages()
-    for (let i = msgs.length - 1; i >= 0; i--) {
+    const activeID = activeUserMessageID(msgs, statusInfo(), (msg) => getParts(msg.id), submitting())
+    const activeIdx = activeID
+      ? msgs.findIndex((msg) => msg.id === activeID)
+      : msgs.findLastIndex((m) => m.role === "user")
+    if (activeIdx < 0) return thinking
+
+    for (let i = msgs.length - 1; i > activeIdx; i--) {
       if (msgs[i].role !== "assistant") continue
       const parts = getParts(msgs[i].id)
-      if (parts.length === 0) break
+      if (parts.length === 0) return thinking
       const raw = computeStatus(parts[parts.length - 1], language.t) ?? fallback
       // When delegating to a subagent and that subagent is blocked on a prompt,
       // replace the generic "Delegating work" label with a more informative one
@@ -2903,7 +2949,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       return raw
     }
-    return fallback
+    return thinking
   })
 
   const modelUsage = createMemo<SessionModelUsage | undefined>(() => {
@@ -3028,10 +3074,12 @@ export const SessionProvider: ParentComponent = (props) => {
     loadSessions,
     loadOlderMessages,
     selectSession,
+    releaseSession: handleSessionDeleted,
     deleteSession,
     renameSession,
     exportSessionTranscript,
     syncSession,
+    unsyncSession,
     cloudPreviewId,
     selectCloudSession,
     draftSessionID,

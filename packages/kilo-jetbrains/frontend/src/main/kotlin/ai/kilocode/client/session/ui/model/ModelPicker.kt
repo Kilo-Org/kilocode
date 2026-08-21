@@ -205,7 +205,7 @@ class ModelPicker : PickerButton() {
             maxVisibleRows = MODEL_PICKER_MAX_VISIBLE_ROWS,
             emptyListHeight = MODEL_PICKER_EMPTY_LIST_HEIGHT,
         )
-        popup.show()
+        restoreFocusOnPick(popup.show())
     }
 
     private fun favoriteKeys(): Set<String> = favorites().mapTo(mutableSetOf()) { "${it.providerID}/${it.modelID}" }

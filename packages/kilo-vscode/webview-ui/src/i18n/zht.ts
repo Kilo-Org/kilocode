@@ -2,6 +2,8 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "連接 Anaconda Desktop",
   "provider.anaconda.title.manage": "管理 Anaconda Desktop",
@@ -54,6 +56,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "連接供應商",
 
@@ -72,30 +75,6 @@ export const dict = {
   "revert.disabled.agentBusy": "等待 Agent 完成",
   "command.session.compact": "精簡工作階段",
   "command.session.export": "匯出會話紀錄",
-
-  "agentRequirements.skill.installed": "已安裝",
-  "agentRequirements.skill.checkFailed": "技能檢查失敗",
-  "agentRequirements.skill.missing": "未安裝",
-  "agentRequirements.mcp.connected": "已連線",
-  "agentRequirements.mcp.checkFailed": "MCP 檢查失敗",
-  "agentRequirements.mcp.missing": "未連線",
-  "agentRequirements.extension.installed": "已安裝",
-  "agentRequirements.extension.checkFailed": "VS Code 擴充功能檢查失敗",
-  "agentRequirements.extension.missing": "未安裝",
-  "agentRequirements.extension.description": "在 VS Code 中安裝缺少的擴充功能。",
-  "agentRequirements.group.skills": "技能",
-  "agentRequirements.group.mcps": "MCP",
-  "agentRequirements.group.extensions": "VS Code 擴充功能",
-  "agentRequirements.blocked.title": "{{agent}} 代理前置需求",
-  "agentRequirements.blocked.description": "此代理需要以下工具後才能執行。",
-  "agentRequirements.prompt.blocked": "請先完成必要檢查，才能使用此代理",
-  "agentRequirements.action.openMarketplace": "開啟 Marketplace",
-  "agentRequirements.error.unknownAgent": "找不到所選代理。",
-  "agentRequirements.error.malformedDeclaration": "此代理的需求宣告無效。",
-  "agentRequirements.error.discoveryFailed": "Kilo 無法檢查可用技能。",
-  "agentRequirements.error.mcpStatusFailed": "Kilo 無法檢查 MCP 伺服器狀態。",
-  "agentRequirements.error.scopeMismatch": "此代理需求檢查已不再有效。",
-  "agentRequirements.error.requestFailed": "Kilo 無法檢查代理需求。",
 
   "dialog.provider.search.placeholder": "搜尋供應商",
   "dialog.provider.empty": "找不到供應商",
@@ -255,6 +234,7 @@ export const dict = {
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
+  "notification.permission.titleSandboxEscalation": "要允許在沙盒外執行 Git 操作嗎？",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
   "ui.permission.doomLoop.rule": "繼續呼叫 {{tool}}",
@@ -826,11 +806,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "額外可寫路徑",
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "啟用 SWE-Pruner：根據智能體提供的聚焦問題，對讀取、搜尋與 shell 工具的大型輸出進行任務感知裁剪",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
-  "settings.experimental.swePrunerModel.description": "用於裁剪工具輸出的模型;預設為已設定的小模型",
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
@@ -1047,10 +1022,14 @@ export const dict = {
   "settings.display.codeEdit.description": "選擇程式碼編輯區塊與差異區塊的初始狀態：展開或收合。",
   "settings.display.codeEdit.expanded": "展開",
   "settings.display.codeEdit.collapsed": "收合",
+  "settings.display.mcpTool.title": "MCP 與通用工具區塊",
+  "settings.display.mcpTool.description": "選擇 MCP 與通用工具區塊的初始狀態：展開或收合。",
+  "settings.display.mcpTool.expanded": "展開",
+  "settings.display.mcpTool.collapsed": "收合",
 
   "settings.display.tokenThroughput.title": "顯示權杖吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助理訊息與工作標題中顯示文字生成速率（權杖/秒）。預設隱藏，以保持對話簡潔。",
+    "在最新的助理訊息和任務標題中顯示文字生成速率（tokens/sec）。預設顯示；需要時停用此設定即可隱藏。",
   "settings.display.autoApprovalReason.title": "顯示自動核准原因",
   "settings.display.autoApprovalReason.description":
     "在工具呼叫中顯示一行說明其被自動核准的原因（符合的規則、代理預設值、YOLO 模式等）。",
@@ -1205,6 +1184,22 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 個待辦已完成",
   "task.todos.allDone": "{{count}} 個待辦已完成",
+  "task.backgroundAgents.running.one": "1 個背景 Agent",
+  "task.backgroundAgents.running.many": "{{count}} 個背景 Agent",
+  "task.backgroundAgents.open": "開啟背景 Agent",
+  "task.backgroundAgents.cancel": "停止",
+  "task.backgroundAgents.continueInBackground": "在背景繼續",
+  "task.backgroundAgents.foreground": "前景 Agent 執行中",
+  "task.backgroundAgents.waiting": "背景 Agent 需要你的輸入",
+  "task.backgroundAgents.needsInput": "需要輸入",
+  "task.backgroundAgents.dismiss": "關閉",
+  "task.backgroundAgents.clearFinished": "清除已完成",
+  "task.backgroundAgents.summary": "{{running}}/{{total}} 個背景 Agent 執行中",
+  "task.backgroundAgents.status.running": "執行中",
+  "task.backgroundAgents.status.completed": "已完成",
+  "task.backgroundAgents.status.cancelled": "已取消",
+  "task.backgroundAgents.status.error": "錯誤",
+  "task.backgroundAgents.untitled": "背景 Agent",
   "settings.saveBar.unsavedChanges": "未儲存的變更",
   "settings.saveBar.discard": "捨棄",
   "settings.saveBar.save": "儲存",

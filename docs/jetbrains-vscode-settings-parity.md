@@ -52,7 +52,6 @@ No CLI/SDK change and no new runtime feature.
 | Batch tool | `experimental.batch_tool` | bool | Experimental |
 | Native notebook tools | `experimental.native_notebook_tools` | bool | Experimental |
 | Continue loop on deny | `experimental.continue_loop_on_deny` | bool | Experimental |
-| SWE pruner (+ model) | `experimental.swe_pruner`, `..._model` | bool + string | Experimental |
 | MCP timeout | `experimental.mcp_timeout` | number | Experimental |
 | Per-tool toggles | `tools.<name>` | bool | Experimental |
 

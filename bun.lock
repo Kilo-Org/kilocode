@@ -359,7 +359,7 @@
     },
     "packages/kilo-jetbrains": {
       "name": "@kilocode/kilo-jetbrains",
-      "version": "7.4.20",
+      "version": "7.4.21",
     },
     "packages/kilo-memory": {
       "name": "@kilocode/kilo-memory",

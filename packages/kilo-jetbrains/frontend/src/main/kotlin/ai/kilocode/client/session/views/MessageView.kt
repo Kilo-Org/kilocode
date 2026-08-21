@@ -20,6 +20,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.tool.EditToolView
+import ai.kilocode.client.session.views.tool.ApprovalReasonTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.ToolbarButtonAction
@@ -35,7 +36,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Point
 import java.awt.Graphics
@@ -67,6 +67,7 @@ class MessageView(
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
+    private val onOpenSubagent: ((String, String) -> Unit)? = null,
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -96,6 +97,7 @@ class MessageView(
     private var wrap: PromptWrap? = null
     private var openDiff: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
+    private var reverted = false
 
     init {
         isOpaque = false
@@ -108,6 +110,7 @@ class MessageView(
             if (isHidden(content)) continue
             addPart(content)
         }
+        syncVisibility()
     }
 
     fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
@@ -126,6 +129,16 @@ class MessageView(
         if (hidden == ref) return
         hidden = ref
         rebuildParts()
+    }
+
+    @RequiresEdt
+    fun syncApprovalReasons(visible: Boolean): Boolean {
+        var changed = false
+        for (view in parts.values) {
+            if (view is ApprovalReasonTarget) changed = view.syncApprovalReason(visible) || changed
+        }
+        if (changed) refresh()
+        return changed
     }
 
     /** Add or update the renderer for [content]. */
@@ -357,9 +370,9 @@ class MessageView(
     }
 
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg), { openAttachment(msg.info.id, it) }, openDiff, sessionId)
+        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg), { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
     } else {
-        ViewFactory.create(content, openFile, openUrl, selection, repo, { openAttachment(msg.info.id, it) }, openDiff, sessionId)
+        ViewFactory.create(content, openFile, openUrl, selection, repo, { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
     }
 
     private fun syncPromptMentions() {
@@ -471,7 +484,11 @@ class MessageView(
             super.paintComponent(g)
             return
         }
-        paintPromptBox(g, this)
+        // Historical user prompts render their text as a plain child that relies on this surface fill,
+        // so paint it whenever the message has content. An empty user message (a bare turn anchor with
+        // no parts) lays out ~1px tall; painting its bubble there would leave a thin light stripe at
+        // the top of the turn, so skip it.
+        if (componentCount > 0) paintPromptBox(g, this)
         super.paintComponent(g)
     }
 
@@ -479,26 +496,39 @@ class MessageView(
         val g2 = g.create() as Graphics2D
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
+            val arc = JBUI.scale(SessionUiStyle.View.BLOCK_ARC)
             val pt = if (box === this) Point() else SwingUtilities.convertPoint(box, Point(), this)
-            val bg = SessionUiStyle.View.Prompt.bgColor(style)
-            g2.color = bg
+            g2.color = SessionUiStyle.View.Prompt.bgColor(style)
             g2.fillRoundRect(pt.x, pt.y, box.width, box.height, arc, arc)
-            // When the prompt shares the session background there is no fill contrast, so draw the
-            // outline to keep the bubble visible.
-            if (bg.rgb == style.editorBackground.rgb) {
-                val w = box.width - 1
-                val h = box.height - 1
-                g2.color = SessionUiStyle.View.Outline.color()
-                if (w > 0 && h > 0) g2.drawRoundRect(pt.x, pt.y, w, h, arc, arc)
-            }
         } finally {
             g2.dispose()
         }
     }
 
+    /**
+     * Mark this message as reverted (rolled back). A reverted message is hidden regardless of its
+     * content; the panel drives this from the model's revert state.
+     */
+    @RequiresEdt
+    fun setReverted(value: Boolean) {
+        reverted = value
+        syncVisibility()
+    }
+
+    /**
+     * An empty message (no rendered parts) would otherwise lay out as a ~1px row and add a stray gap
+     * at the top of its turn — a bare user turn anchor is the common case. Keep such a message present
+     * for lookup/streaming but invisible so [ai.kilocode.client.session.ui.SessionLayout] skips it and
+     * its gap; it reappears as soon as content arrives. Reverted messages stay hidden either way.
+     */
+    @RequiresEdt
+    private fun syncVisibility() {
+        isVisible = componentCount > 0 && !reverted
+    }
+
     @RequiresEdt
     private fun refresh() {
+        syncVisibility()
         revalidate()
         repaint()
     }
@@ -623,7 +653,7 @@ class MessageView(
         private fun queue(onDelete: () -> Unit) = Stack.horizontal(UiStyle.Gap.sm()).also { row ->
             row.isOpaque = false
             row.next(JBLabel(KiloBundle.message("session.queued")).apply {
-                foreground = UIUtil.getContextHelpForeground()
+                foreground = SessionUiStyle.Text.Secondary.foreground()
             })
             row.next(toolbarButton(
                 ToolbarButtonAction(

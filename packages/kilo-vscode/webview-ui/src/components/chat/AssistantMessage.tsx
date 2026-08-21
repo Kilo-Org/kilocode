@@ -76,6 +76,7 @@ function PlanExitCard(props: { part: ToolPart }) {
     <Show when={info()}>
       <div data-component="plan-exit-card">
         <span data-slot="plan-exit-label">{label()}</span>{" "}
+        <span data-slot="plan-exit-badge">{language.t("ui.patch.action.plan")}</span>
         <a data-slot="plan-exit-link" href="#" onClick={open}>
           {display()}
         </a>
@@ -216,6 +217,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
   const edit = createMemo(() => config().code_edit_display === "expanded")
+  const mcp = createMemo(() => config().mcp_tool_display === "expanded")
 
   // Throughput toggle lives on the shared DisplayProvider so every
   // AssistantMessage renders against the same signal without posting its
@@ -331,7 +333,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       part={part}
                                       message={props.message as SDKMessage}
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
-                                      defaultOpen={toolDefaultOpen(part, open(), edit())}
+                                      defaultOpen={toolDefaultOpen(part, open(), edit(), mcp())}
                                       forceOpen={forceOpen()}
                                       forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}

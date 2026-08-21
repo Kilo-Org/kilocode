@@ -120,10 +120,7 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
         }
         return Effect.gen(function* () {
           // kilocode_change start
-          const decoded = yield* decode(
-            args,
-            { errors: "all" },
-          ).pipe(
+          const decoded = yield* decode(args, { errors: "all" }).pipe(
             Effect.mapError(
               (error) =>
                 new InvalidArgumentsError({

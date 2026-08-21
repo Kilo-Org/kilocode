@@ -1,6 +1,7 @@
 package ai.kilocode.client.plugin
 
 import ai.kilocode.KiloPlugin
+import ai.kilocode.client.agentManager.worktree.unregisterWorktreeSessionEditorKind
 import ai.kilocode.client.session.ui.attachment.unregisterAttachmentEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
@@ -37,6 +38,7 @@ object KiloFrontendUnloadCleanup {
             }
         }
         unregisterAttachmentEditorKind()
+        unregisterWorktreeSessionEditorKind()
         service<KiloEditorKindRegistry>().clear()
         KiloVirtualFileSystem.getInstance().clear()
     }

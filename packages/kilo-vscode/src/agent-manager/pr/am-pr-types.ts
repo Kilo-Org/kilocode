@@ -12,6 +12,7 @@ export interface GhComment {
   body?: string
   path?: string
   line?: number
+  originalLine?: number
   url?: string
   createdAt?: string
   diffHunk?: string
@@ -19,6 +20,7 @@ export interface GhComment {
 export interface GhThread {
   id?: string
   isResolved?: boolean
+  isOutdated?: boolean
   comments?: { nodes?: GhComment[] }
 }
 export interface GhReviewRequest {

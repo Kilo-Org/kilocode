@@ -18,7 +18,10 @@ import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.test.CopyProviderSink
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.ide.actions.UndoRedoAction
@@ -225,6 +228,53 @@ class PromptPanelTest : BasePlatformTestCase() {
             assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, panel.width / 2, 1).rgb)
             assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, 1, panel.height / 2).rgb)
             assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, panel.width - 1, panel.height / 2).rgb)
+        } finally {
+            KeyboardFocusManager.setCurrentKeyboardFocusManager(current)
+        }
+    }
+
+    fun `test editor tab prompt reserves focus inset and paints session backdrop`() {
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            hostedInEditorTab = true,
+        )
+        realize(panel, 260, 400)
+        panel.setBounds(0, 0, 260, panel.preferredSize.height)
+        panel.doLayout()
+        val ins = panel.insets
+
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.FOCUS_WIDTH), ins.bottom)
+        assertEquals(ins.bottom, ins.left)
+        assertEquals(ins.bottom, ins.right)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, paint(panel, 0, panel.height / 2).rgb)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, paint(panel, panel.width - 1, panel.height / 2).rgb)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, paint(panel, panel.width / 2, panel.height - 1).rgb)
+
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val current = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        val focus = TestFocusManager()
+        KeyboardFocusManager.setCurrentKeyboardFocusManager(focus)
+        try {
+            focus.focus(editor.contentComponent)
+            editor.contentComponent.focusListeners.forEach {
+                it.focusGained(FocusEvent(editor.contentComponent, FocusEvent.FOCUS_GAINED))
+            }
+
+            assertEquals(
+                JBUI.CurrentTheme.Focus.focusColor().rgb,
+                paint(panel, panel.width / 2, panel.height - 1 - ins.bottom).rgb,
+            )
+            assertEquals(
+                JBUI.CurrentTheme.Focus.focusColor().rgb,
+                paint(panel, ins.left + 1, panel.height / 2).rgb,
+            )
+            assertEquals(
+                JBUI.CurrentTheme.Focus.focusColor().rgb,
+                paint(panel, panel.width - ins.right - 1, panel.height / 2).rgb,
+            )
         } finally {
             KeyboardFocusManager.setCurrentKeyboardFocusManager(current)
         }
@@ -646,6 +696,46 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue("items=$items", items.contains("new"))
     }
 
+    fun `test slash lookup reopens while typing after it closes`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        // The whole-token set does not open a lookup (matches a paste / programmatic set, not typing).
+        field.text = "/n"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+        assertNull("no lookup expected before typing", LookupManager.getActiveLookup(editor))
+
+        // A single keystroke inside the slash token reopens the completion, simulating the popup
+        // having closed during fast typing.
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(editor.caretModel.offset, "e")
+        }
+        editor.caretModel.moveToOffset(editor.document.textLength)
+
+        val items = waitForLookupItems(editor)
+        assertTrue("items=$items", items.contains("new"))
+    }
+
+    fun `test slash lookup refreshes when server commands load`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "/deploy"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+
+        invokeCompletionAction(editor)
+        val before = waitForLookupItems(editor)
+        assertFalse("before=$before", before.contains("deploy"))
+
+        rpc.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY, commands = listOf(CommandDto("deploy")))
+
+        assertTrue("expected deploy after load", waitForLookupItem(editor, "deploy"))
+    }
+
     fun `test prompt completion lookup is positioned above caret`() {
         rpc.searchResult = FileSearchResultDto(
             files = listOf(WorkspaceFileDto("src/deploy.ts", "deploy.ts")),
@@ -748,6 +838,43 @@ class PromptPanelTest : BasePlatformTestCase() {
         waitForSend { sent }
 
         assertTrue(sent)
+    }
+
+    fun `test dialog prompt hides runtime submit and approve controls`() {
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            rounded = false,
+            showSubmit = false,
+            approve = false,
+        )
+
+        assertFalse(components(panel).contains(panel.buttonForTest()))
+    }
+
+    fun `test hidden submit button still exposes send context from editor`() {
+        var sent: String? = null
+        val panel = PromptPanel(
+            project = project,
+            onSend = { text, _ -> sent = text },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            showSubmit = false,
+        )
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        panel.setReady(true)
+        editor.text = "create it"
+
+        val sink = TestSink()
+        (editor as UiDataProvider).uiDataSnapshot(sink)
+        val send = sink.send as ai.kilocode.client.session.ui.prompt.SendPromptContext
+        assertTrue(send.isSendEnabled)
+        send.send()
+        waitForSend { sent != null }
+
+        assertEquals("create it", sent)
     }
 
     fun `test submit resolves mentions from current text`() {
@@ -1437,6 +1564,16 @@ class PromptPanelTest : BasePlatformTestCase() {
             Thread.sleep(20)
         }
         return LookupManager.getActiveLookup(editor)?.items.orEmpty().map { it.lookupString }
+    }
+
+    private fun waitForLookupItem(editor: Editor, value: String): Boolean {
+        repeat(50) {
+            UIUtil.dispatchAllInvocationEvents()
+            val items = LookupManager.getActiveLookup(editor)?.items.orEmpty().map { it.lookupString }
+            if (items.contains(value)) return true
+            Thread.sleep(20)
+        }
+        return false
     }
 
     private fun acceptLookup(editor: Editor) {

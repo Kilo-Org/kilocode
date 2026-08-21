@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop'a bağlan",
   "provider.anaconda.title.manage": "Anaconda Desktop'ı yönet",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Sağlayıcı bağla",
 
@@ -74,30 +77,6 @@ export const dict = {
   "revert.disabled.agentBusy": "Ajanın bitmesini bekleyin",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.export": "Oturum dökümünü dışa aktar",
-
-  "agentRequirements.skill.installed": "Yüklü",
-  "agentRequirements.skill.checkFailed": "Yetenek denetimi başarısız oldu",
-  "agentRequirements.skill.missing": "Yüklü değil",
-  "agentRequirements.mcp.connected": "Bağlı",
-  "agentRequirements.mcp.checkFailed": "MCP denetimi başarısız oldu",
-  "agentRequirements.mcp.missing": "Bağlı değil",
-  "agentRequirements.extension.installed": "Yüklü",
-  "agentRequirements.extension.checkFailed": "VS Code uzantısı denetimi başarısız oldu",
-  "agentRequirements.extension.missing": "Yüklü değil",
-  "agentRequirements.extension.description": "Eksik uzantıları VS Code içinde yükleyin.",
-  "agentRequirements.group.skills": "Yetenekler",
-  "agentRequirements.group.mcps": "MCP’ler",
-  "agentRequirements.group.extensions": "VS Code Uzantıları",
-  "agentRequirements.blocked.title": "{{agent}} ajanı ön koşulları",
-  "agentRequirements.blocked.description": "Bu ajanın çalışmadan önce aşağıdaki araçlara ihtiyacı var.",
-  "agentRequirements.prompt.blocked": "Bu ajanı kullanmak için önce gerekli denetimleri tamamlayın",
-  "agentRequirements.action.openMarketplace": "Marketplace’i Aç",
-  "agentRequirements.error.unknownAgent": "Seçili ajan bulunamadı.",
-  "agentRequirements.error.malformedDeclaration": "Bu ajanın geçersiz bir gereksinim bildirimi var.",
-  "agentRequirements.error.discoveryFailed": "Kilo mevcut yetenekleri denetleyemedi.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo MCP sunucu durumunu denetleyemedi.",
-  "agentRequirements.error.scopeMismatch": "Bu ajan gereksinimi denetimi artık etkin değil.",
-  "agentRequirements.error.requestFailed": "Kilo ajan gereksinimlerini denetleyemedi.",
 
   "dialog.provider.search.placeholder": "Sağlayıcı ara",
   "dialog.provider.empty": "Sağlayıcı bulunamadı",
@@ -268,6 +247,8 @@ export const dict = {
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
+  "notification.permission.titleSandboxEscalation":
+    "Git işleminin korumalı alan dışında gerçekleştirilmesine izin verilsin mi?",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
   "ui.permission.doomLoop.rule": "{{tool}} çağrılarına devam et",
@@ -890,12 +871,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner'ı etkinleştir: ajan tarafından sağlanan bir odak sorusunun yönlendirmesiyle okuma, arama ve kabuk araçlarının büyük çıktılarının göreve duyarlı olarak budanması",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner Modeli",
-  "settings.experimental.swePrunerModel.description":
-    "Araç çıktılarını budamak için kullanılan model; varsayılan olarak yapılandırılmış küçük model",
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
@@ -1105,10 +1080,15 @@ export const dict = {
     "Kod düzenleme ve fark bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.codeEdit.expanded": "Genişletilmiş",
   "settings.display.codeEdit.collapsed": "Daraltılmış",
+  "settings.display.mcpTool.title": "MCP ve Genel Araç Blokları",
+  "settings.display.mcpTool.description":
+    "MCP ve genel araç bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
+  "settings.display.mcpTool.expanded": "Genişletilmiş",
+  "settings.display.mcpTool.collapsed": "Daraltılmış",
 
   "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":
-    "En son asistan mesajında ve görev başlığında metin üretim hızını (token/sn) gösterir. Sohbeti dağınık göstermemek için varsayılan olarak gizlidir.",
+    "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
   "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
   "settings.display.autoApprovalReason.description":
     "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",
@@ -1238,6 +1218,22 @@ export const dict = {
 
   "task.todos.progress": "{{total}} görevden {{done}} tanesi tamamlandı",
   "task.todos.allDone": "{{count}} görev tamamlandı",
+  "task.backgroundAgents.running.one": "1 arka plan ajanı",
+  "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
+  "task.backgroundAgents.open": "Arka plan ajanını aç",
+  "task.backgroundAgents.cancel": "Durdur",
+  "task.backgroundAgents.continueInBackground": "Arka planda devam et",
+  "task.backgroundAgents.foreground": "Ön plan ajanı çalışıyor",
+  "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
+  "task.backgroundAgents.needsInput": "Giriş gerekli",
+  "task.backgroundAgents.dismiss": "Kapat",
+  "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
+  "task.backgroundAgents.summary": "{{total}} arka plan ajanından {{running}} tanesi çalışıyor",
+  "task.backgroundAgents.status.running": "Çalışıyor",
+  "task.backgroundAgents.status.completed": "Tamamlandı",
+  "task.backgroundAgents.status.cancelled": "İptal edildi",
+  "task.backgroundAgents.status.error": "Hata",
+  "task.backgroundAgents.untitled": "Arka plan ajanı",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",

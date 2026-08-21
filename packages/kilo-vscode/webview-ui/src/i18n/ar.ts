@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "توصيل Anaconda Desktop",
   "provider.anaconda.title.manage": "إدارة Anaconda Desktop",
@@ -52,6 +54,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "اتصال بموفر",
 
@@ -71,30 +74,6 @@ export const dict = {
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
   "command.session.compact": "ضغط الجلسة",
   "command.session.export": "تصدير سجل الجلسة",
-
-  "agentRequirements.skill.installed": "مثبت",
-  "agentRequirements.skill.checkFailed": "فشل فحص المهارة",
-  "agentRequirements.skill.missing": "غير مثبت",
-  "agentRequirements.mcp.connected": "متصل",
-  "agentRequirements.mcp.checkFailed": "فشل فحص MCP",
-  "agentRequirements.mcp.missing": "غير متصل",
-  "agentRequirements.extension.installed": "مثبت",
-  "agentRequirements.extension.checkFailed": "فشل فحص إضافة VS Code",
-  "agentRequirements.extension.missing": "غير مثبت",
-  "agentRequirements.extension.description": "ثبّت الإضافات الناقصة في VS Code.",
-  "agentRequirements.group.skills": "المهارات",
-  "agentRequirements.group.mcps": "MCPs",
-  "agentRequirements.group.extensions": "إضافات VS Code",
-  "agentRequirements.blocked.title": "متطلبات وكيل {{agent}}",
-  "agentRequirements.blocked.description": "يحتاج هذا الوكيل إلى الأدوات التالية قبل أن يتمكن من العمل.",
-  "agentRequirements.prompt.blocked": "أكمل الفحوصات المطلوبة لاستخدام هذا الوكيل أولاً",
-  "agentRequirements.action.openMarketplace": "فتح Marketplace",
-  "agentRequirements.error.unknownAgent": "تعذر العثور على الوكيل المحدد.",
-  "agentRequirements.error.malformedDeclaration": "لدى هذا الوكيل تعريف متطلبات غير صالح.",
-  "agentRequirements.error.discoveryFailed": "تعذر على Kilo فحص المهارات المتاحة.",
-  "agentRequirements.error.mcpStatusFailed": "تعذر على Kilo فحص حالة خادم MCP.",
-  "agentRequirements.error.scopeMismatch": "لم يعد فحص متطلبات هذا الوكيل نشطًا.",
-  "agentRequirements.error.requestFailed": "تعذر على Kilo فحص متطلبات الوكيل.",
 
   "dialog.provider.search.placeholder": "البحث عن موفرين",
   "dialog.provider.empty": "لم يتم العثور على موفرين",
@@ -262,6 +241,7 @@ export const dict = {
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
+  "notification.permission.titleSandboxEscalation": "السماح بعملية Git خارج البيئة المعزولة؟",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
   "ui.permission.doomLoop.rule": "متابعة استدعاءات {{tool}}",
@@ -879,12 +859,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "تفعيل SWE-Pruner: تقليم المخرجات الكبيرة لأدوات القراءة والبحث وshell مع مراعاة المهمة، استنادًا إلى سؤال تركيز يقدّمه الوكيل",
-  "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
-  "settings.experimental.swePrunerModel.description":
-    "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
@@ -1117,10 +1091,14 @@ export const dict = {
     "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",
   "settings.display.codeEdit.expanded": "موسّعة",
   "settings.display.codeEdit.collapsed": "مطوية",
+  "settings.display.mcpTool.title": "كتل أدوات MCP والأدوات العامة",
+  "settings.display.mcpTool.description": "اختر ما إذا كانت كتل أدوات MCP والأدوات العامة تبدأ موسّعة أم مطوية.",
+  "settings.display.mcpTool.expanded": "موسّعة",
+  "settings.display.mcpTool.collapsed": "مطوية",
 
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
-    "عرض معدل توليد النص (رموز/ثانية) على آخر رسالة من المساعد وفي رأس المهمة. مخفي بشكل افتراضي للحفاظ على تنظيم المحادثة.",
+    "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",
   "settings.display.autoApprovalReason.title": "إظهار سبب الموافقة التلقائية",
   "settings.display.autoApprovalReason.description":
     "إظهار سطر عند استدعاءات الأدوات يوضح سبب الموافقة التلقائية عليها (قاعدة مطابقة، إعداد افتراضي للوكيل، وضع YOLO، إلخ).",
@@ -1238,6 +1216,22 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} مهام مكتملة",
   "task.todos.allDone": "{{count}} مهام مكتملة",
+  "task.backgroundAgents.running.one": "وكيل خلفي واحد",
+  "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
+  "task.backgroundAgents.open": "فتح الوكيل الخلفي",
+  "task.backgroundAgents.cancel": "إيقاف",
+  "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
+  "task.backgroundAgents.foreground": "الوكيل الأمامي قيد التشغيل",
+  "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",
+  "task.backgroundAgents.needsInput": "الإدخال مطلوب",
+  "task.backgroundAgents.dismiss": "تجاهل",
+  "task.backgroundAgents.clearFinished": "مسح المكتمل",
+  "task.backgroundAgents.summary": "{{running}} من {{total}} وكلاء خلفيين قيد التشغيل",
+  "task.backgroundAgents.status.running": "قيد التشغيل",
+  "task.backgroundAgents.status.completed": "مكتمل",
+  "task.backgroundAgents.status.cancelled": "ملغى",
+  "task.backgroundAgents.status.error": "خطأ",
+  "task.backgroundAgents.untitled": "وكيل خلفي",
   "settings.saveBar.unsavedChanges": "تغييرات غير محفوظة",
   "settings.saveBar.discard": "تجاهل",
   "settings.saveBar.save": "حفظ",

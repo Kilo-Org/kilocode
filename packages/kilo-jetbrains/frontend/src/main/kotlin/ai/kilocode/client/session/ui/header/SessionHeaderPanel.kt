@@ -42,6 +42,7 @@ import javax.swing.SwingUtilities
 class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
+    private val readonly: Boolean = false,
     onOpenBranchDiff: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
@@ -296,7 +297,8 @@ class SessionHeaderPanel(
         setTokens(header.tokens)
         syncTodos(header.todos.items)
 
-        compact.isEnabled = header.canCompact
+        compact.isVisible = !readonly
+        compact.isEnabled = !readonly && header.canCompact
         val appended = timeline.setItems(header.timeline)
         sizeTimeline()
         if (viewport.isVisible != timeline.isVisible) viewport.isVisible = timeline.isVisible
@@ -310,22 +312,29 @@ class SessionHeaderPanel(
         refresh()
     }
 
+    fun hideBranchChanges() {
+        if (!changes.isVisible) return
+        changes.isVisible = false
+        refresh()
+    }
+
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = style.editorBackground
+        val bg = SessionUiStyle.Colors.sessionBackground()
+        background = bg
         foreground = style.editorForeground
-        top.background = style.editorBackground
+        top.background = bg
         top.isOpaque = true
         top.border = JBUI.Borders.empty(UiStyle.Gap.md(), UiStyle.Gap.sm(), UiStyle.Gap.md(), UiStyle.Gap.sm())
-        centerGroup.background = style.editorBackground
+        centerGroup.background = bg
         centerGroup.isOpaque = true
-        right.background = style.editorBackground
-        changes.background = style.editorBackground
-        tokens.background = style.editorBackground
-        todoRow.background = style.editorBackground
-        todoBox.background = style.editorBackground
-        body.background = style.editorBackground
-        viewport.background = style.editorBackground
+        right.background = bg
+        changes.background = bg
+        tokens.background = bg
+        todoRow.background = bg
+        todoBox.background = bg
+        body.background = bg
+        viewport.background = bg
         title.font = style.boldFont
         title.foreground = style.editorForeground
         changes.applyStyle(style)

@@ -2,6 +2,8 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
   "provider.anaconda.title.manage": "Anaconda Desktop verwalten",
@@ -59,6 +61,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Anbieter verbinden",
 
@@ -80,31 +83,6 @@ export const dict = {
   "revert.disabled.agentBusy": "Warten bis der Agent fertig ist",
   "command.session.compact": "Sitzung komprimieren",
   "command.session.export": "Sitzungsprotokoll exportieren",
-
-  "agentRequirements.skill.installed": "Installiert",
-  "agentRequirements.skill.checkFailed": "Die Skill-Prüfung ist fehlgeschlagen",
-  "agentRequirements.skill.missing": "Nicht installiert",
-  "agentRequirements.mcp.connected": "Verbunden",
-  "agentRequirements.mcp.checkFailed": "Die MCP-Prüfung ist fehlgeschlagen",
-  "agentRequirements.mcp.missing": "Nicht verbunden",
-  "agentRequirements.extension.installed": "Installiert",
-  "agentRequirements.extension.checkFailed": "Die Prüfung der VS Code-Erweiterung ist fehlgeschlagen",
-  "agentRequirements.extension.missing": "Nicht installiert",
-  "agentRequirements.extension.description": "Installiere die fehlenden Erweiterungen in VS Code.",
-  "agentRequirements.group.skills": "Skills",
-  "agentRequirements.group.mcps": "MCPs",
-  "agentRequirements.group.extensions": "VS Code-Erweiterungen",
-  "agentRequirements.blocked.title": "Voraussetzungen für den Agenten {{agent}}",
-  "agentRequirements.blocked.description":
-    "Dieser Agent benötigt die folgenden Werkzeuge, bevor er ausgeführt werden kann.",
-  "agentRequirements.prompt.blocked": "Schließe zuerst die erforderlichen Prüfungen ab, um diesen Agenten zu verwenden",
-  "agentRequirements.action.openMarketplace": "Marketplace öffnen",
-  "agentRequirements.error.unknownAgent": "Der ausgewählte Agent wurde nicht gefunden.",
-  "agentRequirements.error.malformedDeclaration": "Dieser Agent hat eine ungültige Anforderungsdeklaration.",
-  "agentRequirements.error.discoveryFailed": "Kilo konnte die verfügbaren Skills nicht prüfen.",
-  "agentRequirements.error.mcpStatusFailed": "Kilo konnte den MCP-Serverstatus nicht prüfen.",
-  "agentRequirements.error.scopeMismatch": "Diese Prüfung der Agentenanforderungen ist nicht mehr aktiv.",
-  "agentRequirements.error.requestFailed": "Kilo konnte die Agentenanforderungen nicht prüfen.",
 
   "dialog.provider.search.placeholder": "Anbieter durchsuchen",
   "dialog.provider.empty": "Keine Anbieter gefunden",
@@ -278,6 +256,7 @@ export const dict = {
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
   "notification.permission.titleSkillShell": "Shell-Befehle aus dem Skill „{{skill}}“ ausführen?",
+  "notification.permission.titleSandboxEscalation": "Git-Vorgang außerhalb der Sandbox zulassen?",
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
   "ui.permission.doomLoop.prompt": "Potenzielle Schleife beim Tool {{tool}} erkannt. Weiter ausführen?",
   "ui.permission.doomLoop.rule": "{{tool}}-Aufrufe fortsetzen",
@@ -922,12 +901,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Zusätzliche schreibbare Pfade",
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
-  "settings.experimental.swePruner.title": "SWE-Pruner",
-  "settings.experimental.swePruner.description":
-    "SWE-Pruner aktivieren: aufgabenbewusstes Kürzen großer Ausgaben der Lese-, Such- und Shell-Werkzeuge, gesteuert durch eine vom Agenten bereitgestellte Fokusfrage",
-  "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
-  "settings.experimental.swePrunerModel.description":
-    "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
@@ -1172,10 +1145,15 @@ export const dict = {
     "Wählen Sie, ob Blöcke mit Codebearbeitungen und Unterschieden anfangs aus- oder eingeklappt sind.",
   "settings.display.codeEdit.expanded": "Ausgeklappt",
   "settings.display.codeEdit.collapsed": "Eingeklappt",
+  "settings.display.mcpTool.title": "Blöcke für MCP- und generische Werkzeuge",
+  "settings.display.mcpTool.description":
+    "Wählen Sie, ob Blöcke für MCP- und generische Werkzeuge anfangs aus- oder eingeklappt sind.",
+  "settings.display.mcpTool.expanded": "Ausgeklappt",
+  "settings.display.mcpTool.collapsed": "Eingeklappt",
 
   "settings.display.tokenThroughput.title": "Token-Durchsatz anzeigen",
   "settings.display.tokenThroughput.description":
-    "Zeigt die Textgenerierungsrate (Tokens/Sek.) in der letzten Assistentennachricht und im Aufgabenkopf an. Standardmäßig ausgeblendet, um den Chat übersichtlich zu halten.",
+    "Die Textgenerierungsrate (tokens/sec) in der neuesten Assistentennachricht und in der Aufgabenüberschrift anzeigen. Standardmäßig angezeigt; deaktivieren Sie diese Einstellung, um sie bei Bedarf auszublenden.",
   "settings.display.autoApprovalReason.title": "Grund für automatische Genehmigung anzeigen",
   "settings.display.autoApprovalReason.description":
     "Zeigt bei Tool-Aufrufen eine Zeile an, die erklärt, warum sie automatisch genehmigt wurden (passende Regel, Agent-Standard, YOLO-Modus usw.).",
@@ -1296,6 +1274,22 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} Aufgaben erledigt",
   "task.todos.allDone": "{{count}} Aufgaben erledigt",
+  "task.backgroundAgents.running.one": "1 Hintergrund-Agent",
+  "task.backgroundAgents.running.many": "{{count}} Hintergrund-Agenten",
+  "task.backgroundAgents.open": "Hintergrund-Agent öffnen",
+  "task.backgroundAgents.cancel": "Stoppen",
+  "task.backgroundAgents.continueInBackground": "Im Hintergrund fortsetzen",
+  "task.backgroundAgents.foreground": "Vordergrund-Agent läuft",
+  "task.backgroundAgents.waiting": "Ein Hintergrund-Agent benötigt deine Eingabe",
+  "task.backgroundAgents.needsInput": "Eingabe erforderlich",
+  "task.backgroundAgents.dismiss": "Ausblenden",
+  "task.backgroundAgents.clearFinished": "Abgeschlossene löschen",
+  "task.backgroundAgents.summary": "{{running}} von {{total}} Hintergrund-Agenten aktiv",
+  "task.backgroundAgents.status.running": "Läuft",
+  "task.backgroundAgents.status.completed": "Fertig",
+  "task.backgroundAgents.status.cancelled": "Abgebrochen",
+  "task.backgroundAgents.status.error": "Fehler",
+  "task.backgroundAgents.untitled": "Hintergrund-Agent",
   "settings.saveBar.unsavedChanges": "Nicht gespeicherte Änderungen",
   "settings.saveBar.discard": "Verwerfen",
   "settings.saveBar.save": "Speichern",
