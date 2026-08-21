@@ -435,7 +435,10 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
         }
         return yield* ProviderShared.unsupportedContent("Anthropic Messages", "user", ["text", "media"])
       }
-      messages.push({ role: "user", content })
+      const previous = messages.at(-1) // kilocode_change
+      if (previous?.role === "user") // kilocode_change
+        messages[messages.length - 1] = { role: "user", content: [...previous.content, ...content] } // kilocode_change
+      else messages.push({ role: "user", content }) // kilocode_change
       continue
     }
 
@@ -482,7 +485,10 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
         cache_control: cacheControl(breakpoints, part.cache),
       })
     }
-    messages.push({ role: "user", content })
+    const previous = messages.at(-1) // kilocode_change
+    if (previous?.role === "user") // kilocode_change
+      messages[messages.length - 1] = { role: "user", content: [...previous.content, ...content] } // kilocode_change
+    else messages.push({ role: "user", content }) // kilocode_change
   }
 
   return messages

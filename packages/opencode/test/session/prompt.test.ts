@@ -577,9 +577,7 @@ it.instance(
       if (!Array.isArray(messages)) throw new Error("expected LLM messages")
       expect(messages.at(-1)).toMatchObject({
         role: "user",
-        content: expect.arrayContaining([
-          { type: "text", text: expect.stringContaining("MAXIMUM STEPS REACHED") },
-        ]),
+        content: expect.stringContaining("MAXIMUM STEPS REACHED"),
       })
     }),
   30_000,

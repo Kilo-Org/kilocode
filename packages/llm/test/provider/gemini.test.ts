@@ -73,6 +73,7 @@ describe("Gemini route", () => {
             ]),
             Message.assistant([ToolCallPart.make({ id: "call_1", name: "lookup", input: { query: "weather" } })]),
             Message.tool({ id: "call_1", name: "lookup", result: { forecast: "sunny" } }),
+            Message.user("Summarize the result."), // kilocode_change - preserve Gemini role alternation
           ],
         }),
       )
@@ -91,6 +92,7 @@ describe("Gemini route", () => {
             role: "user",
             parts: [
               { functionResponse: { name: "lookup", response: { name: "lookup", content: '{"forecast":"sunny"}' } } },
+              { text: "Summarize the result." }, // kilocode_change - coalesce adjacent user content
             ],
           },
         ],

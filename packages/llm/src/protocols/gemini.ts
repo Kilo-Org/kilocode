@@ -222,7 +222,10 @@ const lowerMessages = Effect.fn("Gemini.lowerMessages")(function* (request: LLMR
           return yield* ProviderShared.unsupportedContent("Gemini", "user", ["text", "media"])
         parts.push(yield* lowerUserPart(part))
       }
-      contents.push({ role: "user", parts })
+      const previous = contents.at(-1) // kilocode_change
+      if (previous?.role === "user") // kilocode_change
+        contents[contents.length - 1] = { role: "user", parts: [...previous.parts, ...parts] } // kilocode_change
+      else contents.push({ role: "user", parts }) // kilocode_change
       continue
     }
 
@@ -281,7 +284,10 @@ const lowerMessages = Effect.fn("Gemini.lowerMessages")(function* (request: LLMR
         parts.push({ inlineData: { mimeType: media.mime, data: media.base64 } })
       }
     }
-    contents.push({ role: "user", parts })
+    const previous = contents.at(-1) // kilocode_change
+    if (previous?.role === "user") // kilocode_change
+      contents[contents.length - 1] = { role: "user", parts: [...previous.parts, ...parts] } // kilocode_change
+    else contents.push({ role: "user", parts }) // kilocode_change
   }
 
   return contents
