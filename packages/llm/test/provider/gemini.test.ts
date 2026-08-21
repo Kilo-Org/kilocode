@@ -172,14 +172,16 @@ describe("Gemini route", () => {
         }),
       )
       expect(prepared.body.contents).toEqual([
-        { role: "user", parts: [{ inlineData: { mimeType: "image/png", data: "AAEC" } }] },
+        // kilocode_change start - adjacent user-compatible content is coalesced
         {
           role: "user",
           parts: [
+            { inlineData: { mimeType: "image/png", data: "AAEC" } },
             { functionResponse: { name: "read", response: { name: "read", content: "" } } },
             { inlineData: { mimeType: "image/jpeg", data: "/9j/" } },
           ],
         },
+        // kilocode_change end
       ])
     }),
   )
