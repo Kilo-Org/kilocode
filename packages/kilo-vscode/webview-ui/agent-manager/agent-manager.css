@@ -2899,7 +2899,7 @@ body.am-wt-dragging-active * {
    resize); the textarea always fills it and is the only element that scrolls,
    so long prompts never produce nested scrollbars. */
 .am-nv-dialog .am-prompt-input-container {
-  margin: 0;
+  margin: var(--prompt-min-gutter);
   resize: vertical;
   overflow: hidden;
   min-height: 120px;
