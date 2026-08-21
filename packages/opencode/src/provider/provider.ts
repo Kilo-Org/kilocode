@@ -46,6 +46,7 @@ import {
   wrapFirstByte,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
+import * as ModelDiscovery from "@/kilocode/provider/discover-models"
 import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
 // kilocode_change end
 import { ProviderError } from "./error"
@@ -1581,6 +1582,10 @@ const layer = Layer.effect(
             )
             parsed.models[modelID] = parsedModel
           }
+
+          if (provider.discoverModels === true)
+            discoveryLoaders[providerID] = () => ModelDiscovery.discover(providerID, provider, parsed) // kilocode_change
+
           database[providerID] = parsed
         }
 
@@ -1680,19 +1685,7 @@ const layer = Layer.effect(
         }
         patchKiloProviderPrivacy(providers[ProviderV2.ID.make("kilo")], cfg) // kilocode_change
 
-        const gitlab = ProviderV2.ID.make("gitlab")
-        if (discoveryLoaders[gitlab] && providers[gitlab] && isProviderAllowed(gitlab)) {
-          // kilocode_change start - keep discovery failures visible instead of swallowing them
-          const discovered = yield* Effect.tryPromise(() => discoveryLoaders[gitlab]()).pipe(
-            Effect.catch((err) =>
-              Effect.logWarning("gitlab model discovery failed", { err }).pipe(Effect.as({} as Record<string, Model>)),
-            ),
-          )
-          for (const [modelID, model] of Object.entries(discovered)) {
-            if (!providers[gitlab].models[modelID]) providers[gitlab].models[modelID] = model
-          }
-          // kilocode_change end
-        }
+        yield* ModelDiscovery.load({ loaders: discoveryLoaders, providers, allowed: isProviderAllowed }) // kilocode_change
 
         for (const [id, provider] of Object.entries(providers)) {
           const providerID = ProviderV2.ID.make(id)
