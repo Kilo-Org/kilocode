@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { Index, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { For, Show, createEffect, createMemo, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useLanguage } from "../../src/context/language"
 import { useVSCode } from "../../src/context/vscode"
@@ -7,68 +7,58 @@ import type { PRStatus } from "../../src/types/messages"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { PRCommentCard } from "./PRCommentCard"
 import { SEND_LIMIT, githubUrl, prPayload } from "./pr-comment-payload"
+import { commentState, omit, patchCommentState } from "./pr-comment-state"
 import type { PRComment } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
 
 interface Props {
   comments: NonNullable<PRStatus["comments"]>
+  projectId?: string
   worktreeId: string
   activeTerminalId?: string
   onOpenFile?: (file: string, line?: number) => void
   onOpenUrl?: (url: string) => void
 }
 
-type Flags = Record<string, boolean>
-
-function without<T>(map: Record<string, T>, id: string): Record<string, T> {
-  const next = { ...map }
-  delete next[id]
-  return next
-}
-
 export function PRComments(props: Props) {
   const { t } = useLanguage()
   const vscode = useVSCode()
 
-  const [open, setOpen] = createSignal(true)
-  const [doneOpen, setDoneOpen] = createSignal(false)
-  // threadId -> resolved state requested by the user, until the next poll confirms it
-  const [pending, setPending] = createSignal<Flags>({})
-  const [errors, setErrors] = createSignal<Record<string, string>>({})
-  // threadId -> expansion override; the default depends on resolved/outdated state
-  const [expanded, setExpanded] = createSignal<Flags>({})
-  const [sent, setSent] = createSignal<Flags>({})
+  // Held per worktree outside this component, so a remount does not collapse
+  // the threads the user opened.
+  const state = () => commentState(props.worktreeId)
+  const patch = (value: Parameters<typeof patchCommentState>[1]) => patchCommentState(props.worktreeId, value)
 
-  const resolved = (comment: PRComment) => pending()[comment.threadId] ?? comment.resolved
-  const expandedFor = (comment: PRComment) => expanded()[comment.threadId] ?? (!resolved(comment) && !comment.outdated)
+  const resolved = (comment: PRComment) => state().pending[comment.threadId] ?? comment.resolved
+  const expandedFor = (comment: PRComment) =>
+    state().expanded[comment.threadId] ?? (!resolved(comment) && !comment.outdated)
 
+  const index = createMemo(() => new Map(props.comments.comments.map((item) => [item.threadId, item])))
+
+  // Grouped by thread id, not by object: a poll allocates fresh comments, and a
+  // resolve moves a thread between groups. Ids keep every card bound to its own
+  // thread, so a click cannot land on the thread that took over its position.
   const groups = createMemo(() => {
     const list = props.comments.comments
-    return { todo: list.filter((item) => !resolved(item)), done: list.filter((item) => resolved(item)) }
+    return {
+      todo: list.filter((item) => !resolved(item)).map((item) => item.threadId),
+      done: list.filter((item) => resolved(item)).map((item) => item.threadId),
+    }
   })
 
-  const unsent = createMemo(() => groups().todo.filter((item) => !sent()[item.threadId]))
-
-  createEffect(() => {
-    props.worktreeId
-    setPending({})
-    setErrors({})
-    setExpanded({})
-    setSent({})
-    setDoneOpen(false)
-  })
+  const unsent = createMemo(() => groups().todo.filter((id) => !state().sent[id]))
 
   // Drop the optimistic state once a poll reports the state the user asked for.
   createEffect(() => {
-    const map = pending()
+    const map = state().pending
     const settled = props.comments.comments.filter(
       (item) => map[item.threadId] !== undefined && map[item.threadId] === item.resolved,
     )
     if (settled.length === 0) return
-    setPending((prev) => {
-      const next = { ...prev }
-      for (const item of settled) delete next[item.threadId]
-      return next
+    patch((prev) => {
+      const pending = { ...prev.pending }
+      for (const item of settled) delete pending[item.threadId]
+      return { pending }
     })
   })
 
@@ -79,18 +69,21 @@ export function PRComments(props: Props) {
       const unresolveResult = msg?.type === "agentManager.unresolveCommentResult"
       if (!resolveResult && !unresolveResult) return
       if (msg.worktreeId !== props.worktreeId) return
+      if (props.projectId && msg.projectId !== props.projectId) return
       // Success waits for the poll to report the new server state.
       if (msg.success) return
       const id = msg.threadId as string
-      setPending((prev) => without(prev, id))
-      // Keep the card open so the failure is readable instead of hidden in a collapsed row.
-      setExpanded((prev) => ({ ...prev, [id]: true }))
       const reason = typeof msg.error === "string" && msg.error ? msg.error : t("common.requestFailed")
-      setErrors((prev) => ({
-        ...prev,
-        [id]: t(resolveResult ? "agentManager.pr.comment.resolveFailed" : "agentManager.pr.comment.unresolveFailed", {
-          error: reason,
-        }),
+      patch((prev) => ({
+        pending: omit(prev.pending, id),
+        // Keep the card open so the failure is readable instead of hidden in a collapsed row.
+        expanded: { ...prev.expanded, [id]: true },
+        errors: {
+          ...prev.errors,
+          [id]: t(resolveResult ? "agentManager.pr.comment.resolveFailed" : "agentManager.pr.comment.unresolveFailed", {
+            error: reason,
+          }),
+        },
       }))
     }
     window.addEventListener("message", handler)
@@ -99,50 +92,65 @@ export function PRComments(props: Props) {
 
   function toggleResolved(comment: PRComment) {
     const next = !resolved(comment)
-    setErrors((prev) => without(prev, comment.threadId))
-    setPending((prev) => ({ ...prev, [comment.threadId]: next }))
-    // A thread the user just resolved collapses, like it does on GitHub. Open the
-    // resolved group so the thread is visibly moved instead of just disappearing.
-    setExpanded((prev) => ({ ...prev, [comment.threadId]: !next }))
-    if (next) setDoneOpen(true)
+    patch((prev) => ({
+      errors: omit(prev.errors, comment.threadId),
+      pending: { ...prev.pending, [comment.threadId]: next },
+      // A thread the user just resolved collapses, like it does on GitHub. Open
+      // the resolved group so the thread is visibly moved, not just gone.
+      expanded: { ...prev.expanded, [comment.threadId]: !next },
+      doneOpen: next || prev.doneOpen,
+    }))
     vscode.postMessage({
       type: next ? "agentManager.resolveComment" : "agentManager.unresolveComment",
+      projectId: props.projectId,
       worktreeId: props.worktreeId,
       threadId: comment.threadId,
     } as never)
   }
 
-  function send(list: PRComment[]) {
-    const batch = list.filter((item) => !sent()[item.threadId]).slice(0, SEND_LIMIT)
+  function send(ids: string[]) {
+    const batch = ids
+      .flatMap((id) => {
+        const comment = index().get(id)
+        return comment && !state().sent[id] ? [comment] : []
+      })
+      .slice(0, SEND_LIMIT)
     if (batch.length === 0) return
     sendReviewComments(batch.map(prPayload), props.activeTerminalId)
-    setSent((prev) => {
-      const next = { ...prev }
-      for (const item of batch) next[item.threadId] = true
-      return next
+    patch((prev) => {
+      const sent = { ...prev.sent }
+      for (const item of batch) sent[item.threadId] = true
+      return { sent }
     })
   }
 
-  // `Index` keyed by position, not `For` keyed by identity: every poll allocates
-  // fresh PRComment objects, and remounting would re-run Pierre and Markdown.
-  const card = (comment: () => PRComment) => (
-    <PRCommentCard
-      comment={comment()}
-      resolved={resolved(comment())}
-      pending={pending()[comment().threadId] !== undefined}
-      sent={sent()[comment().threadId] === true}
-      open={expandedFor(comment())}
-      error={errors()[comment().threadId]}
-      onToggleOpen={() => setExpanded((prev) => ({ ...prev, [comment().threadId]: !expandedFor(comment()) }))}
-      onToggleResolved={() => toggleResolved(comment())}
-      onSend={() => send([comment()])}
-      onOpenFile={
-        comment().file && props.onOpenFile ? () => props.onOpenFile?.(comment().file!, comment().line) : undefined
-      }
-      onOpenUrl={
-        githubUrl(comment().url) && props.onOpenUrl ? () => props.onOpenUrl?.(githubUrl(comment().url)!) : undefined
-      }
-    />
+  // `For` over stable thread ids: the DOM survives a poll, so Pierre and
+  // Markdown are not torn down and an open card stays open and clickable.
+  const card = (id: string) => (
+    <Show when={index().get(id)}>
+      {(comment) => (
+        <PRCommentCard
+          comment={comment()}
+          resolved={resolved(comment())}
+          pending={state().pending[id] !== undefined}
+          sent={state().sent[id] === true}
+          open={expandedFor(comment())}
+          error={state().errors[id]}
+          onToggleOpen={() => {
+            const next = !expandedFor(comment())
+            patch((prev) => ({ expanded: { ...prev.expanded, [id]: next } }))
+          }}
+          onToggleResolved={() => toggleResolved(comment())}
+          onSend={() => send([id])}
+          onOpenFile={
+            comment().file && props.onOpenFile ? () => props.onOpenFile?.(comment().file!, comment().line) : undefined
+          }
+          onOpenUrl={
+            githubUrl(comment().url) && props.onOpenUrl ? () => props.onOpenUrl?.(githubUrl(comment().url)!) : undefined
+          }
+        />
+      )}
+    </Show>
   )
 
   return (
@@ -151,8 +159,8 @@ export function PRComments(props: Props) {
       <div class="am-pr-panel-section">
         <SectionHeading
           title={t("agentManager.pr.comment.title")}
-          open={open()}
-          onToggle={() => setOpen((v) => !v)}
+          open={state().open}
+          onToggle={() => patch((prev) => ({ open: !prev.open }))}
           count={
             groups().todo.length > 0
               ? t("agentManager.pr.comment.unresolvedCount", { count: groups().todo.length })
@@ -160,7 +168,7 @@ export function PRComments(props: Props) {
           }
           countClass="am-pr-panel-unresolved"
         />
-        <Show when={open()}>
+        <Show when={state().open}>
           <Show when={unsent().length > 0}>
             <Button variant="primary" size="small" class="am-pr-comment-send-all" onClick={() => send(unsent())}>
               {t(
@@ -172,18 +180,18 @@ export function PRComments(props: Props) {
             </Button>
           </Show>
           <div class="am-pr-panel-comment-list am-pr-col">
-            <Index each={groups().todo}>{card}</Index>
+            <For each={groups().todo}>{card}</For>
           </div>
           <Show when={groups().done.length > 0}>
             <div class="am-pr-comment-done-group">
               <SectionHeading
                 title={t("agentManager.pr.comment.resolvedGroup", { count: groups().done.length })}
-                open={doneOpen()}
-                onToggle={() => setDoneOpen((v) => !v)}
+                open={state().doneOpen}
+                onToggle={() => patch((prev) => ({ doneOpen: !prev.doneOpen }))}
               />
-              <Show when={doneOpen()}>
+              <Show when={state().doneOpen}>
                 <div class="am-pr-panel-comment-list am-pr-col">
-                  <Index each={groups().done}>{card}</Index>
+                  <For each={groups().done}>{card}</For>
                 </div>
               </Show>
             </div>

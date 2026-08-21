@@ -27,3 +27,11 @@ describe("NewWorktreeDialog sandbox toggle", () => {
     expect(src).not.toContain("visible as isSandboxVisible")
   })
 })
+
+describe("NewWorktreeDialog base branch", () => {
+  it("sends the displayed default base branch when advanced options stay closed", () => {
+    expect(src).toContain("const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()")
+    expect(src).toContain("baseBranch: effectiveBaseBranch(),")
+    expect(src).not.toContain("baseBranch: advanced ? (baseBranch() ?? undefined) : undefined")
+  })
+})

@@ -101,6 +101,7 @@ class ReasoningPicker : PickerButton() {
         }
 
         val popup: ListPopup = JBPopupFactory.getInstance().createListPopup(step)
+        restoreFocusOnPick(popup)
         popup.show(PopupShowOptions.aboveComponent(this))
     }
 

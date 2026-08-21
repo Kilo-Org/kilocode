@@ -10,6 +10,7 @@ mock.module("@solid-primitives/resize-observer", () => ({
 }))
 
 const originalElement = globalThis.Element
+const originalNode = globalThis.Node
 const originalWheelEvent = globalThis.WheelEvent
 
 type Listener = {
@@ -22,10 +23,26 @@ class FakeElement {
   clientHeight = 100
   scrollTop = 0
   style = { overflowAnchor: "" }
+  hovered = false
+  ownerDocument!: FakeDocument
+  private children = new Set<FakeElement>()
   private listeners = new Map<string, Listener[]>()
 
   closest() {
     return null
+  }
+
+  contains(node: unknown) {
+    return node === this || (node instanceof FakeElement && [...this.children].some((child) => child.contains(node)))
+  }
+
+  append(child: FakeElement) {
+    child.ownerDocument = this.ownerDocument
+    this.children.add(child)
+  }
+
+  matches(selector: string) {
+    return selector === ":hover" && this.hovered
   }
 
   scrollTo(options: ScrollToOptions) {
@@ -65,6 +82,20 @@ class FakeElement {
   }
 }
 
+class FakeDocument extends FakeElement {
+  body: FakeElement
+  documentElement: FakeElement
+
+  constructor() {
+    super()
+    this.ownerDocument = this
+    this.body = new FakeElement()
+    this.body.ownerDocument = this
+    this.documentElement = new FakeElement()
+    this.documentElement.ownerDocument = this
+  }
+}
+
 class FakeWheelEvent {
   constructor(
     readonly deltaY: number,
@@ -72,13 +103,26 @@ class FakeWheelEvent {
   ) {}
 }
 
+class FakeKeyboardEvent {
+  readonly defaultPrevented = false
+  readonly shiftKey = false
+
+  constructor(
+    readonly key: string,
+    readonly target: FakeElement,
+  ) {}
+}
+
 globalThis.Element = FakeElement as unknown as typeof Element
+globalThis.Node = FakeElement as unknown as typeof Node
 globalThis.WheelEvent = FakeWheelEvent as unknown as typeof WheelEvent
 
 const { createAutoScroll } = await import("./create-auto-scroll")
 
-function setup(options?: { interacted?: () => void; working?: boolean }) {
+function setup(options?: { doc?: FakeDocument; interacted?: () => void; working?: boolean }) {
+  const doc = options?.doc ?? new FakeDocument()
   const el = new FakeElement()
+  el.ownerDocument = doc
   const root = createRoot((dispose) => ({
     dispose,
     scroll: createAutoScroll({
@@ -97,7 +141,7 @@ function setup(options?: { interacted?: () => void; working?: boolean }) {
     observers.forEach((callback) => callback())
   }
 
-  return { ...root, el, resize }
+  return { ...root, doc, el, resize }
 }
 
 beforeEach(() => {
@@ -107,6 +151,8 @@ beforeEach(() => {
 afterAll(() => {
   if (originalElement) globalThis.Element = originalElement
   else Reflect.deleteProperty(globalThis, "Element")
+  if (originalNode) globalThis.Node = originalNode
+  else Reflect.deleteProperty(globalThis, "Node")
   if (originalWheelEvent) globalThis.WheelEvent = originalWheelEvent
   else Reflect.deleteProperty(globalThis, "WheelEvent")
 })
@@ -236,6 +282,117 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.dispose()
   })
 
+  test("continues following after a programmatic scroll correction", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+    ctx.scroll.handleScroll()
+
+    ctx.el.scrollTop = 760
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+
+    ctx.el.scrollHeight = 1100
+    ctx.resize(0)
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(1100)
+    ctx.dispose()
+  })
+
+  test("pauses for a body-targeted keyboard scroll over the transcript", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+    ctx.el.hovered = true
+
+    ctx.doc.fire("keydown", new FakeKeyboardEvent("PageUp", ctx.doc.body) as unknown as Event)
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    ctx.el.scrollHeight = 1100
+    ctx.resize(0)
+
+    expect(ctx.el.scrollTop).toBe(600)
+    ctx.dispose()
+  })
+
+  test("routes body-targeted keyboard scroll to the deepest hovered container", () => {
+    const doc = new FakeDocument()
+    const outer = setup({ doc, working: true })
+    const inner = setup({ doc, working: true })
+    outer.el.append(inner.el)
+    outer.el.scrollHeight = 1000
+    outer.el.clientHeight = 200
+    outer.el.scrollTop = 800
+    inner.el.scrollHeight = 500
+    inner.el.clientHeight = 100
+    inner.el.scrollTop = 400
+    outer.el.hovered = true
+    inner.el.hovered = true
+
+    doc.fire("keydown", new FakeKeyboardEvent("PageUp", doc.body) as unknown as Event)
+    inner.el.scrollTop = 300
+    inner.scroll.handleScroll()
+
+    expect(inner.scroll.userScrolled()).toBe(true)
+    expect(outer.scroll.userScrolled()).toBe(false)
+    inner.dispose()
+    outer.dispose()
+  })
+
+  test("routes keyboard scroll past a nested container boundary", () => {
+    const doc = new FakeDocument()
+    const outer = setup({ doc, working: true })
+    const inner = setup({ doc, working: true })
+    outer.el.append(inner.el)
+    outer.el.scrollHeight = 1000
+    outer.el.clientHeight = 200
+    outer.el.scrollTop = 800
+    inner.el.scrollHeight = 500
+    inner.el.clientHeight = 100
+    inner.el.scrollTop = 0
+    outer.el.hovered = true
+    inner.el.hovered = true
+
+    doc.fire("keydown", new FakeKeyboardEvent("PageUp", doc.body) as unknown as Event)
+    outer.el.scrollTop = 700
+    outer.scroll.handleScroll()
+
+    expect(outer.scroll.userScrolled()).toBe(true)
+    expect(inner.scroll.userScrolled()).toBe(false)
+    inner.dispose()
+    outer.dispose()
+  })
+
+  test("removes disposed containers from keyboard ownership", () => {
+    const doc = new FakeDocument()
+    const outer = setup({ doc, working: true })
+    const inner = setup({ doc, working: true })
+    outer.el.append(inner.el)
+    outer.el.scrollHeight = 1000
+    outer.el.clientHeight = 200
+    outer.el.scrollTop = 800
+    inner.el.scrollHeight = 500
+    inner.el.clientHeight = 100
+    inner.el.scrollTop = 400
+    outer.el.hovered = true
+    inner.el.hovered = true
+    inner.dispose()
+
+    doc.fire("keydown", new FakeKeyboardEvent("PageUp", doc.body) as unknown as Event)
+    outer.el.scrollTop = 700
+    outer.scroll.handleScroll()
+
+    expect(outer.scroll.userScrolled()).toBe(true)
+    outer.dispose()
+  })
+
   test("follows when initially short content starts overflowing", () => {
     const ctx = setup()
     ctx.resize()
@@ -296,13 +453,14 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.dispose()
   })
 
-  test("pauses when a native scrollbar drag changes scroll position without input events", () => {
+  test("pauses after pointer input moves the scroll position", () => {
     const ctx = setup({ working: true })
     ctx.el.scrollHeight = 1000
     ctx.el.clientHeight = 200
     ctx.el.scrollTop = 800
     ctx.scroll.handleScroll()
 
+    ctx.el.fire("pointerdown", new Event("pointerdown"))
     ctx.el.scrollTop = 600
     ctx.scroll.handleScroll()
 

@@ -2322,14 +2322,6 @@ export type AgentConfig = {
   steps?: number
   maxSteps?: number
   permission?: PermissionConfig
-  requirements?: {
-    skills?: Array<string>
-    mcps?: Array<string>
-    vscode_extensions?: Array<{
-      name: string
-      id: string
-    }>
-  }
   [key: string]:
     | unknown
     | string
@@ -2354,14 +2346,6 @@ export type AgentConfig = {
     | "info"
     | number
     | PermissionConfig
-    | {
-        skills?: Array<string>
-        mcps?: Array<string>
-        vscode_extensions?: Array<{
-          name: string
-          id: string
-        }>
-      }
     | undefined
 }
 
@@ -3108,14 +3092,6 @@ export type Agent = {
   prompt?: string
   options: {
     [key: string]: unknown
-  }
-  requirements?: {
-    skills?: Array<string>
-    mcps?: Array<string>
-    vscode_extensions?: Array<{
-      name: string
-      id: string
-    }>
   }
   steps?: number
 }
@@ -12102,6 +12078,90 @@ export type McpDisconnectResponses = {
 
 export type McpDisconnectResponse = McpDisconnectResponses[keyof McpDisconnectResponses]
 
+export type McpReadResourceData = {
+  body?: {
+    uri: string
+    server: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/resource/read"
+}
+
+export type McpReadResourceErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpReadResourceError = McpReadResourceErrors[keyof McpReadResourceErrors]
+
+export type McpReadResourceResponses = {
+  /**
+   * Resource content
+   */
+  200: {
+    uri: string
+    mimeType?: string
+    text?: string
+    blob?: string
+  }
+}
+
+export type McpReadResourceResponse = McpReadResourceResponses[keyof McpReadResourceResponses]
+
+export type McpCallToolData = {
+  body?: {
+    server: string
+    name: string
+    arguments?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/mcp/call-tool"
+}
+
+export type McpCallToolErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpCallToolError = McpCallToolErrors[keyof McpCallToolErrors]
+
+export type McpCallToolResponses = {
+  /**
+   * Tool call result
+   */
+  200: {
+    content: Array<unknown>
+    isError?: boolean
+    structuredContent?: {
+      [key: string]: unknown
+    }
+  }
+}
+
+export type McpCallToolResponse = McpCallToolResponses[keyof McpCallToolResponses]
+
 export type ProjectListData = {
   body?: never
   path?: never
@@ -16945,6 +17005,82 @@ export type KilocodeSessionModelUsageResponses = {
 
 export type KilocodeSessionModelUsageResponse =
   KilocodeSessionModelUsageResponses[keyof KilocodeSessionModelUsageResponses]
+
+export type KilocodeBackgroundJobsData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    sessionID: string
+  }
+  url: "/kilocode/background-jobs"
+}
+
+export type KilocodeBackgroundJobsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeBackgroundJobsError = KilocodeBackgroundJobsErrors[keyof KilocodeBackgroundJobsErrors]
+
+export type KilocodeBackgroundJobsResponses = {
+  /**
+   * Background jobs
+   */
+  200: Array<{
+    id: string
+    type: string
+    title?: string
+    status: "running" | "completed" | "error" | "cancelled"
+    started_at: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    completed_at?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    error?: string
+    metadata?: {
+      [key: string]: unknown
+    }
+  }>
+}
+
+export type KilocodeBackgroundJobsResponse = KilocodeBackgroundJobsResponses[keyof KilocodeBackgroundJobsResponses]
+
+export type KilocodeBackgroundJobCancelData = {
+  body?: never
+  path: {
+    jobID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/background-jobs/{jobID}/cancel"
+}
+
+export type KilocodeBackgroundJobCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeBackgroundJobCancelError =
+  KilocodeBackgroundJobCancelErrors[keyof KilocodeBackgroundJobCancelErrors]
+
+export type KilocodeBackgroundJobCancelResponses = {
+  /**
+   * Background job cancelled
+   */
+  200: boolean
+}
+
+export type KilocodeBackgroundJobCancelResponse =
+  KilocodeBackgroundJobCancelResponses[keyof KilocodeBackgroundJobCancelResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never

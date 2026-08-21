@@ -201,6 +201,7 @@ export const dict = {
   "ui.patch.action.created": "Oluşturuldu",
   "ui.patch.action.moved": "Taşındı",
   "ui.patch.action.patched": "Yamalandı",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} yanıtlandı",
   "ui.question.answer.none": "(yanıt yok)",

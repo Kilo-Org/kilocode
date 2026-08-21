@@ -51,6 +51,7 @@ import type {
   MessageLoadMode,
   ToolPart,
 } from "../types/messages"
+import { agentProject, isStaleAgentSession } from "./session-project"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import {
   computeStatus,
@@ -313,6 +314,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
+  const [agentProjectId, setAgentProjectId] = createSignal<string | undefined>()
+
+  const trackAgentProject = (message: ExtensionMessage): boolean => {
+    if (message.type !== "agentManager.projects" && message.type !== "agentManager.selectionActivated") return false
+    setAgentProjectId(agentProject(message))
+    return true
+  }
   const [draftSessionID, setDraftSessionID] = createSignal<string | undefined>()
   const [userClearedSession, setUserClearedSession] = createSignal(false)
 
@@ -1244,9 +1252,15 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Handle messages from extension
   onMount(() => {
-    const unsubscribe = vscode.onMessage(handleExtensionMessage)
+    const unsubscribeProject = vscode.onMessage(trackAgentProject)
+    const unsubscribe = vscode.onMessage((message) => {
+      if (!isStaleAgentSession(message, agentProjectId())) handleExtensionMessage(message)
+    })
     setModelUsageReady(true)
-    onCleanup(unsubscribe)
+    onCleanup(() => {
+      unsubscribeProject()
+      unsubscribe()
+    })
   })
 
   // Event handlers

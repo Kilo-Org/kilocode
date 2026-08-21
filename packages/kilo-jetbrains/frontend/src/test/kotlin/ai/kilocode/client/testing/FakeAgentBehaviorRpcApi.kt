@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.SkillDto
+import kotlinx.coroutines.CompletableDeferred
 
 class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var agents = emptyList<AgentDetailDto>()
@@ -39,6 +40,7 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var afterMcpConnect: (suspend (String, String) -> Unit)? = null
     var createError: Exception? = null
     var skillsError: Exception? = null
+    var commandFilesGate: CompletableDeferred<Unit>? = null
     var commandFilesError: Exception? = null
     var removeError: Exception? = null
     var removeSkillError: Exception? = null
@@ -135,6 +137,7 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
 
     override suspend fun commandFiles(directory: String): List<CommandFileDto> {
         assertNotEdt("agentBehavior.commandFiles")
+        commandFilesGate?.await()
         commandFilesError?.let { throw it }
         commandCalls.add(directory)
         return commandFiles
