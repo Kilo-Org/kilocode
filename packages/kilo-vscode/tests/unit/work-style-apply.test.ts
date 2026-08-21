@@ -41,7 +41,7 @@ describe("applyWorkStyle", () => {
     expect(state.events).toEqual([
       "write:showTaskTimeline:true",
       "write:agentWorkStyle:human-in-the-loop",
-      "patch:auto_collapse_reasoning,permission,terminal_command_display",
+      "patch:permission,reasoning_display,terminal_command_display",
     ])
   })
 
@@ -56,7 +56,7 @@ describe("applyWorkStyle", () => {
     expect(state.events).toEqual([
       "write:showTaskTimeline:false",
       "write:agentWorkStyle:autonomous",
-      "patch:auto_collapse_reasoning,terminal_command_display",
+      "patch:reasoning_display,terminal_command_display",
       "write:agentWorkStyle:unset",
       "write:showTaskTimeline:undefined",
     ])
@@ -70,7 +70,7 @@ describe("applyWorkStyle", () => {
     expect(result).toEqual({ ok: false, error: "Failed to write agentWorkStyle", rollback: [] })
     expect(state.settings.get("showTaskTimeline")).toBeUndefined()
     expect(state.settings.get("agentWorkStyle")).toBe("unset")
-    expect(state.events).not.toContain("patch:auto_collapse_reasoning,permission,terminal_command_display")
+    expect(state.events).not.toContain("patch:permission,reasoning_display,terminal_command_display")
   })
 
   it("continues rollback and reports settings that could not be restored", async () => {

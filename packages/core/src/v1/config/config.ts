@@ -107,7 +107,24 @@ export const Info = Schema.Struct({
     description: "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
   }),
   auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
-    description: "Automatically collapse reasoning blocks after the agent finishes writing them",
+    description:
+      "@deprecated Use 'reasoning_display' instead. Still recognized for backward compatibility with existing configs: true maps to 'shortened', false or unset to 'full_persist'.",
+  }),
+  reasoning_display: Schema.optional(Schema.Literals(["collapsed", "shortened", "full", "full_persist"])).annotate({
+    description:
+      "How reasoning blocks display in the VS Code chat UI: 'collapsed' (hidden until clicked to expand live), 'shortened' (scrolling preview while streaming, then collapse when finished), 'full' (full text while streaming, then collapse when finished), 'full_persist' (full text, stays open). Defaults to 'full_persist'; when set, overrides the deprecated auto_collapse_reasoning boolean.",
+  }),
+  inline_code_background: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Add a theme-aware background and spacing to inline code spans in the VS Code chat UI. When unset/false, inline code keeps the current text-only styling.",
+  }),
+  inline_code_color: Schema.optional(Schema.String).annotate({
+    description:
+      "Hex color (e.g. '#9dbefe') for inline code spans in the VS Code chat UI. When unset, inline code matches the editor theme.",
+  }),
+  diff_line_backgrounds: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Fill added/removed lines in VS Code chat diffs with a background color, matching the editor diff view. When unset/false, only the line numbers are tinted.",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
   console: Schema.optional(

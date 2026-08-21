@@ -66,6 +66,20 @@ const unsafeCSS = `
   box-shadow: inset 0 0 0 9999px var(--diffs-bg-selection);
 }
 
+[data-diff][data-background] [data-line][data-line-type='change-addition'] {
+  background-image: linear-gradient(
+    var(--kilo-diff-line-add-background, transparent),
+    var(--kilo-diff-line-add-background, transparent)
+  ) !important;
+}
+
+[data-diff][data-background] [data-line][data-line-type='change-deletion'] {
+  background-image: linear-gradient(
+    var(--kilo-diff-line-delete-background, transparent),
+    var(--kilo-diff-line-delete-background, transparent)
+  ) !important;
+}
+
 [data-file] [data-line][data-comment-selected]:not([data-selected-line]) {
   box-shadow: inset 0 0 0 9999px var(--diffs-bg-selection);
 }

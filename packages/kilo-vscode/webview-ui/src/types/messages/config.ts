@@ -132,6 +132,7 @@ export interface BrowserSettings {
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
 export type McpToolDisplay = "expanded" | "collapsed"
+export type ReasoningDisplay = "collapsed" | "shortened" | "full" | "full_persist"
 
 export interface Config {
   permission?: PermissionConfig
@@ -164,7 +165,12 @@ export interface Config {
   commit_message?: CommitMessageConfig
   tools?: Record<string, boolean>
   web_search?: boolean
+  /** @deprecated Use reasoning_display. Recognized for back-compat: true→shortened, false/unset→full_persist. */
   auto_collapse_reasoning?: boolean
+  reasoning_display?: ReasoningDisplay
+  inline_code_background?: boolean
+  inline_code_color?: string
+  diff_line_backgrounds?: boolean
   experimental?: ExperimentalConfig
   sandbox?: SandboxConfig
   indexing?: IndexingConfig

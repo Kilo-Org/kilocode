@@ -987,9 +987,6 @@ export const dict = {
   "settings.display.fontSize.title": "Dimensione font",
   "settings.display.fontSize.description":
     "Regola la dimensione del font della webview Kilo indipendentemente da VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Comprimi automaticamente ragionamento",
-  "settings.display.reasoningAutoCollapse.description":
-    "Comprimi i blocchi di ragionamento dopo che l'agente ha finito di scriverli. Lascia disattivato per tenerli espansi finché non li comprimi manualmente.",
   "settings.display.shiftTabCycle.title": "Cambia lo sforzo di ragionamento con Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Premi Shift+Tab in un campo di inserimento del prompt per passare al livello di sforzo di ragionamento successivo. Disattiva l'opzione per mantenere Shift+Tab per la navigazione del focus tramite tastiera.",

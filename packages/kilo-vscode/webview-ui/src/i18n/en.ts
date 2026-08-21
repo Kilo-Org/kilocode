@@ -1078,9 +1078,23 @@ export const dict = {
   "settings.display.username.description": "Custom username displayed in conversations",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
-  "settings.display.reasoningAutoCollapse.description":
-    "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.reasoning.title": "Reasoning Display",
+  "settings.display.reasoning.description":
+    "How reasoning blocks appear in chat while the agent is thinking and after it finishes.",
+  "settings.display.reasoning.collapsed": "Collapsed (click to expand)",
+  "settings.display.reasoning.shortened": "Preview while thinking, then collapse",
+  "settings.display.reasoning.full": "Full while thinking, then collapse",
+  "settings.display.reasoning.fullPersist": "Full, stay open",
+  "settings.display.inlineCodeBackground.title": "Highlight Inline Code",
+  "settings.display.inlineCodeBackground.description":
+    "Add a theme-aware background and spacing to inline code in chat. Off keeps the current text-only style.",
+  "settings.display.inlineCodeColor.title": "Inline Code Color",
+  "settings.display.inlineCodeColor.description":
+    "Color for inline code spans in chat. Keep 'Match editor theme' on to follow your VS Code theme, or turn it off to choose a custom color.",
+  "settings.display.inlineCodeColor.matchTheme": "Match editor theme",
+  "settings.display.diffLineBackgrounds.title": "Diff Line Backgrounds",
+  "settings.display.diffLineBackgrounds.description":
+    "Fill added/removed lines in chat diffs with a background color, matching the editor's diff view. Off tints only the line numbers.",
   "settings.display.shiftTabCycle.title": "Cycle Reasoning Effort with Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Press Shift+Tab in a prompt input to switch to the next reasoning effort level. Disable to keep Shift+Tab for keyboard focus navigation.",

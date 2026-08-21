@@ -28,3 +28,13 @@
 @import "./settings.css";
 @import "./provider-usage.css";
 @import "./high-contrast.css";
+
+html[data-kilo-inline-code-background] [data-component="markdown"] :not(pre) > code {
+  color: var(--kilo-inline-code-color, var(--text-strong));
+  padding: 1px 4px;
+  border-radius: 3px;
+  background-color: var(--vscode-textCodeBlock-background, var(--surface-base));
+  box-shadow: 0 0 0 1px var(--vscode-contrastBorder, transparent);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}

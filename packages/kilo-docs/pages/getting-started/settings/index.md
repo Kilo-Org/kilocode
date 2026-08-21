@@ -81,13 +81,31 @@ You can also enable it in `kilo.jsonc`:
 
 ### Reasoning Blocks
 
-Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
+Reasoning blocks show their full text while the agent is thinking and stay open by default in the VS Code chat UI. Choose how they display with **Reasoning Display** in the Display tab, or set `reasoning_display` in `kilo.jsonc`:
 
 ```json
 {
-  "auto_collapse_reasoning": true
+  "reasoning_display": "shortened"
 }
 ```
+
+- `collapsed` — hidden until you click to expand
+- `shortened` — scrolling preview while streaming, then collapse when finished
+- `full` — full text while streaming, then collapse when finished
+- `full_persist` — full text, stays open (default)
+
+### Inline Code
+
+Inline code keeps its current text-only appearance by default. Enable **Highlight Inline Code** in the Display tab, or set `inline_code_background` to `true`, to add a theme-aware background and spacing. You can independently set `inline_code_color` to a hex color:
+
+```json
+{
+  "inline_code_background": true,
+  "inline_code_color": "#9dbefe"
+}
+```
+
+Omit either setting to keep its current theme-controlled behavior.
 
 ### Terminal Command Blocks
 
