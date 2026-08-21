@@ -23,7 +23,9 @@ const pr: PRStatus = {
 
 function harness(opts: { hasPersisted?: boolean } = {}) {
   const sent: AgentManagerOutMessage[] = []
-  const worktrees: { id: string; path: string; prUrl?: string }[] = [{ id: "wt1", path: "/repo/wt1" }]
+  const worktrees: { id: string; path: string; branch: string; prUrl?: string }[] = [
+    { id: "wt1", path: "/repo/wt1", branch: "feature" },
+  ]
   const bridge = PRStatusBridge.create({
     getWorktrees: () => worktrees as never,
     getWorkspaceRoot: () => "/repo",
@@ -34,7 +36,7 @@ function harness(opts: { hasPersisted?: boolean } = {}) {
     log: () => {},
   })
   const onStatus = (bridge.poller as unknown as { options: { onStatus: (...a: unknown[]) => void } }).options.onStatus
-  return { bridge, sent, onStatus }
+  return { bridge, sent, onStatus, worktrees }
 }
 
 // --- error deduplication ---
@@ -109,6 +111,44 @@ describe("PRStatusBridge onStatus", () => {
     onStatus("wt1", null, "gh_missing")
     const errorMsg = sent.find((m) => m.type === "agentManager.prError")
     expect(errorMsg).toEqual(expect.objectContaining({ error: "gh_missing" }))
+  })
+
+  // A rate limit, a network blip, or an unresolvable fork ref all look like "no
+  // pull request". Forwarding that unmounts the panel and discards what the user
+  // has open, so a PR already found on this branch stays.
+  it("keeps a known PR when a poll finds no pull request on the same branch", () => {
+    const { bridge, sent, onStatus } = harness()
+    onStatus("wt1", pr)
+    sent.length = 0
+    onStatus("wt1", null)
+    expect(sent).toHaveLength(0)
+    expect(bridge.snapshot().get("wt1")).toEqual(pr)
+  })
+
+  it("drops the PR once the worktree is on another branch", () => {
+    const { bridge, sent, onStatus, worktrees } = harness()
+    onStatus("wt1", pr)
+    sent.length = 0
+    worktrees[0]!.branch = "other"
+    onStatus("wt1", null)
+    expect(sent).toEqual([expect.objectContaining({ type: "agentManager.prStatus", worktreeId: "wt1", pr: null })])
+    expect(bridge.snapshot().has("wt1")).toBe(false)
+  })
+
+  it("forwards no pull request for a worktree that never had one", () => {
+    const { sent, onStatus } = harness()
+    onStatus("wt1", null)
+    expect(sent).toEqual([expect.objectContaining({ type: "agentManager.prStatus", worktreeId: "wt1", pr: null })])
+  })
+
+  it("reports the PR again after a branch switch back", () => {
+    const { bridge, onStatus, worktrees } = harness()
+    onStatus("wt1", pr)
+    worktrees[0]!.branch = "other"
+    onStatus("wt1", null)
+    worktrees[0]!.branch = "feature"
+    onStatus("wt1", pr)
+    expect(bridge.snapshot().get("wt1")).toEqual(pr)
   })
 })
 

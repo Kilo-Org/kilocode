@@ -1507,6 +1507,7 @@ const prComments: NonNullable<PRStatus["comments"]> = {
       outdated: false,
       diffHunk:
         '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
+      after: ["  return result", "}", ""],
       replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
     },
     {

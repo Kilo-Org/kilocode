@@ -77,6 +77,8 @@ export interface PRComment {
   outdated: boolean
   createdAt?: number
   diffHunk?: string
+  /** Lines after the commented line, read from the worktree: a hunk has none. */
+  after?: string[]
   replies?: PRCommentReply[]
 }
 

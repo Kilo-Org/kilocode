@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import type { CheckStatus, PRComment, PRReviewer, ReviewerState } from "../types"
+import type { CheckStatus, PRComment, PRReviewer, PRStatus, ReviewerState } from "../types"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
 export function parsePRResult(json: string): PRResult | null {
@@ -126,6 +126,17 @@ export function ghErrorReason(message: string): string {
     .filter((line) => line.length > 0 && !line.startsWith("Command failed"))
   const last = [...lines].reverse().find((line) => !line.startsWith("query") && !line.startsWith("mutation"))
   return (last ?? message.trim()).replace(/^gh:\s*/, "").slice(0, 200)
+}
+
+/**
+ * Carry review threads across a status that has none. Only the selected worktree
+ * fetches comments, and that fetch can fail, so a plain replace would collapse
+ * the open comment list in the panel while the user is reading it.
+ */
+export function mergePRStatus(prev: PRStatus | undefined, next: PRStatus): PRStatus {
+  if (next.comments || !prev?.comments) return next
+  if (prev.number !== next.number) return next
+  return { ...next, comments: prev.comments }
 }
 
 /**
