@@ -16879,6 +16879,82 @@ export type KilocodeSessionModelUsageResponses = {
 export type KilocodeSessionModelUsageResponse =
   KilocodeSessionModelUsageResponses[keyof KilocodeSessionModelUsageResponses]
 
+export type KilocodeBackgroundJobsData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    sessionID: string
+  }
+  url: "/kilocode/background-jobs"
+}
+
+export type KilocodeBackgroundJobsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeBackgroundJobsError = KilocodeBackgroundJobsErrors[keyof KilocodeBackgroundJobsErrors]
+
+export type KilocodeBackgroundJobsResponses = {
+  /**
+   * Background jobs
+   */
+  200: Array<{
+    id: string
+    type: string
+    title?: string
+    status: "running" | "completed" | "error" | "cancelled"
+    started_at: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    completed_at?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    error?: string
+    metadata?: {
+      [key: string]: unknown
+    }
+  }>
+}
+
+export type KilocodeBackgroundJobsResponse = KilocodeBackgroundJobsResponses[keyof KilocodeBackgroundJobsResponses]
+
+export type KilocodeBackgroundJobCancelData = {
+  body?: never
+  path: {
+    jobID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/background-jobs/{jobID}/cancel"
+}
+
+export type KilocodeBackgroundJobCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeBackgroundJobCancelError =
+  KilocodeBackgroundJobCancelErrors[keyof KilocodeBackgroundJobCancelErrors]
+
+export type KilocodeBackgroundJobCancelResponses = {
+  /**
+   * Background job cancelled
+   */
+  200: boolean
+}
+
+export type KilocodeBackgroundJobCancelResponse =
+  KilocodeBackgroundJobCancelResponses[keyof KilocodeBackgroundJobCancelResponses]
+
 export type AnacondaDesktopStatusData = {
   body?: never
   path?: never

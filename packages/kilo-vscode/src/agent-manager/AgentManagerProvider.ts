@@ -680,7 +680,7 @@ export class AgentManagerProvider implements Disposable {
       })
       return null
     }
-
+    if (m.type === "loadMessages" && m.focus === false) return msg
     if (m.type === "loadMessages") {
       this.activeSessionId = m.sessionID
       this.terminalManager.syncOnSessionSwitch(m.sessionID)
@@ -1434,7 +1434,8 @@ export class AgentManagerProvider implements Disposable {
     // already excludes worktrees in collapsed sections.
     this.syncPollerSkips()
     this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)
-    this.prBridge.poller.setEnabled(worktrees.length > 0)
+    // Start PR polling during state hydration so persisted badges get live status.
+    this.prBridge.poller.setEnabled(this.panel !== undefined)
   }
 
   /** Push empty state when the folder is not a git repo or has no folder open. */

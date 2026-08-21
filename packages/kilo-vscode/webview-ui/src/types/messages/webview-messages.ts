@@ -43,6 +43,24 @@ export interface AbortRequest {
   sessionID: string
 }
 
+export interface RequestBackgroundJobsMessage {
+  type: "requestBackgroundJobs"
+  sessionID: string
+  requestID: string
+}
+
+export interface CancelBackgroundJobMessage {
+  type: "cancelBackgroundJob"
+  jobID: string
+  sessionID: string
+  requestID: string
+}
+
+export interface BackgroundSubagentsMessage {
+  type: "backgroundSubagents"
+  sessionID: string
+}
+
 export interface RevertSessionRequest {
   type: "revertSession"
   sessionID: string
@@ -1158,6 +1176,7 @@ export interface OpenSubAgentViewerRequest {
   type: "openSubAgentViewer"
   sessionID: string
   title?: string
+  parentSessionID?: string
 }
 
 // Preview an image attachment in VS Code's built-in image viewer
@@ -1442,6 +1461,9 @@ export type WebviewMessage =
   | DocumentSendCommentsMessage
   | SendMessageRequest
   | AbortRequest
+  | RequestBackgroundJobsMessage
+  | CancelBackgroundJobMessage
+  | BackgroundSubagentsMessage
   | RevertSessionRequest
   | UnrevertSessionRequest
   | DeleteMessageRequest

@@ -528,6 +528,12 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("syncOnSessionSwitch")
   })
 
+  it("does not activate inspector-only transcript loads", () => {
+    const text = body("onSessionMessage")
+    expect(text).toContain("m.focus === false")
+    expect(text.indexOf("m.focus === false")).toBeLessThan(text.indexOf("this.activeSessionId = m.sessionID"))
+  })
+
   it("terminal context reveals the terminal associated with the originating session", () => {
     const text = body("onSessionMessage")
     const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID, m.agentManagerContext)")
