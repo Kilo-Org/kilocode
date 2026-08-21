@@ -20,6 +20,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.tool.EditToolView
+import ai.kilocode.client.session.views.tool.ApprovalReasonTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.ToolbarButtonAction
@@ -127,6 +128,16 @@ class MessageView(
         if (hidden == ref) return
         hidden = ref
         rebuildParts()
+    }
+
+    @RequiresEdt
+    fun syncApprovalReasons(visible: Boolean): Boolean {
+        var changed = false
+        for (view in parts.values) {
+            if (view is ApprovalReasonTarget) changed = view.syncApprovalReason(visible) || changed
+        }
+        if (changed) refresh()
+        return changed
     }
 
     /** Add or update the renderer for [content]. */

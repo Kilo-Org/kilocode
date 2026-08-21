@@ -227,6 +227,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Created",
   "ui.patch.action.moved": "Moved",
   "ui.patch.action.patched": "Patched",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} answered",
   "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change

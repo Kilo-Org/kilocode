@@ -43,6 +43,24 @@ export interface AbortRequest {
   sessionID: string
 }
 
+export interface RequestBackgroundJobsMessage {
+  type: "requestBackgroundJobs"
+  sessionID: string
+  requestID: string
+}
+
+export interface CancelBackgroundJobMessage {
+  type: "cancelBackgroundJob"
+  jobID: string
+  sessionID: string
+  requestID: string
+}
+
+export interface BackgroundSubagentsMessage {
+  type: "backgroundSubagents"
+  sessionID: string
+}
+
 export interface RevertSessionRequest {
   type: "revertSession"
   sessionID: string
@@ -867,6 +885,37 @@ export interface AgentManagerOpenFileRequest {
   column?: number
 }
 
+export interface AgentManagerRequestDocumentMessage {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
+}
+
+export interface DocumentRequestMessage {
+  type: "document.request"
+  sessionId?: string
+  file: string
+  contextKey?: string
+}
+
+export interface DocumentOpenFileMessage {
+  type: "document.openFile"
+  file: string
+  line?: number
+  column?: number
+}
+
+export interface DocumentCloseMessage {
+  type: "document.close"
+}
+
+export interface DocumentSendCommentsMessage {
+  type: "document.sendComments"
+  comments: ReviewCommentEntry[]
+  autoSend?: boolean
+}
+
 // Create multiple worktree sessions for the same prompt (multi-version mode)
 export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
@@ -1118,6 +1167,7 @@ export interface OpenSubAgentViewerRequest {
   type: "openSubAgentViewer"
   sessionID: string
   title?: string
+  parentSessionID?: string
 }
 
 // Preview an image attachment in VS Code's built-in image viewer
@@ -1396,8 +1446,15 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | DocumentRequestMessage
+  | DocumentOpenFileMessage
+  | DocumentCloseMessage
+  | DocumentSendCommentsMessage
   | SendMessageRequest
   | AbortRequest
+  | RequestBackgroundJobsMessage
+  | CancelBackgroundJobMessage
+  | BackgroundSubagentsMessage
   | RevertSessionRequest
   | UnrevertSessionRequest
   | DeleteMessageRequest
@@ -1525,6 +1582,7 @@ export type WebviewMessage =
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
+  | AgentManagerRequestDocumentMessage
   | CreateMultiVersionRequest
   | SetTabOrderRequest
   | SetWorktreeOrderRequest

@@ -451,6 +451,7 @@ export namespace KiloSessionPrompt {
       info,
       "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
       "Project/user instructions about plan location (for example plans/ or .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
+      "In the visible final response, cite the saved plan path as an inline code span so the client can open it as a document. Cite other user-facing files you create the same way instead of pasting the full file into chat.",
       supportsPlanFollowup()
         ? "When the plan is implementation-ready, write the main plan file and call plan_exit. Do not ask the user to choose between finalizing and refining in chat; the client follow-up after plan_exit asks whether to implement the saved plan or keep refining."
         : 'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',

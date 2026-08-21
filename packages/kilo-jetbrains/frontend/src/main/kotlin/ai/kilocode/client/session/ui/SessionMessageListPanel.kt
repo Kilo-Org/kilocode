@@ -228,6 +228,8 @@ class SessionMessageListPanel(
         this.openDiff = openDiff
         this.sessionId = sessionId
         banner?.setDiffOpener(openDiff, sessionId)
+        permission?.setDiffOpener(openDiff, sessionId)
+        permission?.setHoverSink(::hover)
         turnViews.values.forEach { it.setDiffOpener(openDiff, sessionId) }
     }
 
@@ -499,6 +501,15 @@ class SessionMessageListPanel(
         if (hiddenTool == ref) return
         hiddenTool = ref
         for (mv in msgToView.values) mv.setHiddenQuestionTool(ref)
+    }
+
+    @RequiresEdt
+    fun syncApprovalReasons(visible: Boolean) {
+        var changed = false
+        for (mv in msgToView.values) changed = mv.syncApprovalReasons(visible) || changed
+        if (!changed) return
+        reflow()
+        refresh()
     }
 
     private fun syncSettled(state: SessionState = model.state) {

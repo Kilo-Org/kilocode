@@ -59,7 +59,8 @@ const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   )
 
 const it = testEffect(layer())
-const background = testEffect(layer({ experimentalBackgroundSubagents: true }))
+const background = it // kilocode_change - background subagents are enabled by default
+const disabled = testEffect(layer({ experimentalBackgroundSubagents: false })) // kilocode_change
 
 function defer<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -781,7 +782,8 @@ describe("tool.task", () => {
     }),
   )
   // kilocode_change end
-  it.instance("rejects background execution when the experiment is disabled", () =>
+  // kilocode_change start - preserve the disabled-background regression test
+  disabled.instance("rejects background execution when the experiment is disabled", () =>
     Effect.gen(function* () {
       const { chat, assistant } = yield* seed()
       const tool = yield* TaskTool
@@ -811,6 +813,7 @@ describe("tool.task", () => {
       expect(Exit.isFailure(exit)).toBe(true)
     }),
   )
+  // kilocode_change end
 
   it.instance("promotes a running foreground task without restarting it", () =>
     Effect.gen(function* () {

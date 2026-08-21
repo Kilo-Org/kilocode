@@ -36,7 +36,8 @@ class ShellToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool),
     private val body: ShellBody = ShellBody(selection),
-) : AbstractSessionPartView(parts.header, { body.mount(tool) }), UiDataProvider {
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget {
 
     override val contentId: String = tool.id
 
@@ -73,6 +74,7 @@ class ShellToolView(
         if (was != content.name || !canExpand(content)) changed = collapse() || changed
         changed = sync() || changed
         changed = syncBody() || changed
+        changed = syncApprovalReason(approvalReasonsVisible()) || changed
         if (changed) refresh()
     }
 
@@ -157,7 +159,15 @@ class ShellToolView(
         changed = setFont(parts.link, style.smallEditorFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
         changed = body.applyStyle(style) || changed
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     private fun sync(): Boolean {
@@ -173,6 +183,7 @@ class ShellToolView(
         changed = setForeground(parts.sub, SessionUiStyle.Text.Secondary.foreground()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
+        changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
     }
 

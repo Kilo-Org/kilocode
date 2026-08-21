@@ -198,12 +198,16 @@ export const ChatViewSessionDockStability: Story = {
   name: "ChatView — session dock keeps its height",
   render: () => {
     const [busy, setBusy] = createSignal(false)
+    // Statuses of deliberately different widths: the label swap is what used to
+    // shove the centered spinner sideways.
+    const labels = ["Thinking…", "Searching the codebase", "Making edits"]
+    const [step, setStep] = createSignal(0)
     const status = () => (busy() ? "busy" : "idle")
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
       status,
       statusInfo: () => ({ type: status() }),
-      statusText: () => (busy() ? "Thinking…" : undefined),
+      statusText: () => (busy() ? labels[step() % labels.length] : undefined),
       busySince: () => (busy() ? Date.now() - 2000 : undefined),
       submitting: () => busy(),
       isSubmitting: () => busy(),
@@ -218,6 +222,9 @@ export const ChatViewSessionDockStability: Story = {
               <div style={{ height: "320px", display: "flex", "flex-direction": "column" }}>
                 <button data-testid="toggle-busy" onClick={() => setBusy(!busy())}>
                   toggle busy
+                </button>
+                <button data-testid="next-status" onClick={() => setStep(step() + 1)}>
+                  next status
                 </button>
                 <ChatView onForkSession={() => undefined} continueInWorktree />
               </div>
@@ -684,6 +691,69 @@ export const PromptRailManyPrompts: Story = {
       <StoryProviders data={manyData} sessionID={SESSION_ID} status="idle" noPadding>
         <SessionContext.Provider value={session as any}>
           <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+const correctionTurns = Array.from({ length: 30 }, (_, i) =>
+  railTurn(300 + i, `Virtualized prompt ${i + 1}`, `Virtualized answer ${i + 1}.`),
+)
+const correctionActive = railTurn(400, "Continue streaming", "Initial streamed response.")
+const correctionMessages = [...correctionTurns.flatMap((turn) => turn.messages), ...correctionActive.messages]
+const correctionAssistant = correctionActive.messages[1]!
+correctionAssistant.finish = "tool-calls"
+const correctionParts = Object.assign(
+  {},
+  ...correctionTurns.map((turn) => turn.parts),
+  correctionActive.parts,
+) as Record<string, any[]>
+const correctionData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: correctionMessages },
+  part: correctionParts,
+}
+
+export const MessageListLayoutCorrection: Story = {
+  name: "MessageList - follow after layout correction",
+  render: () => {
+    const [output, setOutput] = createSignal("Initial streamed response.")
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      messages: () => correctionMessages,
+      userMessages: () => correctionMessages.filter((msg) => msg.role === "user"),
+      getParts: (id: string) => {
+        if (id !== correctionAssistant.id) return correctionParts[id] ?? []
+        const part = correctionParts[id]![0]!
+        return [{ ...part, text: output() }]
+      },
+    }
+    return (
+      <StoryProviders data={correctionData} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div
+            class="auto-scroll-correction-fixture"
+            style={{ height: "100vh", display: "flex", "flex-direction": "column" }}
+          >
+            <style>{`
+              .auto-scroll-correction-controls {
+                position: fixed;
+                inset: 8px 8px auto auto;
+                z-index: 10;
+              }
+            `}</style>
+            <div class="auto-scroll-correction-controls">
+              <button
+                type="button"
+                data-testid="append-stream"
+                onClick={() => setOutput((value) => `${value}\n\n${"More streamed output. ".repeat(30)}`)}
+              >
+                Append stream
+              </button>
+            </div>
             <ChatView />
           </div>
         </SessionContext.Provider>

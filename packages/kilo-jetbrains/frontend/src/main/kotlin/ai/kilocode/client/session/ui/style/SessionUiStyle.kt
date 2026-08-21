@@ -114,6 +114,13 @@ object SessionUiStyle {
         }
 
         /**
+         * Left inset for expanded card content that should read as nested under the header — the diff
+         * body's filename row and the auto-approve rule rows both use it. Reuse this wherever expanded
+         * content needs indenting so the amount stays consistent across cards.
+         */
+        fun contentIndent() = UiStyle.Gap.pad()
+
+        /**
          * Standard transparent inset separating an expanded card header from its content, and
          * separating stacked content surfaces inside a [ai.kilocode.client.session.ui.SessionContentPanel].
          * Matches the gap between views in the transcript ([SessionLayout.GAP]), so a card's internal

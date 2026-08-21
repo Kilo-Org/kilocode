@@ -276,6 +276,29 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
     }
 
+    fun `test expanded connection panel is capped to transcript height`() {
+        ui.setSize(800, 260)
+        layout()
+        val root = find<SessionRootPanel>(ui)
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
+
+        connection.onEvent(SessionControllerEvent.ConnectionChanged.ShowError(
+            "CLI startup failed",
+            lines(60),
+        ))
+        layout()
+        connection.clickSummary()
+        layout()
+        val pane = connection.components.filterIsInstance<JBScrollPane>().single()
+        pane.doLayout()
+
+        assertTrue(connection.detailsVisible())
+        assertEquals(0, connection.y)
+        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+        assertTrue(pane.viewport.extentSize.height < pane.viewport.view.preferredSize.height)
+    }
+
     fun `test connection panel is unaffected by active question view`() {
         rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
@@ -783,6 +806,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
     private fun promptPoint(root: SessionRootPanel, prompt: PromptPanel) =
         SwingUtilities.convertPoint(prompt.parent, prompt.x, prompt.y, root.overlay)
+
+    private fun lines(count: Int) = (1..count).joinToString("\n") { "line $it" }
 
     private class Row(override val sessionViewKind: SessionView.Kind) : JPanel(), SessionView {
         override fun getPreferredSize() = Dimension(100, 10)

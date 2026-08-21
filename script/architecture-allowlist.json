@@ -7,8 +7,7 @@
       "description": "Legacy InstanceState.make usages in Kilo-owned code (packages/opencode/src/kilocode/**, packages/opencode/src/kilo-*/**). Target: encapsulate in scoped Effect Services in packages/core.",
       "allowed": {
         "packages/opencode/src/kilo-sessions/kilo-sessions.ts": { "count": 1, "owner": "session-runtime", "reason": "Kilo session coordination state" },
-        "packages/opencode/src/kilocode/background-process/index.ts": { "count": 1, "owner": "process-runtime", "reason": "Directory-keyed background process registry" },
-        "packages/opencode/src/kilocode/watcher.ts": { "count": 1, "owner": "watcher-runtime", "reason": "Eager location watcher subscription" }
+        "packages/opencode/src/kilocode/background-process/index.ts": { "count": 1, "owner": "process-runtime", "reason": "Directory-keyed background process registry" }
       }
     },
     "kilo-database-constructors": {

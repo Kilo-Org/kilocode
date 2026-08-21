@@ -76,6 +76,7 @@ function PlanExitCard(props: { part: ToolPart }) {
     <Show when={info()}>
       <div data-component="plan-exit-card">
         <span data-slot="plan-exit-label">{label()}</span>{" "}
+        <span data-slot="plan-exit-badge">{language.t("ui.patch.action.plan")}</span>
         <a data-slot="plan-exit-link" href="#" onClick={open}>
           {display()}
         </a>
