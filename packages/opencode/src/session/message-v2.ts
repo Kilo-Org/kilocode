@@ -38,6 +38,7 @@ import type { Provider } from "@/provider/provider"
 import { Snapshot } from "@/snapshot" // kilocode_change
 import { SessionNetwork } from "./network" // kilocode_change
 import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
+import { KiloTrailingAssistant } from "@/kilocode/session/trailing-assistant" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import * as TextStream from "@/kilocode/text-stream" // kilocode_change
 import { BoardNotice } from "@/kilocode/board/notice" // kilocode_change
@@ -537,7 +538,11 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
 
   const tools = Object.fromEntries(Array.from(toolNames).map((toolName) => [toolName, { toModelOutput }]))
 
-  return yield* Effect.promise(() =>
+  // kilocode_change start - repair outbound assistant message shape before it
+  // reaches the provider: restore inverted [tool_use, text] block order, and
+  // drop trailing assistant turns that carry no committed output. Turns with
+  // real output are always preserved.
+  const converted = yield* Effect.promise(() =>
     convertToModelMessages(
       result.filter((msg) => msg.parts.some((part) => part.type !== "step-start")),
       {
@@ -546,6 +551,8 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
       },
     ),
   )
+  return KiloTrailingAssistant.sanitize(converted)
+  // kilocode_change end
 })
 
 export function toModelMessages(
