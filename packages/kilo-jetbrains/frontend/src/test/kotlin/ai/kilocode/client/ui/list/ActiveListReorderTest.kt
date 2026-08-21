@@ -2,8 +2,10 @@ package ai.kilocode.client.ui.list
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
+import java.awt.Image
 import java.awt.Point
 import java.awt.Rectangle
+import java.awt.image.BufferedImage
 
 class ActiveListReorderTest : BasePlatformTestCase() {
 
@@ -172,6 +174,21 @@ class ActiveListReorderTest : BasePlatformTestCase() {
         assertEquals(0, image.second.y)
     }
 
+    fun `test the drag image of a section header row paints its whole body`() {
+        val view = view(mutableListOf())
+        view.update(sectioned())
+        layout(view)
+
+        // Row 1 opens the "wt" section, so its body starts below the band inside its own cell. The
+        // copy still covers the body edge to edge: nothing is shifted off the image.
+        val header = view.dragImage(center(view, 1))?.first ?: error("expected a drag image")
+        val plain = view.dragImage(center(view, 2))?.first ?: error("expected a drag image")
+
+        assertEquals(0, blank(header))
+        assertEquals(blank(plain), blank(header))
+        assertEquals(plain.getHeight(null), header.getHeight(null))
+    }
+
     private fun view(
         moves: MutableList<ActiveListMove>,
         cfg: ActiveListConfig = ActiveListConfig.Equal,
@@ -197,6 +214,14 @@ class ActiveListReorderTest : BasePlatformTestCase() {
 
     private fun display(view: ActiveListView): List<ActiveListItem> {
         return (0 until view.list.model.size).map { view.list.model.getElementAt(it) }
+    }
+
+    /** Rows of the image that are fully transparent, i.e. left unpainted. */
+    private fun blank(image: Image): Int {
+        val pixels = image as BufferedImage
+        return (0 until pixels.height).count { y ->
+            (0 until pixels.width).all { x -> (pixels.getRGB(x, y) ushr 24) == 0 }
+        }
     }
 
     private fun heights(view: ActiveListView): List<Int> {

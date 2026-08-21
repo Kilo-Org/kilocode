@@ -333,7 +333,10 @@ internal class ActiveListRenderer(
         val g2 = image.createGraphics()
         try {
             g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.9f)
-            g2.translate(-wrap.x, -wrap.y)
+            // paint() already treats the graphics origin as the body's own top-left, so the body's
+            // offset inside the cell must not be applied again: on a row that opens a section that
+            // offset is the header band, and shifting by it would lift the copy off the image and
+            // leave most of it blank.
             wrap.paint(g2)
         } finally {
             g2.dispose()
