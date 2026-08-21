@@ -397,6 +397,10 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
       // the neighboring signed reasoning blocks.
       const hasSignedReasoning = msg.parts.some((part) => {
         if (part.type !== "reasoning") return false
+        // kilocode_change start - blank-text reasoning is dropped during replay below,
+        // so it must not keep the empty-text separator workaround alive.
+        if (part.text.trim().length === 0) return false
+        // kilocode_change end
         return part.metadata?.anthropic?.signature != null
       })
       for (const part of msg.parts) {
@@ -503,6 +507,15 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
               })
             continue
           }
+          // kilocode_change start - drop reasoning blocks whose text was lost.
+          // Anthropic rejects a thinking block that carries a signature but no
+          // text ("`thinking` or `redacted_thinking` blocks in the latest
+          // assistant message cannot be modified"), because the signature
+          // cannot validate against empty content. The original thinking text
+          // is unrecoverable by this point, so omitting the block is the only
+          // safe replay. Empty blocks carry no context, so nothing is lost.
+          if (part.text.trim().length === 0) continue
+          // kilocode_change end
           assistantMessage.parts.push({
             type: "reasoning",
             text: part.text,
