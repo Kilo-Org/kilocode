@@ -777,7 +777,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
         `${creating}|create|add:false|push|${setup}|setup|session|state-session|register|ready|${success}|log`,
       )
       expect(await run(kind, "setup")).toBe(
-        `${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed`,
+        `${creating}|create|add:false|push|${setup}|setup|disk|state-remove|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|disk|state-remove|push|setup failed|setup failed`,
       )
       const duplicate = branch
         ? 'Branch "topic" is already checked out in another worktree'
