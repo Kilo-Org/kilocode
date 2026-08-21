@@ -9,9 +9,9 @@ export async function discardWorktree(
   branch: string,
   sessionId?: string,
 ): Promise<void> {
-  let release: () => void
+  let releasePtyCleanup: () => void
   try {
-    release = await host.removePtys(dir)
+    releasePtyCleanup = await host.acquirePtyCleanup(dir)
   } catch (error) {
     host.log(`Failed to remove PTYs after worktree setup failed:`, error)
     return
@@ -32,6 +32,6 @@ export async function discardWorktree(
     host.log(`Failed to remove worktree ${id} after setup failed:`, error)
     return
   } finally {
-    release()
+    releasePtyCleanup()
   }
 }

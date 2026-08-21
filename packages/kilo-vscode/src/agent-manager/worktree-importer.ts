@@ -12,7 +12,7 @@ export interface WorktreeImporterHost {
   setup(path: string, branch?: string, worktreeId?: string): Promise<void>
   session(path: string, branch: string, worktreeId?: string): Promise<Session | null>
   register(sessionId: string, directory: string): void
-  removePtys?(directory: string): Promise<() => void>
+  acquirePtyCleanup?(directory: string): Promise<() => void>
   ready(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void
   log(...args: unknown[]): void
 }
@@ -110,10 +110,10 @@ export class WorktreeImporter {
         this.host.post({ type: "agentManager.importResult", projectId, success: true, message: success })
         this.host.log(`${log} as worktree ${worktree.id}`)
       } catch (error) {
-        let release: (() => void) | undefined
-        if (this.host.removePtys) {
+        let releasePtyCleanup: (() => void) | undefined
+        if (this.host.acquirePtyCleanup) {
           try {
-            release = await this.host.removePtys(result.path)
+            releasePtyCleanup = await this.host.acquirePtyCleanup(result.path)
           } catch (cleanup) {
             this.host.log("Failed to remove worktree PTYs:", cleanup)
             throw error
@@ -124,7 +124,7 @@ export class WorktreeImporter {
           state.removeWorktree(worktree.id)
           this.host.push()
         } finally {
-          release?.()
+          releasePtyCleanup?.()
         }
         throw error
       }

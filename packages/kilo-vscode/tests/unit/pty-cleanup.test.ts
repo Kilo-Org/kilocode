@@ -44,7 +44,7 @@ describe("Agent Manager PTY cleanup", () => {
     } as unknown as ProjectContext
     const host = {
       push: () => calls.push("push"),
-      removePtys: async () => {
+      acquirePtyCleanup: async () => {
         calls.push("pty")
         throw new Error("backend offline")
       },
@@ -64,7 +64,7 @@ describe("Agent Manager PTY cleanup", () => {
     } as unknown as ProjectContext
     const host = {
       push: () => calls.push("push"),
-      removePtys: async () => release,
+      acquirePtyCleanup: async () => release,
       client: () => ({ session: { delete: async () => undefined } }) as unknown as KiloClient,
       log: () => undefined,
     } as unknown as LifecycleHost
@@ -81,7 +81,7 @@ describe("Agent Manager PTY cleanup", () => {
     } as unknown as ProjectContext
     const host = {
       push: () => calls.push("push"),
-      removePtys: async () => () => calls.push("release"),
+      acquirePtyCleanup: async () => () => calls.push("release"),
       client: () =>
         ({
           session: {

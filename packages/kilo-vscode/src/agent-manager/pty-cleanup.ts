@@ -21,7 +21,7 @@ export async function removePtys(
   if (failed.length > 0) throw new AggregateError(failed, `Failed to remove PTYs in ${directory}`)
 }
 
-export async function removeWorktreePtys(input: {
+export async function acquirePtyCleanup(input: {
   directory: string
   terminals: TerminalRouter
   scripts: ScriptTerminalManager

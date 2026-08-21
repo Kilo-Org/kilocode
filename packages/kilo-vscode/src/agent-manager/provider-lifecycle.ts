@@ -42,7 +42,7 @@ export interface LifecycleHost {
   capture: (event: string, props: Record<string, unknown>) => void
   autoName: () => { enabled: boolean }
   client: () => KiloClient
-  removePtys: (directory: string) => Promise<() => void>
+  acquirePtyCleanup: (directory: string) => Promise<() => void>
   metadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   post: (message: AgentManagerOutMessage) => void
   log: (...args: unknown[]) => void
@@ -64,9 +64,9 @@ export async function createLifecycleWorktree(
 
   const session = await host.createSession(created.result.path, created.result.branch, created.worktree.id)
   if (!session) {
-    let release: () => void
+    let releasePtyCleanup: () => void
     try {
-      release = await host.removePtys(created.result.path)
+      releasePtyCleanup = await host.acquirePtyCleanup(created.result.path)
     } catch (error) {
       host.log("Failed to remove worktree PTYs:", error)
       return null
@@ -78,7 +78,7 @@ export async function createLifecycleWorktree(
     } catch (error) {
       host.log("Failed to remove worktree after session creation failed:", error)
     } finally {
-      release()
+      releasePtyCleanup()
     }
     return null
   }
@@ -124,9 +124,9 @@ export async function deleteLifecycleWorktree(
     return null
   }
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
-  let release: () => void
+  let releasePtyCleanup: () => void
   try {
-    release = await host.removePtys(worktree.path)
+    releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
   } catch (error) {
     host.log(`Failed to remove worktree from disk: ${error}`)
     host.unskipStats(worktreeId)
@@ -142,7 +142,7 @@ export async function deleteLifecycleWorktree(
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
   } finally {
-    release()
+    releasePtyCleanup()
   }
   return null
 }
@@ -173,8 +173,8 @@ export async function removeStaleLifecycleWorktree(
     return null
   }
   try {
-    const release = await host.removePtys(worktree.path)
-    release()
+    const releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
+    releasePtyCleanup()
   } catch (error) {
     host.log(`Failed to remove stale worktree PTYs: ${error}`)
     return null

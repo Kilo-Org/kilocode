@@ -36,7 +36,7 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
 import { discardWorktree as discard } from "./discard-worktree"
-import { removeWorktreePtys } from "./pty-cleanup"
+import { acquirePtyCleanup } from "./pty-cleanup"
 import { executeVscodeTask } from "./task-runner"
 import { runWorktreeSetupScript } from "./setup-script-task"
 import { RunController } from "./run/controller"
@@ -178,7 +178,7 @@ export class AgentManagerProvider implements Disposable {
       push: () => this.pushState(),
       setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
       session: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
-      removePtys: (directory) => this.removePtys(directory),
+      acquirePtyCleanup: (directory) => this.acquirePtyCleanup(directory),
       register: (sid, dir) => this.registerWorktreeSession(sid, dir),
       ready: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
       log: (...args) => this.log(...args),
@@ -1014,8 +1014,8 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  private async removePtys(directory: string): Promise<() => void> {
-    return removeWorktreePtys({
+  private async acquirePtyCleanup(directory: string): Promise<() => void> {
+    return acquirePtyCleanup({
       directory,
       terminals: this.terminalRouter,
       scripts: this.scripts.manager,
@@ -1091,13 +1091,13 @@ export class AgentManagerProvider implements Disposable {
           return true
         },
         cleanupWorktree: async (wid, dir) => {
-          const release = await this.removePtys(dir)
+          const releasePtyCleanup = await this.acquirePtyCleanup(dir)
           try {
             await this.getWorktreeManager()?.removeWorktree(dir)
             this.getStateManager()?.removeWorktree(wid)
             this.pushState()
           } finally {
-            release()
+            releasePtyCleanup()
           }
         },
         setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
@@ -1468,7 +1468,7 @@ export class AgentManagerProvider implements Disposable {
       capture: (event, props) => this.host.capture(event, props),
       autoName: () => this.host.autoBranchNaming(),
       client: () => this.connectionService.getClient(),
-      removePtys: (directory) => this.removePtys(directory),
+      acquirePtyCleanup: (directory) => this.acquirePtyCleanup(directory),
       metadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
