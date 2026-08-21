@@ -3022,7 +3022,7 @@ describe("SessionRunnerLLM", () => {
       expect(requests[1]?.toolChoice).toMatchObject({ type: "none" })
       expect(requests[1]?.tools).toEqual([])
       expect(requests[1]?.messages.at(-1)).toMatchObject({
-        role: "assistant",
+        role: "user", // kilocode_change - max-step instructions must not become assistant prefill
         content: [{ type: "text", text: expect.stringContaining("MAXIMUM STEPS REACHED") }],
       })
       expect(executions).toEqual(["done"])
