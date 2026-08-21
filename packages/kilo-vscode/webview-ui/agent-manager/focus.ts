@@ -2,6 +2,48 @@ import { isTextControl } from "../src/utils/focus"
 
 const OPTION = '[data-component="question-dock"] button[data-slot="question-option"]'
 
+export type AgentManagerFocusTarget = "prompt" | "mainTerminal" | "sideTerminal" | "other"
+
+export function forgetTerminalFocus(memory: Map<string, "prompt" | { terminal: string }>, id: string): void {
+  for (const [key, owner] of memory) if (owner !== "prompt" && owner.terminal === id) memory.delete(key)
+}
+
+/** Resolve focus from the current DOM owner, not focus event order. */
+export function agentManagerFocusTarget(active: Element | null, promptPending = false): AgentManagerFocusTarget {
+  if (promptPending || active?.matches("textarea.prompt-input")) return "prompt"
+  if (active?.closest(".am-side-terminal-layer .am-terminal-host")) return "sideTerminal"
+  if (active?.closest(".am-terminal-layer .am-terminal-host")) return "mainTerminal"
+  return "other"
+}
+
+export function createFocusBridge(deps: {
+  prompt: { active: () => boolean; focus: () => void }
+  post: (target: AgentManagerFocusTarget) => void
+  remember: () => void
+  restore: () => "none" | "ready" | "pending"
+}) {
+  const report = () => {
+    const active = agentManagerFocusTarget(document.activeElement)
+    deps.post(
+      active === "mainTerminal" || active === "sideTerminal"
+        ? active
+        : agentManagerFocusTarget(document.activeElement, deps.prompt.active()),
+    )
+  }
+  return {
+    report,
+    prompt: (focused: boolean) => {
+      if (focused) deps.remember()
+      report()
+    },
+    focus: () => {
+      if (deps.restore() === "pending") return
+      deps.post("prompt")
+      deps.prompt.focus()
+    },
+  }
+}
+
 /** Keep an active editor, such as the worktree rename input, in control. */
 export const preservesTextFocus = (active: Element | null): boolean =>
   active !== null && isTextControl(active) && !active.classList.contains("prompt-input")

@@ -20,7 +20,7 @@ internal class DiffStatBadge(
     private val inset: Int = 0,
     // When false the badge paints only its text, without the rounded background pill or padding.
     private val fill: Boolean = true,
-) : JPanel(GridBagLayout()) {
+) : JPanel(GridBagLayout()), DiffBadge {
     constructor(additions: Int, deletions: Int) : this(additions, deletions, Variant.REGULAR, 0)
 
     internal enum class Variant {
@@ -68,7 +68,7 @@ internal class DiffStatBadge(
         return Dimension(dim.width, variant.height())
     }
 
-    fun update(additions: Int, deletions: Int) {
+    override fun update(additions: Int, deletions: Int) {
         removed.isVisible = deletions > 0
         added.isVisible = additions > 0
         if (removed.isVisible) removed.text = "-$deletions"

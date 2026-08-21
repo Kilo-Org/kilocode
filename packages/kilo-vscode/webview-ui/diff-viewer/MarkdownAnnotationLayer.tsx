@@ -145,12 +145,16 @@ export const MarkdownAnnotationLayer: Component<MarkdownAnnotationLayerProps> = 
     }
 
     const paneBox = pane.getBoundingClientRect()
+    let bottom = 0
     for (const anchor of list) {
       const box = anchor.element.getBoundingClientRect()
       const row = document.createElement("div")
       row.className = "am-markdown-target"
-      row.style.top = `${box.top - paneBox.top}px`
-      row.style.height = `${Math.max(20, box.height)}px`
+      const height = Math.max(20, box.height)
+      const top = Math.max(box.top - paneBox.top, bottom)
+      row.style.top = `${top}px`
+      row.style.height = `${height}px`
+      bottom = top + height
 
       if (props.enableGutterUtility) {
         const button = document.createElement("button")

@@ -151,7 +151,7 @@ export async function terminate(proc: Process, input: Runtime = runtime): Promis
         windowsHide: true,
         timeout: SPAWN_TIMEOUT_MS,
       })
-      if (!killed && !state.exited) direct(proc)
+      if ((!killed || input.alive(proc.pid)) && !state.exited) direct(proc)
       if (!state.exited) await input.sleep(GRACE_MS)
       await verify(proc, state.exited, input)
       return

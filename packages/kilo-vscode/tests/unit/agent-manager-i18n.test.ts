@@ -28,6 +28,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalDestinationButton.tsx"),
+  path.join(ROOT, "webview-ui/documents/DocumentPanel.tsx"),
 ]
 
 /**

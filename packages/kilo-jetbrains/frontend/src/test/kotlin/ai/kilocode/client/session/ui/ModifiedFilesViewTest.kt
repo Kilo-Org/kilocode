@@ -99,6 +99,17 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
         assertNull(view.headerPopup())
     }
 
+    fun `test single file body omits filename header`() {
+        view.setDiffs(listOf(file("src/A.kt", 2, 1, PATCH)))
+
+        view.toggle()
+
+        assertTrue(view.bodyCreated())
+        assertEquals(1, diffScrolls(view).size)
+        val links = components(view).filterIsInstance<JBLabel>().filter { it.text?.contains("<u>") == true }
+        assertTrue("single-file changes should not render a file header", links.isEmpty())
+    }
+
     fun `test open in diff uses changed files title`() {
         val titles = mutableListOf<String>()
         view.setDiffOpener({ _, title, _ -> titles.add(title) }, "ses", "turn")

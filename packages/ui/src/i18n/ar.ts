@@ -211,6 +211,7 @@ export const dict = {
   "ui.patch.action.created": "تم الإنشاء",
   "ui.patch.action.moved": "منقول",
   "ui.patch.action.patched": "تم تطبيق رقعة",
+  "ui.patch.action.plan": "خطة", // kilocode_change
 
   "ui.question.subtitle.answered": "تمت الإجابة عن {{count}}",
   "ui.question.answer.none": "(لا توجد إجابة)",

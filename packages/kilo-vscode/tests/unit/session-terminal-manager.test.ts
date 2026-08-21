@@ -139,9 +139,30 @@ describe("SessionTerminalManager structure", () => {
 
   it("rejects context capture from another managed session", () => {
     const text = body("prepareContext")
-    expect(text).toContain("this.showExisting(sessionId)")
+    expect(text).toContain("this.showExisting(sessionId, false)")
     expect(text).toContain("this.activeKey()")
     expect(text).toContain("SessionTerminalManager.sessionKey(sessionId)")
+  })
+
+  it("allows a focused legacy Run terminal when no managed terminal exists", () => {
+    const active = {}
+    const host: TerminalHost = {
+      createTerminal() {
+        throw new Error("not used")
+      },
+      activeTerminal: () => active,
+      repoPath: () => undefined,
+      showWarning() {},
+      setContext() {},
+      onTerminalClosed: () => ({ dispose() {} }),
+      onActiveTerminalChanged: () => ({ dispose() {} }),
+      registerCommand: () => ({ dispose() {} }),
+      executeCommand: () => Promise.resolve(),
+    }
+    const manager = new SessionTerminalManager(() => {}, host)
+
+    expect(manager.prepareContext("session-1", "local")).toBe(true)
+    manager.dispose()
   })
 })
 

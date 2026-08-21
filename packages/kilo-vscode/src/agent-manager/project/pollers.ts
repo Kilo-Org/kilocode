@@ -79,6 +79,7 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
     openExternal: deps.openExternal,
     log: deps.log,
     semaphore: deps.semaphore,
+    projectId: () => ctx.id,
   })
   return { stats, pr }
 }
@@ -209,6 +210,7 @@ export function createPollers(opts: {
     openExternal: opts.openExternal,
     log: opts.log,
     semaphore: opts.semaphore,
+    projectId: opts.activeId,
   })
   const projects = new ProjectPollers({
     git: opts.git,

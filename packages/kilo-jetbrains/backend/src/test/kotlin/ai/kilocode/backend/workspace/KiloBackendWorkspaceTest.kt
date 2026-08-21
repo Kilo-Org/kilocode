@@ -232,6 +232,7 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `agents failure retries then transitions to Error`() = runBlocking {
         mock.agentsStatus = 500
+        mock.agents = """{"error":"invalid agent config"}"""
         val app = setup()
         val ws = ready(app)
 
@@ -241,6 +242,60 @@ class KiloBackendWorkspaceTest {
 
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("agents"))
+        val item = err.errors.single { it.resource == "agents" }
+        assertEquals(500, item.status)
+        assertTrue(item.detail?.contains("invalid agent config") == true)
+        assertTrue(log.messages.any { it.contains("agents response body:") && it.contains("invalid agent config") })
+        assertTrue(log.messages.any { it.contains("WARN: agents: all 3 attempts failed") })
+        assertTrue(log.messages.none { it.contains("ERROR: agents: all 3 attempts failed") })
+    }
+
+    @Test
+    fun `dev container virtual directory transitions to Unsupported without fetching agents`() = runBlocking {
+        val app = setup()
+        connect(app)
+        mock.resetCounts()
+        val ws = app.workspaces.get("/${'$'}devcontainer.ij/abc@u~run~user~1001~podman~podman.sock/workspaces/project")
+
+        val state = withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Unsupported }
+        } as KiloWorkspaceState.Unsupported
+
+        assertEquals("devcontainer_virtual_filesystem", state.reason)
+        assertEquals(0, mock.requestCount("/agent"))
+        assertEquals(0, mock.requestCount("/provider"))
+        assertTrue(log.messages.none { it.contains("all 3 attempts failed") })
+        assertTrue(log.messages.none { it.contains("Workspace error") })
+    }
+
+    @Test
+    fun `wsl virtual directory transitions to Unsupported without fetching agents`() = runBlocking {
+        val app = setup()
+        connect(app)
+        mock.resetCounts()
+        val ws = app.workspaces.get("\\\\wsl${'$'}\\Ubuntu\\home\\user\\project")
+
+        val state = withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Unsupported }
+        } as KiloWorkspaceState.Unsupported
+
+        assertEquals("wsl_virtual_filesystem", state.reason)
+        assertEquals(0, mock.requestCount("/agent"))
+    }
+
+    @Test
+    fun `invalid virtual directory transitions to Unsupported without fetching agents`() = runBlocking {
+        val app = setup()
+        connect(app)
+        mock.resetCounts()
+        val ws = app.workspaces.get("bad" + Char.MIN_VALUE + "path")
+
+        val state = withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Unsupported }
+        } as KiloWorkspaceState.Unsupported
+
+        assertEquals("invalid_virtual_path", state.reason)
+        assertEquals(0, mock.requestCount("/agent"))
     }
 
     @Test

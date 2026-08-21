@@ -58,6 +58,12 @@ export interface TabBarProps {
   prStatus: () => PRStatus | undefined
   prOpen: () => boolean
   onTogglePR: () => void
+  documentsOpen: () => boolean
+  documentsAvailable: () => boolean
+  onToggleDocuments: () => void
+  subagentsAvailable: () => boolean
+  subagentsOpen: () => boolean
+  onToggleSubagents: () => void
   terminalDestination: () => TerminalDestination
   terminalDestinationActive: () => boolean
   terminalKeybind: () => string
@@ -232,6 +238,30 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     </Tooltip>
                   )}
                 </Show>
+                <Show when={props.documentsAvailable()}>
+                  <Tooltip value={props.t("agentManager.documents.toggle")} placement="bottom">
+                    <IconButton
+                      icon="book-open-check"
+                      size="small"
+                      variant="ghost"
+                      label={props.t("agentManager.documents.toggle")}
+                      class={props.documentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleDocuments}
+                    />
+                  </Tooltip>
+                </Show>
+                <Show when={props.subagentsAvailable()}>
+                  <Tooltip value="Subagents" placement="bottom">
+                    <IconButton
+                      icon="task"
+                      size="small"
+                      variant="ghost"
+                      label="Subagents"
+                      class={props.subagentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleSubagents}
+                    />
+                  </Tooltip>
+                </Show>
                 <TooltipKeybind
                   title={props.t("agentManager.diff.toggle")}
                   keybind={props.bindings().toggleDiff ?? ""}
@@ -272,7 +302,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
           {/* Terminal destination split button: the primary action
                follows the user's setting (VS Code integrated terminal
                or the embedded side panel), the dropdown picks which.
-               Cmd+Shift+T creates a terminal in the active terminal container. */}
+               Cmd+Shift+T creates a central terminal from center focus. Cmd+T creates a session in the center or a terminal in the right sidebar. */}
           <TerminalDestinationButton
             destination={props.terminalDestination}
             active={props.terminalDestinationActive}

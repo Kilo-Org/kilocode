@@ -18,6 +18,7 @@ export function createRevertFile(
   vscode: VsCode,
   showToast: (t: Toast) => void,
   t: (key: string) => string,
+  projectId?: Accessor<string | undefined>,
 ) {
   const [files, setFiles] = createSignal<Record<string, Set<string>>>({})
 
@@ -36,7 +37,13 @@ export function createRevertFile(
       set.add(file)
       return { ...prev, [id]: set }
     })
-    vscode.postMessage({ type: "agentManager.revertWorktreeFile", sessionId: context, file, scope: scope() })
+    vscode.postMessage({
+      type: "agentManager.revertWorktreeFile",
+      projectId: projectId?.(),
+      sessionId: context,
+      file,
+      scope: scope(),
+    })
   }
 
   function onResult(ev: AgentManagerRevertWorktreeFileResultMessage) {

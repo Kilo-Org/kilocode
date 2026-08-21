@@ -215,6 +215,7 @@ export const dict = {
   "ui.patch.action.created": "Criado",
   "ui.patch.action.moved": "Movido",
   "ui.patch.action.patched": "Patch aplicado",
+  "ui.patch.action.plan": "Plano", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} respondidas",
   "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change

@@ -197,6 +197,7 @@ export const dict = {
   "ui.patch.action.created": "已创建",
   "ui.patch.action.moved": "已移动",
   "ui.patch.action.patched": "已应用补丁",
+  "ui.patch.action.plan": "计划", // kilocode_change
 
   "ui.question.subtitle.answered": "已回答 {{count}} 个",
   "ui.question.answer.none": "（无答案）",
