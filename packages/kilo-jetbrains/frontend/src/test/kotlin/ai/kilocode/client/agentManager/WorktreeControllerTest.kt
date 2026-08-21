@@ -19,7 +19,9 @@ import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.util.IconLoader
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.GraphicsEnvironment
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -371,13 +373,20 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     }
 
     fun `test worktree icons load at the same size`() {
-        assertTrue("branch icon should load", WorktreeIcons.branch.iconWidth > 0)
-        assertTrue("lock icon should load", WorktreeIcons.locked.iconWidth > 0)
-        assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.locked.iconWidth)
-        assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.locked.iconHeight)
-        for (kind in SessionActivityKind.entries) {
-            assertEquals(WorktreeIcons.branch.iconWidth, kind.icon().iconWidth)
-            assertEquals(WorktreeIcons.branch.iconHeight, kind.icon().iconHeight)
+        // Loading an svg asset resolves to a 1x1 placeholder while the platform is headless, which is
+        // how CI runs, so switch real loading on for the assertions and put the ambient state back.
+        IconLoader.activate()
+        try {
+            assertTrue("branch icon should load", WorktreeIcons.branch.iconWidth > 1)
+            assertTrue("lock icon should load", WorktreeIcons.locked.iconWidth > 1)
+            assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.locked.iconWidth)
+            assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.locked.iconHeight)
+            for (kind in SessionActivityKind.entries) {
+                assertEquals(WorktreeIcons.branch.iconWidth, kind.icon().iconWidth)
+                assertEquals(WorktreeIcons.branch.iconHeight, kind.icon().iconHeight)
+            }
+        } finally {
+            if (GraphicsEnvironment.isHeadless()) IconLoader.deactivate()
         }
     }
 
