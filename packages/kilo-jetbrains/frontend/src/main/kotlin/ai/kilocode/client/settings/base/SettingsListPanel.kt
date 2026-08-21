@@ -140,12 +140,6 @@ internal abstract class SettingsListPanel(
 
     protected open fun afterApply() = Unit
 
-    @RequiresEdt
-    protected fun selectionIndex(): ActiveListSelection {
-        checkEdt()
-        return ActiveListSelection.Index(view.selectedIndex())
-    }
-
     private fun header(): JComponent {
         search.textEditor.registerKeyboardAction(
             { view.primary() },

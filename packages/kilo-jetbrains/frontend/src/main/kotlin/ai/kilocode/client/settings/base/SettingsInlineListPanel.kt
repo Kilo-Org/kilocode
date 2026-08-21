@@ -80,7 +80,7 @@ internal abstract class SettingsInlineListPanel(
     fun setItems(items: List<ActiveListItem>, enabled: Boolean) {
         checkEdt()
         setEnabled(enabled)
-        view.update(items, ActiveListSelection.PreserveNoScroll)
+        view.update(items, ActiveListSelection.Preserve)
         toolbar?.updateActionsImmediately()
     }
 

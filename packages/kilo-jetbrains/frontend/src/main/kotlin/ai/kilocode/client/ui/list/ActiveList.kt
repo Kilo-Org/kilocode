@@ -95,6 +95,10 @@ internal class ActiveList(
     @RequiresEdt
     fun selectIndex(index: Int) = view.selectIndex(index)
 
+    /** Steps the selection by [step] visible rows, clamped to the ends of the list. */
+    @RequiresEdt
+    fun move(step: Int) = view.move(step)
+
     @RequiresEdt
     fun selectedIndex(): Int = view.selectedIndex()
 

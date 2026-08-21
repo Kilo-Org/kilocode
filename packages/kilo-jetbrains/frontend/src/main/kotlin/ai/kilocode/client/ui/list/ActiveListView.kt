@@ -321,17 +321,14 @@ internal class ActiveListView(
         checkEdt()
         if (this.items != items) heightKey = null
         this.items = items
-        val scroll = selection != ActiveListSelection.PreserveNoScroll
         when (selection) {
             is ActiveListSelection.Key -> {
                 anchor = setOf(selection.key)
                 mark = -1
-                sync(Absent.KEEP, scroll)
+                sync(Absent.KEEP)
             }
-            is ActiveListSelection.Index -> sync(Absent.KEEP, scroll, selection.index, reanchor = true)
-            ActiveListSelection.Slide -> sync(Absent.SLIDE, scroll)
-            ActiveListSelection.PreserveNoScroll,
-            ActiveListSelection.Preserve -> sync(Absent.KEEP, scroll)
+            ActiveListSelection.Slide -> sync(Absent.SLIDE)
+            ActiveListSelection.Preserve -> sync(Absent.KEEP)
         }
     }
 
@@ -366,13 +363,14 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
-    private fun sync(absent: Absent = Absent.KEEP, scroll: Boolean = true, at: Int? = null, reanchor: Boolean = false) {
+    private fun sync(absent: Absent = Absent.KEEP, at: Int? = null) {
         checkEdt()
         val q = filter.trim()
         val base = if (q.isBlank()) items else items.filter { matcher(q, it) }
         val state = drag
         if (state != null && base.none { it.key == state.key }) drag = null
         val rows = drag?.let { activeListGapRows(base, it.key, it.index, it.height) } ?: base
+        val before = identities()
         restoring = true
         try {
             // Rebuilding the model fires a list-wide repaint, so skip it when the visible rows are
@@ -383,33 +381,38 @@ internal class ActiveListView(
                 model.replaceAll(rows)
             }
             syncCellHeight(rows)
-            restore(rows, absent, scroll, at, reanchor)
+            restore(rows, absent, at)
+            // Scroll only when the refresh moved the selection to another row. Re-finding the same
+            // rows must leave the viewport where the user left it, or a polling owner would drag the
+            // view back to the selection on every tick.
+            val idx = list.selectedIndex
+            if (idx >= 0 && identities() != before) ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
         } finally {
             restoring = false
         }
     }
 
+    /**
+     * Reselects the anchored rows in the rebuilt [rows], or the row [at] when the drag gap pins the
+     * slot. Falls back to [absent] once none of the anchored rows survive.
+     */
     @RequiresEdt
-    private fun restore(rows: List<ActiveListItem>, absent: Absent, scroll: Boolean, at: Int?, reanchor: Boolean) {
+    private fun restore(rows: List<ActiveListItem>, absent: Absent, at: Int?) {
         checkEdt()
         val idx = at?.let { activeListIndex(rows, it) }?.takeIf { it >= 0 }
         if (idx != null) {
-            choose(idx, scroll)
+            list.selectedIndex = idx
             mark = idx
-            if (reanchor) anchor = setOf(rows[idx].identity)
             return
         }
         val indices = anchor.mapNotNull { id -> activeListIdentityIndex(rows, id).takeIf { it >= 0 } }
         if (indices.isNotEmpty()) {
             list.selectedIndices = indices.toIntArray()
-            mark = indices.first()
-            if (scroll) ScrollingUtil.ensureIndexIsVisible(list, mark, 0)
+            mark = indices.min()
             return
         }
         when (absent) {
-            Absent.KEEP -> {
-                list.clearSelection()
-            }
+            Absent.KEEP -> list.clearSelection()
             Absent.SLIDE -> {
                 if (anchor.isEmpty() || rows.isEmpty()) {
                     list.clearSelection()
@@ -417,7 +420,7 @@ internal class ActiveListView(
                     return
                 }
                 val next = mark.coerceIn(0, rows.lastIndex)
-                choose(next, scroll)
+                list.selectedIndex = next
                 anchor = setOf(rows[next].identity)
                 mark = next
             }
@@ -426,7 +429,7 @@ internal class ActiveListView(
                     list.clearSelection()
                     return
                 }
-                choose(0, scroll)
+                list.selectedIndex = 0
                 mark = 0
                 if (anchor.isEmpty()) anchor = setOf(rows[0].identity)
             }
@@ -498,8 +501,10 @@ internal class ActiveListView(
         checkEdt()
         val size = model.size
         if (size <= 0) return
-        val idx = ((list.selectedIndex.takeIf { it >= 0 } ?: 0) + step).coerceIn(0, size - 1)
-        choose(idx)
+        // With nothing selected the first step lands on the near end: down takes the first row, up
+        // takes the last, instead of skipping past it.
+        val from = list.selectedIndex.takeIf { it >= 0 } ?: if (step > 0) -1 else size
+        choose((from + step).coerceIn(0, size - 1))
     }
 
     @RequiresEdt
@@ -654,7 +659,7 @@ internal class ActiveListView(
         val next = idx.coerceIn(run.first, run.last)
         if (state.index == next && current != null) return
         drag = state.copy(index = next)
-        sync(Absent.KEEP, scroll = false, at = next)
+        sync(at = next)
     }
 
     @RequiresEdt
@@ -675,7 +680,7 @@ internal class ActiveListView(
         heightKey = null
         anchor = setOf(state.key)
         mark = target
-        sync(Absent.KEEP, scroll = false, at = target)
+        sync(at = target)
         if (source == target) return
         reorder?.onMove?.invoke(ActiveListMove(state.key, source, target, rows.map { it.key }))
     }
@@ -886,14 +891,24 @@ private fun activeListIndex(items: List<ActiveListItem>, index: Int): Int {
     return index.coerceIn(0, items.lastIndex)
 }
 
+/**
+ * What a refresh should do with the selection. Every policy keeps the rows the user last selected
+ * when they survive the refresh, and none of them scrolls in that case; they differ only in what
+ * happens once those rows are gone.
+ */
 internal sealed interface ActiveListSelection {
-    /** Restore the remembered rows and scroll to them; select nothing while they are absent. */
+    /** Select nothing while the remembered rows are absent, and pick them up again if they return. */
     data object Preserve : ActiveListSelection
-    data object PreserveNoScroll : ActiveListSelection
-    /** Restore the remembered rows; when they are all gone, select the row that took their slot. */
+
+    /**
+     * Select the row that took the remembered row's slot — the following row, or the last row when
+     * the removed one was last — so a deletion moves the highlight instead of dropping it. Clears
+     * only when nothing was selected or the list is now empty.
+     */
     data object Slide : ActiveListSelection
+
+    /** Select [key] instead, now or as soon as a later refresh brings that row in. */
     data class Key(val key: String) : ActiveListSelection
-    data class Index(val index: Int) : ActiveListSelection
 }
 
 internal fun activeListMatches(query: String, item: ActiveListItem): Boolean {

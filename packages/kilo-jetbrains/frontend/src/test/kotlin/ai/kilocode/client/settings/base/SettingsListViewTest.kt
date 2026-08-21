@@ -767,7 +767,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test preserve no scroll keeps scroll position after row change`() {
+    fun `test refresh keeps scroll position after row change`() {
         edt {
             val view = ActiveListView("Empty") { _, _ -> }
             val rows = (0 until 30).map { item("row$it", "Row $it", null, ActiveListCell("level", "Allow", alwaysVisible = true)) }
@@ -785,7 +785,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val before = scroll.viewport.viewPosition.y
             assertTrue("expected a scrolled viewport", before > 0)
 
-            view.update(rows, ActiveListSelection.PreserveNoScroll)
+            view.update(rows, ActiveListSelection.Preserve)
             UIUtil.dispatchAllInvocationEvents()
 
             assertEquals(before, scroll.viewport.viewPosition.y)
@@ -801,17 +801,6 @@ class SettingsListViewTest : BasePlatformTestCase() {
                 listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)),
                 ActiveListSelection.Key("c"),
             )
-
-            assertEquals("c", view.selected()?.key)
-        }
-    }
-
-    fun `test update selects preferred index`() {
-        edt {
-            val view = ActiveListView("Empty") { _, _ -> }
-            view.update(listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)))
-            view.list.selectedIndex = 1
-            view.update(listOf(item("a", "Alpha", null), item("c", "Gamma", null)), ActiveListSelection.Index(1))
 
             assertEquals("c", view.selected()?.key)
         }

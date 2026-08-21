@@ -1,6 +1,9 @@
 package ai.kilocode.client.ui.list
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.ui.UIUtil
+import java.awt.Dimension
 
 class ActiveListSelectionTest : BasePlatformTestCase() {
 
@@ -89,6 +92,75 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
         assertEquals(listOf("b"), view.selectedKeys())
     }
 
+    fun `test key policy keeps an absent row pending`() {
+        val view = view()
+        view.update(rows("a", "b"))
+
+        view.update(rows("a"), ActiveListSelection.Key("b"))
+        assertNull(view.selected())
+        view.update(rows("a", "b"), ActiveListSelection.Preserve)
+
+        assertEquals("b", view.selected()?.key)
+    }
+
+    fun `test clearing selection drops the anchor`() {
+        val view = view()
+        view.update(rows("a", "b"))
+        assertTrue(view.select("b"))
+
+        view.clearSelection()
+        view.update(rows("a", "b"))
+
+        assertNull(view.selected())
+    }
+
+    fun `test slide keeps the last row selected when it is removed`() {
+        val view = view()
+        view.update(rows("a", "b", "c"))
+        assertTrue(view.select("c"))
+
+        view.update(rows("a", "b"), ActiveListSelection.Slide)
+
+        assertEquals("b", view.selected()?.key)
+    }
+
+    fun `test move steps the selection and a refresh keeps the moved row`() {
+        val view = view()
+        view.update(rows("a", "b", "c"))
+        assertNull(view.selected())
+
+        // From no selection the first step lands on the near end rather than skipping it.
+        view.move(1)
+        assertEquals("a", view.selected()?.key)
+        view.clearSelection()
+        view.move(-1)
+        assertEquals("c", view.selected()?.key)
+
+        view.selectIndex(0)
+        view.move(1)
+        assertEquals("b", view.selected()?.key)
+        view.update(rows("a", "b", "c"))
+        assertEquals("b", view.selected()?.key)
+
+        view.move(-5)
+        assertEquals("a", view.selected()?.key)
+        view.move(9)
+        assertEquals("c", view.selected()?.key)
+    }
+
+    fun `test refresh while filtered restores the anchored row`() {
+        val view = view()
+        view.update(rows("a", "b", "c"))
+        assertTrue(view.select("b"))
+        view.filter("Beta")
+        assertEquals("b", view.selected()?.key)
+
+        view.update(rows("a", "b", "c", "d"))
+
+        assertEquals(listOf("b"), view.selectedKeys())
+        assertEquals(1, view.list.model.size)
+    }
+
     fun `test absent select creates pending anchor`() {
         val view = view()
         view.update(rows("a"))
@@ -98,6 +170,34 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
         view.update(rows("a", "b"))
 
         assertEquals("b", view.selected()?.key)
+    }
+
+    fun `test refresh keeps the viewport and only a moved selection scrolls`() {
+        val view = view()
+        val rows = (0 until 30).map { row("k$it", "Row $it") }
+        view.update(rows)
+        val scroll = JBScrollPane(view.list)
+        scroll.size = Dimension(320, 80)
+        scroll.doLayout()
+        view.list.doLayout()
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(view.select("k25"))
+        scroll.doLayout()
+        UIUtil.dispatchAllInvocationEvents()
+        val before = scroll.viewport.viewPosition.y
+        assertTrue("expected a scrolled viewport", before > 0)
+
+        // Re-finding the same row must not drag the viewport back to the selection.
+        view.update(rows)
+        UIUtil.dispatchAllInvocationEvents()
+        assertEquals(before, scroll.viewport.viewPosition.y)
+
+        view.update(rows, ActiveListSelection.Key("k0"))
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals("k0", view.selected()?.key)
+        assertTrue(scroll.viewport.viewPosition.y < before)
     }
 
     fun `test identity override restores by identity and key`() {

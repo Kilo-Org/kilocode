@@ -374,7 +374,7 @@ class AgentManagerPanel(
                     pull,
                 )
             },
-            ActiveListSelection.PreserveNoScroll,
+            ActiveListSelection.Preserve,
         )
     }
 
