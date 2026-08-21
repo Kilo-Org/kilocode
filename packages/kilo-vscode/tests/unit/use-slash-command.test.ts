@@ -270,6 +270,78 @@ describe("useSlashCommand sandbox action", () => {
   })
 })
 
+describe("slash command keyboard selection", () => {
+  it.each(["Enter", "Tab"] as const)("keeps %s selection aligned with the action-first menu", (key) => {
+    const state = { text: "/refresh", prevented: 0 }
+    const ctx = setup(() => {})
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key,
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    ctx.slash.onInput(state.text, state.text.length)
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "refresh", description: "Run the custom refresh command", hints: [] }],
+    })
+
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["reload", "refresh"])
+    const handled = ctx.slash.onKeyDown(event, textarea, (text) => (state.text = text))
+
+    expect(handled).toBe(true)
+    expect(state.prevented).toBe(1)
+    expect(state.text).toBe("")
+    expect(textarea.value).toBe("")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }, { type: "reload" }])
+    ctx.dispose()
+  })
+
+  it("selects the second displayed result after ArrowDown", () => {
+    const state = { text: "/refresh", prevented: 0 }
+    const ctx = setup(() => {})
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "refresh", description: "Run the custom refresh command", hints: [] }],
+    })
+
+    const down = {
+      key: "ArrowDown",
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+    const enter = {
+      key: "Enter",
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    expect(ctx.slash.onKeyDown(down, textarea, (text) => (state.text = text))).toBe(true)
+    expect(ctx.slash.index()).toBe(1)
+    expect(ctx.slash.onKeyDown(enter, textarea, (text) => (state.text = text))).toBe(true)
+
+    expect(state.prevented).toBe(2)
+    expect(state.text).toBe("/refresh ")
+    expect(textarea.value).toBe("/refresh ")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+})
+
 describe("select", () => {
   it("preserves trailing text for action commands", () => {
     let actionCalls = 0

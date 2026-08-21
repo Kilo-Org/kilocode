@@ -31,6 +31,8 @@ interface SessionManager {
 
     val hostedInEditorTab: Boolean get() = false
 
+    val readonly: Boolean get() = false
+
     fun emptyPanel(parent: Disposable, controller: SessionController): EmptySessionPanel = EmptySessionPanel(
         parent,
         controller,

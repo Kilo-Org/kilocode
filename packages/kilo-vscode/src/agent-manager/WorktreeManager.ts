@@ -965,8 +965,18 @@ export class WorktreeManager {
   }
 
   async defaultBranch(): Promise<string> {
-    // 1. Try symbolic-ref against the resolved remote (not hardcoded "origin")
     const remote = await this.resolveRemote()
+
+    // 1. Prefer the shared resolver, which verifies the remote's current HEAD.
+    if (this.ops && remote) {
+      const ref = await this.ops.resolveDefaultBranch(this.root).catch((e) => {
+        this.log(`defaultBranch: shared resolver failed: ${e}`)
+        return undefined
+      })
+      if (ref?.startsWith(`${remote}/`)) return ref.slice(remote.length + 1)
+    }
+
+    // 2. Try local symbolic-ref against the resolved remote (not hardcoded "origin")
     if (remote) {
       try {
         const head = await this.git.raw(["symbolic-ref", `refs/remotes/${remote}/HEAD`])
@@ -978,7 +988,7 @@ export class WorktreeManager {
       }
     }
 
-    // 2. Try current branch (if not detached)
+    // 3. Try current branch (if not detached)
     try {
       const current = await this.currentBranch()
       if (current && current !== "HEAD") return current
@@ -986,7 +996,7 @@ export class WorktreeManager {
       this.log(`defaultBranch: currentBranch failed: ${e}`)
     }
 
-    // 3. Try first local branch
+    // 4. Try first local branch
     try {
       const branches = await this.git.branchLocal()
       if (branches.all.length > 0) return branches.all[0]

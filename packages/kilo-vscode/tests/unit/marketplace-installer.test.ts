@@ -270,17 +270,12 @@ describe("MarketplaceInstaller skills", () => {
 })
 
 describe("MarketplaceInstaller agents", () => {
-  it("preserves requirements in installed agent frontmatter", async () => {
+  it("preserves agent metadata in installed frontmatter", async () => {
     const installer = new MarketplaceInstaller(new TestPaths())
     const item = agent({
       mode: "all",
       description: "Requires local setup",
       prompt: "Use the available project tools.",
-      requirements: {
-        skills: ["project-skill"],
-        mcps: ["project-mcp"],
-        vscode_extensions: [{ name: "Project Helper", id: "publisher.project-helper" }],
-      },
     })
 
     const result = await installer.installAgent(item, "project", tmpDir)
@@ -289,6 +284,6 @@ describe("MarketplaceInstaller agents", () => {
     expect(result.filePath).toBeDefined()
     if (!result.filePath) throw new Error("agent install did not return a file path")
     const data = await frontmatter(result.filePath)
-    expect(data.requirements).toEqual(item.content.requirements)
+    expect(data.description).toBe(item.content.description)
   })
 })

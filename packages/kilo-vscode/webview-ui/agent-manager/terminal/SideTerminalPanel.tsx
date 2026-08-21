@@ -40,6 +40,7 @@ interface Props {
   /** Deliberately stop a running script terminal. */
   onStop: (terminalId: string) => void
   onFocusPrompt: () => void
+  onFocusChange?: (focused: boolean) => void
 }
 
 export const SideTerminalPanel: Component<Props> = (props) => {
@@ -127,6 +128,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
         contextKey: props.contextKey,
         visible: props.visible,
         onFocusPrompt: props.onFocusPrompt,
+        onFocusChange: props.onFocusChange,
       })}
       <Show when={props.visible() && sides().length === 0 && pending()}>
         <div class="am-side-terminal-state" role="status">

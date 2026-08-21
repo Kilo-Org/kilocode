@@ -189,6 +189,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "بنایا گیا",
   "ui.patch.action.moved": "منتقل ہو گیا",
   "ui.patch.action.patched": "پیچ کیتا گیا",
+  "ui.patch.action.plan": "ਯੋਜਨਾ", // kilocode_change
   "ui.question.subtitle.answered": "{{count}} جواب دتا گیا",
   "ui.question.answer.none": "(کوئی جواب نئیں)",
   "ui.question.review.notAnswered": "(جواب نئیں دتا گیا)",

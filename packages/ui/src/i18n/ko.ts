@@ -171,6 +171,7 @@ export const dict = {
   "ui.patch.action.created": "생성됨",
   "ui.patch.action.moved": "이동됨",
   "ui.patch.action.patched": "패치됨",
+  "ui.patch.action.plan": "계획", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}}개 답변됨",
   "ui.question.answer.none": "(답변 없음)",
@@ -235,6 +236,5 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "변경됨",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}}줄 중 {{kept}}줄 유지",
   // kilocode_change end
 }
