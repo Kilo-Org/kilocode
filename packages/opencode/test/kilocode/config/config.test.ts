@@ -978,7 +978,7 @@ describe("project plugin dependencies", () => {
         directory: dir,
         fn: () =>
           Effect.runPromise(
-            Config.Service.use((svc) => Effect.zipRight(svc.get(), svc.waitForDependencies())).pipe(
+            Config.Service.use((svc) => svc.get().pipe(Effect.andThen(svc.waitForDependencies()))).pipe(
               Effect.scoped,
               Effect.provide(make(npm)),
             ),
@@ -998,7 +998,7 @@ describe("project plugin dependencies", () => {
       const npm = Layer.mock(Npm.Service)({
         install: (dir, input) =>
           Effect.sync(() => calls.push({ dir, name: input?.add[0]?.name })).pipe(
-            Effect.zipRight(Effect.promise(() => gate.promise)),
+            Effect.andThen(Effect.promise(() => gate.promise)),
           ),
         add: () => Effect.die("not implemented"),
         which: () => Effect.succeed(undefined),
@@ -1011,9 +1011,8 @@ describe("project plugin dependencies", () => {
             Config.Service.use((svc) =>
               Effect.gen(function* () {
                 yield* svc.get()
-                const fiber = yield* svc.waitForDependencies().pipe(Effect.fork)
-                yield* Effect.yieldNow()
-                const status = yield* Fiber.poll(fiber)
+                const fiber = yield* svc.waitForDependencies().pipe(Effect.forkChild)
+                const status = yield* Fiber.join(fiber).pipe(Effect.timeoutOption("10 millis"))
                 gate.resolve()
                 yield* Fiber.join(fiber)
                 return Option.isNone(status)
@@ -1044,7 +1043,7 @@ describe("project plugin dependencies", () => {
         directory: dir,
         fn: () =>
           Effect.runPromise(
-            Config.Service.use((svc) => Effect.zipRight(svc.get(), svc.waitForDependencies())).pipe(
+            Config.Service.use((svc) => svc.get().pipe(Effect.andThen(svc.waitForDependencies()))).pipe(
               Effect.scoped,
               Effect.provide(make(npm)),
             ),
@@ -1071,7 +1070,7 @@ describe("project plugin dependencies", () => {
         directory: dir,
         fn: () =>
           Effect.runPromise(
-            Config.Service.use((svc) => Effect.zipRight(svc.get(), svc.waitForDependencies())).pipe(
+            Config.Service.use((svc) => svc.get().pipe(Effect.andThen(svc.waitForDependencies()))).pipe(
               Effect.scoped,
               Effect.provide(make(npm)),
             ),
