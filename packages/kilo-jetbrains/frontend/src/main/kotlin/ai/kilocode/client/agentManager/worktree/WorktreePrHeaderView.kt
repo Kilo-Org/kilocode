@@ -28,11 +28,13 @@ import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.JComponent
 
 internal class WorktreePrHeaderView(
     openWorktree: () -> Unit = {},
     openEnabled: Boolean = true,
     openTerminal: () -> Unit = {},
+    run: JComponent? = null,
     openDiff: () -> Unit,
 ) : BorderLayoutPanel() {
     private val terminal = hoverTextButton(
@@ -47,10 +49,12 @@ internal class WorktreePrHeaderView(
     private val title = SimpleColoredComponent()
     private val changes = BranchChangesBadge(openDiff).apply { applyStyle(SessionEditorStyle.current()) }
     private val statusPane = status.align(HAlign.LEFT, VAlign.CENTER)
-    private val actions = Stack.horizontal(UiStyle.Gap.sm())
-        .next(changes.align(HAlign.CENTER, VAlign.CENTER))
-        .next(terminal.align(HAlign.CENTER, VAlign.CENTER))
-        .next(open.align(HAlign.CENTER, VAlign.CENTER))
+    private val actions = Stack.horizontal(UiStyle.Gap.sm()).also { stack ->
+        stack.next(changes.align(HAlign.CENTER, VAlign.CENTER))
+        run?.let { stack.next(it.align(HAlign.CENTER, VAlign.CENTER)) }
+        stack.next(terminal.align(HAlign.CENTER, VAlign.CENTER))
+        stack.next(open.align(HAlign.CENTER, VAlign.CENTER))
+    }
     private var pull: WorktreePrDto? = null
     private var state: GhState? = null
     private var text: String? = null
