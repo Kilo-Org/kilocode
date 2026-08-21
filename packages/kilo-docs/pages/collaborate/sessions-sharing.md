@@ -31,7 +31,7 @@ This information lets Kilo show your recent sessions and continue right from the
 
 You can share a session with anyone via a link. A shared page:
 
-1. Shows who shared it, the session title, and a short preview of the conversation
+1. Shows who shared it, the session title, and the full chat transcript — tool calls and other agent work are collapsed into an expandable row so the conversation stays front and center
 2. Provides safe “open in editor” or CLI actions so collaborators can try your session themselves
 3. Lives at a URL like `https://app.kilo.ai/s/<share-token>` and is visible to anyone with the link
 

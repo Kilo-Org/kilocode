@@ -41,6 +41,10 @@ Files matched by `.kilocodeignore` are excluded (or by `.gitignore` plus `.env` 
 
 Selected text and attached files appear as compact attachment chips inside your sent message. Click a chip to open the referenced file or selection.
 
+## Unsupported remote workspaces
+
+Kilo runs its agent runtime on your host machine. When a project is opened through a Dev Container or WSL virtual filesystem, the IDE sees paths the host-side runtime cannot reach. Kilo marks these workspaces as unsupported and shows a **Workspace not supported** notice in the session panel instead of loading unreachable project data. To work on such a project, open it with JetBrains Gateway so Kilo runs next to your code, or open the project directly from your local filesystem.
+
 ## Settings
 
 Open **Settings → Tools → Kilo Code** to configure the plugin, or click the gear icon in the Kilo Code tool window. The JetBrains plugin reads and writes the same shared `kilo.jsonc` config files as the CLI and the VS Code extension, so changes apply across clients. See [Settings](/docs/getting-started/settings) for config file locations and precedence.
@@ -48,6 +52,8 @@ Open **Settings → Tools → Kilo Code** to configure the plugin, or click the 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, manage file watcher ignore patterns, and toggle **Auto-Include Editor Context** for chat prompts. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
+- **Agent Behavior → Workflows** — open, edit, and delete workflow files (custom slash commands). Edits and deletions are staged until you apply them, then the workflow files are saved or removed and command discovery is reloaded. See [Workflows](/docs/customize/workflows) for the workflow file format.
+- **Advanced → Logging** — configure diagnostic logging: set the log level and the message preview mode and size, with Apply/Reset. The active diagnostic log is `kilo.log` (rotated to `kilo.log.0` / `kilo.log.1`); use the reveal action to open it in your file manager. In remote development, you can reveal the client log locally and download the backend log from the remote host.
 
 ## Reviewing session changes
 
@@ -58,3 +64,9 @@ Open **Settings → Tools → Kilo Code** to configure the plugin, or click the 
 ## Permission requests
 
 When the agent asks for several approvals at once, permission requests queue up instead of replacing each other. Resolve the current request to advance to the next one in the queue.
+
+When the agent asks to edit files, the permission prompt shows the proposed changes before you allow or reject them. Expand the diff inline, hover for a popup preview, or open the changes in the IDE's diff editor.
+
+## Approval reasons on tool cards
+
+Expanded tool cards show a shield footer explaining why and how the call was allowed — for example "Auto-approved by your global config" or "Approved by you" — including the matched rule or agent and a note when the file sits outside your workspace. Control the footer with the **Show approval reason on tool cards** toggle at the bottom of **Settings → Tools → Kilo Code → Auto-Approve** (on by default).

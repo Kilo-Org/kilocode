@@ -276,12 +276,27 @@ See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-wor
 
 ## Subagents Panel
 
-When an agent delegates work to a subagent, the subagent's tool block in chat shows an **Open sub-agent in panel** button. Clicking it opens the child session in the **Subagents** panel, which shares the side inspector area with the diff, PR, and terminal views.
+When an agent delegates work to a subagent, the subagent's tool block in chat shows an **Open sub-agent in panel** button. Clicking it opens the child session in the **Subagents** panel, which shares the side inspector area with the diff, PR, documents, and terminal views.
 
 - Each opened subagent gets its own tab, so you can inspect several child sessions in parallel while the parent session keeps running
 - Drag tabs to reorder them, close a tab with its close button or middle-click, or right-click a tab for **Close others**
 - `Cmd+W` (macOS) / `Ctrl+W` (Windows/Linux) closes the active subagent tab while the panel is visible
 - The subagent chat is read-only — it shows the child's transcript without taking over the parent session
+
+Subagents launched in background mode also appear in a collapsible strip in the chat header, so they stay visible after their task card scrolls away. See [Background agents](/docs/code-with-ai/agents/chat-interface#background-agents) for details.
+
+## Documents Panel
+
+Markdown and text files referenced in chat — such as plan files and other generated artifacts — open in a dedicated **Documents** view instead of a plain editor, so you can read and review them without leaving the session view.
+
+- **Agent Manager:** documents open as per-worktree tabs in the side panel, sharing the inspector area with the diff, PR, subagent, and terminal views. A documents button appears in the toolbar once the current worktree has open documents.
+- **Sidebar:** documents open in a **Documents** editor tab.
+
+The view renders Markdown by default, with a toggle to show the raw source. Images render inline; binary and oversized files are rejected with an explanatory message instead of loading. Changed Markdown files in the diff panel also have a **Preview document** button in the file header.
+
+### Review comments
+
+Select lines in a rendered document to draft an inline comment. Comments can be edited or deleted, and sent to the active session individually with **Send to chat** or all at once with **Send all to chat** (`Cmd+Enter` on macOS / `Ctrl+Enter` on Windows/Linux), so the agent can address your feedback on the document.
 
 ## Terminals
 
