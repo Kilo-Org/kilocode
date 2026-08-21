@@ -245,7 +245,7 @@ internal class WorkflowsSettingsUi(
         )
         if (result != Messages.YES) return
         state.update { copy(deleted = deleted + flow.location, edited = edited - flow.location) }
-        view.update(rows(), selectionIndex())
+        view.update(rows(), ActiveListSelection.Slide)
     }
 
     private fun content(flow: CommandFileDto) = draft.edited[flow.location] ?: flow.content
