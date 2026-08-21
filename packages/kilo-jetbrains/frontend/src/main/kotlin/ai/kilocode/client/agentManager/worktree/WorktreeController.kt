@@ -62,6 +62,11 @@ class WorktreeController(
     var branches: List<String> = emptyList()
         private set
 
+    /** Primary worktree for the current branch, shown above local worktrees in Agent Manager. */
+    @Volatile
+    var current: WorktreeDto? = null
+        private set
+
     /** Every known branch name, used to keep generated worktree names collision-free. */
     @Volatile
     private var known: Set<String> = emptySet()
@@ -81,6 +86,7 @@ class WorktreeController(
                 val main = result.worktrees.firstOrNull { it.main }
                 val extra = result.worktrees.filter { !it.main }
                 val rows = extra + pending.values
+                current = main
                 model.replaceAll(rows)
                 cache().putAll(rows)
                 defaultBranch = main?.branch?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "main"
@@ -231,6 +237,25 @@ class WorktreeController(
                 onFailure(result.error)
                 reload()
             }
+        }
+    }
+
+    /**
+     * Applies a new display order given as worktree row [keys] (ids). Reorders the model optimistically
+     * then persists the resulting paths via [KiloWorktreeService.reorder]; on failure the list reloads
+     * from git ground truth. Pending rows keep their relative slots (stable sort) and are not persisted.
+     */
+    fun reorder(keys: List<String>) {
+        val rows = (0 until model.size).map { model.getElementAt(it) }
+        val rank = keys.withIndex().associate { it.value to it.index }
+        val sorted = rows.sortedBy { rank[it.id] ?: Int.MAX_VALUE }
+        if (sorted == rows) return
+        model.replaceAll(sorted)
+        val paths = sorted.filter { !isPending(it.id) }.map { it.path }
+        cs.launch {
+            val ok = service.reorder(directory, paths)
+            if (!ok) edt { reload() }
+            edt { telemetry("Worktree Reordered", mapOf("count" to paths.size.toString())) }
         }
     }
 

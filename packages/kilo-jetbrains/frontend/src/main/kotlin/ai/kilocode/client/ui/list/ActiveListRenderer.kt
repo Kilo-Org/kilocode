@@ -20,10 +20,17 @@ import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import ai.kilocode.rpc.dto.WorktreeStatsDto
+import java.awt.AlphaComposite
+import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.Point
+import java.awt.RenderingHints
 import java.awt.Rectangle
+import java.awt.image.BufferedImage
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
@@ -125,6 +132,7 @@ internal class ActiveListRenderer(
     )
     private val wrap = PickerRow()
     private var bodyHeight: Int? = null
+    private var gap = false
 
     init {
         isOpaque = true
@@ -183,7 +191,7 @@ internal class ActiveListRenderer(
     ): JPanel {
         val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
-        val weak = if (active) fg else UiStyle.Colors.weak()
+        val weak = UiStyle.Colors.weak()
         val titleFg = if (value.deleting) weak else fg
         val section = activeListSectionTitle(model.items, index)
 
@@ -199,7 +207,22 @@ internal class ActiveListRenderer(
             Dimension(0, height + JBUI.scale(2))
         })
 
+        if (value is ActiveListGap) {
+            gap = true
+            layers.isVisible = false
+            pill.isVisible = false
+            glyph.isVisible = false
+            wrap.update(list, false, false)
+            wrap.setPreferredSize(Dimension(0, bodyHeight ?: value.height))
+            top.invalidate()
+            return this
+        }
+        gap = false
+        layers.isVisible = true
+
         title.clear()
+        // Bold carries the row: the description under it and the icon beside it both render in the
+        // muted secondary color, so weight is what separates the two lines rather than color alone.
         title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, titleFg))
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
@@ -245,6 +268,33 @@ internal class ActiveListRenderer(
         return this
     }
 
+    override fun paintChildren(g: Graphics) {
+        super.paintChildren(g)
+        if (!gap) return
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            val inset = UiStyle.Gap.xs()
+            val arc = UiStyle.Arc.component()
+            val x = wrap.x + inset
+            val y = wrap.y + inset
+            val width = (wrap.width - inset * 2 - 1).coerceAtLeast(0)
+            val height = (wrap.height - inset * 2 - 1).coerceAtLeast(0)
+            g2.color = JBUI.CurrentTheme.List.Selection.background(true)
+            g2.stroke = BasicStroke(
+                JBUI.scale(1).toFloat(),
+                BasicStroke.CAP_ROUND,
+                BasicStroke.JOIN_ROUND,
+                0f,
+                floatArrayOf(JBUI.scale(3).toFloat(), JBUI.scale(3).toFloat()),
+                0f,
+            )
+            g2.drawRoundRect(x, y, width, height, arc, arc)
+        } finally {
+            g2.dispose()
+        }
+    }
+
     fun setBodyHeight(height: Int?) {
         if (bodyHeight == height) return
         bodyHeight = height
@@ -263,6 +313,37 @@ internal class ActiveListRenderer(
         val height = wrap.preferredSize.height
         bodyHeight = fixed
         return height
+    }
+
+    /**
+     * Paints the row body — the section-header band excluded — into an image, together with the
+     * body's origin inside the cell so callers can map a grab point in cell coordinates onto the
+     * image. Rendered as the focused selection so the dragged copy reads as a lifted row.
+     */
+    fun rowImage(
+        list: JList<out ActiveListItem>,
+        value: ActiveListItem,
+        index: Int,
+        width: Int,
+    ): Pair<BufferedImage, Point>? {
+        getListCellRendererComponent(list, value, index, true, true)
+        val size = preferredSize
+        setBounds(0, 0, width, size.height)
+        activeListLayout(this)
+        if (wrap.width <= 0 || wrap.height <= 0) return null
+        val image = UIUtil.createImage(list, wrap.width, wrap.height, BufferedImage.TYPE_INT_ARGB)
+        val g2 = image.createGraphics()
+        try {
+            g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.9f)
+            // paint() already treats the graphics origin as the body's own top-left, so the body's
+            // offset inside the cell must not be applied again: on a row that opens a section that
+            // offset is the header band, and shifting by it would lift the copy off the image and
+            // leave most of it blank.
+            wrap.paint(g2)
+        } finally {
+            g2.dispose()
+        }
+        return image to Point(wrap.x, wrap.y)
     }
 
     private fun syncBadges(item: ActiveListItem) {

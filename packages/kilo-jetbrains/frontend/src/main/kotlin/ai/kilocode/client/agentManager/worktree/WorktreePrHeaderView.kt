@@ -132,17 +132,17 @@ internal class WorktreePrHeaderView(
         changed()
     }
 
-    private fun syncTitle(prefix: String, next: String?, nextTip: String?) {
-        val full = listOfNotNull(prefix, next).joinToString(" ")
+    private fun syncTitle(number: String, next: String?, nextTip: String?) {
+        val full = listOfNotNull(next, number).joinToString(" ")
         var changed = false
         if (text != full) {
             text = full
             title.clear()
             if (next == null) {
-                title.append(prefix, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, UIUtil.getLabelForeground()))
+                title.append(number, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, UIUtil.getLabelForeground()))
             } else {
-                title.append("$prefix ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
                 title.append(next, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, UIUtil.getLabelForeground()))
+                title.append(" $number", SimpleTextAttributes.GRAYED_ATTRIBUTES)
             }
             changed = true
         }

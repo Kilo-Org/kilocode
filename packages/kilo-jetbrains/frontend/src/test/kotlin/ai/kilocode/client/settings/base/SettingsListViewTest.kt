@@ -32,6 +32,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
@@ -195,6 +196,24 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             assertEquals(0, title.insets.left)
             assertTrue(desc.insets.left > title.insets.left)
+        }
+    }
+
+    fun `test renderer draws the row title in bold`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            // Weight is what separates the title from the muted description beside and below it.
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val iter = title.iterator()
+            iter.next()
+            assertEquals(SimpleTextAttributes.STYLE_BOLD, iter.textAttributes.style)
+            assertEquals("Alpha", iter.fragment)
         }
     }
 
@@ -439,6 +458,20 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
             renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            assertEquals(UiStyle.Colors.weak(), desc.foreground)
+        }
+    }
+
+    fun `test focused selected row keeps description muted`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
 
             val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
             assertEquals(UiStyle.Colors.weak(), desc.foreground)
@@ -744,7 +777,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             renderer.getListCellRendererComponent(list, row, 0, true, false)
 
             val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
-            assertEquals(UIUtil.getListForeground(true, true), desc.foreground)
+            assertEquals(UiStyle.Colors.weak(), desc.foreground)
         }
     }
 
@@ -767,7 +800,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test preserve no scroll keeps scroll position after row change`() {
+    fun `test refresh keeps scroll position after row change`() {
         edt {
             val view = ActiveListView("Empty") { _, _ -> }
             val rows = (0 until 30).map { item("row$it", "Row $it", null, ActiveListCell("level", "Allow", alwaysVisible = true)) }
@@ -785,7 +818,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val before = scroll.viewport.viewPosition.y
             assertTrue("expected a scrolled viewport", before > 0)
 
-            view.update(rows, ActiveListSelection.PreserveNoScroll)
+            view.update(rows, ActiveListSelection.Preserve)
             UIUtil.dispatchAllInvocationEvents()
 
             assertEquals(before, scroll.viewport.viewPosition.y)
@@ -801,17 +834,6 @@ class SettingsListViewTest : BasePlatformTestCase() {
                 listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)),
                 ActiveListSelection.Key("c"),
             )
-
-            assertEquals("c", view.selected()?.key)
-        }
-    }
-
-    fun `test update selects preferred index`() {
-        edt {
-            val view = ActiveListView("Empty") { _, _ -> }
-            view.update(listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)))
-            view.list.selectedIndex = 1
-            view.update(listOf(item("a", "Alpha", null), item("c", "Gamma", null)), ActiveListSelection.Index(1))
 
             assertEquals("c", view.selected()?.key)
         }

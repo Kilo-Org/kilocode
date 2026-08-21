@@ -12,9 +12,10 @@ import ai.kilocode.client.agentManager.SidePanelMode
 import ai.kilocode.client.agentManager.applySidePanelMode
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.AgentManagerPanel
+import ai.kilocode.client.agentManager.sessionAttentionNeeded
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.AttentionDotIcon
 import ai.kilocode.log.KiloLog
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DataProvider
@@ -24,19 +25,19 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ToolWindowContentUiType
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.platform.project.projectIdOrNull
 import com.intellij.openapi.wm.impl.content.ToolWindowContentUi
-import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentManagerEvent
 import com.intellij.ui.content.ContentManagerListener
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
-import java.awt.ComponentOrientation
 import javax.swing.JPanel
 
 /**
@@ -122,6 +123,7 @@ internal class KiloToolWindowSetupService(
             }
             agent.add(agentManagerPanel.component, BorderLayout.CENTER)
 
+            toolWindow.setContentUiType(ToolWindowContentUiType.TABBED, null)
             // Hide the "Kilo Code" id label in the header so only the content tabs remain.
             toolWindow.component.putClientProperty(ToolWindowContentUi.HIDE_ID_LABEL, "true")
 
@@ -132,8 +134,8 @@ internal class KiloToolWindowSetupService(
             chatContent.setPreferredFocusedComponent { manager.defaultFocusedComponent }
             val agentContent = factory.createContent(agent, KiloBundle.message("sidePanel.mode.agentManager"), false)
             agentContent.applySidePanelMode(SidePanelMode.AGENT_MANAGER)
-            agentContent.applyAgentManagerBetaBadge()
             agentContent.setPreferredFocusedComponent { agentManagerPanel.component }
+            agentContent.putUserData(ToolWindow.SHOW_CONTENT_ICON, true)
             toolWindow.contentManager.addContent(chatContent)
             toolWindow.contentManager.addContent(agentContent)
             val listener = object : ContentManagerListener {
@@ -147,6 +149,16 @@ internal class KiloToolWindowSetupService(
             Disposer.register(manager) { toolWindow.contentManager.removeContentManagerListener(listener) }
             toolWindow.contentManager.setSelectedContent(chatContent)
             manager.newSession()
+
+            // Show a notification dot on the Agents tab whenever a worktree session needs attention.
+            val dot = cs.launch {
+                project.service<KiloSessionService>().activity.map(::sessionAttentionNeeded).collect { needed ->
+                    withContext(Dispatchers.Main) {
+                        agentContent.icon = if (needed) AttentionDotIcon else null
+                    }
+                }
+            }
+            Disposer.register(manager) { dot.cancel() }
 
             val actions = listOfNotNull(
                 ActionManager.getInstance().getAction("Kilo.NewSession"),
@@ -164,14 +176,4 @@ internal class KiloToolWindowSetupService(
             LOG.error("Failed to set up Kilo tool window content", e)
         }
     }
-}
-
-internal fun Content.applyAgentManagerBetaBadge() {
-    icon = AllIcons.General.Beta
-    description = KiloBundle.message("sidePanel.mode.agentManager.beta.description")
-    putUserData(ToolWindow.SHOW_CONTENT_ICON, true)
-    // TAB_LABEL_ORIENTATION_KEY is @ApiStatus.Experimental and may change or disappear between IDE
-    // releases; we declare no untilBuild cap. Failure is benign: putUserData no-ops and the Beta
-    // icon falls back to the left of the tab label.
-    putUserData(Content.TAB_LABEL_ORIENTATION_KEY, ComponentOrientation.RIGHT_TO_LEFT)
 }

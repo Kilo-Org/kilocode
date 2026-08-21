@@ -19,7 +19,9 @@ import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.util.IconLoader
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.GraphicsEnvironment
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -56,6 +58,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
         assertEquals(1, controller.model.size)
         assertEquals("feature/x", controller.model.getElementAt(0).branch)
+        assertEquals("/repo", controller.current?.path)
     }
 
     fun `test service open routes the directory to the backend rpc`() {
@@ -348,17 +351,51 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test worktree icons prefer pending then locked then branch`() {
-        assertSame(WorktreeIcons.spinner, WorktreeIcons.forRow(locked = false, pending = true))
-        assertSame(WorktreeIcons.locked, WorktreeIcons.forRow(locked = true, pending = false))
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(locked = false, pending = false))
+    fun `test worktree row icons show only while running or waiting`() {
+        assertSame(
+            WorktreeIcons.spinner,
+            WorktreeIcons.forRow(pending = true, kind = SessionActivityKind.RUNNING),
+        )
+        assertSame(
+            WorktreeIcons.running,
+            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.RUNNING),
+        )
+        assertSame(
+            SessionActivityKind.QUESTION.icon(),
+            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.QUESTION),
+        )
+        assertSame(
+            SessionActivityKind.PLAN.icon(),
+            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.PLAN),
+        )
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR))
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false, kind = null))
     }
 
-    fun `test branch and lock icons load at the same size`() {
-        assertTrue("branch icon should load", WorktreeIcons.branch.iconWidth > 0)
-        assertTrue("lock icon should load", WorktreeIcons.locked.iconWidth > 0)
-        assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.locked.iconWidth)
-        assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.locked.iconHeight)
+    fun `test worktree icons load at the same size`() {
+        // Loading an svg asset resolves to a 1x1 placeholder while the platform is headless, which is
+        // how CI runs, so switch real loading on for the assertions and put the ambient state back.
+        IconLoader.activate()
+        try {
+            assertTrue("branch icon should load", WorktreeIcons.branch.iconWidth > 1)
+            assertTrue("lock icon should load", WorktreeIcons.locked.iconWidth > 1)
+            assertTrue("local icon should load", WorktreeIcons.local.iconWidth > 1)
+            assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.locked.iconWidth)
+            assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.locked.iconHeight)
+            assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.local.iconWidth)
+            assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.local.iconHeight)
+            for (kind in SessionActivityKind.entries) {
+                assertEquals(WorktreeIcons.branch.iconWidth, kind.icon().iconWidth)
+                assertEquals(WorktreeIcons.branch.iconHeight, kind.icon().iconHeight)
+            }
+        } finally {
+            if (GraphicsEnvironment.isHeadless()) IconLoader.deactivate()
+        }
+    }
+
+    fun `test activity icons are stable per kind`() {
+        assertSame(SessionActivityKind.RUNNING.icon(), SessionActivityKind.RUNNING.icon())
+        assertNotSame(SessionActivityKind.RUNNING.icon(), SessionActivityKind.ERROR.icon())
     }
 
     fun `test worktree delete eligibility excludes missing main and pending rows`() {

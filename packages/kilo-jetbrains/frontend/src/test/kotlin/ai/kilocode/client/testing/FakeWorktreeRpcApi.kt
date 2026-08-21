@@ -29,6 +29,8 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val removeForces = CopyOnWriteArrayList<Boolean>()
     val renames = CopyOnWriteArrayList<Triple<String, String, String>>()
     val adopts = CopyOnWriteArrayList<Triple<String, String, String>>()
+    val reorders = CopyOnWriteArrayList<List<String>>()
+    var reorderResult = true
     val opens = CopyOnWriteArrayList<String>()
     val ghCalls = CopyOnWriteArrayList<String>()
     var beforeCreate: suspend () -> Unit = {}
@@ -122,5 +124,11 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         assertNotEdt("adopt")
         adopts.add(Triple(directory, path, name))
         return adoptResult(path, name)
+    }
+
+    override suspend fun reorder(directory: String, paths: List<String>): Boolean {
+        assertNotEdt("reorder")
+        reorders.add(paths)
+        return reorderResult
     }
 }

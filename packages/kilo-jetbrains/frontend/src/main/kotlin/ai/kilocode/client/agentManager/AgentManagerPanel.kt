@@ -17,7 +17,6 @@ import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.prTooltip
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.style
-import ai.kilocode.client.agentManager.worktree.worktreeActivityBadge
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.diff.diffParams
@@ -32,6 +31,7 @@ import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMenu
 import ai.kilocode.client.ui.list.ActiveListMetrics
+import ai.kilocode.client.ui.list.ActiveListReorder
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
@@ -91,12 +91,14 @@ class AgentManagerPanel(
             val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
             open(item, focus)
         },
-        onSelect = { selectedRow()?.dto?.id?.let { selected = it } },
         menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
             (row as? WorktreeRow)?.dto?.takeIf { canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) }
         }),
+        reorder = ActiveListReorder(
+            movable = { row -> row is WorktreeRow && !row.current && !row.pending && !row.deleting },
+            onMove = { move -> controller.reorder(move.keys) },
+        ),
     )
-    private var selected: String? = null
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
 
@@ -146,7 +148,7 @@ class AgentManagerPanel(
     }
 
     fun refresh() {
-        selected = currentEditorWorktree()
+        if (list.selectedKeys().isEmpty()) currentEditorWorktree()?.let { list.select(it, scroll = false) }
         controller.reload()
         project?.service<WorktreeStatusService>()?.refreshStats()
         project?.service<WorktreeStatusService>()?.refreshPr()
@@ -202,7 +204,7 @@ class AgentManagerPanel(
 
     private fun open(item: WorktreeDto, focus: Boolean) {
         val target = project ?: return
-        if (item.main || controller.isPending(item.id)) return
+        if (controller.isPending(item.id)) return
         ensureWorktreeSessionEditorKind()
         target.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(item), focus)
     }
@@ -272,9 +274,7 @@ class AgentManagerPanel(
      * last row when the removed row was last) and opens it before closing the deleted tab so the
      * neighbour becomes the active editor. Deleting a background row leaves the selection untouched.
      *
-     * The active editor is read before close(item) as the ground-truth "shown" signal; the
-     * `selected` field is unreliable here because the model rebuild in sync() transiently reselects
-     * row 0 through the list's onSelect hook.
+     * The active editor is read before close(item) as the ground-truth "shown" signal.
      */
     private fun onRemoved(item: WorktreeDto, index: Int) {
         if (currentEditorWorktree() == item.id) advance(neighbor(index))
@@ -288,7 +288,6 @@ class AgentManagerPanel(
      * the selection somewhere unpredictable.
      */
     private fun advance(next: WorktreeDto?) {
-        selected = next?.id
         if (next == null) {
             list.clearSelection()
             return
@@ -349,37 +348,46 @@ class AgentManagerPanel(
     }
 
     private fun sync() {
-        val key = selected
+        val current = controller.current?.let { item ->
+            WorktreeRow(
+                item,
+                pending = false,
+                deleting = false,
+                kind = controller.kind(item.path),
+                stats = null,
+                pr = null,
+                current = true,
+            )
+        }
         list.update(
-            (0 until controller.model.size).map {
+            listOfNotNull(current) + (0 until controller.model.size).map {
                 val item = controller.model.getElementAt(it)
                 val key = normalizeWorktreePath(item.path)
                 val pull = prs[key]
                 service<WorktreeNameCache>().putPr(item.path, pull)
-                WorktreeRow(item, controller.isPending(item.id), controller.isDeleting(item.id), controller.kind(item.path), stats[key], pull)
+                WorktreeRow(
+                    item,
+                    controller.isPending(item.id),
+                    controller.isDeleting(item.id),
+                    controller.kind(item.path),
+                    stats[key],
+                    pull,
+                )
             },
-            ActiveListSelection.PreserveNoScroll,
+            ActiveListSelection.Preserve,
         )
-        if (key != null) {
-            if (!list.select(key, scroll = false)) list.clearSelection()
-            return
-        }
-        list.clearSelection()
-        selected = null
     }
 
     @RequiresEdt
     private fun track(file: VirtualFile?) {
         val key = project?.service<WorktreeEditorMatchers>()?.match(file)
         if (key != null) {
-            selected = key
             list.select(key, scroll = false)
             return
         }
         // A null active editor is a transient state (e.g. a tab closing during a delete); keep the
         // current selection. Only a real, non-worktree editor clears the worktree row selection.
         if (file == null) return
-        selected = null
         list.clearSelection()
     }
 
@@ -465,19 +473,17 @@ class AgentManagerPanel(
         val kind: SessionActivityKind?,
         val stats: WorktreeStatsDto?,
         val pr: WorktreePrDto?,
+        val current: Boolean = false,
     ) : ActiveListItem {
         override val key: String get() = dto.id
-        override val title: String get() = WorktreeTitle.text(dto.name, dto.path, pr)
+        override val identity: Any get() = if (current) "local:${dto.path}" else "worktree:${dto.path}"
+        override val title: String get() = if (current) dto.branch else WorktreeTitle.text(dto.name, dto.path, pr)
         override val description: String get() = WorktreeTitle.fallback(dto.path)
         override val tooltip: String? get() = null
-        override val icon = WorktreeIcons.forRow(dto.locked, pending)
+        override val icon = WorktreeIcons.forRow(pending, kind, dto.locked, current)
+        override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)
-        override val badges: List<ActiveListBadge>
-            get() {
-                if (pending || deleting) return emptyList()
-                return listOfNotNull(kind?.let(::worktreeActivityBadge))
-            }
         override val metrics: ActiveListMetrics?
             get() {
                 if (pending || deleting) return null
@@ -503,7 +509,8 @@ class AgentManagerPanel(
                 deleting == row.deleting &&
                 kind == row.kind &&
                 stats == row.stats &&
-                pr == row.pr
+                pr == row.pr &&
+                current == row.current
         }
 
         override fun hashCode(): Int {
@@ -513,6 +520,7 @@ class AgentManagerPanel(
             result = 31 * result + (kind?.hashCode() ?: 0)
             result = 31 * result + (stats?.hashCode() ?: 0)
             result = 31 * result + (pr?.hashCode() ?: 0)
+            result = 31 * result + current.hashCode()
             return result
         }
     }

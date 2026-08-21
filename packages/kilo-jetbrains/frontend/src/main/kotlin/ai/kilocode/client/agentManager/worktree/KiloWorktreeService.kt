@@ -127,4 +127,11 @@ class KiloWorktreeService internal constructor(
         LOG.warn("worktree adopt failed for $path", e)
         RenameWorktreeResultDto(error = e.message ?: "worktree adopt failed")
     }
+
+    suspend fun reorder(directory: String, paths: List<String>): Boolean = try {
+        call { reorder(directory, paths) }
+    } catch (e: Exception) {
+        LOG.warn("worktree reorder failed for $directory", e)
+        false
+    }
 }

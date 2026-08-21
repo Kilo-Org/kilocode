@@ -328,6 +328,23 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             }
         }
 
+    override suspend fun reorder(directory: String, paths: List<String>): Boolean =
+        withContext(Dispatchers.IO) {
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext false
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items) ?: return@withContext false
+            return@withContext try {
+                val state = readWorktreeState(store)
+                writeWorktreeState(store, state.copy(worktreeOrder = paths).reconcile(worktreePaths(items)))
+                true
+            } catch (e: Exception) {
+                LOG.warn("worktree reorder failed: dir=$directory message=${e.message}", e)
+                false
+            }
+        }
+
     private data class GitResult(val exit: Int, val stdout: String, val stderr: String) {
         val ok get() = exit == 0
     }

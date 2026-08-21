@@ -242,6 +242,39 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `reorder persists a new order that a later list returns`() = runBlocking {
+        initRepo()
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
+        val second = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("alpha")).worktree)
+
+        assertTrue(api.reorder(repo.toString(), listOf(second.path, first.path)))
+
+        val listed = api.list(repo.toString()).worktrees.filter { !it.main }
+        assertEquals(listOf(second.path, first.path), listed.map { it.path })
+        assertEquals(
+            listOf(second.path, first.path),
+            readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json")).worktreeOrder,
+        )
+    }
+
+    @Test
+    fun `reorder drops unknown paths and appends omitted worktrees`() = runBlocking {
+        initRepo()
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
+        val second = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("alpha")).worktree)
+
+        assertTrue(api.reorder(repo.toString(), listOf("/does/not/exist", second.path)))
+
+        val order = readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json")).worktreeOrder
+        assertEquals(listOf(second.path, first.path), order)
+    }
+
+    @Test
+    fun `reorder returns false when the repo has no worktrees`() = runBlocking {
+        assertFalse(api.reorder(repo.toString(), listOf("/repo/.kilo/worktrees/x")))
+    }
+
+    @Test
     fun `remove prunes names and order from worktree state`() = runBlocking {
         initRepo()
         val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)

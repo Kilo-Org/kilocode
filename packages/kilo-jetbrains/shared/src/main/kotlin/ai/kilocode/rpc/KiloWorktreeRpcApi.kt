@@ -61,4 +61,10 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
      * null error when it was skipped because a custom name already exists.
      */
     suspend fun adopt(directory: String, path: String, name: String): RenameWorktreeResultDto
+
+    /**
+     * Records [paths] as the worktree display order for [directory], reconciled against
+     * `git worktree list` (unknown paths dropped, missing ones appended). Returns true when written.
+     */
+    suspend fun reorder(directory: String, paths: List<String>): Boolean
 }

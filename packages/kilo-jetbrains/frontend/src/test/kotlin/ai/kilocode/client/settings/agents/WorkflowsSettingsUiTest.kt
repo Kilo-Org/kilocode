@@ -212,6 +212,17 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(DIR to CUSTOM), agentRpc.commandRemovals)
     }
 
+    fun `test delete selects the workflow that took the deleted slot`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        val next = edt { rows(panel)[1].key }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(workflowsList(panel), panel, CUSTOM, "delete")
+
+        assertEquals(next, edt { workflowsList(panel).selectedValue?.key })
+    }
+
     fun `test delete action requires confirmation`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
