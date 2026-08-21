@@ -152,6 +152,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Откатить файл",
   "agentManager.diff.revertSuccess": "Файл откатан",
   "agentManager.diff.revertError": "Ошибка отката",
+  "agentManager.editPreview.title": "Предпросмотр редактирования",
+  "agentManager.editPreview.close": "Закрыть предпросмотр редактирования",
+  "agentManager.editPreview.openInPanel": "Показать изменения на панели",
   "agentManager.diff.applyBranchOnly":
     "Применение работает только с полным diff ветки. Чтобы применить изменения, переключитесь на область Branch.",
   "agentManager.open.button": "Открыть",

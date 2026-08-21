@@ -73,6 +73,7 @@ import { FeedbackProvider } from "../src/context/feedback"
 import { MemoryProvider } from "../src/context/memory"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
+import { DiffStyleProvider, useDiffStyle } from "../src/context/diff-style"
 import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
@@ -179,7 +180,9 @@ import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { SubagentPanel } from "./SubagentPanel"
-import { createSubagentTabs } from "./subagent-tabs"
+import { attachSubagentEvent, createSubagentTabs } from "./subagent-tabs"
+import { EditPreviewPanel } from "./EditPreviewPanel"
+import { createAgentManagerEditPreview, createEditPreviewContextGuard } from "./edit-preview"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
@@ -189,7 +192,6 @@ import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
 const REVIEW_TAB_ID = "review"
-
 interface SetupState {
   active: boolean
   message: string
@@ -198,7 +200,6 @@ interface SetupState {
   worktreeId?: string
   errorCode?: string
 }
-
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
 export type SidePanelState = SidePanel | null
@@ -214,9 +215,7 @@ const AgentManagerContent: Component = () => {
   const dialog = useDialog()
   const mode = createModeRouter()
   let sidebarSearchMenu: SidebarSearchMenuRef | undefined
-
   const [kb, setKb] = createSignal<Record<string, string>>(defaultBindings)
-
   const [setup, setSetup] = createSignal<SetupState>({ active: false, message: "" })
   const worktrees = () => registry.active().worktrees()
   const setWorktrees = (v: Parameters<Setter<WorktreeState[]>>[0]) => registry.active().setWorktrees(v)
@@ -252,9 +251,7 @@ const AgentManagerContent: Component = () => {
   )
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
-
   const repoDefaultBranch = () => defaultBaseBranch() ?? repoDetectedBranch() ?? "main"
-
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
@@ -287,11 +284,9 @@ const AgentManagerContent: Component = () => {
   const toggleSidebar = sidebar.toggle
   const sections = () => registry.active().sections()
   const setSections = (v: Parameters<Setter<SectionState[]>>[0]) => registry.active().setSections(v)
-
   // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
-
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
   const diffOpen = () => sidePanel() === SidePanel.Diff
@@ -317,12 +312,16 @@ const AgentManagerContent: Component = () => {
     setReviewActive(false)
     setSidePanel(SidePanel.Terminal)
   }
-
   const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
   const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
   const reviewComposer = createReviewComposer()
   const [reviewActive, setReviewActive] = createSignal(false)
-  const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
+  const diffStyle = useDiffStyle()!
+  const setSharedDiffStyle = (style: "unified" | "split") => {
+    if (diffStyle.style() === style) return
+    diffStyle.setStyle(style)
+    vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
+  }
   const subagents = createSubagentTabs({
     current: session.currentSessionID,
     sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
@@ -334,16 +333,29 @@ const AgentManagerContent: Component = () => {
     },
     hide: () => setSidePanel(null),
   })
+  const editPreview = createAgentManagerEditPreview(
+    setHistory,
+    setReviewActive,
+    () => setSidePanel(SidePanel.EditPreview),
+    () => setSidePanel(null),
+    diffStyle.style,
+    setSharedDiffStyle,
+  )
+  createEditPreviewContextGuard(
+    editPreview.preview,
+    () => session.currentSessionID() ?? undefined,
+    () => selection() ?? null,
+    (id: string) => managedSessions().find((item) => item.id === id)?.worktreeId ?? undefined,
+    editPreview.close,
+  )
   const markdown = createMarkdownRender(vscode)
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const worktreeStats = () => registry.active().worktreeStats()
-
   const prStatuses = () => registry.active().prStatuses()
   const runStatuses = () => registry.active().runStatuses()
   const setRunStatuses: Setter<Record<string, RunStatus>> = (v) => registry.active().setRunStatuses(v)
   const runScriptConfigured = () => registry.active().runScriptConfigured()
   const setRunScriptConfigured = (v: Parameters<Setter<boolean>>[0]) => registry.active().setRunScriptConfigured(v)
-
   // Local repo git stats (branch name, diff additions/deletions, commits)
   const localStats = () => registry.active().localStats()
   const projectLive = createProjectLive({
@@ -351,7 +363,6 @@ const AgentManagerContent: Component = () => {
     active: isActivePayload,
     branch: (branch) => setRepoBranch(branch),
   })
-
   const PENDING_PREFIX = "pending:"
   const closedDrafts = new Set<string>()
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
@@ -1113,7 +1124,7 @@ const AgentManagerContent: Component = () => {
     // server won't connect to send the sessionsLoaded message.
     if (state.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
     if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
-      setReviewDiffStyle(state.reviewDiffStyle)
+      diffStyle.setStyle(state.reviewDiffStyle)
     }
     markdown.setRender(state.reviewMarkdownRender === true)
     const current = session.currentSessionID()
@@ -1222,17 +1233,8 @@ const AgentManagerContent: Component = () => {
         if (match) projectNav.jump(parseInt(match[1]!) - 1)
       }
     }
-    const subagent = (event: Event) => {
-      const detail = (event as CustomEvent<{ sessionID?: unknown; title?: unknown; parentSessionID?: unknown }>).detail
-      if (typeof detail?.sessionID !== "string") return
-      subagents.open(
-        detail.sessionID,
-        typeof detail.title === "string" ? detail.title : undefined,
-        typeof detail.parentSessionID === "string" ? detail.parentSessionID : undefined,
-      )
-    }
+    const detachSubagent = attachSubagentEvent(subagents.open)
     window.addEventListener("message", handler)
-    window.addEventListener("agentManager.openSubagent", subagent)
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
@@ -1281,7 +1283,7 @@ const AgentManagerContent: Component = () => {
       confirmDeleteWorktree(sel)
     }
     window.addEventListener("keydown", deleteKeyHandler)
-    onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
+    onCleanup(detachSubagent)
 
     // Reveal the ⌘/Ctrl+1-9 jump badges on all sidebar items while the modifier is held.
     // Capture phase so the terminal's key handlers can't swallow them; blur resets state
@@ -1754,12 +1756,6 @@ const AgentManagerContent: Component = () => {
     if (!key) return undefined
     return diffNotices()[key]
   })
-
-  const setSharedDiffStyle = (style: "unified" | "split") => {
-    if (reviewDiffStyle() === style) return
-    setReviewDiffStyle(style)
-    vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
-  }
 
   const requestDiffFile = (file: string) => {
     const id = diffScopeId()
@@ -2658,7 +2654,7 @@ const AgentManagerContent: Component = () => {
                         notice={diffNotice()}
                         lead={diffScopeControls(true)}
                         canRevert={scopeCapabilities(review.scope()).revert}
-                        diffStyle={reviewDiffStyle()}
+                        diffStyle={diffStyle.style()}
                         onDiffStyleChange={setSharedDiffStyle}
                         markdownRender={markdown.render()}
                         onMarkdownRenderChange={markdown.update}
@@ -2712,6 +2708,9 @@ const AgentManagerContent: Component = () => {
                         onClosePanel={() => setSidePanel(null)}
                       />
                     </Show>
+                    <Show when={editPreview.preview()}>
+                      <EditPreviewPanel state={editPreview} visible={() => sidePanel() === SidePanel.EditPreview} />
+                    </Show>
                     <SideTerminalPanel
                       state={terms}
                       contextKey={terms.sideKey}
@@ -2760,7 +2759,7 @@ const AgentManagerContent: Component = () => {
                   composer={reviewComposer}
                   onSendAll={closeReviewTab}
                   onSendClick={() => metrics.track("send_review_comments", "fullscreen_review")}
-                  diffStyle={reviewDiffStyle()}
+                  diffStyle={diffStyle.style()}
                   onDiffStyleChange={setSharedDiffStyle}
                   markdownRender={markdown.render()}
                   onMarkdownRenderChange={markdown.update}
@@ -2788,9 +2787,11 @@ export const AgentManagerApp: Component = () => {
       <ProviderShell.Session>
         <ProviderShell.Chat>
           <WorktreeModeProvider>
-            <DataBridge>
-              <AgentManagerContent />
-            </DataBridge>
+            <DiffStyleProvider>
+              <DataBridge>
+                <AgentManagerContent />
+              </DataBridge>
+            </DiffStyleProvider>
           </WorktreeModeProvider>
         </ProviderShell.Chat>
       </ProviderShell.Session>

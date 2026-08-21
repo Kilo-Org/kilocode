@@ -158,6 +158,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Ripristina file",
   "agentManager.diff.revertSuccess": "File ripristinato",
   "agentManager.diff.revertError": "Ripristino non riuscito",
+  "agentManager.editPreview.title": "Anteprima modifica",
+  "agentManager.editPreview.close": "Chiudi anteprima modifica",
+  "agentManager.editPreview.openInPanel": "Visualizza modifiche nel pannello",
   "agentManager.diff.applyBranchOnly":
     "Applica funziona solo sul diff completo del branch. Passa all'ambito Branch per applicare.",
   "agentManager.open.button": "Apri",

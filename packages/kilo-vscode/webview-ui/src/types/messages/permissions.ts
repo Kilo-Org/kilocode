@@ -18,6 +18,7 @@ export interface PermissionFileDiff {
   patch?: string
   additions: number
   deletions: number
+  files?: PermissionFileDiff[]
 }
 
 export interface PermissionPatchFile {

@@ -151,6 +151,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Cofnij plik",
   "agentManager.diff.revertSuccess": "Plik cofnięty",
   "agentManager.diff.revertError": "Cofanie nie powiodło się",
+  "agentManager.editPreview.title": "Podgląd edycji",
+  "agentManager.editPreview.close": "Zamknij podgląd edycji",
+  "agentManager.editPreview.openInPanel": "Wyświetl zmiany w panelu",
   "agentManager.diff.applyBranchOnly":
     "Funkcja Zastosuj działa tylko z pełnym diffem brancha. Przełącz się na zakres Branch, aby zastosować.",
   "agentManager.open.button": "Otwórz",

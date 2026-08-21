@@ -151,6 +151,9 @@ export const dict = {
   "agentManager.diff.revertFile": "ファイルを元に戻す",
   "agentManager.diff.revertSuccess": "ファイルを元に戻しました",
   "agentManager.diff.revertError": "元に戻せませんでした",
+  "agentManager.editPreview.title": "編集プレビュー",
+  "agentManager.editPreview.close": "編集プレビューを閉じる",
+  "agentManager.editPreview.openInPanel": "変更をパネルで表示",
   "agentManager.diff.applyBranchOnly":
     "適用はブランチ全体の差分に対してのみ利用できます。適用するにはスコープを Branch に切り替えてください。",
   "agentManager.open.button": "開く",

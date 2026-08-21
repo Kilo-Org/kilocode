@@ -88,3 +88,17 @@ export function createSubagentTabs(opts: Options) {
 
   return { tabs, active, open, select, close, closeOthers, reorder }
 }
+
+export function attachSubagentEvent(open: (id: string, title?: string, parentID?: string) => void): () => void {
+  const handler = (event: Event) => {
+    const detail = (event as CustomEvent<{ sessionID?: unknown; title?: unknown; parentSessionID?: unknown }>).detail
+    if (typeof detail?.sessionID !== "string") return
+    open(
+      detail.sessionID,
+      typeof detail.title === "string" ? detail.title : undefined,
+      typeof detail.parentSessionID === "string" ? detail.parentSessionID : undefined,
+    )
+  }
+  window.addEventListener("agentManager.openSubagent", handler)
+  return () => window.removeEventListener("agentManager.openSubagent", handler)
+}

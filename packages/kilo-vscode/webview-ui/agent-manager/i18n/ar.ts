@@ -148,6 +148,9 @@ export const dict = {
   "agentManager.diff.revertFile": "استعادة الملف",
   "agentManager.diff.revertSuccess": "تم استعادة الملف",
   "agentManager.diff.revertError": "فشل الاستعادة",
+  "agentManager.editPreview.title": "معاينة التعديل",
+  "agentManager.editPreview.close": "إغلاق معاينة التعديل",
+  "agentManager.editPreview.openInPanel": "عرض التغييرات في اللوحة",
   "agentManager.diff.applyBranchOnly":
     "لا يعمل تطبيق التغييرات إلا على فرق الفرع الكامل. انتقل إلى نطاق Branch لتطبيقها.",
   "agentManager.open.button": "فتح",

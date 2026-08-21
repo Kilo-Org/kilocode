@@ -2552,8 +2552,6 @@ ToolRegistry.register({
       })
     })
     const canOpenDiff = () => !!data.openDiff && !!path() && !!view()
-    const canOpenFile = () => !!data.openFile && !!path()
-
     const openDiff = () => {
       const v = view()
       if (!canOpenDiff() || !v) return
@@ -2563,19 +2561,6 @@ ToolRegistry.register({
         additions: v.additions,
         deletions: v.deletions,
       })
-    }
-
-    const handleFileClick = (e: MouseEvent) => {
-      e.stopPropagation()
-
-      if (canOpenDiff()) {
-        openDiff()
-        return
-      }
-
-      if (canOpenFile()) {
-        data.openFile!(path())
-      }
     }
 
     const handleOpenDiffClick = (e: MouseEvent) => {
@@ -2604,7 +2589,6 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
@@ -2669,8 +2653,6 @@ ToolRegistry.register({
       return normalize(diff)
     })
     const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!view()
-    const canOpenFile = () => !!data.openFile && !!props.input.filePath
-
     const openDiff = () => {
       const v = view()
       if (!data.openDiff || !props.input.filePath || !v) return
@@ -2680,17 +2662,6 @@ ToolRegistry.register({
         additions: v.additions,
         deletions: v.deletions,
       })
-    }
-
-    const handleFileClick = (e: MouseEvent) => {
-      e.stopPropagation()
-      if (canOpenDiff()) {
-        openDiff()
-        return
-      }
-      if (canOpenFile()) {
-        data.openFile!(props.input.filePath!)
-      }
     }
 
     const handleOpenDiffClick = (e: MouseEvent) => {
@@ -2719,7 +2690,6 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
@@ -2802,13 +2772,55 @@ ToolRegistry.register({
     const view = (file: ApplyPatchFile) => {
       const patch = file.patch ?? file.diff
       if (!patch) return
-      return normalize({
+      const value = normalize({
         file: file.relativePath,
         patch,
         additions: file.additions,
         deletions: file.deletions,
       })
+      // apply_patch can report a file whose payload is not a parsable unified
+      // diff. Rendering it yields an empty "+0 -0" pane, so treat such a file
+      // as having no preview instead of showing a blank diff.
+      if (!value.fileDiff.hunks.length) return
+      return value
     }
+    const openAllDiff = () => {
+      const diffs = files().flatMap((file) => {
+        const diff = view(file)
+        return diff
+          ? [{
+              file: file.relativePath,
+              patch: diff.patch,
+              // Patch metadata reports 0 for some added files; fall back to the
+              // parsed hunks so the header matches the rendered diff.
+              additions: diff.additions || diff.fileDiff.additionLines.length,
+              deletions: diff.deletions || diff.fileDiff.deletionLines.length,
+            }]
+          : []
+      })
+      const first = diffs[0]
+      if (!data.openDiff || !first) return
+      data.openDiff(diffs.length === 1 ? first : { ...first, files: diffs })
+    }
+    const allDiffAction = () => (
+      <Show when={data.openDiff && files().some((file) => view(file))}>
+        <span data-slot="tool-trigger-actions">
+          <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+            <IconButton
+              icon="square-arrow-top-right"
+              size="small"
+              variant="ghost"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation()
+                openAllDiff()
+              }}
+              aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+            />
+          </Tooltip>
+        </span>
+      </Show>
+    )
     const pending = createMemo(() => busy(props.status))
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const single = createMemo(() => {
@@ -2877,14 +2889,6 @@ ToolRegistry.register({
                         path={file().relativePath.includes("/") ? getDirectory(file().relativePath) : undefined}
                         changes={{ additions: file().additions, deletions: file().deletions }}
                         animate={reveal()}
-                        onClick={
-                          data.openFile && file().filePath
-                            ? (e: MouseEvent) => {
-                                e.stopPropagation()
-                                data.openFile!(file().filePath)
-                              }
-                            : undefined
-                        }
                       />
                     )}
                   </Show>
@@ -2900,6 +2904,7 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
+              {allDiffAction()}
             </div>
           }
         >
@@ -2941,12 +2946,6 @@ ToolRegistry.register({
 
                                     <span
                                       data-slot="apply-patch-filename"
-                                      classList={{ clickable: !!data.openFile }}
-                                      onClick={(e: MouseEvent) => {
-                                        if (!data.openFile) return
-                                        e.stopPropagation()
-                                        data.openFile(file.filePath)
-                                      }}
                                     >
                                       {getFilename(file.relativePath)}
                                     </span>
