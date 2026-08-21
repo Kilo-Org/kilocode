@@ -109,7 +109,7 @@ it.live("keeps a shared refresh alive when one waiter times out", () =>
         expect(Option.isNone(yield* Fiber.join(first))).toBe(true)
         yield* Deferred.succeed(wait, undefined)
         const models = yield* Fiber.join(second)
-        return { models, cached: yield* cache.get("apertis") }
+        return { models, cached: yield* cache.get("apertis", { apiKey: "test-key" }) }
       }),
     ).pipe(Effect.provide(layer(hits, TestConfig.layer(), auth, { started, wait })))
 
@@ -133,7 +133,7 @@ it.live("commits a refresh after its only waiter times out", () =>
         expect(Option.isNone(yield* Fiber.join(caller))).toBe(true)
         yield* Deferred.succeed(wait, undefined)
         return yield* pollWithTimeout(
-          cache.get("apertis"),
+          cache.get("apertis", { apiKey: "test-key" }),
           "service-owned refresh did not commit after its waiter timed out",
         )
       }),
@@ -185,7 +185,11 @@ it.live("keeps concurrent request options isolated", () =>
         yield* Deferred.succeed(wait, undefined)
         const firstModels = yield* Fiber.join(first)
         const secondModels = yield* Fiber.join(second)
-        return { first: firstModels, second: secondModels, current: yield* cache.get("apertis") }
+        return {
+          first: firstModels,
+          second: secondModels,
+          current: yield* cache.get("apertis", { apiKey: "second", baseURL: "https://second.test/v1" }),
+        }
       }),
     ).pipe(Effect.provide(layer(hits, TestConfig.layer(), auth, { started, wait })))
 
@@ -213,12 +217,19 @@ it.live("does not let an older fetch override a newer refresh", () =>
         const fresh = yield* cache.refresh("apertis", { apiKey: "second", baseURL: "https://second.test/v1" })
         yield* Deferred.succeed(wait, undefined)
         yield* Fiber.join(stale)
-        return { fresh, current: yield* cache.get("apertis") }
+        return {
+          fresh,
+          current: yield* cache.get("apertis", { apiKey: "second", baseURL: "https://second.test/v1" }),
+          // The superseded fetch must not surface under its own identity either — that is the only
+          // thing keeping the version guard in commit() honest now that identities have separate slots.
+          superseded: yield* cache.get("apertis", { apiKey: "first", baseURL: "https://first.test/v1" }),
+        }
       }),
     ).pipe(Effect.provide(layer(hits, TestConfig.layer(), auth, { started, wait })))
 
     expect(models.current).toEqual(models.fresh)
     expect(Object.keys(models.current ?? {})).toEqual(["apertis-2"])
+    expect(models.superseded).toBeUndefined()
   }),
 )
 
@@ -239,13 +250,19 @@ it.live("promotes a cached result after a newer option load fails", () =>
         yield* Deferred.succeed(wait, undefined)
         yield* Fiber.join(first)
         const models = yield* cache.fetch("apertis", { apiKey: "first", baseURL: "https://first.test/v1" })
-        return { failed, models, current: yield* cache.get("apertis") }
+        return {
+          failed,
+          models,
+          current: yield* cache.get("apertis", { apiKey: "first", baseURL: "https://first.test/v1" }),
+          rejected: yield* cache.get("apertis", { apiKey: "second", baseURL: "https://second.test/v1" }),
+        }
       }),
     ).pipe(Effect.provide(layer(hits, TestConfig.layer(), auth, { started, wait }, 2)))
 
     expect(Exit.isFailure(out.failed)).toBe(true)
     expect(Object.keys(out.models)).toEqual(["apertis-1"])
     expect(out.current).toEqual(out.models)
+    expect(out.rejected).toBeUndefined()
     expect((yield* Ref.get(hits)).length).toBe(2)
   }),
 )
@@ -264,7 +281,7 @@ it.live("does not restore a fetch that was cleared while pending", () =>
         yield* cache.clear("apertis")
         yield* Deferred.succeed(wait, undefined)
         yield* Fiber.join(pending)
-        return yield* cache.get("apertis")
+        return yield* cache.get("apertis", { apiKey: "first", baseURL: "https://first.test/v1" })
       }),
     ).pipe(Effect.provide(layer(hits, TestConfig.layer(), auth, { started, wait })))
 
@@ -279,7 +296,7 @@ it.live("exposes the most recently refreshed provider value", () =>
       Effect.gen(function* () {
         yield* cache.fetch("apertis", { apiKey: "first", baseURL: "https://first.test/v1" })
         const refreshed = yield* cache.refresh("apertis", { apiKey: "second", baseURL: "https://second.test/v1" })
-        const current = yield* cache.get("apertis")
+        const current = yield* cache.get("apertis", { apiKey: "second", baseURL: "https://second.test/v1" })
         return { refreshed, current }
       }),
     ).pipe(Effect.provide(layer(hits)))

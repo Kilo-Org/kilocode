@@ -31,6 +31,7 @@ export const kiloModelsLayer = Layer.succeed(
   KiloModelsService.of({ fetch: (options) => Effect.tryPromise(() => fetchKiloModels(options)) }),
 )
 type Cell = {
+  readonly id: string
   readonly providerID: string
   readonly options: Options
   readonly view: View
@@ -41,7 +42,8 @@ type Cell = {
 export interface Interface {
   readonly getFailure: (providerID: string) => Effect.Effect<Failure | undefined>
   readonly failedProviders: () => Effect.Effect<string[]>
-  readonly get: (providerID: string) => Effect.Effect<Models | undefined>
+  /** Reads the cached models for an identity: the resolved credentials merged with `options`. */
+  readonly get: (providerID: string, options?: Options) => Effect.Effect<Models | undefined>
   readonly fetch: (providerID: string, options?: Options) => Effect.Effect<Models, unknown>
   readonly refresh: (providerID: string, options?: Options) => Effect.Effect<Models, unknown>
   readonly clear: (providerID: string) => Effect.Effect<void>
@@ -170,16 +172,18 @@ export const layer: Layer.Layer<
       return Effect.succeed({ models: {} })
     }
 
-    const load = Effect.fn("ModelCache.load")(function* (providerID: string, options: Options) {
+    // Credentials are part of a request's identity, so they must be resolved before anything is keyed:
+    // a public/unauthenticated catalog must never satisfy a later authenticated request for the same provider.
+    const resolve = Effect.fn("ModelCache.resolve")(function* (providerID: string, options?: Options) {
       const resolved = yield* authOptions(providerID).pipe(
         Effect.catchCause((cause) =>
           Effect.sync(() => {
             log.warn("auth options failed", { providerID, cause })
-            return {}
+            return {} as Options
           }),
         ),
       )
-      return yield* fetchModels(providerID, { ...resolved, ...options })
+      return { ...resolved, ...options } satisfies Options
     })
 
     const key = (providerID: string, options?: Options) => {
@@ -195,7 +199,7 @@ export const layer: Layer.Layer<
       const existing = cells.get(id)
       if (existing) return existing
       const view: View = {}
-      const next: Cell = { providerID, options, view }
+      const next: Cell = { id, providerID, options, view }
       cells.set(id, next)
       return next
     })
@@ -214,8 +218,9 @@ export const layer: Layer.Layer<
         ),
       )
 
-    const commit = (providerID: string, version: number, entry: Cell, result: Result) =>
+    const commit = (version: number, entry: Cell, result: Result) =>
       Effect.sync(() => {
+        const providerID = entry.providerID
         if ((versions.get(providerID) ?? 0) !== version) return result.models
         if (result.error) {
           failures.set(providerID, result.error)
@@ -225,7 +230,7 @@ export const layer: Layer.Layer<
         }
         entry.view.models = result.models
         entry.view.timestamp = Date.now()
-        active.set(providerID, entry)
+        active.set(entry.id, entry)
         log.info("models fetched and cached", { providerID, count: Object.keys(result.models).length })
         return result.models
       })
@@ -236,7 +241,7 @@ export const layer: Layer.Layer<
         Effect.gen(function* () {
           const cached = entry.cached
           if (cached && cached.expires > Date.now()) {
-            yield* commit(entry.providerID, version, entry, cached.result)
+            yield* commit(version, entry, cached.result)
             return cached.result
           }
 
@@ -251,12 +256,12 @@ export const layer: Layer.Layer<
           entry.flight = flight
           yield* Effect.uninterruptibleMask((restore) =>
             Effect.gen(function* () {
-              const exit = yield* restore(load(entry.providerID, entry.options)).pipe(Effect.exit)
+              const exit = yield* restore(fetchModels(entry.providerID, entry.options)).pipe(Effect.exit)
               if (entry.flight === flight) {
                 entry.flight = undefined
                 if (Exit.isSuccess(exit)) {
                   entry.cached = { result: exit.value, expires: Date.now() + Duration.toMillis(ttl) }
-                  yield* commit(entry.providerID, flight.version, entry, exit.value)
+                  yield* commit(flight.version, entry, exit.value)
                 }
               }
               yield* Deferred.done(done, exit)
@@ -266,8 +271,8 @@ export const layer: Layer.Layer<
         }),
       )
 
-    const get = Effect.fn("ModelCache.get")(function* (providerID: string) {
-      const entry = active.get(providerID)
+    const peek = Effect.fn("ModelCache.peek")(function* (providerID: string, id: string) {
+      const entry = active.get(id)
       if (!entry?.view.models || entry.view.timestamp === undefined) {
         log.debug("cache miss", { providerID })
         return
@@ -286,21 +291,28 @@ export const layer: Layer.Layer<
       return entry.view.models
     })
 
+    const get = Effect.fn("ModelCache.get")(function* (providerID: string, options?: Options) {
+      const resolved = yield* resolve(providerID, options)
+      return yield* peek(providerID, key(providerID, resolved))
+    })
+
     const fetch = Effect.fn("ModelCache.fetch")(function* (providerID: string, options?: Options) {
-      const cached = yield* get(providerID)
+      const resolved = yield* resolve(providerID, options)
+      const cached = yield* peek(providerID, key(providerID, resolved))
       if (cached) return cached
       const version = (versions.get(providerID) ?? 0) + 1
       versions.set(providerID, version)
-      const entry = yield* cell(providerID, options)
+      const entry = yield* cell(providerID, resolved)
       log.info("fetching models", { providerID })
       const result = yield* evaluate(entry, version)
       return result.models
     })
 
     const refresh = Effect.fn("ModelCache.refresh")(function* (providerID: string, options?: Options) {
+      const resolved = yield* resolve(providerID, options)
       const version = (versions.get(providerID) ?? 0) + 1
       versions.set(providerID, version)
-      const entry = yield* cell(providerID, options)
+      const entry = yield* cell(providerID, resolved)
       log.info("refreshing models", { providerID })
       yield* invalidate(entry)
       const result = yield* evaluate(entry, version)
@@ -314,7 +326,9 @@ export const layer: Layer.Layer<
         entries.map(([id, entry]) => detach(entry).pipe(Effect.tap(() => Effect.sync(() => cells.delete(id))))),
         { discard: true },
       )
-      active.delete(providerID)
+      for (const [id, entry] of active) {
+        if (entry.providerID === providerID) active.delete(id)
+      }
       failures.delete(providerID)
       if (entries.some(([, entry]) => entry.view.models)) {
         log.info("cache cleared", { providerID })
