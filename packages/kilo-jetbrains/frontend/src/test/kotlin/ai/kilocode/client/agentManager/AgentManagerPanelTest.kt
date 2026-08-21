@@ -22,6 +22,7 @@ import ai.kilocode.client.testing.fire
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMetrics
+import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
@@ -608,6 +609,107 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(emptyList<ActiveListBadge>(), pending.badges)
         gate.complete(Unit)
         flush()
+    }
+
+    fun `test dragging a worktree above another reorders the model and persists the path order`() {
+        val a = worktree("aardvark")
+        val b = worktree("beluga")
+        rpc.listed += main()
+        rpc.listed += a
+        rpc.listed += b
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        layout(view)
+        // Display order: current (main) row is index 0, then a (1), b (2).
+        edt {
+            assertEquals(b.id, view.pickable(rowCenter(view, 2)))
+            view.over(b.id, rowCenter(view, 1))
+            view.drop()
+        }
+        flush()
+
+        assertEquals(listOf(b.path, a.path), edt { worktreeIds(controller) })
+        assertEquals(listOf(listOf(b.path, a.path)), rpc.reorders.toList())
+    }
+
+    fun `test the current and pending rows are not draggable`() {
+        rpc.listed += main()
+        rpc.listed += worktree("aardvark")
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        edt { controller.create("feature/pending", null) }
+        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        layout(view)
+
+        edt {
+            val size = view.list.model.size
+            // Row 0 is the current (main) row; the last row is the pending create.
+            assertNull(view.pickable(rowCenter(view, 0)))
+            assertNull(view.pickable(rowCenter(view, size - 1)))
+        }
+        gate.complete(Unit)
+        flush()
+    }
+
+    fun `test a failed reorder rpc reloads from git ground truth`() {
+        val a = worktree("aardvark")
+        val b = worktree("beluga")
+        rpc.listed += main()
+        rpc.listed += a
+        rpc.listed += b
+        rpc.reorderResult = false
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        layout(view)
+        edt {
+            view.over(b.id, rowCenter(view, 1))
+            view.drop()
+        }
+        flush()
+
+        // The optimistic swap is discarded; reload restores the backend (listed) order.
+        assertEquals(listOf(a.path, b.path), edt { worktreeIds(controller) })
+        assertEquals(listOf(listOf(b.path, a.path)), rpc.reorders.toList())
+    }
+
+    private fun main(): WorktreeDto {
+        val base = project.basePath!!
+        return WorktreeDto(base, "repo", "main", base, main = true)
+    }
+
+    private fun worktree(name: String): WorktreeDto {
+        val path = "${project.basePath!!}/.kilo/worktrees/$name"
+        return WorktreeDto(path, name, name, path)
+    }
+
+    private fun worktreeIds(controller: WorktreeController): List<String> {
+        return (0 until controller.model.size).map { controller.model.getElementAt(it).path }
+    }
+
+    private fun layout(view: ActiveListView) {
+        edt {
+            view.list.setSize(360, 600)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+        }
+    }
+
+    private fun rowCenter(view: ActiveListView, index: Int): Point {
+        val bounds = view.list.getCellBounds(index, index)!!
+        return Point(bounds.x + 8, bounds.y + bounds.height / 2)
     }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)

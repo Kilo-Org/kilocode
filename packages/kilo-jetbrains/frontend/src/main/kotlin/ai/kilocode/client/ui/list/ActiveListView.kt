@@ -21,6 +21,7 @@ import com.intellij.xml.util.XmlStringUtil
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Image
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.FocusAdapter
@@ -47,6 +48,7 @@ internal class ActiveListView(
     private val onActivate: ((ActiveListItem) -> Unit)? = null,
     private val onClick: ((ActiveListItem) -> Unit)? = null,
     private val menu: ActiveListMenu<*>? = null,
+    private val reorder: ActiveListReorder? = null,
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
     private val model = CollectionListModel<ActiveListItem>()
@@ -98,6 +100,7 @@ internal class ActiveListView(
     private var popups = 0
     private var hovered = -1
     private var heightKey: ActiveListHeightKey? = null
+    private var drag: Drag? = null
     // Cursor for the row body; buttons override it on hover via [cursorAt].
     private var baseCursor: Cursor = Cursor.getDefaultCursor()
     internal var onSelect: (() -> Unit)? = null
@@ -173,7 +176,7 @@ internal class ActiveListView(
             }
 
             override fun mouseMoved(e: MouseEvent) {
-                if (hover) {
+                if (hover && drag == null) {
                     val idx = list.locationToIndex(e.point)
                         .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
                         ?: -1
@@ -200,6 +203,7 @@ internal class ActiveListView(
 
             override fun focusLost(e: FocusEvent) = list.repaint()
         })
+        reorder?.let { installActiveListReorder(this, list, it) }
         ScrollingUtil.installActions(list)
         next(list)
     }
@@ -343,7 +347,10 @@ internal class ActiveListView(
     private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null, scroll: Boolean = true) {
         checkEdt()
         val q = filter.trim()
-        val rows = if (q.isBlank()) items else items.filter { matcher(q, it) }
+        val base = if (q.isBlank()) items else items.filter { matcher(q, it) }
+        val state = drag
+        if (state != null && base.none { it.key == state.key }) drag = null
+        val rows = drag?.let { activeListGapRows(base, it.key, it.index, it.height) } ?: base
         // Rebuilding the model fires a list-wide repaint, so skip it when the visible rows are
         // structurally unchanged (e.g. a stats/name refresh that produced identical rows) and only
         // reconcile selection below. Row types are data classes, so equality is by value.
@@ -435,6 +442,7 @@ internal class ActiveListView(
 
     private fun open(focus: Boolean) {
         val item = list.selectedValue ?: return
+        if (item is ActiveListGap) return
         if (item.deleting) return
         val action = onOpen
         if (action != null) {
@@ -446,6 +454,7 @@ internal class ActiveListView(
 
     private fun source() {
         val item = list.selectedValue ?: return
+        if (item is ActiveListGap) return
         if (item.deleting) return
         onOpen?.invoke(item, true)
     }
@@ -457,6 +466,7 @@ internal class ActiveListView(
      * action is destructive (e.g. delete) does nothing on double-click.
      */
     private fun activate(item: ActiveListItem) {
+        if (item is ActiveListGap) return
         if (item.deleting) return
         val action = onActivate
         if (action != null) {
@@ -473,6 +483,7 @@ internal class ActiveListView(
     }
 
     private fun primary(item: ActiveListItem) {
+        if (item is ActiveListGap) return
         if (item.deleting) return
         val cells = activeListVisibleCells(item, true)
         val cell = cells.firstOrNull { it.enabled && it.primary }
@@ -508,6 +519,95 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
+    fun pickable(point: Point): String? {
+        checkEdt()
+        val cfg = reorder ?: return null
+        if (!list.isEnabled || filter.isNotBlank() || drag != null) return null
+        val idx = rowAt(point) ?: return null
+        val item = model.getElementAt(idx)
+        if (item is ActiveListGap || item.disabled || item.deleting) return null
+        if (!cfg.movable(item)) return null
+        val selected = list.isSelectedIndex(idx)
+        if (activeListCellAt(list, idx, point, selected, menu?.takeIf { it.available(item) } != null) != null) return null
+        return item.key
+    }
+
+    /**
+     * The dragged row painted as an image, plus the AWT image offset that keeps the grabbed pixel
+     * under the cursor. AWT places the image origin at `cursor + offset`, so the offset is the
+     * negated grab point inside the image — otherwise the copy floats off to the lower right.
+     */
+    @RequiresEdt
+    fun dragImage(point: Point): Pair<Image, Point>? {
+        checkEdt()
+        val idx = rowAt(point) ?: return null
+        val item = model.getElementAt(idx)
+        if (item is ActiveListGap) return null
+        val bounds = list.getCellBounds(idx, idx) ?: return null
+        val (image, origin) = renderer.rowImage(list, item, idx, bounds.width) ?: return null
+        // Clamp so grabbing the section-header band still anchors inside the body image.
+        val x = (point.x - bounds.x - origin.x).coerceIn(0, image.width)
+        val y = (point.y - bounds.y - origin.y).coerceIn(0, image.height)
+        return image to Point(-x, -y)
+    }
+
+    @RequiresEdt
+    fun over(key: String, point: Point) {
+        checkEdt()
+        if (filter.isNotBlank()) return
+        val current = drag
+        val base = items
+        val from = activeListIndex(base, key)
+        if (from < 0) {
+            cancel()
+            return
+        }
+        val bounds = list.getCellBounds(from, from)
+        val state = current ?: Drag(key, from, from, bounds?.height ?: list.fixedCellHeight.takeIf { it > 0 } ?: renderer.bodyPreferredHeight(list, base[from], from, true, true))
+        if (current == null) {
+            press = null
+            setHovered(-1)
+            drag = state
+        }
+        val run = activeListSectionRun(base, from)
+        if (run.isEmpty()) return
+        val idx = rowAt(point) ?: state.index
+        val next = idx.coerceIn(run.first, run.last)
+        if (state.index == next && current != null) return
+        drag = state.copy(index = next)
+        sync(key, next, scroll = false)
+    }
+
+    @RequiresEdt
+    fun drop() {
+        checkEdt()
+        val state = drag ?: return
+        drag = null
+        val source = activeListIndex(items, state.key)
+        if (source < 0) {
+            sync()
+            return
+        }
+        val rows = items.toMutableList()
+        val item = rows.removeAt(source)
+        val target = state.index.coerceIn(0, rows.size)
+        rows.add(target, item)
+        items = rows
+        heightKey = null
+        sync(state.key, target, scroll = false)
+        if (source == target) return
+        reorder?.onMove?.invoke(ActiveListMove(state.key, source, target, rows.map { it.key }))
+    }
+
+    @RequiresEdt
+    fun cancel() {
+        checkEdt()
+        if (drag == null) return
+        drag = null
+        sync()
+    }
+
+    @RequiresEdt
     fun setBaseCursor(cursor: Cursor) {
         checkEdt()
         baseCursor = cursor
@@ -527,6 +627,7 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return baseCursor
         if (!bounds.contains(point)) return baseCursor
         val item = model.getElementAt(idx)
+        if (item is ActiveListGap) return baseCursor
         if (menu == null && item.cells.isEmpty() && item.metrics == null) return baseCursor
         val hit = activeListHits(list, idx, list.isSelectedIndex(idx))
             .firstOrNull { it.enabled && it.bounds.contains(point) }
@@ -539,6 +640,7 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return null
         if (!bounds.contains(e.point)) return null
         val item = model.getElementAt(idx)
+        if (item is ActiveListGap) return null
         val selected = list.isSelectedIndex(idx)
         val id = if (enabled) {
             activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
@@ -557,6 +659,7 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return false
         if (!bounds.contains(point)) return false
         val item = model.getElementAt(idx)
+        if (item is ActiveListGap) return false
         if (item.disabled || item.deleting || !cfg.available(item)) return false
         val rect = activeListCellBounds(list, idx, list.isSelectedIndex(idx))[ACTIVE_LIST_MENU_CELL] ?: return false
         if (!rect.contains(point)) return false
@@ -603,6 +706,15 @@ internal class ActiveListView(
         return e.isShiftDown || e.isMetaDown || e.isControlDown
     }
 
+    private fun rowAt(point: Point): Int? {
+        val idx = list.locationToIndex(point)
+        if (idx < 0) return null
+        val bounds = list.getCellBounds(idx, idx) ?: return null
+        if (bounds.contains(point)) return idx
+        if (point.y < bounds.y) return 0
+        return (model.size - 1).takeIf { it >= 0 }
+    }
+
     override fun getBackground(): Color {
         if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
         return super.getBackground() ?: UIUtil.getPanelBackground()
@@ -636,6 +748,8 @@ internal class ActiveListView(
     private data class Hit(val item: ActiveListItem, val id: String?)
 
     private data class Press(val key: String, val id: String)
+
+    private data class Drag(val key: String, val from: Int, val index: Int, val height: Int)
 
     private data class ActiveListHeightKey(
         val cfg: ActiveListConfig,

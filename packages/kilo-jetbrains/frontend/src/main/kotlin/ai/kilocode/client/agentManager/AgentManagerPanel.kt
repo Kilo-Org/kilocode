@@ -31,6 +31,7 @@ import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMenu
 import ai.kilocode.client.ui.list.ActiveListMetrics
+import ai.kilocode.client.ui.list.ActiveListReorder
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
@@ -94,6 +95,10 @@ class AgentManagerPanel(
         menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
             (row as? WorktreeRow)?.dto?.takeIf { canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) }
         }),
+        reorder = ActiveListReorder(
+            movable = { row -> row is WorktreeRow && !row.current && !row.pending && !row.deleting },
+            onMove = { move -> controller.reorder(move.keys) },
+        ),
     )
     private var selected: String? = null
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
