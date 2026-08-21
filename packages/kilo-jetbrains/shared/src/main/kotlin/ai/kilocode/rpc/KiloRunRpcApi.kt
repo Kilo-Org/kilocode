@@ -31,6 +31,12 @@ interface KiloRunRpcApi : RemoteApi<Unit> {
     /** Starts config [id] with its working directory switched to [worktree]. Re-running restarts. */
     suspend fun run(directory: String, id: String, worktree: String): RunResultDto
 
+    /**
+     * Builds [worktree] by running the project's external-system build tasks against the worktree's
+     * own copy of each linked root. [clean] prepends `clean`, approximating Rebuild Project.
+     */
+    suspend fun build(directory: String, worktree: String, clean: Boolean): RunResultDto
+
     /** Stops the process started for ([id], [worktree]). A second call while stopping force-kills. */
     suspend fun stop(directory: String, id: String, worktree: String): Boolean
 

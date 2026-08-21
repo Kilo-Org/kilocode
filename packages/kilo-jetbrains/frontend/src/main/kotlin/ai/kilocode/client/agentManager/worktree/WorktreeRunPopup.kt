@@ -15,8 +15,9 @@ import javax.swing.Icon
 
 /**
  * Builds the action group for the worktree Run popup: a "Running" section with stop/output
- * rows per live process, a "Start" section listing the supported run configurations, and a
- * trailing "Open in New Frame" escape hatch for full run/debug support.
+ * rows per live process, a "Start" section listing the supported run configurations, Build and
+ * Rebuild rows when the project has a buildable external project, and a trailing
+ * "Open in New Frame" escape hatch for full run/debug support.
  */
 internal object WorktreeRunPopup {
     fun group(
@@ -27,6 +28,8 @@ internal object WorktreeRunPopup {
         stop: (RunStateDto) -> Unit,
         output: (RunStateDto) -> Unit,
         frame: () -> Unit,
+        buildable: Boolean = false,
+        build: (Boolean) -> Unit = {},
     ): DefaultActionGroup {
         val group = DefaultActionGroup()
         if (states.isNotEmpty()) {
@@ -55,6 +58,11 @@ internal object WorktreeRunPopup {
         }
         if (configs.isEmpty()) {
             group.add(action(error ?: KiloBundle.message("worktree.run.empty"), null, enabled = false) {})
+        }
+        if (buildable) {
+            group.addSeparator()
+            group.add(action(KiloBundle.message("worktree.run.build"), AllIcons.Actions.Compile) { build(false) })
+            group.add(action(KiloBundle.message("worktree.run.rebuild"), AllIcons.Actions.Rebuild) { build(true) })
         }
         group.addSeparator()
         group.add(action(KiloBundle.message("worktree.run.open.frame"), ProductIcons.getInstance().productIcon) { frame() })

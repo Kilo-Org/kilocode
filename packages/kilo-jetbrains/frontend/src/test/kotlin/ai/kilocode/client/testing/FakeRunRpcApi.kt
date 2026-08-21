@@ -19,8 +19,10 @@ class FakeRunRpcApi : KiloRunRpcApi {
     var error: String? = null
     var result = RunResultDto(ok = true)
     val states = MutableStateFlow(emptyList<RunStateDto>())
+    var buildable = false
     val configDirs = CopyOnWriteArrayList<String>()
     val stateDirs = CopyOnWriteArrayList<String>()
+    val builds = CopyOnWriteArrayList<Triple<String, String, Boolean>>()
     val runs = CopyOnWriteArrayList<Triple<String, String, String>>()
     val stops = CopyOnWriteArrayList<Triple<String, String, String>>()
     val focuses = CopyOnWriteArrayList<Triple<String, String, String>>()
@@ -28,7 +30,13 @@ class FakeRunRpcApi : KiloRunRpcApi {
     override suspend fun configs(directory: String): RunConfigListDto {
         assertNotEdt("configs")
         configDirs.add(directory)
-        return RunConfigListDto(configs, error)
+        return RunConfigListDto(configs, error, buildable)
+    }
+
+    override suspend fun build(directory: String, worktree: String, clean: Boolean): RunResultDto {
+        assertNotEdt("build")
+        builds.add(Triple(directory, worktree, clean))
+        return result
     }
 
     override suspend fun run(directory: String, id: String, worktree: String): RunResultDto {

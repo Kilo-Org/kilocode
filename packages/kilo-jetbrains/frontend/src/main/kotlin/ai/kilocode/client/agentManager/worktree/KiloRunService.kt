@@ -50,6 +50,13 @@ class KiloRunService internal constructor(
         RunResultDto(error = e.message ?: "run start failed")
     }
 
+    suspend fun build(directory: String, worktree: String, clean: Boolean): RunResultDto = try {
+        call { build(directory, worktree, clean) }
+    } catch (e: Exception) {
+        LOG.warn("worktree build failed for $worktree clean=$clean", e)
+        RunResultDto(error = e.message ?: "worktree build failed")
+    }
+
     suspend fun stop(directory: String, id: String, worktree: String): Boolean = try {
         call { stop(directory, id, worktree) }
     } catch (e: Exception) {
@@ -77,6 +84,10 @@ class KiloRunService internal constructor(
      */
     fun runInBackground(directory: String, id: String, worktree: String, done: (RunResultDto) -> Unit = {}) {
         cs.launch { done(run(directory, id, worktree)) }
+    }
+
+    fun buildInBackground(directory: String, worktree: String, clean: Boolean, done: (RunResultDto) -> Unit = {}) {
+        cs.launch { done(build(directory, worktree, clean)) }
     }
 
     fun stopInBackground(directory: String, id: String, worktree: String) {

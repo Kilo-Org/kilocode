@@ -23,6 +23,10 @@ import com.intellij.execution.runners.ExecutionUtil
 import com.intellij.execution.ui.RunContentManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.externalSystem.model.ProjectSystemId
+import com.intellij.openapi.externalSystem.model.execution.ExternalSystemTaskExecutionSettings
+import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
+import com.intellij.openapi.externalSystem.util.ExternalSystemUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.JDOMUtil
 import kotlinx.coroutines.CoroutineScope
@@ -85,8 +89,24 @@ class WorktreeRunManager internal constructor(
         val items = manager.allSettings
             .filter { WorktreeRunAdapter.supports(it.configuration) }
             .map { RunConfigDto(it.uniqueID, it.name, it.type.displayName) }
-        return RunConfigListDto(items)
+        return RunConfigListDto(items, buildable = roots().isNotEmpty())
     }
+
+    /**
+     * Linked external project roots that can be built: the system must have a known task mapping and
+     * a registered run configuration type, because without one
+     * [ExternalSystemUtil.createExternalSystemRunnerAndConfigurationSettings] cannot build settings.
+     *
+     * Discovery goes through the generic external-system API so the plugin keeps loading in IDEs that
+     * ship without the Gradle plugin.
+     */
+    private fun roots(): List<Pair<ProjectSystemId, String>> =
+        ExternalSystemApiUtil.getAllManagers()
+            .filter { WorktreeRunAdapter.buildable(it.systemId) && ExternalSystemUtil.findConfigurationType(it.systemId) != null }
+            .flatMap { manager ->
+                manager.settingsProvider.`fun`(project).linkedProjectsSettings
+                    .map { manager.systemId to it.externalProjectPath }
+            }
 
     suspend fun run(id: String, worktree: String): RunResultDto {
         listen()
@@ -99,6 +119,76 @@ class WorktreeRunManager internal constructor(
         LOG.info("worktree run: start config=${settings.name} worktree=$worktree")
         exec(clone)
         return RunResultDto(ok = true)
+    }
+
+    /**
+     * Builds [worktree] by running each linked root's build tasks against the worktree's own copy of
+     * that root. One process per root, so multi-root projects stay individually stoppable.
+     */
+    suspend fun build(worktree: String, clean: Boolean): RunResultDto {
+        listen()
+        val roots = roots()
+        if (roots.isEmpty()) return RunResultDto(error = "project has no buildable external project")
+        val repo = project.basePath ?: return RunResultDto(error = "project has no base path")
+        val label = label(repo, worktree)
+        val manager = RunManager.getInstance(project)
+        for (root in roots) {
+            val settings = WorktreeRunAdapter.buildSettings(root.first, root.second, worktree, repo, clean)
+            val name = name(clean, label, root.second, repo, roots.size > 1)
+            val clone = buildClone(manager, root.first, settings, key(clean, root.second, repo, worktree), name)
+                ?: return RunResultDto(error = "no run configuration type for ${root.first.readableName}")
+            LOG.info("worktree build: start tasks=${settings.taskNames} path=${settings.externalProjectPath}")
+            exec(clone)
+        }
+        return RunResultDto(ok = true)
+    }
+
+    /**
+     * Same reuse contract as [clone]: while the tasks and target path are unchanged the cached
+     * settings instance is re-executed, so clicking Build again restarts through the platform's
+     * `restartRunProfile` instead of piling up parallel builds.
+     */
+    private fun buildClone(
+        manager: RunManager,
+        system: ProjectSystemId,
+        settings: ExternalSystemTaskExecutionSettings,
+        key: Key,
+        name: String,
+    ): RunnerAndConfigurationSettings? {
+        val print = "${settings.externalProjectPath}|${settings.taskNames.joinToString(" ")}"
+        val entry = clones[key]
+        if (entry != null && entry.print == print) return entry.settings
+        val next = ExternalSystemUtil.createExternalSystemRunnerAndConfigurationSettings(settings, project, system)
+            ?: return null
+        next.name = name
+        // A build has no before-run tasks of its own, and must not run in parallel with itself.
+        next.configuration.beforeRunTasks = emptyList()
+        next.configuration.isAllowRunningInParallel = false
+        next.isActivateToolWindowBeforeRun = true
+        clones[key] = Entry(next, print)
+        tracked[next] = key
+        return next
+    }
+
+    /** Stable per-(action, root, worktree) key so Stop and Show Output resolve the right build. */
+    private fun key(clean: Boolean, root: String, repo: String, worktree: String): Key {
+        val action = if (clean) "kilo.rebuild" else "kilo.build"
+        return Key("$action:${relative(root, repo)}", worktree)
+    }
+
+    private fun name(clean: Boolean, label: String, root: String, repo: String, qualify: Boolean): String {
+        val action = if (clean) "Rebuild" else "Build"
+        val base = "$action [$label]"
+        if (!qualify) return base
+        val rel = relative(root, repo)
+        return if (rel.isEmpty()) base else "$base ($rel)"
+    }
+
+    private fun relative(root: String, repo: String): String {
+        val main = Path.of(repo).normalize()
+        val target = runCatching { Path.of(root).normalize() }.getOrNull() ?: return root
+        if (!target.isAbsolute || !target.startsWith(main)) return target.fileName?.toString() ?: root
+        return main.relativize(target).toString()
     }
 
     /**

@@ -7,6 +7,7 @@ import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.RunStateDto
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 
@@ -59,6 +60,18 @@ class WorktreeRunControlTest : BasePlatformTestCase() {
 
         coroutines.drain(::pumpEdt)
         assertSame(idle, edtWait { control.button.icon })
+    }
+
+    fun `test build and rebuild reach the backend with the clean flag`() {
+        service<KiloRunService>().buildInBackground(ROOT, WORKTREE, clean = false)
+        assertTrue(coroutines.pumpUntil { run.builds.size == 1 })
+        service<KiloRunService>().buildInBackground(ROOT, WORKTREE, clean = true)
+        assertTrue(coroutines.pumpUntil { run.builds.size == 2 })
+
+        assertEquals(
+            listOf(Triple(ROOT, WORKTREE, false), Triple(ROOT, WORKTREE, true)),
+            run.builds.toList(),
+        )
     }
 
     private fun control() = edtWait { WorktreeRunControl(project, testRootDisposable, WORKTREE) {} }

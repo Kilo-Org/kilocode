@@ -82,6 +82,46 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
         assertTrue(enabled(rows[2]))
     }
 
+    fun testBuildRowsFollowConfigsAndPrecedeOpenFrame() {
+        val cfg = RunConfigDto("id1", "dev", "Gradle")
+        val cleans = mutableListOf<Boolean>()
+        val group = WorktreeRunPopup.group(
+            configs = listOf(cfg),
+            error = null,
+            states = emptyList(),
+            run = {},
+            stop = {},
+            output = {},
+            frame = {},
+            buildable = true,
+            build = { cleans += it },
+        )
+        val rows = group.getChildren(null)
+
+        assertEquals(
+            listOf("dev", "---", "Build", "Rebuild", "---", KiloBundle.message("worktree.run.open.frame")),
+            layout(rows),
+        )
+
+        perform(rows[2])
+        perform(rows[3])
+        assertEquals(listOf(false, true), cleans)
+    }
+
+    fun testBuildRowsAreAbsentWhenProjectIsNotBuildable() {
+        val cfg = RunConfigDto("id1", "dev", "Gradle")
+        val group = WorktreeRunPopup.group(listOf(cfg), null, emptyList(), {}, {}, {}, {})
+
+        assertEquals(
+            listOf("dev", "---", KiloBundle.message("worktree.run.open.frame")),
+            layout(group.getChildren(null)),
+        )
+    }
+
+    /** Row labels in order, with unlabeled separators as `---`, so ordering is asserted directly. */
+    private fun layout(rows: Array<AnAction>): List<String> =
+        rows.map { if (it is Separator) it.text ?: "---" else it.templateText.orEmpty() }
+
     fun testStoppingOffersKillForKillableProcess() {
         val cfg = RunConfigDto("id1", "dev", "Shell Script")
         val state = RunStateDto("id1", "dev [wt]", "/wt", RunProcessState.STOPPING, killable = true)

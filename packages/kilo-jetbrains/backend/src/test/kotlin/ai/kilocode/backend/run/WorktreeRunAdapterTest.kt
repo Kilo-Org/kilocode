@@ -1,8 +1,11 @@
 package ai.kilocode.backend.run
 
+import com.intellij.openapi.externalSystem.model.ProjectSystemId
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class WorktreeRunAdapterTest {
     private val repo = "/repo"
@@ -59,7 +62,54 @@ class WorktreeRunAdapterTest {
         )
     }
 
+    @Test
+    fun `build tasks compile main and test sources without running tests`() {
+        assertEquals(listOf("classes", "testClasses"), WorktreeRunAdapter.buildTasks(GRADLE, clean = false))
+        assertEquals(listOf("clean", "classes", "testClasses"), WorktreeRunAdapter.buildTasks(GRADLE, clean = true))
+    }
+
+    @Test
+    fun `unknown external system has no build tasks`() {
+        val other = ProjectSystemId("SBT")
+        assertFalse(WorktreeRunAdapter.buildable(other))
+        assertEquals(emptyList(), WorktreeRunAdapter.buildTasks(other, clean = false))
+        assertTrue(WorktreeRunAdapter.buildable(GRADLE))
+    }
+
+    @Test
+    fun `build settings target the worktree copy of a nested linked root`() {
+        val settings = buildSettings("/repo/packages/kilo-jetbrains", clean = false)
+
+        assertEquals(path("$worktree/packages/kilo-jetbrains"), settings.externalProjectPath)
+        assertEquals(listOf("classes", "testClasses"), settings.taskNames)
+        assertEquals(GRADLE.id, settings.externalSystemIdString)
+        assertEquals(
+            mapOf(
+                WorktreeRunAdapter.WORKTREE_ENV to worktree,
+                WorktreeRunAdapter.REPO_ENV to repo,
+                WorktreeRunAdapter.DEBUGGER_ENV to "false",
+            ),
+            settings.env,
+        )
+    }
+
+    @Test
+    fun `build settings for a repository root linked project target the worktree root`() {
+        // Spring Boot style layout: the linked Gradle root is the repository itself.
+        val settings = buildSettings(repo, clean = true)
+
+        assertEquals(worktree, settings.externalProjectPath)
+        assertEquals(listOf("clean", "classes", "testClasses"), settings.taskNames)
+    }
+
+    private fun buildSettings(root: String, clean: Boolean) =
+        WorktreeRunAdapter.buildSettings(GRADLE, root, worktree, repo, clean)
+
     private fun rebase(value: String?): String = WorktreeRunAdapter.rebase(value, repo, worktree)
 
     private fun path(value: String): String = Path.of(value).normalize().toString()
+
+    private companion object {
+        private val GRADLE = ProjectSystemId("GRADLE")
+    }
 }

@@ -99,6 +99,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertEquals(wt, cfg.workingDirectory)
         assertEquals(wt, cfg.envs[WorktreeRunAdapter.WORKTREE_ENV])
         assertEquals(project.basePath, cfg.envs[WorktreeRunAdapter.REPO_ENV])
+        assertEquals("false", cfg.envs[WorktreeRunAdapter.DEBUGGER_ENV])
         assertEquals("bar", cfg.envs["FOO"])
         assertTrue(cfg.beforeRunTasks.isEmpty())
         assertFalse(cfg.isAllowRunningInParallel)
@@ -143,6 +144,10 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertEquals(listOf(":runIdeSplitMode"), cfg.settings.taskNames)
         assertEquals(wt, cfg.settings.env[WorktreeRunAdapter.WORKTREE_ENV])
         assertEquals(repo, cfg.settings.env[WorktreeRunAdapter.REPO_ENV])
+        // An IDE launched by "Debug" on a Gradle task exports DEBUGGER_ENABLED=true, and parent envs
+        // are inherited. Left alone, Gradle's injected debug script fails every forked start task
+        // because the dispatch port system property is absent outside a real debug session.
+        assertEquals("false", cfg.settings.env[WorktreeRunAdapter.DEBUGGER_ENV])
         // Cloning an external-system config must not mutate the user's own configuration.
         assertEquals("$repo/packages/kilo-jetbrains", source.settings.externalProjectPath)
         assertTrue(source.settings.env.isEmpty())
@@ -262,6 +267,19 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertTrue(mgr.stop(settings.uniqueID, wt))
         await("force kill") { handler.killed }
         assertEquals(RunProcessState.STOPPING, mgr.states.value.single().state)
+    }
+
+    fun testBuildIsUnavailableWithoutALinkedExternalProject() = runBlocking {
+        val mgr = manager()
+
+        // A bare test project links no Gradle root, so the popup must not offer build actions.
+        assertFalse(mgr.configs().buildable)
+
+        val result = mgr.build("/tmp/kilo-build-wt", clean = false)
+        assertFalse(result.ok)
+        assertEquals("project has no buildable external project", result.error)
+        assertTrue(launched.isEmpty())
+        assertTrue(mgr.states.value.isEmpty())
     }
 
     // ------ fixtures ------

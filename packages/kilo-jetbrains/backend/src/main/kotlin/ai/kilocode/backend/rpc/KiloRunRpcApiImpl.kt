@@ -33,6 +33,11 @@ class KiloRunRpcApiImpl : KiloRunRpcApi {
         return project.getService(WorktreeRunManager::class.java).run(id, worktree)
     }
 
+    override suspend fun build(directory: String, worktree: String, clean: Boolean): RunResultDto {
+        val project = resolve(directory) ?: return RunResultDto(error = "no open project for $directory")
+        return project.getService(WorktreeRunManager::class.java).build(worktree, clean)
+    }
+
     override suspend fun stop(directory: String, id: String, worktree: String): Boolean {
         val project = resolve(directory) ?: return false
         return project.getService(WorktreeRunManager::class.java).stop(id, worktree)

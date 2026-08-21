@@ -99,6 +99,8 @@ internal class WorktreeRunControl(
             },
             output = { state -> service<KiloRunService>().focusInBackground(repo, state.id, worktree) },
             frame = frame,
+            buildable = list.buildable,
+            build = { clean -> build(repo, clean) },
         )
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
             KiloBundle.message("worktree.run.popup.title"),
@@ -119,6 +121,18 @@ internal class WorktreeRunControl(
             val error = result.error ?: return@runInBackground
             alive {
                 Notification("Kilo Code", KiloBundle.message("worktree.run.failed", cfg.name, error), NotificationType.ERROR)
+                    .notify(project)
+            }
+        }
+    }
+
+    private fun build(repo: String, clean: Boolean) {
+        val name = KiloBundle.message(if (clean) "worktree.run.rebuild" else "worktree.run.build")
+        Telemetry.send("Worktree Build Started", mapOf("mode" to if (clean) "rebuild" else "build"))
+        service<KiloRunService>().buildInBackground(repo, worktree, clean) { result ->
+            val error = result.error ?: return@buildInBackground
+            alive {
+                Notification("Kilo Code", KiloBundle.message("worktree.run.failed", name, error), NotificationType.ERROR)
                     .notify(project)
             }
         }

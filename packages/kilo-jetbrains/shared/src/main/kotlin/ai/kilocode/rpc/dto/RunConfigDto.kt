@@ -13,6 +13,9 @@ data class RunConfigDto(
 data class RunConfigListDto(
     val configs: List<RunConfigDto> = emptyList(),
     val error: String? = null,
+    // True when the project has at least one linked external-system root whose build tasks are known,
+    // so the worktree can be built. False hides the build actions instead of offering a failing one.
+    val buildable: Boolean = false,
 )
 
 @Serializable

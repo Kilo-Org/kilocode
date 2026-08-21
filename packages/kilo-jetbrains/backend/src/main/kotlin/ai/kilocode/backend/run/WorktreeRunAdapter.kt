@@ -6,6 +6,8 @@ import com.intellij.execution.RunManager
 import com.intellij.execution.RunnerAndConfigurationSettings
 import com.intellij.execution.configurations.ModuleBasedConfiguration
 import com.intellij.execution.configurations.RunConfiguration
+import com.intellij.openapi.externalSystem.model.ProjectSystemId
+import com.intellij.openapi.externalSystem.model.execution.ExternalSystemTaskExecutionSettings
 import com.intellij.openapi.externalSystem.service.execution.ExternalSystemRunConfiguration
 import java.nio.file.Path
 
@@ -26,10 +28,34 @@ import java.nio.file.Path
  *
  * Module-classpath configurations (plain JVM Application, JUnit, ...) are excluded: even with
  * a worktree working directory they would execute the main checkout's compiled classes.
+ *
+ * The adapter also synthesizes the worktree build ([buildSettings]). A real IDE Build Project is
+ * impossible here: `ProjectTaskManager` describes work as [com.intellij.openapi.module.Module]
+ * instances, which only exist for an open project, so a worktree directory can never be its target.
+ * Running the external system's own build tasks against the worktree copy of a linked root is the
+ * reachable equivalent, and relies on the same unlinked-path support as the transplanted configs.
  */
 internal object WorktreeRunAdapter {
     const val WORKTREE_ENV = "WORKTREE_PATH"
     const val REPO_ENV = "REPO_PATH"
+
+    /** Gradle's own debug switch, read by its always-injected `JvmDebugInit` script. */
+    const val DEBUGGER_ENV = "DEBUGGER_ENABLED"
+
+    /**
+     * Build tasks per external system id, mirroring what the IDE's delegated build runs.
+     *
+     * `classes`/`testClasses` compile main and test sources without packaging or running tests,
+     * which is what Build Project does; unqualified names run in the root project and every
+     * subproject. `build` is deliberately not used — it also runs tests and checks.
+     *
+     * Rebuild prepends `clean`. The IDE instead injects `outputs.upToDateWhen { false }` on
+     * `AbstractCompile`, but that init script is generated from imported per-module Gradle paths,
+     * which an unlinked worktree path does not have.
+     */
+    private val TASKS = mapOf("GRADLE" to listOf("classes", "testClasses"))
+
+    private const val CLEAN_TASK = "clean"
 
     private val LOG = KiloLog.create(WorktreeRunAdapter::class.java)
 
@@ -87,6 +113,36 @@ internal object WorktreeRunAdapter {
         return result
     }
 
+    /** Whether [system] has a known build task mapping, i.e. whether its roots can be built. */
+    fun buildable(system: ProjectSystemId): Boolean = TASKS.containsKey(system.id)
+
+    /** Build tasks for [system]; empty when unknown. [clean] prepends `clean` for Rebuild. */
+    fun buildTasks(system: ProjectSystemId, clean: Boolean): List<String> {
+        val tasks = TASKS[system.id] ?: return emptyList()
+        return if (clean) listOf(CLEAN_TASK) + tasks else tasks
+    }
+
+    /**
+     * Task settings that build [root] — a linked external project root of the main checkout — inside
+     * [worktree]. The path is rebased exactly like a transplanted configuration's, so a root nested
+     * at `<repo>/packages/kilo-jetbrains` builds `<worktree>/packages/kilo-jetbrains`, and a root
+     * that is the repository itself builds the worktree root.
+     */
+    fun buildSettings(
+        system: ProjectSystemId,
+        root: String,
+        worktree: String,
+        repo: String,
+        clean: Boolean,
+    ): ExternalSystemTaskExecutionSettings {
+        val settings = ExternalSystemTaskExecutionSettings()
+        settings.externalSystemIdString = system.id
+        settings.externalProjectPath = rebase(root, repo, worktree)
+        settings.taskNames = buildTasks(system, clean)
+        settings.env = env(worktree, repo)
+        return settings
+    }
+
     /**
      * Maps a configured path onto the worktree so nested projects keep working:
      * `<repo>/packages/kilo-jetbrains` becomes `<worktree>/packages/kilo-jetbrains`, which keeps
@@ -118,5 +174,17 @@ internal object WorktreeRunAdapter {
         return if (rel.toString().isEmpty()) root.toString() else root.resolve(rel).normalize().toString()
     }
 
-    private fun env(worktree: String, repo: String) = mapOf(WORKTREE_ENV to worktree, REPO_ENV to repo)
+    private fun env(worktree: String, repo: String) = mapOf(
+        WORKTREE_ENV to worktree,
+        REPO_ENV to repo,
+        // Neutralize an inherited Gradle debug session. When the IDE itself was launched by
+        // "Debug" on a Gradle task, its own environment carries DEBUGGER_ENABLED/DEBUGGER_ID, and
+        // ExternalSystemTaskExecutionSettings.isPassParentEnvs is true by default, so a worktree
+        // execution inherits them. Gradle always injects the JvmDebugInit script, which then
+        // instruments every forked start task and reads the idea.debugger.dispatch.port system
+        // property that only a real debug session sets — failing the task outright. Worktree
+        // executions always use the Run executor, so debugging is never wanted here. An explicit
+        // "false" is required: omitting the key cannot unset an inherited value.
+        DEBUGGER_ENV to "false",
+    )
 }
