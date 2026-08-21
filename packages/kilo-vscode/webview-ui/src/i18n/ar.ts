@@ -134,6 +134,19 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "لم تعد نماذج {{provider}} متاحة.",
   "model.tag.free": "مجاني",
   "model.tag.dataCollected": "قد تُستخدم البيانات للتدريب",
+  "model.routing.label": "توجيه الموفر",
+  "model.routing.auto": "تلقائي",
+  "model.routing.loading": "جارٍ تحميل الموفرين…",
+  "model.routing.empty": "لا تتوفر قائمة موفرين لهذا النموذج",
+  "model.routing.preview.quantization": "التكميم",
+  "model.routing.preview.maxOutput": "الحد الأقصى للإخراج",
+  "model.routing.preview.cacheRead": "قراءة ذاكرة التخزين المؤقت",
+  "model.routing.preview.cacheWrite": "كتابة ذاكرة التخزين المؤقت",
+  "model.routing.preview.uptime": "وقت التشغيل (30 دقيقة)",
+  "model.routing.preview.autoDescription": "تختار البوابة موفرًا ديناميكيًا عند إرسال كل طلب.",
+  "model.routing.unavailable": "غير متاح حاليًا",
+  "model.routing.projectOverride":
+    "توجيه الموفر لهذا النموذج محدَّد في ملف kilo.json الخاص بالمشروع ويتجاوز هذا الاختيار.",
   "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
@@ -398,6 +411,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "إخفاء النماذج التي تدرّب على المطالبات",
   "settings.models.hidePromptTraining.description":
     "إخفاء نماذج Kilo Gateway التي قد يستخدم مزودوها مطالباتك لأغراض التدريب.",
+  "settings.models.providerRouting.title": "توجيه الموفر",
+  "settings.models.providerRouting.description":
+    "ثبّت النموذج الافتراضي على موفر استدلال محدد عند توجيهه عبر Kilo Gateway. يتيح الخيار «تلقائي» للبوابة الاختيار.",
   "settings.providers.modeModels": "نموذج لكل وضع",
   "settings.providers.modeModels.description":
     "تجاوز النموذج الافتراضي لأوضاع محددة. إذا لم يتم التعيين، يتم استخدام النموذج الافتراضي العام.",

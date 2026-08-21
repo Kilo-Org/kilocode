@@ -3921,6 +3921,220 @@
         ]
       }
     },
+    "/experimental/resource/read": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.readResource",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uri": {
+                      "type": "string"
+                    },
+                    "mimeType": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "blob": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["uri"],
+                  "additionalProperties": false,
+                  "description": "Resource content"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read a resource from a connected MCP server by URI. Used by MCP Apps to load UI resources.",
+        "summary": "Read MCP resource",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "uri": {
+                    "type": "string"
+                  },
+                  "server": {
+                    "type": "string"
+                  }
+                },
+                "required": ["uri", "server"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.readResource({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/mcp/call-tool": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.callTool",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool call result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "array"
+                    },
+                    "isError": {
+                      "type": "boolean"
+                    },
+                    "structuredContent": {
+                      "type": "object"
+                    }
+                  },
+                  "required": ["content"],
+                  "additionalProperties": false,
+                  "description": "Tool call result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.",
+        "summary": "Call MCP tool",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "server": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "arguments": {
+                    "type": "object"
+                  }
+                },
+                "required": ["server", "name"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.callTool({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/project": {
       "get": {
         "tags": ["project"],
@@ -13957,6 +14171,128 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.models.images({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilo/models/endpoints": {
+      "get": {
+        "tags": ["kilo"],
+        "operationId": "kilo.models.endpoints",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "catalog",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["kilo", "public"]
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upstream endpoints serving a model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "provider": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "quantization": {
+                        "type": "string"
+                      },
+                      "context": {
+                        "type": "number"
+                      },
+                      "output": {
+                        "type": "number"
+                      },
+                      "pricing": {
+                        "type": "object",
+                        "properties": {
+                          "input": {
+                            "type": "number"
+                          },
+                          "output": {
+                            "type": "number"
+                          },
+                          "cacheRead": {
+                            "type": "number"
+                          },
+                          "cacheWrite": {
+                            "type": "number"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "uptime": {
+                        "type": "number"
+                      }
+                    },
+                    "required": ["provider", "name"],
+                    "additionalProperties": false
+                  },
+                  "description": "Upstream endpoints serving a model"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "List the upstream endpoints (inference providers) serving a model, usable as provider routing preferences for Kilo Gateway requests",
+        "summary": "Model endpoints",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.models.endpoints({\n  ...\n})"
           }
         ]
       }

@@ -5,6 +5,7 @@ import {
   fetchCloudSession,
   fetchCloudSessionForImport,
   fetchKiloImageModels,
+  fetchKiloModelEndpoints,
   fetchKiloTranscriptionModels,
   getCloudSessions,
   getOrganizationId,
@@ -615,6 +616,28 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       return result.models
     })
 
+    const modelEndpoints = Effect.fn("KiloGatewayHttpApi.modelEndpoints")(function* (ctx) {
+      const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
+
+      const result = yield* Effect.tryPromise({
+        try: () =>
+          fetchKiloModelEndpoints(ctx.query.model, {
+            kilocodeToken: getToken(info),
+            kilocodeOrganizationId: getOrganizationId(info),
+            catalog: ctx.query.catalog,
+          }),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+
+      if (result.error && result.endpoints.length === 0) {
+        const err =
+          result.error.kind === "unauthorized" ? new HttpApiError.Unauthorized({}) : new HttpApiError.BadRequest({})
+        return yield* Effect.fail(err)
+      }
+
+      return result.endpoints
+    })
+
     const transcriptionModels = Effect.fn("KiloGatewayHttpApi.transcriptionModels")(function* () {
       const info = yield* proxyAuth()
       if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
@@ -646,6 +669,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("edit", edit)
       .handle("audioTranscriptions", audioTranscriptions)
       .handle("imageModels", imageModels)
+      .handle("modelEndpoints", modelEndpoints)
       .handle("transcriptionModels", transcriptionModels)
       .handle("notifications", notifications)
       .handle("organization", organization)

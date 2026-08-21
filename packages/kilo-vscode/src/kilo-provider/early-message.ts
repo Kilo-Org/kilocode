@@ -1,9 +1,10 @@
 import { routeSuggestionWebviewMessage } from "./handlers/suggestion"
 import * as ModelState from "./model-state"
+import { routeModelRoutingMessage } from "./model-routing"
 import { routeInputToolMessage } from "../services/input-tools"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 import type { SuggestionContext } from "./handlers/suggestion"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { Config, KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
 import { buildAutoApprovalReasonSettingMessage } from "./auto-approval-reason-settings"
@@ -19,6 +20,7 @@ type Ctx = {
   exportTranscript: (sessionID: string) => Promise<void>
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
+  updateConfig: (partial: Partial<Config>, unset?: string[][]) => Promise<void>
   speechToTextModels: () => Promise<void>
   modelUsage: (message: ModelUsageMessage) => Promise<void>
   backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
@@ -81,6 +83,8 @@ export async function routeEarlyMessage(
   }
   await routeSuggestionWebviewMessage(ctx.question, message)
   if (await ModelState.handleMessage(message.type, message, ctx.client, ctx.post)) return true
+  if (await routeModelRoutingMessage(message, { client: ctx.client, post: ctx.post, updateConfig: ctx.updateConfig }))
+    return true
   if (message.type === "exportSessionTranscript") {
     const input = message as { sessionID?: unknown }
     if (typeof input.sessionID === "string") await ctx.exportTranscript(input.sessionID)

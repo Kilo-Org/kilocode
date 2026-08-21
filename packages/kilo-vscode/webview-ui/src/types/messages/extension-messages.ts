@@ -41,7 +41,7 @@ export interface BackgroundJobInfo {
   }
 }
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
-import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
+import type { ModelEndpoint, ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
@@ -962,6 +962,18 @@ export interface VariantsLoadedMessage {
   variants: Record<string, string>
 }
 
+// Upstream endpoints for a model loaded from the CLI backend (extension → webview).
+// `error: true` marks a transient failure (no backend, network error) that must
+// not be cached as a result.
+export interface ModelEndpointsLoadedMessage {
+  type: "modelEndpointsLoaded"
+  providerID: string
+  modelID: string
+  requestID: number
+  endpoints: ModelEndpoint[]
+  error?: boolean
+}
+
 export interface RecentsLoadedMessage {
   type: "recentsLoaded"
   recents: ModelSelection[]
@@ -1475,6 +1487,7 @@ export type ExtensionMessage =
   | AppendReviewCommentsToTerminalMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
+  | ModelEndpointsLoadedMessage
   | CloudSessionDataLoadedMessage
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage

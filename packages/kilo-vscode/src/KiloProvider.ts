@@ -1032,6 +1032,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
+          updateConfig: (partial, unset) => this.handleUpdateConfig(partial, {}, unset),
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
           backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),

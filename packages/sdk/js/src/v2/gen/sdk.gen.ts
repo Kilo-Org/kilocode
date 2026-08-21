@@ -215,6 +215,8 @@ import type {
   KiloEditResponses,
   KiloFimErrors,
   KiloFimResponses,
+  KiloModelsEndpointsErrors,
+  KiloModelsEndpointsResponses,
   KiloModelsImagesErrors,
   KiloModelsImagesResponses,
   KiloModelsTranscriptionsErrors,
@@ -240,11 +242,15 @@ import type {
   McpAuthRemoveResponses,
   McpAuthStartErrors,
   McpAuthStartResponses,
+  McpCallToolErrors,
+  McpCallToolResponses,
   McpConnectErrors,
   McpConnectResponses,
   McpDisconnectErrors,
   McpDisconnectResponses,
   McpLocalConfig,
+  McpReadResourceErrors,
+  McpReadResourceResponses,
   McpRemoteConfig,
   McpStatusErrors,
   McpStatusResponses,
@@ -3177,6 +3183,88 @@ export class Mcp extends HeyApiClient {
       url: "/mcp/{name}/disconnect",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Read MCP resource
+   *
+   * Read a resource from a connected MCP server by URI. Used by MCP Apps to load UI resources.
+   */
+  public readResource<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      uri?: string
+      server?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "uri" },
+            { in: "body", key: "server" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<McpReadResourceResponses, McpReadResourceErrors, ThrowOnError>({
+      url: "/experimental/resource/read",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Call MCP tool
+   *
+   * Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.
+   */
+  public callTool<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      server?: string
+      name?: string
+      arguments?: {
+        [key: string]: unknown
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "server" },
+            { in: "body", key: "name" },
+            { in: "body", key: "arguments" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<McpCallToolResponses, McpCallToolErrors, ThrowOnError>({
+      url: "/experimental/mcp/call-tool",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 
@@ -6891,6 +6979,40 @@ export class Models extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<KiloModelsImagesResponses, KiloModelsImagesErrors, ThrowOnError>({
       url: "/kilo/models/images",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Model endpoints
+   *
+   * List the upstream endpoints (inference providers) serving a model, usable as provider routing preferences for Kilo Gateway requests
+   */
+  public endpoints<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      model: string
+      catalog?: "kilo" | "public"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "model" },
+            { in: "query", key: "catalog" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KiloModelsEndpointsResponses, KiloModelsEndpointsErrors, ThrowOnError>({
+      url: "/kilo/models/endpoints",
       ...options,
       ...params,
     })

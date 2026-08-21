@@ -139,6 +139,20 @@ export const dict = {
 
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Gegevens kunnen worden gebruikt voor training",
+  "model.routing.label": "Providerroutering",
+  "model.routing.auto": "Auto",
+  "model.routing.loading": "Providers laden…",
+  "model.routing.empty": "Geen providerlijst beschikbaar voor dit model",
+  "model.routing.preview.quantization": "Kwantisatie",
+  "model.routing.preview.maxOutput": "Maximale uitvoer",
+  "model.routing.preview.cacheRead": "Cache lezen",
+  "model.routing.preview.cacheWrite": "Cache schrijven",
+  "model.routing.preview.uptime": "Beschikbaarheid (30 min)",
+  "model.routing.preview.autoDescription":
+    "De gateway selecteert voor elke aanvraag dynamisch een provider op het moment van verzenden.",
+  "model.routing.unavailable": "Momenteel niet beschikbaar",
+  "model.routing.projectOverride":
+    "De providerroutering voor dit model staat in de kilo.json van het project en overschrijft deze keuze.",
   "model.group.auto": "Automatische modellen",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",
@@ -1081,6 +1095,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Modellen die prompts voor training gebruiken verbergen",
   "settings.models.hidePromptTraining.description":
     "Verberg Kilo Gateway-modellen waarvan providers je prompts mogelijk voor training gebruiken.",
+  "settings.models.providerRouting.title": "Providerroutering",
+  "settings.models.providerRouting.description":
+    "Koppel het standaardmodel aan een specifieke inference-provider wanneer het via Kilo Gateway wordt gerouteerd. Met Auto kiest de gateway.",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",

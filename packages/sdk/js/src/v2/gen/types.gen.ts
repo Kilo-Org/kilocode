@@ -12078,6 +12078,90 @@ export type McpDisconnectResponses = {
 
 export type McpDisconnectResponse = McpDisconnectResponses[keyof McpDisconnectResponses]
 
+export type McpReadResourceData = {
+  body?: {
+    uri: string
+    server: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/resource/read"
+}
+
+export type McpReadResourceErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpReadResourceError = McpReadResourceErrors[keyof McpReadResourceErrors]
+
+export type McpReadResourceResponses = {
+  /**
+   * Resource content
+   */
+  200: {
+    uri: string
+    mimeType?: string
+    text?: string
+    blob?: string
+  }
+}
+
+export type McpReadResourceResponse = McpReadResourceResponses[keyof McpReadResourceResponses]
+
+export type McpCallToolData = {
+  body?: {
+    server: string
+    name: string
+    arguments?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/mcp/call-tool"
+}
+
+export type McpCallToolErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpCallToolError = McpCallToolErrors[keyof McpCallToolErrors]
+
+export type McpCallToolResponses = {
+  /**
+   * Tool call result
+   */
+  200: {
+    content: Array<unknown>
+    isError?: boolean
+    structuredContent?: {
+      [key: string]: unknown
+    }
+  }
+}
+
+export type McpCallToolResponse = McpCallToolResponses[keyof McpCallToolResponses]
+
 export type ProjectListData = {
   body?: never
   path?: never
@@ -16129,6 +16213,49 @@ export type KiloModelsImagesResponses = {
 }
 
 export type KiloModelsImagesResponse = KiloModelsImagesResponses[keyof KiloModelsImagesResponses]
+
+export type KiloModelsEndpointsData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    model: string
+    catalog?: "kilo" | "public"
+  }
+  url: "/kilo/models/endpoints"
+}
+
+export type KiloModelsEndpointsErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KiloModelsEndpointsError = KiloModelsEndpointsErrors[keyof KiloModelsEndpointsErrors]
+
+export type KiloModelsEndpointsResponses = {
+  /**
+   * Upstream endpoints serving a model
+   */
+  200: Array<{
+    provider: string
+    name: string
+    quantization?: string
+    context?: number
+    output?: number
+    pricing?: {
+      input?: number
+      output?: number
+      cacheRead?: number
+      cacheWrite?: number
+    }
+    uptime?: number
+  }>
+}
+
+export type KiloModelsEndpointsResponse = KiloModelsEndpointsResponses[keyof KiloModelsEndpointsResponses]
 
 export type KiloModelsTranscriptionsData = {
   body?: never
