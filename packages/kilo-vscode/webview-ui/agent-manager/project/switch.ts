@@ -10,8 +10,8 @@ export function switchProject(opts: {
 }): "first" | "switched" | "same" {
   const previous = opts.current()
   if (opts.id === previous) return "same"
-  opts.set(opts.id)
   if (previous === undefined) {
+    opts.set(opts.id)
     opts.first()
     return "first"
   }
@@ -19,5 +19,6 @@ export function switchProject(opts: {
   opts.hide()
   opts.history()
   opts.reset()
+  opts.set(opts.id)
   return "switched"
 }

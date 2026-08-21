@@ -30,7 +30,8 @@ export function createSidebarCollapse(vscode: VsCodePoster, opts: Options = {}) 
     collapsed,
     hydrated,
     /** Apply state from extension push without re-broadcasting. */
-    hydrate: () => {
+    hydrate: (value?: boolean) => {
+      if (value !== undefined) setCollapsed(value)
       if (!hydrated()) requestAnimationFrame(() => setHydrated(true))
     },
     /** Ensure the sidebar is visible; no-op + no message when already open. */

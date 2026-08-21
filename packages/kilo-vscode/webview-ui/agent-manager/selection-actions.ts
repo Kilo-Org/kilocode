@@ -35,6 +35,7 @@ export function createTabMemory(opts: {
   owns: (selection: string) => boolean
   pending: (id: string) => boolean
   locals: () => string[]
+  localTab?: (id: string) => boolean
   set: (selection: string, tab: string) => void
 }) {
   return () => {
@@ -42,7 +43,11 @@ export function createTabMemory(opts: {
     const tab = opts.tab()
     if (sel === null || !tab) return
     if (opts.multi() && opts.applied() !== opts.active()) return
-    if (opts.multi() && !(sel === LOCAL ? opts.pending(tab) || opts.locals().includes(tab) : opts.owns(sel))) return
+    if (
+      opts.multi() &&
+      !(sel === LOCAL ? (opts.localTab?.(tab) ?? (opts.pending(tab) || opts.locals().includes(tab))) : opts.owns(sel))
+    )
+      return
     rememberSelectionTab(opts.set, sel, tab)
   }
 }
@@ -133,8 +138,10 @@ export function selectLocalAction<T extends SessionLike>(
     deps.terms.setActiveId(undefined)
     const real = locals.filter((item) => !deps.isPending(item.id))
     const target = remembered ? real.find((s) => s.id === remembered) : undefined
+    const draft = remembered && deps.isPending(remembered) ? remembered : undefined
     const fallback =
       target?.id ??
+      draft ??
       (remembered && ids.includes(remembered) ? remembered : undefined) ??
       real[0]?.id ??
       ids[0] ??

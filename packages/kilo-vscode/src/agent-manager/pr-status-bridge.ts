@@ -104,6 +104,7 @@ export class PRStatusBridge {
   }
 
   private handleComment(m: Record<string, unknown>): boolean {
+    if (typeof m.projectId === "string" && m.projectId !== this.host.projectId?.()) return true
     const id = m.worktreeId as string
     const threadId = m.threadId as string
     const projectId = typeof m.projectId === "string" ? m.projectId : this.host.projectId?.()
@@ -111,13 +112,14 @@ export class PRStatusBridge {
     const cwd = wt?.path ?? this.host.getWorkspaceRoot()
     const resolve = m.type === "agentManager.resolveComment"
     const resultType = resolve ? "agentManager.resolveCommentResult" : "agentManager.unresolveCommentResult"
-    const result = (success: boolean) =>
+    const result = (success: boolean, error?: string) =>
       this.host.postToWebview({
         type: resultType,
         ...(projectId ? { projectId } : {}),
         worktreeId: id,
         threadId,
         success,
+        ...(error ? { error } : {}),
       })
     if (!cwd) {
       this.host.log("resolveComment: no cwd for worktree", id)
@@ -132,7 +134,7 @@ export class PRStatusBridge {
       },
       (err: unknown) => {
         this.host.log(`${resultType} failed: ${err instanceof Error ? err.message : String(err)}`)
-        result(false)
+        result(false, ghErrorReason(err instanceof Error ? err.message : String(err)))
       },
     )
     return true

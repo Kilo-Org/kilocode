@@ -302,7 +302,7 @@ const AgentManagerContent: Component = () => {
     setSessionsCollapsed(collapsed)
     vscode.postMessage({ type: "agentManager.setSessionsCollapsed", collapsed })
   }
-  const sidebar = createSidebarCollapse(vscode)
+  const sidebar = createSidebarCollapse(vscode, { initial: persisted?.sidebarCollapsed })
   const sidebarCollapsed = sidebar.collapsed
   const expandSidebar = sidebar.expand
   const toggleSidebar = sidebar.toggle
@@ -700,6 +700,7 @@ const AgentManagerContent: Component = () => {
     owns: (sel) => worktrees().some((wt) => wt.id === sel),
     pending: isPending,
     locals: localSessionIDs,
+    localTab: (id) => id === REVIEW_TAB_ID || isTerminalTabId(id),
     set: (sel, tab) => registry.active().tabMemory.set(sel, tab),
   })
   createEffect(() => {
@@ -1145,8 +1146,7 @@ const AgentManagerContent: Component = () => {
       })
       requestChatFocus()
     }
-    // Recover sidebar collapsed state and mark hydrated so transitions enable
-    sidebar.hydrate()
+    sidebar.hydrate(state.sidebarCollapsed)
   }
 
   const applyProjectSwitch = (state: AgentManagerStateMessage): "first" | "switched" | "same" => {
