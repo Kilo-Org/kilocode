@@ -52,6 +52,20 @@ class ActiveListReorderTest : BasePlatformTestCase() {
         assertEquals(listOf("cur", "c", "a", "b"), move.keys)
     }
 
+    fun `test drop anchors the moved row for owner refresh`() {
+        val moves = mutableListOf<ActiveListMove>()
+        val view = view(moves)
+        view.update(sectioned())
+        layout(view)
+
+        assertTrue(view.select("c"))
+        view.over("c", center(view, 1))
+        view.drop()
+        view.update(sectioned().let { listOf(it[0], it[3], it[1], it[2]) })
+
+        assertEquals("c", view.selected()?.key)
+    }
+
     fun `test drag cannot leave its section and never displaces the current row`() {
         val moves = mutableListOf<ActiveListMove>()
         val view = view(moves)

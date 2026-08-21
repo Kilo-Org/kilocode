@@ -90,6 +90,11 @@ internal interface ActiveListHitCell {
  */
 internal interface ActiveListItem {
     val key: String
+    /**
+     * Stable identity used to restore selection across refreshes. Defaults to [key]; override when
+     * the key is not stable for the row's lifetime.
+     */
+    val identity: Any get() = key
     val title: String
     val note: String? get() = null
     val description: String? get() = null

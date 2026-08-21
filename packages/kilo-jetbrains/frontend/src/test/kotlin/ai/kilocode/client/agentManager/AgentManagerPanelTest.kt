@@ -234,6 +234,24 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
     }
 
+    fun `test panel refresh keeps selected worktree across tab switch reload`() {
+        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        rpc.listed += first
+        rpc.listed += second
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt { list.selectedIndex = 1 }
+
+        edt { panel.refresh() }
+        flush()
+
+        assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
+    }
+
     fun `test refresh keeps existing selection`() {
         val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
@@ -634,6 +652,49 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         assertEquals(listOf(b.path, a.path), edt { worktreeIds(controller) })
         assertEquals(listOf(listOf(b.path, a.path)), rpc.reorders.toList())
+    }
+
+    fun `test dragging a worktree keeps dropped row selected after reorder reload`() {
+        val a = worktree("aardvark")
+        val b = worktree("beluga")
+        rpc.listed += main()
+        rpc.listed += a
+        rpc.listed += b
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        layout(view)
+        edt {
+            assertTrue(view.select(b.id))
+            view.over(b.id, rowCenter(view, 1))
+            view.drop()
+        }
+        flush()
+
+        assertEquals(b.id, edt { view.selected()?.key })
+    }
+
+    fun `test renaming selected worktree keeps it selected`() {
+        val item = worktree("aardvark")
+        rpc.listed += main()
+        rpc.listed += item
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        edt {
+            assertTrue(view.select(item.id))
+            controller.rename(item, "renamed", onFailure = {})
+        }
+        flush()
+
+        assertEquals(item.id, edt { view.selected()?.key })
+        assertEquals("renamed", edt { (view.selected() as ActiveListItem).title })
     }
 
     fun `test the current and pending rows are not draggable`() {

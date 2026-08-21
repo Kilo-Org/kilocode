@@ -286,19 +286,7 @@ class HistoryPanel(
      * list is now empty.
      */
     private fun restore(list: ActiveList, rows: List<ActiveListItem>) {
-        val keys = list.selectedKeys()
-        val anchor = list.selectedIndex()
-        list.update(rows, ActiveListSelection.PreserveNoScroll)
-        val indices = keys.mapNotNull { key -> rows.indexOfFirst { it.key == key }.takeIf { it >= 0 } }.toIntArray()
-        if (indices.isNotEmpty()) {
-            list.setSelectionIndices(indices)
-            return
-        }
-        if (keys.isNotEmpty() && rows.isNotEmpty()) {
-            list.selectIndex(anchor.coerceIn(0, rows.size - 1))
-            return
-        }
-        list.clearSelection()
+        list.update(rows, ActiveListSelection.Slide)
     }
 
     @RequiresEdt

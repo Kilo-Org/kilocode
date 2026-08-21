@@ -129,7 +129,7 @@ internal class ActiveList(
 
     @RequiresEdt
     fun setSelectionIndices(indices: IntArray) {
-        view.list.selectedIndices = indices
+        view.setSelectionIndices(indices)
     }
 
     @RequiresEdt

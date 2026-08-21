@@ -101,6 +101,9 @@ internal class ActiveListView(
     private var hovered = -1
     private var heightKey: ActiveListHeightKey? = null
     private var drag: Drag? = null
+    private var anchor: Set<Any> = emptySet()
+    private var mark = -1
+    private var restoring = false
     // Cursor for the row body; buttons override it on hover via [cursorAt].
     private var baseCursor: Cursor = Cursor.getDefaultCursor()
     internal var onSelect: (() -> Unit)? = null
@@ -131,6 +134,7 @@ internal class ActiveListView(
                 list.requestFocusInWindow()
                 press = null
                 if (selection(e)) return
+                rowAt(e.point)?.takeIf { !list.isSelectedIndex(it) }?.let { choose(it, scroll = false) }
                 val hit = hit(e) ?: return
                 press = Press(hit.item.key, hit.id ?: return)
             }
@@ -196,7 +200,11 @@ internal class ActiveListView(
             // Selection gates the hover-revealed action bar, so repaint the hovered row as soon as
             // its selection flips instead of waiting for the next mouse move.
             if (hover) repaintRow(hovered)
-            if (!e.valueIsAdjusting) onSelect?.invoke()
+            if (!restoring && !e.valueIsAdjusting) {
+                anchor = identities()
+                mark = list.selectedIndex
+                onSelect?.invoke()
+            }
         }
         list.addFocusListener(object : FocusAdapter() {
             override fun focusGained(e: FocusEvent) = list.repaint()
@@ -217,6 +225,8 @@ internal class ActiveListView(
     @RequiresEdt
     fun clearSelection() {
         checkEdt()
+        anchor = emptySet()
+        mark = -1
         list.clearSelection()
     }
 
@@ -241,7 +251,9 @@ internal class ActiveListView(
     @RequiresEdt
     fun select(key: String, scroll: Boolean = true): Boolean {
         checkEdt()
+        anchor = setOf(key)
         val idx = activeListIndex(model.items, key)
+        mark = idx
         if (idx < 0) return false
         choose(idx, scroll)
         return true
@@ -250,7 +262,19 @@ internal class ActiveListView(
     @RequiresEdt
     fun selectIndex(index: Int) {
         checkEdt()
+        val item = model.items.getOrNull(index)
+        anchor = item?.let { setOf(it.identity) }.orEmpty()
+        mark = if (item == null) -1 else index
         choose(index)
+    }
+
+    @RequiresEdt
+    fun setSelectionIndices(indices: IntArray) {
+        checkEdt()
+        val rows = indices.toList().mapNotNull { model.items.getOrNull(it) }
+        anchor = rows.map { it.identity }.toSet()
+        mark = indices.firstOrNull { it in model.items.indices } ?: -1
+        list.selectedIndices = indices
     }
 
     @RequiresEdt
@@ -297,20 +321,18 @@ internal class ActiveListView(
         checkEdt()
         if (this.items != items) heightKey = null
         this.items = items
-        val key = when (selection) {
-            is ActiveListSelection.Key -> selection.key
-            is ActiveListSelection.Index -> null
+        val scroll = selection != ActiveListSelection.PreserveNoScroll
+        when (selection) {
+            is ActiveListSelection.Key -> {
+                anchor = setOf(selection.key)
+                mark = -1
+                sync(Absent.KEEP, scroll)
+            }
+            is ActiveListSelection.Index -> sync(Absent.KEEP, scroll, selection.index, reanchor = true)
+            ActiveListSelection.Slide -> sync(Absent.SLIDE, scroll)
             ActiveListSelection.PreserveNoScroll,
-            ActiveListSelection.Preserve -> list.selectedValue?.key
+            ActiveListSelection.Preserve -> sync(Absent.KEEP, scroll)
         }
-        val idx = when (selection) {
-            is ActiveListSelection.Index -> selection.index
-            is ActiveListSelection.Key,
-            ActiveListSelection.PreserveNoScroll,
-            ActiveListSelection.Preserve,
-            -> null
-        }
-        sync(key, idx, selection != ActiveListSelection.PreserveNoScroll)
     }
 
     @RequiresEdt
@@ -340,31 +362,78 @@ internal class ActiveListView(
         checkEdt()
         if (filter == query) return
         filter = query
-        sync()
+        sync(Absent.FIRST)
     }
 
     @RequiresEdt
-    private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null, scroll: Boolean = true) {
+    private fun sync(absent: Absent = Absent.KEEP, scroll: Boolean = true, at: Int? = null, reanchor: Boolean = false) {
         checkEdt()
         val q = filter.trim()
         val base = if (q.isBlank()) items else items.filter { matcher(q, it) }
         val state = drag
         if (state != null && base.none { it.key == state.key }) drag = null
         val rows = drag?.let { activeListGapRows(base, it.key, it.index, it.height) } ?: base
-        // Rebuilding the model fires a list-wide repaint, so skip it when the visible rows are
-        // structurally unchanged (e.g. a stats/name refresh that produced identical rows) and only
-        // reconcile selection below. Row types are data classes, so equality is by value.
-        if (model.items != rows) {
-            setHovered(-1)
-            model.replaceAll(rows)
+        restoring = true
+        try {
+            // Rebuilding the model fires a list-wide repaint, so skip it when the visible rows are
+            // structurally unchanged (e.g. a stats/name refresh that produced identical rows) and only
+            // reconcile selection below. Row types are data classes, so equality is by value.
+            if (model.items != rows) {
+                setHovered(-1)
+                model.replaceAll(rows)
+            }
+            syncCellHeight(rows)
+            restore(rows, absent, scroll, at, reanchor)
+        } finally {
+            restoring = false
         }
-        syncCellHeight(rows)
-        val idx = at?.let { activeListIndex(rows, it) }?.takeIf { it >= 0 }
-            ?: activeListIndex(rows, prefer).takeIf { it >= 0 }
-            ?: rows.indices.firstOrNull()
-            ?: -1
-        if (idx >= 0) choose(idx, scroll) else list.clearSelection()
     }
+
+    @RequiresEdt
+    private fun restore(rows: List<ActiveListItem>, absent: Absent, scroll: Boolean, at: Int?, reanchor: Boolean) {
+        checkEdt()
+        val idx = at?.let { activeListIndex(rows, it) }?.takeIf { it >= 0 }
+        if (idx != null) {
+            choose(idx, scroll)
+            mark = idx
+            if (reanchor) anchor = setOf(rows[idx].identity)
+            return
+        }
+        val indices = anchor.mapNotNull { id -> activeListIdentityIndex(rows, id).takeIf { it >= 0 } }
+        if (indices.isNotEmpty()) {
+            list.selectedIndices = indices.toIntArray()
+            mark = indices.first()
+            if (scroll) ScrollingUtil.ensureIndexIsVisible(list, mark, 0)
+            return
+        }
+        when (absent) {
+            Absent.KEEP -> {
+                list.clearSelection()
+            }
+            Absent.SLIDE -> {
+                if (anchor.isEmpty() || rows.isEmpty()) {
+                    list.clearSelection()
+                    mark = -1
+                    return
+                }
+                val next = mark.coerceIn(0, rows.lastIndex)
+                choose(next, scroll)
+                anchor = setOf(rows[next].identity)
+                mark = next
+            }
+            Absent.FIRST -> {
+                if (rows.isEmpty()) {
+                    list.clearSelection()
+                    return
+                }
+                choose(0, scroll)
+                mark = 0
+                if (anchor.isEmpty()) anchor = setOf(rows[0].identity)
+            }
+        }
+    }
+
+    private fun identities(): Set<Any> = list.selectedValuesList.map { it.identity }.toSet()
 
     @RequiresEdt
     private fun setHovered(idx: Int) {
@@ -436,12 +505,12 @@ internal class ActiveListView(
     @RequiresEdt
     fun primary() {
         checkEdt()
-        val item = list.selectedValue ?: return
+        val item = active() ?: return
         primary(item)
     }
 
     private fun open(focus: Boolean) {
-        val item = list.selectedValue ?: return
+        val item = active() ?: return
         if (item is ActiveListGap) return
         if (item.deleting) return
         val action = onOpen
@@ -457,6 +526,13 @@ internal class ActiveListView(
         if (item is ActiveListGap) return
         if (item.deleting) return
         onOpen?.invoke(item, true)
+    }
+
+    private fun active(): ActiveListItem? {
+        list.selectedValue?.let { return it }
+        if (model.size == 0) return null
+        choose(0, scroll = false)
+        return list.selectedValue
     }
 
     /**
@@ -575,7 +651,7 @@ internal class ActiveListView(
         val next = idx.coerceIn(run.first, run.last)
         if (state.index == next && current != null) return
         drag = state.copy(index = next)
-        sync(key, next, scroll = false)
+        sync(Absent.KEEP, scroll = false, at = next)
     }
 
     @RequiresEdt
@@ -594,7 +670,9 @@ internal class ActiveListView(
         rows.add(target, item)
         items = rows
         heightKey = null
-        sync(state.key, target, scroll = false)
+        anchor = setOf(state.key)
+        mark = target
+        sync(Absent.KEEP, scroll = false, at = target)
         if (source == target) return
         reorder?.onMove?.invoke(ActiveListMove(state.key, source, target, rows.map { it.key }))
     }
@@ -757,6 +835,8 @@ internal class ActiveListView(
         val rows: List<ActiveListHeightRow>,
     )
 
+    private enum class Absent { KEEP, SLIDE, FIRST }
+
 }
 
 private data class ActiveListHeightRow(
@@ -790,8 +870,12 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
 }
 
 private fun activeListIndex(items: List<ActiveListItem>, key: String?): Int {
-    if (key == null) return if (items.isEmpty()) -1 else 0
+    if (key == null) return -1
     return items.indexOfFirst { it.key == key }
+}
+
+private fun activeListIdentityIndex(items: List<ActiveListItem>, id: Any): Int {
+    return items.indexOfFirst { it.identity == id || it.key == id }
 }
 
 private fun activeListIndex(items: List<ActiveListItem>, index: Int): Int {
@@ -800,8 +884,11 @@ private fun activeListIndex(items: List<ActiveListItem>, index: Int): Int {
 }
 
 internal sealed interface ActiveListSelection {
+    /** Restore the remembered rows and scroll to them; select nothing while they are absent. */
     data object Preserve : ActiveListSelection
     data object PreserveNoScroll : ActiveListSelection
+    /** Restore the remembered rows; when they are all gone, select the row that took their slot. */
+    data object Slide : ActiveListSelection
     data class Key(val key: String) : ActiveListSelection
     data class Index(val index: Int) : ActiveListSelection
 }

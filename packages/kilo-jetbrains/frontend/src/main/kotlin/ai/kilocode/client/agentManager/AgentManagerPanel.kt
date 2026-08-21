@@ -91,7 +91,6 @@ class AgentManagerPanel(
             val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
             open(item, focus)
         },
-        onSelect = { selectedRow()?.dto?.id?.let { selected = it } },
         menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
             (row as? WorktreeRow)?.dto?.takeIf { canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) }
         }),
@@ -100,7 +99,6 @@ class AgentManagerPanel(
             onMove = { move -> controller.reorder(move.keys) },
         ),
     )
-    private var selected: String? = null
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
 
@@ -150,7 +148,7 @@ class AgentManagerPanel(
     }
 
     fun refresh() {
-        selected = selected ?: currentEditorWorktree()
+        if (list.selectedKeys().isEmpty()) currentEditorWorktree()?.let { list.select(it, scroll = false) }
         controller.reload()
         project?.service<WorktreeStatusService>()?.refreshStats()
         project?.service<WorktreeStatusService>()?.refreshPr()
@@ -276,9 +274,7 @@ class AgentManagerPanel(
      * last row when the removed row was last) and opens it before closing the deleted tab so the
      * neighbour becomes the active editor. Deleting a background row leaves the selection untouched.
      *
-     * The active editor is read before close(item) as the ground-truth "shown" signal; the
-     * `selected` field is unreliable here because the model rebuild in sync() transiently reselects
-     * row 0 through the list's onSelect hook.
+     * The active editor is read before close(item) as the ground-truth "shown" signal.
      */
     private fun onRemoved(item: WorktreeDto, index: Int) {
         if (currentEditorWorktree() == item.id) advance(neighbor(index))
@@ -292,7 +288,6 @@ class AgentManagerPanel(
      * the selection somewhere unpredictable.
      */
     private fun advance(next: WorktreeDto?) {
-        selected = next?.id
         if (next == null) {
             list.clearSelection()
             return
@@ -353,7 +348,6 @@ class AgentManagerPanel(
     }
 
     private fun sync() {
-        val key = selected
         val current = controller.current?.let { item ->
             WorktreeRow(
                 item,
@@ -382,26 +376,18 @@ class AgentManagerPanel(
             },
             ActiveListSelection.PreserveNoScroll,
         )
-        if (key != null) {
-            if (!list.select(key, scroll = false)) list.clearSelection()
-            return
-        }
-        list.clearSelection()
-        selected = null
     }
 
     @RequiresEdt
     private fun track(file: VirtualFile?) {
         val key = project?.service<WorktreeEditorMatchers>()?.match(file)
         if (key != null) {
-            selected = key
             list.select(key, scroll = false)
             return
         }
         // A null active editor is a transient state (e.g. a tab closing during a delete); keep the
         // current selection. Only a real, non-worktree editor clears the worktree row selection.
         if (file == null) return
-        selected = null
         list.clearSelection()
     }
 
@@ -490,6 +476,7 @@ class AgentManagerPanel(
         val current: Boolean = false,
     ) : ActiveListItem {
         override val key: String get() = dto.id
+        override val identity: Any get() = if (current) "local:${dto.path}" else "worktree:${dto.path}"
         override val title: String get() = if (current) dto.branch else WorktreeTitle.text(dto.name, dto.path, pr)
         override val description: String get() = WorktreeTitle.fallback(dto.path)
         override val tooltip: String? get() = null
