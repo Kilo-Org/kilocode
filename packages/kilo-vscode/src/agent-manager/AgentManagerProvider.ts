@@ -46,6 +46,7 @@ import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
+import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
 import { WorktreeImporter } from "./worktree-importer"
 import {
   createWorktreeOnDisk,
@@ -221,6 +222,7 @@ export class AgentManagerProvider implements Disposable {
       localDiffFile: local.file,
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
+      projectId: () => this.context?.id,
     })
     const pollers = createPollers({
       git: this.gitOps,
@@ -272,7 +274,8 @@ export class AgentManagerProvider implements Disposable {
       pushState: (ctx) => this.pushState(ctx),
       hasPanelSession: (id) => this.panelSessions.has(id),
       closeSession: (id) => this.onCloseSession(id),
-      postSessionClosed: (id) => this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id }),
+      postSessionClosed: (id, projectId) =>
+        this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id, projectId }),
       log: (...args) => this.log(...args),
     })
     this.unsubTool = this.connectionService.onEventFiltered(
@@ -829,6 +832,7 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private onDiffMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
+    if ("projectId" in m && m.projectId && m.projectId !== this.context?.id) return null
     if (m.type === "agentManager.requestWorktreeDiff") {
       void this.diffs.request(composeDiffId(m.sessionId, normalizeScope(m.scope)))
       return null
@@ -854,14 +858,14 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.requestDiffBranches") {
-      void this.diffs.postBranches(composeDiffId(m.sessionId, normalizeScope(m.scope)))
+      void this.sendDiffBranches(m.sessionId, m.scope, this.context?.id)
       return null
     }
     if (m.type === "agentManager.setDiffBaseBranch") {
       void this.diffs
         .setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch)
         .catch((err) => this.log("Failed to set diff base:", err instanceof Error ? err.message : String(err)))
-        .then(() => void this.diffs.postBranches(composeDiffId(m.sessionId, normalizeScope(m.scope))))
+        .then(() => void this.sendDiffBranches(m.sessionId, m.scope, this.context?.id))
       return null
     }
     if (m.type === "agentManager.openFile") {
@@ -869,6 +873,17 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.requestDocument") return this.diffs.document(m.sessionId, m.file, m.contextKey)
+  }
+
+  private async sendDiffBranches(sessionId: string, scope?: string, projectId = this.context?.id): Promise<void> {
+    return postDiffBranches(
+      this.diffs,
+      (message) => this.postToWebview(message),
+      (...args) => this.log(...args),
+      sessionId,
+      scope,
+      projectId,
+    )
   }
 
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
@@ -1163,6 +1178,7 @@ export class AgentManagerProvider implements Disposable {
         notifyForked: (s, from, wt) =>
           this.postToWebview({
             type: "agentManager.sessionForked",
+            projectId: this.context?.id,
             sessionId: s.id,
             forkedFromId: from,
             worktreeId: wt,
@@ -1265,7 +1281,7 @@ export class AgentManagerProvider implements Disposable {
     try {
       const branch = await manager.currentBranch()
       const defaultBranch = await manager.defaultBranch()
-      this.postToWebview({ type: "agentManager.repoInfo", branch, defaultBranch })
+      this.postToWebview({ type: "agentManager.repoInfo", branch, defaultBranch, projectId: this.context?.id })
     } catch (error) {
       this.log(`Failed to get current branch: ${error}`)
     }
@@ -1306,6 +1322,7 @@ export class AgentManagerProvider implements Disposable {
     this.pushState()
     this.postToWebview({
       type: "agentManager.sessionAdded",
+      projectId: this.context?.id,
       sessionId: session.id,
       worktreeId: worktree.id,
     })

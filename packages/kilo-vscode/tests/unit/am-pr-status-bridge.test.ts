@@ -21,8 +21,9 @@ const pr: PRStatus = {
   files: 0,
 }
 
-function harness(opts: { hasPersisted?: boolean } = {}) {
+function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
   const sent: AgentManagerOutMessage[] = []
+  const opened: string[] = []
   const worktrees: { id: string; path: string; prUrl?: string }[] = [{ id: "wt1", path: "/repo/wt1" }]
   const bridge = PRStatusBridge.create({
     getWorktrees: () => worktrees as never,
@@ -30,12 +31,37 @@ function harness(opts: { hasPersisted?: boolean } = {}) {
     postToWebview: (msg) => sent.push(msg),
     updateWorktreePR: () => {},
     hasPersistedPR: () => opts.hasPersisted ?? false,
-    openExternal: () => {},
+    openExternal: (url) => opened.push(url),
     log: () => {},
+    projectId: () => opts.projectId,
   })
   const onStatus = (bridge.poller as unknown as { options: { onStatus: (...a: unknown[]) => void } }).options.onStatus
-  return { bridge, sent, onStatus }
+  return { bridge, sent, opened, worktrees, onStatus }
 }
+
+describe("PRStatusBridge.handleMessage openPR", () => {
+  it("opens an explicit URL from a background project", () => {
+    const { bridge, opened } = harness({ projectId: "active" })
+
+    bridge.handleMessage({
+      type: "agentManager.openPR",
+      projectId: "background",
+      worktreeId: "wt1",
+      url: "https://github.com/x/y/pull/2",
+    })
+
+    expect(opened).toEqual(["https://github.com/x/y/pull/2"])
+  })
+
+  it("does not look up a background worktree without an explicit URL", () => {
+    const { bridge, opened, worktrees } = harness({ projectId: "active" })
+    worktrees[0]!.prUrl = "https://github.com/x/y/pull/1"
+
+    bridge.handleMessage({ type: "agentManager.openPR", projectId: "background", worktreeId: "wt1" })
+
+    expect(opened).toEqual([])
+  })
+})
 
 // --- error deduplication ---
 

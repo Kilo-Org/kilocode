@@ -21,7 +21,7 @@ export interface OrchestrationBridgeDeps {
   pushState: (ctx?: ProjectContext) => void
   hasPanelSession: (id: string) => boolean
   closeSession: (id: string) => Promise<unknown>
-  postSessionClosed: (id: string) => void
+  postSessionClosed: (id: string, projectId?: string) => void
   log: (...args: unknown[]) => void
 }
 
@@ -57,7 +57,7 @@ export function createOrchestrationBridge(deps: OrchestrationBridgeDeps): AgentM
       } else {
         await deps.closeSession(id)
       }
-      deps.postSessionClosed(id)
+      deps.postSessionClosed(id, ctx?.id)
     },
     directories: () => {
       const all: string[] = []
