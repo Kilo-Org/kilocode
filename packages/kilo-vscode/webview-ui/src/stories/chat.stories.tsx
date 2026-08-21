@@ -26,7 +26,6 @@ import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import type {
-  AgentRequirementResult,
   Message,
   Part,
   QuestionRequest,
@@ -39,68 +38,6 @@ import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
-
-const missingToolsRequirements: AgentRequirementResult = {
-  agent: "code-review",
-  directory: "/project",
-  enabled: true,
-  state: "blocked",
-  skills: [
-    { name: "review-checklist", status: "ready" },
-    { name: "security-audit", status: "missing" },
-  ],
-  mcps: [
-    { name: "github", status: "missing" },
-    { name: "filesystem", status: "ready" },
-  ],
-  vscode_extensions: [],
-}
-
-const missingExtensionRequirements: AgentRequirementResult = {
-  agent: "release-review",
-  directory: "/project",
-  enabled: true,
-  state: "blocked",
-  skills: [],
-  mcps: [],
-  vscode_extensions: [
-    {
-      name: "GitHub Pull Requests",
-      id: "github.vscode-pull-request-github",
-      status: "missing",
-    },
-  ],
-}
-
-const malformedRequirements: AgentRequirementResult = {
-  agent: "malformed-agent",
-  directory: "/project",
-  enabled: true,
-  state: "error",
-  skills: [],
-  mcps: [],
-  vscode_extensions: [],
-  error: {
-    code: "malformed_declaration",
-    message: "Invalid requirements declaration.",
-  },
-}
-
-const readyRequirements: AgentRequirementResult = {
-  agent: "ready-agent",
-  directory: "/project",
-  enabled: true,
-  state: "ready",
-  skills: [{ name: "review-checklist", status: "ready" }],
-  mcps: [{ name: "filesystem", status: "ready" }],
-  vscode_extensions: [
-    {
-      name: "GitHub Pull Requests",
-      id: "github.vscode-pull-request-github",
-      status: "ready",
-    },
-  ],
-}
 
 // ---------------------------------------------------------------------------
 // Question fixtures
@@ -228,71 +165,6 @@ export const ChatViewWithMessages: Story = {
   },
 }
 
-export const ChatViewRequirementsChecking: Story = {
-  name: "ChatView — agent requirements checking",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirementsChecking agentRequirementsBlocked>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
-export const ChatViewRequirementsMissingTools: Story = {
-  name: "ChatView — missing skills and MCPs",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={missingToolsRequirements}>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
-export const ChatViewRequirementsMissingExtension: Story = {
-  name: "ChatView — missing VS Code extension",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={missingExtensionRequirements}>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
-export const ChatViewRequirementsMalformed: Story = {
-  name: "ChatView — malformed agent requirements",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={malformedRequirements}>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
-export const ChatViewRequirementsReady: Story = {
-  name: "ChatView — requirements ready (no card)",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={readyRequirements}>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
 export const ChatViewAgentManagerCompleted: Story = {
   name: "ChatView — completed Agent Manager session actions",
   render: () => {
@@ -307,6 +179,53 @@ export const ChatViewAgentManagerCompleted: Story = {
           <SessionContext.Provider value={session as any}>
             <WorktreeModeProvider>
               <div style={{ height: "200px", display: "flex", "flex-direction": "column" }}>
+                <ChatView onForkSession={() => undefined} continueInWorktree />
+              </div>
+            </WorktreeModeProvider>
+          </SessionContext.Provider>
+        </ServerContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+/**
+ * The session dock swaps the working indicator for the session actions when a
+ * turn finishes. Toggling `busy` here drives that swap inside one mounted view
+ * so a test can assert the transcript viewport keeps its exact height.
+ */
+export const ChatViewSessionDockStability: Story = {
+  name: "ChatView — session dock keeps its height",
+  render: () => {
+    const [busy, setBusy] = createSignal(false)
+    // Statuses of deliberately different widths: the label swap is what used to
+    // shove the centered spinner sideways.
+    const labels = ["Thinking…", "Searching the codebase", "Making edits"]
+    const [step, setStep] = createSignal(0)
+    const status = () => (busy() ? "busy" : "idle")
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
+      status,
+      statusInfo: () => ({ type: status() }),
+      statusText: () => (busy() ? labels[step() % labels.length] : undefined),
+      busySince: () => (busy() ? Date.now() - 2000 : undefined),
+      submitting: () => busy(),
+      isSubmitting: () => busy(),
+      messages: () => [{ id: "msg-001" }] as any[],
+      worktreeStats: () => ({ files: 2, additions: 164, deletions: 111 }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <ServerContext.Provider value={mockServer as any}>
+          <SessionContext.Provider value={session as any}>
+            <WorktreeModeProvider>
+              <div style={{ height: "320px", display: "flex", "flex-direction": "column" }}>
+                <button data-testid="toggle-busy" onClick={() => setBusy(!busy())}>
+                  toggle busy
+                </button>
+                <button data-testid="next-status" onClick={() => setStep(step() + 1)}>
+                  next status
+                </button>
                 <ChatView onForkSession={() => undefined} continueInWorktree />
               </div>
             </WorktreeModeProvider>
@@ -772,6 +691,69 @@ export const PromptRailManyPrompts: Story = {
       <StoryProviders data={manyData} sessionID={SESSION_ID} status="idle" noPadding>
         <SessionContext.Provider value={session as any}>
           <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+const correctionTurns = Array.from({ length: 30 }, (_, i) =>
+  railTurn(300 + i, `Virtualized prompt ${i + 1}`, `Virtualized answer ${i + 1}.`),
+)
+const correctionActive = railTurn(400, "Continue streaming", "Initial streamed response.")
+const correctionMessages = [...correctionTurns.flatMap((turn) => turn.messages), ...correctionActive.messages]
+const correctionAssistant = correctionActive.messages[1]!
+correctionAssistant.finish = "tool-calls"
+const correctionParts = Object.assign(
+  {},
+  ...correctionTurns.map((turn) => turn.parts),
+  correctionActive.parts,
+) as Record<string, any[]>
+const correctionData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: correctionMessages },
+  part: correctionParts,
+}
+
+export const MessageListLayoutCorrection: Story = {
+  name: "MessageList - follow after layout correction",
+  render: () => {
+    const [output, setOutput] = createSignal("Initial streamed response.")
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      messages: () => correctionMessages,
+      userMessages: () => correctionMessages.filter((msg) => msg.role === "user"),
+      getParts: (id: string) => {
+        if (id !== correctionAssistant.id) return correctionParts[id] ?? []
+        const part = correctionParts[id]![0]!
+        return [{ ...part, text: output() }]
+      },
+    }
+    return (
+      <StoryProviders data={correctionData} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div
+            class="auto-scroll-correction-fixture"
+            style={{ height: "100vh", display: "flex", "flex-direction": "column" }}
+          >
+            <style>{`
+              .auto-scroll-correction-controls {
+                position: fixed;
+                inset: 8px 8px auto auto;
+                z-index: 10;
+              }
+            `}</style>
+            <div class="auto-scroll-correction-controls">
+              <button
+                type="button"
+                data-testid="append-stream"
+                onClick={() => setOutput((value) => `${value}\n\n${"More streamed output. ".repeat(30)}`)}
+              >
+                Append stream
+              </button>
+            </div>
             <ChatView />
           </div>
         </SessionContext.Provider>

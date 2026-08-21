@@ -10,8 +10,8 @@ import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeState
 const WORKSPACE = "/repo/main"
 const PINNED = projectIdFor(WORKSPACE)
 
-function stored(id: string, trusted = true): StoredProject {
-  return { id, root: `/repo/${id}`, order: 1, trusted, addedAt: new Date().toISOString() }
+function stored(id: string): StoredProject {
+  return { id, root: `/repo/${id}`, order: 1, addedAt: new Date().toISOString() }
 }
 
 function fakeState(persisted?: { current?: unknown }) {
@@ -35,7 +35,7 @@ function setup(
   } = {},
 ) {
   const extra = "prj-extra"
-  const projects = [stored(extra, true)]
+  const projects = [stored(extra)]
   const registry = {
     list: () => projects,
     get: (id: string) => projects.find((p) => p.id === id),
@@ -43,7 +43,6 @@ function setup(
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.workspace ?? WORKSPACE,
     registry,
-    trusted: (id) => registry.get(id)?.trusted === true,
     enabled: () => opts.enabled ?? true,
     deps: {
       log: () => {},

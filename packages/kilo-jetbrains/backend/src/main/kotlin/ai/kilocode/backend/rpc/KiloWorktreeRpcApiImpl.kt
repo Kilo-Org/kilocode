@@ -96,7 +96,8 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             return true
         }
         LOG.info("worktree open (backend): opening dir=$dir newFrame=true")
-        val project = ProjectUtil.openOrImportAsync(dir, OpenProjectTask { forceOpenInNewFrame = true })
+        val opts = OpenProjectTask.build().withForceOpenInNewFrame(true)
+        val project = ProjectUtil.openOrImportAsync(dir, opts)
         LOG.info("worktree open (backend) requested: dir=$dir newFrame=true opened=${project?.name}")
         return true
     }

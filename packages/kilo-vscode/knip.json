@@ -3,6 +3,7 @@
   "entry": [
     "src/extension.ts",
     "webview-ui/agent-manager/index.tsx",
+    "webview-ui/documents/index.tsx",
     "webview-ui/diff-viewer/index.tsx",
     "webview-ui/diff-virtual/index.tsx",
     "webview-ui/kiloclaw/index.tsx",

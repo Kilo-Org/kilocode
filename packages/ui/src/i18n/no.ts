@@ -174,6 +174,7 @@ export const dict: Record<Keys, string> = {
   "ui.patch.action.created": "Opprettet",
   "ui.patch.action.moved": "Flyttet",
   "ui.patch.action.patched": "Oppdatert",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} besvart",
   "ui.question.answer.none": "(ingen svar)",
@@ -238,6 +239,5 @@ export const dict: Record<Keys, string> = {
   "ui.sessionTurn.diffs.changed": "Endret",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} av {{total}} linjer beholdt",
   // kilocode_change end
 }

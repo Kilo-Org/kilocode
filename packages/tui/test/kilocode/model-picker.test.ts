@@ -64,6 +64,26 @@ const inCategory = (options: ReturnType<typeof build>, category: string) =>
   options.filter((option) => option.category === category).map((option) => option.modelID)
 
 describe("model picker options", () => {
+  test("matches colon-separated prefixes in model display names", () => {
+    const options = buildModelPickerOptions({
+      providers: [
+        {
+          id: "kilo",
+          name: "Kilo Gateway",
+          models: {
+            "xai/grok-4.20": {
+              id: "xai/grok-4.20",
+              name: "SpaceXAI: Grok 4.20",
+            },
+          },
+        },
+      ],
+      query: "SpaceX",
+    })
+
+    expect(options.map((option) => option.modelID)).toEqual(["xai/grok-4.20"])
+  })
+
   test("keeps recommended Kilo models in their section after they are used", () => {
     const options = build({ recents: [sonnet45] })
 

@@ -51,6 +51,7 @@ import type {
   MessageLoadMode,
   ToolPart,
 } from "../types/messages"
+import { agentProject, isStaleAgentSession } from "./session-project"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
 import {
   computeStatus,
@@ -84,7 +85,7 @@ import { sessionVariantKeys, transferVariants, variantKey } from "./session-vari
 import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
-import { visibleMessages as filterVisibleMessages } from "./session-queue"
+import { activeUserMessageID, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
@@ -313,6 +314,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
+  const [agentProjectId, setAgentProjectId] = createSignal<string | undefined>()
+
+  const trackAgentProject = (message: ExtensionMessage): boolean => {
+    if (message.type !== "agentManager.projects" && message.type !== "agentManager.selectionActivated") return false
+    setAgentProjectId(agentProject(message))
+    return true
+  }
   const [draftSessionID, setDraftSessionID] = createSignal<string | undefined>()
   const [userClearedSession, setUserClearedSession] = createSignal(false)
 
@@ -1244,9 +1252,15 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Handle messages from extension
   onMount(() => {
-    const unsubscribe = vscode.onMessage(handleExtensionMessage)
+    const unsubscribeProject = vscode.onMessage(trackAgentProject)
+    const unsubscribe = vscode.onMessage((message) => {
+      if (!isStaleAgentSession(message, agentProjectId())) handleExtensionMessage(message)
+    })
     setModelUsageReady(true)
-    onCleanup(unsubscribe)
+    onCleanup(() => {
+      unsubscribeProject()
+      unsubscribe()
+    })
   })
 
   // Event handlers
@@ -1625,11 +1639,12 @@ export const SessionProvider: ParentComponent = (props) => {
           parts[effectiveMessageID] = []
         }
 
-        const existingIndex = parts[effectiveMessageID].findIndex((p) => p.id === part.id)
+        const list = parts[effectiveMessageID]
+        const existingIndex = list.findIndex((p) => p.id === part.id)
 
         if (existingIndex >= 0) {
           // Update existing part
-          const existing = parts[effectiveMessageID][existingIndex]
+          const existing = list[existingIndex]
           if (
             delta?.type === "text-delta" &&
             delta.textDelta &&
@@ -1648,7 +1663,7 @@ export const SessionProvider: ParentComponent = (props) => {
           }
         } else {
           // Add new part
-          parts[effectiveMessageID].push(part)
+          list.push(part)
         }
       }),
     )
@@ -2211,19 +2226,24 @@ export const SessionProvider: ParentComponent = (props) => {
     pendingOptimistic.set(sid, pending)
 
     const parts: Part[] = []
+    const partIds = new Set<string>()
     if (text) {
+      const partId = Identifier.ascending("part")
+      partIds.add(partId)
       parts.push({
         type: "text" as const,
-        id: Identifier.ascending("part"),
+        id: partId,
         messageID,
         text,
         metadata: review ? reviewMetadata(review) : undefined,
       })
     }
     for (const file of files ?? []) {
+      const partId = Identifier.ascending("part")
+      partIds.add(partId)
       parts.push({
         type: "file" as const,
-        id: Identifier.ascending("part"),
+        id: partId,
         messageID,
         mime: file.mime,
         url: file.url,
@@ -2231,7 +2251,6 @@ export const SessionProvider: ParentComponent = (props) => {
         source: file.source,
       })
     }
-
     setStore("messages", sid, (msgs = []) => [...msgs, temp])
     setStore("parts", messageID, parts)
     if (parts.length > 0) optimisticParts.set(messageID, new Set(parts.map((part) => part.id)))
@@ -2901,16 +2920,23 @@ export const SessionProvider: ParentComponent = (props) => {
     return buildCostBreakdown(id, costs, familyLabels(), language.t("context.stats.thisSession"))
   })
 
-  // Status text derived from last assistant message parts
+  // Status text derived from current turn's assistant message parts
   const statusText = createMemo<string | undefined>(() => {
     if (status() === "idle") return undefined
+    const thinking = language.t("ui.sessionTurn.status.thinking")
     const fallback = language.t("ui.sessionTurn.status.consideringNextSteps")
     const id = currentSessionID()
     const msgs = messages()
-    for (let i = msgs.length - 1; i >= 0; i--) {
+    const activeID = activeUserMessageID(msgs, statusInfo(), (msg) => getParts(msg.id), submitting())
+    const activeIdx = activeID
+      ? msgs.findIndex((msg) => msg.id === activeID)
+      : msgs.findLastIndex((m) => m.role === "user")
+    if (activeIdx < 0) return thinking
+
+    for (let i = msgs.length - 1; i > activeIdx; i--) {
       if (msgs[i].role !== "assistant") continue
       const parts = getParts(msgs[i].id)
-      if (parts.length === 0) break
+      if (parts.length === 0) return thinking
       const raw = computeStatus(parts[parts.length - 1], language.t) ?? fallback
       // When delegating to a subagent and that subagent is blocked on a prompt,
       // replace the generic "Delegating work" label with a more informative one
@@ -2923,7 +2949,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       return raw
     }
-    return fallback
+    return thinking
   })
 
   const modelUsage = createMemo<SessionModelUsage | undefined>(() => {
