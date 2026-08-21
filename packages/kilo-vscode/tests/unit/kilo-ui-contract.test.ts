@@ -223,8 +223,11 @@ describe("Write and apply_patch patch rendering contracts (source)", () => {
 
   it("apply_patch skips files whose patch has no parsable hunks", () => {
     expect(patchBlock).toContain("value.fileDiff.hunks.length")
-    expect(patchBlock).toContain("diff.additions || diff.fileDiff.additionLines.length")
-    expect(patchBlock).toContain("diff.deletions || diff.fileDiff.deletionLines.length")
+    expect(patchBlock).toContain('file.type === "add"')
+    expect(patchBlock).toContain("diff.additions === 0")
+    expect(patchBlock).toContain("diff.deletions === 0")
+    expect(patchBlock).toContain("hunk.additionLines")
+    expect(patchBlock).toContain("hunk.deletionLines")
   })
 
   it("apply_patch open action preserves every file in a multi-file payload", () => {

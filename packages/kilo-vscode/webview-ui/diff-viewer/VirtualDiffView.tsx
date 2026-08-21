@@ -8,12 +8,14 @@ import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { useLanguage } from "../src/context/language"
 import { EXTREME_DIFF_CHANGED_LINES } from "./diff-open-policy"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
+import { diffCounts } from "../agent-manager/edit-preview"
 
 export interface VirtualDiffFile {
   file: string
   patch?: string
   additions: number
   deletions: number
+  status?: "added" | "deleted" | "modified"
   files?: VirtualDiffFile[]
 }
 
@@ -65,15 +67,12 @@ export const VirtualDiffView: Component<VirtualDiffViewProps> = (props) => {
     return value
   })
 
-  // Provided counts win, but added files often report 0 while the patch has
-  // real lines, so the parsed hunks are the fallback.
+  // Provided counts win, but some added files report 0 while the patch has
+  // real changed lines. Hunk counts exclude context lines.
   const counts = createMemo(() => {
     const value = view()
     if (!value) return { additions: props.diff.additions, deletions: props.diff.deletions }
-    return {
-      additions: props.diff.additions || value.fileDiff.additionLines.length,
-      deletions: props.diff.deletions || value.fileDiff.deletionLines.length,
-    }
+    return diffCounts(props.diff, value.fileDiff.hunks, props.diff.status)
   })
 
   // Hunk-bounded patches render fully and let the surrounding list scroll, so a

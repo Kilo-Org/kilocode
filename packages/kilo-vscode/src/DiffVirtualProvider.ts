@@ -9,6 +9,7 @@ export interface DiffVirtualFile {
   patch?: string
   additions: number
   deletions: number
+  status?: "added" | "deleted" | "modified"
   files?: Omit<DiffVirtualFile, "files" | "initialDiffStyle">[]
   initialDiffStyle: "unified" | "split"
 }

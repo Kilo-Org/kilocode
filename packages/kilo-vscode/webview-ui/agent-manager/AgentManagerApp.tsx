@@ -184,7 +184,12 @@ import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { createDocumentInspector } from "../documents/state"
 import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
 import { EditPreviewPanel } from "./EditPreviewPanel"
-import { createAgentManagerEditPreview, createEditPreviewContextGuard } from "./edit-preview"
+import {
+  createAgentManagerEditPreview,
+  createEditPreviewContextGuard,
+  sessionTreeContains,
+  sessionWorktree,
+} from "./edit-preview"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
@@ -206,7 +211,6 @@ interface SetupState {
 type SidebarSelection = typeof LOCAL | string | null
 export type SidePanelState = SidePanel | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
-
 import { parseBindingTokens } from "./keybind-tokens"
 import { defaultBindings } from "./keybind-defaults"
 const AgentManagerContent: Component = () => {
@@ -351,7 +355,7 @@ const AgentManagerContent: Component = () => {
     setHistory,
     setReviewActive,
     () => setSidePanel(SidePanel.EditPreview),
-    () => setSidePanel(null),
+    () => setSidePanel((prev) => (prev === SidePanel.EditPreview ? null : prev)),
     diffStyle.style,
     setSharedDiffStyle,
   )
@@ -359,8 +363,9 @@ const AgentManagerContent: Component = () => {
     editPreview.preview,
     () => session.currentSessionID() ?? undefined,
     () => selection() ?? null,
-    (id: string) => managedSessions().find((item) => item.id === id)?.worktreeId ?? undefined,
+    (id: string) => sessionWorktree(id, session.sessions(), managedSessions()),
     editPreview.close,
+    (child, parent) => sessionTreeContains(child, parent, session.sessions()),
   )
   const markdown = createMarkdownRender(vscode)
   const worktreeStats = () => registry.active().worktreeStats()
@@ -383,7 +388,6 @@ const AgentManagerContent: Component = () => {
     fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--vscode-editor-font-family").trim(),
     fontSize: readFontSize(),
   })
-
   const nsKey = (sel: string) => `${currentProjectId() ?? "single"}:${sel}`
   const terms = createTerminalState(() => {
     const sel = selection()
@@ -493,7 +497,6 @@ const AgentManagerContent: Component = () => {
     setSidePanel,
   })
   const cancelAmbientSetup = ambientSetup.cancel
-
   const [pendingDelete, setPendingDelete] = createSignal<string | null>(null)
   let pendingDeleteTimer: ReturnType<typeof setTimeout> | undefined
   const cancelPendingDelete = () => {
@@ -512,11 +515,8 @@ const AgentManagerContent: Component = () => {
     ),
   )
   onCleanup(() => clearTimeout(pendingDeleteTimer))
-
   const tabMemory = () => registry.active().tabMemory.all()
-
   const reviewOpen = createMemo(() => selection() !== null && reviewOpenByContext()[selection()!] === true)
-
   const setReviewOpenForContext = (context: string, open: boolean) => {
     setReviewOpenByContext((prev) => {
       if (prev[context] === open) return prev

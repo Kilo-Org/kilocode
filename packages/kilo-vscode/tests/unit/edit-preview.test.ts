@@ -2,8 +2,11 @@ import { describe, expect, it } from "bun:test"
 import { createRoot } from "solid-js"
 import {
   createEditPreview,
+  diffCounts,
   isEditPreviewDiff,
   previewMatchesContext,
+  sessionTreeContains,
+  sessionWorktree,
 } from "../../webview-ui/agent-manager/edit-preview"
 
 const diff = {
@@ -89,5 +92,33 @@ describe("Agent Manager edit preview", () => {
     expect(previewMatchesContext("session-1", "session-1", "local", undefined)).toBe(true)
     expect(previewMatchesContext("session-1", "session-1", null, undefined)).toBe(true)
     expect(previewMatchesContext("session-1", "session-1", "wt-1", undefined)).toBe(false)
+  })
+
+  it("keeps nested subagent previews in the parent worktree", () => {
+    const sessions = [
+      { id: "parent", parentID: null },
+      { id: "child", parentID: "parent" },
+      { id: "grandchild", parentID: "child" },
+    ]
+    const managed = [{ id: "parent", worktreeId: "wt-1" }]
+
+    expect(sessionTreeContains("grandchild", "parent", sessions)).toBe(true)
+    expect(sessionTreeContains("parent", "grandchild", sessions)).toBe(false)
+    expect(sessionWorktree("grandchild", sessions, managed)).toBe("wt-1")
+    expect(
+      previewMatchesContext("grandchild", "parent", "wt-1", "wt-1", (child, root) =>
+        sessionTreeContains(child, root, sessions),
+      ),
+    ).toBe(true)
+  })
+
+  it("preserves explicit zero counts and excludes hunk context from fallbacks", () => {
+    const hunks = [{ additionLines: 1, deletionLines: 0 }]
+    expect(diffCounts({ additions: 0, deletions: 0 }, hunks, "added")).toEqual({ additions: 1, deletions: 0 })
+    expect(diffCounts({ additions: 0, deletions: 0 }, hunks, "modified")).toEqual({ additions: 0, deletions: 0 })
+    expect(diffCounts({ additions: 4, deletions: 0 }, [{ additionLines: 2, deletionLines: 1 }], "deleted")).toEqual({
+      additions: 4,
+      deletions: 1,
+    })
   })
 })

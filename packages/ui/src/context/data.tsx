@@ -55,6 +55,7 @@ export type OpenDiffFn = (diff: {
   patch?: string // kilocode_change
   additions: number
   deletions: number
+  status?: "added" | "deleted" | "modified" // kilocode_change
   // kilocode_change start - multi-file patch preview payload
   files?: Array<{
     file: string
@@ -63,6 +64,7 @@ export type OpenDiffFn = (diff: {
     patch?: string
     additions: number
     deletions: number
+    status?: "added" | "deleted" | "modified" // kilocode_change
   }>
   // kilocode_change end
 }) => void

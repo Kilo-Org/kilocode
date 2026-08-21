@@ -2804,10 +2804,20 @@ ToolRegistry.register({
           ? [{
               file: file.relativePath,
               patch: diff.patch,
-              // Patch metadata reports 0 for some added files; fall back to the
-              // parsed hunks so the header matches the rendered diff.
-              additions: diff.additions || diff.fileDiff.additionLines.length,
-              deletions: diff.deletions || diff.fileDiff.deletionLines.length,
+              status:
+                file.type === "add"
+                  ? ("added" as const)
+                  : file.type === "delete"
+                    ? ("deleted" as const)
+                    : ("modified" as const),
+              additions:
+                file.type === "add" && diff.additions === 0
+                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.additionLines, 0)
+                  : diff.additions,
+              deletions:
+                file.type === "delete" && diff.deletions === 0
+                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.deletionLines, 0)
+                  : diff.deletions,
             }]
           : []
       })
