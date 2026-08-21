@@ -15,7 +15,7 @@
 }
 
 .chat-input > .session-dock + .prompt-input-container {
-  margin-top: var(--prompt-gutter);
+  margin-top: 0;
 }
 
 :root {

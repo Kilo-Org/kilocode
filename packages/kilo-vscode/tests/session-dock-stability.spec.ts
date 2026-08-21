@@ -81,6 +81,25 @@ test("only one of the two states is visible in the dock", async ({ page }) => {
   await expect(page.locator('[data-component="session-dock"] .new-task-button-wrapper')).toBeHidden()
 })
 
+test("keeps the prompt flush with the working indicator", async ({ page }) => {
+  await openStory(page)
+  await page.getByTestId("toggle-busy").click()
+  await expect(page.locator('[data-component="session-dock"] .working-indicator')).toBeVisible()
+
+  const gap = await page.evaluate(() => {
+    const dock = document.querySelector('[data-component="session-dock"]')
+    const prompt = document.querySelector(".chat-input > .prompt-input-container")
+    if (!(dock instanceof HTMLElement) || !(prompt instanceof HTMLElement)) throw new Error("dock or prompt missing")
+    return {
+      gap: prompt.getBoundingClientRect().top - dock.getBoundingClientRect().bottom,
+      marginTop: getComputedStyle(prompt).marginTop,
+    }
+  })
+
+  expect(gap.gap).toBe(0)
+  expect(gap.marginTop).toBe("0px")
+})
+
 test("the indicator stays a centered lane on a wide surface", async ({ page }) => {
   await openStory(page)
   // Agent Manager width: a full-width indicator put the spinner at the far-left
