@@ -112,7 +112,15 @@ export function createSubagentTabs(opts: Options) {
     })
   }
 
-  return { tabs: list, active: selected, open, select, close, closeOthers, reorder }
+  const reset = () => {
+    const scope = key()
+    for (const tab of tabs()[scope] ?? []) opts.unsync(tab.id)
+    setTabs((prev) => ({ ...prev, [scope]: [] }))
+    setActive((prev) => ({ ...prev, [scope]: undefined }))
+    opts.hide()
+  }
+
+  return { tabs: list, active: selected, open, select, close, closeOthers, reorder, reset }
 }
 
 export function availableSubagents(parts: ToolPart[]): SubagentTab[] {
