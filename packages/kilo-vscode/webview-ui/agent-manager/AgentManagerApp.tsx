@@ -209,7 +209,6 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 
 import { parseBindingTokens } from "./keybind-tokens"
 import { defaultBindings } from "./keybind-defaults"
-
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
   const session = useSession()
@@ -257,7 +256,6 @@ const AgentManagerContent: Component = () => {
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
-
   // Recover persisted local session IDs from webview state
   const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number; sidePanelWidth?: number }>()
   const registry = createProjectRegistry({
@@ -286,7 +284,6 @@ const AgentManagerContent: Component = () => {
   const toggleSidebar = sidebar.toggle
   const sections = () => registry.active().sections()
   const setSections = (v: Parameters<Setter<SectionState[]>>[0]) => registry.active().setSections(v)
-  // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
   const [history, setHistory] = createSignal(false)
