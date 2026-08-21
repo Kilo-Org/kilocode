@@ -804,6 +804,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trackedSessionIds.add(session.id)
     this.postMessage({
       type: "sessionCreated",
+      projectId: this.opts.projectQualifier?.()?.projectId,
       session: this.sessionToWebview(session),
       ...(activate ? { activate: true } : {}),
     })
@@ -1946,6 +1947,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Notify webview of the new session
       this.postMessage({
         type: "sessionCreated",
+        projectId: this.opts.projectQualifier?.()?.projectId,
         session: this.sessionToWebview(this.currentSession!),
       })
     } catch (error) {
@@ -3472,6 +3474,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.trackedSessionIds.add(session.id)
         this.postMessage({
           type: "sessionCreated",
+          projectId: this.opts.projectQualifier?.()?.projectId,
           session: this.sessionToWebview(session),
           draftID,
         })

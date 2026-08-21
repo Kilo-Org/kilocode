@@ -17,6 +17,7 @@ import "./pr-panel.css"
 interface PRPanelProps {
   pr: PRStatus
   worktree?: WorktreeState
+  projectId?: string
   worktreeId: string
   activeTerminalId?: string
   onClose: () => void
@@ -146,6 +147,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
               <div ref={commentsRef}>
                 <PRComments
                   comments={item().value}
+                  projectId={props.projectId}
                   worktreeId={props.worktreeId}
                   activeTerminalId={props.activeTerminalId}
                   onOpenFile={props.onOpenFile}

@@ -13,6 +13,7 @@ import { SectionHeading } from "./SectionHeading"
 
 interface Props {
   comments: NonNullable<PRStatus["comments"]>
+  projectId?: string
   worktreeId: string
   activeTerminalId?: string
   onOpenFile?: (file: string, line?: number) => void
@@ -68,6 +69,7 @@ export function PRComments(props: Props) {
       const unresolveResult = msg?.type === "agentManager.unresolveCommentResult"
       if (!resolveResult && !unresolveResult) return
       if (msg.worktreeId !== props.worktreeId) return
+      if (props.projectId && msg.projectId !== props.projectId) return
       // Success waits for the poll to report the new server state.
       if (msg.success) return
       const id = msg.threadId as string
@@ -100,6 +102,7 @@ export function PRComments(props: Props) {
     }))
     vscode.postMessage({
       type: next ? "agentManager.resolveComment" : "agentManager.unresolveComment",
+      projectId: props.projectId,
       worktreeId: props.worktreeId,
       threadId: comment.threadId,
     } as never)

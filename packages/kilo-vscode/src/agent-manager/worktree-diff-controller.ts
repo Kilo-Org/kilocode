@@ -29,6 +29,7 @@ export interface WorktreeDiffControllerContext {
   localDiffFile: (dir: string, base: string, file: string) => Promise<WorktreeDiffEntry | null>
   post: (msg: AgentManagerOutMessage) => void
   log: (...args: unknown[]) => void
+  projectId?: () => string | undefined
 }
 
 export class WorktreeDiffController {
@@ -37,6 +38,7 @@ export class WorktreeDiffController {
   private applying: string | undefined
   /** Intended watch mode for the active context; isPolling lags the initial fetch. */
   private poll = false
+  private owner: string | undefined
   /** Ephemeral per-context base override, keyed by context id. */
   private baseOverrides = new Map<string, string>()
 
@@ -48,27 +50,32 @@ export class WorktreeDiffController {
       {
         loading: (source, loading) => ({
           type: "agentManager.worktreeDiffLoading",
+          projectId: this.owner,
           sessionId: source.descriptor.id,
           loading,
         }),
         notice: (source, notice) => ({
           type: "agentManager.worktreeDiffNotice",
+          projectId: this.owner,
           sessionId: source.descriptor.id,
           notice,
         }),
         diffs: (source, diffs) => ({
           type: "agentManager.worktreeDiff",
+          projectId: this.owner,
           sessionId: source.descriptor.id,
           diffs: diffs as AgentManagerDiffFile[],
         }),
         diffFile: (source, file, diff) => ({
           type: "agentManager.worktreeDiffFile",
+          projectId: this.owner,
           sessionId: source?.descriptor.id ?? "",
           file,
           diff: diff as AgentManagerDiffFile | null,
         }),
         revertFileResult: (source, file, result) => ({
           type: "agentManager.revertWorktreeFileResult",
+          projectId: this.owner,
           sessionId: source?.descriptor.id ?? "",
           file,
           status: result.ok ? "success" : "error",
@@ -76,6 +83,7 @@ export class WorktreeDiffController {
         }),
         unsupportedRevert: (source, file) => ({
           type: "agentManager.revertWorktreeFileResult",
+          projectId: this.owner,
           sessionId: source?.descriptor.id ?? "",
           file,
           status: "error",
@@ -166,7 +174,7 @@ export class WorktreeDiffController {
   }
 
   public async request(id: string): Promise<void> {
-    if (this.controller.currentId !== id) {
+    if (this.controller.currentId !== id || this.owner !== this.ctx.projectId?.()) {
       await this.activate(id, false, true)
       return
     }
@@ -177,7 +185,13 @@ export class WorktreeDiffController {
   public async requestFile(id: string, file: string): Promise<void> {
     if (!file) return
     if (this.controller.currentId !== id) {
-      this.ctx.post({ type: "agentManager.worktreeDiffFile", sessionId: id, file, diff: null })
+      this.ctx.post({
+        type: "agentManager.worktreeDiffFile",
+        projectId: this.owner,
+        sessionId: id,
+        file,
+        diff: null,
+      })
       return
     }
     await this.controller.requestFile(file)
@@ -228,7 +242,7 @@ export class WorktreeDiffController {
   }
 
   public start(id: string): void {
-    if (this.controller.isPolling && this.controller.currentId === id) return
+    if (this.controller.isPolling && this.controller.currentId === id && this.owner === this.ctx.projectId?.()) return
     this.ctx.log(`Starting diff polling for ${id}`)
     void this.activate(id, true, true)
   }
@@ -237,6 +251,7 @@ export class WorktreeDiffController {
     this.controller.stop()
     this.target = undefined
     this.poll = false
+    this.owner = undefined
   }
 
   /**
@@ -271,13 +286,22 @@ export class WorktreeDiffController {
   private async activate(id: string, poll: boolean, fetch: boolean): Promise<void> {
     this.target = undefined
     this.poll = poll
+    const owner = this.ctx.projectId?.()
+    this.owner = owner
     await this.ready("stateReady rejected, continuing diff activate:")
+    if (this.owner !== owner || this.ctx.projectId?.() !== owner) return
     const { ctx } = parseDiffId(id)
     const resolved = await this.resolve(ctx)
+    if (this.owner !== owner || this.ctx.projectId?.() !== owner) return
     this.target = resolved ? { sessionId: id, ...resolved } : undefined
     // Clear any stale source notice up front; sources only push a notice when
     // one is active, so a swap away from a noticing source must reset it.
-    this.ctx.post({ type: "agentManager.worktreeDiffNotice", sessionId: id, notice: undefined })
+    this.ctx.post({
+      type: "agentManager.worktreeDiffNotice",
+      projectId: this.owner,
+      sessionId: id,
+      notice: undefined,
+    })
     this.controller.setContext({
       workspaceRoot: this.ctx.getRoot(),
       dir: resolved?.directory,
@@ -367,6 +391,7 @@ export class WorktreeDiffController {
   private postRevertResult(sessionId: string, file: string, result: { ok: boolean; message: string }): void {
     this.ctx.post({
       type: "agentManager.revertWorktreeFileResult",
+      projectId: this.owner,
       sessionId,
       file,
       status: result.ok ? "success" : "error",
@@ -382,6 +407,7 @@ export class WorktreeDiffController {
   ): void {
     this.ctx.post({
       type: "agentManager.applyWorktreeDiffResult",
+      projectId: this.owner,
       worktreeId,
       status,
       message,
