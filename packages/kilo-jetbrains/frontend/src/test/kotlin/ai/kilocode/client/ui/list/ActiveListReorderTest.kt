@@ -134,6 +134,33 @@ class ActiveListReorderTest : BasePlatformTestCase() {
         assertTrue(-image.second.y <= image.first.getHeight(null))
     }
 
+    fun `test dragging the row that opens a section keeps every row height`() {
+        val view = view(mutableListOf())
+        view.update(sectioned())
+        layout(view)
+        val before = heights(view)
+
+        // Row 1 opens the "wt" section, so its cell paints the section band above its body.
+        view.over("a", center(view, 2))
+        layout(view)
+
+        // The band belongs to the slot, not the dragged row: the gap takes a body-sized slot and no
+        // row grows to the band-inclusive height of the cell the drag started from.
+        assertEquals(before, heights(view))
+    }
+
+    fun `test the gap keeps the dragged row body height when rows size to content`() {
+        val view = view(mutableListOf(), ActiveListConfig.Preferred)
+        view.update(sectioned())
+        layout(view)
+        val body = heights(view)[2]
+
+        view.over("a", center(view, 2))
+        layout(view)
+
+        assertEquals(body, heights(view)[2])
+    }
+
     fun `test grabbing a section header row still anchors inside the body image`() {
         val view = view(mutableListOf())
         view.update(sectioned())
@@ -145,9 +172,13 @@ class ActiveListReorderTest : BasePlatformTestCase() {
         assertEquals(0, image.second.y)
     }
 
-    private fun view(moves: MutableList<ActiveListMove>): ActiveListView {
+    private fun view(
+        moves: MutableList<ActiveListMove>,
+        cfg: ActiveListConfig = ActiveListConfig.Equal,
+    ): ActiveListView {
         return ActiveListView(
             empty = "",
+            cfg = cfg,
             reorder = ActiveListReorder(
                 movable = { it.section != null },
                 onMove = { moves += it },
@@ -166,6 +197,10 @@ class ActiveListReorderTest : BasePlatformTestCase() {
 
     private fun display(view: ActiveListView): List<ActiveListItem> {
         return (0 until view.list.model.size).map { view.list.model.getElementAt(it) }
+    }
+
+    private fun heights(view: ActiveListView): List<Int> {
+        return (0 until view.list.model.size).map { view.list.getCellBounds(it, it)!!.height }
     }
 
     private fun center(view: ActiveListView, index: Int): Point {

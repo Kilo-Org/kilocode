@@ -638,8 +638,11 @@ internal class ActiveListView(
             cancel()
             return
         }
-        val bounds = list.getCellBounds(from, from)
-        val state = current ?: Drag(key, from, from, bounds?.height ?: list.fixedCellHeight.takeIf { it > 0 } ?: renderer.bodyPreferredHeight(list, base[from], from, true, true))
+        // Measure the row body, not the whole cell: a row that opens a section renders the header
+        // band inside its own cell, and folding that band into the gap height both oversizes the
+        // placeholder and — through the equal-height pass, which measures the gap like any other
+        // row — stretches every row to the header-carrying cell's height.
+        val state = current ?: Drag(key, from, from, renderer.bodyPreferredHeight(list, base[from], from, true, true))
         if (current == null) {
             press = null
             setHovered(-1)
