@@ -10,7 +10,7 @@ Bring Your Own Key (BYOK) lets you use your own API keys when using the Kilo Gat
 A user or organization may want to use BYOK to:
 
 - Utilize new models quickly, Kilo Gateway supports most new models in minutes
-- Use subscriptions with third-party AI providers, for example the [Z.ai Coding Plan](https://z.ai/subscribe), [Kimi Code](https://platform.moonshot.ai/), or the [BytePlus Coding Plan](https://www.byteplus.com/)
+- Use subscriptions with third-party AI providers, for example the [Z.ai Coding Plan](https://z.ai/subscribe), [Kimi Code](https://platform.moonshot.ai/), the [MiniMax Coding Plan](https://platform.minimax.io/docs/coding-plan/intro), or the [BytePlus Coding Plan](https://www.byteplus.com/)
 - Attribute usage against existing provider commitments or agreements
 - Use existing credits with a provider
 
@@ -28,7 +28,7 @@ Use your provider API key to route matching models through your account:
 - Fireworks
 - Google AI Studio
 - Inception
-- Minimax
+- MiniMax
 - Mistral AI
 - Moonshot AI (Kimi)
 - Novita
@@ -47,6 +47,7 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 - Inceptron BYOK
 - Kimi Code
 - Martian
+- MiniMax Coding Plan (minimax.io)
 - Mistral Codestral
 - Neuralwatt
 - NVIDIA
@@ -93,7 +94,8 @@ Your IAM user or role must have the following permissions:
 - When you use the **Kilo Gateway** provider, Kilo checks if there's a BYOK key for the selected model's provider.
 - If a matching BYOK key exists, the request is routed using your key.
 - If the key is invalid, the request fails. It does not fall back to using Kilo's keys.
-- Subscription-based providers (such as the Z.ai Coding Plan or Kimi Code) only expose the models included in that plan. Select one of those models to route traffic through your subscription.
+- Subscription-based providers (such as the Z.ai Coding Plan, Kimi Code, or MiniMax Coding Plan) only expose the models included in that plan. Select one of those models to route traffic through your subscription.
+- Usage information for MiniMax Coding Plan requests is unavailable until MiniMax exposes a usage API.
 
 ## Using BYOK in the Extensions and CLI
 
