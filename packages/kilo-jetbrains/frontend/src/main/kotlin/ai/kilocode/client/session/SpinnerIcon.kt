@@ -15,7 +15,8 @@ import kotlin.math.cos
 /**
  * Animated running badge that mirrors the VS Code Agent Manager spinner: a 4x4 grid of rounded
  * squares whose opacity pulses. Corners stay empty; the inner squares pulse brighter than the
- * outer ring. Rendered in the amber "running" brand color ([UiStyle.Badge.ActivityRunning]).
+ * outer ring. Painted in the neutral icon grey ([UiStyle.Colors.running]) so it carries the same
+ * weight as the static row icons it stands in for.
  *
  * Built as a frame-based [com.intellij.ui.AnimatedIcon] so it animates automatically inside list
  * cell renderers that set `AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED` (see `ActiveListView`).
@@ -77,7 +78,7 @@ internal object SpinnerIcon {
                 val scale = iconWidth / VIEWBOX
                 val size = SQUARE * scale
                 val arc = RADIUS * 2f * scale
-                val base = UiStyle.Badge.ActivityRunning.fg()
+                val base = color()
                 for (i in 0 until COUNT) {
                     if (i in CORNERS) continue
                     g2.color = ColorUtil.withAlpha(base, opacity(i, frame).toDouble())
@@ -90,4 +91,6 @@ internal object SpinnerIcon {
             }
         }
     }
+
+    fun color() = UiStyle.Colors.running()
 }

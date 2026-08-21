@@ -200,6 +200,17 @@ object UiStyle {
 
         fun weak(): Color = UIUtil.getContextHelpForeground()
 
+        // Neutral icon greys from the New UI palette: the same values our svg row icons paint with, so
+        // an animated icon reads at the row's icon weight instead of as a colored status light. Each
+        // variant carries the contrast its own theme needs — mid grey on light, near-white on dark.
+        val runningLight = Color(0x6C, 0x70, 0x7E)
+        val runningDark = Color(0xCE, 0xD0, 0xD6)
+
+        fun running(): Color = JBColor.namedColor(
+            "Kilo.Activity.runningSpinnerForeground",
+            JBColor(runningLight, runningDark),
+        )
+
         /** Uses the editor background so chat cards feel native beside editor content. */
         fun editorBackground(): Color = JBColor.lazy { EditorColorsManager.getInstance().globalScheme.defaultBackground }
 

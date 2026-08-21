@@ -199,7 +199,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test renderer draws the row title in the plain list weight`() {
+    fun `test renderer draws the row title in bold`() {
         edt {
             val row = item("with", "Alpha", "Description")
             val model = CollectionListModel<ActiveListItem>(listOf(row))
@@ -208,11 +208,11 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             renderer.getListCellRendererComponent(list, row, 0, true, true)
 
-            // Bold reads as emphasis in platform lists, so rows must stay plain like tree/list text.
+            // Weight is what separates the title from the muted description beside and below it.
             val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
             val iter = title.iterator()
             iter.next()
-            assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
+            assertEquals(SimpleTextAttributes.STYLE_BOLD, iter.textAttributes.style)
             assertEquals("Alpha", iter.fragment)
         }
     }
@@ -458,6 +458,20 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
             renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            assertEquals(UiStyle.Colors.weak(), desc.foreground)
+        }
+    }
+
+    fun `test focused selected row keeps description muted`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
 
             val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
             assertEquals(UiStyle.Colors.weak(), desc.foreground)
@@ -763,7 +777,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             renderer.getListCellRendererComponent(list, row, 0, true, false)
 
             val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
-            assertEquals(UIUtil.getListForeground(true, true), desc.foreground)
+            assertEquals(UiStyle.Colors.weak(), desc.foreground)
         }
     }
 

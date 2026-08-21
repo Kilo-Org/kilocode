@@ -191,7 +191,7 @@ internal class ActiveListRenderer(
     ): JPanel {
         val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
-        val weak = if (active) fg else UiStyle.Colors.weak()
+        val weak = UiStyle.Colors.weak()
         val titleFg = if (value.deleting) weak else fg
         val section = activeListSectionTitle(model.items, index)
 
@@ -221,10 +221,9 @@ internal class ActiveListRenderer(
         layers.isVisible = true
 
         title.clear()
-        // Plain, like every platform list and tree renders its primary text. Bold reads as emphasis in
-        // the IDE (the current branch, an unread entry), so bolding every row makes the list look
-        // heavier than the surfaces around it.
-        title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, titleFg))
+        // Bold carries the row: the description under it and the icon beside it both render in the
+        // muted secondary color, so weight is what separates the two lines rather than color alone.
+        title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, titleFg))
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
