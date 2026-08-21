@@ -109,26 +109,21 @@ export const parseJson = (route: string, input: string, message: string) =>
 export const joinText = (parts: ReadonlyArray<{ readonly text: string }>) => parts.map((part) => part.text).join("\n")
 
 // kilocode_change start - preserve provider role alternation when tool results lower to user messages
-type UserMessage =
-  | { readonly role: "user"; readonly content: ReadonlyArray<unknown> }
-  | { readonly role: "user"; readonly parts: ReadonlyArray<unknown> }
-
-export const appendUserMessage = <Message extends { readonly role: string }, User extends Message & UserMessage>(
+export const appendUserMessage = <
+  const Key extends "content" | "parts",
+  Part,
+  Message extends { readonly role: string } & Record<Key, ReadonlyArray<Part>>,
+>(
   messages: Message[],
-  message: User,
+  message: Message,
+  key: Key,
 ) => {
   const previous = messages.at(-1)
   if (previous?.role !== "user") {
     messages.push(message)
     return
   }
-  if ("content" in message) {
-    const content = (previous as { readonly content: ReadonlyArray<unknown> }).content
-    messages[messages.length - 1] = { ...message, content: [...content, ...message.content] }
-    return
-  }
-  const parts = (previous as { readonly parts: ReadonlyArray<unknown> }).parts
-  messages[messages.length - 1] = { ...message, parts: [...parts, ...message.parts] }
+  messages[messages.length - 1] = { ...message, [key]: [...previous[key], ...message[key]] } as Message
 }
 // kilocode_change end
 

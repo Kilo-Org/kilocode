@@ -309,7 +309,7 @@ const lowerMessages = Effect.fn("BedrockConverse.lowerMessages")(function* (
     if (message.role === "system") {
       const part = yield* ProviderShared.wrappedSystemUpdate("Bedrock Converse", message)
       const content = textWithCache(breakpoints, part.text, part.cache)
-      ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
+      ProviderShared.appendUserMessage(messages, { role: "user", content }, "content") // kilocode_change
       continue
     }
 
@@ -327,7 +327,7 @@ const lowerMessages = Effect.fn("BedrockConverse.lowerMessages")(function* (
           continue
         }
       }
-      ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
+      ProviderShared.appendUserMessage(messages, { role: "user", content }, "content") // kilocode_change
       continue
     }
 
@@ -369,7 +369,7 @@ const lowerMessages = Effect.fn("BedrockConverse.lowerMessages")(function* (
       const cachePoint = BedrockCache.block(breakpoints, part.cache)
       if (cachePoint) content.push(cachePoint)
     }
-    ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
+    ProviderShared.appendUserMessage(messages, { role: "user", content }, "content") // kilocode_change
   }
 
   return messages

@@ -415,7 +415,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
       }
       const part = yield* ProviderShared.wrappedSystemUpdate("Anthropic Messages", message)
       const block = { type: "text" as const, text: part.text, cache_control: cacheControl(breakpoints, part.cache) }
-      ProviderShared.appendUserMessage(messages, { role: "user", content: [block] }) // kilocode_change
+      ProviderShared.appendUserMessage(messages, { role: "user", content: [block] }, "content") // kilocode_change
       continue
     }
 
@@ -432,7 +432,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
         }
         return yield* ProviderShared.unsupportedContent("Anthropic Messages", "user", ["text", "media"])
       }
-      ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
+      ProviderShared.appendUserMessage(messages, { role: "user", content }, "content") // kilocode_change
       continue
     }
 
@@ -479,7 +479,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
         cache_control: cacheControl(breakpoints, part.cache),
       })
     }
-    ProviderShared.appendUserMessage(messages, { role: "user", content }) // kilocode_change
+    ProviderShared.appendUserMessage(messages, { role: "user", content }, "content") // kilocode_change
   }
 
   return messages
