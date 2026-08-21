@@ -152,6 +152,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Revertir archivo",
   "agentManager.diff.revertSuccess": "Archivo revertido",
   "agentManager.diff.revertError": "Error al revertir",
+  "agentManager.editPreview.title": "Vista previa de la edición",
+  "agentManager.editPreview.close": "Cerrar vista previa de la edición",
+  "agentManager.editPreview.openInPanel": "Ver cambios en el panel",
   "agentManager.diff.applyBranchOnly":
     "Aplicar solo funciona con el diff completo de la rama. Cambia al ámbito Branch para aplicar.",
   "agentManager.open.button": "Abrir",

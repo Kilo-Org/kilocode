@@ -155,6 +155,9 @@ export const dict = {
   "agentManager.diff.revertFile": "بازگردانی فایل",
   "agentManager.diff.revertSuccess": "فایل بازگردانی شد",
   "agentManager.diff.revertError": "بازگردانی ناموفق بود",
+  "agentManager.editPreview.title": "پیش‌نمایش ویرایش",
+  "agentManager.editPreview.close": "بستن پیش‌نمایش ویرایش",
+  "agentManager.editPreview.openInPanel": "نمایش تغییرات در پنل",
   "agentManager.diff.applyBranchOnly":
     "اعمال تغییرات روی اختلاف کامل شاخه انجام می‌شود. برای اعمال، به محدوده Branch بروید.",
   "agentManager.open.button": "باز کردن",
