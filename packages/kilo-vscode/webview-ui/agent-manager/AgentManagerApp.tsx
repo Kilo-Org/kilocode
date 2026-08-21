@@ -543,30 +543,23 @@ const AgentManagerContent: Component = () => {
     if (sel === null) return false
     return isReviewOpen(reviewOpenByContext(), currentProjectId() ?? "single", sel)
   })
-  const setReviewOpenForContext = (context: string, open: boolean) => {
-    setReviewOpenByContext((prev) => {
-      return setReviewOpen(prev, currentProjectId() ?? "single", context, open)
-    })
-  }
-
+  const setReviewOpenForContext = (context: string, open: boolean) =>
+    setReviewOpenByContext((prev) => setReviewOpen(prev, currentProjectId() ?? "single", context, open))
   const setReviewOpenForSelection = (open: boolean) => {
     const sel = selection()
     if (sel === null) return
     setReviewOpenForContext(sel, open)
   }
-
   const reviewComments = createMemo(() => {
     const sel = selection()
     if (sel === null) return [] as ReviewComment[]
     return readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", sel)
   })
-
   const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
     const sel = selection()
     if (sel === null) return
     setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", sel, comments))
   }
-
   const apply = createApplyToLocal({
     vscode,
     dialog,
@@ -580,14 +573,12 @@ const AgentManagerContent: Component = () => {
     projectId: activeProjectId,
   })
   const openApplyDialog = apply.openApplyDialog
-
   const openWorktreeDirectory = () => {
     const sel = selection()
     if (!sel || sel === LOCAL) return
     vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: sel })
   }
   const openWindow = metrics.click("open_worktree_window", "tab_toolbar", openWorktreeDirectory)
-
   const togglePRPanel = () => {
     setHistory(false)
     if (reviewActive()) closeReviewTab()
@@ -601,7 +592,6 @@ const AgentManagerContent: Component = () => {
         vscode.postMessage({ type: "agentManager.refreshPR", projectId: activeProjectId(), worktreeId: sel })
     }
   }
-
   const openSelectedPR = () => {
     const sel = selection()
     if (!sel || sel === LOCAL || !prStatuses()[sel]) return
