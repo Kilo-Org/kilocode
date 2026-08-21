@@ -26,6 +26,7 @@ import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { Permission } from "../../src/permission" // kilocode_change
 
 afterEach(async () => {
   await disposeAllInstances()
@@ -666,6 +667,132 @@ describe("tool.task", () => {
       },
     },
   )
+
+  // kilocode_change start - #12387: explicit env allow on the subagent must survive Permission.resolve
+  it.instance(
+    "execute keeps explicit subagent env allow on the production resolve path",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const agents = yield* Agent.Service
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+
+        const result = yield* def.execute(
+          {
+            description: "read env",
+            prompt: "read the .env file",
+            subagent_type: "envreader",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps: stubOps() },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        const child = yield* sessions.get(result.metadata.sessionId)
+        const agent = (yield* agents.get("envreader"))!
+        expect(child.parentID).toBe(chat.id)
+        expect(child.agent).toBe("envreader")
+
+        const effective = Permission.merge(agent.permission, child.permission ?? [])
+        expect(Permission.resolve("read", "project/.env", effective).action).toBe("allow")
+        expect(Permission.resolve("read", "project/.env.local", effective).action).toBe("ask")
+        expect(Permission.resolve("read", "README.md", effective).action).toBe("allow")
+      }),
+    {
+      config: {
+        agent: {
+          envreader: {
+            mode: "subagent",
+            permission: {
+              read: {
+                "*": "allow",
+                "*.env": "allow",
+                "*.env.*": "ask",
+                "*.env.example": "allow",
+              },
+            },
+          },
+        },
+      },
+    },
+  )
+
+  it.instance(
+    "nested subagent does not inherit the delegator's catch-all deny",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const agents = yield* Agent.Service
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+
+        const first = yield* def.execute(
+          {
+            description: "explore",
+            prompt: "look around",
+            subagent_type: "explore",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps: stubOps() },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        const explorer = yield* sessions.get(first.metadata.sessionId)
+        const nestedAssistant = yield* sessions.updateMessage({
+          ...assistant,
+          id: MessageID.ascending(),
+          parentID: MessageID.ascending(),
+          sessionID: explorer.id,
+        })
+
+        const second = yield* def.execute(
+          {
+            description: "write work",
+            prompt: "continue in general",
+            subagent_type: "general",
+          },
+          {
+            sessionID: explorer.id,
+            messageID: nestedAssistant.id,
+            agent: "explore",
+            abort: new AbortController().signal,
+            extra: { promptOps: stubOps() },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        const grandchild = yield* sessions.get(second.metadata.sessionId)
+        const general = (yield* agents.get("general"))!
+        const effective = Permission.merge(general.permission, grandchild.permission ?? [])
+        expect(grandchild.parentID).toBe(explorer.id)
+        // Explore's catch-all deny must not land in session.permission and then
+        // last-match-deny the nested general agent's reads. Edit denials from
+        // KiloTask.inherited() are a separate Plan/Explore mutation ceiling.
+        expect(Permission.resolve("read", "README.md", effective).action).not.toBe("deny")
+        expect(Permission.resolve("read", "project/.env", effective).action).not.toBe("deny")
+      }),
+    { config: { subagent_depth: 2 } },
+  )
+  // kilocode_change end
 
   // kilocode_change start - terminal child assistant errors fail the task tool boundary
   it.instance("execute fails when child prompt returns assistant error", () =>

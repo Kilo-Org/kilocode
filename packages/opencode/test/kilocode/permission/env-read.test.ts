@@ -96,6 +96,35 @@ describe("env read permissions", () => {
     }),
   )
 
+  it.live("explicit *.env allow wins over a later broad read allow", () =>
+    Effect.sync(() => {
+      const set = Permission.merge(
+        rules(),
+        Permission.fromConfig({
+          read: {
+            "*.env": "allow",
+            "*.env.*": "allow",
+            "*": "allow",
+          },
+        }),
+      )
+      expect(Permission.resolve("read", "project/.env", set).action).toBe("allow")
+      expect(Permission.resolve("read", "project/.env.local", set).action).toBe("allow")
+      expect(Permission.resolve("read", "src/.env", set).action).toBe("allow")
+      expect(Permission.resolve("read", "README.md", set).action).toBe("allow")
+    }),
+  )
+
+  it.live("explicit env allow does not override a deny", () =>
+    Effect.sync(() => {
+      const set = Permission.merge(
+        Permission.fromConfig({ read: { "*.env": "allow" } }),
+        Permission.fromConfig({ read: { "*.env": "deny" } }),
+      )
+      expect(Permission.resolve("read", "project/.env", set).action).toBe("deny")
+    }),
+  )
+
   it.live("saved wildcard read approval does not bypass env ask", () =>
     withDir(() =>
       Effect.gen(function* () {
