@@ -6,7 +6,7 @@ describe("providerMetadata", () => {
     expect(providerMetadata("openai")).toEqual({
       noteKey: "settings.providers.note.openai",
       icon: "openai",
-      priority: 3,
+      priority: 4,
     })
   })
 

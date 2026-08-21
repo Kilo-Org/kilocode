@@ -4,10 +4,11 @@ import { Deferred, Effect, Exit, Fiber, Layer, Option, Ref } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
+import { DEFAULT_PARTNER_ID } from "../../src/kilocode/aimlapi/config"
 import { TestConfig } from "../fixture/config"
 import { pollWithTimeout, testEffect } from "../lib/effect"
 
-type Hit = { readonly url: string }
+type Hit = { readonly url: string; readonly headers: Record<string, string> }
 
 const auth = Layer.mock(Auth.Service)({
   get: () => Effect.succeed(undefined),
@@ -19,12 +20,16 @@ function layer(
   hits: Ref.Ref<Hit[]>,
   cfg = TestConfig.layer(),
   access = auth,
-  gates?: { readonly started: Deferred.Deferred<void>; readonly wait: Deferred.Deferred<void>; readonly count?: number },
+  gates?: {
+    readonly started: Deferred.Deferred<void>
+    readonly wait: Deferred.Deferred<void>
+    readonly count?: number
+  },
   fail?: number,
 ) {
   const http = HttpClient.make((request) =>
     Effect.gen(function* () {
-      yield* Ref.update(hits, (list) => [...list, { url: request.url }])
+      yield* Ref.update(hits, (list) => [...list, { url: request.url, headers: request.headers }])
       const count = (yield* Ref.get(hits)).length
       if (gates && count === (gates.count ?? 1)) {
         yield* Deferred.succeed(gates.started, undefined)
@@ -308,5 +313,114 @@ it.live("does not resolve auth or config for unsupported providers", () =>
     expect(yield* Ref.get(configs)).toBe(0)
     expect(yield* Ref.get(auths)).toBe(0)
     expect(yield* Ref.get(hits)).toEqual([])
+  }),
+)
+
+function aimlapiLayer(hits: Ref.Ref<Hit[]>, item: unknown) {
+  const http = HttpClient.make((request) =>
+    Effect.gen(function* () {
+      yield* Ref.update(hits, (list) => [...list, { url: request.url, headers: request.headers }])
+      return HttpClientResponse.fromWeb(request, Response.json({ data: [item] }))
+    }),
+  )
+  return Layer.fresh(ModelCache.layer).pipe(
+    Layer.provide(Layer.succeed(HttpClient.HttpClient, http)),
+    Layer.provide(TestConfig.layer()),
+    Layer.provide(auth),
+    Layer.provide(ModelCache.kiloModelsLayer),
+  )
+}
+
+it.live("maps aimlapi pricing units to per-1M model cost", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const item = {
+      id: "vendor/chat-model",
+      type: "openai/chat-completions",
+      info: { name: "Chat Model", contextLength: 200000 },
+      pricing: {
+        units: [
+          { type: "charge", name: "token", content: "text", origin: "provided", price: 3.25, per: 1_000_000 },
+          // per normalization: 0.000013 per 1 token == 13 per 1M
+          { type: "charge", name: "token", content: "text", origin: "generated", price: 0.000013, per: 1 },
+          { type: "charge", name: "token", content: "text", origin: "cached", price: 1.625, per: 1_000_000 },
+          { type: "charge", name: "token", content: "text", origin: "cache_write", price: 6, per: 1_000_000 },
+          // ignored: audio input, tool-call charge, and a duplicate generated row
+          { type: "charge", name: "token", content: "audio", origin: "provided", price: 999, per: 1_000_000 },
+          { type: "charge", name: "call", content: "structured", origin: "generated", price: 0.05, per: 1 },
+          { type: "charge", name: "token", content: "text", origin: "generated", price: 99, per: 1_000_000 },
+        ],
+      },
+    }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+    expect(models["vendor/chat-model"]!.cost).toEqual({ input: 3.25, output: 13, cache_read: 1.625, cache_write: 6 })
+    expect((yield* Ref.get(hits))[0]!.url).toContain("include=capabilities,modalities,pricing")
+  }),
+)
+
+it.live("leaves aimlapi cost at zero when the model carries no pricing", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const item = { id: "vendor/free-model", type: "openai/chat-completions", info: { name: "Free Model" } }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+    expect(models["vendor/free-model"]!.cost).toEqual({ input: 0, output: 0 })
+    // No description in the catalog → no options blurb for the detail panel.
+    expect((models["vendor/free-model"] as { options?: unknown }).options).toBeUndefined()
+  }),
+)
+
+it.live("hides image-generation models that ride the chat endpoint but reject tool use", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    // Served as type=openai/chat-completions but tool use is unsupported, so a
+    // coding agent must not surface it. The only reliable signal today is the id.
+    const item = { id: "openai/gpt-5-image", type: "openai/chat-completions", info: { name: "GPT-5 Image" } }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+    expect(Object.keys(models)).toEqual([])
+  }),
+)
+
+it.live("exposes the catalog description via model options", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const item = {
+      id: "vendor/described",
+      type: "openai/chat-completions",
+      info: { name: "Described", description: "  A capable coding model.  " },
+    }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+    const model = models["vendor/described"] as { options?: { description?: string } }
+    expect(model.options?.description).toBe("A capable coding model.")
+  }),
+)
+
+it.live("tags the catalog fetch and every model with the attribution headers", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const item = { id: "vendor/tagged", type: "openai/chat-completions", info: { name: "Tagged" } }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+    // The public catalog request carries the attribution headers.
+    const headers = (yield* Ref.get(hits))[0]!.headers
+    expect(headers["x-aimlapi-source"]).toBe("agent")
+    expect(headers["x-aimlapi-partner-id"]).toBe(DEFAULT_PARTNER_ID)
+
+    // Every model carries them too, so getSDK stamps them on inference calls.
+    const model = models["vendor/tagged"] as { headers?: Record<string, string> }
+    expect(model.headers).toEqual({ "X-AIMLAPI-Source": "agent", "X-AIMLAPI-Partner-ID": DEFAULT_PARTNER_ID })
   }),
 )

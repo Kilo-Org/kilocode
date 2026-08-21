@@ -7,6 +7,7 @@ export const dict = {
   // Provider settings translations
   "settings.providers.group.recommended": "Anbefalede",
   "settings.providers.note.kilo": "Adgang til 500+ AI-modeller",
+  "settings.providers.note.aimlapi": "Over 1000 modeller fra alle større udbydere, opsætning med ét klik",
   "settings.providers.note.opencode": "Udvalgte modeller inklusive Claude, GPT, Gemini og mere",
   "settings.providers.note.anthropic": "Direkte adgang til Claude-modeller, inklusive Pro og Max",
   "settings.providers.note.deepseek": "DeepSeek-modeller til ræsonnement og kodningsopgaver",

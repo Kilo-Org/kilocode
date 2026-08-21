@@ -9,6 +9,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { httpClient } from "@opencode-ai/core/effect/app-node-platform" // kilocode_change
+import { aimlapiAttributionHeaders } from "../kilocode/aimlapi/config"
 
 type Models = Provider["models"]
 type KiloOptions = NonNullable<Parameters<typeof fetchKiloModels>[0]>
@@ -55,6 +56,51 @@ const APERTIS_BASE_URL = "https://api.apertis.ai/v1"
 const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional(Schema.String) })
 const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
 type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
+
+const AIMLAPI_BASE_URL = "https://api.aimlapi.com/v1"
+// TEMPORARY: some image-generation models are served over the chat protocol
+// (via OpenRouter) and reach /v1/models as type=openai/chat-completions, but
+// reject tool use — a coding agent then errors at runtime ("No endpoints found
+// that support tool use"). The catalog can't distinguish them yet (the generic
+// chat DTO over-reports the `tools` capability; text-only pricing leaves
+// output=[text]), so we exclude them by id. Remove once the backend re-tags
+// them (playground:image) or fixes their output modality — see the repo-root
+// MODELS.md § "One model, multiple endpoints" and its backlog task.
+const AIMLAPI_IMAGE_ON_CHAT_ID = /-image(-|$)/i
+const AimlapiInfo = Schema.Struct({
+  name: Schema.optional(Schema.String),
+  developer: Schema.optional(Schema.String),
+  releasedAt: Schema.optional(Schema.String),
+  contextLength: Schema.optional(Schema.Finite),
+  outputMax: Schema.optional(Schema.Finite),
+  description: Schema.optional(Schema.String),
+})
+const AimlapiModalities = Schema.Struct({
+  input: Schema.optional(Schema.Array(Schema.String)),
+  output: Schema.optional(Schema.Array(Schema.String)),
+})
+const AimlapiPricingUnit = Schema.Struct({
+  type: Schema.optional(Schema.String),
+  name: Schema.optional(Schema.String),
+  content: Schema.optional(Schema.String),
+  origin: Schema.optional(Schema.String),
+  price: Schema.optional(Schema.Finite),
+  per: Schema.optional(Schema.Finite),
+})
+const AimlapiPricing = Schema.Struct({
+  units: Schema.optional(Schema.Array(AimlapiPricingUnit)),
+})
+const AimlapiItem = Schema.Struct({
+  id: Schema.String,
+  type: Schema.optional(Schema.String),
+  info: Schema.optional(AimlapiInfo),
+  tags: Schema.optional(Schema.Array(Schema.String)),
+  capabilities: Schema.optional(Schema.Array(Schema.String)),
+  modalities: Schema.optional(AimlapiModalities),
+  pricing: Schema.optional(AimlapiPricing),
+})
+const AimlapiResponse = Schema.Struct({ data: Schema.optional(Schema.Array(AimlapiItem)) })
+type AimlapiItem = Schema.Schema.Type<typeof AimlapiItem>
 
 export const layer: Layer.Layer<
   Service,
@@ -118,8 +164,113 @@ export const layer: Layer.Layer<
       return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
     })
 
+    type AimlapiModality = NonNullable<Models[string]["modalities"]>["input"][number]
+    const AIMLAPI_MODALITIES: readonly string[] = ["text", "image", "audio", "video", "pdf"]
+    const aimlapiModalities = (values: readonly string[]): AimlapiModality[] =>
+      values.filter((value): value is AimlapiModality => AIMLAPI_MODALITIES.includes(value))
+
+    // Map the catalog `pricing` section to models-dev cost (USD per 1M tokens).
+    // The unit discriminator is `origin` (not `measure`); only text token
+    // charges carry input/output/cache prices — audio and tool-call units are
+    // skipped. The first unit per origin wins; tiered pricing
+    // (thresholds/variants) is not mapped, so the base rate is used.
+    const AIMLAPI_ORIGIN_TO_COST: Record<string, "input" | "output" | "cache_read" | "cache_write"> = {
+      provided: "input",
+      generated: "output",
+      cached: "cache_read",
+      cache_write: "cache_write",
+    }
+    const aimlapiCost = (pricing: AimlapiItem["pricing"]): NonNullable<Models[string]["cost"]> => {
+      const cost: { input: number; output: number; cache_read?: number; cache_write?: number } = {
+        input: 0,
+        output: 0,
+      }
+      const seen = new Set<string>()
+      for (const unit of pricing?.units ?? []) {
+        if (unit.type !== "charge" || unit.name !== "token" || unit.content !== "text") continue
+        const field = unit.origin ? AIMLAPI_ORIGIN_TO_COST[unit.origin] : undefined
+        if (!field || unit.price === undefined || seen.has(field)) continue
+        seen.add(field)
+        const per = unit.per && unit.per > 0 ? unit.per : 1_000_000
+        cost[field] = (unit.price * 1_000_000) / per
+      }
+      return cost
+    }
+
+    const aimlapiModel = (item: AimlapiItem): Models[string] => {
+      const capabilities = item.capabilities ?? []
+      const input = aimlapiModalities(item.modalities?.input ?? [])
+      const output = aimlapiModalities(item.modalities?.output ?? [])
+      const model: Models[string] & {
+        options?: Record<string, string>
+        headers?: Record<string, string>
+      } = {
+        id: item.id,
+        name: item.info?.name ?? item.id,
+        family: item.info?.developer ?? "",
+        release_date: item.info?.releasedAt ?? "",
+        attachment: input.includes("image"),
+        // Unlocks the host-generated reasoning-effort variants (low/medium/high).
+        reasoning: capabilities.includes("reasoning"),
+        temperature: true,
+        // The catalog's `tools` capability has false negatives, so it cannot
+        // gate tool_call without hiding models from agent use.
+        tool_call: true,
+        cost: aimlapiCost(item.pricing),
+        limit: { context: item.info?.contextLength ?? 128000, output: item.info?.outputMax ?? 8192 },
+        modalities: {
+          input: input.length > 0 ? input : ["text"],
+          output: output.length > 0 ? output : ["text"],
+        },
+      }
+      // The model-detail panel reads the blurb from options.description (Kilo's
+      // convention — models.dev catalog entries carry none).
+      const description = item.info?.description?.trim()
+      if (description) model.options = { description }
+      // Attribution headers ride on every inference request: getSDK merges
+      // model.headers into the openai-compatible client, and patchModelsDevModel
+      // carries them onto the resolved model.
+      model.headers = aimlapiAttributionHeaders()
+      return model
+    }
+
+    const fetchAimlapiModels = Effect.fn("ModelCache.fetchAimlapiModels")(function* (options: Options) {
+      const baseURL = options.baseURL ?? AIMLAPI_BASE_URL
+
+      // The models endpoint is public; attach the key only when present so
+      // the catalog renders before the provider is connected. Capability,
+      // modality and pricing metadata are opt-in per section via `include`.
+      const url = `${baseURL.replace(/\/+$/, "")}/models?include=capabilities,modalities,pricing`
+      let request = HttpClientRequest.get(url).pipe(
+        HttpClientRequest.acceptJson,
+        HttpClientRequest.setHeaders(aimlapiAttributionHeaders()),
+      )
+      if (options.apiKey) {
+        request = request.pipe(HttpClientRequest.bearerToken(options.apiKey))
+      }
+      const response = yield* request.pipe(http.execute, Effect.timeout("10 seconds"))
+      if (response.status < 200 || response.status >= 300) {
+        log.error("aimlapi model fetch failed", { status: response.status })
+        return {}
+      }
+
+      const json = yield* HttpClientResponse.schemaBodyJson(AimlapiResponse)(response)
+      const chat = (json.data ?? []).filter(
+        (item) => item.type === "openai/chat-completions" && !AIMLAPI_IMAGE_ON_CHAT_ID.test(item.id),
+      )
+      // Coding-tagged models rank first so the picker surfaces them on top.
+      let recommended = 0
+      return Object.fromEntries(
+        chat.map((item) => {
+          const base = aimlapiModel(item)
+          const model = item.tags?.includes("playground:code") ? { ...base, recommendedIndex: recommended++ } : base
+          return [item.id, model] as const
+        }),
+      )
+    })
+
     const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
-      if (providerID !== "kilo" && providerID !== "apertis") return {}
+      if (providerID !== "kilo" && providerID !== "apertis" && providerID !== "aimlapi") return {}
       const config = yield* cfg.get()
       const options: Options = {}
 
@@ -160,12 +311,29 @@ export const layer: Layer.Layer<
         })
       }
 
+      if (providerID === "aimlapi") {
+        const item = config.provider?.[providerID]
+        if (item?.options?.apiKey) options.apiKey = item.options.apiKey
+        if (item?.options?.baseURL) options.baseURL = item.options.baseURL
+
+        const info = yield* auth.get(providerID)
+        if (info?.type === "api") options.apiKey = info.key
+        if (process.env.AIMLAPI_API_KEY) options.apiKey = process.env.AIMLAPI_API_KEY
+        if (process.env.AIMLAPI_INFERENCE_URL) options.baseURL = process.env.AIMLAPI_INFERENCE_URL
+        log.debug("aimlapi auth options resolved", {
+          providerID,
+          hasKey: !!options.apiKey,
+          hasBaseURL: !!options.baseURL,
+        })
+      }
+
       return options
     })
 
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
       if (providerID === "kilo") return kilo.fetch(options)
       if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      if (providerID === "aimlapi") return fetchAimlapiModels(options).pipe(Effect.map((models) => ({ models })))
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
     }
@@ -186,7 +354,8 @@ export const layer: Layer.Layer<
       if (providerID === "kilo") {
         return JSON.stringify([providerID, options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])
       }
-      if (providerID === "apertis") return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
+      if (providerID === "apertis" || providerID === "aimlapi")
+        return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
       return providerID
     }
 

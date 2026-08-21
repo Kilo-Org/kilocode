@@ -70,7 +70,37 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
             yield* cache.refresh("apertis", aptOpts).pipe(Effect.ignore, Effect.forkDetach)
         })
 
+        const aiml = cfg.provider?.aimlapi?.options
+        const aimlURL = process.env.AIMLAPI_INFERENCE_URL ?? aiml?.baseURL ?? "https://api.aimlapi.com/v1"
+        const aimlOpts = aimlURL === "https://api.aimlapi.com/v1" ? {} : { baseURL: aimlURL }
+        // The aimlapi catalog is public, so it can be fetched without a key —
+        // but this path is hot (startup, one-shot runs, tests) and must never
+        // phone home on its own. Fetch eagerly only when the provider is
+        // configured (key via env/config/auth), exactly like apertis; keyless,
+        // reuse whatever the cache already holds and let the connect picker
+        // (provider.list) warm the public catalog on demand.
+        const aimlInfo = yield* auth.get("aimlapi").pipe(Effect.catch(() => Effect.succeed(undefined)))
+        const aimlConnected = !!process.env.AIMLAPI_API_KEY || !!aiml?.apiKey || aimlInfo?.type === "api"
+
+        const addAimlapi = Effect.fnUntraced(function* () {
+          if (providers.aimlapi) return
+          const models = aimlConnected
+            ? yield* cache.fetch("aimlapi", aimlOpts).pipe(Effect.catch(() => Effect.succeed({})))
+            : yield* cache.get("aimlapi").pipe(Effect.map((cached) => cached ?? {}))
+          providers.aimlapi = {
+            id: "aimlapi",
+            name: "aimlapi.com",
+            env: ["AIMLAPI_API_KEY"],
+            api: aimlURL,
+            npm: "@ai-sdk/openai-compatible",
+            models,
+          }
+          if (aimlConnected && Object.keys(models).length === 0)
+            yield* cache.refresh("aimlapi", aimlOpts).pipe(Effect.ignore, Effect.forkDetach)
+        })
+
         if (!allowed) {
+          yield* addAimlapi()
           yield* addApertis()
           return providers
         }
@@ -94,6 +124,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
           models,
         }
         if (Object.keys(fetched).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
+        yield* addAimlapi()
         yield* addApertis()
         return providers
       })

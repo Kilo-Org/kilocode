@@ -48,6 +48,15 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
 
     const list = Effect.fn("ProviderHttpApi.list")(function* () {
       const config = yield* cfg.get()
+      // kilocode_change start - warm the public aimlapi catalog here, at the
+      // connect picker's data source, so the provider is listed before it is
+      // connected. The base ModelsDev.get() deliberately stays keyless-silent
+      // (it runs on every startup, one-shot run, and test); this is the one
+      // place that actually needs the pre-connect catalog.
+      const aimlURL = process.env.AIMLAPI_INFERENCE_URL ?? config.provider?.aimlapi?.options?.baseURL
+      const aimlOpts = aimlURL && aimlURL !== "https://api.aimlapi.com/v1" ? { baseURL: aimlURL } : {}
+      yield* cache.fetch("aimlapi", aimlOpts).pipe(Effect.ignore)
+      // kilocode_change end
       const all = overlayAnacondaDesktop(yield* ModelsDev.Service.use((s) => s.get())) // kilocode_change
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined

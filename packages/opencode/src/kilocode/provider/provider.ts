@@ -71,6 +71,9 @@ export function patchModelsDevModel(providerID: string, source: any) {
     autoRouting: source.autoRouting,
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
+    // Carry any per-model request headers (e.g. aimlapi attribution) onto the
+    // resolved model so getSDK merges them into the openai-compatible client.
+    ...(source.headers ? { headers: source.headers } : {}),
   }
 }
 

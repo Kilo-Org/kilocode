@@ -9,7 +9,15 @@ import type { JSX } from "solid-js"
 import type { RGBA } from "@opentui/core"
 import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2"
 import { KiloAutoMethod } from "@/kilocode/components/dialog-kilo-auto-method"
-export { selectProvider } from "@/kilocode/anaconda-desktop/tui/setup"
+import { selectProvider as selectAnacondaDesktop } from "@/kilocode/anaconda-desktop/tui/setup"
+import { selectProvider as selectAimlapi } from "@/kilocode/aimlapi/tui/setup"
+
+/** Providers with a fully custom connect flow intercept selection here. */
+export function selectProvider(input: Parameters<typeof selectAnacondaDesktop>[0]) {
+  if (selectAnacondaDesktop(input)) return true
+  if (selectAimlapi(input)) return true
+  return false
+}
 
 // ---------------------------------------------------------------------------
 // Failed-state gutter/description helpers
@@ -47,11 +55,12 @@ export function failedDescription(providerID: string, failed: string[]): string 
 
 export const PROVIDER_PRIORITY: Record<string, number> = {
   kilo: -1,
-  anthropic: 0,
-  "github-copilot": 1,
-  openai: 2,
-  google: 3,
-  "anaconda-desktop": 4,
+  aimlapi: 0,
+  anthropic: 1,
+  "github-copilot": 2,
+  openai: 3,
+  google: 4,
+  "anaconda-desktop": 5,
 }
 
 // ---------------------------------------------------------------------------
@@ -60,12 +69,14 @@ export const PROVIDER_PRIORITY: Record<string, number> = {
 
 export const PROVIDER_DESCRIPTIONS: Record<string, string> = {
   kilo: "(Recommended)",
+  aimlapi: "(1000+ models, one-click setup)",
   anthropic: "(Claude Max or API key)",
   openai: "(ChatGPT login or API key)",
   "anaconda-desktop": "(Local models)",
 }
 
 export const PROVIDER_TITLES: Record<string, string> = {
+  aimlapi: "aimlapi.com",
   openai: "OpenAI / Codex",
 }
 

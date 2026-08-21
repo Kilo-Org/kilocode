@@ -7,6 +7,7 @@ export const dict = {
   // Provider settings translations
   "settings.providers.group.recommended": "Recommandés",
   "settings.providers.note.kilo": "Accès à plus de 500 modèles d'IA",
+  "settings.providers.note.aimlapi": "Plus de 1000 modèles de tous les principaux fournisseurs, configuration en un clic",
   "settings.providers.note.opencode": "Modèles sélectionnés, dont Claude, GPT, Gemini et plus encore",
   "settings.providers.note.anthropic": "Accès direct aux modèles Claude, y compris Pro et Max",
   "settings.providers.note.deepseek": "Modèles DeepSeek pour les tâches de raisonnement et de codage",
