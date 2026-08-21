@@ -1,5 +1,6 @@
 /* PR Panel */
 .am-pr-panel {
+  /* self-test conflict head */
   height: 100%;
   overflow: hidden;
 }
