@@ -32,6 +32,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
@@ -195,6 +196,24 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             assertEquals(0, title.insets.left)
             assertTrue(desc.insets.left > title.insets.left)
+        }
+    }
+
+    fun `test renderer draws the row title in the plain list weight`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            // Bold reads as emphasis in platform lists, so rows must stay plain like tree/list text.
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val iter = title.iterator()
+            iter.next()
+            assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
+            assertEquals("Alpha", iter.fragment)
         }
     }
 

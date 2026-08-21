@@ -221,7 +221,10 @@ internal class ActiveListRenderer(
         layers.isVisible = true
 
         title.clear()
-        title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, titleFg))
+        // Plain, like every platform list and tree renders its primary text. Bold reads as emphasis in
+        // the IDE (the current branch, an unread entry), so bolding every row makes the list look
+        // heavier than the surfaces around it.
+        title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, titleFg))
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
