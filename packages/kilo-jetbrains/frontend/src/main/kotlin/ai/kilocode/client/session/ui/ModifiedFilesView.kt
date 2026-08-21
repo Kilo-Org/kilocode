@@ -44,7 +44,7 @@ internal class ModifiedFilesView private constructor(
     fun setDiffs(diffs: List<DiffFileDto>): Boolean {
         if (items == diffs) {
             val visible = diffs.isNotEmpty()
-            parts.diff.isEnabled = visible
+            parts.open.enabled = visible
             if (isVisible == visible) return false
             isVisible = visible
             revalidate()

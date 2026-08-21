@@ -200,6 +200,25 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(messages, pv.parent)
     }
 
+    fun `test readonly session omits prompt and active reply views`() {
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val readonly: Boolean get() = true
+        }
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = owner)
+        settle()
+        layoutReadonly()
+
+        assertNull(find(ui, PromptPanel::class.java))
+        assertNull(find(ui, QuestionView::class.java))
+        assertNull(find(ui, PermissionView::class.java))
+        assertSame(scrollComponent(), ui.defaultFocusedComponent)
+        assertTrue(find<SessionMessageListPanel>(ui).parent != null)
+    }
+
     fun `test header is docked above shared scroll pane and hidden while empty`() {
         val root = find<SessionRootPanel>(ui)
         val header = find<SessionHeaderPanel>(ui)
@@ -806,6 +825,15 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
     private fun promptPoint(root: SessionRootPanel, prompt: PromptPanel) =
         SwingUtilities.convertPoint(prompt.parent, prompt.x, prompt.y, root.overlay)
+
+    private fun layoutReadonly() {
+        ui.doLayout()
+        val root = find<SessionRootPanel>(ui)
+        root.doLayout()
+        root.content.doLayout()
+        scrollComponent().doLayout()
+        (scrollView() as? java.awt.Container)?.doLayout()
+    }
 
     private fun lines(count: Int) = (1..count).joinToString("\n") { "line $it" }
 
