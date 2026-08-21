@@ -14,7 +14,10 @@ import com.intellij.execution.RunManager
 import com.intellij.execution.RunnerAndConfigurationSettings
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.executors.DefaultRunExecutor
+import com.intellij.execution.impl.ExecutionManagerImpl
+import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
+import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.ExecutionUtil
 import com.intellij.execution.ui.RunContentManager
@@ -39,8 +42,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * State tracking is fully public-API: the manager subscribes to
  * [ExecutionManager.EXECUTION_TOPIC] and matches [ExecutionEnvironment.getRunnerAndConfigurationSettings]
  * by identity against the clone cache, recording the started [ProcessHandler] per
- * (config, worktree) key. Stop replicates the IDE Stop action on the recorded handler
- * (detach when `detachIsDefault`, destroy otherwise, force-kill on a repeat stop).
+ * (config, worktree) key. The reported state is read back from the handler's own state machine, so
+ * it cannot drift from what the IDE's Stop button sees.
+ *
+ * Stop delegates to [ExecutionManagerImpl.stopProcess] — the entry point every platform stop action
+ * uses — which records `TERMINATION_REQUESTED`, detaches or destroys per `detachIsDefault()`, and
+ * escalates to [KillableProcess.killProcess] when the process is already terminating.
  */
 @Service(Service.Level.PROJECT)
 class WorktreeRunManager internal constructor(
@@ -68,7 +75,6 @@ class WorktreeRunManager internal constructor(
     /** Every clone ever executed, so late topic events for replaced clones still resolve their key. */
     private val tracked = ConcurrentHashMap<RunnerAndConfigurationSettings, Key>()
     private val handlers = ConcurrentHashMap<Key, ProcessHandler>()
-    private val stopping = ConcurrentHashMap.newKeySet<Key>()
     private val flow = MutableStateFlow<List<RunStateDto>>(emptyList())
     private val listening = AtomicBoolean()
 
@@ -130,17 +136,15 @@ class WorktreeRunManager internal constructor(
     }
 
     fun stop(id: String, worktree: String): Boolean {
-        val key = Key(id, worktree)
-        val handler = handlers[key] ?: return false
-        val first = stopping.add(key)
-        if (!first) {
-            LOG.info("worktree run: force kill config=$id worktree=$worktree")
-            (handler as? KillableProcess)?.killProcess()
-            return true
-        }
-        sync()
-        LOG.info("worktree run: stop config=$id worktree=$worktree detach=${handler.detachIsDefault()}")
-        if (handler.detachIsDefault()) handler.detachProcess() else handler.destroyProcess()
+        val handler = handlers[Key(id, worktree)] ?: return false
+        LOG.info(
+            "worktree run: stop config=$id worktree=$worktree" +
+                " terminating=${handler.isProcessTerminating} detach=${handler.detachIsDefault()}",
+        )
+        // ExecutionManagerImpl lives in an impl package only because ExecutionManager exposes no stop
+        // method; stopProcess itself is reviewed public API and is what every platform stop action
+        // calls. Termination runs asynchronously, so the state flow updates from the handler events.
+        ExecutionManagerImpl.stopProcess(handler)
         return true
     }
 
@@ -163,7 +167,16 @@ class WorktreeRunManager internal constructor(
                 // stays manageable in its own Run tab but is not re-adopted here.
                 if (clones[key]?.settings !== settings) return
                 handlers[key] = handler
-                stopping.remove(key)
+                // The handler's own state machine is the source of truth: it reports STOPPING as soon
+                // as termination starts, and drops the entry once the process is gone even if no
+                // topic event follows.
+                handler.addProcessListener(object : ProcessListener {
+                    override fun processWillTerminate(event: ProcessEvent, willBeDestroyed: Boolean) = sync()
+
+                    override fun processTerminated(event: ProcessEvent) {
+                        if (handlers.remove(key, handler)) sync()
+                    }
+                })
                 sync()
             }
 
@@ -173,7 +186,6 @@ class WorktreeRunManager internal constructor(
                 if (clones[key]?.settings !== settings) return
                 LOG.warn("worktree run: process not started config=${key.id} worktree=${key.worktree}", cause)
                 handlers.remove(key)
-                stopping.remove(key)
                 sync()
             }
 
@@ -186,22 +198,21 @@ class WorktreeRunManager internal constructor(
                     tracked.remove(settings)
                     return
                 }
-                if (handlers.remove(key, handler)) {
-                    stopping.remove(key)
-                    sync()
-                }
+                if (handlers.remove(key, handler)) sync()
             }
         })
     }
 
     private fun sync() {
-        flow.value = handlers.keys
-            .map { key ->
+        flow.value = handlers.entries
+            .map { entry ->
+                val handler = entry.value
                 RunStateDto(
-                    id = key.id,
-                    name = clones[key]?.settings?.name ?: key.id,
-                    worktree = key.worktree,
-                    state = if (key in stopping) RunProcessState.STOPPING else RunProcessState.RUNNING,
+                    id = entry.key.id,
+                    name = clones[entry.key]?.settings?.name ?: entry.key.id,
+                    worktree = entry.key.worktree,
+                    state = if (handler.isProcessTerminating) RunProcessState.STOPPING else RunProcessState.RUNNING,
+                    killable = (handler as? KillableProcess)?.canKillProcess() == true,
                 )
             }
             .sortedBy { it.name }

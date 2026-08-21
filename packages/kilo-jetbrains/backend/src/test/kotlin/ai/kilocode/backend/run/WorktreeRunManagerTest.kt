@@ -41,6 +41,10 @@ import java.io.OutputStream
 import java.nio.file.Path
 
 class WorktreeRunManagerTest : BasePlatformTestCase() {
+    private companion object {
+        private const val WAIT_NANOS = 10_000_000_000L
+    }
+
     private lateinit var cs: CoroutineScope
     private val launched = mutableListOf<RunnerAndConfigurationSettings>()
     private val added = mutableListOf<RunnerAndConfigurationSettings>()
@@ -162,24 +166,47 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val clone = launched.single()
 
         val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
-        val handler = NopProcessHandler()
+        // A handler that never finishes terminating keeps the STOPPING state observable.
+        val handler = StubbornHandler()
         handler.startNotify()
         val bus = project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
 
         bus.processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
         assertEquals(
-            listOf(RunStateDto(settings.uniqueID, clone.name, wt, RunProcessState.RUNNING)),
+            listOf(RunStateDto(settings.uniqueID, clone.name, wt, RunProcessState.RUNNING, killable = true)),
             mgr.states.value,
         )
 
         assertTrue(mgr.stop(settings.uniqueID, wt))
-        assertEquals(RunProcessState.STOPPING, mgr.states.value.single().state)
-        // NopProcessHandler terminates synchronously on destroy — proves destroyProcess was called.
-        assertTrue(handler.isProcessTerminated)
+        await("stopping state") { mgr.states.value.single().state == RunProcessState.STOPPING }
+        assertTrue(handler.isProcessTerminating)
 
         bus.processTerminated(DefaultRunExecutor.EXECUTOR_ID, env, handler, 0)
         assertTrue(mgr.states.value.isEmpty())
         assertFalse(mgr.stop(settings.uniqueID, wt))
+    }
+
+    fun testStopDestroysProcessAndDropsTerminatedHandler() = runBlocking {
+        val type = register(paramsType("kilo.test.params.destroy"))
+        val settings = add(type, "srv")
+        val mgr = manager()
+        val wt = "/tmp/kilo-destroy-wt"
+        assertTrue(mgr.run(settings.uniqueID, wt).ok)
+        val clone = launched.single()
+
+        val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
+        val handler = NopProcessHandler()
+        handler.startNotify()
+        project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
+            .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
+        // A plain handler is not killable, so the popup must not offer a force kill for it.
+        assertFalse(mgr.states.value.single().killable)
+
+        assertTrue(mgr.stop(settings.uniqueID, wt))
+        // NopProcessHandler terminates on destroy — proves destroyProcess ran, not detachProcess.
+        await("terminated process") { handler.isProcessTerminated }
+        // The handler's own termination event drops the entry without any execution topic event.
+        await("dropped handler") { mgr.states.value.isEmpty() }
     }
 
     fun testEditedSourceCreatesFreshCloneAndKeepsTracking() = runBlocking {
@@ -229,13 +256,27 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
             .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
 
         assertTrue(mgr.stop(settings.uniqueID, wt))
+        await("stopping state") { mgr.states.value.single().state == RunProcessState.STOPPING }
         assertFalse(handler.killed)
+
         assertTrue(mgr.stop(settings.uniqueID, wt))
-        assertTrue(handler.killed)
+        await("force kill") { handler.killed }
         assertEquals(RunProcessState.STOPPING, mgr.states.value.single().state)
     }
 
     // ------ fixtures ------
+
+    /**
+     * Termination goes through the platform's `stopProcess`, which runs off the calling thread, so
+     * assertions wait for the observable outcome instead of assuming it already happened.
+     */
+    private fun await(what: String, cond: () -> Boolean) {
+        val end = System.nanoTime() + WAIT_NANOS
+        while (!cond()) {
+            check(System.nanoTime() < end) { "timed out waiting for $what" }
+            Thread.sleep(1)
+        }
+    }
 
     private fun manager() = WorktreeRunManager(project, cs) { launched += it }
 

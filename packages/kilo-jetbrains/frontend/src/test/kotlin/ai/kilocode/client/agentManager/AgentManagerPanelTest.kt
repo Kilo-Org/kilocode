@@ -14,6 +14,7 @@ import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.fire
@@ -66,6 +67,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         rpc = FakeWorktreeRpcApi()
         service = KiloWorktreeService(coroutines.scope, rpc)
         ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        // Worktree stats/PR loading resolves the backend project root first.
+        fakeRoot(project, coroutines.scope, testRootDisposable, project.basePath!!)
         ApplicationManager.getApplication()
             .replaceService(GhStatusCoordinator::class.java, GhStatusCoordinator(coroutines.scope, TestUiTimers()), testRootDisposable)
     }

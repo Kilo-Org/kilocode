@@ -24,6 +24,10 @@ data class RunStateDto(
     val name: String,     // display name of the running per-worktree clone
     val worktree: String, // absolute worktree path the process was started for
     val state: RunProcessState = RunProcessState.RUNNING,
+    // Whether the platform can force-kill this process once it is [RunProcessState.STOPPING].
+    // False for Gradle and other external-system runs: their handler only cancels the build
+    // through the tooling API and never signals the forked process, so there is nothing to kill.
+    val killable: Boolean = false,
 )
 
 @Serializable

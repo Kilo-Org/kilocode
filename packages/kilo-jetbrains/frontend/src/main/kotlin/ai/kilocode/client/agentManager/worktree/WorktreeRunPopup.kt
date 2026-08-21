@@ -32,11 +32,14 @@ internal object WorktreeRunPopup {
         if (states.isNotEmpty()) {
             group.addSeparator(KiloBundle.message("worktree.run.section.running"))
             for (state in states) {
+                // Mirrors the platform Stop button: it turns into Kill once the process is
+                // terminating, and stays disabled when the handler cannot be force-killed.
+                val terminating = state.state == RunProcessState.STOPPING
                 group.add(
                     action(
-                        KiloBundle.message("worktree.run.stop", state.name),
-                        AllIcons.Actions.Suspend,
-                        enabled = state.state == RunProcessState.RUNNING,
+                        KiloBundle.message(if (terminating) "worktree.run.kill" else "worktree.run.stop", state.name),
+                        if (terminating) AllIcons.Debugger.KillProcess else AllIcons.Actions.Suspend,
+                        enabled = !terminating || state.killable,
                     ) { stop(state) },
                 )
                 group.add(

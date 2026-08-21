@@ -13,10 +13,10 @@ import kotlinx.coroutines.flow.Flow
  * Run-configuration RPC API exposed from backend to frontend.
  *
  * Lets Agent Manager surfaces run the open project's IDE run configurations inside a git
- * worktree directory. Operations are scoped to the main repository [directory], which
- * resolves the owning open project on the backend. Execution goes through the platform's
- * real run pipeline ([com.intellij.execution.runners.ExecutionUtil]), so output lands in
- * the Run tool window like a regular Run action.
+ * worktree directory. Operations are scoped to the main repository [directory], which must be
+ * the backend-resolved project root and resolves the owning open project on the backend. Execution
+ * goes through the platform's real run pipeline ([com.intellij.execution.runners.ExecutionUtil]),
+ * so output lands in the Run tool window like a regular Run action.
  */
 @Rpc
 interface KiloRunRpcApi : RemoteApi<Unit> {

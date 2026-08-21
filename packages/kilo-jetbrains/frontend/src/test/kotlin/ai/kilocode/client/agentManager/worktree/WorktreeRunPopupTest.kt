@@ -70,14 +70,31 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
         assertEquals(1, frames)
     }
 
-    fun testStoppingDisablesStopRow() {
+    fun testStoppingDisablesStopRowForUnkillableProcess() {
+        // Gradle/external-system runs cannot be force-killed, so the row offers nothing more.
         val cfg = RunConfigDto("id1", "dev", "Gradle")
         val state = RunStateDto("id1", "dev [wt]", "/wt", RunProcessState.STOPPING)
         val group = WorktreeRunPopup.group(listOf(cfg), null, listOf(state), {}, {}, {}, {})
         val rows = group.getChildren(null)
+        assertEquals(KiloBundle.message("worktree.run.kill", "dev [wt]"), rows[1].templateText)
         assertFalse(enabled(rows[1]))
         assertEquals(KiloBundle.message("worktree.run.output", "dev [wt]"), rows[2].templateText)
         assertTrue(enabled(rows[2]))
+    }
+
+    fun testStoppingOffersKillForKillableProcess() {
+        val cfg = RunConfigDto("id1", "dev", "Shell Script")
+        val state = RunStateDto("id1", "dev [wt]", "/wt", RunProcessState.STOPPING, killable = true)
+        val stops = mutableListOf<RunStateDto>()
+        val group = WorktreeRunPopup.group(listOf(cfg), null, listOf(state), {}, { stops += it }, {}, {})
+        val rows = group.getChildren(null)
+
+        assertEquals(KiloBundle.message("worktree.run.kill", "dev [wt]"), rows[1].templateText)
+        assertTrue(enabled(rows[1]))
+
+        // Kill reuses the stop call: the backend escalates because the process is already terminating.
+        perform(rows[1])
+        assertEquals(listOf(state), stops)
     }
 
     private fun event(action: AnAction): AnActionEvent =

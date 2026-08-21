@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.util.edtWait
@@ -26,6 +27,8 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         timers = TestUiTimers()
         ApplicationManager.getApplication()
             .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(coroutines.scope, rpc), testRootDisposable)
+        // The probe resolves the backend project root before each call.
+        fakeRoot(project, coroutines.scope, testRootDisposable, ROOT)
         service = GhStatusCoordinator(coroutines.scope, timers)
         ApplicationManager.getApplication().replaceService(GhStatusCoordinator::class.java, service, testRootDisposable)
     }
@@ -101,6 +104,15 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test coordinator probes the resolved backend root`() {
+        val handle = edtWait { service.attach(project) }
+        awaitCalls(1)
+
+        assertEquals(ROOT, rpc.ghCalls.first())
+        assertFalse(rpc.ghCalls.contains(project.basePath))
+        handle.close()
+    }
+
     fun `test coordinator stops polling after detach`() {
         val handle = edtWait { service.attach(project) }
         drain()
@@ -142,4 +154,8 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
     }
 
     private fun pump() = pumpEdt()
+
+    private companion object {
+        private const val ROOT = "/real/repo"
+    }
 }

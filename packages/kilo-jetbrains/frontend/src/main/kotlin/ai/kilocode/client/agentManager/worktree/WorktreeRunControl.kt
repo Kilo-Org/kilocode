@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.app.ProjectRoot
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.ToolbarButtonAction
@@ -32,9 +33,10 @@ import javax.swing.SwingConstants
 
 /**
  * The worktree editor's Run control: a header button that opens a popup listing the project's
- * supported run configurations (see the backend `WorktreeRunAdapter`) and the processes
- * currently running in this worktree. The button shows the platform live indicator while
- * anything runs; output lives in the native Run tool window.
+ * supported run configurations (see the backend `WorktreeRunAdapter`) and the processes currently
+ * running in this worktree. The backend project key is the resolved backend root, not the frontend
+ * project path, which is synthetic in split mode. The button shows the platform live indicator
+ * while anything runs; output lives in the native Run tool window.
  */
 internal class WorktreeRunControl(
     private val project: Project,
@@ -55,17 +57,15 @@ internal class WorktreeRunControl(
     )
 
     init {
-        val repo = project.basePath
         val key = normalizeWorktreePath(worktree)
-        if (repo != null) {
-            cs.launch {
-                service<KiloRunService>().states(repo)
-                    .catch { err -> LOG.warn("run states stream failed for $repo", err) }
-                    .collectLatest { all ->
-                        val mine = all.filter { normalizeWorktreePath(it.worktree) == key }
-                        alive { sync(mine) }
-                    }
-            }
+        cs.launch {
+            val repo = root() ?: return@launch
+            service<KiloRunService>().states(repo)
+                .catch { err -> LOG.warn("run states stream failed for $repo", err) }
+                .collectLatest { all ->
+                    val mine = all.filter { normalizeWorktreePath(it.worktree) == key }
+                    alive { sync(mine) }
+                }
         }
         Disposer.register(parent) { cs.cancel() }
     }
@@ -79,8 +79,8 @@ internal class WorktreeRunControl(
 
     @RequiresEdt
     private fun open() {
-        val repo = project.basePath ?: return
         cs.launch {
+            val repo = root() ?: return@launch
             val list = service<KiloRunService>().configs(repo)
             alive { popup(repo, list) }
         }
@@ -125,4 +125,6 @@ internal class WorktreeRunControl(
     }
 
     private fun alive(block: () -> Unit) = edt({ !project.isDisposed && !Disposer.isDisposed(parent) }, block)
+
+    private suspend fun root(): String? = project.service<ProjectRoot>().get().takeIf { it.isNotBlank() }
 }
