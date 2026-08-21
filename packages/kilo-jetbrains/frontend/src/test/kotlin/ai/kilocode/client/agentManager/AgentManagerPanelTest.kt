@@ -492,7 +492,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(emptyList<ActiveListBadge>(), row.badges)
     }
 
-    fun `test worktree row uses the idle dot for error activity`() {
+    fun `test worktree row uses the branch icon for error activity`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         val activity = MutableStateFlow(mapOf(
             "ses_1" to SessionActivityDto(item.path, SessionActivityKindDto.ERROR),
@@ -503,7 +503,30 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         flush()
 
-        assertSame(WorktreeIcons.idle, row(panel, 0).icon)
+        assertSame(WorktreeIcons.branch, row(panel, 0).icon)
+    }
+
+    fun `test idle worktree rows show the branch icon and the local row shows the monitor`() {
+        rpc.listed += main()
+        rpc.listed += worktree("aardvark")
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        assertSame(WorktreeIcons.local, row(panel, 0).icon)
+        assertSame(WorktreeIcons.branch, row(panel, 1).icon)
+    }
+
+    fun `test locked worktree row shows the lock icon`() {
+        val path = "${project.basePath!!}/.kilo/worktrees/held"
+        rpc.listed += WorktreeDto(path, "held", "held", path, locked = true, lockReason = "held by test")
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        assertSame(WorktreeIcons.locked, row(panel, 0).icon)
     }
 
     fun `test worktree row shows metrics from status service`() {

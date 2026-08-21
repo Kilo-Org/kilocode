@@ -368,8 +368,8 @@ class WorktreeControllerTest : BasePlatformTestCase() {
             SessionActivityKind.PLAN.icon(),
             WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.PLAN),
         )
-        assertSame(WorktreeIcons.idle, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR))
-        assertSame(WorktreeIcons.idle, WorktreeIcons.forRow(pending = false, kind = null))
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR))
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false, kind = null))
     }
 
     fun `test worktree icons load at the same size`() {
@@ -379,8 +379,11 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         try {
             assertTrue("branch icon should load", WorktreeIcons.branch.iconWidth > 1)
             assertTrue("lock icon should load", WorktreeIcons.locked.iconWidth > 1)
+            assertTrue("local icon should load", WorktreeIcons.local.iconWidth > 1)
             assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.locked.iconWidth)
             assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.locked.iconHeight)
+            assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.local.iconWidth)
+            assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.local.iconHeight)
             for (kind in SessionActivityKind.entries) {
                 assertEquals(WorktreeIcons.branch.iconWidth, kind.icon().iconWidth)
                 assertEquals(WorktreeIcons.branch.iconHeight, kind.icon().iconHeight)

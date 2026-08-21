@@ -22,18 +22,31 @@ class WorktreeIconsTest : BasePlatformTestCase() {
     }
 
     fun `test waiting kinds resolve to the attention glyph`() {
-        assertSame(SessionActivityKind.QUESTION.icon(), WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.QUESTION))
-        assertSame(SessionActivityKind.PLAN.icon(), WorktreeIcons.forKind(SessionActivityKind.PLAN))
+        assertSame(
+            SessionActivityKind.QUESTION.icon(),
+            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.QUESTION),
+        )
+        assertSame(SessionActivityKind.PLAN.icon(), WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.PLAN))
     }
 
-    fun `test idle and errored rows use the idle dot`() {
-        assertSame(WorktreeIcons.idle, WorktreeIcons.forRow(pending = false, kind = null))
-        assertSame(WorktreeIcons.idle, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR))
-        assertSame(WorktreeIcons.idle, WorktreeIcons.forKind(null))
+    fun `test rows at rest show what the checkout is`() {
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false))
+        assertSame(WorktreeIcons.locked, WorktreeIcons.forRow(pending = false, locked = true))
+        assertSame(WorktreeIcons.local, WorktreeIcons.forRow(pending = false, current = true))
     }
 
-    fun `test idle dot matches the status icon size`() {
-        assertEquals(WorktreeIcons.running.iconWidth, WorktreeIcons.idle.iconWidth)
-        assertEquals(WorktreeIcons.running.iconHeight, WorktreeIcons.idle.iconHeight)
+    fun `test errored session falls back to the resting glyph`() {
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR))
+        assertSame(
+            WorktreeIcons.local,
+            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR, current = true),
+        )
+    }
+
+    fun `test activity outranks the resting glyph on the local row`() {
+        assertSame(
+            WorktreeIcons.running,
+            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.RUNNING, current = true),
+        )
     }
 }

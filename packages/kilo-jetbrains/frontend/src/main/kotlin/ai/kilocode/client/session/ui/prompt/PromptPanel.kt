@@ -4,6 +4,7 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.SendPromptAction
 import ai.kilocode.client.actions.StopSessionAction
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.model.PromptAttachment
@@ -61,7 +62,6 @@ import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.IslandsState
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
@@ -247,7 +247,7 @@ class PromptPanel(
         addActionListener { onAutoApproveToggle(!autoApprove) }
     }
 
-    private val enhancingIcon = AnimatedIcon.Default()
+    private val enhancingIcon = SpinnerIcon.icon
     private val enhance = HoverIcon().apply {
         icon = WAND_ICON
         toolTipText = KiloBundle.message("prompt.action.enhance")
