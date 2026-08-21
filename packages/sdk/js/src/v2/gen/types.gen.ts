@@ -4155,6 +4155,52 @@ export type CommandFile = {
   hints: Array<string>
 }
 
+export type ProviderUsagePeriod = {
+  unit: "hour" | "day" | "week" | "month"
+  value: number
+}
+
+export type ProviderUsageWindow = {
+  id: string
+  resource: string
+  unit: string
+  orientation: "used_percent" | "remaining_percent" | "amount" | "count"
+  used?: number
+  remaining?: number
+  limit?: number
+  period?: ProviderUsagePeriod
+  durationMs?: number
+  resetAt?: string
+  state: "active" | "exhausted" | "unlimited" | "not_in_plan" | "unknown"
+}
+
+export type ProviderUsageError = {
+  code: string
+  message: string
+  retryable: boolean
+}
+
+export type ProviderUsageSnapshot = {
+  id: string
+  providerID: string
+  sourceKind: "kilo_managed" | "direct"
+  providerLabel: string
+  planLabel: string
+  sourceLabel: string
+  fetchState: "ready" | "stale" | "unavailable" | "error"
+  planState: "active" | "past_due" | "canceling" | "unknown"
+  routingState: "active" | "disabled" | "missing" | "replaced" | "not_applicable" | "unknown"
+  fetchedAt?: string
+  managementUrl?: string
+  windows: Array<ProviderUsageWindow>
+  error?: ProviderUsageError
+}
+
+export type ProviderUsage = {
+  items: Array<ProviderUsageSnapshot>
+  generatedAt: string
+}
+
 export type NotebookOutput = {
   mime: string
   text?: string
@@ -16610,6 +16656,73 @@ export type KilocodeRemoveAgentResponses = {
 }
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
+
+export type KilocodeProviderUsageGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/provider-usage"
+}
+
+export type KilocodeProviderUsageGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * ServiceUnavailable
+   */
+  503: EffectHttpApiErrorServiceUnavailable
+}
+
+export type KilocodeProviderUsageGetError = KilocodeProviderUsageGetErrors[keyof KilocodeProviderUsageGetErrors]
+
+export type KilocodeProviderUsageGetResponses = {
+  /**
+   * Current provider usage
+   */
+  200: ProviderUsage
+}
+
+export type KilocodeProviderUsageGetResponse =
+  KilocodeProviderUsageGetResponses[keyof KilocodeProviderUsageGetResponses]
+
+export type KilocodeProviderUsageRefreshData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/provider-usage/refresh"
+}
+
+export type KilocodeProviderUsageRefreshErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * ServiceUnavailable
+   */
+  503: EffectHttpApiErrorServiceUnavailable
+}
+
+export type KilocodeProviderUsageRefreshError =
+  KilocodeProviderUsageRefreshErrors[keyof KilocodeProviderUsageRefreshErrors]
+
+export type KilocodeProviderUsageRefreshResponses = {
+  /**
+   * Refreshed provider usage
+   */
+  200: ProviderUsage
+}
+
+export type KilocodeProviderUsageRefreshResponse =
+  KilocodeProviderUsageRefreshResponses[keyof KilocodeProviderUsageRefreshResponses]
 
 export type KilocodeNotebookListData = {
   body?: never

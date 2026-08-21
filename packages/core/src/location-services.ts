@@ -12,6 +12,7 @@ import { FileSystemSearch } from "./filesystem/search"
 import { Watcher } from "./filesystem/watcher"
 import { Image } from "./image"
 import { Integration } from "./integration"
+import { ProviderUsage } from "./kilocode/provider-usage" // kilocode_change
 import { Location } from "./location"
 import { LocationMutation } from "./location-mutation"
 import { LocationServiceMap } from "./location-service-map"
@@ -48,6 +49,7 @@ export const locationServices = LayerNode.group([
   Reference.node,
   Integration.node,
   Catalog.node,
+  ProviderUsage.node, // kilocode_change
   AISDK.node,
   PluginV2.node,
   PluginInternal.node,
