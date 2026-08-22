@@ -1291,6 +1291,23 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertSame(icon, button.icon)
     }
 
+    fun `test toggleAutoApprove invokes onAutoApproveToggle with inverted state`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        var seen: Boolean? = null
+        panel.onAutoApproveToggle = { seen = it }
+
+        assertFalse(panel.isAutoApproveEnabled)
+
+        panel.toggleAutoApprove()
+
+        assertEquals(true, seen)
+
+        panel.setAutoApprove(true)
+        panel.toggleAutoApprove()
+
+        assertEquals(false, seen)
+    }
+
     fun `test auto approve enhance separator and send buttons sit in order`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val auto = autoApproveButton(panel)
