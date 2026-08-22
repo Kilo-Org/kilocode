@@ -109,6 +109,7 @@ plugins {
     id("java")
     alias(libs.plugins.intellij.platform)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.ktlint)
     alias(libs.plugins.changelog)
 
     alias(libs.plugins.kotlin) apply false
@@ -143,6 +144,7 @@ val notes = providers.gradleProperty("kilo.changeNotes").orElse(
 subprojects {
     apply(plugin = "org.jetbrains.intellij.platform.module")
     apply(plugin = "io.gitlab.arturbosch.detekt")
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
     detekt {
         config.setFrom(rootProject.file("detekt.yml"))

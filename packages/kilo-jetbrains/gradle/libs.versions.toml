@@ -11,6 +11,7 @@ junit-vintage = "5.11.4"
 okhttp = "4.12.0"
 openapi-generator = "7.21.0"
 detekt = "1.23.8"
+ktlint = "14.2.0"
 commonmark = "0.28.0"
 zxing = "3.5.3"
 changelog = "2.5.0"
@@ -33,6 +34,7 @@ commons-compress = { module = "org.apache.commons:commons-compress", version.ref
 
 [plugins]
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-gradle-plugin" }
 rpc = { id = "rpc", version.ref = "intellij-rpc-plugin" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin-jvm-plugin" }

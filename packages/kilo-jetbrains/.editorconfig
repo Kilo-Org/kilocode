@@ -1,0 +1,41 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 120
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[{Makefile,*.mk}]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.kt]
+ktlint_code_style = intellij_idea
+
+# Disabled rules for now to reduce diff noise
+ktlint_standard_max-line-length = disabled
+ktlint_standard_function-naming = disabled
+
+
+[*.kts]
+ktlint = disabled
+
+# Disable ktlint for all files except the explicitly included ones
+[**/*]
+ktlint = disabled
+
+# Re-enable ktlint for specific files (organized by module)
+#--------------------------------------------------
+# Backend workspace
+[**/backend/workspace/**/*.kt]
+ktlint = enabled
+#--------------------------------------------------
