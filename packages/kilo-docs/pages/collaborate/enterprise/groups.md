@@ -47,10 +47,10 @@ Policies compose in layers:
 - **Default policies** apply to every direct member before their group policies are combined. Manage them from the **Group policies** card on the Groups page.
 - **Group policies** apply to the group's members. A member in several groups gets the union of those grants.
 
-A member's effective access is the organization ceiling intersected with the default policies plus the union of their group grants:
+A member's effective access is the organization-wide baseline plus the default policies and the union of their group grants:
 
 - Absence of configuration is never a restriction — if no default or group policy applies to a member, their access is unchanged.
-- Group grants cannot exceed the organization-wide [Model Access Controls](/docs/collaborate/enterprise/model-access-controls). Models and providers blocked there stay blocked for everyone, and the policy editor marks out-of-ceiling entries as unavailable.
+- Group grants are additive: a group can grant models or providers beyond the organization-wide [Model Access Controls](/docs/collaborate/enterprise/model-access-controls) baseline, and the policy editor shows the full provider and model catalog.
 - Only an explicit **None** mode, or a **Selected** mode with nothing selected, results in no access.
 
 Policy changes are enforced everywhere members use models, including the extension, the CLI, autocomplete, and the Slack, Discord, Linear, and GitHub integrations.

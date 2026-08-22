@@ -136,6 +136,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | Command | Aliases | Description |
 |---|---|---|
 | `/profile` | `/me`, `/whoami` | View your Kilo Gateway profile |
+| `/usage` | `/plans`, `/quota` | View provider plans and quota windows (Kilo Pass, Kilo-managed plans, and direct MiniMax Token Plans) |
 | `/teams` | `/team`, `/org`, `/orgs` | Switch between Kilo Gateway teams |
 | `/remote` | - | Toggle remote mode for Cloud Agent access |
 

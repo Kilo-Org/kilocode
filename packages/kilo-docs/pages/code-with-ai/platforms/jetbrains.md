@@ -61,6 +61,12 @@ Open **Settings → Tools → Kilo Code** to configure the plugin, or click the 
 - **Branch comparison** — when the workspace differs from the base branch, the session header shows a changes badge. Click it (**Compare with base branch**) to open a diff editor with a file tree and per-file navigation.
 - **Stale diff refresh** — diff views detect when files change on disk and offer a **Refresh** action to reload them instead of showing outdated content.
 
+## Sub-agent sessions in editor tabs
+
+When the agent delegates work to a sub-agent with the task tool, hover the task card header and click **Open sub-agent in editor** to open the child session in a dedicated editor tab. The tab streams the child session's transcript but is read-only — it has no prompt input and no session controls, so you can inspect the sub-agent's work without taking over the parent session.
+
+Opening the same sub-agent again focuses its existing tab instead of creating a duplicate. Task cards inside a read-only sub-agent tab can open their own child sessions in further editor tabs, so nested delegation stays navigable.
+
 ## Permission requests
 
 When the agent asks for several approvals at once, permission requests queue up instead of replacing each other. Resolve the current request to advance to the next one in the queue.

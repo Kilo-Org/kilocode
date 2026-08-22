@@ -274,6 +274,15 @@ The Branch scope also has a base-branch picker next to it for overriding the com
 
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
 
+### Edit Previews
+
+Edit, write, and `apply_patch` changes made in an Agent Manager session open in the side panel instead of a separate editor tab. Clicking the tool's file name expands the change inline in the transcript, while the open-diff action shows the full change in the panel, sharing the inspector area with the diff, PR, subagent, and terminal views.
+
+- Multi-file `apply_patch` payloads open every changed file, each sized to its own rendered diff
+- The preview keeps the unified or split diff style you last selected in the review view
+
+Outside Agent Manager, edit previews continue to open in a standalone diff editor tab.
+
 ## Subagents Panel
 
 When an agent delegates work to a subagent, the subagent's tool block in chat shows an **Open sub-agent in panel** button. Clicking it opens the child session in the **Subagents** panel, which shares the side inspector area with the diff, PR, documents, and terminal views.

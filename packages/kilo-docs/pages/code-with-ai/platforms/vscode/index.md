@@ -34,6 +34,7 @@ Key features include:
 - **Transcript export:** Save complete local session transcripts as Markdown files
 - **Sub-Agent Viewer** — Read-only panels for viewing child agent sessions
 - **Legacy Migration** — Automatic migration wizard for VSCode extension settings
+- **Plans & usage** — The profile view shows your provider plan quota, including Kilo Pass credits, Kilo-managed subscriptions, and direct MiniMax Token Plans
 
 ## Shared Settings
 
