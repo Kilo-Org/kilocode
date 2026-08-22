@@ -40,6 +40,16 @@ describe("Agent Manager New Worktree project targeting", () => {
     expect(css).toContain('[data-component="dialog"]:has(.am-nv-project-inline [data-component="popover-content"])')
   })
 
+  it("keeps project activation separate from accordion expansion", () => {
+    const header = readFileSync(join(root, "webview-ui", "agent-manager", "SidebarSectionHeader.tsx"), "utf8")
+    const projects = readFileSync(join(root, "webview-ui", "agent-manager", "ProjectsSection.tsx"), "utf8")
+    expect(header).toContain("onClick?: () => void")
+    expect(header).toContain("(props.onClick ?? props.onToggle)?.()")
+    expect(projects).toContain("onToggle={() => {")
+    expect(projects).toContain("onClick={() => {")
+    expect(projects).toContain("if (!project().active) props.onSelect(project().id)")
+  })
+
   it("defines project labels in every Agent Manager locale", () => {
     const keys = ["agentManager.dialog.project.select", "agentManager.dialog.project.missing"]
     const locales = readdirSync(join(root, "webview-ui", "agent-manager", "i18n")).filter((file) =>

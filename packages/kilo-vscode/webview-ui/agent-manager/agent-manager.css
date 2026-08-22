@@ -2899,7 +2899,7 @@ body.am-wt-dragging-active * {
    resize); the textarea always fills it and is the only element that scrolls,
    so long prompts never produce nested scrollbars. */
 .am-nv-dialog .am-prompt-input-container {
-  margin: 0;
+  margin: var(--prompt-min-gutter);
   resize: vertical;
   overflow: hidden;
   min-height: 120px;
@@ -5085,6 +5085,89 @@ body.vscode-high-contrast-light {
 .am-subagent-panel-visible {
   opacity: 1;
   pointer-events: auto;
+}
+
+.am-edit-preview-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: var(--surface-base);
+  will-change: opacity;
+}
+
+.am-edit-preview-panel-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-edit-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 32px;
+  padding: 0 4px 0 8px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-weak-base);
+  background: var(--surface-base);
+}
+
+.am-edit-preview-heading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  color: var(--text-base);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.am-edit-preview-close {
+  flex-shrink: 0;
+}
+
+.am-edit-preview-files {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Each file is as tall as its own diff; the list is the single scroller, so a
+   one-line change no longer reserves a tall empty pane. */
+.am-edit-preview-files > .am-review-layout {
+  flex: 0 0 auto;
+  min-height: 0;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+.am-edit-preview-files > .am-review-layout > .am-review-diff {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+/* Unbounded or extreme diffs keep Pierre's virtualizer, which needs a capped
+   viewport of its own. */
+.am-edit-preview-files > .am-review-layout[data-virtualized="true"] {
+  height: min(70vh, 640px);
+}
+
+.am-edit-preview-files > .am-review-layout[data-virtualized="true"] > .am-review-diff {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.am-edit-preview-unavailable {
+  padding: 16px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
 }
 
 /* Document inspector. It remains mounted while another inspector mode is active

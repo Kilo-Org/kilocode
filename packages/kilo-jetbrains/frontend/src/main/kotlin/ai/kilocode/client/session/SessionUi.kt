@@ -17,6 +17,10 @@ import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.scroll.SessionScroll
+import ai.kilocode.client.session.subagent.SubagentSessionEditorKind
+import ai.kilocode.client.session.subagent.SubagentTitleCache
+import ai.kilocode.client.session.subagent.ensureSubagentSessionEditorKind
+import ai.kilocode.client.session.subagent.subagentSessionParams
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
@@ -206,6 +210,7 @@ class SessionUi(
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
     private val popup = HeaderPopupController(timers)
+    private val readonly: Boolean get() = manager?.readonly == true
     private val provider = object : TextCopyProvider() {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
@@ -285,10 +290,11 @@ class SessionUi(
 
     val defaultFocusedComponent: JComponent get() {
         modalFocus?.invoke()?.let { return it }
+        if (readonly) return scroll.component
         return prompt.defaultFocusedComponent
     }
 
-    internal val promptFocusedComponent: JComponent get() = prompt.defaultFocusedComponent
+    internal val promptFocusedComponent: JComponent get() = if (readonly) scroll.component else prompt.defaultFocusedComponent
 
     /**
      * Sends [text] as the session's first message. Used by the New Worktree flow to auto-start a
@@ -298,6 +304,7 @@ class SessionUi(
      */
     @RequiresEdt
     internal fun submitPrompt(text: String, select: PromptSelection? = null) {
+        if (readonly) return
         if (text.isBlank()) return
         // Seed the session's agent/model/reasoning so the pickers and later turns reflect the pick,
         // then send the first turn carrying it too (so it applies before workspace-ready resolves).
@@ -307,7 +314,7 @@ class SessionUi(
 
     @RequiresEdt
     internal fun focusPrompt() {
-        val target = prompt.defaultFocusedComponent
+        val target = promptFocusedComponent
         ApplicationManager.getApplication().invokeLater({
             if (!disposed && !project.isDisposed) {
                 IdeFocusManager.getInstance(project).requestFocusInProject(target, project)
@@ -357,7 +364,7 @@ class SessionUi(
         load = LoadingPanel()
         progressBody = load
         val focus = { manager?.focusPrompt() ?: focusPrompt() }
-        question = QuestionView(
+        val questionView = if (readonly) null else QuestionView(
             project = project,
             reply = { id, dto, opts -> controller.replyQuestion(id, dto, opts) },
             reject = { id -> controller.rejectQuestion(id) },
@@ -365,19 +372,19 @@ class SessionUi(
             scroll = { scroll.followBottom(it) },
             selection = selection,
             focus = focus,
-        )
-        permission = PermissionView(
+        ).also { question = it }
+        val permissionView = if (readonly) null else PermissionView(
             reply = { id, dto, rules -> controller.replyPermission(id, dto, rules) },
             openFile = fileLinks::open,
             selection = selection,
             focus = focus,
-        )
-        login = LoginRequiredView(
+        ).also { permission = it }
+        val loginView = if (readonly) null else LoginRequiredView(
             openProfile = { controller.openProfile() },
             dismiss = { controller.dismissLoginRequired() },
             selection = selection,
             focus = focus,
-        )
+        ).also { login = it }
         outcome = SessionOutcomeView(
             selection = selection,
             focus = focus,
@@ -385,25 +392,26 @@ class SessionUi(
         messageBody = SessionMessageListPanel(
             controller.model,
             this,
-            question,
-            permission,
-            login,
+            questionView,
+            permissionView,
+            loginView,
             fileLinks::open,
             ::openUrl,
             selection,
             ::openAttachment,
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
-            revert = ::revert,
-            cancelRevert = ::cancelRevert,
-            deleteQueued = { id -> controller.deleteQueuedMessage(id) },
-            banner = RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
+            revert = if (readonly) null else ::revert,
+            cancelRevert = if (readonly) null else ::cancelRevert,
+            deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
+            banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
+            onOpenSubagent = ::openSubagent,
         ).also {
             it.outcome = outcome
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this) { openBranchChanges() }
+        header = SessionHeaderPanel(controller, this, readonly) { openBranchChanges() }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
         overlay = SessionHoverCopyOverlay(root, scroll.component, this)
@@ -436,6 +444,16 @@ class SessionUi(
         )
         connection = ConnectionPanel(this, controller)
         root.addOverlay(connection) { pane, child ->
+            val size = child.preferredSize
+            if (readonly) {
+                val gap = SessionUiStyle.View.contentGap()
+                return@addOverlay java.awt.Rectangle(
+                    gap,
+                    pane.height - size.height - gap,
+                    (pane.width - gap * 2).coerceAtLeast(0),
+                    size.height,
+                )
+            }
             val point = SwingUtilities.convertPoint(prompt.parent ?: root.content, prompt.x, prompt.y, pane)
             val gap = SessionUiStyle.View.contentGap()
             val wide = (prompt.width - gap * 2).coerceAtLeast(0)
@@ -455,51 +473,58 @@ class SessionUi(
             java.awt.Rectangle(0, 0, pane.width, pane.height)
         }
         root.overlay.setComponentZOrder(drop, 0)
-        prompt.onFileDrag = ::syncDrop
-        prompt.installFileDrop(root, "session-root")
+        if (!readonly) {
+            prompt.onFileDrag = ::syncDrop
+            prompt.installFileDrop(root, "session-root")
+        }
         // The visual overlay returns contains(false) so normal UI remains clickable.
         // Registering it as a native DnD target makes IntelliJ resolve a null over-component.
 
         sessionContent.add(header, BorderLayout.NORTH)
         sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
-        root.content.add(
-            prompt.align(
-                HAlign.CENTER,
-                VAlign.FIT,
-                maxW = { SessionUiStyle.SessionLayout.readableWidth(prompt, style.transcriptFont) },
-            ),
-            BorderLayout.SOUTH,
-        )
+        if (!readonly) {
+            root.content.add(
+                prompt.align(
+                    HAlign.CENTER,
+                    VAlign.FIT,
+                    maxW = { SessionUiStyle.SessionLayout.readableWidth(prompt, style.transcriptFont) },
+                ),
+                BorderLayout.SOUTH,
+            )
+        }
         add(root, BorderLayout.CENTER)
     }
 
     private fun bindUi() {
-        prompt.mode.onSelect = { item -> controller.selectAgent(item.id) }
-        prompt.model.onSelect = { item ->
-            prompt.setAttachmentEnabled(item.attachment)
-            controller.selectModel(item.provider, item.id)
-        }
-        prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
-        prompt.onReset = { controller.clearModelOverride() }
-        prompt.onChange = { scroll.refresh() }
-        prompt.onAutoApproveToggle = { value ->
-            controller.setAutoApprove(value)
+        if (!readonly) {
+            prompt.mode.onSelect = { item -> controller.selectAgent(item.id) }
+            prompt.model.onSelect = { item ->
+                prompt.setAttachmentEnabled(item.attachment)
+                controller.selectModel(item.provider, item.id)
+            }
+            prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
+            prompt.onReset = { controller.clearModelOverride() }
+            prompt.onChange = { scroll.refresh() }
+            prompt.onAutoApproveToggle = { value ->
+                controller.setAutoApprove(value)
+                prompt.setAutoApprove(controller.autoApprove)
+            }
             prompt.setAutoApprove(controller.autoApprove)
-        }
-        prompt.setAutoApprove(controller.autoApprove)
-        prompt.model.favorites = { app.favorites.value }
-        prompt.model.onFavoriteToggle = { item ->
-            Telemetry.send(
-                "Model Favorite Toggled",
-                mapOf("provider" to item.provider, "modelId" to item.id),
-            )
-            app.toggleModelFavorite(item.provider, item.id)
+            prompt.model.favorites = { app.favorites.value }
+            prompt.model.onFavoriteToggle = { item ->
+                Telemetry.send(
+                    "Model Favorite Toggled",
+                    mapOf("provider" to item.provider, "modelId" to item.id),
+                )
+                app.toggleModelFavorite(item.provider, item.id)
+            }
         }
 
         controller.addListener(this) { event ->
             when (event) {
                 is SessionControllerEvent.WorkspaceReady -> {
+                    if (readonly) return@addListener
                     val m = controller.model
                     prompt.mode.setItems(m.agents.map {
                         ModePicker.Item(
@@ -563,10 +588,12 @@ class SessionUi(
                 }
 
                 is SessionControllerEvent.AppChanged -> {
+                    if (readonly) return@addListener
                     prompt.setReady(controller.model.isReady())
                 }
 
                 is SessionControllerEvent.WorkspaceChanged -> {
+                    if (readonly) return@addListener
                     prompt.setReady(controller.model.isReady())
                 }
 
@@ -712,6 +739,7 @@ class SessionUi(
     }
 
     private fun sendPrompt(text: String, files: List<PromptPartDto>, select: PromptSelection? = null) {
+        if (readonly) return
         if (text.isBlank() && files.isEmpty()) return
         prompt.clear()
         val follow = scroll.following()
@@ -872,6 +900,17 @@ class SessionUi(
                 Telemetry.send("Diff Editor Opened", mapOf("source" to "inline"))
             }
         }
+    }
+
+    @RequiresEdt
+    private fun openSubagent(sessionId: String, title: String) {
+        service<SubagentTitleCache>().put(sessionId, title)
+        ensureSubagentSessionEditorKind()
+        project.service<KiloVfsManager>().open(
+            SubagentSessionEditorKind.ID,
+            subagentSessionParams(sessionId, workspace.directory),
+        )
+        Telemetry.send("Subagent Session Opened", mapOf("sessionId" to sessionId))
     }
 
     /** Badge-only refresh: fetches stats (no patch text) and updates the header count. */

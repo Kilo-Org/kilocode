@@ -7,11 +7,11 @@ export function applyProjectSelection(
   msg: ExtensionMessage,
   deps: {
     active: (projectId: string) => boolean
+    applied: (projectId: string) => boolean
     managed: (projectId: string) => ManagedSessionState[]
     local: (projectId: string) => void
     worktree: (projectId: string, worktreeId: string) => void
-    session: (sessionId: string) => void
-    openTab: (sessionId: string) => void
+    focusLocal: (sessionId: string) => void
     managedSession: (worktreeId: string, sessionId: string) => void
   },
 ): boolean {
@@ -20,6 +20,11 @@ export function applyProjectSelection(
   // A selection acknowledgement can arrive after the user switched again.
   // Ignore it unless this project's catalog entry and state are both active.
   if (!deps.active(target.projectId)) return true
+  // State application owns the project-scoped stores used by the callbacks.
+  // A cold reactivation can acknowledge before that state arrives; waiting for
+  // the state transition prevents the previous project's store from handling
+  // this target. restoreProjectTarget applies the persisted target afterward.
+  if (!deps.applied(target.projectId)) return true
   // Scope by project like the session branch: a selection ack must never act on
   // another project's data if it lands before that project's state push.
   if (target.kind === "local") deps.local(target.projectId)
@@ -28,11 +33,9 @@ export function applyProjectSelection(
     const session = deps.managed(target.projectId).find((item) => item.id === target.sessionId)
     if (session?.worktreeId) deps.managedSession(session.worktreeId, target.sessionId)
     else {
-      // An unassigned session joins the project's local tabs, mirroring what
-      // selecting it from the legacy sidebar does, before it becomes current.
-      deps.openTab(target.sessionId)
-      deps.local(target.projectId)
-      deps.session(target.sessionId)
+      // An unassigned session joins the project's local tabs before it becomes
+      // current, replacing any temporary New Session draft.
+      deps.focusLocal(target.sessionId)
     }
   }
   return true

@@ -92,6 +92,7 @@ class ModePicker : PickerButton() {
             }
             .createPopup()
 
+        restoreFocusOnPick(popup)
         popup.show(PopupShowOptions.aboveComponent(this))
     }
 }

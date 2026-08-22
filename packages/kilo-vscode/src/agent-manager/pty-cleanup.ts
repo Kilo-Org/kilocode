@@ -1,4 +1,6 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { ScriptTerminalManager } from "./ScriptTerminalManager"
+import type { TerminalRouter } from "./terminal-routing"
 
 export async function removePtys(
   getClient: (directory: string) => Promise<KiloClient>,
@@ -17,4 +19,30 @@ export async function removePtys(
     }
   }
   if (failed.length > 0) throw new AggregateError(failed, `Failed to remove PTYs in ${directory}`)
+}
+
+export async function acquirePtyCleanup(input: {
+  directory: string
+  terminals: TerminalRouter
+  scripts: ScriptTerminalManager
+  getClient: (directory: string) => Promise<KiloClient>
+}) {
+  const releases = await Promise.all([
+    input.terminals.blockDirectory(input.directory),
+    input.scripts.blockDirectory(input.directory),
+  ])
+  try {
+    await input.terminals.closeDirectory(input.directory)
+    await input.scripts.closeDirectory(input.directory)
+    await removePtys(input.getClient, input.directory)
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      for (const release of releases) release()
+    }
+  } catch (error) {
+    for (const release of releases) release()
+    throw error
+  }
 }

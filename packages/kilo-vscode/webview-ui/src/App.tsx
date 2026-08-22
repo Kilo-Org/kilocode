@@ -14,6 +14,10 @@ import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
 import { SidebarTopBar } from "./components/chat/SidebarTopBar"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
+import { useWorktreeMode } from "./context/worktree-mode"
+import { useDiffStyle } from "./context/diff-style"
+import { dispatchAgentManagerEditPreview } from "./utils/agent-manager-events"
+import type { PermissionFileDiff } from "./types/messages"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
 // that shows child session parts inline in the VS Code sidebar.
@@ -51,6 +55,8 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   const vscode = useVSCode()
   const prov = useProvider()
   const server = useServer()
+  const worktree = useWorktreeMode()
+  const diffStyle = useDiffStyle()
 
   // Memos for fields that change infrequently (not per-token) — cheap and
   // avoids allocating a fresh array/object on every consumer read.
@@ -129,8 +135,16 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column, sessionID })
   }
 
-  const openDiff = (diff: { file: string; patch?: string; additions: number; deletions: number }) => {
-    vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: "split" })
+  const openDiff = (diff: PermissionFileDiff) => {
+    if (worktree) {
+      dispatchAgentManagerEditPreview({
+        diff,
+        sessionID: session.currentSessionID(),
+        initialDiffStyle: diffStyle?.style() ?? "unified",
+      })
+      return
+    }
+    vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: diffStyle?.style() ?? "unified" })
   }
 
   const openUrl = (url: string) => {
@@ -370,8 +384,13 @@ const AppContent: Component = () => {
             <Match when={currentView() === "profile"}>
               <ProfileView
                 profileData={server.profileData()}
+                providerUsage={server.providerUsage()}
+                providerUsageLoading={server.providerUsageLoading()}
+                providerUsageError={server.providerUsageError()}
                 deviceAuth={server.deviceAuth()}
                 onLogin={server.startLogin}
+                onRequestProviderUsage={server.requestProviderUsage}
+                onRefreshProviderUsage={server.refreshProviderUsage}
               />
             </Match>
             <Match when={currentView() === "settings"}>

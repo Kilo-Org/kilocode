@@ -151,6 +151,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Vrati datoteku",
   "agentManager.diff.revertSuccess": "Datoteka vraćena",
   "agentManager.diff.revertError": "Vraćanje neuspješno",
+  "agentManager.editPreview.title": "Pregled uređivanja",
+  "agentManager.editPreview.close": "Zatvori pregled uređivanja",
+  "agentManager.editPreview.openInPanel": "Prikaži izmjene u panelu",
   "agentManager.diff.applyBranchOnly":
     "Primijeni radi samo s kompletnim diffom grane. Prebacite se na opseg Branch da biste primijenili.",
   "agentManager.open.button": "Otvori",

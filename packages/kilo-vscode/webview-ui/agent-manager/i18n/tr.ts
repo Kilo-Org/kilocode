@@ -158,6 +158,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Dosyayı geri al",
   "agentManager.diff.revertSuccess": "Dosya geri alındı",
   "agentManager.diff.revertError": "Geri alma başarısız",
+  "agentManager.editPreview.title": "Düzenleme önizlemesi",
+  "agentManager.editPreview.close": "Düzenleme önizlemesini kapat",
+  "agentManager.editPreview.openInPanel": "Değişiklikleri panelde görüntüle",
   "agentManager.diff.applyBranchOnly":
     "Uygula yalnızca tam Branch diff'inde çalışır. Uygulamak için Branch kapsamına geçin.",
   "agentManager.open.button": "Aç",

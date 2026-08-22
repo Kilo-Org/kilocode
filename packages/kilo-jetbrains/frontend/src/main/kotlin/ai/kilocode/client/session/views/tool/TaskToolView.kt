@@ -5,15 +5,22 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.SessionCodeScroll
+import ai.kilocode.client.session.ui.popup.HeaderPopupBody
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
+import ai.kilocode.client.session.views.base.HeaderOpenAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -22,6 +29,7 @@ import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.Rectangle
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
@@ -31,9 +39,10 @@ import kotlin.math.abs
 class TaskToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
+    private val onOpenSubagent: ((String, String) -> Unit)? = null,
     private val parts: ToolParts = toolParts(tool),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
-) : AbstractSessionPartView(parts.header, { TaskBody(parts.glyph).scroll }, { footer }), UiDataProvider, ApprovalReasonTarget {
+) : AbstractSessionPartView(parts.header, { TaskBody(parts.glyph).scroll }, { footer }), UiDataProvider, ApprovalReasonTarget, SessionCopyTarget {
 
     override val contentId: String = tool.id
 
@@ -42,15 +51,33 @@ class TaskToolView(
     private val rows = LinkedHashMap<String, Row>()
     private var following = false
     private var collapsed = false
+    private var popup: HeaderPopupBody? = null
+    // Same hover open-in-editor affordance as the edit/patch and modified-files cards.
+    private val open = HeaderOpenAction(
+        SessionViewIcons.openDiff,
+        KiloBundle.message("session.part.tool.openSubagent"),
+        ::openSubagent,
+    )
 
     init {
+        // Mirror the edit/patch cards: move the summary and the open action into the non-fit left
+        // group so the anchor always reserves its width right after the text. Left in the fill slot
+        // (a fitHorizontal stack), a long summary would clip the trailing anchor to zero width and
+        // the hover open control could fail to appear.
+        parts.header.left(parts.sub, open.anchor)
         applyStyle(style)
         sync()
         if (item.childTools.isNotEmpty()) expand()
     }
 
+    override val copyEligible: Boolean get() = item.childSessionId != null && onOpenSubagent != null
+    override val copyAnchor: JComponent get() = open.anchor
+    override val copyToolbar: JComponent get() = open.button
+
+    override fun copyText(): String? = null
+
     override fun uiDataSnapshot(sink: DataSink) {
-        selection?.provideCopy(sink) { copyText() }
+        selection?.provideCopy(sink) { copyDump() }
     }
 
     @RequiresEdt
@@ -64,7 +91,10 @@ class TaskToolView(
         changed = syncApprovalReason(approvalReasonsVisible()) || changed
         if (content.childTools.isNotEmpty() && !collapsed) changed = expand() || changed
         followTail(follow || fresh)
-        if (changed) refresh()
+        if (changed) {
+            refresh()
+            refreshPopup()
+        }
     }
 
     @RequiresEdt
@@ -134,6 +164,12 @@ class TaskToolView(
         return changed
     }
 
+    private fun openSubagent() {
+        val id = item.childSessionId ?: return
+        val title = listOf(agentTitle(item), summary(item)).filter { it.isNotBlank() }.joinToString(" - ")
+        onOpenSubagent?.invoke(id, title)
+    }
+
     private fun syncRows(): Boolean {
         if (!hasBody()) return false
         val body = taskBody()
@@ -159,8 +195,63 @@ class TaskToolView(
         if (changed) {
             body.rows.revalidate()
             body.rows.repaint()
+            body.revalidate()
+            body.repaint()
         }
         return changed
+    }
+
+    /**
+     * Collapsed-card hover preview. Unlike the edit/patch popups, which build fresh snapshot content,
+     * this hosts the *live* [TaskBodyScroll] — the same instance the in-place expanded card uses — so
+     * streaming child tools keep updating inside the popup while the card stays collapsed.
+     */
+    @RequiresEdt
+    override fun headerPopup(): HeaderPopupRequest? =
+        popup("tool", "task", item.childTools.isNotEmpty()) { taskPopupBody() }
+
+    @RequiresEdt
+    private fun taskPopupBody(): HeaderPopupBody {
+        val scroll = taskBody()
+        syncRows()
+        val owner = Disposer.newDisposable("Task popup body")
+        // The live body is only reparented into the popup, never rebuilt. On hide, detach it so it
+        // returns to a reusable state — unless the card already reclaimed it by expanding — and never
+        // dispose the shared component itself.
+        val body = HeaderPopupBody(
+            scroll,
+            owner,
+            SessionUiStyle.Colors.codeBlockBackground(),
+            SessionUiStyle.View.Popup.WIDE_MAX_WIDTH,
+            // Fixed, bounded box so streaming child tools scroll instead of resizing the balloon:
+            // a 60-char floor width, the shared height cap, and both scrollbars.
+            minWidth = scroll.getFontMetrics(style.smallEditorFont).charWidth('m') * POPUP_MIN_CHARS,
+            fixedHeight = true,
+            horizontal = true,
+        )
+        popup = body
+        Disposer.register(owner, Disposable {
+            if (popup === body) popup = null
+            if (!isExpanded()) detachBody(scroll)
+        })
+        return body
+    }
+
+    // The popup hosts the live body, so parent-view updates just revalidate it for the scrollbars to
+    // track the new content height; the balloon keeps its bounded size instead of resizing.
+    @RequiresEdt
+    private fun refreshPopup() {
+        val body = popup ?: return
+        body.component.revalidate()
+        body.component.repaint()
+    }
+
+    @RequiresEdt
+    private fun detachBody(scroll: TaskBodyScroll) {
+        val parent = scroll.parent ?: return
+        parent.remove(scroll)
+        parent.revalidate()
+        parent.repaint()
     }
 
     private fun taskBody() = bodyComponent() as TaskBodyScroll
@@ -216,7 +307,7 @@ class TaskToolView(
         return maxOf(0, view.height - scroll.viewport.extentSize.height)
     }
 
-    private fun copyText(): String = buildString {
+    private fun copyDump(): String = buildString {
         append(agentTitle(item))
         val desc = item.input["description"].orEmpty()
         if (desc.isNotBlank()) append(" - ").append(desc)
@@ -267,6 +358,7 @@ class TaskToolView(
     override fun dumpLabel() = "TaskToolView#$contentId(${labelText()})"
 
     companion object {
+        private const val POPUP_MIN_CHARS = 60
         fun canRender(content: Tool): Boolean = content.name == "task"
     }
 }

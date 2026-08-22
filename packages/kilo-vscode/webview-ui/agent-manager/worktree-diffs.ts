@@ -29,7 +29,10 @@ export function wireDiffId(id: string) {
   return { sessionId: ctx, scope, diffSessionId: sessionId }
 }
 
-export function createWorktreeDiffs(vscode: ReturnType<typeof useVSCode>) {
+export function createWorktreeDiffs(
+  vscode: ReturnType<typeof useVSCode>,
+  project: () => string | undefined = () => undefined,
+) {
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
   const [diffLoading, setDiffLoading] = createSignal(false)
   const [diffNotices, setDiffNotices] = createSignal<Record<string, string | undefined>>({})
@@ -65,7 +68,7 @@ export function createWorktreeDiffs(vscode: ReturnType<typeof useVSCode>) {
   const requestDiffFile = (id: string, file: string) => {
     if (diffFileLoading()[id]?.[file]) return
     setDiffFilePending(id, file, true)
-    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", file, ...wireDiffId(id) })
+    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", projectId: project(), file, ...wireDiffId(id) })
   }
 
   /** Files the backend flagged as stale in a merged update need a fresh fetch. */
@@ -74,7 +77,12 @@ export function createWorktreeDiffs(vscode: ReturnType<typeof useVSCode>) {
     for (const file of files) {
       if (loading[file]) continue
       setDiffFilePending(id, file, true)
-      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", file, ...wireDiffId(id) })
+      vscode.postMessage({
+        type: "agentManager.requestWorktreeDiffFile",
+        projectId: project(),
+        file,
+        ...wireDiffId(id),
+      })
     }
   }
 
