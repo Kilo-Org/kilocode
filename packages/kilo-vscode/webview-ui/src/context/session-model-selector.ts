@@ -1,24 +1,29 @@
 import type { ModelSelection } from "../types/messages"
+import type { ModelSelectionScope } from "./session-model-store"
 
 type Deps = {
   current: () => string | undefined
   agent: (session?: string) => string
   selected: (session?: string) => ModelSelection | null
   variant: (session?: string) => string | undefined
-  apply: (agent: string, selection: ModelSelection, session?: string) => void
+  apply: (agent: string, selection: ModelSelection, session?: string, scope?: ModelSelectionScope) => void
   set: (session: string, selection: ModelSelection) => void
   carry: (selection: ModelSelection, value: string | undefined, agent: string, session?: string) => void
   hide: (session: string) => void
 }
 
+export function modelSelectionScope(inAgentManager: boolean): ModelSelectionScope {
+  return inAgentManager ? "session" : "global"
+}
+
 export function createModelSelector(deps: Deps) {
-  const select = (providerID: string, modelID: string, sessionID?: string) => {
+  const select = (providerID: string, modelID: string, sessionID?: string, scope?: ModelSelectionScope) => {
     const session = sessionID ?? deps.current()
     const agent = deps.agent(session)
     const current = deps.selected(session)
     const value = current ? deps.variant(session) : undefined
     const selection = { providerID, modelID }
-    deps.apply(agent, selection, session)
+    deps.apply(agent, selection, session, scope)
     deps.carry(selection, value, agent, session)
     if (session) deps.hide(session)
   }

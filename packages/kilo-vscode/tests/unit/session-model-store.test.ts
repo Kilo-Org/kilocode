@@ -166,12 +166,26 @@ describe("per-mode model memory", () => {
     expect(getAgentModel(store, configured, "code", true)).toEqual(claude)
   })
 
-  it("applyModel in a session writes only to sessionOverrides", () => {
+  it("global session picks update per-mode memory and the active session", () => {
     const store = emptyStore()
-    const result = applyModel(store, "code", claude, "session-a")
+    const result = applyModel(store, "code", claude, "session-a", "global")
+
+    expect(result.sessionOverrides["session-a"]).toEqual(claude)
+    expect(result.modelSelections["code"]).toEqual(claude)
+    expect(result.persistModelSelection).toEqual({
+      agent: "code",
+      providerID: "anthropic",
+      modelID: "claude-sonnet-4",
+    })
+  })
+
+  it("session-scoped picks do not update per-mode memory", () => {
+    const store = emptyStore()
+    const result = applyModel(store, "code", claude, "session-a", "session")
 
     expect(result.sessionOverrides["session-a"]).toEqual(claude)
     expect(result.modelSelections["code"]).toBeUndefined()
+    expect(result.persistModelSelection).toBeUndefined()
   })
 
   it("switching modes falls back to default after session override is cleared", () => {
