@@ -71,13 +71,7 @@ export class VsCodeIde implements IDE {
   }
 
   async fileExists(fileUri: string): Promise<boolean> {
-    try {
-      await stat(vscode.Uri.file(fileUri))
-      return true
-    } catch {
-      console.error(`File does not exist: ${fileUri}`)
-      return false
-    }
+    return (await stat(vscode.Uri.file(fileUri))) !== null
   }
 
   async writeFile(path: string, contents: string): Promise<void> {
@@ -85,13 +79,12 @@ export class VsCodeIde implements IDE {
   }
 
   async saveFile(fileUri: string): Promise<void> {
-    console.log(`Saving file: ${fileUri}`)
     const uri = vscode.Uri.parse(fileUri)
-    vscode.window.visibleTextEditors.forEach(async (editor) => {
-      if (areEqualURIs(uri, editor.document.uri)) {
-        await editor.document.save()
-      }
-    })
+    const savePromises = vscode.window.visibleTextEditors
+      .filter((editor) => areEqualURIs(uri, editor.document.uri))
+      .map((editor) => editor.document.save())
+
+    await Promise.all(savePromises)
   }
 
   async readFile(fileUri: string): Promise<string> {
