@@ -28,6 +28,9 @@ export function staticEnvLines(ctx?: EditorContext): string[] {
  * These change frequently (user switches files/tabs) and belong in the
  * user message so the model always has fresh context.
  * Always includes at least the current timestamp.
+ * The leading blank lines separate the block from the user's own text when
+ * the block is appended as an adjacent content part, so models do not treat
+ * it as a continuation of the user's content (kilocode#13110).
  */
 function timestamp(): string {
   const now = new Date()
@@ -64,5 +67,5 @@ export function environmentDetails(ctx?: EditorContext): string {
       lines.push(`  ${f}`)
     }
   }
-  return ["<environment_details>", ...lines, "</environment_details>"].join("\n")
+  return ["", "", "<environment_details>", ...lines, "</environment_details>"].join("\n")
 }

@@ -436,7 +436,7 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
           typeof part === "object" &&
           part.type !== "tool-approval-request" &&
           part.type !== "tool-approval-response" &&
-          !(part.type === "text" && part.text.startsWith("<environment_details>"))
+          !(part.type === "text" && part.text.trimStart().startsWith("<environment_details>"))
         ) {
           targetIndex = i
           break
