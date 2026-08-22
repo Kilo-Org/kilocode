@@ -1,6 +1,7 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { NodeHttpServer } from "@effect/platform-node"
 import { Database } from "@opencode-ai/core/database/database"
+import { Credential } from "@opencode-ai/core/credential"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
@@ -30,6 +31,7 @@ const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
 const session = Layer.mock(Session.Service)({})
 const storage = Layer.mock(Storage.Service)({})
+const credentials = Layer.mock(Credential.Service)({})
 const passthroughAuthorization = Layer.succeed(
   Authorization,
   Authorization.of((effect) => effect),
@@ -55,6 +57,7 @@ const layer = HttpRouter.serve(
       auth,
       store,
       cache,
+      credentials,
       session,
       AppNodeBuilder.build(EventV2Bridge.node),
     ]),
