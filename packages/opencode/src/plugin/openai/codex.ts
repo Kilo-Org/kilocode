@@ -7,6 +7,7 @@ import os from "os"
 import { setTimeout as sleep } from "node:timers/promises"
 import { createServer } from "http"
 import { refreshCodexAuth } from "@/kilocode/provider/codex-refresh" // kilocode_change
+import { sanitize } from "@/kilocode/plugin/openai/codex" // kilocode_change
 import { OpenAIWebSocketPool } from "./ws-pool"
 
 const log = Log.create({ service: "plugin.codex" }) // kilocode_change
@@ -529,7 +530,12 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
 
             const requestInit = {
               ...init,
-              body: init?.body,
+              // kilocode_change start
+              body:
+                parsed.pathname.includes("/v1/responses") || parsed.pathname.includes("/chat/completions")
+                  ? sanitize(init?.body)
+                  : init?.body,
+              // kilocode_change end
               headers,
             }
             if (websocketFetch && parsed.pathname.endsWith("/responses")) return websocketFetch(url, requestInit)
