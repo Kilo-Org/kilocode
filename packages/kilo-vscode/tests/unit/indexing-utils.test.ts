@@ -3,6 +3,7 @@ import {
   applyIndexingStatusMessage,
   formatIndexingLabel,
   indexingButtonVisible,
+  indexingTabVisible,
   indexingTone,
 } from "../../webview-ui/src/context/indexing-utils"
 import { mapSSEEventToWebviewMessage } from "../../src/kilo-provider-utils"
@@ -52,6 +53,46 @@ describe("indexing button visibility", () => {
     expect(indexingButtonVisible(true, false, { indexing: { enabled: false } }, { indexing: { enabled: true } })).toBe(
       true,
     )
+  })
+})
+
+describe("indexing tab visibility", () => {
+  it("hides the tab when the indexing feature is unavailable", () => {
+    expect(
+      indexingTabVisible(
+        false,
+        { indexing: { enabled: true } },
+        { indexing: { enabled: true } },
+        { indexing: { enabled: true } },
+      ),
+    ).toBe(false)
+  })
+
+  it("hides the tab when indexing is off in every scope", () => {
+    expect(indexingTabVisible(true, {}, {}, {})).toBe(false)
+    expect(indexingTabVisible(true, { indexing: { enabled: false } }, { indexing: { enabled: false } }, {})).toBe(false)
+  })
+
+  it("shows the tab when the merged config has indexing enabled", () => {
+    expect(indexingTabVisible(true, { indexing: { enabled: true } }, {}, {})).toBe(true)
+    expect(indexingTabVisible(true, { indexing: { enabled: true } }, { indexing: { enabled: false } }, {})).toBe(true)
+  })
+
+  it("shows the tab when the global config has indexing enabled", () => {
+    expect(indexingTabVisible(true, {}, { indexing: { enabled: true } }, {})).toBe(true)
+    expect(indexingTabVisible(true, { indexing: { enabled: false } }, { indexing: { enabled: true } }, {})).toBe(true)
+  })
+
+  it("shows the tab when the project config has indexing enabled", () => {
+    expect(indexingTabVisible(true, {}, {}, { indexing: { enabled: true } })).toBe(true)
+    expect(
+      indexingTabVisible(
+        true,
+        { indexing: { enabled: false } },
+        { indexing: { enabled: false } },
+        { indexing: { enabled: true } },
+      ),
+    ).toBe(true)
   })
 })
 
