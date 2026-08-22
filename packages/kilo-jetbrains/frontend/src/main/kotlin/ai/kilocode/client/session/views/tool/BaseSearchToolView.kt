@@ -20,7 +20,8 @@ abstract class BaseSearchToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts,
     private val repo: String? = null,
-) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }) {
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), ApprovalReasonTarget {
 
     override val contentId: String = tool.id
 
@@ -52,7 +53,7 @@ abstract class BaseSearchToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight()
+        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight() + footerHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -62,6 +63,7 @@ abstract class BaseSearchToolView(
         item = content
         var changed = sync()
         changed = syncBody() || changed
+        changed = syncApprovalReason(approvalReasonsVisible()) || changed
         if (changed) refresh()
     }
 
@@ -124,7 +126,15 @@ abstract class BaseSearchToolView(
         parts.targets.forEach { changed = setFont(it, style.regularFont) || changed }
         changed = setFont(parts.state, style.smallEditorFont) || changed
         changed = applyBodyStyle() || changed
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     private fun sync(): Boolean {
@@ -145,6 +155,7 @@ abstract class BaseSearchToolView(
             body.foreground = bodyColor()
             changed = true
         }
+        changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
     }
 

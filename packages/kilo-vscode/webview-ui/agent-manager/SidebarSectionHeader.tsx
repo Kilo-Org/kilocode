@@ -5,6 +5,7 @@ interface Props {
   label: JSX.Element
   expanded?: boolean
   onToggle?: () => void
+  onClick?: () => void
   count?: JSX.Element
   actions?: JSX.Element
   class?: string
@@ -20,7 +21,7 @@ export const SidebarSectionHeader: Component<Props> = (props) => {
       class={`am-sidebar-header${props.onToggle ? " am-sidebar-header-toggleable" : ""}${props.class ? ` ${props.class}` : ""}`}
       title={props.title}
       onClick={(event) => {
-        if (event.button === 0 && !props.disabled) props.onToggle?.()
+        if (event.button === 0 && !props.disabled) (props.onClick ?? props.onToggle)?.()
       }}
     >
       <div class="am-sidebar-header-main">

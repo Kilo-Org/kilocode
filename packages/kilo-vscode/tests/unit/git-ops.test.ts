@@ -228,26 +228,60 @@ describe("GitOps", () => {
   })
 
   describe("resolveDefaultBranch", () => {
-    it("returns <remote>/HEAD symbolic ref", async () => {
+    it("uses the remote's advertised HEAD instead of stale local metadata", async () => {
+      const commands: string[][] = []
       const git = ops(async (args) => {
+        commands.push(args)
         // resolveRemote: upstream is configured
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "upstream/main"
-        // symbolic-ref for upstream/HEAD
-        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/upstream/HEAD") return "upstream/develop"
+        if (args[0] === "ls-remote") return "ref: refs/heads/develop\tHEAD\nabc123\tHEAD"
+        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/upstream/HEAD") return "upstream/master"
         return ""
       })
       expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("upstream/develop")
+      expect(commands.some((args) => args[0] === "symbolic-ref")).toBe(false)
     })
 
-    it("falls back to origin/HEAD when remote is origin", async () => {
+    it("falls back to local origin/HEAD when the remote is unavailable", async () => {
       const git = ops(async (args) => {
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
         if (args[0] === "config") throw new Error("no config")
         if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") throw new Error("offline")
         if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/origin/HEAD") return "origin/main"
         return ""
       })
       expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+    })
+
+    it("keeps master when the remote still advertises master", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") return "ref: refs/heads/master\tHEAD\nabc123\tHEAD"
+        return ""
+      })
+
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/master")
+    })
+
+    it("caches the advertised remote HEAD", async () => {
+      let calls = 0
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") {
+          calls++
+          return "ref: refs/heads/main\tHEAD\nabc123\tHEAD"
+        }
+        return ""
+      })
+
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+      expect(calls).toBe(1)
     })
 
     it("returns undefined when <remote>/HEAD is not set", async () => {
@@ -255,6 +289,7 @@ describe("GitOps", () => {
         if (args[0] === "rev-parse") throw new Error("no upstream")
         if (args[0] === "config") throw new Error("no config")
         if (args[0] === "branch") return ""
+        if (args[0] === "ls-remote") throw new Error("no remote")
         if (args[0] === "symbolic-ref") throw new Error("no symbolic ref")
         return ""
       })

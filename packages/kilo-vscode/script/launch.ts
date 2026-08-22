@@ -240,6 +240,7 @@ async function compile() {
     return
   }
 
+  await ensureDependencies()
   console.log("[launch] Building extension...")
   await $`bun run build:launch`.cwd(root).env(cleanEnv(process.env))
   console.log("[launch] Build complete")
@@ -252,6 +253,26 @@ function cleanEnv(input: NodeJS.ProcessEnv) {
     if (value !== undefined) env[key] = value.trim()
   }
   return env
+}
+
+async function ensureDependencies() {
+  const required = [
+    { name: "esbuild", dir: root },
+    { name: "@opencode-ai/core/npm", dir: join(repo, "packages", "opencode") },
+    { name: "@hey-api/openapi-ts", dir: join(repo, "packages", "sdk", "js") },
+  ]
+  const ready = required.every((item) => {
+    try {
+      Bun.resolveSync(item.name, item.dir)
+      return true
+    } catch {
+      return false
+    }
+  })
+  if (ready) return
+
+  console.log("[launch] Worktree dependencies are missing, installing...")
+  await $`bun install --frozen-lockfile`.cwd(repo).env(cleanEnv(process.env))
 }
 
 // ---------------------------------------------------------------------------

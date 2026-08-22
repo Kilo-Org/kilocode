@@ -24,6 +24,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.codeInsight.completion.CodeCompletionHandlerBase
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.LookupEx
+import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.codeInsight.lookup.LookupManagerListener
 import com.intellij.codeInsight.lookup.LookupPositionStrategy
 import com.intellij.codeInsight.lookup.LookupPresentation
@@ -71,6 +72,7 @@ import com.intellij.util.messages.MessageBusConnection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -160,6 +162,7 @@ class PromptPanel(
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
     private var lookupBus: MessageBusConnection? = null
+    private var commandJob: Job? = null
     private var completionAction: AnAction? = null
     private var completionTarget: JComponent? = null
     private var mentionCaret = false
@@ -277,6 +280,9 @@ class PromptPanel(
         applyStyle(style)
         syncBorder()
         selection?.register(editor)
+        mode.onPickClose = ::focusLater
+        model.onPickClose = ::focusLater
+        reasoning.onPickClose = ::focusLater
         editor.text = ""
         editor.addDocumentListener(object : DocumentListener {
             override fun documentChanged(e: DocumentEvent) {
@@ -603,11 +609,19 @@ class PromptPanel(
         editor.requestFocusInWindow()
     }
 
+    private fun focusLater() {
+        ApplicationManager.getApplication().invokeLater {
+            if (project.isDisposed || !isShowing) return@invokeLater
+            focus()
+        }
+    }
+
     override fun addNotify() {
         super.addNotify()
         bindRoot()
         bindKeymap()
         bindLookup()
+        bindCommandRefresh()
     }
 
     override fun removeNotify() {
@@ -617,6 +631,8 @@ class PromptPanel(
         bus = null
         lookupBus?.disconnect()
         lookupBus = null
+        commandJob?.cancel()
+        commandJob = null
         uninstallCompletionShortcut()
         super.removeNotify()
     }
@@ -714,15 +730,37 @@ class PromptPanel(
 
     private fun triggerCompletion(e: DocumentEvent) {
         if (project.isDisposed) return
+        val provider = completion ?: return
         val value = e.newFragment.toString()
         if (value.length != 1) return
         val text = editor.text
-        val offset = e.offset + value.length
-        val popup = value == "@" || (value == "/" && text.take(offset).trim() == "/")
-        if (!popup) return
+        val offset = (e.offset + value.length).coerceIn(0, text.length)
+        val initial = value == "@" || (value == "/" && text.take(offset).trim() == "/")
+        val ed = editor.getEditor(false)
+        val open = ed?.let { LookupManager.getActiveLookup(it) } != null
+        // Reopen when a keystroke lands inside a slash/mention token but the lookup has closed.
+        // Fast typing can drop the platform's completion restart: the @-mention path stays open
+        // because its backend search keeps the completion calculating, while the instant slash
+        // path settles and can disappear. Re-triggering self-heals it via the same manual path.
+        val retry = !initial && !open && provider.completing(text, offset)
+        if (!initial && !retry) return
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
             editor.getEditor(false)?.let(::showCompletion)
+        }
+    }
+
+    @RequiresEdt
+    private fun bindCommandRefresh() {
+        if (completion == null || commandJob != null) return
+        commandJob = completion.watchCommands {
+            ApplicationManager.getApplication().invokeLater {
+                if (project.isDisposed) return@invokeLater
+                val ed = editor.getEditor(false) ?: return@invokeLater
+                if (LookupManager.getActiveLookup(ed) == null) return@invokeLater
+                if (!completion.completingSlash(ed.document.text, ed.caretModel.offset)) return@invokeLater
+                showCompletion(ed)
+            }
         }
     }
 

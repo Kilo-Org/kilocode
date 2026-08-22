@@ -18,6 +18,40 @@ interface SessionLike {
   id: string
 }
 
+export function rememberSelectionTab(
+  set: (selection: string, tab: string) => void,
+  selection: string | null,
+  tab: string,
+) {
+  if (selection !== null) set(selection === LOCAL ? LOCAL : selection, tab)
+}
+
+export function createTabMemory(opts: {
+  selection: () => string | null
+  tab: () => string | undefined
+  multi: () => boolean
+  applied: () => string | undefined
+  active: () => string | undefined
+  owns: (selection: string) => boolean
+  pending: (id: string) => boolean
+  locals: () => string[]
+  localTab?: (id: string) => boolean
+  set: (selection: string, tab: string) => void
+}) {
+  return () => {
+    const sel = opts.selection()
+    const tab = opts.tab()
+    if (sel === null || !tab) return
+    if (opts.multi() && opts.applied() !== opts.active()) return
+    if (
+      opts.multi() &&
+      !(sel === LOCAL ? (opts.localTab?.(tab) ?? (opts.pending(tab) || opts.locals().includes(tab))) : opts.owns(sel))
+    )
+      return
+    rememberSelectionTab(opts.set, sel, tab)
+  }
+}
+
 export interface SelectionActionDeps<T extends SessionLike> {
   saveTabMemory: () => void
   setReviewActive: (open: boolean) => void
@@ -30,6 +64,7 @@ export interface SelectionActionDeps<T extends SessionLike> {
   nsKey: (sel: string) => string
   activateTerminal: (id: string) => void
   setActivePendingId: (id: string | undefined) => void
+  focusLocal: (id: string) => void
   selectSession: (id: string) => void
   clearSession: () => void
   resetSession: () => void
@@ -85,7 +120,11 @@ export function createSessionRestore<T extends SessionLike>(deps: {
 }
 
 /** Select the Local context: restore its remembered tab or fall back to the first session/draft. */
-export function selectLocalAction<T extends SessionLike>(deps: SelectionActionDeps<T>, locals: T[]): void {
+export function selectLocalAction<T extends SessionLike>(
+  deps: SelectionActionDeps<T>,
+  locals: T[],
+  ids: string[] = [],
+): void {
   deps.saveTabMemory()
   deps.post({ type: "agentManager.requestRepoInfo" })
   const remembered = deps.tabMemory()[LOCAL]
@@ -97,13 +136,21 @@ export function selectLocalAction<T extends SessionLike>(deps: SelectionActionDe
       return
     }
     deps.terms.setActiveId(undefined)
-    const target = remembered ? locals.find((s) => s.id === remembered) : undefined
-    const fallback = target ?? locals[0]
-    if (fallback && !deps.isPending(fallback.id)) {
+    const real = locals.filter((item) => !deps.isPending(item.id))
+    const target = remembered ? real.find((s) => s.id === remembered) : undefined
+    const draft = remembered && deps.isPending(remembered) ? remembered : undefined
+    const fallback =
+      target?.id ??
+      draft ??
+      (remembered && ids.includes(remembered) ? remembered : undefined) ??
+      real[0]?.id ??
+      ids[0] ??
+      locals.find((item) => deps.isPending(item.id))?.id
+    if (fallback && !deps.isPending(fallback)) {
       deps.setActivePendingId(undefined)
-      deps.selectSession(fallback.id)
+      deps.focusLocal(fallback)
     } else {
-      deps.setActivePendingId(fallback && deps.isPending(fallback.id) ? fallback.id : undefined)
+      deps.setActivePendingId(fallback && deps.isPending(fallback) ? fallback : undefined)
       deps.clearSession()
       deps.post({ type: "agentManager.showExistingLocalTerminal" })
     }
@@ -116,6 +163,7 @@ export function selectWorktreeAction<T extends SessionLike>(
   deps: SelectionActionDeps<T>,
   worktreeId: string,
   sessions: T[],
+  ids: string[] = [],
 ): void {
   deps.saveTabMemory()
   const remembered = deps.tabMemory()[worktreeId]
@@ -127,8 +175,9 @@ export function selectWorktreeAction<T extends SessionLike>(
     }
     deps.terms.setActiveId(undefined)
     const target = remembered ? sessions.find((s) => s.id === remembered) : undefined
-    const fallback = target ?? sessions[0]
-    if (fallback) deps.selectSession(fallback.id)
+    const fallback =
+      target?.id ?? (remembered && ids.includes(remembered) ? remembered : undefined) ?? sessions[0]?.id ?? ids[0]
+    if (fallback) deps.selectSession(fallback)
     else deps.resetSession()
     deps.setReviewActive(deps.isReviewTab(remembered, worktreeId))
   })

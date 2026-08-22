@@ -91,6 +91,7 @@ describe("ensureSandbox", () => {
 
 describe("Agent Manager sandbox startup", () => {
   const provider = readFileSync(join(__dirname, "..", "..", "src", "agent-manager", "AgentManagerProvider.ts"), "utf8")
+  const discard = readFileSync(join(__dirname, "..", "..", "src", "agent-manager", "discard-worktree.ts"), "utf8")
   const flow = readFileSync(join(__dirname, "..", "..", "src", "agent-manager", "provider-multi-version.ts"), "utf8")
   const dialog = readFileSync(
     join(__dirname, "..", "..", "webview-ui", "agent-manager", "NewWorktreeDialog.tsx"),
@@ -129,7 +130,7 @@ describe("Agent Manager sandbox startup", () => {
 
   test("deletes the fresh branch when sandbox setup rolls back", () => {
     expect(provider).toContain("private async discardWorktree(id: string, dir: string, branch: string")
-    expect(provider).toContain("removeWorktree(dir, branch)")
+    expect(discard).toContain("removeWorktree(dir, branch)")
     expect(flow).toContain("wt.result.path, wt.result.branch, sessionId")
   })
 
