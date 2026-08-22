@@ -61,6 +61,7 @@ export namespace KilocodeConfigOverlay {
     targets: z.object({ global: z.custom<Target>(), project: z.custom<Target>(), active: z.custom<Target>() }),
     fields: z.record(z.string(), Resolved),
     collections: z.record(z.string(), z.array(Resolved)),
+    warnings: z.array(Config.Warning).optional(),
   })
   export type Result = z.infer<typeof Result>
 
@@ -191,8 +192,9 @@ export namespace KilocodeConfigOverlay {
   export async function resolve(input: Input): Promise<Result> {
     // kilocode_change start - project agents untrusted, {file:} confined to the project root; global agents trusted
     const root = input.worktree && input.worktree !== "/" ? input.worktree : input.directory
-    const local = await withAgents(await project(input), await projectDirs(input), false, root)
-    const global = await withAgents(input.global, globalDirs(), true)
+    const warnings: Config.Warning[] = []
+    const local = await withAgents(await project(input), await projectDirs(input), false, warnings, root)
+    const global = await withAgents(input.global, globalDirs(), true, warnings)
     // kilocode_change end
     const [globalTarget, projectTarget] = await Promise.all([
       target({ ...input, scope: "global" }),
@@ -216,6 +218,7 @@ export namespace KilocodeConfigOverlay {
       collections: Object.fromEntries(
         collectionPaths.map((key) => [key, collection(input.scope, input.effective, global, local, key)]),
       ),
+      warnings: warnings.length ? warnings : undefined,
     }
   }
 
@@ -243,16 +246,22 @@ export namespace KilocodeConfigOverlay {
     return [Global.Path.config, path.join(Global.Path.home, ".kilocode"), path.join(Global.Path.home, ".kilo")]
   }
 
-  // kilocode_change start - root confines untrusted agent {file:} reads
-  async function withAgents(input: Config.Info, dirs: string[], trusted: boolean, root?: string): Promise<Config.Info> {
+  // kilocode_change start - root confines untrusted agent {file:} reads; collect warnings
+  async function withAgents(
+    input: Config.Info,
+    dirs: string[],
+    trusted: boolean,
+    warnings: Config.Warning[],
+    root?: string,
+  ): Promise<Config.Info> {
     const [dir, ...rest] = dirs
     if (!dir) return input
-    if (!existsSync(dir)) return withAgents(input, rest, trusted, root)
+    if (!existsSync(dir)) return withAgents(input, rest, trusted, warnings, root)
     const fileScope = trusted || !root ? undefined : { root, source: dir }
-    const agent = await ConfigAgent.load(dir, undefined, trusted, fileScope, fileScope)
-    const mode = await ConfigAgent.loadMode(dir, undefined, trusted, fileScope, fileScope)
+    const agent = await ConfigAgent.load(dir, warnings, trusted, fileScope, fileScope)
+    const mode = await ConfigAgent.loadMode(dir, warnings, trusted, fileScope, fileScope)
     const next = KilocodeConfig.mergeConfig(KilocodeConfig.mergeConfig(input, { agent }), { agent: mode })
-    return withAgents(next, rest, trusted, root)
+    return withAgents(next, rest, trusted, warnings, root)
   }
   // kilocode_change end
 
