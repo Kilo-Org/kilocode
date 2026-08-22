@@ -378,8 +378,10 @@
   font-size: var(--font-size-base);
   line-height: 1.4;
   white-space: pre-wrap;
-  /* Match textarea plaintext bidi behavior for each hard-newline paragraph. */
-  unicode-bidi: plaintext;
+  /* The textarea honors its own dir, so the overlay must too. Using plaintext
+     here would ignore dir and resolve first-strong, drifting the visible text
+     out of alignment with the caret. */
+  unicode-bidi: isolate;
   word-wrap: break-word;
   overflow-x: hidden;
   overflow-y: auto;

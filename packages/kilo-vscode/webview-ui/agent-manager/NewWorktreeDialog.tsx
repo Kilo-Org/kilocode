@@ -14,6 +14,7 @@ import type {
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { DeferredPopover } from "../src/components/shared/DeferredPopover"
@@ -849,7 +850,7 @@ export const NewWorktreeDialog: Component<{
                     onKeyUp={speechUp}
                     onPaste={(e) => imageAttach.handlePaste(e)}
                     rows={3}
-                    dir="auto"
+                    dir={textDirection(prompt())}
                   />
                 </div>
               </div>

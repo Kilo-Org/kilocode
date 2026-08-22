@@ -12,6 +12,7 @@ import { Component, For, Show, createMemo, createSignal, createEffect, on, onMou
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
 import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
@@ -216,7 +217,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 startRename()
               }}
             >
-              <span data-slot="task-header-title-label" dir="auto">
+              <span data-slot="task-header-title-label" dir={textDirection(title())}>
                 {title()}
               </span>
             </span>

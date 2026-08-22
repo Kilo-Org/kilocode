@@ -3,6 +3,7 @@ import { Window } from "happy-dom"
 import path from "node:path"
 import { createMarkedParser } from "../context/marked"
 import { fnv1a } from "../context/marked"
+import { applyTextDirection } from "./text-direction"
 import { update } from "./markdown-stream-highlight"
 
 const root = path.resolve(import.meta.dir, "../..")
@@ -62,6 +63,59 @@ describe("Markdown bidirectional rendering contract", () => {
     const html = proc.stdout.toString()
     expect(html).toContain('data-component="markdown"')
     expect(html).toContain('dir="auto"')
+  })
+
+  test("gives each rendered element its own direction so mixed documents stay readable", async () => {
+    // A finished message is a single block covering the whole document, so a
+    // block-level direction would force these three paragraphs to share one
+    // and flip the English ones. Direction has to land per rendered element.
+    const parser = createMarkedParser({})
+    const html = await Promise.resolve(
+      parser.parse(
+        [
+          "This paragraph is written in English and must stay left to right.",
+          "",
+          "OK باشه من این تابع را عوض میکنم و بعد تست را اجرا میکنم.",
+          "",
+          "Another English paragraph follows the Persian one.",
+        ].join("\n"),
+      ),
+    )
+
+    const win = new Window()
+    const block = win.document.createElement("div")
+    block.innerHTML = html
+    applyTextDirection(block as unknown as Element)
+
+    const rendered = Array.from(block.children).map((el) => [el.getAttribute("dir"), el.textContent.trim()])
+    expect(rendered.length).toBe(3)
+    expect(rendered.map(([dir]) => dir)).toEqual(["ltr", "rtl", "ltr"])
+    expect(rendered[1][1]).toContain("باشه")
+  })
+
+  test("resolves a pending block as a whole while its prose is still bare text", () => {
+    const win = new Window()
+    const block = win.document.createElement("div")
+    // What `fallback()` emits before a parse resolves: escaped source with <br>
+    // separators, so the prose has no element to carry a direction.
+    block.innerHTML = "OK باشه من این تابع را عوض میکنم<br><br>و بعد تست را اجرا میکنم"
+    applyTextDirection(block as unknown as Element)
+
+    expect(block.getAttribute("dir")).toBe("rtl")
+  })
+
+  test("keeps rendered code from voting for the prose direction around it", async () => {
+    const parser = createMarkedParser({})
+    const html = await Promise.resolve(parser.parse("لطفا `handleSubmit` و `validateForm` را صدا بزن"))
+
+    const win = new Window()
+    const block = win.document.createElement("div")
+    block.innerHTML = html
+    applyTextDirection(block as unknown as Element)
+
+    // Two latin identifiers outnumber nothing here: the inline code is skipped
+    // entirely, so only the Persian prose votes.
+    expect(block.children[0].getAttribute("dir")).toBe("rtl")
   })
 
   test("renders code, pre, and math with isolated direction", async () => {
