@@ -142,4 +142,28 @@ describe("model picker options", () => {
     expect(options.map((option) => option.modelID)).toContain(sonnet45.modelID)
     expect(options.map((option) => option.modelID)).toContain(sonnet4.modelID)
   })
+
+  test("keeps custom provider category intact when all its models are in recent (#13123)", () => {
+    const PROXSIS: ModelPickerProvider = {
+      id: "proxsis",
+      name: "Proxsis",
+      models: {
+        "Proxsis-Mimo25": { id: "Proxsis-Mimo25", name: "Proxsis Mimo25" },
+        "Proxsis-Mimo25Pro": { id: "Proxsis-Mimo25Pro", name: "Proxsis Mimo25 Pro" },
+      },
+    }
+
+    const options = buildModelPickerOptions({
+      providers: [PROXSIS],
+      connected: true,
+      showExtra: true,
+      recents: [
+        { providerID: "proxsis", modelID: "Proxsis-Mimo25" },
+        { providerID: "proxsis", modelID: "Proxsis-Mimo25Pro" },
+      ],
+    })
+
+    expect(inCategory(options, "Recent")).toEqual(["Proxsis-Mimo25", "Proxsis-Mimo25Pro"])
+    expect(inCategory(options, "Proxsis")).toEqual(["Proxsis-Mimo25", "Proxsis-Mimo25Pro"])
+  })
 })
