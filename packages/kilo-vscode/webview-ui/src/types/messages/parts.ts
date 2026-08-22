@@ -23,6 +23,7 @@ export interface TextPart extends BasePart {
   type: "text"
   text: string
   synthetic?: boolean
+  ignored?: boolean
   time?: { start: number; end?: number }
   metadata?: Record<string, unknown>
 }

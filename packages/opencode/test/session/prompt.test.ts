@@ -3109,9 +3109,21 @@ it.instance(
       yield* prompt.command({
         sessionID: chat.id,
         command: "review",
-        arguments: "",
+        arguments: "uncommitted focus on tests", // kilocode_change
         agent: "general",
       })
+
+      // kilocode_change start - command-backed child sessions preserve the literal invocation
+      const [child] = yield* sessions.children(chat.id)
+      const messages = child ? yield* sessions.messages({ sessionID: child.id }) : []
+      const user = messages.find((message) => message.info.role === "user")
+      expect(
+        user?.parts.some(
+          (part) => part.type === "text" && part.ignored && part.text === "/review uncommitted focus on tests",
+        ),
+      ).toBe(true)
+      expect(user?.parts.some((part) => part.type === "text" && part.synthetic)).toBe(true)
+      // kilocode_change end
 
       const tagged = trackSpy.mock.calls
         .map((args) => args[0] as Parameters<typeof Telemetry.trackLlmCompletion>[0])
