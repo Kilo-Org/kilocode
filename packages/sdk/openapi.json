@@ -12231,6 +12231,9 @@
                   "mouse": {
                     "type": "boolean"
                   },
+                  "vim": {
+                    "type": "boolean"
+                  },
                   "attention": {
                     "type": "object",
                     "properties": {
@@ -12333,6 +12336,64 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.keybind.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/provider/disabled": {
+      "get": {
+        "tags": ["disabled-providers"],
+        "operationId": "disabledProviders.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Providers hidden by disabled_providers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Provider"
+                  },
+                  "description": "Providers hidden by disabled_providers"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List providers hidden by the disabled_providers config so the settings UI can re-enable them.",
+        "summary": "List disabled providers",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.disabledProviders.list({\n  ...\n})"
           }
         ]
       }
@@ -38527,6 +38588,9 @@
           "mouse": {
             "type": "boolean"
           },
+          "vim": {
+            "type": "boolean"
+          },
           "attention": {
             "type": "object",
             "properties": {
@@ -59033,6 +59097,10 @@
     {
       "name": "config-console",
       "description": "Kilo Console config routes."
+    },
+    {
+      "name": "disabled-providers",
+      "description": "Kilo-only route that exposes providers hidden via disabled_providers."
     },
     {
       "name": "enhance-prompt",

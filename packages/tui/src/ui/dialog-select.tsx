@@ -36,6 +36,9 @@ export interface DialogSelectProps<T> {
   renderFilter?: boolean
   locked?: boolean
   preserveSelection?: boolean
+  scrollbar?: boolean // kilocode_change - allow Kilo dialogs to opt into a visible scrollbar
+  truncateOverflow?: boolean // kilocode_change - render "…" when the title text overflows
+  compactFooter?: boolean // kilocode_change - apply padding/wrapMode tweaks to the footer text
   actions?: DialogSelectAction<T>[] // kilocode_change - supports actions without a selected option
   footerHints?: {
     title: string
@@ -632,6 +635,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
             paddingLeft={1}
             paddingRight={1}
             scrollbarOptions={{ visible: false }}
+            verticalScrollbarOptions={{ visible: props.scrollbar ?? false }} // kilocode_change
             scrollAcceleration={scrollAcceleration()}
             ref={(r: ScrollBoxRenderable) => (scroll = r)}
             maxHeight={height()}
@@ -713,6 +717,8 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                               footer={flatten() ? (option.category ?? option.footer) : option.footer}
                               titleWidth={option.titleWidth}
                               truncateTitle={option.truncateTitle}
+                              truncateOverflow={props.truncateOverflow} // kilocode_change
+                              compactFooter={props.compactFooter} // kilocode_change
                               description={option.description !== category ? option.description : undefined}
                               active={active()}
                               current={current()}
@@ -764,6 +770,8 @@ function Option(props: {
   footer?: JSX.Element | string
   titleWidth?: number
   truncateTitle?: boolean | "left"
+  truncateOverflow?: boolean // kilocode_change - opt-in ellipsis for long titles
+  compactFooter?: boolean // kilocode_change - opt-in padding/wrapMode tweaks to footer text
   gutter?: () => JSX.Element
   onMouseOver?: () => void
 }) {
@@ -795,6 +803,7 @@ function Option(props: {
         overflow="hidden"
         wrapMode="none"
         paddingLeft={3}
+        {...(props.truncateOverflow ? { truncate: true } : {})} // kilocode_change - opt-in ellipsis for long titles
       >
         {props.titleView ??
           (props.truncateTitle === false
@@ -807,9 +816,16 @@ function Option(props: {
         </Show>
       </text>
       <Show when={props.footer}>
-        <box flexShrink={0}>
-          <text fg={props.active && !props.muted ? fg : theme.textMuted}>{props.footer}</text>
+        {/* kilocode_change start - opt-in padding/wrapMode tweaks for compact footer rows */}
+        <box flexShrink={0} paddingLeft={props.compactFooter ? 1 : 0} marginRight={props.compactFooter ? 3 : 0}>
+          <text
+            fg={props.active && !props.muted ? fg : theme.textMuted}
+            wrapMode={props.compactFooter ? "none" : undefined}
+          >
+            {props.footer}
+          </text>
         </box>
+        {/* kilocode_change end */}
       </Show>
     </>
   )
