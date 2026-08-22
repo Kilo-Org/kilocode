@@ -36,6 +36,7 @@ const mockTable = {
   remove: mock(),
   createIndex: mock(),
   dropIndex: mock(),
+  optimize: mock().mockResolvedValue(undefined),
   indexes: [],
   columns: [],
   primaryKey: "id",
@@ -100,6 +101,7 @@ const allMocks = [
   mockTable.remove,
   mockTable.createIndex,
   mockTable.dropIndex,
+  mockTable.optimize,
   mockTable.batch,
   mockTable.distanceRange,
   mockDb.openTable,
@@ -132,6 +134,7 @@ function resetAllMocks() {
   mockTable.openTable.mockResolvedValue(undefined)
   mockTable.search.mockReturnThis()
   mockTable.distanceRange.mockReturnThis()
+  mockTable.optimize.mockResolvedValue(undefined)
   mockDb.openTable.mockResolvedValue(mockTable)
   mockDb.createTable.mockResolvedValue(mockTable)
   mockDb.dropTable.mockResolvedValue(undefined)
@@ -243,6 +246,7 @@ describe("LocalVectorStore", () => {
       store["_getMetadataValue"] = mock().mockResolvedValue("2")
       const result = await store.initialize()
       expect(result).toBe(false)
+      expect(mockTable.optimize).not.toHaveBeenCalled()
     })
 
     test("recreates an index using the legacy payload schema", async () => {
@@ -266,6 +270,20 @@ describe("LocalVectorStore", () => {
       await expect(store.initialize()).rejects.toThrow("metadata unavailable")
       expect(mockDb.dropTable).not.toHaveBeenCalled()
       expect(mockDb.createTable).not.toHaveBeenCalled()
+    })
+
+    test("rebuilds an index whose manifest references a missing data file", async () => {
+      const error = new Error(
+        "Failed to get next batch from stream: LanceError(IO): Object at location metadata.lance/data/missing.lance not found: os error 2",
+      )
+      spyOn(fs, "existsSync").mockReturnValue(true)
+      const remove = spyOn(fs, "rmSync").mockImplementation(() => {})
+      mockDb.tableNames.mockResolvedValueOnce(["vector", "metadata"]).mockResolvedValueOnce([])
+      store["_getStoredVectorSize"] = mock().mockRejectedValue(error)
+
+      expect(await store.initialize()).toBe(true)
+      expect(remove).toHaveBeenCalledWith(store["dbPath"], { recursive: true, force: true })
+      expect(mockDb.createTable).toHaveBeenCalledTimes(2)
     })
 
     test("does not recreate when profile metadata cannot be read", async () => {
@@ -515,6 +533,7 @@ describe("LocalVectorStore", () => {
       mockTable.delete.mockResolvedValue(undefined)
       await expect(store.clearCollection()).resolves.toBeUndefined()
       expect(mockTable.delete).toHaveBeenCalledWith("true")
+      expect(mockTable.optimize).toHaveBeenCalledWith()
     })
 
     test("should warn if metadata table clear fails", async () => {
