@@ -453,6 +453,15 @@ describe("BasicTool export contract (runtime)", () => {
   })
 })
 
+describe("Read tool file link contract (source)", () => {
+  const message = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  it("opens the input file from the custom trigger detail", () => {
+    expect(message).toMatch(/name:\s*"read"[\s\S]*?<ToolTriggerRow[\s\S]*?onClick=/)
+    expect(message).toMatch(/event\.stopPropagation\(\)[\s\S]*?data\.openFile!\(props\.input\.filePath\)/)
+  })
+})
+
 describe("Collapsed deferred tool details contract (source)", () => {
   const basic = fs.readFileSync(BASIC_TOOL_FILE, "utf-8")
   const message = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
