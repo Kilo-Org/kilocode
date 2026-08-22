@@ -665,6 +665,20 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
+    .get("/kilocode/provider-usage", "kilocode.providerUsage.get")
+    .inProject({ git: true })
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
+  http.protected
+    .post("/kilocode/provider-usage/refresh", "kilocode.providerUsage.refresh")
+    .inProject({ git: true })
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
+  http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent.duplicates")
     .inProject({ git: true, init: duplicates })
     .mutating()
