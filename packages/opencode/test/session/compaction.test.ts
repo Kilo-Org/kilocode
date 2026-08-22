@@ -1241,6 +1241,90 @@ describe("session.compaction.process", () => {
     }),
   )
 
+  // kilocode_change start - pre-flight (usage-based) compaction must replay the
+  // pending user turn while preserving media, and must never re-inject an
+  // already-answered prompt; see the replay flag on the CompactionPart schema
+  it.instance(
+    "replays the pending user turn on the replay flag, preserving media",
+    Effect.gen(function* () {
+      const ssn = yield* SessionNs.Service
+      const session = yield* ssn.create({})
+      yield* createUserMessage(session.id, "root")
+      const replay = yield* createUserMessage(session.id, "image")
+      yield* ssn.updatePart({
+        id: PartID.ascending(),
+        messageID: replay.id,
+        sessionID: session.id,
+        type: "file",
+        mime: "image/png",
+        filename: "cat.png",
+        url: "https://example.com/cat.png",
+      })
+      const msg = yield* createUserMessage(session.id, "current")
+      const msgs = yield* ssn.messages({ sessionID: session.id })
+
+      const result = yield* SessionCompaction.use.process({
+        parentID: msg.id,
+        messages: msgs,
+        sessionID: session.id,
+        auto: true,
+        replay: true,
+      })
+
+      const last = (yield* ssn.messages({ sessionID: session.id })).at(-1)
+
+      expect(result).toBe("continue")
+      expect(last?.info.role).toBe("user")
+      // Unlike the provider-overflow path (`overflow: true`), a pre-flight replay
+      // keeps the pending turn's attachments so the model can still see them.
+      expect(last?.parts.some((part) => part.type === "file")).toBe(true)
+      expect(
+        last?.parts.some((part) => part.type === "text" && part.text.includes("Attached image/png: cat.png")),
+      ).toBe(false)
+    }),
+  )
+
+  it.instance(
+    "does not replay an already-answered turn when overflow is false",
+    Effect.gen(function* () {
+      const ssn = yield* SessionNs.Service
+      const session = yield* ssn.create({})
+      yield* createUserMessage(session.id, "root")
+      yield* createUserMessage(session.id, "answered prompt")
+      const msg = yield* createUserMessage(session.id, "current")
+      const msgs = yield* ssn.messages({ sessionID: session.id })
+
+      const result = yield* SessionCompaction.use.process({
+        parentID: msg.id,
+        messages: msgs,
+        sessionID: session.id,
+        auto: true,
+        overflow: false,
+      })
+
+      const last = (yield* ssn.messages({ sessionID: session.id })).at(-1)
+
+      expect(result).toBe("continue")
+      expect(last?.info.role).toBe("user")
+      // The answered prompt must not be re-injected as a fresh user message; the
+      // synthetic continue prompt is the only user message emitted.
+      expect(last?.parts[0]).toMatchObject({
+        type: "text",
+        synthetic: true,
+        metadata: { compaction_continue: true },
+      })
+      if (last?.parts[0]?.type === "text") {
+        expect(last.parts[0].text).toContain("Continue if you have next steps")
+      }
+      expect(
+        (yield* ssn.messages({ sessionID: session.id })).filter(
+          (m) => m.info.role === "user" && m.parts.some((p) => p.type === "text" && p.text === "answered prompt"),
+        ),
+      ).toHaveLength(1)
+    }),
+  )
+  // kilocode_change end
+
   itCompaction.instance(
     "stops quickly when aborted during retry backoff",
     () => {

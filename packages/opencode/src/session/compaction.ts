@@ -157,6 +157,7 @@ export interface Interface {
     sessionID: SessionID
     auto: boolean
     overflow?: boolean
+    replay?: boolean // kilocode_change - replay the pending user turn after compaction
   }) => Effect.Effect<"continue" | "stop">
   readonly create: (input: {
     sessionID: SessionID
@@ -164,6 +165,7 @@ export interface Interface {
     model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
     auto: boolean
     overflow?: boolean
+    replay?: boolean // kilocode_change
   }) => Effect.Effect<void>
 }
 
@@ -324,6 +326,7 @@ const layer = Layer.effect(
       sessionID: SessionID
       auto: boolean
       overflow?: boolean
+      replay?: boolean // kilocode_change
     }) {
       const parent = input.messages.findLast((m) => m.info.id === input.parentID)
       if (!parent || parent.info.role !== "user") {
@@ -339,8 +342,11 @@ const layer = Layer.effect(
             parts: SessionV1.Part[]
           }
         | undefined
-      // kilocode_change start - false is preflight replay; undefined disables replay
-      if (input.overflow !== undefined) {
+      // kilocode_change start - true is preflight replay; undefined disables replay.
+      // `replay` requests the same pending-turn replay without the media stripping
+      // that `overflow` implies, so a usage-based pre-flight compaction preserves
+      // the user's attachments while a provider-rejected payload still strips them.
+      if (input.overflow === true || input.replay === true) {
         const idx = input.messages.findIndex((m) => m.info.id === input.parentID)
         for (let i = idx - 1; i >= 0; i--) {
           const msg = input.messages[i]
@@ -661,6 +667,7 @@ const layer = Layer.effect(
       model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
       auto: boolean
       overflow?: boolean
+      replay?: boolean // kilocode_change
     }) {
       const msg = yield* session.updateMessage({
         id: MessageID.ascending(),
@@ -677,6 +684,7 @@ const layer = Layer.effect(
         type: "compaction",
         auto: input.auto,
         overflow: input.overflow,
+        replay: input.replay, // kilocode_change
       })
       // kilocode_change start - keep auto-compaction markers visible during queued turns
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)

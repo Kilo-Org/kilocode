@@ -254,7 +254,7 @@ const user = Effect.fn("prompt-safety.user")(function* (
 const assistant = Effect.fn("prompt-safety.assistant")(function* (
   sessionID: SessionID,
   parentID: MessageID,
-  input?: { text?: string; summary?: boolean },
+  input?: { text?: string; summary?: boolean; tokens?: MessageV2.Assistant["tokens"] },
 ) {
   const sessions = yield* Session.Service
   const msg = yield* sessions.updateMessage({
@@ -266,7 +266,7 @@ const assistant = Effect.fn("prompt-safety.assistant")(function* (
     agent: "code",
     path: { cwd: "/tmp", root: "/tmp" },
     cost: 0,
-    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    tokens: input?.tokens ?? { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
     modelID: ref.modelID,
     providerID: ref.providerID,
     time: { created: Date.now() },
@@ -361,6 +361,52 @@ describe("SessionPrompt compaction safety", () => {
         }),
       },
     ),
+  )
+
+  it.live("replays the pending turn after pre-turn overflow instead of injecting a continue prompt", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({
+          title: "Pre-turn overflow replay",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+
+        // Prior turn completed but its reported usage exceeds the usable window,
+        // so the next turn's pre-flight compaction must run before the pending
+        // prompt is answered.
+        const old = yield* user(chat.id, "old prompt")
+        yield* assistant(chat.id, old.id, {
+          text: "old answer",
+          tokens: { input: 95_000, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+        })
+        const pending = yield* user(chat.id, "pending request")
+        yield* file(chat.id, pending.id, { mime: "image/png", name: "pending.png", body: "PENDINGIMAGE" })
+        yield* llm.text("summary 1")
+        yield* llm.text("pending answer")
+
+        const result = yield* prompt.loop({ sessionID: chat.id })
+
+        expect(yield* llm.calls).toBe(2)
+        expect(result.parts.some((part) => part.type === "text" && part.text === "pending answer")).toBe(true)
+        const inputs = yield* llm.inputs
+        const body = JSON.stringify(inputs.at(-1)?.messages)
+        // The pending prompt itself is answered — and its attachment survives the
+        // pre-flight replay (unlike the provider-overflow path which strips media).
+        expect(body).toContain("pending request")
+        expect(body).toContain("PENDINGIMAGE")
+        // No synthetic "continue" user message may be injected.
+        const msgs = yield* sessions.messages({ sessionID: chat.id })
+        expect(
+          msgs.flatMap((msg) => msg.parts).some(
+            (part) => part.type === "text" && part.synthetic && part.text.includes("Continue if you have next steps"),
+          ),
+        ).toBe(false)
+      }),
+      { git: true, config: providerCfg },
+    ),
+    30_000,
   )
 
   it.live("trims plain-text summary history before provider request", () =>

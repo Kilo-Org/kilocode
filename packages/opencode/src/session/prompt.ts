@@ -1584,6 +1584,7 @@ export const layer = Layer.effect(
             sessionID,
             auto: task.auto,
             overflow: task.overflow,
+            replay: task.replay, // kilocode_change
           })
           // kilocode_change start - compaction.process only returns "stop" after
           // setting ContextOverflowError on the summary message; surface as turn error
@@ -1616,7 +1617,15 @@ export const layer = Layer.effect(
           }
           compactionAttempts++
           // kilocode_change end
-          yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
+          // kilocode_change - replay the pending user turn after compaction so the
+          // model answers the actual prompt instead of a synthetic continue message
+          yield* compaction.create({
+            sessionID,
+            agent: lastUser.agent,
+            model: lastUser.model,
+            auto: true,
+            replay: true,
+          })
           continue
         }
 
@@ -1838,27 +1847,40 @@ export const layer = Layer.effect(
           // kilocode_change end
           if (result === "compact") {
             // kilocode_change start
-            const guard = KiloSessionPrompt.guardCompactionAttempt({
-              sessionID,
-              attempts: compactionAttempts,
-              closeReasons,
-              message: handle.message,
-            })
-            if (guard.exhausted) {
+            // A completed turn has no pending prompt to resume after compaction.
+            // Compacting now would replay the already-answered prompt (or inject a
+            // synthetic continue message), so persist the terminal finish and defer
+            // compaction to the next turn's pre-flight check instead.
+            const terminal = handle.message.finish && !["tool-calls", "unknown"].includes(handle.message.finish)
+            if (terminal) {
               yield* sessions.updateMessage(handle.message)
-              yield* events.publish(Session.Event.Error, { sessionID, error: guard.error })
-              return "break" as const
+            } else {
+              const guard = KiloSessionPrompt.guardCompactionAttempt({
+                sessionID,
+                attempts: compactionAttempts,
+                closeReasons,
+                message: handle.message,
+              })
+              if (guard.exhausted) {
+                yield* sessions.updateMessage(handle.message)
+                yield* events.publish(Session.Event.Error, { sessionID, error: guard.error })
+                return "break" as const
+              }
+              compactionAttempts++
+              // Replay the pending user turn so the model answers the actual
+              // prompt instead of a synthetic continue message. Media is stripped
+              // only when the provider rejected the oversized payload (i.e. the
+              // turn did not finish a step before the overflow surfaced).
+              yield* compaction.create({
+                sessionID,
+                agent: lastUser.agent,
+                model: lastUser.model,
+                auto: true,
+                replay: true,
+                overflow: !handle.message.finish && handle.compactError?.() !== undefined,
+              })
             }
-            compactionAttempts++
             // kilocode_change end
-            yield* compaction.create({
-              sessionID,
-              agent: lastUser.agent,
-              model: lastUser.model,
-              auto: true,
-              // kilocode_change - preflight compaction replays the pending turn without treating media as provider overflow
-              overflow: !handle.message.finish && handle.compactError?.() !== undefined, // kilocode_change
-            })
           }
           // kilocode_change start — break out so a newer queued prompt can take over
           // instead of starting another LLM step for the now-superseded turn. The

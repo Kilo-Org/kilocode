@@ -197,6 +197,10 @@ export const CompactionPart = Schema.Struct({
   type: Schema.Literal("compaction"),
   auto: Schema.Boolean,
   overflow: Schema.optional(Schema.Boolean),
+  // kilocode_change start - replay the pending user turn after compaction instead
+  // of injecting a synthetic continue prompt; unlike `overflow`, media is preserved
+  replay: Schema.optional(Schema.Boolean),
+  // kilocode_change end
   tail_start_id: Schema.optional(MessageID),
 }).annotate({ identifier: "CompactionPart" })
 export type CompactionPart = Types.DeepMutable<Schema.Schema.Type<typeof CompactionPart>>
