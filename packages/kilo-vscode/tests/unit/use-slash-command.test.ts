@@ -5,7 +5,12 @@ import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/type
 
 function setup(
   sandbox: () => void,
-  options: { enabled?: () => boolean; exclude?: () => Set<string>; include?: Set<string> } = {},
+  options: {
+    enabled?: () => boolean
+    exclude?: () => Set<string>
+    include?: Set<string>
+    includeSources?: Set<"command" | "mcp" | "skill">
+  } = {},
 ) {
   const sent: WebviewMessage[] = []
   const handlers = new Set<(message: ExtensionMessage) => void>()
@@ -22,6 +27,9 @@ function setup(
       { action: sandbox, enabled: options.enabled ?? (() => true) },
       options.exclude,
       options.include,
+      undefined,
+      undefined,
+      options.includeSources,
     ),
   }))
   const fire = (message: ExtensionMessage) => {
@@ -55,6 +63,25 @@ describe("useSlashCommand sandbox action", () => {
 
     ctx.slash.onInput("/models", 7)
     expect(ctx.slash.results().map((command) => command.name)).toEqual(["models"])
+    ctx.dispose()
+  })
+
+  it("keeps skill commands available when the worktree menu restricts built-ins", () => {
+    const ctx = setup(() => {}, {
+      include: new Set(["models", "agents", "variant", "sandbox"]),
+      includeSources: new Set(["skill"]),
+    })
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "project-skill", description: "A relative-path project skill", source: "skill", hints: [] },
+        { name: "project-command", description: "A regular project command", source: "command", hints: [] },
+      ],
+    })
+
+    ctx.slash.onInput("/project", 8)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["project-skill"])
     ctx.dispose()
   })
 

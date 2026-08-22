@@ -59,6 +59,7 @@ export function useSlashCommand(
   include?: Set<string> | Accessor<Set<string>>,
   scope?: string,
   extra?: SlashCommandEntry[],
+  includeSources?: ReadonlySet<NonNullable<SlashCommandInfo["source"]>>,
 ): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
@@ -220,10 +221,13 @@ export function useSlashCommand(
     return include
   }
 
+  const includedBySource = (command: SlashCommandEntry) =>
+    command.source !== undefined && includeSources?.has(command.source)
+
   const client = () => {
     const set = excluded()
     const only = included()
-    return all.filter((c) => !set?.has(c.name) && (!only || only.has(c.name)))
+    return all.filter((c) => !set?.has(c.name) && (!only || only.has(c.name) || includedBySource(c)))
   }
 
   const commands = (): SlashCommandEntry[] => {
@@ -231,7 +235,9 @@ export function useSlashCommand(
     const names = new Set(list.map((c) => c.name))
     const set = excluded()
     const only = included()
-    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name) && (!only || only.has(c.name)))
+    const filtered = server().filter(
+      (c) => !names.has(c.name) && !set?.has(c.name) && (!only || only.has(c.name) || includedBySource(c)),
+    )
     return [...list, ...filtered]
   }
 

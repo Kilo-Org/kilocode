@@ -10,6 +10,7 @@ import type {
   BranchInfo,
   EnhancePromptResultMessage,
   EnhancePromptErrorMessage,
+  SlashCommandInfo,
 } from "../src/types/messages"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -55,6 +56,7 @@ import { ProjectSelect } from "./ProjectSelect"
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
 const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbox", "project"])
+const WORKTREE_PROMPT_COMMAND_SOURCES = new Set<NonNullable<SlashCommandInfo["source"]>>(["skill"])
 const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
 
 type DialogTab = "new" | "import"
@@ -394,6 +396,7 @@ export const NewWorktreeDialog: Component<{
         action: () => setProjectOpen(true),
       },
     ],
+    WORKTREE_PROMPT_COMMAND_SOURCES,
   )
   const onFocusPrompt = () => restorePrompt()
   window.addEventListener("focusPrompt", onFocusPrompt)
