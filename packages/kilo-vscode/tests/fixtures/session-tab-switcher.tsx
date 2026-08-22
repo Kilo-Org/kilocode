@@ -36,9 +36,9 @@ const { render } = await import("solid-js/web")
 const { SessionTabSwitcher } = await import("../../webview-ui/src/components/chat/SessionTabSwitcher")
 
 const rows = [
-  { id: "alpha", title: "Alpha", active: true, busy: false, pending: false },
-  { id: "beta", title: "Beta", active: false, busy: true, pending: false },
-  { id: "gamma", title: "Gamma", active: false, busy: false, pending: false },
+  { id: "alpha", title: "Alpha", active: true, busy: false, input: false, pending: false },
+  { id: "beta", title: "Beta", active: false, busy: true, input: false, pending: false },
+  { id: "gamma", title: "Gamma", active: false, busy: false, input: false, pending: false },
 ]
 const [items, setItems] = createSignal(rows)
 const selected: string[] = []
@@ -70,6 +70,7 @@ const dispose = render(
           closed.push(id)
           setItems((value) => value.filter((item) => item.id !== id))
         }}
+        hover
         portal={false}
       />
     </Show>
@@ -96,6 +97,11 @@ const open = async () => {
     query('[data-slot="list-item"][data-key="alpha"]', "Current tab did not render").getAttribute("data-selected"),
     "true",
     "Current tab was not selected",
+  )
+  assert.equal(
+    document.activeElement,
+    query<HTMLInputElement>('[data-slot="list-search"] input', "Switcher search did not render"),
+    "Click-open did not focus the search input",
   )
 }
 
@@ -185,10 +191,28 @@ async function closeToOne() {
   assert.equal(document.activeElement, target, "Prompt was not focused after the switcher unmounted")
 }
 
+async function hoverDoesNotFocus() {
+  setItems(rows)
+  selected.length = 0
+  closed.length = 0
+  restored.length = 0
+  await settle()
+
+  target.focus()
+  query<HTMLButtonElement>('[aria-label="Show open tabs"]', "Switcher trigger did not render").dispatchEvent(
+    new PointerEvent("pointerenter", { bubbles: true }),
+  )
+  await settle()
+
+  query<HTMLInputElement>('[data-slot="list-search"] input', "Hover-opened switcher did not render")
+  assert.equal(document.activeElement, target, "Hover-open stole focus from the prompt")
+}
+
 await closeFiltered()
 await selectFiltered()
 await enterSelectsFirst()
 await deleteReopened()
 await closeToOne()
+await hoverDoesNotFocus()
 
 dispose()

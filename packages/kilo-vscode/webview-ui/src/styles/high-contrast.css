@@ -12,7 +12,6 @@ body.vscode-high-contrast-light {
   .startup-error-retry,
   .image-attachment-remove,
   .prompt-review-chip-remove,
-  .session-tab-bar .am-tab-close,
   [data-slot="question-progress-nav"],
   [data-slot="question-collapse-toggle"] {
     border: 1px solid var(--vscode-contrastBorder, transparent);

@@ -5,10 +5,24 @@ import { SessionTabSwitcher } from "../components/chat/SessionTabSwitcher"
 import { StoryProviders } from "./StoryProviders"
 
 const rows = [
-  { id: "refactor", title: "Refactor shared search menu styles", active: false, busy: false, pending: false },
-  { id: "current", title: "Run the extension test suite", active: true, busy: true, pending: false },
-  { id: "pending", title: "Untitled session", active: false, busy: false, pending: true },
-  { id: "idle", title: "Review keyboard navigation behavior", active: false, busy: false, pending: false },
+  {
+    id: "refactor",
+    title: "Refactor shared search menu styles",
+    active: false,
+    busy: false,
+    input: false,
+    pending: false,
+  },
+  { id: "current", title: "Run the extension test suite", active: true, busy: true, input: false, pending: false },
+  { id: "pending", title: "Untitled session", active: false, busy: false, input: true, pending: true },
+  {
+    id: "idle",
+    title: "Review keyboard navigation behavior",
+    active: false,
+    busy: false,
+    input: false,
+    pending: false,
+  },
 ]
 
 const noop = () => {}
@@ -36,7 +50,7 @@ export const SwitcherOpen: Story = {
         }}
       >
         <textarea class="sr-only" aria-label="Chat input" data-slot="session-prompt-focus-target" />
-        <div class="session-tab-switcher-wrap">
+        <div data-slot="task-header-session-switcher">
           <SessionTabSwitcher
             items={() => rows}
             labels={{

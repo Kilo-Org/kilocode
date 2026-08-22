@@ -18,7 +18,6 @@ import { PromptInput } from "./PromptInput"
 import { PermissionDock } from "./PermissionDock"
 import { SessionDock } from "./SessionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
-import { SessionTabStrip } from "./SessionTabStrip"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
@@ -27,7 +26,6 @@ import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
-import { showTabStrip } from "../../utils/local-tabs"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
@@ -343,10 +341,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   return (
     <TranscriptSearchProvider>
       <div class="chat-view">
-        <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
-          <SessionTabStrip />
-        </Show>
-        <TaskHeader readonly={props.readonly} />
+        <TaskHeader readonly={props.readonly} sessionSwitcher={isSidebar() && !props.readonly} />
         <div class="chat-messages-wrapper">
           <div class="chat-messages">
             <MessageList

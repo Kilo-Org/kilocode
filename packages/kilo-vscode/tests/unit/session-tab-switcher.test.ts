@@ -45,11 +45,10 @@ describe("SessionTabSwitcher", () => {
 
   it("uses logical properties for RTL layout", async () => {
     const css = await Bun.file(path.join(WEBVIEW, "src/styles/session-tabs.css")).text()
-    const start = css.indexOf(".session-tab-switcher-wrap")
+    const start = css.indexOf('.session-tab-switcher [data-slot="list-item"]')
     const end = css.indexOf("/* Match tab context menus", start)
     const switcher = css.slice(start, end)
 
-    expect(switcher).toContain("border-inline-start")
     expect(switcher).toContain("inset-inline-end")
     expect(switcher).toContain("padding-inline")
     expect(switcher).not.toMatch(/\b(?:left|right|margin-left|margin-right|border-left|border-right)\s*:/)
