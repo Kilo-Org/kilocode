@@ -2887,10 +2887,10 @@ export const SessionProvider: ParentComponent = (props) => {
   )
 
   /**
-   * Per-session **own cost** — reads `store.messages` for per-session
-   * propagated totals and task metadata as a fallback for parent links so each
-   * session's entry excludes the cost already propagated up from its
-   * descendants by the CLI backend.
+   * Per-session **own cost** — uses the authoritative session total as a floor
+   * for the paginated messages currently loaded, then excludes the cost already
+   * propagated up from descendants by the CLI backend. Task metadata provides
+   * fallback parent links for child sessions not yet present in the session list.
    */
   const familyCosts = createMemo<Map<string, number>>(() => {
     const id = currentSessionID()
