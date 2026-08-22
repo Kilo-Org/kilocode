@@ -42,6 +42,7 @@ import javax.swing.SwingUtilities
 class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
+    private val readonly: Boolean = false,
     onOpenBranchDiff: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
@@ -296,7 +297,8 @@ class SessionHeaderPanel(
         setTokens(header.tokens)
         syncTodos(header.todos.items)
 
-        compact.isEnabled = header.canCompact
+        compact.isVisible = !readonly
+        compact.isEnabled = !readonly && header.canCompact
         val appended = timeline.setItems(header.timeline)
         sizeTimeline()
         if (viewport.isVisible != timeline.isVisible) viewport.isVisible = timeline.isVisible

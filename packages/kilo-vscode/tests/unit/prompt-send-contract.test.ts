@@ -358,10 +358,10 @@ describe("PromptInput send origin contract", () => {
 
   it("captures the real or pending tab before asynchronous attachment resolution", () => {
     expect(source).toMatch(/const origin = session\.currentSessionID\(\)[\s\S]*const id = origin \?\? pendingId/)
-    expect(source.indexOf("beginPendingSend(pendingId)")).toBeLessThan(
-      source.indexOf("await terminal.resolveAttachment"),
+    expect(source.indexOf("beginPending(pendingId)")).toBeLessThan(
+      source.indexOf("const terminalFile = await terminal"),
     )
-    expect(source).toMatch(/await terminal\.resolveAttachment\(message, id\)/)
+    expect(source).toMatch(/resolveAttachment\(message, id, readTerminalContext\(props\.terminalContext\)\)/)
     expect(source).toMatch(/await git\.resolveAttachment\(message, id, context\)/)
   })
 
@@ -609,6 +609,29 @@ describe("Cloud import parts cleanup contract", () => {
       "pending",
     )
     expect(cleared).toBe(1)
+  })
+})
+
+describe("Optimistic parts preservation and smooth status contract", () => {
+  const source = readFile(SESSION_FILE)
+
+  it("handleMessageCreated preserves optimistic parts instead of deleting them", () => {
+    const created = extractFunctionBody(source, "handleMessageCreated")
+    expect(created).not.toMatch(/delete\s+p\[message\.id\]/)
+    expect(created).toContain("pendingOptimistic.get(message.sessionID)")
+  })
+
+  it("handlePartUpdated replaces matching optimistic parts in place", () => {
+    const updated = extractFunctionBody(source, "handlePartUpdated")
+    expect(updated).toContain("optimisticParts.get(effectiveMessageID)")
+    expect(updated).toContain("mergeOptimisticPart")
+  })
+
+  it("statusText derives status from the active turn instead of queued follow-ups", () => {
+    const match = source.match(/const statusText = createMemo<string \| undefined>\(\(\) => \{([\s\S]*?)\n  \}\)/)
+    expect(match).not.toBeNull()
+    expect(match![1]).toContain("activeUserMessageID(msgs, statusInfo()")
+    expect(match![1]).toContain('language.t("ui.sessionTurn.status.thinking")')
   })
 })
 

@@ -60,7 +60,29 @@
    Task Header Todos
    ============================================ */
 
-[data-component="task-header-todos"] {
+/* The background agent strip reuses these slots so both strips look identical. */
+[data-component="task-header-todos"],
+[data-component="task-header-agents"] {
+  display: flex;
+  flex-direction: column;
+
+  [data-slot="task-header-agents-toolbar"] {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    width: 100%;
+  }
+
+  [data-slot="task-header-agents-toolbar"] > [data-component="button"],
+  [data-slot="task-header-agents-toolbar"] > [data-component="icon-button"] {
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+
+  [data-slot="task-header-agents-toolbar"] [data-slot="task-header-todos-trigger"] {
+    flex: 1;
+    min-width: 0;
+  }
   border-bottom: 1px solid var(--border-weak-base);
   background-color: var(--background-base);
   flex-shrink: 0;
@@ -113,6 +135,94 @@
       text-decoration: line-through;
       color: var(--text-weak);
     }
+  }
+}
+
+/* ============================================
+   Task Header Background Agents
+
+   Strip chrome comes from the to-do strip rules above. Only the row
+   affordances below are specific to background agents.
+   ============================================ */
+
+[data-component="task-header-agents"] {
+  /* The shared spinner svg has no intrinsic size, so it must be constrained
+     or it stretches to the full row width. */
+  [data-component="spinner"] {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: var(--text-weak);
+  }
+
+  [data-slot="task-header-agent"] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 28px;
+    padding: 2px 0;
+    box-sizing: border-box;
+    font-size: var(--kilo-font-size-12);
+    color: var(--text-base);
+  }
+
+  [data-slot="task-header-agent-attention"] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0 6px;
+    color: var(--text-warning, var(--vscode-editorWarning-foreground));
+    font-size: var(--kilo-font-size-11);
+  }
+
+  [data-slot="task-header-agent-attention-label"] {
+    color: var(--text-warning, var(--vscode-editorWarning-foreground));
+    font-size: var(--kilo-font-size-11);
+    white-space: nowrap;
+  }
+
+  [data-slot="task-header-agent-main"] {
+    all: unset;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 3px 4px;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--text-base);
+      background: var(--surface-base-hover);
+      outline: none;
+    }
+  }
+
+  [data-slot="task-header-agent-label"] {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  [data-slot="task-header-agent-status"] {
+    flex-shrink: 0;
+    margin-left: 2px;
+    color: var(--text-weak);
+  }
+
+  [data-slot="task-header-agent-status-label"] {
+    color: var(--text-weak);
+    font-size: var(--kilo-font-size-11);
+    white-space: nowrap;
+  }
+
+  [data-component="icon-button"],
+  [data-component="button"] {
+    flex-shrink: 0;
   }
 }
 

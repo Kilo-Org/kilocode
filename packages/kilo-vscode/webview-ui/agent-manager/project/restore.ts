@@ -18,7 +18,7 @@ import { LOCAL } from "../navigate"
 export interface RestoreDeps {
   selectLocal: () => void
   selectWorktree: (id: string) => void
-  selectSession: (id: string) => void
+  focusLocal: (id: string) => void
   focusManaged: (worktreeId: string, sessionId: string) => void
   setSelection: (id: string | null) => void
   setActivePendingId: (id: string | undefined) => void
@@ -40,9 +40,8 @@ export function restoreProjectTarget(state: AgentManagerStateMessage, deps: Rest
       deps.focusManaged(managed.worktreeId, managed.id)
       return
     }
-    // Local or unmanaged live session: go to Local and select it directly.
-    deps.setSelection(LOCAL)
-    deps.selectSession(target.sessionId)
+    // Local or unmanaged live session: add it to Local and select it directly.
+    deps.focusLocal(target.sessionId)
     return
   }
   deps.selectLocal()

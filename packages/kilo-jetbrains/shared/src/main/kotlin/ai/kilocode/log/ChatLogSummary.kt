@@ -84,7 +84,7 @@ object ChatLogSummary {
     }
 
     private fun editorFile(key: String, file: String): String {
-        if (mode() == Mode.OFF) return "${key}Hash=${hash(file)}"
+        if (mode() == LogConfig.ContentMode.OFF) return "${key}Hash=${hash(file)}"
         return "$key=\"${clean(file)}\""
     }
 
@@ -355,10 +355,10 @@ object ChatLogSummary {
 
     private fun preview(text: String): String? {
         val mode = mode()
-        if (mode == Mode.OFF) return null
+        if (mode == LogConfig.ContentMode.OFF) return null
         val raw = clean(text)
         if (raw.isEmpty()) return null
-        val cut = if (mode == Mode.FULL) raw else raw.take(max())
+        val cut = if (mode == LogConfig.ContentMode.FULL) raw else raw.take(max())
         return if (cut.length == raw.length) cut else "$cut..."
     }
 
@@ -366,7 +366,7 @@ object ChatLogSummary {
         val raw = clean(text)
         if (raw.isEmpty()) return null
         val mode = mode()
-        val cut = if (mode == Mode.FULL) raw else raw.take(max())
+        val cut = if (mode == LogConfig.ContentMode.FULL) raw else raw.take(max())
         return if (cut.length == raw.length) cut else "$cut..."
     }
 
@@ -377,18 +377,7 @@ object ChatLogSummary {
 
     private fun hash(text: String): String = text.hashCode().toUInt().toString(16)
 
-    private fun mode(): Mode = when ((System.getProperty("kilo.dev.log.chat.content") ?: "off").lowercase()) {
-        "preview" -> Mode.PREVIEW
-        "full" -> Mode.FULL
-        else -> Mode.OFF
-    }
+    private fun mode(): LogConfig.ContentMode = LogConfig.contentMode()
 
-    private fun max(): Int = (System.getProperty("kilo.dev.log.chat.preview.max")?.toIntOrNull() ?: 160)
-        .coerceIn(1, 2000)
-
-    private enum class Mode {
-        OFF,
-        PREVIEW,
-        FULL,
-    }
+    private fun max(): Int = LogConfig.previewMax()
 }

@@ -42,6 +42,7 @@ import javax.swing.SwingUtilities
 abstract class AbstractSessionPartView(
     header: JComponent,
     private val makeBody: () -> JComponent,
+    private val makeFooter: (() -> JComponent)? = null,
     expanded: Boolean = false,
     private val expandable: Boolean = true,
     private val compact: Boolean = false,
@@ -53,13 +54,14 @@ abstract class AbstractSessionPartView(
         expanded: Boolean = false,
         expandable: Boolean = true,
         compact: Boolean = false,
-    ) : this(header, { body }, expanded, expandable, compact)
+    ) : this(header, { body }, null, expanded, expandable, compact)
 
     protected val arrow = JBLabel()
     protected val row = Row()
     private val clickable = linkedSetOf<Component>()
     private val watched = linkedSetOf<Component>()
     private var body: JComponent? = null
+    private var footer: JComponent? = null
 
     private val click = object : MouseAdapter() {
         override fun mouseClicked(e: MouseEvent) {
@@ -99,7 +101,7 @@ abstract class AbstractSessionPartView(
         row.add(arrow, BorderLayout.EAST)
         add(row, BorderLayout.NORTH)
         watch(row)
-        if (expanded && expandable) add(body(), BorderLayout.CENTER)
+        if (expanded && expandable) attachBody()
         if (!expandable) syncExpandable(false) else syncArrow()
     }
 
@@ -125,7 +127,7 @@ abstract class AbstractSessionPartView(
     open fun expand(): Boolean {
         if (!expandable) return false
         if (isExpanded()) return false
-        add(body(), BorderLayout.CENTER)
+        attachBody()
         return true
     }
 
@@ -133,6 +135,7 @@ abstract class AbstractSessionPartView(
         val item = body ?: return false
         if (item.parent !== this) return false
         remove(item)
+        footer?.takeIf { it.parent === this }?.let(::remove)
         return true
     }
 
@@ -145,8 +148,16 @@ abstract class AbstractSessionPartView(
         val item = body ?: return false
         val attached = item.parent === this
         if (attached) remove(item)
+        footer?.takeIf { it.parent === this }?.let(::remove)
         body = null
+        footer = null
         return attached
+    }
+
+    protected fun footerHeight(): Int {
+        val item = footer ?: return 0
+        if (!item.isVisible) return 0
+        return expandedGap() + item.preferredSize.height
     }
 
     private fun toggleLocal(): Boolean {
@@ -338,6 +349,19 @@ abstract class AbstractSessionPartView(
         val item = body
         if (item != null) return item
         return makeBody().also { body = it }
+    }
+
+    private fun attachBody() {
+        add(body(), BorderLayout.CENTER)
+        val item = footer()
+        if (item != null) add(item, BorderLayout.SOUTH)
+    }
+
+    private fun footer(): JComponent? {
+        val item = footer
+        if (item != null) return item
+        val make = makeFooter ?: return null
+        return make().also { footer = it }
     }
 
     private fun syncCursor(cursor: Cursor): Boolean {

@@ -8,8 +8,14 @@
   width: 100%;
 }
 
-.chat-input > .new-task-button-wrapper + .prompt-input-container {
-  margin-top: 0;
+/* Inside the dock the row is a flex item. Keep it full width so the container
+   query below still measures the dock instead of the buttons' own width. */
+.session-dock-state > .new-task-button-wrapper {
+  width: 100%;
+}
+
+.chat-input > .session-dock + .prompt-input-container {
+  margin-top: var(--prompt-gutter);
 }
 
 :root {

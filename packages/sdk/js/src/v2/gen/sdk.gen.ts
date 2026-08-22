@@ -181,8 +181,10 @@ import type {
   KilocodeAgentManagerRejectResponses,
   KilocodeAgentManagerReplyErrors,
   KilocodeAgentManagerReplyResponses,
-  KilocodeAgentRequirementsErrors,
-  KilocodeAgentRequirementsResponses,
+  KilocodeBackgroundJobCancelErrors,
+  KilocodeBackgroundJobCancelResponses,
+  KilocodeBackgroundJobsErrors,
+  KilocodeBackgroundJobsResponses,
   KilocodeCommandFilesErrors,
   KilocodeCommandFilesResponses,
   KilocodeHeapSnapshotErrors,
@@ -193,6 +195,10 @@ import type {
   KilocodeNotebookRejectResponses,
   KilocodeNotebookReplyErrors,
   KilocodeNotebookReplyResponses,
+  KilocodeProviderUsageGetErrors,
+  KilocodeProviderUsageGetResponses,
+  KilocodeProviderUsageRefreshErrors,
+  KilocodeProviderUsageRefreshResponses,
   KilocodeRemoveAgentErrors,
   KilocodeRemoveAgentResponses,
   KilocodeRemoveCommandErrors,
@@ -7444,6 +7450,76 @@ export class Heap extends HeyApiClient {
   }
 }
 
+export class ProviderUsage extends HeyApiClient {
+  /**
+   * Get provider usage
+   *
+   * Get cache-aware, secret-free provider plan usage and personal billing status.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeProviderUsageGetResponses,
+      KilocodeProviderUsageGetErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/provider-usage",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh provider usage
+   *
+   * Refresh provider plan usage while coalescing concurrent source requests.
+   */
+  public refresh<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeProviderUsageRefreshResponses,
+      KilocodeProviderUsageRefreshErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/provider-usage/refresh",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Notebook extends HeyApiClient {
   /**
    * List pending notebook requests
@@ -7684,6 +7760,44 @@ export class AgentManager extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class BackgroundJob extends HeyApiClient {
+  /**
+   * Cancel background job
+   *
+   * Cancel one background subagent job and its session tree.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters: {
+      jobID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "jobID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeBackgroundJobCancelResponses,
+      KilocodeBackgroundJobCancelErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs/{jobID}/cancel",
+      ...options,
+      ...params,
     })
   }
 }
@@ -8075,42 +8189,6 @@ export class SessionImport extends HeyApiClient {
 
 export class Kilocode extends HeyApiClient {
   /**
-   * Check agent requirements
-   *
-   * Check whether the selected agent's requirements are available in the request directory.
-   */
-  public agentRequirements<ThrowOnError extends boolean = false>(
-    parameters: {
-      directory?: string
-      workspace?: string
-      agent: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "agent" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KilocodeAgentRequirementsResponses,
-      KilocodeAgentRequirementsErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/agent/requirements",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
    * List command files
    *
    * List commands with editable file locations for settings clients.
@@ -8301,9 +8379,50 @@ export class Kilocode extends HeyApiClient {
     })
   }
 
+  /**
+   * List background jobs
+   *
+   * List background subagent jobs owned by one parent session.
+   */
+  public backgroundJobs<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeBackgroundJobsResponses,
+      KilocodeBackgroundJobsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs",
+      ...options,
+      ...params,
+    })
+  }
+
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
+  }
+
+  private _providerUsage?: ProviderUsage
+  get providerUsage(): ProviderUsage {
+    return (this._providerUsage ??= new ProviderUsage({ client: this.client }))
   }
 
   private _notebook?: Notebook
@@ -8314,6 +8433,11 @@ export class Kilocode extends HeyApiClient {
   private _agentManager?: AgentManager
   get agentManager(): AgentManager {
     return (this._agentManager ??= new AgentManager({ client: this.client }))
+  }
+
+  private _backgroundJob?: BackgroundJob
+  get backgroundJob(): BackgroundJob {
+    return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport

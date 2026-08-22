@@ -95,7 +95,7 @@ export function createFetch(override?: FetchHandler, events?: ReturnType<typeof 
     // kilocode_change end
     if (url.pathname === "/config/providers") return json({ providers: {}, default: {} })
     if (url.pathname === "/experimental/console") return json({ consoleManagedProviders: [], switchableOrgCount: 0 })
-    if (url.pathname === "/experimental/capabilities") return json({ backgroundSubagents: false })
+    if (url.pathname === "/experimental/capabilities") return json({ backgroundSubagents: true }) // kilocode_change
     if (url.pathname === "/path") return json({ home: "", state: "", config: "", worktree, directory })
     if (url.pathname === "/api/location") return json({ directory, project: { id: "proj_test", directory: worktree } })
     if (

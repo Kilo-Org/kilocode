@@ -209,6 +209,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Dibuat",
   "ui.patch.action.moved": "Dipindahkan",
   "ui.patch.action.patched": "Ditambal",
+  "ui.patch.action.plan": "Rencana", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} dijawab",
   "ui.question.answer.none": "(tidak ada jawaban)",

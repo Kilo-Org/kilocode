@@ -21,6 +21,8 @@ export interface ClosableTabProps {
   label: Value<string>
   tooltip: Value<string>
   icon: Value<TabIcon>
+  /** Renders instead of `icon`, for tabs that need a per-filetype glyph. */
+  iconNode?: Value<JSX.Element>
   iconStatus?: Value<"success" | "failure" | undefined>
   class?: string
   focused?: boolean
@@ -71,8 +73,15 @@ export const ClosableTabChrome: Component<ClosableTabProps> = (props) => {
         >
           <span class="am-tab-title">
             <span class="am-tab-icon" data-run-status={status()}>
-              <Show when={icon() === "spinner"} fallback={<Icon name={icon() as IconProps["name"]} size="small" />}>
-                <Spinner class="am-tab-spinner" />
+              <Show
+                when={props.iconNode}
+                fallback={
+                  <Show when={icon() === "spinner"} fallback={<Icon name={icon() as IconProps["name"]} size="small" />}>
+                    <Spinner class="am-tab-spinner" />
+                  </Show>
+                }
+              >
+                {value(props.iconNode!)}
               </Show>
             </span>
             <span class="am-tab-label">{label()}</span>
@@ -133,6 +142,7 @@ export const SortableClosableTab: Component<
         label={props.label}
         tooltip={props.tooltip}
         icon={props.icon}
+        iconNode={props.iconNode}
         iconStatus={props.iconStatus}
         class={props.class}
         focused={props.focused}
