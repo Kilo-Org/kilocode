@@ -7,10 +7,12 @@ const SettingsRow: Component<{
   descriptionId?: string
   tag?: () => string | undefined
   last?: boolean
+  modelInput?: boolean
   children: JSX.Element
 }> = (props) => (
   <div
     data-slot="settings-row"
+    data-variant={props.modelInput ? "model-input" : undefined}
     style={{
       "margin-bottom": props.last ? "0" : "8px",
       "padding-bottom": props.last ? "0" : "8px",
