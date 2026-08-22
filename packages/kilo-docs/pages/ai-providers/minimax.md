@@ -65,3 +65,4 @@ Then set your default model:
 - **Performance:** MiniMax M2.1 emphasizes fast inference, strong coding ability, and exceptional tool-calling performance.
 - **Context Window:** MiniMax models support ultra-long context windows suitable for large codebases and agent workflows.
 - **Pricing:** Pricing varies by model, with input costs ranging from $0.20 to $0.30 per million tokens and output costs from $1.10 to $2.20 per million tokens. Refer to the MiniMax documentation for the most current pricing information.
+- **Token Plan usage:** If you configure a MiniMax coding plan (Token Plan) key, its remaining quota appears under **Plans & usage** in the VS Code profile view and via `/usage` in the CLI.

@@ -136,6 +136,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | Command | Aliases | Description |
 |---|---|---|
 | `/profile` | `/me`, `/whoami` | View your Kilo Gateway profile |
+| `/usage` | `/plans`, `/quota` | View provider plans and quota windows (Kilo Pass, Kilo-managed plans, and direct MiniMax Token Plans) |
 | `/teams` | `/team`, `/org`, `/orgs` | Switch between Kilo Gateway teams |
 | `/remote` | - | Toggle remote mode for Cloud Agent access |
 
@@ -641,6 +642,31 @@ kilo --continue
 - Cannot be combined with autonomous mode
 - Cannot be used with a prompt argument
 - Only works when there's at least one previous session in the workspace
+
+## Git Worktrees
+
+Run Kilo in an isolated git worktree instead of your main checkout. Worktrees are created at `.kilo/worktrees/<name>` inside the primary checkout with a matching branch, and the directory is added to `.git/info/exclude` so it stays out of `git status`. This is the same location the VS Code extension's [Agent Manager](/docs/automate/agent-manager) uses, so both surfaces share worktrees.
+
+```bash
+# Create (or reuse) a worktree named "feature-x" and start the TUI in it
+kilo --worktree feature-x
+```
+
+Names are normalized to a lowercase slug. Reusing a name opens the existing worktree. Run `--worktree` from the primary checkout — creating a worktree from inside another worktree is refused.
+
+### Managing Worktrees
+
+| Command | Description |
+|---|---|
+| `kilo worktree create <name>` | Create (or reuse) a worktree and print its path |
+| `kilo worktree list` | List the current project's worktrees |
+| `kilo worktree remove <name>` | Remove a worktree, deleting its branch too |
+
+`kilo worktree create` prints only the resolved path on stdout, so scripts can do `cd "$(kilo worktree create foo)"`.
+
+### Resuming Sessions Across Worktrees
+
+Resuming an explicit session with `--session <id>` starts Kilo in the worktree where that session was originally created, if the worktree still exists.
 
 ## Remote Connections
 

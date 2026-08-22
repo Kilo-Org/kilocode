@@ -40,7 +40,7 @@ seats for Kilo in the Teams or Enterprise subscription brings transparent AI cod
 3. Enter team member email
 4. Assign roles:
    - **Owner** - Full administrative access
-   - **Admin** - Team management without billing
+   - **Admin** - Full administrative access, except managing Owners
    - **Member** - Standard usage access
 
 {% image src="/docs/img/teams/invite-member.png" alt="Invite your team members" width="600" /%}

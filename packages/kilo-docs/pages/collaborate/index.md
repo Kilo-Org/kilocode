@@ -18,6 +18,10 @@ Sessions are your platform-agnostic interaction with Kilo. They remember your re
 - Share read-only links with teammates
 - Fork shared sessions to create your own copy
 
+## Account
+
+- [**Data Exports**](/docs/collaborate/data-exports) — Download an archive of your account or organization data
+
 ## Teams
 
 Kilo Code's paid plans provide powerful team management features:

@@ -18,7 +18,7 @@ The gateway works seamlessly with the [Vercel AI SDK](https://ai-sdk.dev), the [
 - **Usage tracking**: Per-request cost and token tracking with microdollar precision
 - **Organization controls**: Model allow lists, provider restrictions, per-user daily spending limits, and balance management
 - **Tool calling**: Robust function/tool calling with automatic repair for deduplication and orphan cleanup
-- **FIM completions**: Fill-in-the-middle code completions via Mistral Codestral
+- **FIM completions**: Fill-in-the-middle code completions via Mistral Codestral and Inception Mercury Edit 2
 
 ```typescript
 import { streamText } from "ai"

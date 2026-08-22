@@ -39,12 +39,12 @@ Use Kilo Code's native `azure` provider instead. If your Azure deployment name d
 - **Provider API** — Select **OpenAI Compatible** for an OpenAI Chat Completions-compatible endpoint. Use **OpenAI Responses** for OpenAI and xAI models. Use **Anthropic Messages** for Anthropic and MiniMax models.
 - **Base URL** — The provider's API endpoint (e.g., `https://api.your-provider.com/v1`). Kilo auto-fetches available models when a valid URL exposes an OpenAI-compatible models endpoint. For Azure OpenAI GPT-5, use the native `azure` provider instead.
 - **API key** — Your API key. Optional — leave empty if authentication is handled via headers.
-- **Models** — Add models manually or select from the auto-fetched list (see [Automatic Model Detection](#automatic-model-detection) below).
+- **Models** — Add models manually or select from the auto-fetched list (see [Automatic Model Detection](#automatic-model-detection) below). Each model has **Reasoning** and **Image** checkboxes, with **Toggle reasoning for all** and **Toggle image for all** buttons to flip every model at once.
 - **Headers** (optional) — Custom HTTP headers as key-value pairs.
 
 4. Click **Submit** to save. The provider's models appear in the model picker.
 
-For additional model configuration (token limits, tool calling, variants), edit the `kilo.jsonc` config file directly — see the **CLI** tab or the [Custom Models](/docs/code-with-ai/agents/custom-models) guide.
+For additional model configuration (token limits, tool calling, variants), edit the `kilo.jsonc` config file directly — when editing a saved provider, click **Edit advanced settings in the JSON config file** to jump straight to its config entry. See the **CLI** tab or the [Custom Models](/docs/code-with-ai/agents/custom-models) guide.
 
 ### Automatic Model Detection
 
