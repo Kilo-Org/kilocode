@@ -47,6 +47,7 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/supermassive-black-hole\.kiloapps\.io\/v1\/session-export\//, // kilocode_change
   /^https?:\/\/ingest\.kilosessions\.ai/,
   /^https?:\/\/api\.openai\.com/,
+  /^https?:\/\/api\.perplexity\.ai/, // kilocode_change
   /^https?:\/\/api\.github\.com/,
   /^https?:\/\/api\.githubcopilot\.com/,
   /^https?:\/\/[^/]+\.openai\.azure\.com\/openai/, // kilocode_change
