@@ -139,9 +139,9 @@ export namespace SkillInject {
     )
   }
 
-  // `!`RUST_LOG`` in prose documents an env var name, not a shell command to run.
+  // `!`RUST_LOG`` (and `!`_JAVA_OPTIONS``) in prose documents an env var name, not a shell command to run.
   function documentationShell(command: string) {
-    return /^[A-Z][A-Z0-9_]*$/.test(command.trim())
+    return /^_?[A-Z][A-Z0-9_]*$/.test(command.trim())
   }
 
   function isInert(index: number, command: string, inert: (index: number) => boolean) {
