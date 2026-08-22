@@ -1324,6 +1324,26 @@ export interface CustomProviderModelsFetchedMessage {
   auth?: boolean
 }
 
+export interface IndexingModelsFetchedMessage {
+  type: "indexingModelsFetched"
+  requestId: string
+  models?: Array<{
+    id: string
+    name: string
+    embedding: "supported" | "unsupported" | "unknown"
+    dimension?: number
+    batchSize?: number
+  }>
+  model?: {
+    id: string
+    name: string
+    embedding: "supported"
+    dimension: number
+    batchSize?: number
+  }
+  error?: string
+}
+
 export interface McpStatusEntry {
   status: "connected" | "disabled" | "failed" | "needs_auth" | "needs_client_registration"
   error?: string
@@ -1535,6 +1555,7 @@ export type ExtensionMessage =
   | ProviderActionErrorMessage
   | AnacondaDesktopExtensionMessage
   | CustomProviderModelsFetchedMessage
+  | IndexingModelsFetchedMessage
   | RecentsLoadedMessage
   | ModelSelectorExpandedLoadedMessage
   | FavoritesLoadedMessage
