@@ -4466,6 +4466,74 @@ export type KilocodeSessionImportResult = {
   skipped?: boolean
 }
 
+export type KilocodeSessionResumeResult = {
+  /**
+   * Final assistant message written by the import.
+   */
+  messageID: string
+  /**
+   * Detected transcript format.
+   */
+  format: "claude" | "codex"
+  /**
+   * Number of messages written to the session.
+   */
+  messages: number
+  /**
+   * Human-readable reasons for content that could not be imported.
+   */
+  dropped: Array<string>
+}
+
+export type SessionResumeFailedError = {
+  message: string
+}
+
+export type KilocodeSessionResumeModel = {
+  providerID: string
+  modelID: string
+}
+
+export type KilocodeSessionResumeDiscovered = {
+  /**
+   * Session UUID parsed from the transcript filename.
+   */
+  id: string
+  /**
+   * Detected transcript format.
+   */
+  format: "claude" | "codex"
+  /**
+   * Absolute path to the JSONL transcript on the CLI host.
+   */
+  path: string
+  /**
+   * Last-modified time (epoch ms).
+   */
+  mtime: number
+  /**
+   * Source harness major version.
+   */
+  version: number
+  title?: string
+  /**
+   * Number of user + assistant steps in the transcript.
+   */
+  messages: number
+  model?: KilocodeSessionResumeModel
+}
+
+export type KilocodeSessionResumeDiscoverResult = {
+  /**
+   * Discovered importable sessions, most recently modified first.
+   */
+  sessions: Array<KilocodeSessionResumeDiscovered>
+  /**
+   * Human-readable reasons for transcripts that were found but could not be previewed.
+   */
+  dropped: Array<string>
+}
+
 export type MemoryApiClientError = {
   name: "MemoryApiClientError"
   data: {
@@ -12124,6 +12192,90 @@ export type McpDisconnectResponses = {
 
 export type McpDisconnectResponse = McpDisconnectResponses[keyof McpDisconnectResponses]
 
+export type McpReadResourceData = {
+  body?: {
+    uri: string
+    server: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/resource/read"
+}
+
+export type McpReadResourceErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpReadResourceError = McpReadResourceErrors[keyof McpReadResourceErrors]
+
+export type McpReadResourceResponses = {
+  /**
+   * Resource content
+   */
+  200: {
+    uri: string
+    mimeType?: string
+    text?: string
+    blob?: string
+  }
+}
+
+export type McpReadResourceResponse = McpReadResourceResponses[keyof McpReadResourceResponses]
+
+export type McpCallToolData = {
+  body?: {
+    server: string
+    name: string
+    arguments?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/mcp/call-tool"
+}
+
+export type McpCallToolErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpCallToolError = McpCallToolErrors[keyof McpCallToolErrors]
+
+export type McpCallToolResponses = {
+  /**
+   * Tool call result
+   */
+  200: {
+    content: Array<unknown>
+    isError?: boolean
+    structuredContent?: {
+      [key: string]: unknown
+    }
+  }
+}
+
+export type McpCallToolResponse = McpCallToolResponses[keyof McpCallToolResponses]
+
 export type ProjectListData = {
   body?: never
   path?: never
@@ -17784,6 +17936,88 @@ export type KilocodeSessionImportPartResponses = {
 
 export type KilocodeSessionImportPartResponse =
   KilocodeSessionImportPartResponses[keyof KilocodeSessionImportPartResponses]
+
+export type KilocodeSessionResumeImportData = {
+  body?: {
+    /**
+     * Target Kilo session. Must be empty (no existing messages).
+     */
+    sessionID: string
+    /**
+     * Raw JSONL transcript content (Claude Code or OpenAI Codex, Anthropic message format).
+     */
+    content: string
+    agent?: string
+    model?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-resume"
+}
+
+export type KilocodeSessionResumeImportErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * SessionResumeFailedError
+   */
+  422: SessionResumeFailedError
+}
+
+export type KilocodeSessionResumeImportError =
+  KilocodeSessionResumeImportErrors[keyof KilocodeSessionResumeImportErrors]
+
+export type KilocodeSessionResumeImportResponses = {
+  /**
+   * Session import result
+   */
+  200: KilocodeSessionResumeResult
+}
+
+export type KilocodeSessionResumeImportResponse =
+  KilocodeSessionResumeImportResponses[keyof KilocodeSessionResumeImportResponses]
+
+export type KilocodeSessionResumeDiscoverData = {
+  body?: {
+    cwd?: string
+    formats?: Array<"claude" | "codex">
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-resume/discover"
+}
+
+export type KilocodeSessionResumeDiscoverErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * SessionResumeFailedError
+   */
+  422: SessionResumeFailedError
+}
+
+export type KilocodeSessionResumeDiscoverError =
+  KilocodeSessionResumeDiscoverErrors[keyof KilocodeSessionResumeDiscoverErrors]
+
+export type KilocodeSessionResumeDiscoverResponses = {
+  /**
+   * Discovered importable sessions
+   */
+  200: KilocodeSessionResumeDiscoverResult
+}
+
+export type KilocodeSessionResumeDiscoverResponse =
+  KilocodeSessionResumeDiscoverResponses[keyof KilocodeSessionResumeDiscoverResponses]
 
 export type SuggestionListData = {
   body?: never
