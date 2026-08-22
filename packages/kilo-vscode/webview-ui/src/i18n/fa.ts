@@ -1310,4 +1310,7 @@ export const dict = {
   "chat.search.invalidRegex": "عبارت منظم نامعتبر",
   "chat.search.noResults": "نتیجه‌ای یافت نشد",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
+  "settings.experimental.smoothScrolling.title": "پیمایش روان",
+  "settings.experimental.smoothScrolling.description":
+    "متحرک‌سازی موقعیت‌های پیمایش در چت (نوار زبانه‌ها، سکوی سؤال، پنل استدلال). برای پیمایش فوری خاموش کنید. اینرسی چرخ ماوس توسط سیستم‌عامل / VS Code کنترل می‌شود و تحت تأثیر قرار نمی‌گیرد.",
 }

@@ -57,6 +57,7 @@ export interface ExperimentalConfig {
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
+  smooth_scrolling?: boolean
 }
 
 export interface SandboxConfig {

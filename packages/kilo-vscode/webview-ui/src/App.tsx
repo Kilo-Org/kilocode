@@ -1,10 +1,11 @@
-import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup } from "solid-js"
+import { Component, createSignal, createMemo, createEffect, Switch, Match, Show, onMount, onCleanup } from "solid-js"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
 import { useVSCode } from "./context/vscode"
 import { useServer } from "./context/server"
 import { useProvider } from "./context/provider"
+import { useConfig } from "./context/config"
 import { WorkStyleProvider } from "./context/work-style"
 import { useSession } from "./context/session"
 import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
@@ -228,6 +229,15 @@ const AppContent: Component = () => {
   const tabs = useLocalTabs()
   const server = useServer()
   const vscode = useVSCode()
+  const { config } = useConfig()
+
+  // Mirror experimental.smooth_scrolling onto <html> so CSS rules in
+  // shared (kilo-ui) components can opt out of `scroll-behavior: smooth`
+  // without touching their stylesheet. Default is on; off sets the class.
+  createEffect(() => {
+    const enabled = config().experimental?.smooth_scrolling !== false
+    document.documentElement.classList.toggle("kilo-no-smooth-scroll", !enabled)
+  })
 
   const handleViewAction = (action: string) => {
     switch (action) {
