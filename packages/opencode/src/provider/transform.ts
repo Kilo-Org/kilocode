@@ -369,6 +369,9 @@ function isLikelyChatGPTSubscription(model: Provider.Model): boolean {
 
 function supportsPromptCacheBreakpoint(model: Provider.Model): boolean {
   if (isLikelyChatGPTSubscription(model)) return false
+  // Only first-party OpenAI-family deployments support explicit breakpoints;
+  // custom @ai-sdk/openai endpoints reject prompt_cache_breakpoint (#13285).
+  if (!["openai", "azure", "kilo"].includes(model.providerID)) return false
   const match = model.api.id.match(/gpt-(\d+)\.(\d+)/)
   if (match) {
     const major = Number(match[1])
