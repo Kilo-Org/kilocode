@@ -243,6 +243,12 @@ describe("tool parameters", () => {
       expect(parsed.offset).toBe(10)
       expect(parsed.limit).toBe(100)
     })
+    // kilocode_change start - read pagination is 1-indexed
+    test("rejects zero offset and limit", () => {
+      expect(accepts(Read, { filePath: "/a", offset: 0 })).toBe(false)
+      expect(accepts(Read, { filePath: "/a", limit: 0 })).toBe(false)
+    })
+    // kilocode_change end
   })
 
   describe("skill", () => {

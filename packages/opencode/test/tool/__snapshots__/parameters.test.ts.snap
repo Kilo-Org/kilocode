@@ -327,13 +327,13 @@ exports[`tool parameters JSON Schema (wire shape) read 1`] = `
     "limit": {
       "description": "The maximum number of lines to read (defaults to 2000)",
       "maximum": 9007199254740991,
-      "minimum": 0,
+      "minimum": 1,
       "type": "integer",
     },
     "offset": {
       "description": "The line number to start reading from (1-indexed)",
       "maximum": 9007199254740991,
-      "minimum": 0,
+      "minimum": 1,
       "type": "integer",
     },
   },
