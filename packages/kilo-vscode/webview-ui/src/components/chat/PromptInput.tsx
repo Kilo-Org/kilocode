@@ -5,7 +5,6 @@
 
 import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -38,11 +37,12 @@ import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
+import { IMAGE_ACCEPT } from "../../hooks/image-attachments-utils"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
-import { WandSparkles } from "@kilocode/kilo-ui/lucide"
+import { Paperclip, WandSparkles } from "@kilocode/kilo-ui/lucide"
 import {
   fileName,
   dirName,
@@ -218,6 +218,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
   const history = usePromptHistory()
   let textareaRef: HTMLTextAreaElement | undefined
+  let imageInputRef: HTMLInputElement | undefined
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
@@ -874,6 +875,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     })
   }
 
+  const selectImages = (event: Event) => {
+    const input = event.currentTarget as HTMLInputElement
+    for (const file of Array.from(input.files ?? [])) imageAttach.add(file)
+    input.value = ""
+  }
+
   const handleInput = (e: InputEvent) => {
     const target = e.target as HTMLTextAreaElement
     const val = target.value
@@ -1526,6 +1533,27 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
+          <input
+            ref={imageInputRef}
+            class="sr-only"
+            type="file"
+            accept={IMAGE_ACCEPT}
+            multiple
+            onChange={selectImages}
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+          <Tooltip value="Upload images" placement="top" openDelay={0}>
+            <Button
+              size="small"
+              variant="ghost"
+              onClick={() => imageInputRef?.click()}
+              disabled={isDisabled()}
+              aria-label="Upload images"
+            >
+              <Paperclip size={16} />
+            </Button>
+          </Tooltip>
           <Show when={showIndexing()}>
             <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
               <Button
