@@ -28,6 +28,7 @@ import { WorktreeModeProvider } from "../context/worktree-mode"
 import type {
   Message,
   Part,
+  PromptRailPosition,
   QuestionRequest,
   ReviewComment,
   SessionModelUsage,
@@ -614,7 +615,9 @@ const railData = {
   part: railParts,
 }
 
-const renderRailChat = (status: "idle" | "busy" = "idle") => {
+// `position` is only forwarded when a story asks for it, so the default-rail
+// stories keep using the real ConfigProvider and their baselines stay put.
+const renderRailChat = (status: "idle" | "busy" = "idle", position?: PromptRailPosition) => {
   const session = {
     ...mockSessionValue({ id: SESSION_ID, status }),
     messages: () => railMessages,
@@ -622,7 +625,13 @@ const renderRailChat = (status: "idle" | "busy" = "idle") => {
     getParts: (id: string) => railParts[id] ?? [],
   }
   return (
-    <StoryProviders data={railData} sessionID={SESSION_ID} status={status} noPadding>
+    <StoryProviders
+      data={railData}
+      sessionID={SESSION_ID}
+      status={status}
+      config={position ? { prompt_rail_position: position } : undefined}
+      noPadding
+    >
       <SessionContext.Provider value={session as any}>
         <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
           <ChatView />
@@ -640,6 +649,13 @@ export const PromptRailWide: Story = {
 export const PromptRailSidebar: Story = {
   name: "PromptRail - narrow sidebar",
   render: () => renderRailChat("busy"),
+}
+
+// Right-edge rail: covers the mirrored tick alignment and the scrollbar
+// allowance that keeps the ticks off the transcript scrollbar.
+export const PromptRailRightEdge: Story = {
+  name: "PromptRail - right edge",
+  render: () => renderRailChat("idle", "right"),
 }
 
 // Long session: more prompts than fit the transcript height, so the rail and

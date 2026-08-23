@@ -161,6 +161,10 @@
 
 .scroll-to-bottom-button {
   position: absolute;
+  /* Above .prompt-rail (z-index 2). With the rail on the right edge its ticks
+     overlap this button, and a tick's hit target would otherwise swallow the
+     click that scrolls back to the latest turn. */
+  z-index: 3;
   bottom: 12px;
   right: 12px;
   width: 32px;

@@ -13,12 +13,26 @@
      starting a drag. */
   --prompt-rail-edge: 8px;
 
+  /* The transcript reserves a scrollbar gutter on its inline-end side, which is
+     physically right under LTR and physically left under RTL. Only the rail
+     sharing that side has to clear the scrollbar; the opposite side keeps the
+     bare splitter gutter so the default left rail is unchanged. */
+  --prompt-rail-left: var(--prompt-rail-edge);
+  --prompt-rail-right: calc(var(--prompt-rail-edge) + var(--chat-scrollbar-width, 10px));
+
   position: absolute;
   /* Against the panel edge rather than tracking the readable lane: on a wide
      editor tab the lane is centered, so a lane-hugging rail would sit right
      next to the prose the pointer travels over and open on the way past. The
-     far edge is somewhere the pointer only goes deliberately. */
-  inset-inline-start: var(--prompt-rail-edge);
+     far edge is somewhere the pointer only goes deliberately.
+
+     Physical left/right rather than logical insets: the setting is labelled
+     Left and Right, and place() anchors the hover card with physical
+     getBoundingClientRect/innerWidth math. A logical inset would silently flip
+     the rail under RTL without flipping that math, which pushes the card
+     off-screen. */
+  left: var(--prompt-rail-left);
+  right: auto;
   top: 0;
   bottom: 0;
   width: var(--prompt-rail-width);
@@ -40,15 +54,26 @@
   opacity: 1;
 }
 
+/* Swaps which physical side carries the scrollbar allowance. */
+.prompt-rail:dir(rtl) {
+  --prompt-rail-left: calc(var(--prompt-rail-edge) + var(--chat-scrollbar-width, 10px));
+  --prompt-rail-right: var(--prompt-rail-edge);
+}
+
 .prompt-rail[data-position="right"] {
-  inset-inline-start: auto;
-  inset-inline-end: var(--prompt-rail-edge);
+  left: auto;
+  right: var(--prompt-rail-right);
 }
 
 .prompt-rail-tick {
   pointer-events: auto;
   display: flex;
   align-items: center;
+  /* A tick is a decorative hairline with an aria-label, never text, so it
+     aligns physically: this row's flex-start would otherwise follow the text
+     direction and pull the line to the far side of the column under RTL,
+     against the physical transform-origin below. */
+  direction: ltr;
   justify-content: flex-start;
   height: var(--prompt-rail-step);
   min-height: 4px;

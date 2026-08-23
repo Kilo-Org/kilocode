@@ -88,6 +88,12 @@ export function PromptRail(props: PromptRailProps) {
   // and the card never rides up over the task header or down over the composer.
   // Before the card is mounted its height is estimated from the row count; the
   // measured value takes over on the next frame, inside the fade-in.
+  //
+  // The side is anchored physically so the card always opens inward, away from
+  // the panel edge: only one of left/right is ever set, because a fixed element
+  // given both and no width stretches to span the gap between them. This math
+  // is physical in both directions, which is why .prompt-rail places itself
+  // with physical left/right instead of logical insets.
   const place = () => {
     if (!rail) return
     const rect = rail.getBoundingClientRect()
