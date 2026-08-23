@@ -113,6 +113,19 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test coordinator does not probe or latch when the root is unresolved`() {
+        // A blank backend root must not call ghStatus, and must not leave the probe stuck busy:
+        // the coordinator stays responsive to later reports.
+        fakeRoot(project, coroutines.scope, testRootDisposable, "")
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertTrue(rpc.ghCalls.isEmpty())
+
+        report(GhAvailability.OK)
+        assertEquals(GhAvailability.OK, service.current())
+        handle.close()
+    }
+
     fun `test coordinator stops polling after detach`() {
         val handle = edtWait { service.attach(project) }
         drain()

@@ -25,6 +25,7 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.externalSystem.model.ProjectSystemId
 import com.intellij.openapi.externalSystem.model.execution.ExternalSystemTaskExecutionSettings
+import com.intellij.openapi.externalSystem.service.execution.ExternalSystemRunConfiguration
 import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
 import com.intellij.openapi.externalSystem.util.ExternalSystemUtil
 import com.intellij.openapi.project.Project
@@ -135,7 +136,7 @@ class WorktreeRunManager internal constructor(
         for (root in roots) {
             val settings = WorktreeRunAdapter.buildSettings(root.first, root.second, worktree, repo, clean)
             val name = name(clean, label, root.second, repo, roots.size > 1)
-            val clone = buildClone(manager, root.first, settings, key(clean, root.second, repo, worktree), name)
+            val clone = buildClone(manager, root.first, settings, key(root.second, repo, worktree), name)
                 ?: return RunResultDto(error = "no run configuration type for ${root.first.readableName}")
             LOG.info("worktree build: start tasks=${settings.taskNames} path=${settings.externalProjectPath}")
             exec(clone)
@@ -144,9 +145,10 @@ class WorktreeRunManager internal constructor(
     }
 
     /**
-     * Same reuse contract as [clone]: while the tasks and target path are unchanged the cached
-     * settings instance is re-executed, so clicking Build again restarts through the platform's
-     * `restartRunProfile` instead of piling up parallel builds.
+     * Same reuse contract as [clone], except Build and Rebuild intentionally share one settings
+     * instance per root/worktree. Switching between them mutates that same settings object before
+     * execution, so `isAllowRunningInParallel = false` makes the platform stop the sibling process
+     * instead of allowing Build and Rebuild to race over the same output directories.
      */
     private fun buildClone(
         manager: RunManager,
@@ -158,6 +160,14 @@ class WorktreeRunManager internal constructor(
         val print = "${settings.externalProjectPath}|${settings.taskNames.joinToString(" ")}"
         val entry = clones[key]
         if (entry != null && entry.print == print) return entry.settings
+        if (entry != null) {
+            val config = entry.settings.configuration as? ExternalSystemRunConfiguration ?: return null
+            config.name = name
+            config.settings.setFrom(settings)
+            entry.settings.name = name
+            clones[key] = Entry(entry.settings, print)
+            return entry.settings
+        }
         val next = ExternalSystemUtil.createExternalSystemRunnerAndConfigurationSettings(settings, project, system)
             ?: return null
         next.name = name
@@ -170,11 +180,8 @@ class WorktreeRunManager internal constructor(
         return next
     }
 
-    /** Stable per-(action, root, worktree) key so Stop and Show Output resolve the right build. */
-    private fun key(clean: Boolean, root: String, repo: String, worktree: String): Key {
-        val action = if (clean) "kilo.rebuild" else "kilo.build"
-        return Key("$action:${relative(root, repo)}", worktree)
-    }
+    /** Stable per-(root, worktree) key shared by Build/Rebuild so they restart each other. */
+    private fun key(root: String, repo: String, worktree: String): Key = Key("kilo.build:${relative(root, repo)}", worktree)
 
     private fun name(clean: Boolean, label: String, root: String, repo: String, qualify: Boolean): String {
         val action = if (clean) "Rebuild" else "Build"

@@ -129,15 +129,20 @@ class GhStatusCoordinator(
         val start = timers.now()
         LOG.info("gh probe start reason=$reason state=$value delay=${delay()}")
         cs.launch {
-            val dir = project.service<ProjectRoot>().get()
-            if (dir.isBlank()) {
-                LOG.info("gh probe skipped reason=$reason unresolved_root=true project=${project.name}")
-                idle(gen)
-                return@launch
+            runCatching {
+                val dir = project.service<ProjectRoot>().get()
+                if (dir.isBlank()) return@runCatching null
+                LOG.info("gh probe dir=$dir")
+                service<KiloWorktreeService>().ghStatus(dir)
             }
-            LOG.info("gh probe dir=$dir")
-            runCatching { service<KiloWorktreeService>().ghStatus(dir) }
-                .onSuccess { next -> done(gen, project, next, timers.now() - start) }
+                .onSuccess { next ->
+                    if (next == null) {
+                        LOG.info("gh probe skipped reason=$reason unresolved_root=true project=${project.name}")
+                        idle(gen)
+                        return@onSuccess
+                    }
+                    done(gen, project, next, timers.now() - start)
+                }
                 .onFailure { err -> failed(gen, err, timers.now() - start) }
         }
     }
