@@ -27,7 +27,6 @@ import IndexingTab from "./IndexingTab"
 import SandboxingTab from "./SandboxingTab"
 import * as Sandboxing from "./sandboxing"
 import { useServer } from "../../context/server"
-import { indexingTabVisible } from "../../context/indexing-utils"
 import type { MigrationSource } from "../../types/messages"
 import { configMessage } from "../../utils/open-config"
 
@@ -41,25 +40,11 @@ const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const {
-    loading,
-    isDirty,
-    saving,
-    saveError,
-    saveConfig,
-    discardConfig,
-    features,
-    config,
-    globalConfig,
-    projectConfig,
-  } = useConfig()
+  const { loading, isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
   const sandboxing = createMemo(() => Sandboxing.visible(features()))
-  const indexingEnabled = createMemo(() =>
-    indexingTabVisible(features().indexing, config(), globalConfig(), projectConfig()),
-  )
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -96,7 +81,7 @@ const Settings: Component<SettingsProps> = (props) => {
   )
 
   createEffect(() => {
-    if (indexingEnabled() || active() !== "indexing") return
+    if (loading() || features().indexing || active() !== "indexing") return
     onTabChange("providers")
   })
 
@@ -195,7 +180,7 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="edit" />
             <span class="label">{language.t("settings.commitMessage.title")}</span>
           </Tabs.Trigger>
-          <Show when={indexingEnabled()}>
+          <Show when={features().indexing}>
             <Tabs.Trigger value="indexing" aria-label={language.t("settings.indexing.title")}>
               <Icon name="database" />
               <span class="label">{language.t("settings.indexing.title")}</span>
@@ -266,7 +251,7 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.commitMessage.title")}</h3>
           <CommitMessageTab />
         </Tabs.Content>
-        <Show when={indexingEnabled()}>
+        <Show when={features().indexing}>
           <Tabs.Content value="indexing">
             <h3>{language.t("settings.indexing.title")}</h3>
             <IndexingTab />

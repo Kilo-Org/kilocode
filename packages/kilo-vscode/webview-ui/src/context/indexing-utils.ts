@@ -7,13 +7,6 @@ export function indexingButtonVisible(feature: boolean, show: boolean, config: C
   return config.indexing?.enabled === true
 }
 
-export function indexingTabVisible(feature: boolean, config: Config, global: Config, project: Config) {
-  if (!feature) return false
-  if (config.indexing?.enabled === true) return true
-  if (global.indexing?.enabled === true) return true
-  return project.indexing?.enabled === true
-}
-
 export function formatIndexingLabel(status: IndexingStatus): string {
   if (status.state === "In Progress") {
     if (status.totalFiles <= 0) return "IDX In Progress"
