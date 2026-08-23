@@ -40,6 +40,7 @@ interface ApplyToLocalOptions {
   diffLoading: Accessor<boolean>
   /** Telemetry: metrics.track(name, surface, data). */
   track: ReturnType<typeof tracker>["track"]
+  projectId?: Accessor<string | undefined>
 }
 
 export function createApplyToLocal(opts: ApplyToLocalOptions) {
@@ -116,7 +117,12 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
         conflicts: [],
       },
     }))
-    vscode.postMessage({ type: "agentManager.applyWorktreeDiff", worktreeId, selectedFiles })
+    vscode.postMessage({
+      type: "agentManager.applyWorktreeDiff",
+      projectId: opts.projectId?.(),
+      worktreeId,
+      selectedFiles,
+    })
   }
 
   const resetApplyDialog = () => {
@@ -177,7 +183,7 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
     setApplyTarget(sel)
     setApplySelectionTouched(false)
     setApplySelectedFiles([])
-    vscode.postMessage({ type: "agentManager.requestWorktreeDiff", sessionId: sel })
+    vscode.postMessage({ type: "agentManager.requestWorktreeDiff", projectId: opts.projectId?.(), sessionId: sel })
 
     setApplySelectedFiles(applyDiffs().map((diff) => diff.file))
 

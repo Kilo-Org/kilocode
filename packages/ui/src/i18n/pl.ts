@@ -203,6 +203,7 @@ export const dict = {
   "ui.patch.action.created": "Utworzono",
   "ui.patch.action.moved": "Przeniesiono",
   "ui.patch.action.patched": "Załatano",
+  "ui.patch.action.plan": "Plan", // kilocode_change
 
   "ui.question.subtitle.answered": "Liczba odpowiedzi: {{count}}",
   "ui.question.answer.none": "(brak odpowiedzi)",

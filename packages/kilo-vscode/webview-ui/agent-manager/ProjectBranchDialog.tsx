@@ -32,6 +32,7 @@ export const ProjectBranchDialog: Component<Props> = (props) => {
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "agentManager.branches") return
     const event = message as AgentManagerBranchesMessage
+    if (event.projectId !== props.projectId) return
     setBranches(event.branches)
     setLoading(false)
   })

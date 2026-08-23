@@ -2322,14 +2322,6 @@ export type AgentConfig = {
   steps?: number
   maxSteps?: number
   permission?: PermissionConfig
-  requirements?: {
-    skills?: Array<string>
-    mcps?: Array<string>
-    vscode_extensions?: Array<{
-      name: string
-      id: string
-    }>
-  }
   [key: string]:
     | unknown
     | string
@@ -2354,14 +2346,6 @@ export type AgentConfig = {
     | "info"
     | number
     | PermissionConfig
-    | {
-        skills?: Array<string>
-        mcps?: Array<string>
-        vscode_extensions?: Array<{
-          name: string
-          id: string
-        }>
-      }
     | undefined
 }
 
@@ -3108,14 +3092,6 @@ export type Agent = {
   prompt?: string
   options: {
     [key: string]: unknown
-  }
-  requirements?: {
-    skills?: Array<string>
-    mcps?: Array<string>
-    vscode_extensions?: Array<{
-      name: string
-      id: string
-    }>
   }
   steps?: number
 }
@@ -4177,6 +4153,52 @@ export type CommandFile = {
   content?: string
   subtask?: boolean
   hints: Array<string>
+}
+
+export type ProviderUsagePeriod = {
+  unit: "hour" | "day" | "week" | "month"
+  value: number
+}
+
+export type ProviderUsageWindow = {
+  id: string
+  resource: string
+  unit: string
+  orientation: "used_percent" | "remaining_percent" | "amount" | "count"
+  used?: number
+  remaining?: number
+  limit?: number
+  period?: ProviderUsagePeriod
+  durationMs?: number
+  resetAt?: string
+  state: "active" | "exhausted" | "unlimited" | "not_in_plan" | "unknown"
+}
+
+export type ProviderUsageError = {
+  code: string
+  message: string
+  retryable: boolean
+}
+
+export type ProviderUsageSnapshot = {
+  id: string
+  providerID: string
+  sourceKind: "kilo_managed" | "direct"
+  providerLabel: string
+  planLabel: string
+  sourceLabel: string
+  fetchState: "ready" | "stale" | "unavailable" | "error"
+  planState: "active" | "past_due" | "canceling" | "unknown"
+  routingState: "active" | "disabled" | "missing" | "replaced" | "not_applicable" | "unknown"
+  fetchedAt?: string
+  managementUrl?: string
+  windows: Array<ProviderUsageWindow>
+  error?: ProviderUsageError
+}
+
+export type ProviderUsage = {
+  items: Array<ProviderUsageSnapshot>
+  generatedAt: string
 }
 
 export type NotebookOutput = {
@@ -16635,6 +16657,73 @@ export type KilocodeRemoveAgentResponses = {
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
 
+export type KilocodeProviderUsageGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/provider-usage"
+}
+
+export type KilocodeProviderUsageGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * ServiceUnavailable
+   */
+  503: EffectHttpApiErrorServiceUnavailable
+}
+
+export type KilocodeProviderUsageGetError = KilocodeProviderUsageGetErrors[keyof KilocodeProviderUsageGetErrors]
+
+export type KilocodeProviderUsageGetResponses = {
+  /**
+   * Current provider usage
+   */
+  200: ProviderUsage
+}
+
+export type KilocodeProviderUsageGetResponse =
+  KilocodeProviderUsageGetResponses[keyof KilocodeProviderUsageGetResponses]
+
+export type KilocodeProviderUsageRefreshData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/provider-usage/refresh"
+}
+
+export type KilocodeProviderUsageRefreshErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * ServiceUnavailable
+   */
+  503: EffectHttpApiErrorServiceUnavailable
+}
+
+export type KilocodeProviderUsageRefreshError =
+  KilocodeProviderUsageRefreshErrors[keyof KilocodeProviderUsageRefreshErrors]
+
+export type KilocodeProviderUsageRefreshResponses = {
+  /**
+   * Refreshed provider usage
+   */
+  200: ProviderUsage
+}
+
+export type KilocodeProviderUsageRefreshResponse =
+  KilocodeProviderUsageRefreshResponses[keyof KilocodeProviderUsageRefreshResponses]
+
 export type KilocodeNotebookListData = {
   body?: never
   path?: never
@@ -16902,6 +16991,82 @@ export type KilocodeSessionModelUsageResponses = {
 
 export type KilocodeSessionModelUsageResponse =
   KilocodeSessionModelUsageResponses[keyof KilocodeSessionModelUsageResponses]
+
+export type KilocodeBackgroundJobsData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    sessionID: string
+  }
+  url: "/kilocode/background-jobs"
+}
+
+export type KilocodeBackgroundJobsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeBackgroundJobsError = KilocodeBackgroundJobsErrors[keyof KilocodeBackgroundJobsErrors]
+
+export type KilocodeBackgroundJobsResponses = {
+  /**
+   * Background jobs
+   */
+  200: Array<{
+    id: string
+    type: string
+    title?: string
+    status: "running" | "completed" | "error" | "cancelled"
+    started_at: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    completed_at?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    error?: string
+    metadata?: {
+      [key: string]: unknown
+    }
+  }>
+}
+
+export type KilocodeBackgroundJobsResponse = KilocodeBackgroundJobsResponses[keyof KilocodeBackgroundJobsResponses]
+
+export type KilocodeBackgroundJobCancelData = {
+  body?: never
+  path: {
+    jobID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/background-jobs/{jobID}/cancel"
+}
+
+export type KilocodeBackgroundJobCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeBackgroundJobCancelError =
+  KilocodeBackgroundJobCancelErrors[keyof KilocodeBackgroundJobCancelErrors]
+
+export type KilocodeBackgroundJobCancelResponses = {
+  /**
+   * Background job cancelled
+   */
+  200: boolean
+}
+
+export type KilocodeBackgroundJobCancelResponse =
+  KilocodeBackgroundJobCancelResponses[keyof KilocodeBackgroundJobCancelResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never

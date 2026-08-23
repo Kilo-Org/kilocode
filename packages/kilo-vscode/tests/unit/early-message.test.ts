@@ -42,3 +42,38 @@ describe("routeEarlyMessage clipboard handling", () => {
     expect(posted).toEqual([{ type: "clipboardWriteResult", id: "copy-2", ok: false, error: "clipboard unavailable" }])
   })
 })
+
+describe("routeEarlyMessage background jobs", () => {
+  it("forwards list request correlation", async () => {
+    const calls: unknown[] = []
+    const ctx = {
+      backgroundJobs: async (sessionID: string, requestID: string) => calls.push([sessionID, requestID]),
+    } as Ctx
+
+    expect(
+      await routeEarlyMessage({ type: "requestBackgroundJobs", sessionID: "ses_parent", requestID: "request-1" }, ctx),
+    ).toBe(true)
+    expect(calls).toEqual([["ses_parent", "request-1"]])
+  })
+
+  it("forwards cancellation through the owning parent session", async () => {
+    const calls: unknown[] = []
+    const ctx = {
+      cancelBackgroundJob: async (jobID: string, sessionID: string, requestID: string) =>
+        calls.push([jobID, sessionID, requestID]),
+    } as Ctx
+
+    expect(
+      await routeEarlyMessage(
+        {
+          type: "cancelBackgroundJob",
+          jobID: "ses_child",
+          sessionID: "ses_parent",
+          requestID: "request-2",
+        },
+        ctx,
+      ),
+    ).toBe(true)
+    expect(calls).toEqual([["ses_child", "ses_parent", "request-2"]])
+  })
+})
