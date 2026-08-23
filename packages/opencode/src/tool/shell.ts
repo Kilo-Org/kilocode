@@ -289,6 +289,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
   command: string,
   metadata: ReturnType<typeof heredocs>, // kilocode_change
   description?: string, // kilocode_change
+  sandboxed = false, // kilocode_change - sandboxed commands skip the prompt but keep deny evaluation
 ) {
   // kilocode_change
   if (scan.dirs.size > 0) {
@@ -308,6 +309,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
         directories,
         patterns: globs,
         ...(scan.access === "read" ? { access: "read" as const } : {}),
+        ...(sandboxed ? { sandboxed: true } : {}), // kilocode_change
         ...metadata,
       },
       // kilocode_change end
@@ -319,7 +321,12 @@ const ask = Effect.fn("ShellTool.ask")(function* (
     permission: ShellID.ToolID,
     patterns: Array.from(scan.patterns),
     always: Array.from(scan.always),
-    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}), ...metadata }, // kilocode_change
+    metadata: {
+      command: normalizeUrls(command),
+      ...(description ? { description } : {}),
+      ...(sandboxed ? { sandboxed: true } : {}), // kilocode_change
+      ...metadata,
+    }, // kilocode_change
   })
 })
 
@@ -432,12 +439,12 @@ export const ShellPermission = Effect.gen(function* () {
           scan.dirs.add(input.cwd)
           scan.access = "unknown"
         }
-        // kilocode_change start - a sandboxed command is confined to writable paths, so the normal
-        // bash/external-directory approval is redundant (the sandbox already constrains the command,
-        // like an allow rule); only git mutations that escape the sandbox need the confirmation below.
-        if (!input.escalate) {
-          yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
-        }
+        // kilocode_change start - a sandboxed command is confined to writable paths, so its
+        // bash/external-directory check auto-approves instead of prompting (Permission.ask treats
+        // the sandboxed flag like an allow rule); deny rules and plan-mode hard rules still veto,
+        // and git mutations additionally ask the one-shot sandbox escalation below because they
+        // escape the sandbox.
+        yield* ask(ctx, scan, input.command, metadata, input.description, input.escalate) // kilocode_change
         // kilocode_change end
         const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
         if (input.escalate && gitMutation) {

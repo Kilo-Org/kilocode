@@ -84,17 +84,21 @@ afterEach(async () => {
 })
 
 describe("shell permission scanner fails closed on unparsed commands", () => {
-  test("sandboxed commands skip the bash approval; mutating Git asks only for the sandbox escalation", async () => {
+  test("sandboxed commands still emit the bash check, flagged so the server auto-approves without a prompt", async () => {
     await using tmp = await tmpdir({ git: true })
-    const requests = await scan(tmp.path, "git add . && git commit -m test", "bash", true)
-    expect(requests.map((request) => request.permission)).toEqual(["sandbox_escalation"])
-    expect(requests[0]?.metadata?.sandboxEscalation).toBe(true)
+    for (const command of ["npm run build", "git status"]) {
+      const requests = await scan(tmp.path, command, "bash", true)
+      expect(requests.map((request) => request.permission)).toEqual(["bash"])
+      expect(requests[0]?.metadata?.sandboxed).toBe(true)
+    }
   })
 
-  test("sandboxed non-git and read-only git commands run without any approval prompt", async () => {
+  test("sandboxed mutating Git asks only for the sandbox escalation, bash check flagged sandboxed", async () => {
     await using tmp = await tmpdir({ git: true })
-    expect(await scan(tmp.path, "npm run build", "bash", true)).toEqual([])
-    expect(await scan(tmp.path, "git status", "bash", true)).toEqual([])
+    const requests = await scan(tmp.path, "git add . && git commit -m test", "bash", true)
+    expect(requests.map((request) => request.permission)).toEqual(["bash", "sandbox_escalation"])
+    expect(requests[0]?.metadata?.sandboxed).toBe(true)
+    expect(requests[1]?.metadata?.sandboxEscalation).toBe(true)
   })
 
   test("pwsh: bare '--' git commands now produce a denied pattern", async () => {

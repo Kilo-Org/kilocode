@@ -214,6 +214,10 @@ const layer = Layer.effect(
       // kilocode_change end
 
       const forceAsk = request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true // kilocode_change
+      // kilocode_change start - a sandboxed command is already confined to writable paths, so an "ask"
+      // outcome auto-approves like an allow rule — but deny rules and hard vetoes above still terminate.
+      const sandboxed = request.metadata?.["sandboxed"] === true
+      // kilocode_change end
       for (const pattern of request.patterns) {
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
@@ -232,8 +236,9 @@ const layer = Layer.effect(
           continue
         }
         // kilocode_change end
-        // kilocode_change start - override "allow" to "ask" for protected config paths
-        if (rule.action === "allow" && (!isProtected || trusted)) {
+        // kilocode_change start - override "allow" to "ask" for protected config paths; sandboxed
+        // requests treat an "ask" outcome as allowed (no prompt) while still honoring deny above.
+        if ((rule.action === "allow" || sandboxed) && (!isProtected || trusted)) {
           approvedRule = rule // remember the winning rule so callers can explain the auto-approval
           continue
         }
