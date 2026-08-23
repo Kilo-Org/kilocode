@@ -22,7 +22,7 @@ import { isRecord } from "@/util/record"
 import type { ConsoleState } from "@opencode-ai/core/v1/config/console-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
-import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
+import { Context, Duration, Effect, Fiber, Layer, Option, Schema } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
@@ -55,6 +55,7 @@ import {
   IndexingSchema as KiloIndexingSchema,
 } from "@kilocode/kilo-indexing/config"
 import { unique } from "remeda"
+import { installLocalPluginDependency, needsLocalPluginDependency } from "@/kilocode/config/plugin-deps"
 // kilocode_change end
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
@@ -789,28 +790,9 @@ const layer = Layer.effect(
           plugins.push(...list) // kilocode_change
           yield* mergePluginOrigins(dir, list, dirScope) // kilocode_change
 
-          // kilocode_change start - only file plugins need the config directory's local plugin dependency
-          if (plugins.some((plugin) => ConfigPlugin.pluginSpecifier(plugin).startsWith("file://"))) {
-            const dep = yield* npmSvc
-              .install(dir, {
-                add: [
-                  {
-                    name: "@kilocode/plugin",
-                    version: InstallationLocal ? undefined : InstallationVersion,
-                  },
-                ],
-              })
-              .pipe(
-                Effect.exit,
-                Effect.tap((exit) =>
-                  Exit.isFailure(exit)
-                    ? Effect.logWarning("background dependency install failed", { dir, error: String(exit.cause) })
-                    : Effect.void,
-                ),
-                Effect.asVoid,
-                Effect.forkDetach,
-              )
-            deps.push(dep)
+          // kilocode_change start
+          if (needsLocalPluginDependency(plugins)) {
+            deps.push(yield* installLocalPluginDependency(npmSvc, dir, InstallationVersion, InstallationLocal))
           }
           // kilocode_change end
         }
