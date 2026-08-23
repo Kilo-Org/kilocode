@@ -175,6 +175,58 @@ it.live("maps aliases to models, drops embedding-only rows, and derives the reas
   }),
 )
 
+it.live("preserves the full reasoning-effort ladder, including max, as reasoning_options", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
+      Effect.provide(layer(hits, { key: "test-key" })),
+      provideInstance(process.cwd()),
+    )
+
+    // The raw ModelsDev model must carry the ladder as `reasoning_options`, not just a
+    // collapsed boolean, otherwise @ai-sdk/openai-compatible's heuristics invent
+    // low|medium|high and drop "max" entirely.
+    expect(providers.mindshub?.models.sonnet?.reasoning_options).toEqual([
+      { type: "effort", values: ["low", "medium", "high", "max"] },
+    ])
+    // A null ladder (e.g. "kimi") must not get a reasoning_options entry at all.
+    expect(providers.mindshub?.models.kimi?.reasoning_options).toBeUndefined()
+
+    const mindshub = Provider.fromModelsDevProvider(providers.mindshub)
+    expect(Object.keys(mindshub.models.sonnet.variants ?? {}).sort()).toEqual(["high", "low", "max", "medium"])
+    expect(mindshub.models.sonnet.variants?.max).toEqual({ reasoningEffort: "max" })
+    // Aliases with no effort ladder (kimi) get no effort variants, but also don't fall
+    // back to the id-sniffing heuristic that would otherwise invent one.
+    expect(mindshub.models.kimi.variants).toEqual({})
+  }),
+)
+
+it.live("applies MINDSHUB_BASE_URL to provider.api for inference, matching the model-listing host", () =>
+  Effect.gen(function* () {
+    const original = process.env.MINDSHUB_BASE_URL
+    process.env.MINDSHUB_BASE_URL = "https://proxy.example.com/v1"
+    try {
+      const hits = yield* Ref.make<Hit[]>([])
+      const providers = yield* ModelsDev.Service.use((models) => models.get()).pipe(
+        Effect.provide(layer(hits, { key: "test-key" })),
+        provideInstance(process.cwd()),
+      )
+
+      // `provider.api` (used by @ai-sdk/openai-compatible for actual completions via
+      // model.api.url) must honor the env override the same way GET /models already did,
+      // otherwise a proxy override is split-brained: listing hits the proxy, completions
+      // hit production.
+      expect(providers.mindshub?.api).toBe("https://proxy.example.com/v1")
+
+      const hit = (yield* Ref.get(hits))[0]
+      expect(hit?.url).toBe("https://proxy.example.com/v1/models")
+    } finally {
+      if (original === undefined) delete process.env.MINDSHUB_BASE_URL
+      else process.env.MINDSHUB_BASE_URL = original
+    }
+  }),
+)
+
 it.live("skips the fetch and reports no models without an API key", () =>
   Effect.gen(function* () {
     const hits = yield* Ref.make<Hit[]>([])

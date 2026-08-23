@@ -73,7 +73,11 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
         // kilocode_change start - register MindsHub, an OpenAI/Anthropic-compatible
         // inference gateway (https://mindshub.ai), the same way Apertis is registered above.
         const mh = cfg.provider?.mindshub?.options
-        const mhURL = mh?.baseURL ?? "https://api.mindshub.ai/v1"
+        // kilocode_change - fold MINDSHUB_BASE_URL into the default so the `provider.api`
+        // host used for inference matches the host authOptions() in model-cache.ts already
+        // uses for GET /models; otherwise an env-only proxy override lists models from the
+        // proxy but sends completions to the production host.
+        const mhURL = mh?.baseURL ?? process.env.MINDSHUB_BASE_URL ?? "https://api.mindshub.ai/v1"
         const mhOpts = mh?.baseURL ? { baseURL: mh.baseURL } : {}
 
         const addMindsHub = Effect.fnUntraced(function* () {

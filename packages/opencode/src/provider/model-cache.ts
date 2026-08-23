@@ -136,19 +136,28 @@ export const layer: Layer.Layer<
     })
 
     // kilocode_change start
-    const mindshubModel = (item: MindsHubItem): Models[string] => ({
-      id: item.id,
-      name: item.label ?? item.id,
-      family: item.family ?? item.provider ?? "",
-      release_date: "",
-      attachment: true,
-      reasoning: Array.isArray(item.reasoning_efforts) && item.reasoning_efforts.length > 0,
-      temperature: true,
-      tool_call: true,
-      cost: { input: 0, output: 0 },
-      limit: { context: 128000, output: 16384 },
-      modalities: { input: ["text", "image"], output: ["text"] },
-    })
+    const mindshubModel = (item: MindsHubItem): Models[string] => {
+      const efforts = Array.isArray(item.reasoning_efforts) ? item.reasoning_efforts : []
+      // Preserve the full effort ladder (including "max") as `reasoning_options` so
+      // fromModelsDevModel()/ProviderTransform.reasoningVariants() build the real variants
+      // instead of falling back to the @ai-sdk/openai-compatible low|medium|high heuristic,
+      // which never reaches "max" and produces no variants at all for aliases whose ids
+      // don't match its hardcoded family list (kimi, qwen, etc).
+      return {
+        id: item.id,
+        name: item.label ?? item.id,
+        family: item.family ?? item.provider ?? "",
+        release_date: "",
+        attachment: true,
+        reasoning: efforts.length > 0,
+        ...(efforts.length > 0 ? { reasoning_options: [{ type: "effort", values: efforts }] } : {}),
+        temperature: true,
+        tool_call: true,
+        cost: { input: 0, output: 0 },
+        limit: { context: 128000, output: 16384 },
+        modalities: { input: ["text", "image"], output: ["text"] },
+      }
+    }
 
     const fetchMindsHubModels = Effect.fn("ModelCache.fetchMindsHubModels")(function* (options: Options) {
       const baseURL = options.baseURL ?? MINDSHUB_BASE_URL
