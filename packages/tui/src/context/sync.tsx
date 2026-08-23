@@ -256,7 +256,11 @@ export const {
 
         case "permission.asked": {
           const request = event.properties
-          if (permission.mode === "auto") {
+          // kilocode_change start - sandbox escalation and skill-shell batches require an interactive
+          // human decision; the server refuses non-interactive approvals, so render them even in auto
+          // mode instead of replying "once" and leaving the request pending (command hangs forever).
+          const sensitive = request.metadata?.["sandboxEscalation"] === true || request.metadata?.["skillShell"] === true
+          if (permission.mode === "auto" && !sensitive) {
             void sdk.client.permission.reply({
               requestID: request.id,
               reply: "once",
@@ -265,6 +269,7 @@ export const {
             })
             break
           }
+          // kilocode_change end
           const requests = store.permission[request.sessionID]
           if (!requests) {
             setStore("permission", request.sessionID, [request])

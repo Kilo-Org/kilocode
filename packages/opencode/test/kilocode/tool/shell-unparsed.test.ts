@@ -84,11 +84,17 @@ afterEach(async () => {
 })
 
 describe("shell permission scanner fails closed on unparsed commands", () => {
-  test("asks separately before mutating Git when the session sandbox is enabled", async () => {
+  test("sandboxed commands skip the bash approval; mutating Git asks only for the sandbox escalation", async () => {
     await using tmp = await tmpdir({ git: true })
     const requests = await scan(tmp.path, "git add . && git commit -m test", "bash", true)
-    expect(requests.map((request) => request.permission)).toEqual(["bash", "sandbox_escalation"])
-    expect(requests[1]?.metadata?.sandboxEscalation).toBe(true)
+    expect(requests.map((request) => request.permission)).toEqual(["sandbox_escalation"])
+    expect(requests[0]?.metadata?.sandboxEscalation).toBe(true)
+  })
+
+  test("sandboxed non-git and read-only git commands run without any approval prompt", async () => {
+    await using tmp = await tmpdir({ git: true })
+    expect(await scan(tmp.path, "npm run build", "bash", true)).toEqual([])
+    expect(await scan(tmp.path, "git status", "bash", true)).toEqual([])
   })
 
   test("pwsh: bare '--' git commands now produce a denied pattern", async () => {

@@ -432,7 +432,13 @@ export const ShellPermission = Effect.gen(function* () {
           scan.dirs.add(input.cwd)
           scan.access = "unknown"
         }
-        yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
+        // kilocode_change start - a sandboxed command is confined to writable paths, so the normal
+        // bash/external-directory approval is redundant (the sandbox already constrains the command,
+        // like an allow rule); only git mutations that escape the sandbox need the confirmation below.
+        if (!input.escalate) {
+          yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
+        }
+        // kilocode_change end
         const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
         if (input.escalate && gitMutation) {
           yield* ctx.ask({
