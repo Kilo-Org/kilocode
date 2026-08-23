@@ -1034,6 +1034,11 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "在工具呼叫中顯示一行說明其被自動核准的原因（符合的規則、代理預設值、YOLO 模式等）。",
 
+  "settings.display.promptRailPosition.title": "提示詞導覽位置",
+  "settings.display.promptRailPosition.description": "選擇提示詞導覽列顯示在聊天的哪一側邊緣。",
+  "settings.display.promptRailPosition.left": "左側",
+  "settings.display.promptRailPosition.right": "右側",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

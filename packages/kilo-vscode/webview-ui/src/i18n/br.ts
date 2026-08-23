@@ -1146,6 +1146,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "Mostra uma linha nas chamadas de ferramentas explicando por que foram aprovadas automaticamente (regra correspondente, padrão do agente, modo YOLO, etc.).",
 
+  "settings.display.promptRailPosition.title": "Posição do navegador de prompts",
+  "settings.display.promptRailPosition.description":
+    "Escolha em qual borda do chat a barra do navegador de prompts aparece.",
+  "settings.display.promptRailPosition.left": "Esquerda",
+  "settings.display.promptRailPosition.right": "Direita",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

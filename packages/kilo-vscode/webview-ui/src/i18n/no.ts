@@ -1131,6 +1131,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "Viser en linje ved verktøykall som forklarer hvorfor de ble automatisk godkjent (samsvarende regel, agentstandard, YOLO-modus osv.).",
 
+  "settings.display.promptRailPosition.title": "Plassering av ledetekstnavigering",
+  "settings.display.promptRailPosition.description":
+    "Velg hvilken kant av chatten linjen for ledetekstnavigering vises på.",
+  "settings.display.promptRailPosition.left": "Venstre",
+  "settings.display.promptRailPosition.right": "Høyre",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

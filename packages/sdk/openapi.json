@@ -33894,6 +33894,10 @@
             "type": "string",
             "enum": ["expanded", "collapsed"]
           },
+          "prompt_rail_position": {
+            "type": "string",
+            "enum": ["left", "right"]
+          },
           "hide_prompt_training_models": {
             "type": "boolean"
           },

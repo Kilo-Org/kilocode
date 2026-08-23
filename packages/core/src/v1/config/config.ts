@@ -133,6 +133,11 @@ export const Info = Schema.Struct({
     description:
       "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  // kilocode_change start
+  prompt_rail_position: Schema.optional(Schema.Literals(["left", "right"])).annotate({
+    description: "Controls which edge of the chat the prompt navigator rail appears on",
+  }),
+  // kilocode_change end
   hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
     description: "Hide Kilo Gateway models that may train on your prompts from model listings",
   }),

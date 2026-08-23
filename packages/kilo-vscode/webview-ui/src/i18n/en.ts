@@ -1103,6 +1103,11 @@ export const dict = {
   "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
   "settings.display.autoApprovalReason.description":
     "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
+  "settings.display.promptRailPosition.title": "Prompt Navigator Position",
+  "settings.display.promptRailPosition.description":
+    "Choose which edge of the chat the prompt navigator rail appears on.",
+  "settings.display.promptRailPosition.left": "Left",
+  "settings.display.promptRailPosition.right": "Right",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

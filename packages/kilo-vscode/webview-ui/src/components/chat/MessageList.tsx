@@ -27,6 +27,7 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { useConfig } from "../../context/config"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { useProvider } from "../../context/provider"
 import { useWorktreeMode } from "../../context/worktree-mode"
@@ -81,7 +82,7 @@ import {
   parseProviderAuthError,
   unwrapError,
 } from "../../utils/errorUtils"
-import type { Part, QuestionRequest, SuggestionRequest, ToolState } from "../../types/messages"
+import type { Part, PromptRailPosition, QuestionRequest, SuggestionRequest, ToolState } from "../../types/messages"
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
@@ -104,6 +105,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
+  const config = useConfig()
   const provider = useProvider()
   const i18n = useI18n()
   const data = useData()
@@ -1034,7 +1036,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   window.addEventListener("scrollToMessage", onScrollToMessage)
   onCleanup(() => window.removeEventListener("scrollToMessage", onScrollToMessage))
 
-  // Prompt rail: one tick per user prompt, positioned to the left of the
+  // Prompt rail: one tick per user prompt, positioned on the edge of the
   // readable lane, opening a card of prompt/answer previews on hover.
   const items = createMemo(() => promptItems(rows()))
   // Until the transcript is measured there is no height to cap against, and
@@ -1042,6 +1044,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const entries = createMemo(() => railEntries(items(), capacity(height()), session.hasOlderMessages()))
   const [activeTurn, setActiveTurn] = createSignal<string>()
   const railActiveKey = createMemo(() => items().find((item) => item.turn === activeTurn())?.key)
+  const railPosition = createMemo<PromptRailPosition>(() => config.config().prompt_rail_position ?? "left")
 
   const [seek, setSeek] = createSignal<{ sid: string; count: number }>()
   let paging = false
@@ -1371,6 +1374,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       </div>
 
       <PromptRail
+        position={railPosition}
         entries={entries}
         items={items}
         active={() => railActiveKey()}

@@ -1158,6 +1158,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "Zeigt bei Tool-Aufrufen eine Zeile an, die erklärt, warum sie automatisch genehmigt wurden (passende Regel, Agent-Standard, YOLO-Modus usw.).",
 
+  "settings.display.promptRailPosition.title": "Position der Prompt-Navigation",
+  "settings.display.promptRailPosition.description":
+    "Wählen Sie, an welchem Rand des Chats die Leiste der Prompt-Navigation angezeigt wird.",
+  "settings.display.promptRailPosition.left": "Links",
+  "settings.display.promptRailPosition.right": "Rechts",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

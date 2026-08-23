@@ -1131,6 +1131,11 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "Viser en linje ved værktøjskald, der forklarer, hvorfor de blev automatisk godkendt (matchende regel, agent-standard, YOLO-tilstand osv.).",
 
+  "settings.display.promptRailPosition.title": "Placering af promptnavigator",
+  "settings.display.promptRailPosition.description": "Vælg i hvilken kant af chatten promptnavigatorens bjælke vises.",
+  "settings.display.promptRailPosition.left": "Venstre",
+  "settings.display.promptRailPosition.right": "Højre",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

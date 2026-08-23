@@ -1125,6 +1125,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "ツール呼び出しが自動承認された理由（一致したルール、エージェントのデフォルト、YOLOモードなど）を示す行を表示します。",
 
+  "settings.display.promptRailPosition.title": "プロンプトナビゲーターの位置",
+  "settings.display.promptRailPosition.description":
+    "プロンプトナビゲーターのバーをチャットのどちらの端に表示するかを選択します。",
+  "settings.display.promptRailPosition.left": "左",
+  "settings.display.promptRailPosition.right": "右",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

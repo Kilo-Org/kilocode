@@ -2557,6 +2557,7 @@ export type Config = {
   terminal_command_display?: "expanded" | "collapsed"
   code_edit_display?: "expanded" | "collapsed"
   mcp_tool_display?: "expanded" | "collapsed"
+  prompt_rail_position?: "left" | "right"
   hide_prompt_training_models?: boolean
   privacy_mode?: boolean
   /**

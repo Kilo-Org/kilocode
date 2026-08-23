@@ -6,7 +6,7 @@ import { Switch } from "@kilocode/kilo-ui/switch"
 import { useConfig } from "../../context/config"
 import { useDisplay } from "../../context/display"
 import { useLanguage } from "../../context/language"
-import type { CodeEditDisplay, McpToolDisplay, TerminalCommandDisplay } from "../../types/messages"
+import type { CodeEditDisplay, McpToolDisplay, PromptRailPosition, TerminalCommandDisplay } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
 interface LayoutOption {
@@ -27,6 +27,11 @@ const CODE_EDIT_OPTIONS: LayoutOption[] = [
 const MCP_OPTIONS: LayoutOption[] = [
   { value: "expanded", labelKey: "settings.display.mcpTool.expanded" },
   { value: "collapsed", labelKey: "settings.display.mcpTool.collapsed" },
+]
+
+const PROMPT_RAIL_OPTIONS: LayoutOption[] = [
+  { value: "left", labelKey: "settings.display.promptRailPosition.left" },
+  { value: "right", labelKey: "settings.display.promptRailPosition.right" },
 ]
 
 const DisplayTab: Component = () => {
@@ -167,7 +172,6 @@ const DisplayTab: Component = () => {
         <SettingsRow
           title={language.t("settings.display.mcpTool.title")}
           description={language.t("settings.display.mcpTool.description")}
-          last
         >
           <Select
             options={MCP_OPTIONS}
@@ -179,6 +183,28 @@ const DisplayTab: Component = () => {
               const next = o.value as McpToolDisplay
               if (next === (config().mcp_tool_display ?? "collapsed")) return
               updateConfig({ mcp_tool_display: next })
+            }}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.promptRailPosition.title")}
+          description={language.t("settings.display.promptRailPosition.description")}
+          last
+        >
+          <Select
+            options={PROMPT_RAIL_OPTIONS}
+            current={PROMPT_RAIL_OPTIONS.find((o) => o.value === (config().prompt_rail_position ?? "left"))}
+            value={(o) => o.value}
+            label={(o) => language.t(o.labelKey)}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value as PromptRailPosition
+              if (next === (config().prompt_rail_position ?? "left")) return
+              updateConfig({ prompt_rail_position: next })
             }}
             variant="secondary"
             size="small"

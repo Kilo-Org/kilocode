@@ -1092,6 +1092,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "Показує рядок біля викликів інструментів, що пояснює, чому їх автоматично схвалено (відповідне правило, стандартне значення агента, режим YOLO тощо).",
 
+  "settings.display.promptRailPosition.title": "Розташування навігатора запитів",
+  "settings.display.promptRailPosition.description":
+    "Виберіть, біля якого краю чату відображається панель навігатора запитів.",
+  "settings.display.promptRailPosition.left": "Ліворуч",
+  "settings.display.promptRailPosition.right": "Праворуч",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

@@ -2,7 +2,7 @@
 
 /**
  * PromptRail component
- * Thin vertical summary rail on the left edge of the transcript. Hovering or
+ * Thin vertical summary rail on the edge of the transcript. Hovering or
  * focusing opens a bounded navigator for every loaded prompt; clicking jumps
  * the virtualized transcript without mounting the intervening rows.
  */
@@ -15,8 +15,10 @@ import { Portal } from "solid-js/web"
 import { VList, type VListHandle } from "virtua/solid"
 import { useLanguage } from "../../context/language"
 import { RAIL_INSET, ROW_HEIGHT, TICK_MIN, TICK_STEP, type PromptRailEntry, type PromptRailItem } from "./prompt-rail"
+import type { PromptRailPosition } from "../../types/messages"
 
 interface PromptRailProps {
+  position: Accessor<PromptRailPosition>
   entries: Accessor<PromptRailEntry[]>
   items: Accessor<PromptRailItem[]>
   /** Row key of the item whose turn is currently at the top of the transcript. */
@@ -47,7 +49,7 @@ export function PromptRail(props: PromptRailProps) {
   const [open, setOpen] = createSignal(false)
   const [hover, setHover] = createSignal<string>()
   const [focused, setFocused] = createSignal<number>()
-  const [anchor, setAnchor] = createSignal<{ top: number; left: number; height: number }>()
+  const [anchor, setAnchor] = createSignal<{ top: number; left?: number; right?: number; height: number }>()
   let rail: HTMLElement | undefined
   let card: HTMLDivElement | undefined
   let list: VListHandle | undefined
@@ -96,9 +98,11 @@ export function PromptRail(props: PromptRailProps) {
     const min = Math.max(EDGE, rect.top + 4)
     const max = Math.min(window.innerHeight - EDGE, rect.bottom - 4) - height
     const center = rect.top + rect.height / 2 - height / 2
+    const isRight = props.position() === "right"
     setAnchor({
       top: max < min ? min : Math.min(Math.max(center, min), max),
-      left: rect.right + GAP,
+      left: isRight ? undefined : rect.right + GAP,
+      right: isRight ? window.innerWidth - rect.left + GAP : undefined,
       height: limit,
     })
   }
@@ -252,6 +256,16 @@ export function PromptRail(props: PromptRailProps) {
     props.onLatest()
   }
 
+  const cardStyle = (position: { top: number; left?: number; right?: number; height: number }) => {
+    const style: Record<string, string> = {
+      top: `${position.top}px`,
+      "--prompt-rail-card-height": `${position.height}px`,
+    }
+    if (position.left !== undefined) style.left = `${position.left}px`
+    if (position.right !== undefined) style.right = `${position.right}px`
+    return style
+  }
+
   const row = (item: PromptRailItem, index: Accessor<number>) => (
     <button
       type="button"
@@ -279,6 +293,7 @@ export function PromptRail(props: PromptRailProps) {
       <nav
         ref={rail}
         class="prompt-rail"
+        data-position={props.position()}
         aria-label={language.t("session.prompts.navLabel")}
         style={{ "--prompt-rail-step": `${step()}px` }}
         onMouseLeave={closeCard}
@@ -328,14 +343,11 @@ export function PromptRail(props: PromptRailProps) {
             <div
               ref={card}
               class="prompt-rail-card"
+              data-position={props.position()}
               data-virtualized={virtualized() || undefined}
               role="dialog"
               aria-label={language.t("session.prompts.navLabel")}
-              style={{
-                top: `${position().top}px`,
-                left: `${position().left}px`,
-                "--prompt-rail-card-height": `${position().height}px`,
-              }}
+              style={cardStyle(position())}
               onMouseEnter={cancelClose}
               onMouseLeave={closeCard}
               onWheel={(event) => {

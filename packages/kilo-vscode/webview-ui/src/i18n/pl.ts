@@ -1138,6 +1138,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "Pokazuje wiersz przy wywołaniach narzędzi wyjaśniający, dlaczego zostały automatycznie zatwierdzone (dopasowana reguła, wartość domyślna agenta, tryb YOLO itp.).",
 
+  "settings.display.promptRailPosition.title": "Położenie nawigatora promptów",
+  "settings.display.promptRailPosition.description":
+    "Wybierz, przy której krawędzi czatu wyświetlany jest pasek nawigatora promptów.",
+  "settings.display.promptRailPosition.left": "Lewa",
+  "settings.display.promptRailPosition.right": "Prawa",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

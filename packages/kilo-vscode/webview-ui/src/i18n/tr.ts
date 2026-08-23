@@ -1093,6 +1093,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",
 
+  "settings.display.promptRailPosition.title": "Komut Gezgini Konumu",
+  "settings.display.promptRailPosition.description":
+    "Komut gezgini çubuğunun sohbetin hangi kenarında görüneceğini seçin.",
+  "settings.display.promptRailPosition.left": "Sol",
+  "settings.display.promptRailPosition.right": "Sağ",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

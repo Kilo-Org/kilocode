@@ -1109,6 +1109,11 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "แสดงบรรทัดในการเรียกใช้เครื่องมือเพื่ออธิบายว่าเหตุใดจึงได้รับการอนุมัติอัตโนมัติ (กฎที่ตรงกัน ค่าเริ่มต้นของเอเจนต์ โหมด YOLO ฯลฯ)",
 
+  "settings.display.promptRailPosition.title": "ตำแหน่งตัวนำทางพรอมต์",
+  "settings.display.promptRailPosition.description": "เลือกว่าแถบตัวนำทางพรอมต์จะแสดงที่ขอบด้านใดของแชท",
+  "settings.display.promptRailPosition.left": "ซ้าย",
+  "settings.display.promptRailPosition.right": "ขวา",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

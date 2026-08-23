@@ -132,6 +132,7 @@ export interface BrowserSettings {
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
 export type McpToolDisplay = "expanded" | "collapsed"
+export type PromptRailPosition = "left" | "right"
 
 export interface Config {
   permission?: PermissionConfig
@@ -154,6 +155,7 @@ export interface Config {
   terminal_command_display?: TerminalCommandDisplay
   code_edit_display?: CodeEditDisplay
   mcp_tool_display?: McpToolDisplay
+  prompt_rail_position?: PromptRailPosition
   hide_prompt_training_models?: boolean
   share?: "manual" | "auto" | "disabled"
   username?: string

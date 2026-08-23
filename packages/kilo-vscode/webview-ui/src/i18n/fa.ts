@@ -1117,6 +1117,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "نمایش خطی در فراخوانی ابزارها که توضیح می‌دهد چرا به‌طور خودکار تأیید شده‌اند (قانون مطابق، پیش‌فرض عامل، حالت YOLO و غیره).",
 
+  "settings.display.promptRailPosition.title": "موقعیت ناوبر پرامپت",
+  "settings.display.promptRailPosition.description":
+    "انتخاب کنید که نوار ناوبر پرامپت در کدام لبه گفتگو نمایش داده شود.",
+  "settings.display.promptRailPosition.left": "چپ",
+  "settings.display.promptRailPosition.right": "راست",
+
   "chat.throughput.tooltip":
     "میانگین {{speed}} توکن/ثانیه برای این نوبت. شامل توکن‌های خروجی و استدلال می‌شود؛ زمان اجرای ابزار و انتظار را شامل نمی‌شود.",
   "chat.throughput.tooltip.missing": "معیارهای توان عملیاتی برای این نوبت در دسترس نیست.",

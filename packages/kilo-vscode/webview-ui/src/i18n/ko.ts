@@ -1112,6 +1112,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "도구 호출이 자동으로 승인된 이유(일치한 규칙, 에이전트 기본값, YOLO 모드 등)를 설명하는 줄을 표시합니다.",
 
+  "settings.display.promptRailPosition.title": "프롬프트 탐색기 위치",
+  "settings.display.promptRailPosition.description":
+    "프롬프트 탐색기 막대를 채팅의 어느 쪽 가장자리에 표시할지 선택합니다.",
+  "settings.display.promptRailPosition.left": "왼쪽",
+  "settings.display.promptRailPosition.right": "오른쪽",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

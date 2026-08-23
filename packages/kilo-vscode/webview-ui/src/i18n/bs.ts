@@ -1137,6 +1137,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "Prikazuje red uz pozive alata koji objašnjava zašto su automatski odobreni (odgovarajuće pravilo, podrazumevana vrijednost agenta, YOLO režim itd.).",
 
+  "settings.display.promptRailPosition.title": "Položaj navigatora upita",
+  "settings.display.promptRailPosition.description":
+    "Odaberite na kojoj ivici razgovora se prikazuje traka navigatora upita.",
+  "settings.display.promptRailPosition.left": "Lijevo",
+  "settings.display.promptRailPosition.right": "Desno",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

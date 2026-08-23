@@ -1103,6 +1103,11 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "إظهار سطر عند استدعاءات الأدوات يوضح سبب الموافقة التلقائية عليها (قاعدة مطابقة، إعداد افتراضي للوكيل، وضع YOLO، إلخ).",
 
+  "settings.display.promptRailPosition.title": "موضع مستعرض المطالبات",
+  "settings.display.promptRailPosition.description": "اختر الحافة التي يظهر عليها شريط مستعرض المطالبات في الدردشة.",
+  "settings.display.promptRailPosition.left": "يسار",
+  "settings.display.promptRailPosition.right": "يمين",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",

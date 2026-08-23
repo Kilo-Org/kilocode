@@ -40,6 +40,11 @@
   opacity: 1;
 }
 
+.prompt-rail[data-position="right"] {
+  inset-inline-start: auto;
+  inset-inline-end: var(--prompt-rail-edge);
+}
+
 .prompt-rail-tick {
   pointer-events: auto;
   display: flex;
@@ -55,6 +60,10 @@
   /* No outline box: the focus ring is drawn on the line itself, so a focused
      tick reads as part of the rail instead of a rectangle floating over it. */
   outline: none;
+}
+
+.prompt-rail[data-position="right"] .prompt-rail-tick {
+  justify-content: flex-end;
 }
 
 /* Ticks grow by transform, not by width and height: a rail can hold a hundred
@@ -75,6 +84,10 @@
     opacity 0.2s var(--prompt-rail-ease),
     background-color 0.2s var(--prompt-rail-ease),
     box-shadow 0.2s var(--prompt-rail-ease);
+}
+
+.prompt-rail[data-position="right"] .prompt-rail-tick-line {
+  transform-origin: right center;
 }
 
 .prompt-rail-tick[data-queued] .prompt-rail-tick-line {
@@ -164,6 +177,11 @@
   transform-origin: left center;
 }
 
+.prompt-rail-card[data-position="right"] {
+  transform-origin: right center;
+  animation-name: prompt-rail-in-right;
+}
+
 .prompt-rail-card[data-virtualized] {
   display: flex;
   flex-direction: column;
@@ -247,6 +265,17 @@
   from {
     opacity: 0;
     transform: translateX(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes prompt-rail-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(6px) scale(0.98);
   }
   to {
     opacity: 1;

@@ -1132,6 +1132,12 @@ export const dict = {
   "settings.display.autoApprovalReason.description":
     "Показывает строку у вызовов инструментов, объясняющую, почему они были одобрены автоматически (совпавшее правило, значение агента по умолчанию, режим YOLO и т. д.).",
 
+  "settings.display.promptRailPosition.title": "Расположение навигатора промптов",
+  "settings.display.promptRailPosition.description":
+    "Выберите, у какого края чата отображается панель навигатора промптов.",
+  "settings.display.promptRailPosition.left": "Слева",
+  "settings.display.promptRailPosition.right": "Справа",
+
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
