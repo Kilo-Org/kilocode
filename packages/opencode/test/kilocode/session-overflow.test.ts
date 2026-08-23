@@ -293,9 +293,21 @@ describe("Kilo preflight compaction", () => {
     ).toBe(true)
   })
 
-  test("uses the model input limit for the preflight percentage", () => {
+  test("applies the threshold to the context window, not the model input limit", () => {
     const conf = cfg({ threshold_percent: 75 })
     const mdl = model({ context: 400_000, input: 200_000, output: 32_000 })
+
+    // The 500k-char payload estimates at 162.5k inflated tokens: above 75% of the
+    // 200k input limit but below 75% of the 400k context window the UI displays.
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        messages: [{ role: "user", content: "x".repeat(500_000) }],
+        tools: {},
+      }),
+    ).toBe(false)
 
     expect(
       KiloSessionOverflow.shouldCompact({
@@ -304,6 +316,52 @@ describe("Kilo preflight compaction", () => {
         usable: usable({ cfg: conf, model: mdl }),
         messages: [{ role: "user", content: "x".repeat(500_000) }],
         tools: {},
+        reported: 180_000,
+      }),
+    ).toBe(true)
+  })
+
+  test("does not compact from the inflated estimate when reported usage is far below the threshold", () => {
+    // Regression for #13335: GPT-5-style model (272k input of a 400k context),
+    // threshold 80%, provider reports ~40% displayed usage, and the estimate
+    // overshoots past the old input-based limit. Compaction must not fire.
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 400_000, input: 272_000, output: 128_000 })
+
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        tokens: 230_000,
+        continuation: false,
+        reported: 160_000,
+      }),
+    ).toBe(false)
+  })
+
+  test("compacts when reported usage reaches the threshold percentage of the context window", () => {
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        tokens: 10_000,
+        continuation: false,
+        reported: 159_999,
+      }),
+    ).toBe(false)
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        tokens: 10_000,
+        continuation: false,
+        reported: 160_000,
       }),
     ).toBe(true)
   })

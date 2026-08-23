@@ -159,6 +159,7 @@ const live: Layer.Layer<
           usable: usable({ cfg, model: input.model, outputTokenMax: flags.outputTokenMax }), // kilocode_change
           tokens: usage.normalized,
           continuation: usage.continuation,
+          reported: input.reportedContextTokens,
         })
       ) {
         return yield* Effect.fail(new KiloSessionOverflow.PreflightError())

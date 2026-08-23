@@ -38,7 +38,7 @@ export namespace KiloSessionOverflow {
     const percent = input.cfg.compaction?.threshold_percent
     if (typeof percent !== "number") return input.usable
 
-    const context = input.model.limit.input || input.model.limit.context
+    const context = input.model.limit.context
     if (context === 0) return input.usable
 
     const cap = Math.floor(context * (percent / 100))
@@ -96,12 +96,17 @@ export namespace KiloSessionOverflow {
       cfg: Config.Info
       model: Provider.Model
       usable: number
+      reported?: number
     } & (Payload | { tokens: number; continuation: boolean }),
   ) {
     if (!enabled(input)) return false
     const stats = "tokens" in input ? input : measure(input)
     if (stats.continuation) return false
-    const tokens = "tokens" in stats ? stats.tokens : stats.normalized
+    const estimate = "tokens" in stats ? stats.tokens : stats.normalized
+    // The estimate's safety factor overshoots real usage; deflate it so the preflight
+    // tracks the displayed percentage, and anchor to the provider-reported count from
+    // the last finished turn when available.
+    const tokens = Math.max(input.reported ?? 0, estimate / FACTOR)
     return tokens >= limit(input)
   }
 }
