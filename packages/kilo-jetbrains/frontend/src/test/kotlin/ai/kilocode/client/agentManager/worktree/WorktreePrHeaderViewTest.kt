@@ -3,6 +3,8 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.session.ui.header.BranchChangesBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.stateLabel
+import ai.kilocode.client.ui.style
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto

@@ -4,9 +4,11 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -17,6 +19,7 @@ import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 /**
@@ -96,6 +99,20 @@ class KiloWorktreeService internal constructor(
         LOG.warn("worktree PR status failed for $directory", e)
         WorktreePrListDto()
     }
+
+    suspend fun branchStatus(directory: String): BranchStatusDto = try {
+        call { branchStatus(directory) }
+    } catch (e: Exception) {
+        LOG.warn("worktree branch status failed for $directory", e)
+        BranchStatusDto()
+    }
+
+    /**
+     * Long-lived move flow. Routed through [durable] (via [call]) so it survives reconnects and
+     * backend restarts while the move runs.
+     */
+    suspend fun moveToWorktree(directory: String, sessionId: String, branch: String): Flow<MoveProgressDto> =
+        call { moveToWorktree(directory, sessionId, branch) }
 
     suspend fun create(directory: String, req: CreateWorktreeRequestDto): CreateWorktreeResultDto =
         call { create(directory, req) }

@@ -163,6 +163,41 @@ class KiloBackendSessionManager(
         }
     }
 
+    /**
+     * Fork session [id] into [dir] via `POST /session/{id}/fork?directory={dir}` with an empty body.
+     *
+     * Uses raw HTTP for the same reason as [create]: the generated client sends a malformed empty
+     * body. The CLI accepts a bodyless fork and `?directory=` overrides the source session directory
+     * (see packages/opencode/src/kilocode/server/httpapi/session-fork.ts and fork-routing.ts).
+     */
+    fun fork(id: String, dir: String): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addPathSegment("fork")
+            .addQueryParameter("directory", dir)
+            .build()
+        log.info("Forking session: POST $target")
+        val request = Request.Builder()
+            .url(target)
+            .post(ByteArray(0).toRequestBody(null))
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session fork failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session fork failed: HTTP ${response.code} — $raw")
+            }
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            log.info("${ChatLogSummary.sid(dto.id)} kind=session forkedFrom=${ChatLogSummary.sid(id)} code=${response.code}")
+            owned[dto.id] = dto.directory
+            return dto
+        }
+    }
+
     fun get(id: String, dir: String): SessionDto {
         val all = requireClient().sessionList(directory = dir)
         val raw = all.firstOrNull { it.id == id }

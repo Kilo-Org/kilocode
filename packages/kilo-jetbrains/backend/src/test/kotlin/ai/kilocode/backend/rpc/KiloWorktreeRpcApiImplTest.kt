@@ -442,6 +442,79 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("Fix login bug", pull.title)
     }
 
+    @Test
+    fun `branchStatus reports plain checkout and linked worktree`() = runBlocking {
+        initRepo()
+
+        val main = api.branchStatus(repo.toString())
+        assertFalse(main.worktree, "main checkout is not a linked worktree")
+        assertTrue(main.branch.isNotBlank(), "main checkout should report a branch")
+
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val wt = api.branchStatus(created.path)
+        assertTrue(wt.worktree, "a linked worktree should be detected")
+        assertEquals("feature/x", wt.branch)
+    }
+
+    @Test
+    fun `worktree transfer round trips changes without touching the source`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("tracked.txt"), "original\n")
+        git(repo, "add", "tracked.txt")
+        git(repo, "commit", "-m", "add tracked")
+        // Staged new file, an unstaged modification to a tracked file, an untracked text file,
+        // and an untracked binary file.
+        Files.writeString(repo.resolve("staged.txt"), "staged content\n")
+        git(repo, "add", "staged.txt")
+        Files.writeString(repo.resolve("tracked.txt"), "modified\n")
+        Files.writeString(repo.resolve("untracked.txt"), "brand new\n")
+        val binary = byteArrayOf(0, 1, 2, 3, 0, 5, 127, -1)
+        Files.write(repo.resolve("blob.bin"), binary)
+
+        val snapshot = WorktreeTransfer.capture(repo)
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val target = Path.of(created.path)
+        // Baseline the source status after worktree creation (which adds .kilo bookkeeping) so the
+        // assertion isolates the effect of apply, which must not touch the source tree.
+        val before = statusOf(repo)
+
+        val result = WorktreeTransfer.apply(snapshot, repo, target)
+        assertTrue(result.ok, "apply should succeed: ${result.error}")
+
+        assertEquals("modified\n", Files.readString(target.resolve("tracked.txt")))
+        assertEquals("staged content\n", Files.readString(target.resolve("staged.txt")))
+        assertEquals("brand new\n", Files.readString(target.resolve("untracked.txt")))
+        assertTrue(binary.contentEquals(Files.readAllBytes(target.resolve("blob.bin"))), "binary file should round-trip")
+
+        // The source working tree must be untouched by capture + apply.
+        assertEquals(before, statusOf(repo), "source working tree must be unchanged")
+        WorktreeTransfer.cleanup(snapshot)
+    }
+
+    @Test
+    fun `worktree transfer reports failure when a staged patch cannot apply`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("staged.txt"), "staged content\n")
+        git(repo, "add", "staged.txt")
+
+        val snapshot = WorktreeTransfer.capture(repo)
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val target = Path.of(created.path)
+        // Pre-create the staged file in the target so the new-file patch cannot apply cleanly.
+        Files.writeString(target.resolve("staged.txt"), "conflicting\n")
+
+        val result = WorktreeTransfer.apply(snapshot, repo, target)
+
+        assertFalse(result.ok, "apply should fail when the patch conflicts")
+        assertNotNull(result.error)
+        WorktreeTransfer.cleanup(snapshot)
+    }
+
+    private fun statusOf(dir: Path): String {
+        val cmd = GeneralCommandLine(listOf("git", "status", "--porcelain")).withWorkDirectory(dir.toFile())
+        return CapturingProcessHandler(cmd).runProcess(30_000).stdout
+    }
+
     private fun initRepo() {
         git(repo, "init")
         git(repo, "config", "user.email", "test@kilo.ai")

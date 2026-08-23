@@ -49,6 +49,15 @@ class SessionSidePanelManager(
     private var panel: JComponent? = null
     private var historyBack: (() -> Unit)? = null
 
+    /** Wired by the tool window to open the Agent Manager's New Worktree flow from the chat dock. */
+    var onNewWorktree: (() -> Unit)? = null
+
+    override val supportsNewWorktree: Boolean get() = onNewWorktree != null
+
+    override fun newWorktree() {
+        onNewWorktree?.invoke()
+    }
+
     val defaultFocusedComponent: JComponent? get() = currentUi()?.defaultFocusedComponent ?: (panel as? HistoryPanel)?.defaultFocusedComponent
 
     @RequiresEdt

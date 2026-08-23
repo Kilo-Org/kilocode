@@ -1,11 +1,15 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.MoveProgressDto
+import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -21,6 +25,7 @@ import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.ide.impl.OpenProjectTask
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.io.FileUtil
@@ -30,6 +35,8 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -63,6 +70,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     private val bases = ConcurrentHashMap<String, Timed<String>>()
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
+    private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
     private val ghLock = Any()
     @Volatile
     private var ghProbe: Timed<GhAvailability>? = null
@@ -176,6 +184,73 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val dto = WorktreePrListDto(status, if (status == GhAvailability.OK) data else emptyList())
         prs[directory] = Timed(System.currentTimeMillis(), dto)
         dto
+    }
+
+    override suspend fun branchStatus(directory: String): BranchStatusDto = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        branches[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
+        val root = Path.of(directory).normalize()
+        val branch = runGit(root, "branch", "--show-current").stdout.trim()
+        val worktree = isLinkedWorktree(root)
+        val availability = ghAvailable(root)
+        val pr = if (availability == GhAvailability.OK && branch.isNotBlank()) {
+            val out = runGh(root, "pr", "view", branch, "--json", "number,state,isDraft,url,title,headRefName")
+            // Only accept a PR whose head branch matches the current branch. Guards against gh
+            // resolving a PR via upstream/remote configuration that isn't for this branch.
+            if (out.ok && parsePrHeadRef(out.stdout) == branch) parsePr(directory, out.stdout) else null
+        } else {
+            null
+        }
+        val dto = BranchStatusDto(branch = branch, worktree = worktree, availability = availability, pr = pr)
+        branches[directory] = Timed(System.currentTimeMillis(), dto)
+        dto
+    }
+
+    override suspend fun moveToWorktree(directory: String, sessionId: String, branch: String): Flow<MoveProgressDto> = flow {
+        val base = Path.of(directory).normalize()
+        LOG.info("worktree move requested: dir=$base session=$sessionId branch=$branch")
+        emit(MoveProgressDto(MoveStage.CAPTURING))
+        val snapshot = withContext(Dispatchers.IO) { WorktreeTransfer.capture(base) }
+        try {
+            emit(MoveProgressDto(MoveStage.CREATING))
+            val created = withContext(Dispatchers.IO) {
+                addWorktree(base, branch.trim(), existing = false, baseRef = snapshot.head)
+            }
+            val worktree = created.worktree ?: run {
+                emit(MoveProgressDto(MoveStage.ERROR, error = created.error ?: "Failed to create worktree"))
+                return@flow
+            }
+            val target = Path.of(worktree.path).normalize()
+            emit(MoveProgressDto(MoveStage.TRANSFERRING))
+            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(snapshot, base, target) }
+            if (!applied.ok) {
+                LOG.warn("worktree move: rolling back ${worktree.path} after transfer failure")
+                remove(directory, worktree.path, branch, force = true)
+                emit(MoveProgressDto(MoveStage.ERROR, error = applied.error ?: "Failed to apply changes to worktree"))
+                return@flow
+            }
+            emit(MoveProgressDto(MoveStage.FORKING))
+            val forked = runCatching {
+                withContext(Dispatchers.IO) { service<KiloBackendAppService>().sessions.fork(sessionId, worktree.path) }
+            }.getOrElse { err ->
+                LOG.warn("worktree move: fork failed session=$sessionId", err)
+                emit(MoveProgressDto(MoveStage.ERROR, error = err.message ?: "Failed to fork session"))
+                return@flow
+            }
+            LOG.info("worktree move done: worktree=${worktree.path} session=${forked.id}")
+            emit(MoveProgressDto(MoveStage.DONE, worktree = worktree, session = forked.id))
+        } finally {
+            withContext(Dispatchers.IO) { WorktreeTransfer.cleanup(snapshot) }
+        }
+    }
+
+    /** Detects a linked (non-primary) worktree: its git-dir differs from the shared common git-dir. */
+    private fun isLinkedWorktree(root: Path): Boolean {
+        val res = runGit(root, "rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir")
+        if (!res.ok) return false
+        val lines = res.stdout.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        if (lines.size < 2) return false
+        return Path.of(lines[0]).normalize() != Path.of(lines[1]).normalize()
     }
 
     override suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto =

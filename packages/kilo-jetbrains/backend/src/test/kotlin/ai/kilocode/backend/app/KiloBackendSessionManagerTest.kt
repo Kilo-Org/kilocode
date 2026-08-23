@@ -309,6 +309,57 @@ class KiloBackendSessionManagerTest {
         assertEquals("/test", session.directory)
     }
 
+    // ------ Session fork ------
+
+    @Test
+    fun `fork posts to fork endpoint with empty body and directory override`() = runBlocking {
+        mock.sessionFork = """{
+            "id": "ses_forked",
+            "slug": "forked",
+            "projectID": "prj_test",
+            "directory": "/worktree/path",
+            "title": "Forked",
+            "version": "1.0.0",
+            "time": {"created": 1000, "updated": 1000}
+        }"""
+        val app = setup()
+        ready(app)
+
+        val session = app.sessions.fork("ses_source", "/worktree/path")
+
+        assertEquals("ses_forked", session.id)
+        assertEquals("/worktree/path", session.directory)
+        val path = mock.lastForkPath ?: error("missing fork request")
+        assertTrue(path.startsWith("/session/ses_source/fork?"), "Expected fork path, got $path")
+        assertTrue(URLDecoder.decode(path, "UTF-8").contains("directory=/worktree/path"), path)
+        // The CLI accepts a bodyless fork; a non-empty body would be rejected.
+        assertEquals("", mock.lastForkBody)
+    }
+
+    @Test
+    fun `fork surfaces server failure`() = runBlocking {
+        mock.sessionForkStatus = 500
+        mock.sessionFork = """{"error":"boom"}"""
+        val app = setup()
+        ready(app)
+
+        val err = assertFailsWith<RuntimeException> {
+            app.sessions.fork("ses_source", "/worktree")
+        }
+
+        assertTrue(err.message.orEmpty().contains("HTTP 500"))
+        assertTrue(err.message.orEmpty().contains("boom"))
+    }
+
+    @Test
+    fun `fork throws before start`() = runBlocking {
+        val app = setup()
+
+        assertFailsWith<IllegalStateException> {
+            app.sessions.fork("ses_source", "/worktree")
+        }
+    }
+
     // ------ Session delete ------
 
     @Test

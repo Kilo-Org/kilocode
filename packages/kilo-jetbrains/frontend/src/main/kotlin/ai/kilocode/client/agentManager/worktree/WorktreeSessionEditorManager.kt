@@ -46,6 +46,7 @@ open class WorktreeSessionEditorManager(
     project: Project,
     private val worktree: Workspace,
     private val list: WorktreeSessionListController,
+    private val session: String? = null,
     private val del: (String, (Boolean, String?) -> Unit) -> Unit = list::delete,
     create: (Project, Workspace, SessionManager, SessionRef?, UiTimerSource) -> SessionUi =
         { project, workspace, manager, ref, timers ->
@@ -72,7 +73,7 @@ open class WorktreeSessionEditorManager(
         }
     },
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
-    override val showsBranchBadgeInHeader: Boolean get() = false
+    override val showsBranchDock: Boolean get() = false
     override val hostedInEditorTab: Boolean get() = true
     private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
@@ -97,6 +98,11 @@ open class WorktreeSessionEditorManager(
     fun start() {
         startedOnce = true
         list.reload {
+            val target = session
+            if (target != null) {
+                openSession(SessionRef.Local(target), false)
+                return@reload
+            }
             val dto = latest()
             if (dto != null) openSession(SessionRef.Local(dto), false) else newSession(false)
         }

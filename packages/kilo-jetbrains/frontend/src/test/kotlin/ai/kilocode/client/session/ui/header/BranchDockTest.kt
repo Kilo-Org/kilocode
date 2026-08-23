@@ -1,0 +1,195 @@
+package ai.kilocode.client.session.ui.header
+
+import ai.kilocode.client.actions.ChatMoveToWorktreeAction
+import ai.kilocode.client.actions.ChatNewWorktreeAction
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.util.edtWait
+import ai.kilocode.rpc.dto.BranchStatusDto
+import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.MoveStage
+import ai.kilocode.rpc.dto.WorktreePrDto
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+
+@Suppress("UnstableApiUsage")
+class BranchDockTest : BasePlatformTestCase() {
+
+    // ---- dock visibility ----
+
+    fun `test dock visible with messages`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+        }
+        assertTrue(edt { dock.isVisible })
+    }
+
+    fun `test dock visible with changes`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = true, availability = GhAvailability.OK))
+            dock.setChanges(listOf(DiffFileDto("src/A.kt", 2, 1)))
+        }
+        assertTrue(edt { dock.isVisible })
+    }
+
+    fun `test dock hidden with nothing to show`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "main", worktree = false, availability = GhAvailability.OK))
+        }
+        assertFalse(edt { dock.isVisible })
+    }
+
+    fun `test dock hidden when git missing`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "main", worktree = false, availability = GhAvailability.GIT_MISSING))
+            dock.setHasMessages(true)
+        }
+        assertFalse(edt { dock.isVisible })
+    }
+
+    fun `test PR makes dock visible`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(
+                BranchStatusDto(
+                    branch = "feature-x",
+                    worktree = true,
+                    availability = GhAvailability.GIT_MISSING,
+                    pr = WorktreePrDto("/repo", 7, GhState.OPEN, "https://pr/7", "Title"),
+                ),
+            )
+        }
+        assertTrue(edt { dock.isVisible })
+    }
+
+    // ---- Move to Worktree action ----
+
+    fun `test move action visible with messages`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+        }
+        val p = update(ChatMoveToWorktreeAction(), dock)
+        assertTrue(p.isVisible)
+        assertTrue(p.isEnabled)
+        assertEquals(KiloBundle.message("session.dock.move"), p.text)
+    }
+
+    fun `test move action visible with changes and no messages`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setChanges(listOf(DiffFileDto("src/A.kt", 2, 1)))
+        }
+        assertTrue(update(ChatMoveToWorktreeAction(), dock).isVisible)
+    }
+
+    fun `test move action hidden with nothing to move`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+        }
+        assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
+    }
+
+    fun `test move action hidden when git missing`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.GIT_MISSING))
+            dock.setHasMessages(true)
+        }
+        assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
+    }
+
+    fun `test move action shows spinner while moving`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+            dock.setMoveProgress(MoveStage.CREATING, null)
+        }
+        val p = update(ChatMoveToWorktreeAction(), dock)
+        assertTrue(p.isVisible)
+        assertFalse(p.isEnabled)
+        assertEquals(KiloBundle.message("session.dock.progress.creating"), p.text)
+    }
+
+    fun `test move action invokes callback`() {
+        var moved = 0
+        val dock = edt { BranchDock(openDiff = {}, onMove = { moved++ }) }
+        val action = ChatMoveToWorktreeAction()
+        val event = event(action, dock)
+        edt { ActionUtil.updateAction(action, event) }
+        edt { action.actionPerformed(event) }
+        assertEquals(1, moved)
+    }
+
+    // ---- New Worktree action ----
+
+    fun `test new worktree action visible when dock active`() {
+        val dock = dockWithNewWorktree()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+        }
+        val p = update(ChatNewWorktreeAction(), dock)
+        assertTrue(p.isVisible)
+        assertEquals(KiloBundle.message("session.dock.newWorktree"), p.text)
+    }
+
+    fun `test new worktree action hidden with nothing to show`() {
+        val dock = dockWithNewWorktree()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+        }
+        assertFalse(update(ChatNewWorktreeAction(), dock).isVisible)
+    }
+
+    fun `test new worktree action hidden without callback`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+        }
+        assertFalse(update(ChatNewWorktreeAction(), dock).isVisible)
+    }
+
+    fun `test new worktree action invokes callback`() {
+        var fired = 0
+        val dock = edt { BranchDock(openDiff = {}, onMove = {}, onNewWorktree = { fired++ }) }
+        val action = ChatNewWorktreeAction()
+        val event = event(action, dock)
+        edt { ActionUtil.updateAction(action, event) }
+        edt { action.actionPerformed(event) }
+        assertEquals(1, fired)
+    }
+
+    private fun dock(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}) }
+
+    private fun dockWithNewWorktree(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}, onNewWorktree = {}) }
+
+    private fun update(action: AnAction, dock: BranchDock): Presentation {
+        val event = event(action, dock)
+        edt { ActionUtil.updateAction(action, event) }
+        return event.presentation
+    }
+
+    private fun event(action: AnAction, dock: BranchDock): AnActionEvent {
+        val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
+        val context = DataContext { id -> if (ChatDockKeys.DOCK.`is`(id)) dock else null }
+        return AnActionEvent.createFromDataContext("", presentation, context)
+    }
+
+    private fun <T> edt(block: () -> T): T = edtWait(block)
+}

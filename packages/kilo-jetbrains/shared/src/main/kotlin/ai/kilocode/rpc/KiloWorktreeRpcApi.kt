@@ -1,8 +1,10 @@
 package ai.kilocode.rpc
 
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -13,6 +15,7 @@ import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
 import fleet.rpc.Rpc
 import fleet.rpc.remoteApiDescriptor
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Git-worktree RPC API exposed from backend to frontend.
@@ -40,6 +43,20 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     suspend fun stats(directory: String): WorktreeStatsListDto
     suspend fun ghStatus(directory: String): GhAvailability
     suspend fun prStatus(directory: String): WorktreePrListDto
+
+    /**
+     * Single-directory branch status for the chat branch/PR dock: current branch, worktree flag,
+     * gh availability, and the PR for the branch (if any). Cached with the same TTL as [prStatus].
+     */
+    suspend fun branchStatus(directory: String): BranchStatusDto
+
+    /**
+     * Moves the session [sessionId] running in [directory] into a fresh worktree on [branch]:
+     * captures uncommitted changes, creates the worktree at the source HEAD, transfers the changes,
+     * then forks the session into it. Emits one [MoveProgressDto] per stage; [branch] is generated
+     * on the frontend from the known branch list.
+     */
+    suspend fun moveToWorktree(directory: String, sessionId: String, branch: String): Flow<MoveProgressDto>
     suspend fun listBranches(directory: String): WorktreeBranchesDto
     suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto
 

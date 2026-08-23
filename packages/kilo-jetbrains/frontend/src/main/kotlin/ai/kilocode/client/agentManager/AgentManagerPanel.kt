@@ -14,10 +14,10 @@ import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeTitle
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
-import ai.kilocode.client.agentManager.worktree.prTooltip
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
-import ai.kilocode.client.agentManager.worktree.style
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
+import ai.kilocode.client.ui.prTooltip
+import ai.kilocode.client.ui.style
 import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.diff.diffParams
 import ai.kilocode.client.diff.ensureDiffEditorKind
@@ -155,7 +155,7 @@ class AgentManagerPanel(
     }
 
     /** Opens the New Worktree dialog. */
-    fun configure() {
+    fun configure(afterClose: (() -> Unit)? = null) {
         val target = project ?: return
         NewWorktreeDialog(
             this,
@@ -168,6 +168,7 @@ class AgentManagerPanel(
                 controller.create(branch, base, prompt = prompt)
             },
         ).show()
+        afterClose?.invoke()
     }
 
     private fun remove(item: WorktreeDto, force: Boolean) {

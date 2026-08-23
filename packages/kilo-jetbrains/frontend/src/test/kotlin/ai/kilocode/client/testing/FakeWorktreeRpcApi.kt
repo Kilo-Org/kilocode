@@ -1,9 +1,11 @@
 package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -11,6 +13,8 @@ import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -23,7 +27,11 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     var statsResult = WorktreeStatsListDto()
     var ghResult = GhAvailability.OK
     var prResult = WorktreePrListDto()
+    var branchResult = BranchStatusDto()
     var currentBranch: String? = null
+    val moves = CopyOnWriteArrayList<Triple<String, String, String>>()
+    /** Progress events emitted by [moveToWorktree], in order. */
+    var moveScript: List<MoveProgressDto> = emptyList()
     val creates = CopyOnWriteArrayList<CreateWorktreeRequestDto>()
     val removes = CopyOnWriteArrayList<Triple<String, String, String?>>()
     val removeForces = CopyOnWriteArrayList<Boolean>()
@@ -83,6 +91,17 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     override suspend fun prStatus(directory: String): WorktreePrListDto {
         assertNotEdt("prStatus")
         return prResult
+    }
+
+    override suspend fun branchStatus(directory: String): BranchStatusDto {
+        assertNotEdt("branchStatus")
+        return branchResult
+    }
+
+    override suspend fun moveToWorktree(directory: String, sessionId: String, branch: String): Flow<MoveProgressDto> {
+        assertNotEdt("moveToWorktree")
+        moves.add(Triple(directory, sessionId, branch))
+        return moveScript.asFlow()
     }
 
     override suspend fun open(directory: String): Boolean {

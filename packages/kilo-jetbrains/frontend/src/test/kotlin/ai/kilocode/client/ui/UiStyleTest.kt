@@ -1,6 +1,5 @@
 package ai.kilocode.client.ui
 
-import ai.kilocode.client.agentManager.worktree.style
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.GhState

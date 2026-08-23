@@ -38,15 +38,17 @@ object WorktreeSessionEditorKind : KiloEditorKind {
     @RequiresEdt
     override fun createContent(project: Project, file: KiloVirtualFile, parent: Disposable): JComponent {
         val path = file.path.params[PATH]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
+        val session = file.path.params[SESSION]?.takeIf { it.isNotBlank() }
         val worktree = service<KiloWorkspaceService>().workspace(path)
         val cs = service<SessionUiFactory>().scope()
         Disposer.register(parent) { cs.cancel() }
         val controller = WorktreeSessionListController(project.service<KiloSessionService>(), path, cs)
-        val manager = WorktreeSessionEditorManager(parent, project, worktree, controller)
+        val manager = WorktreeSessionEditorManager(parent, project, worktree, controller, session = session)
         return WorktreeSessionEditorPanel(parent, manager, controller, worktree, project)
     }
 
     private const val PATH = "path"
+    private const val SESSION = "session"
 }
 
 fun ensureWorktreeSessionEditorKind() {
@@ -57,6 +59,6 @@ internal fun unregisterWorktreeSessionEditorKind() {
     service<KiloEditorKindRegistry>().unregister(WorktreeSessionEditorKind.ID)
 }
 
-internal fun worktreeSessionParams(item: WorktreeDto): Map<String, String> = linkedMapOf(
+internal fun worktreeSessionParams(item: WorktreeDto, session: String? = null): Map<String, String> = linkedMapOf(
     "path" to item.path,
-)
+).apply { session?.takeIf { it.isNotBlank() }?.let { put("session", it) } }
