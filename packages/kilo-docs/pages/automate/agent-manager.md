@@ -220,6 +220,14 @@ Right-click the section header and select **Delete Section**. The section is rem
 - **Cancel:** Sends a cooperative stop signal to the agent
 - **Stop:** Force-terminates the session and marks it as stopped
 
+## Previewing pending edits
+
+When an agent requests permission to run `edit`, `write`, or `apply_patch`, the permission card shows the proposed file changes. In Agent Manager, select the expand button on the file diff to open an **Edit preview** in the side panel.
+
+The preview supports patches that contain multiple files and shows each file's diff. Use the view selector to switch between **unified** and **split** views. You can close the preview without changing the request or its patch.
+
+Previewing only displays the proposed changes. It does not approve or deny the pending tool request, apply changes to your local checkout, or revert a file. Make those decisions and use those actions from their respective controls. Outside Agent Manager, the same file-diff control opens the preview in a separate diff tab instead of the side panel.
+
 ## Diff / Review Panel
 
 Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It shows a live-updating diff between the worktree and its parent branch.
