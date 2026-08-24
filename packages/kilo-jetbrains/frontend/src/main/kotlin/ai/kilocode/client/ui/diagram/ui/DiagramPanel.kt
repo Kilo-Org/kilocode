@@ -1,11 +1,15 @@
 package ai.kilocode.client.ui.diagram.ui
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.SessionSurface
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.MessageToolbar
+import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.diagram.Art
 import ai.kilocode.client.ui.diagram.Painters
 import ai.kilocode.client.ui.diagram.Palette
+import com.intellij.icons.AllIcons
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Dimension
@@ -22,7 +26,20 @@ internal class DiagramPanel(
     private var art: Art? = null
     private var last = Dimension(0, 0)
 
+    // Copy plus the standard open-in-editor action, so a rendered diagram keeps every hover
+    // affordance the code block it replaced had.
+    private val toolbar = MessageToolbar(
+        text = { source },
+        actions = listOf(
+            ToolbarButtonAction(AllIcons.Actions.EditSource, KiloBundle.message("diagram.open")) {
+                openDiagram(this, source)
+            },
+        ),
+    )
+
     override val copyAnchor: JComponent get() = this
+
+    override val copyToolbar: JComponent get() = toolbar
 
     @RequiresEdt
     override fun copyText() = source

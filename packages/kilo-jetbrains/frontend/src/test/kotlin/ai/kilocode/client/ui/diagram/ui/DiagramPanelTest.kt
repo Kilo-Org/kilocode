@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.diagram.ui
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.diagram.Mark
 import ai.kilocode.client.ui.diagram.Palette
 import ai.kilocode.client.ui.diagram.Rect
@@ -9,6 +10,7 @@ import ai.kilocode.client.ui.diagram.Size
 import ai.kilocode.client.ui.diagram.Type
 import java.awt.Color
 import java.awt.Font
+import javax.swing.AbstractButton
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -36,6 +38,26 @@ class DiagramPanelTest {
         assertEquals("flowchart TD", panel.copyText())
         panel.source("sequenceDiagram")
         assertEquals("sequenceDiagram", panel.copyText())
+    }
+
+    @Test
+    fun `test hover toolbar offers copy and open in editor`() {
+        val panel = DiagramPanel("flowchart TD", palette())
+
+        val buttons = buttons(panel.copyToolbar)
+
+        assertEquals(2, buttons.size)
+        assertTrue(buttons.any { it.toolTipText == KiloBundle.message("diagram.open") })
+        assertTrue(buttons.any { it.toolTipText == KiloBundle.message("session.copy.hover") })
+    }
+
+    private fun buttons(root: java.awt.Container): List<AbstractButton> {
+        val out = mutableListOf<AbstractButton>()
+        for (comp in root.components) {
+            if (comp is AbstractButton) out.add(comp)
+            if (comp is java.awt.Container) out.addAll(buttons(comp))
+        }
+        return out
     }
 
     private fun scene(w: Double, h: Double) = Scene(
