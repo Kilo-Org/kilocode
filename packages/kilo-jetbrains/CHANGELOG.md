@@ -240,6 +240,26 @@
 
 ## [Unreleased]
 
+## [7.1.0-rc.3] - 2026-08-24
+
+### Added
+- Add JetBrains logging settings with log reveal and backend log download actions for easier diagnostics.
+- Add JetBrains workflow settings so workflows can be reviewed and managed from the plugin.
+- Show permission-prompt diffs and approval reasons on JetBrains tool cards before acting on tool requests.
+- Open sub-agent sessions in JetBrains editor tabs with live collapsed task previews.
+- Improve JetBrains Agent Manager worktrees and chat with worktree branch/PR actions, drag-and-drop reordering, worktree progress, stable activity rows, and session-history scoping.
+
+### Fixed
+- Detect unsupported JetBrains remote workspaces and surface the problem in the session instead of failing ambiguously.
+- Keep slash completion open and responsive while typing quickly.
+- Prevent chat header popups, PR badges, row heights, row spacing, and worktree metadata from drifting out of alignment.
+- Keep JetBrains worktree actions visible only when sessions are idle, and enable moving worktrees from local changes.
+- Improve Core reliability for JetBrains by preserving output budgets, retrying reasoning-only incomplete responses, sending max-step instructions correctly, preserving Cerebras completion limits, and clarifying background task orchestration.
+
+### Changed
+- Bump the pinned Kilo Core CLI used by JetBrains releases to 7.4.23.
+- Remove an unused JetBrains Compose compiler plugin dependency.
+
 ## [7.1.0-rc.2] - 2026-08-18
 
 ### Added
