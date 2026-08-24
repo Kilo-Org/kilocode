@@ -3,6 +3,7 @@ import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import { buildRunTaskCommand, RunScriptService } from "../../src/agent-manager/run/service"
+import { powershellCommand } from "../../src/util/powershell"
 
 function tmpdir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "run-script-service-test-"))
@@ -59,7 +60,7 @@ describe("RunScriptService", () => {
       args: ["/tmp/run-script"],
     })
     expect(buildRunTaskCommand({ path: "C:\\repo\\.kilo\\run-script.ps1", kind: "powershell" })).toEqual({
-      command: "powershell.exe",
+      command: powershellCommand(),
       args: ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\repo\\.kilo\\run-script.ps1"],
     })
     expect(buildRunTaskCommand({ path: "C:\\repo path\\.kilo\\run-script.cmd", kind: "cmd" })).toEqual({

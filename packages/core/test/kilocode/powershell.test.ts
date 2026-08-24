@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { existsSync } from "fs"
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs"
+import { tmpdir } from "os"
 import path from "path"
 import { Shell } from "@opencode-ai/core/shell"
+import { PowerShell } from "@opencode-ai/core/kilocode/powershell"
 import { which } from "@opencode-ai/core/util/which"
 
 const LEGACY = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
@@ -71,3 +73,48 @@ if (process.platform === "win32") {
     })
   })
 }
+
+describe("powershell install probing", () => {
+  test("lists known locations in priority order", () => {
+    expect(
+      PowerShell.locations({
+        ProgramFiles: "C:\\Program Files",
+        "ProgramFiles(x86)": "C:\\Program Files (x86)",
+        LOCALAPPDATA: "C:\\Users\\u\\AppData\\Local",
+      }),
+    ).toEqual([
+      path.join("C:\\Program Files", "PowerShell", "7", "pwsh.exe"),
+      path.join("C:\\Program Files (x86)", "PowerShell", "7", "pwsh.exe"),
+      path.join("C:\\Users\\u\\AppData\\Local", "Microsoft", "WindowsApps", "pwsh.exe"),
+    ])
+  })
+
+  test("skips unset environment roots", () => {
+    expect(PowerShell.locations({})).toEqual([])
+  })
+
+  test("probe and pwsh resolve an installed pwsh outside PATH", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "pwsh-probe-"))
+    try {
+      const dir = path.join(root, "PowerShell", "7")
+      mkdirSync(dir, { recursive: true })
+      const file = path.join(dir, "pwsh.exe")
+      writeFileSync(file, "")
+      expect(PowerShell.probe({ ProgramFiles: root })).toEqual([file])
+      expect(PowerShell.pwsh({ PATH: "", ProgramFiles: root })).toBe(file)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("probe ignores location roots without pwsh", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "pwsh-probe-empty-"))
+    try {
+      mkdirSync(path.join(root, "PowerShell", "7"), { recursive: true })
+      expect(PowerShell.probe({ ProgramFiles: root })).toEqual([])
+      expect(PowerShell.pwsh({ PATH: "", ProgramFiles: root })).toBeUndefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
