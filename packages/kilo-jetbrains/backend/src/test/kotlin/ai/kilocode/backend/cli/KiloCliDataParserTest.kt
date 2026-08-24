@@ -20,6 +20,7 @@ import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
+import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SkillsPatchDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
 import org.junit.jupiter.api.Nested
@@ -1116,6 +1117,76 @@ class KiloCliDataParserTest {
             val result = KiloCliDataParser.parseSessionStatus(data)
             assertNotNull(result)
             assertEquals("req_xyz", result.second.requestID)
+        }
+
+        // ---- parseSessionChange ----
+
+        @Test
+        fun `parseSessionChange - created carries the session directory`() {
+            val data = sessionLifecycle("session.created", "ses_new", "/repo/.kilo/worktrees/feature", "Fix the bug")
+            val result = KiloCliDataParser.parseSessionChange("session.created", data)
+            assertNotNull(result)
+            assertEquals("ses_new", result.id)
+            assertEquals("/repo/.kilo/worktrees/feature", result.directory)
+            assertEquals(SessionChangeKindDto.CREATED, result.kind)
+        }
+
+        @Test
+        fun `parseSessionChange - updated and deleted map to their kinds`() {
+            val updated = KiloCliDataParser.parseSessionChange(
+                "session.updated",
+                sessionLifecycle("session.updated", "ses_1", "/repo", "Renamed"),
+            )
+            val deleted = KiloCliDataParser.parseSessionChange(
+                "session.deleted",
+                sessionLifecycle("session.deleted", "ses_1", "/repo", "Renamed"),
+            )
+            assertEquals(SessionChangeKindDto.UPDATED, updated?.kind)
+            assertEquals(SessionChangeKindDto.DELETED, deleted?.kind)
+        }
+
+        @Test
+        fun `parseSessionChange - falls back to the info id when sessionID is absent`() {
+            val data = globalEvent("""
+                "type": "session.created",
+                "properties": {
+                    "info": { "id": "ses_from_info", "directory": "/repo", "title": "T" }
+                }
+            """)
+            assertEquals("ses_from_info", KiloCliDataParser.parseSessionChange("session.created", data)?.id)
+        }
+
+        @Test
+        fun `parseSessionChange - ignores unrelated types and unusable payloads`() {
+            // Wrong event type.
+            assertNull(
+                KiloCliDataParser.parseSessionChange(
+                    "session.status",
+                    sessionLifecycle("session.status", "ses_1", "/repo", "T"),
+                ),
+            )
+            // No directory to scope on.
+            assertNull(
+                KiloCliDataParser.parseSessionChange(
+                    "session.created",
+                    globalEvent("""
+                        "type": "session.created",
+                        "properties": { "info": { "id": "ses_1", "title": "T" } }
+                    """),
+                ),
+            )
+            // No info at all.
+            assertNull(
+                KiloCliDataParser.parseSessionChange(
+                    "session.created",
+                    globalEvent("""
+                        "type": "session.created",
+                        "properties": { "sessionID": "ses_1" }
+                    """),
+                ),
+            )
+            // Malformed JSON.
+            assertNull(KiloCliDataParser.parseSessionChange("session.created", "not json"))
         }
 
         // ---- parsePermissionRequests / parseQuestionRequests ----
@@ -2793,6 +2864,21 @@ class KiloCliDataParserTest {
     /** Wrap payload content in a GlobalEvent structure. */
     private fun globalEvent(payload: String): String =
         """{"directory":"/tmp","payload":{$payload}}"""
+
+    private fun sessionLifecycle(type: String, id: String, dir: String, title: String): String = globalEvent("""
+        "type": "$type",
+        "properties": {
+            "sessionID": "$id",
+            "info": {
+                "id": "$id",
+                "projectID": "prj",
+                "directory": "$dir",
+                "title": "$title",
+                "version": "1",
+                "time": { "created": 1.0, "updated": 2.0 }
+            }
+        }
+    """)
 
     private fun messageUpdated(id: String, role: String): String = globalEvent("""
         "type": "message.updated",

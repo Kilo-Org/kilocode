@@ -39,7 +39,6 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     private lateinit var workspaces: KiloWorkspaceService
     private lateinit var sessionRpc: FakeSessionRpcApi
     private var dialog: NewWorktreeDialog? = null
-    private val created = mutableListOf<Triple<String, String?, PendingPrompt?>>()
 
     override fun setUp() {
         super.setUp()
@@ -82,10 +81,8 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         }
         flushUntil { edt { prompt().isSendEnabled } }
         edt { prompt().send() }
-        flushUntil { created.isNotEmpty() }
-        dialog = null
 
-        assertEquals("plan", created.single().third?.agent)
+        assertEquals("plan", submitted().prompt?.agent)
         // Picking a mode must no longer mutate the global default_agent config.
         assertTrue(sessionRpc.configs.none { it.second.agent != null })
     }
@@ -116,13 +113,11 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         }
         flushUntil { edt { prompt().isSendEnabled } }
         edt { prompt().send() }
-        flushUntil { created.isNotEmpty() }
-        dialog = null
 
-        val entry = created.single()
-        assertEquals("agent/foo", entry.first)
-        assertEquals("main", entry.second)
-        val payload = requireNotNull(entry.third)
+        val entry = submitted()
+        assertEquals("agent/foo", entry.branch)
+        assertEquals("main", entry.base)
+        val payload = requireNotNull(entry.prompt)
         assertEquals("build the thing", payload.text)
         assertEquals("build", payload.agent)
         assertEquals("kilo", payload.provider)
@@ -158,10 +153,8 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         }
         flushUntil { edt { prompt().isSendEnabled } }
         edt { prompt().send() }
-        flushUntil { created.isNotEmpty() }
-        dialog = null
 
-        assertEquals("main", created.single().second)
+        assertEquals("main", submitted().base)
     }
 
     fun `test creating with fuzzy base branch uses matching branch`() {
@@ -173,10 +166,8 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         }
         flushUntil { edt { prompt().isSendEnabled } }
         edt { prompt().send() }
-        flushUntil { created.isNotEmpty() }
-        dialog = null
 
-        assertEquals("release/candidate", created.single().second)
+        assertEquals("release/candidate", submitted().base)
     }
 
     fun `test creating with unknown base branch does not create`() {
@@ -190,7 +181,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         edt { prompt().send() }
         flush()
 
-        assertTrue(created.isEmpty())
+        assertNull(plan())
     }
 
     private fun open(branches: List<String> = listOf("main")) {
@@ -202,11 +193,18 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
                 "agent/foo",
                 "main",
                 branches,
-                onCreate = { branch, base, prompt -> created.add(Triple(branch, base, prompt)) },
                 app,
                 workspaces,
             )
         }
+    }
+
+    private fun plan(): NewWorktreePlan? = edt { requireNotNull(dialog).result() }
+
+    /** Waits for the dialog to accept a create, then forgets it: closing already disposed it. */
+    private fun submitted(): NewWorktreePlan {
+        flushUntil { plan() != null }
+        return requireNotNull(plan()).also { dialog = null }
     }
 
     private fun workspace(): ModelsWorkspaceDto {

@@ -1,9 +1,11 @@
 package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -11,6 +13,8 @@ import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -23,12 +27,20 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     var statsResult = WorktreeStatsListDto()
     var ghResult = GhAvailability.OK
     var prResult = WorktreePrListDto()
+    var branchResult = BranchStatusDto()
+    /** When set, [branchStatus] throws it instead of answering. */
+    var branchThrows: Exception? = null
     var currentBranch: String? = null
+    val moves = CopyOnWriteArrayList<Triple<String, String?, String>>()
+    /** Progress events emitted by [moveToWorktree], in order. */
+    var moveScript: List<MoveProgressDto> = emptyList()
     val creates = CopyOnWriteArrayList<CreateWorktreeRequestDto>()
     val removes = CopyOnWriteArrayList<Triple<String, String, String?>>()
     val removeForces = CopyOnWriteArrayList<Boolean>()
     val renames = CopyOnWriteArrayList<Triple<String, String, String>>()
     val adopts = CopyOnWriteArrayList<Triple<String, String, String>>()
+    val reorders = CopyOnWriteArrayList<List<String>>()
+    var reorderResult = true
     val opens = CopyOnWriteArrayList<String>()
     val ghCalls = CopyOnWriteArrayList<String>()
     var beforeCreate: suspend () -> Unit = {}
@@ -83,6 +95,18 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         return prResult
     }
 
+    override suspend fun branchStatus(directory: String): BranchStatusDto {
+        assertNotEdt("branchStatus")
+        branchThrows?.let { throw it }
+        return branchResult
+    }
+
+    override suspend fun moveToWorktree(directory: String, sessionId: String?, branch: String): Flow<MoveProgressDto> {
+        assertNotEdt("moveToWorktree")
+        moves.add(Triple(directory, sessionId, branch))
+        return moveScript.asFlow()
+    }
+
     override suspend fun open(directory: String): Boolean {
         assertNotEdt("open")
         opens.add(directory)
@@ -122,5 +146,11 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         assertNotEdt("adopt")
         adopts.add(Triple(directory, path, name))
         return adoptResult(path, name)
+    }
+
+    override suspend fun reorder(directory: String, paths: List<String>): Boolean {
+        assertNotEdt("reorder")
+        reorders.add(paths)
+        return reorderResult
     }
 }

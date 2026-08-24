@@ -24,6 +24,7 @@ import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.service
@@ -123,6 +124,9 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun activity(): Flow<Map<String, SessionActivityDto>> =
         activity.activity
+
+    override suspend fun changes(): Flow<SessionChangeDto> =
+        sessions.changes
 
     override suspend fun setDirectory(id: String, directory: String) =
         sessions.setDirectory(id, directory)

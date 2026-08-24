@@ -72,6 +72,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.awt.Component
 import java.nio.file.Path
@@ -1043,6 +1044,18 @@ class SessionController(
                     }
                 }
             }
+        }
+
+        // Sessions started elsewhere — another editor tab, or another project frame opened on this
+        // same directory — only reach the empty state through the CLI's event stream.
+        cs.launch {
+            sessions.changes
+                .filter { it.directory == directory }
+                .collect {
+                    edt {
+                        if (canUseRecents()) refreshRecents(force = true)
+                    }
+                }
         }
     }
 
