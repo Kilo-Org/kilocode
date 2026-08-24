@@ -160,6 +160,7 @@ function createSummaryAssistantMessage(sessionID: SessionID, parentID: MessageID
         time: { created: Date.now() },
         finish: "end_turn",
       })
+      // kilocode_change start - cover preservation of non-media attachments
       yield* ssn.updatePart({
         id: PartID.ascending(),
         messageID: msg.id,
@@ -1192,6 +1193,17 @@ describe("session.compaction.process", () => {
         filename: "cat.png",
         url: "https://example.com/cat.png",
       })
+      // kilocode_change start - cover preservation of non-media attachments
+      yield* ssn.updatePart({
+        id: PartID.ascending(),
+        messageID: replay.id,
+        sessionID: session.id,
+        type: "file",
+        mime: "text/plain",
+        filename: "notes.txt",
+        url: "https://example.com/notes.txt",
+      })
+      // kilocode_change end
       const msg = yield* createUserMessage(session.id, "current")
       const msgs = yield* ssn.messages({ sessionID: session.id })
 
@@ -1207,10 +1219,17 @@ describe("session.compaction.process", () => {
 
       expect(result).toBe("continue")
       expect(last?.info.role).toBe("user")
-      expect(last?.parts.some((part) => part.type === "file")).toBe(false)
+      expect(last?.parts.some((part) => part.type === "file" && part.mime === "image/png")).toBe(false) // kilocode_change
       expect(
         last?.parts.some((part) => part.type === "text" && part.text.includes("Attached image/png: cat.png")),
       ).toBe(true)
+      // kilocode_change start - preserve non-media attachments during overflow recovery
+      expect(
+        last?.parts.some(
+          (part) => part.type === "file" && part.mime === "text/plain" && part.url === "https://example.com/notes.txt",
+        ),
+      ).toBe(true)
+      // kilocode_change end
     }),
   )
   // kilocode_change start - explicit pending-turn replay contract

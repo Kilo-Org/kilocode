@@ -526,6 +526,7 @@ const layer = Layer.effect(
             format: original.format,
             tools: original.tools,
             system: original.system,
+            editorContext: original.editorContext, // kilocode_change - preserve editor context across continuation
           })
           KiloSessionPromptQueue.retarget(input.sessionID, next.id)
           if (preserve) {
@@ -543,7 +544,7 @@ const layer = Layer.effect(
             for (const part of replay.parts) {
               if (part.type === "compaction") continue
               const item =
-                part.type === "file"
+                part.type === "file" && MessageV2.isMedia(part.mime) // kilocode_change - only replace media on overflow
                   ? {
                       type: "text" as const,
                       text: `[Attached ${part.mime}: ${part.filename ?? "file"}]`,

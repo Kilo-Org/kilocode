@@ -380,7 +380,8 @@ describe("SessionPrompt compaction safety", () => {
             text: "old answer",
             tokens: { input: 95_000, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
           })
-          const pending = yield* user(chat.id, "pending request")
+          const editor = { activeFile: "src/app.ts", openTabs: ["src/app.ts", "src/lib.ts"] }
+          const pending = yield* user(chat.id, "pending request", { editorContext: editor })
           yield* file(chat.id, pending.id, { mime: "image/png", name: "pending.png", body: "PENDINGIMAGE" })
           yield* llm.text("summary")
           yield* llm.text("pending answer")
@@ -409,6 +410,13 @@ describe("SessionPrompt compaction safety", () => {
                   part.type === "text" && part.synthetic && part.text.includes("Continue if you have next steps"),
               ),
           ).toBe(false)
+          const continuation = msgs.find(
+            (msg) =>
+              msg.info.role === "user" &&
+              msg.info.id !== pending.id &&
+              msg.parts.some((part) => part.type === "text" && part.text.includes("Continue the pending user request")),
+          )
+          expect(continuation?.info.role === "user" ? continuation.info.editorContext : undefined).toEqual(editor)
         }),
         { git: true, config: providerCfg },
       ),
