@@ -77,7 +77,7 @@ internal class BranchDock(
         super.updateUI()
         border = JBUI.Borders.compound(
             JBUI.Borders.customLineTop(JBUI.CurrentTheme.EditorTabs.borderColor()),
-            JBUI.Borders.empty(UiStyle.Gap.md(), UiStyle.Gap.sm(), UiStyle.Gap.md(), UiStyle.Gap.sm()),
+            JBUI.Borders.empty(0, 0),
         )
     }
 
@@ -172,6 +172,12 @@ internal class BranchDock(
         ActivityTracker.getInstance().inc()
     }
 
+    override fun getPreferredSize(): Dimension {
+        val base = super.getPreferredSize()
+        // Reserve a stable row height so the transcript does not jump as stats/PR arrive late.
+        return Dimension(base.width, maxOf(base.height, JBUI.scale(ROW_HEIGHT)))
+    }
+
     override fun getMinimumSize(): Dimension = preferredSize
 
     override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
@@ -182,6 +188,7 @@ internal class BranchDock(
     }
 
     private companion object {
+        const val ROW_HEIGHT = 34
         const val PLACE = "KiloChatBranchDock"
     }
 }
