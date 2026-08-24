@@ -151,6 +151,8 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Use session history to reopen local sessions or preview cloud sessions
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
+File mentions, clickable file links, review-comment file links, file-link validation, and native VS Code opening resolve against the referenced session's directory or worktree. If a session ID is present in multiple projects, Kilo rejects the unqualified reference rather than choosing an arbitrary project.
+
 ### Renaming Worktrees
 
 Double-click a worktree name to edit its label inline. You can also right-click the worktree and choose **Rename**. Press `Enter` or click outside the field to save, or press `Escape` to cancel.
