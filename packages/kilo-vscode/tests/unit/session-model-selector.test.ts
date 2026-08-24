@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { createModelSelector } from "../../webview-ui/src/context/session-model-selector"
+import { createModelSelector, modelSelectionScope } from "../../webview-ui/src/context/session-model-selector"
 
 describe("model selector", () => {
   it("carries the active session variant for the selected model", () => {
@@ -46,5 +46,29 @@ describe("model selector", () => {
     const model = { providerID: "kilo", modelID: "new" }
     expect(models).toEqual([{ id: "session", selection: model }])
     expect(variants).toEqual([{ value: "high", session: "session" }])
+  })
+
+  it("passes the requested selection scope to the state transition", () => {
+    const selected = { providerID: "kilo", modelID: "old" }
+    const scopes: Array<string | undefined> = []
+    const selector = createModelSelector({
+      current: () => "session",
+      agent: () => "code",
+      selected: () => selected,
+      variant: () => undefined,
+      apply: (_agent, _selection, _id, scope) => scopes.push(scope),
+      set: () => undefined,
+      carry: () => undefined,
+      hide: () => undefined,
+    })
+
+    selector.select("kilo", "new", "session", "global")
+
+    expect(scopes).toEqual(["global"])
+  })
+
+  it("keeps Agent Manager selections session-scoped and sidebar selections global", () => {
+    expect(modelSelectionScope(true)).toBe("session")
+    expect(modelSelectionScope(false)).toBe("global")
   })
 })

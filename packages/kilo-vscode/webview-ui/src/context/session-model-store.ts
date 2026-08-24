@@ -18,6 +18,8 @@ export interface ModelStore {
   recentModels: ModelSelection[]
 }
 
+export type ModelSelectionScope = "global" | "session"
+
 export interface ResolveEnv {
   providers: Record<string, Provider>
   connected: string[]
@@ -92,29 +94,38 @@ export function getAgentModel(
 export interface ApplyResult {
   modelSelections: Record<string, ModelSelection | null>
   sessionOverrides: Record<string, ModelSelection>
+  persistModelSelection?: {
+    agent: string
+    providerID: string
+    modelID: string
+  }
 }
 
 /**
  * Apply a user-initiated model selection.
  *
  * Session-scoped selections write only to the per-session override.
- * No-session selections write to the global modelSelections map so sidebar
- * default picks still mirror CLI TUI's model.json behavior.
+ * Global selections also update the per-session override when a session is
+ * active, so the sidebar reflects the pick immediately while the last-used
+ * per-mode value remains durable.
  */
 export function applyModel(
   store: ModelStore,
   agentName: string,
   selection: ModelSelection,
   sessionID: string | undefined,
+  scope: ModelSelectionScope = sessionID ? "session" : "global",
 ): ApplyResult {
-  const modelSelections = sessionID
-    ? { ...store.modelSelections }
-    : { ...store.modelSelections, [agentName]: selection }
+  const modelSelections =
+    scope === "global" ? { ...store.modelSelections, [agentName]: selection } : { ...store.modelSelections }
   const sessionOverrides = { ...store.sessionOverrides }
 
   if (sessionID) {
     sessionOverrides[sessionID] = selection
   }
 
-  return { modelSelections, sessionOverrides }
+  const persistModelSelection =
+    scope === "global" ? { agent: agentName, providerID: selection.providerID, modelID: selection.modelID } : undefined
+
+  return { modelSelections, sessionOverrides, persistModelSelection }
 }
