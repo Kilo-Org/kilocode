@@ -3,6 +3,7 @@ package ai.kilocode.client.ui
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.ColorUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBFont
@@ -39,6 +40,9 @@ object UiStyle {
 
     /** Platform balloon styling used by lightweight contextual overlays. */
     object Balloon {
+        /** Mirrors the platform default for `ide.balloon.shadow.size`, used only if the key is gone. */
+        private const val SHADOW_SIZE = 24
+
         fun bg(): Color = UIUtil.getPanelBackground()
 
         fun border(): Color = JBUI.CurrentTheme.Popup.borderColor(true)
@@ -49,6 +53,19 @@ object UiStyle {
         fun pointer() = JBUI.size(16, 8)
 
         fun arc() = JBUI.scale(8)
+
+        /**
+         * Drop-shadow inset the platform reserves on every side of a balloon, or 0 when shadows are
+         * off. Read from the same registry keys `BalloonImpl` uses, because callers that size a
+         * balloon to fit an area have to account for it: an overflowing balloon is silently
+         * re-pointed to another side.
+         */
+        fun shadow(): Int =
+            if (Registry.`is`("ide.balloon.shadowEnabled", true)) {
+                JBUI.scale(Registry.intValue("ide.balloon.shadow.size", SHADOW_SIZE))
+            } else {
+                0
+            }
     }
 
     /** Filled badge styles shared across JetBrains UI surfaces. */
