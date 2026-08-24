@@ -845,6 +845,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
+  "settings.experimental.compactToolActivity.title": "Kompakt verktøyaktivitet",
+  "settings.experimental.compactToolActivity.description":
+    "Slå sammen påfølgende verktøykall og tanker til én oppsummert aktivitetsrad. Utvid et trinn for å få tilbake hele verktøykortet.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1134,6 +1137,10 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "{{count}} verktøy brukt",
+  "chat.activity.count_other": "{{count}} verktøy brukt",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",

@@ -516,6 +516,10 @@ export interface RequestAutoApprovalReasonSettingMessage {
   type: "requestAutoApprovalReasonSetting"
 }
 
+export interface RequestCompactToolActivitySettingMessage {
+  type: "requestCompactToolActivitySetting"
+}
+
 export interface RequestWorkStyleMessage {
   type: "requestWorkStyle"
 }
@@ -1571,6 +1575,7 @@ export type WebviewMessage =
   | RequestTimelineSettingMessage
   | RequestThroughputSettingMessage
   | RequestAutoApprovalReasonSettingMessage
+  | RequestCompactToolActivitySettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage

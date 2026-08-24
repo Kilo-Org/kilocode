@@ -881,6 +881,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
+  "settings.experimental.compactToolActivity.title": "Компактная активность инструментов",
+  "settings.experimental.compactToolActivity.description":
+    "Объединять последовательные вызовы инструментов и шаги рассуждения в одну строку сводки активности. Разверните шаг, чтобы снова увидеть полную карточку инструмента.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1135,6 +1138,11 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "Использован {{count}} инструмент",
+  "chat.activity.count_other": "Использовано инструментов: {{count}}",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "Модель по умолчанию",
   "settings.providers.defaultModel.description": "Основная модель для разговоров",

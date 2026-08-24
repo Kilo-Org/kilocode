@@ -878,6 +878,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
+  "settings.experimental.compactToolActivity.title": "ツールアクティビティのコンパクト表示",
+  "settings.experimental.compactToolActivity.description":
+    "連続するツール呼び出しと思考を1つの要約アクティビティ行に折りたたみます。ステップを展開すると、完全なツールカードを再表示できます。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1128,6 +1131,11 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "{{count}} 個のツールを使用",
+  "chat.activity.count_other": "{{count}} 個のツールを使用",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "デフォルトモデル",
   "settings.providers.defaultModel.description": "会話のプライマリモデル",

@@ -875,6 +875,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
+  "settings.experimental.compactToolActivity.title": "Компактна активність інструментів",
+  "settings.experimental.compactToolActivity.description":
+    "Згортати послідовні виклики інструментів і кроки міркування в один рядок підсумку активності. Розгорніть крок, щоб знову побачити повну картку інструмента.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1095,6 +1098,11 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
+  // Compact tool activity — the collapsed summary of a run of tool calls and thoughts.
+  "chat.activity.count_one": "Використано {{count}} інструмент",
+  "chat.activity.count_other": "Використано інструментів: {{count}}",
+  "chat.activity.overflow": "+{{count}}",
 
   "settings.providers.defaultModel.title": "Модель за замовчуванням",
   "settings.providers.defaultModel.description": "Основна модель для чатів",

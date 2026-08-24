@@ -193,6 +193,10 @@ import {
   buildAutoApprovalReasonSettingMessage,
   watchAutoApprovalReasonConfig,
 } from "./kilo-provider/auto-approval-reason-settings"
+import {
+  buildCompactToolActivityMessage,
+  watchCompactToolActivityConfig,
+} from "./kilo-provider/compact-tool-activity-settings"
 
 let maxCost = 0
 
@@ -434,6 +438,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private chatConfigDisposable: vscode.Disposable | null = null
   private throughputConfigDisposable: vscode.Disposable | null = null
   private autoApprovalReasonConfigDisposable: vscode.Disposable | null = null
+  private compactToolActivityDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -1016,6 +1021,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.throughputConfigDisposable = watchThroughputConfig((msg) => this.postMessage(msg))
     this.autoApprovalReasonConfigDisposable?.dispose()
     this.autoApprovalReasonConfigDisposable = watchAutoApprovalReasonConfig((msg) => this.postMessage(msg))
+    this.compactToolActivityDisposable?.dispose()
+    this.compactToolActivityDisposable = watchCompactToolActivityConfig((msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -1921,6 +1928,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.sendTimelineSetting()
       this.postMessage(buildThroughputSettingMessage())
       this.postMessage(buildAutoApprovalReasonSettingMessage())
+      this.postMessage(buildCompactToolActivityMessage())
       this.postMessage({ type: "extensionDataReady" })
 
       console.log("[Kilo New] KiloProvider: ✅ initializeConnection completed successfully")
@@ -4391,6 +4399,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendTimelineSetting()
     this.postMessage(buildThroughputSettingMessage())
     this.postMessage(buildAutoApprovalReasonSettingMessage())
+    this.postMessage(buildCompactToolActivityMessage())
     this.sendWorkStyle()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
@@ -5362,6 +5371,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.chatConfigDisposable?.dispose()
     this.throughputConfigDisposable?.dispose()
     this.autoApprovalReasonConfigDisposable?.dispose()
+    this.compactToolActivityDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()
