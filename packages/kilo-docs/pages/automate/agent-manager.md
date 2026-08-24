@@ -193,6 +193,8 @@ Imported work stays associated with its branch or worktree and can be continued 
 - When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
+File mentions, clickable file links, review-comment file links, file-link validation, and native VS Code opening resolve against the referenced session's directory or worktree. If a session ID is present in multiple projects, Kilo rejects the unqualified reference rather than choosing an arbitrary project.
+
 When a session delegates work to a subagent, open the child transcript from its task card or background-agent row. Agent Manager displays it in the read-only **Subagents** inspector. The inspector supports multiple child-session tabs and keeps them scoped to the selected project and parent session. For the difference between Agent Manager inspector tabs and the separate subagent editor tabs used by the sidebar, see [Inspecting delegated sessions in VS Code](/docs/customize/custom-subagents#inspecting-delegated-sessions-in-vs-code).
 
 ### Renaming Worktrees
