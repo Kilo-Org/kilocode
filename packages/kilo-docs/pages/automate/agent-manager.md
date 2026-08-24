@@ -114,6 +114,37 @@ Hovering over a worktree item shows a card with additional PR details:
 
 PR badges update automatically in the background. The active worktree refreshes frequently, while other worktrees sync periodically to keep badges current. Polling pauses when the Agent Manager panel is hidden.
 
+### Reviewing a pull request
+
+The PR review panel is available when the selected worktree has an associated pull request. Open it in either of these ways:
+
+- Click the pull request icon in the Agent Manager toolbar
+- Press `Cmd+Shift+R` (macOS) or `Ctrl+Shift+R` (Windows/Linux)
+
+The selected worktree controls the panel. The panel shows the worktree branch and its parent branch, so confirm that you are reviewing the intended branch. The PR association uses the detection methods described above, including the branch tracking ref, branch name, or current commit SHA.
+
+The panel includes:
+
+- **Status:** Open, Draft, Merged, or Closed
+- **Review status:** Approved, Changes Requested, or Review Pending
+- **Checks:** passed, failed, running, cancelled, or skipped checks, with duration and browser links when available
+- **Reviewers:** requested reviewers and their current state, such as Approved, Changes requested, Commented, or Awaiting
+- **Description and summary:** the PR description, file count, additions, deletions, and unresolved comment count
+
+#### Review comments
+
+Expand a comment to read its Markdown body, replies, file and line location, and a bounded diff hunk around the commented line. Outdated threads show an **Outdated** label. Unresolved threads appear first. Resolved threads move into the **Resolved** group and are collapsed by default. Click a thread row to expand or collapse it.
+
+Use the actions on an expanded thread to:
+
+- **Send** the comment, its diff context, and replies to the current agent. **Send all unresolved** sends the unresolved threads together, up to the panel limit.
+- **Resolve** or **Unresolve** the GitHub conversation. The panel refreshes the thread state after the action completes.
+- **Copy** the formatted thread context
+- **Open file** at the comment location in the selected worktree
+- **Open on GitHub** at the comment
+
+The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context. It does not post a reply to GitHub. The panel intentionally has no reply composer; write replies in GitHub.
+
 ### Creating a New Worktree Session
 
 1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to open the new worktree dialog
@@ -459,7 +490,8 @@ Closing a managed worktree removes it from Agent Manager, deletes its `.kilo/wor
 - **A configured base branch is missing** — Kilo clears the stale project setting and uses automatic remote-default detection for the new worktree. Select the project and configure a new default if needed.
 - **Provider or authentication errors** — open extension Settings and verify your sign-in, provider, model, or BYOK configuration. Agent Manager uses the same settings as the sidebar.
 - **Session history missing cloud sessions** — sign in through the extension and confirm the repository remote matches the sessions you expect to see.
-- **PR badges or PR import missing** — install and authenticate the GitHub CLI (`gh`). This is only required for GitHub PR features.
+- **PR badges, the review panel, or PR import missing:** install the GitHub CLI (`gh`) and authenticate it for the repository. Run `gh auth status` to check the current login. GitHub PR features do not work until `gh` is available and authenticated.
+- **PR data looks temporarily stale:** polling pauses while the Agent Manager panel is hidden, and background updates are not instantaneous. Close and reopen the PR panel, or switch worktrees and select the original worktree again, to trigger a fresh lookup. A transient GitHub, network, or fork lookup failure can leave the last known PR data visible until the next successful refresh.
 
 ## Related features
 
