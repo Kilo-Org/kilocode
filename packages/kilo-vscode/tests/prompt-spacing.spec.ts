@@ -41,10 +41,14 @@ test.describe("prompt spacing", () => {
   test("uses the same responsive gutter in Agent Manager chat", async ({ page }) => {
     await open(page, "agentmanager--readable-chat-420", 420)
     const value = await spacing(page)
+    // This session shows its actions row, and a visible dock owns the space
+    // above the composer so both dock states stay flush on it.
+    const dock = await page.locator('[data-component="session-dock"]').evaluate((el) => el.hasAttribute("data-active"))
 
+    expect(dock).toBe(true)
     expect(value.left).toBeCloseTo(8.4, 1)
     expect(value.right).toBeCloseTo(8.4, 1)
-    expect(value.top).toBe("8.4px")
+    expect(value.top).toBe("0px")
     expect(value.bottom).toBe("8.4px")
     expect(value.gutter).toBe("max(6px, 2cqi)")
   })
