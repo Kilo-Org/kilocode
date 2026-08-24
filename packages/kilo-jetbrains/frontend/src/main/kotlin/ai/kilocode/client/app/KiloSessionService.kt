@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -75,6 +76,13 @@ class KiloSessionService internal constructor(
     val activity: StateFlow<Map<String, SessionActivityDto>> =
         stream { activity() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
 
+    /**
+     * Session create/update/delete across every directory the CLI serves, including sessions
+     * started in another project frame. Consumers filter by directory and must coalesce: a single
+     * turn produces many `session.updated` events as the title and summary stream in.
+     */
+    val changes: Flow<SessionChangeDto> = stream { changes() }
+
     // ------ RPC helpers ------
 
     private suspend fun <T> call(block: suspend KiloSessionRpcApi.() -> T): T {
@@ -119,7 +127,7 @@ class KiloSessionService internal constructor(
      */
     suspend fun sessionsFor(dir: String): SessionListDto = call { list(dir) }
 
-    /** Load recent sessions for the current worktree family. */
+    /** Load recent sessions for the worktree containing [dir]; sibling worktrees are excluded. */
     suspend fun recent(dir: String, limit: Int): List<SessionDto> =
         call { recent(dir, limit) }.sessions
 

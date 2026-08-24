@@ -6,12 +6,17 @@ import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.SessionChangeDto
+import ai.kilocode.rpc.dto.SessionChangeKindDto
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -22,6 +27,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KiloBackendSessionManagerTest {
@@ -49,6 +55,27 @@ class KiloBackendSessionManagerTest {
             app.appState.first { it is KiloAppState.Ready }
         }
     }
+
+    /**
+     * Runs [push] once a collector is attached to the change stream and returns the first change.
+     * The stream has no replay, so pushing before subscription would drop the event.
+     */
+    private suspend fun awaitChange(app: KiloBackendAppService, push: () -> Unit): SessionChangeDto =
+        withTimeout(10_000) {
+            val ready = CompletableDeferred<Unit>()
+            val change = scope.async {
+                app.sessions.changes.onSubscription { ready.complete(Unit) }.first()
+            }
+            ready.await()
+            push()
+            change.await()
+        }
+
+    /** One SSE `data:` frame, which must stay on a single line or the frame is truncated. */
+    private fun lifecycle(type: String, id: String, dir: String): String =
+        """{"type":"$type","properties":{"sessionID":"$id","info":""" +
+            """{"id":"$id","projectID":"prj","directory":"$dir","title":"T","version":"1",""" +
+            """"time":{"created":1,"updated":2}}}}"""
 
     // ------ Lifecycle ------
 
@@ -159,6 +186,19 @@ class KiloBackendSessionManagerTest {
         assertTrue(path.contains("roots=true"), path)
         assertTrue(path.contains("limit=5.0"), path)
         assertTrue(path.contains("archived=false"), path)
+    }
+
+    @Test
+    fun `recent narrows the worktree family to the current worktree`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        app.sessions.recent("/repo/.kilo/worktrees/feature", 5)
+
+        val path = mock.lastExperimentalSessionPath ?: error("missing experimental session request")
+        // current=true is what keeps a worktree chat from listing the main checkout's sessions.
+        assertTrue(path.contains("current=true"), path)
+        assertFalse(path.contains("current=false"), path)
     }
 
     @Test
@@ -436,6 +476,61 @@ class KiloBackendSessionManagerTest {
         }
 
         assertEquals("idle", app.sessions.statuses.value["ses_x"]?.type)
+    }
+
+    // ------ SSE session lifecycle tracking ------
+
+    @Test
+    fun `SSE session created is republished on changes`() = runBlocking {
+        val app = setup()
+        ready(app)
+        mock.awaitSseConnection()
+
+        val result = awaitChange(app) {
+            mock.pushEvent("session.created", lifecycle("session.created", "ses_live", "/repo/wt"))
+        }
+
+        assertEquals("ses_live", result.id)
+        assertEquals("/repo/wt", result.directory)
+        assertEquals(SessionChangeKindDto.CREATED, result.kind)
+    }
+
+    @Test
+    fun `SSE session lifecycle records and clears the directory for activity lookups`() = runBlocking {
+        val app = setup()
+        ready(app)
+        mock.awaitSseConnection()
+
+        // The change is published only after the directory is recorded, so awaiting the event is
+        // enough — no polling. A session this frame never listed must still resolve a directory,
+        // otherwise the Agent Manager worktree row cannot be badged.
+        awaitChange(app) {
+            mock.pushEvent("session.created", lifecycle("session.created", "ses_elsewhere", "/repo/wt"))
+        }
+        assertEquals("/repo/wt", app.sessions.sessionDirectory("ses_elsewhere"))
+
+        awaitChange(app) {
+            mock.pushEvent("session.deleted", lifecycle("session.deleted", "ses_elsewhere", "/repo/wt"))
+        }
+        assertNull(app.sessions.sessionDirectory("ses_elsewhere"))
+    }
+
+    @Test
+    fun `activity badges a session this frame only learned about from events`() = runBlocking {
+        val app = setup()
+        ready(app)
+        mock.awaitSseConnection()
+
+        mock.pushEvent("session.created", lifecycle("session.created", "ses_other_frame", "/repo/wt"))
+        mock.pushEvent(
+            "session.status",
+            """{"type":"session.status","properties":{"sessionID":"ses_other_frame","status":{"type":"busy"}}}""",
+        )
+
+        val snap = withTimeout(10_000) {
+            app.activity.activity.first { it.containsKey("ses_other_frame") }
+        }
+        assertEquals("/repo/wt", snap["ses_other_frame"]?.directory)
     }
 
     @Test

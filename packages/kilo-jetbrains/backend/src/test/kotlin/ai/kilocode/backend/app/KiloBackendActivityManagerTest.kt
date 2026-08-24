@@ -34,7 +34,14 @@ class KiloBackendActivityManagerTest {
         scope.cancel()
     }
 
-    private fun start() = manager.start(statuses, { directories[it] }, events)
+    /**
+     * Starts the manager and waits until its event collector has subscribed. [events] has no
+     * replay, so an emit before that point is silently discarded and the test hangs.
+     */
+    private suspend fun start() {
+        manager.start(statuses, { directories[it] }, events)
+        withTimeout(5_000) { events.subscriptionCount.first { it > 0 } }
+    }
 
     @Test
     fun `busy status with known directory emits running activity`() = runBlocking {
