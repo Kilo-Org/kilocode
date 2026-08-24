@@ -168,6 +168,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Скасувати зміни файлу",
   "agentManager.diff.revertSuccess": "Файл відновлено",
   "agentManager.diff.revertError": "Не вдалося відновити",
+  "agentManager.editPreview.title": "Попередній перегляд редагування",
+  "agentManager.editPreview.close": "Закрити попередній перегляд редагування",
+  "agentManager.editPreview.openInPanel": "Переглянути зміни на панелі",
   "agentManager.diff.applyBranchOnly":
     "Застосування працює лише з повним diff гілки. Щоб застосувати зміни, перемкніться на область Branch.",
   "agentManager.open.button": "Відкрити",
@@ -212,6 +215,7 @@ export const dict = {
   "agentManager.review.metaComment": "Коментар користувача",
   "agentManager.review.metaAuthor": "Автор",
   "agentManager.pr.comment.title": "Коментарі",
+  "agentManager.pr.copyLink": "Копіювати посилання на PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} невирішених",
   "agentManager.pr.comment.resolvedGroup": "Вирішено ({{count}})",
   "agentManager.pr.comment.sendAll": "Надіслати {{count}} невирішених агенту",

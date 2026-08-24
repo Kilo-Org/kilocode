@@ -159,6 +159,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Vrati datoteku",
   "agentManager.diff.revertSuccess": "Datoteka vraćena",
   "agentManager.diff.revertError": "Vraćanje neuspješno",
+  "agentManager.editPreview.title": "Pregled uređivanja",
+  "agentManager.editPreview.close": "Zatvori pregled uređivanja",
+  "agentManager.editPreview.openInPanel": "Prikaži izmjene u panelu",
   "agentManager.diff.applyBranchOnly":
     "Primijeni radi samo s kompletnim diffom grane. Prebacite se na opseg Branch da biste primijenili.",
   "agentManager.open.button": "Otvori",
@@ -202,6 +205,7 @@ export const dict = {
   "agentManager.review.metaComment": "Komentar korisnika",
   "agentManager.review.metaAuthor": "Autor",
   "agentManager.pr.comment.title": "Komentari",
+  "agentManager.pr.copyLink": "Kopiraj PR vezu",
   "agentManager.pr.comment.unresolvedCount": "{{count}} neriješenih",
   "agentManager.pr.comment.resolvedGroup": "Riješeno ({{count}})",
   "agentManager.pr.comment.sendAll": "Pošalji {{count}} neriješenih agentu",

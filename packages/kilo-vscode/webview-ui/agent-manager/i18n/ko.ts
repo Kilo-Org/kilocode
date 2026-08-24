@@ -157,6 +157,9 @@ export const dict = {
   "agentManager.diff.revertFile": "파일 되돌리기",
   "agentManager.diff.revertSuccess": "파일이 되돌려졌습니다",
   "agentManager.diff.revertError": "되돌리기 실패",
+  "agentManager.editPreview.title": "편집 미리보기",
+  "agentManager.editPreview.close": "편집 미리보기 닫기",
+  "agentManager.editPreview.openInPanel": "패널에서 변경 사항 보기",
   "agentManager.diff.applyBranchOnly":
     "적용은 전체 브랜치 diff에서만 작동합니다. 적용하려면 범위를 Branch로 전환하세요.",
   "agentManager.open.button": "열기",
@@ -201,6 +204,7 @@ export const dict = {
   "agentManager.review.metaComment": "사용자 코멘트",
   "agentManager.review.metaAuthor": "작성자",
   "agentManager.pr.comment.title": "댓글",
+  "agentManager.pr.copyLink": "PR 링크 복사",
   "agentManager.pr.comment.unresolvedCount": "{{count}}개 미해결",
   "agentManager.pr.comment.resolvedGroup": "해결됨 ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}}개 미해결 댓글을 에이전트로 보내기",

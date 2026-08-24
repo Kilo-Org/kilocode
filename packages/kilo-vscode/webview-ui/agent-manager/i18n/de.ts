@@ -163,6 +163,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Datei zurücksetzen",
   "agentManager.diff.revertSuccess": "Datei zurückgesetzt",
   "agentManager.diff.revertError": "Zurücksetzen fehlgeschlagen",
+  "agentManager.editPreview.title": "Bearbeitungsvorschau",
+  "agentManager.editPreview.close": "Bearbeitungsvorschau schließen",
+  "agentManager.editPreview.openInPanel": "Änderungen im Panel anzeigen",
   "agentManager.diff.applyBranchOnly":
     "Anwenden funktioniert nur für den vollständigen Branch-Diff. Wechsle zum Bereich Branch, um anzuwenden.",
   "agentManager.open.button": "Öffnen",
@@ -206,6 +209,7 @@ export const dict = {
   "agentManager.review.metaComment": "Benutzerkommentar",
   "agentManager.review.metaAuthor": "Autor",
   "agentManager.pr.comment.title": "Kommentare",
+  "agentManager.pr.copyLink": "PR-Link kopieren",
   "agentManager.pr.comment.unresolvedCount": "{{count}} ungelöst",
   "agentManager.pr.comment.resolvedGroup": "Gelöst ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} ungelöste an Agent senden",

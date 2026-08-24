@@ -161,6 +161,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Revertir archivo",
   "agentManager.diff.revertSuccess": "Archivo revertido",
   "agentManager.diff.revertError": "Error al revertir",
+  "agentManager.editPreview.title": "Vista previa de la edición",
+  "agentManager.editPreview.close": "Cerrar vista previa de la edición",
+  "agentManager.editPreview.openInPanel": "Ver cambios en el panel",
   "agentManager.diff.applyBranchOnly":
     "Aplicar solo funciona con el diff completo de la rama. Cambia al ámbito Branch para aplicar.",
   "agentManager.open.button": "Abrir",
@@ -204,6 +207,7 @@ export const dict = {
   "agentManager.review.metaComment": "Comentario del usuario",
   "agentManager.review.metaAuthor": "Autor",
   "agentManager.pr.comment.title": "Comentarios",
+  "agentManager.pr.copyLink": "Copiar enlace del PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} sin resolver",
   "agentManager.pr.comment.resolvedGroup": "Resueltos ({{count}})",
   "agentManager.pr.comment.sendAll": "Enviar {{count}} sin resolver al agente",

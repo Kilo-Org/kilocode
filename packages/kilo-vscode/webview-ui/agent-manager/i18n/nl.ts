@@ -166,6 +166,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Bestand terugzetten",
   "agentManager.diff.revertSuccess": "Bestand teruggezet",
   "agentManager.diff.revertError": "Terugzetten mislukt",
+  "agentManager.editPreview.title": "Voorbeeld van bewerking",
+  "agentManager.editPreview.close": "Voorbeeld van bewerking sluiten",
+  "agentManager.editPreview.openInPanel": "Wijzigingen in paneel bekijken",
   "agentManager.diff.applyBranchOnly":
     "Toepassen werkt alleen op de volledige branch-diff. Schakel naar het bereik Branch om toe te passen.",
   "agentManager.open.button": "Openen",
@@ -209,6 +212,7 @@ export const dict = {
   "agentManager.review.metaComment": "Gebruikersopmerking",
   "agentManager.review.metaAuthor": "Auteur",
   "agentManager.pr.comment.title": "Opmerkingen",
+  "agentManager.pr.copyLink": "PR-link kopiëren",
   "agentManager.pr.comment.unresolvedCount": "{{count}} onopgelost",
   "agentManager.pr.comment.resolvedGroup": "Opgelost ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} onopgeloste opmerkingen naar agent sturen",

@@ -167,6 +167,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Dosyayı geri al",
   "agentManager.diff.revertSuccess": "Dosya geri alındı",
   "agentManager.diff.revertError": "Geri alma başarısız",
+  "agentManager.editPreview.title": "Düzenleme önizlemesi",
+  "agentManager.editPreview.close": "Düzenleme önizlemesini kapat",
+  "agentManager.editPreview.openInPanel": "Değişiklikleri panelde görüntüle",
   "agentManager.diff.applyBranchOnly":
     "Uygula yalnızca tam Branch diff'inde çalışır. Uygulamak için Branch kapsamına geçin.",
   "agentManager.open.button": "Aç",
@@ -211,6 +214,7 @@ export const dict = {
   "agentManager.review.metaComment": "Kullanıcı yorumu",
   "agentManager.review.metaAuthor": "Yazar",
   "agentManager.pr.comment.title": "Yorumlar",
+  "agentManager.pr.copyLink": "PR bağlantısını kopyala",
   "agentManager.pr.comment.unresolvedCount": "{{count}} çözülmemiş",
   "agentManager.pr.comment.resolvedGroup": "Çözüldü ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} çözülmemiş yorumu ajana gönder",

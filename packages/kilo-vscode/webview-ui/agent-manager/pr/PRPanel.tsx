@@ -4,6 +4,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { WorktreeState } from "../../src/types/messages"
 import type { PRStatus } from "../../src/types/messages"
+import { useLanguage } from "../../src/context/language"
 import { PRBadge } from "./PRBadge"
 import { PROverview } from "./PROverview"
 import { PRReviewers } from "./PRReviewers"
@@ -12,11 +13,13 @@ import { PRChecks } from "./PRChecks"
 import { PRComments } from "./PRComments"
 import { commentScroll, setCommentScroll } from "./pr-comment-state"
 import { PRSummary } from "./PRSummary"
+import { CopyButton } from "./CopyButton"
 import "./pr-panel.css"
 
 interface PRPanelProps {
   pr: PRStatus
   worktree?: WorktreeState
+  projectId?: string
   worktreeId: string
   activeTerminalId?: string
   onClose: () => void
@@ -26,6 +29,7 @@ interface PRPanelProps {
 }
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
+  const { t } = useLanguage()
   let commentsRef: HTMLDivElement | undefined
   let bodyRef: HTMLDivElement | undefined
   let capture: number | undefined
@@ -116,6 +120,9 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <span class="am-pr-panel-number">#{props.pr.number}</span>
         </div>
         <div class="am-pr-panel-actions am-pr-row">
+          <Tooltip value={t("agentManager.pr.copyLink")} placement="bottom">
+            <CopyButton text={props.pr.url} label={t("agentManager.pr.copyLink")} />
+          </Tooltip>
           <Tooltip value="Open in browser" placement="bottom">
             <IconButton
               icon="link"
@@ -146,6 +153,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
               <div ref={commentsRef}>
                 <PRComments
                   comments={item().value}
+                  projectId={props.projectId}
                   worktreeId={props.worktreeId}
                   activeTerminalId={props.activeTerminalId}
                   onOpenFile={props.onOpenFile}

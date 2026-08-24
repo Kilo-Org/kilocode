@@ -161,6 +161,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Откатить файл",
   "agentManager.diff.revertSuccess": "Файл откатан",
   "agentManager.diff.revertError": "Ошибка отката",
+  "agentManager.editPreview.title": "Предпросмотр редактирования",
+  "agentManager.editPreview.close": "Закрыть предпросмотр редактирования",
+  "agentManager.editPreview.openInPanel": "Показать изменения на панели",
   "agentManager.diff.applyBranchOnly":
     "Применение работает только с полным diff ветки. Чтобы применить изменения, переключитесь на область Branch.",
   "agentManager.open.button": "Открыть",
@@ -204,6 +207,7 @@ export const dict = {
   "agentManager.review.metaComment": "Комментарий пользователя",
   "agentManager.review.metaAuthor": "Автор",
   "agentManager.pr.comment.title": "Комментарии",
+  "agentManager.pr.copyLink": "Копировать ссылку на PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} нерешённых",
   "agentManager.pr.comment.resolvedGroup": "Решённые ({{count}})",
   "agentManager.pr.comment.sendAll": "Отправить {{count}} нерешённых агенту",

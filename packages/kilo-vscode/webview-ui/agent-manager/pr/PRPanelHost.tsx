@@ -7,6 +7,7 @@ import { openFile, openUrl } from "./pr-panel-actions"
 
 interface Props {
   pr: PRStatus
+  projectId?: string
   worktree?: WorktreeState
   worktreeId: string
   activeTerminalId?: string
@@ -20,6 +21,7 @@ export function PRPanelHost(props: Props) {
     <Show when={props.pr}>
       <PRPanel
         pr={props.pr}
+        projectId={props.projectId}
         worktree={props.worktree}
         worktreeId={props.worktreeId}
         activeTerminalId={props.activeTerminalId}

@@ -159,6 +159,9 @@ export const dict = {
   "agentManager.diff.revertFile": "ファイルを元に戻す",
   "agentManager.diff.revertSuccess": "ファイルを元に戻しました",
   "agentManager.diff.revertError": "元に戻せませんでした",
+  "agentManager.editPreview.title": "編集プレビュー",
+  "agentManager.editPreview.close": "編集プレビューを閉じる",
+  "agentManager.editPreview.openInPanel": "変更をパネルで表示",
   "agentManager.diff.applyBranchOnly":
     "適用はブランチ全体の差分に対してのみ利用できます。適用するにはスコープを Branch に切り替えてください。",
   "agentManager.open.button": "開く",
@@ -203,6 +206,7 @@ export const dict = {
   "agentManager.review.metaComment": "ユーザーコメント",
   "agentManager.review.metaAuthor": "作成者",
   "agentManager.pr.comment.title": "コメント",
+  "agentManager.pr.copyLink": "PRリンクをコピー",
   "agentManager.pr.comment.unresolvedCount": "{{count}} 件未解決",
   "agentManager.pr.comment.resolvedGroup": "解決済み ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} 件の未解決コメントをエージェントに送信",

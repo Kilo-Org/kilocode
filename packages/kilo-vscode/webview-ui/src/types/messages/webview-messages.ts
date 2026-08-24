@@ -7,6 +7,7 @@ import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type {
   ClearLegacyDataMessage,
@@ -847,6 +848,11 @@ export interface OpenWorktreeRequest {
   worktreeId: string
 }
 
+export interface AgentManagerCopyToClipboardRequest {
+  type: "agentManager.copyToClipboard"
+  text: string
+}
+
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
   type: "copyToClipboard"
@@ -1024,12 +1030,14 @@ export interface ImportFromPRRequest {
 // Agent Manager: Request one-shot diff fetch (webview → extension)
 export interface RequestWorktreeDiffMessage {
   type: "agentManager.requestWorktreeDiff"
+  projectId?: string
   sessionId: string
   scope?: string
 }
 
 export interface RequestWorktreeDiffFileMessage {
   type: "agentManager.requestWorktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   scope?: string
@@ -1038,6 +1046,7 @@ export interface RequestWorktreeDiffFileMessage {
 // Agent Manager: Start polling for live diff updates (webview → extension)
 export interface StartDiffWatchMessage {
   type: "agentManager.startDiffWatch"
+  projectId?: string
   sessionId: string
   scope?: string
 }
@@ -1045,11 +1054,13 @@ export interface StartDiffWatchMessage {
 // Agent Manager: Stop polling for diff updates (webview → extension)
 export interface StopDiffWatchMessage {
   type: "agentManager.stopDiffWatch"
+  projectId?: string
 }
 
 // Agent Manager: Request branch picker data for a diff context (webview → extension)
 export interface RequestDiffBranchesMessage {
   type: "agentManager.requestDiffBranches"
+  projectId?: string
   sessionId: string
   scope?: string
 }
@@ -1057,6 +1068,7 @@ export interface RequestDiffBranchesMessage {
 // Agent Manager: Set or clear the base branch override for a diff context (webview → extension)
 export interface SetDiffBaseBranchMessage {
   type: "agentManager.setDiffBaseBranch"
+  projectId?: string
   sessionId: string
   scope?: string
   branch?: string
@@ -1065,6 +1077,7 @@ export interface SetDiffBaseBranchMessage {
 // Agent Manager: PR messages (webview → extension)
 export interface RefreshPRMessage {
   type: "agentManager.refreshPR"
+  projectId?: string
   worktreeId: string
 }
 
@@ -1077,12 +1090,14 @@ export interface OpenPRMessage {
 
 export interface CommentActionMessage {
   type: "agentManager.resolveComment" | "agentManager.unresolveComment"
+  projectId?: string
   worktreeId: string
   threadId: string
 }
 
 export interface ApplyWorktreeDiffMessage {
   type: "agentManager.applyWorktreeDiff"
+  projectId?: string
   worktreeId: string
   selectedFiles?: string[]
 }
@@ -1495,6 +1510,8 @@ export type WebviewMessage =
   | LoginRequest
   | LogoutRequest
   | RefreshProfileRequest
+  | RequestProviderUsageMessage
+  | RefreshProviderUsageMessage
   | OpenExternalRequest
   | OpenSettingsPanelRequest
   | RequestAgentManagerSettingsMessage
@@ -1609,6 +1626,7 @@ export type WebviewMessage =
   | ShowLocalTerminalRequest
   | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
+  | AgentManagerCopyToClipboardRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest

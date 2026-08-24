@@ -160,6 +160,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Gendan fil",
   "agentManager.diff.revertSuccess": "Fil gendannet",
   "agentManager.diff.revertError": "Gendannelse fejlede",
+  "agentManager.editPreview.title": "Forhåndsvisning af redigering",
+  "agentManager.editPreview.close": "Luk forhåndsvisning af redigering",
+  "agentManager.editPreview.openInPanel": "Vis ændringer i panelet",
   "agentManager.diff.applyBranchOnly":
     "Anvend virker kun på hele Branch-diffen. Skift til Branch-området for at anvende.",
   "agentManager.open.button": "Åbn",
@@ -203,6 +206,7 @@ export const dict = {
   "agentManager.review.metaComment": "Brugerkommentar",
   "agentManager.review.metaAuthor": "Forfatter",
   "agentManager.pr.comment.title": "Kommentarer",
+  "agentManager.pr.copyLink": "Kopiér PR-link",
   "agentManager.pr.comment.unresolvedCount": "{{count}} uløste",
   "agentManager.pr.comment.resolvedGroup": "Løste ({{count}})",
   "agentManager.pr.comment.sendAll": "Send {{count}} uløste til agenten",

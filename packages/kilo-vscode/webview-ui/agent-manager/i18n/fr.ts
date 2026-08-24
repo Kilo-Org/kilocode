@@ -162,6 +162,9 @@ export const dict = {
   "agentManager.diff.revertFile": "Rétablir le fichier",
   "agentManager.diff.revertSuccess": "Fichier rétabli",
   "agentManager.diff.revertError": "Échec du rétablissement",
+  "agentManager.editPreview.title": "Aperçu de la modification",
+  "agentManager.editPreview.close": "Fermer l'aperçu de la modification",
+  "agentManager.editPreview.openInPanel": "Afficher les modifications dans le panneau",
   "agentManager.diff.applyBranchOnly":
     "Appliquer ne fonctionne que sur le diff complet de la branche. Passez à la portée Branch pour appliquer.",
   "agentManager.open.button": "Ouvrir",
@@ -206,6 +209,7 @@ export const dict = {
   "agentManager.review.metaComment": "Commentaire de l'utilisateur",
   "agentManager.review.metaAuthor": "Auteur",
   "agentManager.pr.comment.title": "Commentaires",
+  "agentManager.pr.copyLink": "Copier le lien du PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} non résolus",
   "agentManager.pr.comment.resolvedGroup": "Résolus ({{count}})",
   "agentManager.pr.comment.sendAll": "Envoyer {{count}} non résolus à l’agent",
