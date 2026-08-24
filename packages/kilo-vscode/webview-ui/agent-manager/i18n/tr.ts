@@ -205,6 +205,7 @@ export const dict = {
   "agentManager.review.metaComment": "Kullanıcı yorumu",
   "agentManager.review.metaAuthor": "Yazar",
   "agentManager.pr.comment.title": "Yorumlar",
+  "agentManager.pr.copyLink": "PR bağlantısını kopyala",
   "agentManager.pr.comment.unresolvedCount": "{{count}} çözülmemiş",
   "agentManager.pr.comment.resolvedGroup": "Çözüldü ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} çözülmemiş yorumu ajana gönder",
