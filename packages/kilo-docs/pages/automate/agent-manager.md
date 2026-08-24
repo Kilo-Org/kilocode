@@ -303,6 +303,21 @@ The Branch scope also has a base-branch picker next to it for overriding the com
 
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
 
+## Documents inspector
+
+The Documents inspector previews Markdown file references from Agent Manager chat without leaving the panel. Open a file reference to add it as a document tab, then use the tab strip to switch, reorder, or close open documents. The inspector keeps one tab per file in the active project and worktree context.
+
+- Markdown files (`.md`, `.mdx`, and `.markdown`) open in rendered view by default. Use the preview/source toggle to switch between rendered Markdown and syntax-highlighted source.
+- The document renderer also supports syntax-highlighted text and inline PNG, JPEG, GIF, WebP, and SVG previews when a document payload is available. Normal Agent Manager file-opening actions route non-Markdown source references to the native VS Code editor.
+- Use **Open file** to open the document in the native VS Code editor. The original line and column are preserved when available.
+- Unsupported, binary, missing, out-of-scope, or oversized files show an error fallback in the inspector. Text previews are limited to 2 MB and image previews to 5 MB; open the file in VS Code to inspect larger or unsupported content.
+
+### Inline document review
+
+In a rendered Markdown preview, use the comment control in the line gutter to add a comment at that line. Clicking a line number opens that location in the native editor. Draft comments can be edited or deleted, sent individually to the active session, or sent together with **Send all to chat**. Comments are attached to the document path and line, and remain isolated to the active project and worktree context.
+
+The project and worktree context owns document tabs, loaded content, and comments. The session ID attached to an opened file selects the session's worktree for reading and native-editor navigation. Sessions that share one worktree also share its document inspector state; switching project or worktree changes the visible context without mixing tabs or comments across worktrees.
+
 ## Terminals
 
 Each session has a dedicated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session. If the embedded terminal is already visible but the prompt has focus, the same shortcut focuses the terminal without hiding it. Press it again while the terminal has focus to hide the panel.
