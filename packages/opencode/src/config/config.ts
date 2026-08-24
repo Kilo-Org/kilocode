@@ -42,6 +42,7 @@ import z from "zod" // kilocode_change - Kilo config compatibility schemas
 // kilocode_change start
 import { ZodOverride } from "@opencode-ai/core/effect-zod"
 import { KilocodeConfig } from "../kilocode/config/config"
+import { Excess } from "../kilocode/config/excess"
 import { sanitizeProjectMcpHeaders } from "../kilocode/config/mcp-headers"
 import { primaryPaths } from "../kilocode/primary-worktree"
 import { Git } from "@/git"
@@ -318,6 +319,7 @@ const layer = Layer.effect(
       // kilocode_change start - trusted allows {env:}; fileScope confines untrusted {file:} reads to a root
       trusted?: boolean,
       fileScope?: ConfigVariable.FileScope,
+      configWarnings?: Warning[],
       // kilocode_change end
     ) {
       const source = "path" in options ? options.path : options.source
@@ -329,7 +331,21 @@ const layer = Layer.effect(
         ),
       )
       const parsed = ConfigParse.jsonc(expanded, source)
-      const data = ConfigParse.schema(ConfigV1.Info, normalizeLoadedConfig(parsed, source), source)
+      const normalized = normalizeLoadedConfig(parsed, source) // kilocode_change
+      // kilocode_change start - preserve upstream excess-key compatibility while warning Kilo users about typos
+      if (configWarnings) {
+        const keys = Excess.keys(ConfigV1.Info, normalized)
+        if (keys.length) {
+          const detail = Excess.issue(keys)
+          configWarnings.push({
+            path: source,
+            message: `Configuration is invalid at ${source}: ${detail}`,
+            detail,
+          })
+        }
+      }
+      // kilocode_change end
+      const data = ConfigParse.schema(ConfigV1.Info, normalized, source) // kilocode_change
       if (!("path" in options)) return data
 
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
@@ -371,6 +387,7 @@ const layer = Layer.effect(
         trusted === false ? undefined : env,
         trusted,
         fileScope,
+        configWarnings,
       )
       // kilocode_change end
       return data
@@ -738,7 +755,13 @@ const layer = Layer.effect(
               yield* Effect.logDebug(`loading config from ${source}`)
               // kilocode_change - untrusted config dirs confine {file:} reads to projectRoot
               const fileScope = dirTrusted ? undefined : { root: projectRoot, source }
-              const next = yield* loadFile(source, authEnv, dirTrusted, fileScope, dirTrusted ? undefined : warnings).pipe(
+              const next = yield* loadFile(
+                source,
+                authEnv,
+                dirTrusted,
+                fileScope,
+                dirTrusted ? undefined : warnings,
+              ).pipe(
                 Effect.catchDefect((err: unknown) => {
                   caughtWarning(warnings, source, err)
                   return Effect.succeed({} as Info)

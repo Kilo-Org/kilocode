@@ -57,7 +57,6 @@ describe("ConfigValidation.check", () => {
   test("reports schema validation errors for unknown fields", async () => {
     await using tmp = await tmpdir({ git: true })
     const filepath = path.join(tmp.path, "kilo.json")
-    // Config.Info uses .strict() so unknown fields produce errors
     await Filesystem.write(filepath, JSON.stringify({ notAField: true }))
 
     const result = await provideTestInstance({
@@ -67,6 +66,7 @@ describe("ConfigValidation.check", () => {
     expect(result).toContain("config_validation")
     expect(result).toContain("WARNING")
     expect(result).toContain("invalid")
+    expect(result).toContain("notAField")
   })
 
   test("validates valid markdown command", async () => {

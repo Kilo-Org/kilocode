@@ -6,6 +6,7 @@ import { ConfigProtection } from "./permission/config-paths"
 import { ConfigMarkdown } from "@/config/markdown"
 import { ConfigParse } from "@/config/parse"
 import { Config } from "@/config/config"
+import { Excess } from "@/kilocode/config/excess"
 import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ConfigCommandV1 } from "@opencode-ai/core/v1/config/command"
 import { ConfigErrorV1, FrontmatterError } from "@opencode-ai/core/v1/config/error"
@@ -49,6 +50,8 @@ export namespace ConfigValidation {
     }
 
     const issues = (() => {
+      const keys = Excess.keys(Config.Info, data)
+      if (keys.length) return Excess.issue(keys)
       try {
         ConfigParse.schema(Config.Info, data, filepath)
         return undefined

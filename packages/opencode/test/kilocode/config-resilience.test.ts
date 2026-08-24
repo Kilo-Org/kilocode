@@ -369,7 +369,10 @@ Broken command`,
   test("collects warnings for invalid schema in .kilo directory config", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
-        await Filesystem.write(path.join(dir, ".kilo", "kilo.json"), JSON.stringify({ unknownField: true }))
+        await Filesystem.write(
+          path.join(dir, ".kilo", "kilo.json"),
+          JSON.stringify({ model: "test/model", unknownField: true }),
+        )
       },
     })
 
@@ -379,8 +382,12 @@ Broken command`,
         const cfg = await load()
         const warns = await warnings()
 
-        expect(cfg).toBeDefined()
-        expect(warns.some((w) => w.path.includes("kilo.json") && w.message.includes("invalid"))).toBe(true)
+        expect(cfg.model).toBe("test/model")
+        expect(
+          warns.some(
+            (w) => w.path.includes("kilo.json") && w.message.includes("invalid") && w.message.includes("unknownField"),
+          ),
+        ).toBe(true)
       },
     })
   })
