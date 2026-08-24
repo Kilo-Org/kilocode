@@ -38,7 +38,7 @@ Every productive worktree session follows the same rhythm:
 1. **Open a new worktree dialog** (`Cmd+N` / `Ctrl+N`), then describe the task.
 2. **Let the agent run.** Switch to another worktree, another session, or step away.
 3. **Verify manually.** Before you trust "all tests pass", run the app with the run script (`Cmd+E` / `Ctrl+E`) or open the worktree's terminal (`Cmd+/` / `Ctrl+/`) and run the tests yourself.
-4. **Review the diff** (`Cmd+D` / `Ctrl+D`). Drop inline comments, then **Send to chat** to feed them back to the agent.
+4. **Review the diff** (`Cmd+D` / `Ctrl+D`). Add inline comments, then send all collected comments to chat or the active Agent Manager terminal with **Send all to chat**. Use `Cmd+Enter` / `Ctrl+Enter` as a shortcut.
 5. **Iterate.** Re-run, re-review. Repeat until the diff is ready — not until the agent says it is done.
 6. **Ship it.** See [Merging worktree and parent branch](#merging-worktree-and-parent-branch).
 

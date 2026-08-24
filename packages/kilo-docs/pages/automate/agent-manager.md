@@ -238,6 +238,12 @@ Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It sh
 - Markdown files include an eye/code toggle in the file header to switch between rendered Markdown and the raw diff
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
 
+### Sending review comments
+
+Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
+
+After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
+
 ### Diff Scope
 
 A scope selector in the diff toolbar (both in the side panel and the full-screen review) chooses which changes the diff shows:
