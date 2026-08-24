@@ -71,6 +71,14 @@ export {
 } from "./api/modes.js"
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
 export {
+  fetchByokEntries,
+  fetchCodingPlanSubscriptions,
+  fetchCodingPlanUsage,
+  type ByokEntry,
+  type CodingPlanSubscription,
+  type CodingPlanQuotaWindow,
+} from "./api/trpc.js"
+export {
   fetchCloudSession,
   fetchCloudSessionForImport,
   SessionImportValidationError,

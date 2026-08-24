@@ -525,7 +525,34 @@ html[data-theme="kilo-vscode"] [data-component="todos"] {
 }
 
 [data-component="question-answers"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 8px;
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-13);
+  line-height: var(--line-height-large);
+
+  [data-slot="question-answer-item"] {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  [data-slot="question-text"],
+  [data-slot="answer-text"] {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  [data-slot="question-text"] {
+    color: var(--text-weak);
+  }
+
+  [data-slot="answer-text"] {
+    color: var(--text-strong);
+  }
 }
 
 @keyframes reasoning-card-down {

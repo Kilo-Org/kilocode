@@ -195,6 +195,7 @@ export const dict = {
   "agentManager.review.metaComment": "Brukerkommentar",
   "agentManager.review.metaAuthor": "Forfatter",
   "agentManager.pr.comment.title": "Kommentarer",
+  "agentManager.pr.copyLink": "Kopier PR-lenke",
   "agentManager.pr.comment.unresolvedCount": "{{count}} uløste",
   "agentManager.pr.comment.resolvedGroup": "Løste ({{count}})",
   "agentManager.pr.comment.sendAll": "Send {{count}} uløste til agenten",

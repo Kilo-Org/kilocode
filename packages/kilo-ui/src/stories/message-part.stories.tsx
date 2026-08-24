@@ -617,7 +617,7 @@ export const ToolHintErrors: Story = {
   ),
 }
 
-// --- Question tool: answered (collapsed) ---
+// --- Question tool: answered (expanded by default) ---
 
 export const QuestionAnswered: Story = {
   name: "QuestionAnswered",
@@ -628,10 +628,10 @@ export const QuestionAnswered: Story = {
   ),
 }
 
-// --- Question tool: answered (expanded) ---
+// --- Question tool: answered (manually collapsed) ---
 
-export const QuestionAnsweredExpanded: Story = {
-  name: "QuestionAnswered (expanded)",
+export const QuestionAnsweredCollapsed: Story = {
+  name: "QuestionAnswered (manually collapsed)",
   render: () => (
     <AllProviders data={mockDataQuestionAnswered}>
       <AssistantParts messages={[mockAssistantMessage]} />

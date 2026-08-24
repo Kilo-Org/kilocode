@@ -7,6 +7,7 @@ import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type {
   ClearLegacyDataMessage,
@@ -821,6 +822,11 @@ export interface OpenWorktreeRequest {
   worktreeId: string
 }
 
+export interface AgentManagerCopyToClipboardRequest {
+  type: "agentManager.copyToClipboard"
+  text: string
+}
+
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
   type: "copyToClipboard"
@@ -1478,6 +1484,8 @@ export type WebviewMessage =
   | LoginRequest
   | LogoutRequest
   | RefreshProfileRequest
+  | RequestProviderUsageMessage
+  | RefreshProviderUsageMessage
   | OpenExternalRequest
   | OpenSettingsPanelRequest
   | OpenProfilePanelRequest
@@ -1588,6 +1596,7 @@ export type WebviewMessage =
   | ShowLocalTerminalRequest
   | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
+  | AgentManagerCopyToClipboardRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest

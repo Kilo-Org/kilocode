@@ -196,6 +196,7 @@ export const dict = {
   "agentManager.review.metaComment": "사용자 코멘트",
   "agentManager.review.metaAuthor": "작성자",
   "agentManager.pr.comment.title": "댓글",
+  "agentManager.pr.copyLink": "PR 링크 복사",
   "agentManager.pr.comment.unresolvedCount": "{{count}}개 미해결",
   "agentManager.pr.comment.resolvedGroup": "해결됨 ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}}개 미해결 댓글을 에이전트로 보내기",
