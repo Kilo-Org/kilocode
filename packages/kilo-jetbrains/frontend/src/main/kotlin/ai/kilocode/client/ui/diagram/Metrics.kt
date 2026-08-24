@@ -1,22 +1,20 @@
 package ai.kilocode.client.ui.diagram
 
 import java.awt.Font
-import java.awt.FontMetrics
-import java.awt.image.BufferedImage
+import java.awt.font.FontRenderContext
 
 internal class AwtMeasure : Measure {
-    private val img = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
-    private val g = img.createGraphics()
-    private val cache = linkedMapOf<FontSpec, FontMetrics>()
+    private val ctx = FontRenderContext(null, true, true)
+    private val cache = linkedMapOf<FontSpec, Font>()
 
-    override fun width(text: String, font: FontSpec) = metrics(font).stringWidth(text).toDouble()
-    override fun height(font: FontSpec) = metrics(font).height.toDouble()
-    override fun ascent(font: FontSpec) = metrics(font).ascent.toDouble()
+    override fun width(text: String, font: FontSpec) = font(font).getStringBounds(text, ctx).width
+    override fun height(font: FontSpec) = font(font).getLineMetrics("Ag", ctx).height.toDouble()
+    override fun ascent(font: FontSpec) = font(font).getLineMetrics("Ag", ctx).ascent.toDouble()
 
-    private fun metrics(font: FontSpec): FontMetrics {
+    private fun font(font: FontSpec): Font {
         cache[font]?.let { return it }
         val style = if (font.bold) Font.BOLD else Font.PLAIN
-        val value = g.getFontMetrics(Font(font.family, style, font.size))
+        val value = Font(font.family, style, font.size)
         cache[font] = value
         return value
     }

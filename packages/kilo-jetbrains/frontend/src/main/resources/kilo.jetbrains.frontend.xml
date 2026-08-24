@@ -142,7 +142,12 @@
                      restartRequired="false"
                      overrides="false"/>
         <registryKey key="kilo.session.validateRoots"
-                     description="Treat settled (non-streaming) transcript turns as Swing validate roots so their internal repaints do not relayout the whole transcript."
+                      description="Treat settled (non-streaming) transcript turns as Swing validate roots so their internal repaints do not relayout the whole transcript."
+                      defaultValue="true"
+                      restartRequired="false"
+                      overrides="false"/>
+        <registryKey key="kilo.diagram.inline.enabled"
+                     description="Render Mermaid diagram fences inline in markdown session views."
                      defaultValue="true"
                      restartRequired="false"
                      overrides="false"/>

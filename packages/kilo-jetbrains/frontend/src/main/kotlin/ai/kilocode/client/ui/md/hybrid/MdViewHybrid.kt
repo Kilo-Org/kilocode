@@ -5,6 +5,15 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.diagram.FontSpec
+import ai.kilocode.client.ui.diagram.Out
+import ai.kilocode.client.ui.diagram.Palette
+import ai.kilocode.client.ui.diagram.Spec
+import ai.kilocode.client.ui.diagram.ui.DiagramPanel
+import ai.kilocode.client.ui.diagram.ui.Diagrams
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCommon
@@ -15,6 +24,7 @@ import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.markup.HighlighterLayer
@@ -23,10 +33,13 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
+import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBHtmlPaneConfiguration
 import com.intellij.ui.components.JBHtmlPaneStyleConfiguration
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import java.awt.Color
@@ -324,6 +337,7 @@ internal open class MdViewHybrid(
             is Desc.Code -> when (val kind = desc.kind) {
                 is Kind.Source -> CodeView(desc, codeBlock(desc.text, kind, disposable), disposable)
                 is Kind.Terminal -> TermView(desc, terminalBlock(desc.text, kind, disposable), disposable)
+                is Kind.Diagram -> DiagramView(desc, kind, disposable)
             }
         }
     }
@@ -500,6 +514,24 @@ internal open class MdViewHybrid(
         applyTerm(field, term, kind.mode, value)
         return pane
     }
+
+    private fun palette(opts: MdStyle): Palette {
+        val font = style.editorFont
+        return Palette(
+            surface = UiStyle.Colors.contrast(opts.preBg, 8),
+            border = opts.codeBorder,
+            text = opts.foreground,
+            muted = opts.quoteFg,
+            accent = opts.linkColor,
+            note = opts.quoteBg,
+            cluster = opts.codeBorder,
+            line = opts.quoteFg,
+            font = font,
+            bold = style.boldEditorFont,
+        )
+    }
+
+    private fun spec() = Spec(FontSpec(style.editorFamily, style.editorSize))
 
     private fun styleCodePane(pane: JBScrollPane, opts: MdStyle) {
         pane.apply {
@@ -941,6 +973,153 @@ internal open class MdViewHybrid(
                 sizeCodePane(pane, view)
             }
             overlay()
+        }
+    }
+
+    private inner class DiagramView(desc: Desc.Code, kind: Kind.Diagram, disposable: Disposable) :
+        View(desc, Stack.vertical(gap = UiStyle.Gap.sm()), disposable) {
+        private val root = component as Stack
+        private val codePane = codeBlock(desc.text, Kind.Source(kind.file), disposable)
+        private val toggle = HyperlinkLabel(KiloBundle.message("diagram.diagram"))
+        private val label = JBLabel(KiloBundle.message("diagram.rendering")).apply {
+            foreground = SessionUiStyle.Text.Secondary.foreground()
+        }
+        private val row = Stack.horizontal(gap = UiStyle.Gap.md()).apply {
+            next(toggle)
+            next(label)
+        }
+        private var panel: DiagramPanel? = null
+        private var hash = 0
+        private var gen = 0
+        private var font = spec().font
+
+        init {
+            root.next(codePane).next(row)
+            toggle.addHyperlinkListener { toggle() }
+            kick()
+        }
+
+        override fun compatible(desc: Desc) = desc is Desc.Code && desc.kind is Kind.Diagram
+
+        override fun update(desc: Desc) {
+            if (this.desc == desc) return
+            this.desc = desc
+            val item = desc as Desc.Code
+            panel?.source(item.text)
+            updateCode(item.text)
+            kick()
+        }
+
+        override fun grow(delta: String) {
+            val item = desc as Desc.Code
+            update(item.copy(text = item.text + delta, open = true))
+        }
+
+        override fun style(opts: MdStyle) {
+            styleCodePane(codePane, opts)
+            val view = codePane.viewport.view
+            when (view) {
+                is CodeField -> {
+                    view.font = style.editorFont
+                    view.background = opts.preBg
+                    view.getEditor(false)?.let { ed -> applyEditorChrome(ed, opts, view.soft) }
+                }
+                is JBTextArea -> styleTextArea(view, opts)
+            }
+            if (view is JComponent) {
+                sizeCodeField(view, fieldText(view))
+                sizeCodePane(codePane, view)
+            }
+            panel?.background = opts.preBg
+            panel?.palette(palette(opts))
+            val next = spec().font
+            if (font == next) return
+            font = next
+            hash = 0
+            kick()
+        }
+
+        private fun kick() {
+            val item = desc as Desc.Code
+            if (!Registry.`is`("kilo.diagram.inline.enabled", true)) {
+                label.text = ""
+                showSource()
+                return
+            }
+            if (item.open) {
+                showSource()
+                label.text = KiloBundle.message("diagram.rendering")
+                label.foreground = SessionUiStyle.Text.Secondary.foreground()
+                return
+            }
+            val code = item.text.hashCode()
+            if (hash == code) return
+            hash = code
+            label.text = KiloBundle.message("diagram.rendering")
+            label.foreground = SessionUiStyle.Text.Secondary.foreground()
+            val seq = ++gen
+            service<Diagrams>().render(item.text, spec(), disposable) { out ->
+                if (seq != gen) return@render
+                when (out) {
+                    is Out.Ok -> ok(out)
+                    is Out.Err -> fail(out.message)
+                }
+            }
+        }
+
+        private fun ok(out: Out.Ok) {
+            val pane = panel ?: DiagramPanel((desc as Desc.Code).text, palette(opts())).also {
+                it.background = opts().preBg
+                panel = it
+            }
+            pane.art(out.art)
+            if (pane.parent == null) root.add(pane, 0)
+            showDiagram()
+            label.text = ""
+            root.revalidate()
+            root.repaint()
+        }
+
+        private fun fail(message: String) {
+            val text = message.ifBlank { KiloBundle.message("diagram.rendering") }
+            label.text = KiloBundle.message("diagram.error", text)
+            label.foreground = UiStyle.Colors.errorLabelForeground()
+            showSource()
+            root.revalidate()
+            root.repaint()
+        }
+
+        private fun toggle() {
+            if (panel?.parent === root && codePane.parent == null) showSource() else showDiagram()
+            root.revalidate()
+            root.repaint()
+        }
+
+        private fun showDiagram() {
+            val pane = panel ?: return
+            if (pane.parent == null) root.add(pane, 0)
+            if (codePane.parent === root) root.remove(codePane)
+            toggle.setHyperlinkText(KiloBundle.message("diagram.source"))
+        }
+
+        private fun showSource() {
+            val pane = panel
+            if (pane?.parent === root) root.remove(pane)
+            if (codePane.parent == null) root.add(codePane, 0)
+            toggle.setHyperlinkText(KiloBundle.message("diagram.diagram"))
+        }
+
+        private fun updateCode(text: String) {
+            val value = text.trimEnd('\n')
+            val view = codePane.viewport.view
+            when (view) {
+                is CodeField -> view.text = value
+                is JBTextArea -> view.text = value
+            }
+            if (view is JComponent) {
+                sizeCodeField(view, value)
+                sizeCodePane(codePane, view)
+            }
         }
     }
 

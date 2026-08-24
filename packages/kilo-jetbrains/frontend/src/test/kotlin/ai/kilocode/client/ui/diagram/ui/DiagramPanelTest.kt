@@ -1,0 +1,59 @@
+package ai.kilocode.client.ui.diagram.ui
+
+import ai.kilocode.client.ui.diagram.Mark
+import ai.kilocode.client.ui.diagram.Palette
+import ai.kilocode.client.ui.diagram.Rect
+import ai.kilocode.client.ui.diagram.Role
+import ai.kilocode.client.ui.diagram.Scene
+import ai.kilocode.client.ui.diagram.Size
+import ai.kilocode.client.ui.diagram.Type
+import java.awt.Color
+import java.awt.Font
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class DiagramPanelTest {
+    @Test
+    fun `test panel fits width and caps height`() {
+        val panel = DiagramPanel("source", palette())
+        panel.setSize(100, 1)
+        panel.art(scene(300.0, 100.0))
+
+        assertTrue(panel.preferredSize.height < 100)
+        assertEquals(0, panel.preferredSize.width)
+
+        panel.setSize(2_000, 1)
+        panel.art(scene(100.0, 2_000.0))
+
+        assertTrue(panel.preferredSize.height <= 520)
+    }
+
+    @Test
+    fun `test copy returns source`() {
+        val panel = DiagramPanel("flowchart TD", palette())
+
+        assertEquals("flowchart TD", panel.copyText())
+        panel.source("sequenceDiagram")
+        assertEquals("sequenceDiagram", panel.copyText())
+    }
+
+    private fun scene(w: Double, h: Double) = Scene(
+        Type.Flowchart,
+        listOf(Mark.Box(Rect(0.0, 0.0, w, h), 4.0, Role.Surface, Role.Border)),
+        Size(w, h),
+    )
+
+    private fun palette() = Palette(
+        surface = Color.WHITE,
+        border = Color.BLACK,
+        text = Color.BLACK,
+        muted = Color.GRAY,
+        accent = Color.BLUE,
+        note = Color.YELLOW,
+        cluster = Color.LIGHT_GRAY,
+        line = Color.DARK_GRAY,
+        font = Font(Font.SANS_SERIF, Font.PLAIN, 12),
+        bold = Font(Font.SANS_SERIF, Font.BOLD, 12),
+    )
+}
