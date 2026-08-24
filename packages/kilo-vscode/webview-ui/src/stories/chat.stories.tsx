@@ -30,6 +30,7 @@ import type {
   Part,
   QuestionRequest,
   ReviewComment,
+  ReviewCommentEntry,
   SessionModelUsage,
   SuggestionRequest,
   TodoItem,
@@ -236,6 +237,29 @@ export const ChatViewSessionDockStability: Story = {
   },
 }
 
+/** Builds the user message a review-comment send produces: markdown prefix + review metadata. */
+function reviewMessage(comments: ReviewCommentEntry[]) {
+  const prefix = formatReviewCommentsMarkdown(comments)
+  const message: Message = {
+    id: "review-user-message",
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: "review-user-part",
+      sessionID: SESSION_ID,
+      messageID: message.id,
+      type: "text",
+      text: `${prefix}\n\nPlease address these review comments.`,
+      metadata: reviewMetadata({ version: 1, comments }),
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
 export const UserMessageReviewComments: Story = {
   name: "User message — interactive review comments",
   render: () => {
@@ -253,36 +277,65 @@ export const UserMessageReviewComments: Story = {
         file: "resources/messages/KiloBundle_bs.properties",
         side: "deletions",
         line: 235,
-        comment: "Translate the modified setting description.",
+        comment:
+          "Translate the modified setting description. The Bosnian bundle still ships the English sentence, so the settings panel shows mixed languages for anyone running a localized IDE.",
         selectedText: "settings.models.smallModel.description=The lightweight model used for quick tasks.",
-      },
-    ]
-    const prefix = formatReviewCommentsMarkdown(comments)
-    const text = `${prefix}\n\nPlease address these review comments.`
-    const review = { version: 1 as const, comments }
-    const message: Message = {
-      id: "review-user-message",
-      sessionID: SESSION_ID,
-      role: "user",
-      createdAt: new Date(0).toISOString(),
-      time: { created: 0 },
-    }
-    const parts: Part[] = [
-      {
-        id: "review-user-part",
-        sessionID: SESSION_ID,
-        messageID: message.id,
-        type: "text",
-        text,
-        metadata: reviewMetadata(review),
       },
     ]
 
     return (
       <StoryProviders sessionID={SESSION_ID} status="idle">
-        <div style={{ "max-height": "400px", padding: "12px" }}>
-          <VscodeUserMessage message={message} parts={parts} />
-        </div>
+        <div style={{ "max-height": "400px", padding: "12px" }}>{reviewMessage(comments)}</div>
+      </StoryProviders>
+    )
+  },
+}
+
+/**
+ * Many review comments at once, mixing local diff comments and imported GitHub
+ * PR threads. Locks in the collapsed preview + "show more" behavior so a large
+ * paste cannot take over the transcript.
+ */
+export const UserMessageManyReviewComments: Story = {
+  name: "User message — many review comments",
+  render: () => {
+    const local: ReviewCommentEntry[] = Array.from({ length: 6 }, (_, index) => ({
+      id: `local-${index}`,
+      file: `src/agent-manager/handlers/worktree-${index}.ts`,
+      side: index % 2 === 0 ? "additions" : "deletions",
+      line: 40 + index * 17,
+      comment: `Guard the ${index % 2 === 0 ? "apply" : "discard"} path against a missing worktree before touching git.`,
+      selectedText: `const worktree = state.worktrees[${index}]`,
+    }))
+    const pr: ReviewCommentEntry[] = [
+      {
+        id: "pr-1",
+        origin: "pr",
+        author: "octocat",
+        body: "This reuses the shared helper, but it drops the `directory` argument, so the request resolves against the workspace root instead of the worktree.",
+        file: "src/services/cli-backend/http-client.ts",
+        line: 212,
+        diffHunk:
+          "@@ -210,6 +210,8 @@\n-  return client.session.messages({ id })\n+  return client.session.messages({ id, directory })",
+        replies: [
+          { author: "hubot", body: "Agreed. `directory` should be required here." },
+          { author: "octocat", body: "Pushed a fixup." },
+        ],
+      },
+      {
+        id: "pr-2",
+        origin: "pr",
+        author: "hubot",
+        body: "Outdated: this line moved in the latest push.",
+        file: "src/KiloProvider.ts",
+        line: 3870,
+        outdated: true,
+      },
+    ]
+
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle">
+        <div style={{ "max-height": "620px", padding: "12px" }}>{reviewMessage([...pr, ...local])}</div>
       </StoryProviders>
     )
   },
