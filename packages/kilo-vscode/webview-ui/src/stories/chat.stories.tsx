@@ -292,14 +292,13 @@ export const UserMessageReviewComments: Story = {
 }
 
 /**
- * Many review comments at once, mixing local diff comments and imported GitHub
- * PR threads. Locks in the collapsed preview + "show more" behavior so a large
- * paste cannot take over the transcript.
+ * Many local review comments at once. Locks in the collapsed preview + "show
+ * more" behavior so a large paste cannot take over the transcript.
  */
 export const UserMessageManyReviewComments: Story = {
   name: "User message — many review comments",
   render: () => {
-    const local: ReviewCommentEntry[] = Array.from({ length: 6 }, (_, index) => ({
+    const local: ReviewCommentEntry[] = Array.from({ length: 8 }, (_, index) => ({
       id: `local-${index}`,
       file: `src/agent-manager/handlers/worktree-${index}.ts`,
       side: index % 2 === 0 ? "additions" : "deletions",
@@ -307,31 +306,9 @@ export const UserMessageManyReviewComments: Story = {
       comment: `Guard the ${index % 2 === 0 ? "apply" : "discard"} path against a missing worktree before touching git.`,
       selectedText: `const worktree = state.worktrees[${index}]`,
     }))
-    const pr: ReviewCommentEntry[] = [
-      {
-        id: "pr-1",
-        origin: "pr",
-        author: "octocat",
-        body: "This reuses the shared helper, but it drops the `directory` argument, so the request resolves against the workspace root instead of the worktree.",
-        file: "src/services/cli-backend/http-client.ts",
-        line: 212,
-        diffHunk:
-          "@@ -210,6 +210,8 @@\n-  return client.session.messages({ id })\n+  return client.session.messages({ id, directory })",
-      },
-      {
-        id: "pr-2",
-        origin: "pr",
-        author: "hubot",
-        body: "Outdated: this line moved in the latest push.",
-        file: "src/KiloProvider.ts",
-        line: 3870,
-        outdated: true,
-      },
-    ]
-
     return (
       <StoryProviders sessionID={SESSION_ID} status="idle">
-        <div style={{ "max-height": "620px", padding: "12px" }}>{reviewMessage([...pr, ...local])}</div>
+        <div style={{ "max-height": "620px", padding: "12px" }}>{reviewMessage(local)}</div>
       </StoryProviders>
     )
   },
