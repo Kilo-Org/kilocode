@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import {
   apply,
@@ -8,7 +9,7 @@ import {
 } from "../../../src/kilocode/provider/processing-mode"
 
 const model = {
-  id: "gpt-5.6-luna",
+  id: ModelV2.ID.make("gpt-5.6-luna"),
   api: { id: "gpt-5.6-luna", npm: "@ai-sdk/openai", url: "https://api.openai.com/v1" },
 }
 const provider = { id: ProviderV2.ID.make("openai"), options: {}, source: "env" as const }
@@ -23,7 +24,7 @@ test("allows the built-in OpenAI endpoint when catalog URL is empty", () => {
 })
 
 test("rejects models outside the initial verified Flex allowlist", () => {
-  expect(supportsFlex({ provider, model: { ...model, id: "gpt-5.6-sol" }, auth })).toBe(false)
+  expect(supportsFlex({ provider, model: { ...model, id: ModelV2.ID.make("gpt-5.6-sol") }, auth })).toBe(false)
 })
 
 test("recognizes Flex request bodies and uses the extended timeout", () => {
@@ -35,9 +36,9 @@ test("recognizes Flex request bodies and uses the extended timeout", () => {
 test("rejects Flex for non-OpenAI credentials and endpoints", () => {
   expect(supportsFlex({ provider, model, auth: { type: "oauth" } })).toBe(false)
   expect(supportsFlex({ provider: { ...provider, id: ProviderV2.ID.make("kilo") }, model, auth })).toBe(false)
-  expect(supportsFlex({ provider, model: { api: { ...model.api, url: "https://proxy.example/v1" } }, auth })).toBe(
-    false,
-  )
+  expect(
+    supportsFlex({ provider, model: { ...model, api: { ...model.api, url: "https://proxy.example/v1" } }, auth }),
+  ).toBe(false)
 })
 
 test("applies Flex and clears an inherited service tier for Standard", () => {
@@ -67,7 +68,7 @@ test("fails closed when Flex is requested for an unsupported model", () => {
     apply({
       mode: "flex",
       provider,
-      model: { api: { ...model.api, npm: "@ai-sdk/openai-compatible" } },
+      model: { ...model, api: { ...model.api, npm: "@ai-sdk/openai-compatible" } },
       auth,
       options: {},
     }),
