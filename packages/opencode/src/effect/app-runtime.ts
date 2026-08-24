@@ -137,7 +137,7 @@ export const AppLayer = AppNodeBuilderV1.build(
     LocationServiceMap.node, // kilocode_change - expose the process-wide location cache to listeners
     // kilocode_change end
   ]),
-  [[LocationServiceMap.node, locationServiceMap]],
+  [[LocationServiceMap.node, locationServiceMap]], // kilocode_change
 ).pipe(Layer.provideMerge(AppNodeBuilderV1.build(Ripgrep.node)), Layer.provideMerge(Observability.layer))
 
 const rt = ManagedRuntime.make(AppLayer, { memoMap })
