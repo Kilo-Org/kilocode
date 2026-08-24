@@ -179,7 +179,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
   "agentManager.review.inlineCount": "审查评论 ({{count}})",
   "agentManager.review.fileCount": "{{count}} 个文件",
-  "agentManager.review.replyCount": "{{count}} 条回复",
   "agentManager.review.showMore": "显示更多 {{count}} 条",
   "agentManager.review.showLess": "显示更少",
   "agentManager.review.clearAll": "全部清除",

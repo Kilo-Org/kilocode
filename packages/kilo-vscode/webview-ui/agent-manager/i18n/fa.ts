@@ -190,7 +190,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
   "agentManager.review.inlineCount": "نظرات بررسی ({{count}})",
   "agentManager.review.fileCount": "{{count}} فایل",
-  "agentManager.review.replyCount": "{{count}} پاسخ",
   "agentManager.review.showMore": "نمایش {{count}} مورد بیشتر",
   "agentManager.review.showLess": "نمایش کمتر",
   "agentManager.review.clearAll": "پاک کردن همه",

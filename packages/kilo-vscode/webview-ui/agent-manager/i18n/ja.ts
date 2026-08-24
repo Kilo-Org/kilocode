@@ -187,7 +187,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
   "agentManager.review.inlineCount": "レビューコメント ({{count}})",
   "agentManager.review.fileCount": "{{count}} ファイル",
-  "agentManager.review.replyCount": "{{count}} 件の返信",
   "agentManager.review.showMore": "さらに {{count}} 件を表示",
   "agentManager.review.showLess": "表示を減らす",
   "agentManager.review.clearAll": "すべてクリア",

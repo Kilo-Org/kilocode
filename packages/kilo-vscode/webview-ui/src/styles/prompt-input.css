@@ -276,19 +276,6 @@
   overflow-wrap: anywhere;
 }
 
-.prompt-review-row-reply {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-left: 8px;
-  border-left: 2px solid var(--border-weak-base, var(--vscode-panel-border));
-  min-width: 0;
-}
-
-.prompt-review-row-reply .prompt-review-row-author {
-  align-self: flex-start;
-}
-
 .prompt-review-row-remove {
   width: 16px;
   height: 16px;

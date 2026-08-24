@@ -194,7 +194,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
   "agentManager.review.inlineCount": "Yorumları gözden geçir ({{count}})",
   "agentManager.review.fileCount": "{{count}} dosya",
-  "agentManager.review.replyCount": "{{count}} yanıt",
   "agentManager.review.showMore": "{{count}} tane daha göster",
   "agentManager.review.showLess": "Daha az göster",
   "agentManager.review.clearAll": "Tümünü temizle",

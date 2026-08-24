@@ -181,7 +181,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
   "agentManager.review.inlineCount": "ความคิดเห็นการตรวจสอบ ({{count}})",
   "agentManager.review.fileCount": "{{count}} ไฟล์",
-  "agentManager.review.replyCount": "{{count}} คำตอบ",
   "agentManager.review.showMore": "แสดงเพิ่มอีก {{count}} รายการ",
   "agentManager.review.showLess": "แสดงน้อยลง",
   "agentManager.review.clearAll": "ล้างทั้งหมด",

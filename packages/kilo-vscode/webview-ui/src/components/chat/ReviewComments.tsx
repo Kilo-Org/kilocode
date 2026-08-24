@@ -36,7 +36,6 @@ export const ReviewComments: Component<ReviewCommentsProps> = (props) => {
   const body = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? item.body : item.comment)
   const snippet = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? item.diffHunk : item.selectedText)
   const label = (item: ReviewCommentEntry) => (item.file ? fileName(item.file) : `@${author(item)}`)
-  const replies = (item: ReviewCommentEntry) => (isPRReviewComment(item) ? (item.replies ?? []) : [])
   const outdated = (item: ReviewCommentEntry) => isPRReviewComment(item) && item.outdated === true
 
   const files = createMemo(() => new Set(props.comments.filter((item) => item.file).map((item) => item.file)).size)
@@ -123,11 +122,6 @@ export const ReviewComments: Component<ReviewCommentsProps> = (props) => {
                       <Show when={outdated(item)}>
                         <span class="prompt-review-row-badge">{language.t("agentManager.pr.comment.outdated")}</span>
                       </Show>
-                      <Show when={replies(item).length > 0}>
-                        <span class="prompt-review-row-badge">
-                          {language.t("agentManager.review.replyCount", { count: replies(item).length })}
-                        </span>
-                      </Show>
                     </span>
                     <Show when={!full().includes(item.id)}>
                       <span class="prompt-review-row-preview">{body(item)}</span>
@@ -167,16 +161,6 @@ export const ReviewComments: Component<ReviewCommentsProps> = (props) => {
                     <Show when={snippet(item)}>
                       {(value) => <pre class="prompt-review-row-snippet">{value()}</pre>}
                     </Show>
-                    <For each={replies(item)}>
-                      {(reply) => (
-                        <div class="prompt-review-row-reply">
-                          <span class="prompt-review-row-author">@{reply.author}</span>
-                          <div class="prompt-review-row-text">
-                            <Markdown text={reply.body} />
-                          </div>
-                        </div>
-                      )}
-                    </For>
                   </div>
                 </Show>
               </div>

@@ -192,7 +192,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
   "agentManager.review.inlineCount": "Opmerkingen bekijken ({{count}})",
   "agentManager.review.fileCount": "{{count}} bestanden",
-  "agentManager.review.replyCount": "{{count}} antwoorden",
   "agentManager.review.showMore": "{{count}} meer weergeven",
   "agentManager.review.showLess": "Minder weergeven",
   "agentManager.review.clearAll": "Alles wissen",

@@ -193,7 +193,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Invio",
   "agentManager.review.inlineCount": "Commenti di revisione ({{count}})",
   "agentManager.review.fileCount": "{{count}} file",
-  "agentManager.review.replyCount": "{{count}} risposte",
   "agentManager.review.showMore": "Mostra altri {{count}}",
   "agentManager.review.showLess": "Mostra meno",
   "agentManager.review.clearAll": "Cancella tutto",

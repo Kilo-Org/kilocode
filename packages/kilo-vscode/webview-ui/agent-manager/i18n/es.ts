@@ -187,7 +187,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
   "agentManager.review.inlineCount": "Comentarios de revisión ({{count}})",
   "agentManager.review.fileCount": "{{count}} archivos",
-  "agentManager.review.replyCount": "{{count}} respuestas",
   "agentManager.review.showMore": "Mostrar {{count}} más",
   "agentManager.review.showLess": "Mostrar menos",
   "agentManager.review.clearAll": "Borrar todo",

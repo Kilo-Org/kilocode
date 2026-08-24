@@ -317,10 +317,6 @@ export const UserMessageManyReviewComments: Story = {
         line: 212,
         diffHunk:
           "@@ -210,6 +210,8 @@\n-  return client.session.messages({ id })\n+  return client.session.messages({ id, directory })",
-        replies: [
-          { author: "hubot", body: "Agreed. `directory` should be required here." },
-          { author: "octocat", body: "Pushed a fixup." },
-        ],
       },
       {
         id: "pr-2",

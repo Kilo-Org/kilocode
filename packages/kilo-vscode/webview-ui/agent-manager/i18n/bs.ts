@@ -186,7 +186,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
   "agentManager.review.inlineCount": "Komentari pregleda ({{count}})",
   "agentManager.review.fileCount": "{{count}} datoteka",
-  "agentManager.review.replyCount": "{{count}} odgovora",
   "agentManager.review.showMore": "Prikaži još {{count}}",
   "agentManager.review.showLess": "Prikaži manje",
   "agentManager.review.clearAll": "Očisti sve",

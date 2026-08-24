@@ -185,7 +185,6 @@ export const dict = {
   "agentManager.review.sendAllShortcut.other": "Ctrl+Enter",
   "agentManager.review.inlineCount": "리뷰 코멘트 ({{count}})",
   "agentManager.review.fileCount": "{{count}}개 파일",
-  "agentManager.review.replyCount": "{{count}}개 답글",
   "agentManager.review.showMore": "{{count}}개 더 보기",
   "agentManager.review.showLess": "간략히 보기",
   "agentManager.review.clearAll": "모두 지우기",
