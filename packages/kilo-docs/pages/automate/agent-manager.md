@@ -151,6 +151,8 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Use session history to reopen local sessions or preview cloud sessions
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
+When a session delegates work to a subagent, open the child transcript from its task card or background-agent row. Agent Manager displays it in the read-only **Subagents** inspector. The inspector supports multiple child-session tabs and keeps them scoped to the selected project and parent session. For the difference between Agent Manager inspector tabs and the separate subagent editor tabs used by the sidebar, see [Inspecting delegated sessions in VS Code](/docs/customize/custom-subagents#inspecting-delegated-sessions-in-vs-code).
+
 ### Renaming Worktrees
 
 Double-click a worktree name to edit its label inline. You can also right-click the worktree and choose **Rename**. Press `Enter` or click outside the field to save, or press `Escape` to cancel.
