@@ -12,6 +12,7 @@ import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
 import { WorktreeCommand } from "@/kilocode/cli/cmd/worktree"
+import { PtySmokeCommand } from "@/kilocode/cli/cmd/pty-smoke"
 
 const log = Log.create({ service: "kilocode.cli" })
 
@@ -58,6 +59,7 @@ export namespace KiloCli {
       .command(DaemonCommand)
       .command(ConfigCLICommand)
       .command(WorktreeCommand)
+    if (process.env.KILO_PTY_SMOKE === "1") cli.command(PtySmokeCommand)
     if (InstallationBuildKind !== "release") cli.command(DevSetupCommand).command(DevAliasCommand)
     // Safe self-reference: `cli` is a typed parameter and yargs `.command()` returns the same
     // instance, so the help command can resolve the fully-built root at handler time. This also

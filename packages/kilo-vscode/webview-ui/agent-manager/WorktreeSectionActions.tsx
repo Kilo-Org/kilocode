@@ -25,8 +25,7 @@ interface WorktreeSectionActionsProps {
   onNew: () => void
   onSection: () => void
   onShortcuts: () => void
-  onSetup: () => void
-  onBranch: () => void
+  onSettings: () => void
 }
 
 export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (props) => (
@@ -108,28 +107,13 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
           onClick={props.onShortcuts}
         />
       </TooltipKeybind>
-      <DropdownMenu gutter={4} placement="bottom-end">
-        <DropdownMenu.Trigger
-          as={IconButton}
-          icon="settings-gear"
-          size="small"
-          variant="ghost"
-          label={props.t("agentManager.worktree.settings")}
-        />
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content class="am-split-menu">
-            <DropdownMenu.Item onSelect={props.onSetup}>
-              <DropdownMenu.ItemLabel>{props.t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
-            </DropdownMenu.Item>
-            <DropdownMenu.Separator />
-            <DropdownMenu.Item onSelect={props.onBranch}>
-              <DropdownMenu.ItemLabel>
-                {props.t("agentManager.worktree.defaultBaseBranch")}: {props.branch}
-              </DropdownMenu.ItemLabel>
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu>
+      <IconButton
+        icon="settings-gear"
+        size="small"
+        variant="ghost"
+        label={props.t("agentManager.worktree.settings")}
+        onClick={props.onSettings}
+      />
     </Show>
   </div>
 )

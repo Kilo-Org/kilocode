@@ -59,7 +59,6 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ClosableTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/InspectorTabStrip.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectBranchDialog.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
@@ -904,35 +903,6 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
 })
 
 // ---------------------------------------------------------------------------
-// handleChangeDefaultBaseBranch — listener leak fix
-// ---------------------------------------------------------------------------
-
-describe("Agent Manager — dialog listener cleanup", () => {
-  const tsx = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"), "utf-8")
-
-  /**
-   * Regression: handleChangeDefaultBaseBranch subscribes to vscode.onMessage
-   * for branch data. Previously unsub() was only called inside selectBranch()
-   * and the Escape keydown handler. If the dialog closed via backdrop click or
-   * external dialog.close(), the listener leaked and stacked on every reopen.
-   *
-   * The fix ties unsub() to the dialog component's Solid cleanup so it always
-   * disposes regardless of how the dialog closes.
-   */
-  it("DefaultBaseBranchDialog disposes its message listener on cleanup", () => {
-    expect(tsx).toContain("const unsub = vscode.onMessage")
-    expect(tsx).toContain("onCleanup(unsub)")
-  })
-
-  it("select does not manually call unsub (handled by onCleanup)", () => {
-    const selStart = tsx.indexOf("const select =")
-    expect(selStart, "select must exist").toBeGreaterThan(-1)
-    const selEnd = tsx.indexOf("}", selStart + 40)
-    const selBody = tsx.slice(selStart, selEnd + 1)
-    expect(selBody, "select should not call unsub() directly").not.toContain("unsub()")
-  })
-})
-
 describe("SetupScriptRunner — task execution model", () => {
   const runner = fs.readFileSync(SETUP_SCRIPT_RUNNER_FILE, "utf-8")
   const taskAdapter = fs.readFileSync(path.join(ROOT, "src/agent-manager/task-runner.ts"), "utf-8")
