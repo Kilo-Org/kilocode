@@ -1578,12 +1578,33 @@ export const layer = Layer.effect(
         }
 
         if (task?.type === "compaction") {
+          // kilocode_change start - recover genuine preflight markers but discard stale v7.4.23 completed-turn markers
+          const target =
+            task.overflow === false
+              ? KiloSessionMessageOrder.latest(
+                  msgs.filter(
+                    (item) => item.info.role !== "user" || !item.parts.some((part) => part.type === "compaction"),
+                  ),
+                ).userMessage
+              : undefined
+          const answered =
+            target &&
+            msgs.some(
+              (item) => item.info.role === "assistant" && item.info.parentID === target.info.id && !!item.info.finish,
+            )
+          if (answered) {
+            yield* sessions.removeMessage({ sessionID, messageID: lastUser.id })
+            continue
+          }
+          const pending = target?.info.role === "user" ? target.info.id : undefined
+          // kilocode_change end
           const result = yield* compaction.process({
             messages: msgs,
             parentID: lastUser.id,
             sessionID,
             auto: task.auto,
             overflow: task.overflow,
+            pending,
           })
           // kilocode_change start - compaction.process only returns "stop" after
           // setting ContextOverflowError on the summary message; surface as turn error
@@ -1616,7 +1637,13 @@ export const layer = Layer.effect(
           }
           compactionAttempts++
           // kilocode_change end
-          yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
+          yield* compaction.create({
+            sessionID,
+            agent: lastUser.agent,
+            model: lastUser.model,
+            auto: true,
+            overflow: false,
+          }) // kilocode_change - compact around the pending turn, then resume it
           continue
         }
 
@@ -1838,27 +1865,31 @@ export const layer = Layer.effect(
           // kilocode_change end
           if (result === "compact") {
             // kilocode_change start
-            const guard = KiloSessionPrompt.guardCompactionAttempt({
-              sessionID,
-              attempts: compactionAttempts,
-              closeReasons,
-              message: handle.message,
-            })
-            if (guard.exhausted) {
+            if (handle.message.finish && handle.message.finish !== "tool-calls") {
               yield* sessions.updateMessage(handle.message)
-              yield* events.publish(Session.Event.Error, { sessionID, error: guard.error })
-              return "break" as const
+            } else {
+              const guard = KiloSessionPrompt.guardCompactionAttempt({
+                sessionID,
+                attempts: compactionAttempts,
+                closeReasons,
+                message: handle.message,
+              })
+              if (guard.exhausted) {
+                yield* sessions.updateMessage(handle.message)
+                yield* events.publish(Session.Event.Error, { sessionID, error: guard.error })
+                return "break" as const
+              }
+              compactionAttempts++
+              const overflow = handle.compactError?.() !== undefined
+              yield* compaction.create({
+                sessionID,
+                agent: lastUser.agent,
+                model: lastUser.model,
+                auto: true,
+                overflow: handle.message.finish === "tool-calls" || handle.compactProgress?.() ? undefined : overflow,
+              })
             }
-            compactionAttempts++
             // kilocode_change end
-            yield* compaction.create({
-              sessionID,
-              agent: lastUser.agent,
-              model: lastUser.model,
-              auto: true,
-              // kilocode_change - preflight compaction replays the pending turn without treating media as provider overflow
-              overflow: !handle.message.finish && handle.compactError?.() !== undefined, // kilocode_change
-            })
           }
           // kilocode_change start — break out so a newer queued prompt can take over
           // instead of starting another LLM step for the now-superseded turn. The

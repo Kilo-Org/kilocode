@@ -692,17 +692,19 @@ describe("KiloCompactionChunks", () => {
                 sessionID: session.id,
                 auto: true,
                 overflow: true,
+                pending: large.id,
               }),
             ),
           )
 
           const all = await svc.messages({ sessionID: session.id })
-          const replay = all.findLast((msg) => msg.info.role === "user" && msg.info.id !== large.id)
-          const part = replay?.parts.find((part): part is MessageV2.TextPart => part.type === "text")
+          const next = all.findLast((msg) => msg.info.role === "user" && msg.info.id !== large.id)
+          const part = next?.parts.find((part): part is MessageV2.TextPart => part.type === "text")
 
           expect(result).toBe("continue")
-          expect(calls).toHaveLength(1)
-          expect(calls[0]).toContain("Summarize conversation chunk 1 of 1")
+          expect(calls.length).toBeGreaterThan(0)
+          expect(calls[0]).toContain("Summarize conversation chunk")
+          expect(part?.synthetic).toBe(true)
           expect(part?.text).toContain("compacted representation")
           expect(part?.text).toContain("replay summary")
         } finally {

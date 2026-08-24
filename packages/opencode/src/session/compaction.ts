@@ -157,6 +157,7 @@ export interface Interface {
     sessionID: SessionID
     auto: boolean
     overflow?: boolean
+    pending?: MessageID // kilocode_change - resume this pending turn after compaction
   }) => Effect.Effect<"continue" | "stop">
   readonly create: (input: {
     sessionID: SessionID
@@ -324,6 +325,7 @@ const layer = Layer.effect(
       sessionID: SessionID
       auto: boolean
       overflow?: boolean
+      pending?: MessageID // kilocode_change
     }) {
       const parent = input.messages.findLast((m) => m.info.id === input.parentID)
       if (!parent || parent.info.role !== "user") {
@@ -332,29 +334,28 @@ const layer = Layer.effect(
       const userMessage = parent.info
       const compactionPart = parent.parts.find((part): part is SessionV1.CompactionPart => part.type === "compaction")
 
-      let messages = input.messages
+      const pending = input.pending
       let replay:
         | {
             info: SessionV1.User
             parts: SessionV1.Part[]
           }
         | undefined
-      // kilocode_change start - false is preflight replay; undefined disables replay
-      if (input.overflow !== undefined) {
+      let history = input.messages
+      // kilocode_change start - replay only explicitly pending turns or provider-overflow requests
+      if (pending || input.overflow === true) {
         const idx = input.messages.findIndex((m) => m.info.id === input.parentID)
         for (let i = idx - 1; i >= 0; i--) {
           const msg = input.messages[i]
-          if (msg.info.role === "user" && !msg.parts.some((p) => p.type === "compaction")) {
+          if (
+            msg.info.role === "user" &&
+            !msg.parts.some((p) => p.type === "compaction") &&
+            (!pending || msg.info.id === pending)
+          ) {
             replay = { info: msg.info, parts: msg.parts }
-            messages = input.messages.slice(0, i)
+            history = input.messages.slice(0, i)
             break
           }
-        }
-        const hasContent =
-          replay && messages.some((m) => m.info.role === "user" && !m.parts.some((p) => p.type === "compaction"))
-        if (!hasContent) {
-          replay = undefined
-          messages = input.messages
         }
       }
       // kilocode_change end
@@ -364,15 +365,14 @@ const layer = Layer.effect(
         ? yield* provider.getModel(agent.model.providerID, agent.model.modelID).pipe(Effect.orDie)
         : yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID).pipe(Effect.orDie)
       const cfg = yield* config.get()
-      const history = compactionPart && messages.at(-1)?.info.id === input.parentID ? messages.slice(0, -1) : messages
+      if (compactionPart && history.at(-1)?.info.id === input.parentID) history = history.slice(0, -1)
       const prior = completedCompactions(history)
       const hidden = new Set(prior.flatMap((item) => [item.userIndex, item.assistantIndex]))
       const previousSummary = prior.at(-1)?.summary
-      const selected = yield* select({
-        messages: history.filter((_, index) => !hidden.has(index)),
-        cfg,
-        model,
-      })
+      const available = history.filter((_, index) => !hidden.has(index))
+      const selected = replay
+        ? { head: available, tail_start_id: undefined }
+        : yield* select({ messages: available, cfg, model })
       // Allow plugins to inject context or replace compaction prompt.
       const compacting = yield* plugin.trigger(
         "experimental.session.compacting",
@@ -492,6 +492,7 @@ const layer = Layer.effect(
         // kilocode_change end
         if (replay) {
           // kilocode_change start - compact oversized replay turns instead of looping into replay overflow
+          const parts = replay.parts
           replay = yield* KiloCompactionChunks.replay({
             processors,
             session,
@@ -510,7 +511,12 @@ const layer = Layer.effect(
           }).pipe(Effect.provideService(Database.Service, database)) // kilocode_change
           // kilocode_change end
           const original = replay.info
-          const replayMsg = yield* session.updateMessage({
+          KiloSessionPromptQueue.retarget(input.sessionID, original.id)
+          const preserve = input.overflow !== true && replay.parts === parts
+          if (compactionPart && preserve) {
+            yield* session.updatePart({ ...compactionPart, tail_start_id: original.id })
+          }
+          const next = yield* session.updateMessage({
             id: MessageID.ascending(),
             role: "user",
             sessionID: input.sessionID,
@@ -521,21 +527,38 @@ const layer = Layer.effect(
             tools: original.tools,
             system: original.system,
           })
-          KiloSessionPromptQueue.retarget(input.sessionID, replayMsg.id) // kilocode_change - expose replay to scope()
-          for (const part of replay.parts) {
-            if (part.type === "compaction") continue
-            // kilocode_change start - preserve media for preflight replay but strip it after provider overflow
-            const replayPart =
-              input.overflow && part.type === "file" && MessageV2.isMedia(part.mime)
-                ? { type: "text" as const, text: `[Attached ${part.mime}: ${part.filename ?? "file"}]` }
-                : part
+          KiloSessionPromptQueue.retarget(input.sessionID, next.id)
+          if (preserve) {
             yield* session.updatePart({
-              ...replayPart,
               id: PartID.ascending(),
-              messageID: replayMsg.id,
+              messageID: next.id,
               sessionID: input.sessionID,
+              type: "text",
+              metadata: { compaction_continue: true },
+              synthetic: true,
+              text: "Continue the pending user request from the compacted context.",
+              time: { start: Date.now(), end: Date.now() },
             })
-            // kilocode_change end
+          } else {
+            for (const part of replay.parts) {
+              if (part.type === "compaction") continue
+              const item =
+                part.type === "file"
+                  ? {
+                      type: "text" as const,
+                      text: `[Attached ${part.mime}: ${part.filename ?? "file"}]`,
+                      synthetic: true,
+                    }
+                  : part.type === "text"
+                    ? { ...part, synthetic: true }
+                    : part
+              yield* session.updatePart({
+                ...item,
+                id: PartID.ascending(),
+                messageID: next.id,
+                sessionID: input.sessionID,
+              })
+            }
           }
         }
 
