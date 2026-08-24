@@ -188,6 +188,7 @@ export const dict = {
   "agentManager.review.commentAction": "留言",
   "agentManager.review.sendToChat": "傳送到聊天",
   "agentManager.pr.comment.title": "留言",
+  "agentManager.pr.copyLink": "複製 PR 連結",
   "agentManager.pr.comment.unresolvedCount": "{{count}} 個未解決",
   "agentManager.pr.comment.resolvedGroup": "已解決 ({{count}})",
   "agentManager.pr.comment.sendAll": "將 {{count}} 個未解決留言傳送給代理",

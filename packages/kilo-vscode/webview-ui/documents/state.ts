@@ -176,7 +176,9 @@ export function createDocumentInspector(
     return true
   }
   const openFile = (file: string, line?: number, column?: number, sessionId = context()) => {
-    if (sessionId) vscode.postMessage({ type: "agentManager.openFile", sessionId, filePath: file, line, column })
+    if (!sessionId) return false
+    vscode.postMessage({ type: "agentManager.openFile", sessionId, filePath: file, line, column })
+    return true
   }
   onMount(() => {
     const handler = (event: Event) => handleDocumentOpen(event, open, openFile)
@@ -201,7 +203,7 @@ export function createDocumentInspector(
 export function handleDocumentOpen(
   event: Event,
   open: (file: string, sessionId?: string, line?: number, column?: number) => boolean,
-  openFile?: (file: string, line?: number, column?: number, sessionId?: string) => void,
+  openFile?: (file: string, line?: number, column?: number, sessionId?: string) => boolean,
 ): void {
   const detail = (event as CustomEvent<{ filePath?: unknown; sessionID?: unknown; line?: unknown; column?: unknown }>)
     .detail
@@ -211,8 +213,7 @@ export function handleDocumentOpen(
   const line = typeof detail.line === "number" ? detail.line : undefined
   const column = typeof detail.column === "number" ? detail.column : undefined
   if (!isMarkdownPath(file)) {
-    if (!openFile) return
-    openFile(file, line, column, sessionId)
+    if (!openFile?.(file, line, column, sessionId)) return
     event.preventDefault()
     return
   }

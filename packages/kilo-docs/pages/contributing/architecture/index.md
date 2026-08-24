@@ -223,4 +223,3 @@ After system-boundary pages, continue with Development Patterns for implementati
 - [Development Patterns](/docs/contributing/architecture/development-patterns) - code-ownership decisions and contributor workflow
 - [Development Environment](/docs/contributing/development-environment) - setup guide
 - [Ecosystem](/docs/contributing/ecosystem) - related projects and integrations
-- [KiloClaw Overview](/docs/kiloclaw/overview) - customer-facing KiloClaw docs

@@ -5,6 +5,8 @@ description: "Configure your KiloClaw agent to use third-party tools and service
 
 # Setting Up Other Services
 
+{% partial file="kiloclaw-eol.md" /%}
+
 While KiloClaw comes with a set of [pre-configured tool integrations](/docs/kiloclaw/tools), your agent isn't limited to just those. KiloClaw can be configured to use virtually any third-party integration as a tool — as long as it has a CLI or an API, you can teach your agent to work with it.
 
 We have seen this pattern work well with outside services like ZenDesk, Todoist, GitLab, and more.

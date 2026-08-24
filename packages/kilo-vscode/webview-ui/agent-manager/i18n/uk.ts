@@ -204,6 +204,7 @@ export const dict = {
   "agentManager.review.commentAction": "Коментувати",
   "agentManager.review.sendToChat": "Надіслати до чату",
   "agentManager.pr.comment.title": "Коментарі",
+  "agentManager.pr.copyLink": "Копіювати посилання на PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} невирішених",
   "agentManager.pr.comment.resolvedGroup": "Вирішено ({{count}})",
   "agentManager.pr.comment.sendAll": "Надіслати {{count}} невирішених агенту",

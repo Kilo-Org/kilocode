@@ -199,6 +199,7 @@ export const dict = {
   "agentManager.review.commentAction": "نظر",
   "agentManager.review.sendToChat": "ارسال به چت",
   "agentManager.pr.comment.title": "نظرات",
+  "agentManager.pr.copyLink": "کپی پیوند PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} حل‌نشده",
   "agentManager.pr.comment.resolvedGroup": "حل‌شده ({{count}})",
   "agentManager.pr.comment.sendAll": "ارسال {{count}} مورد حل‌نشده به عامل",

@@ -195,6 +195,7 @@ export const dict = {
   "agentManager.review.commentAction": "Komentariši",
   "agentManager.review.sendToChat": "Pošalji u chat",
   "agentManager.pr.comment.title": "Komentari",
+  "agentManager.pr.copyLink": "Kopiraj PR vezu",
   "agentManager.pr.comment.unresolvedCount": "{{count}} neriješenih",
   "agentManager.pr.comment.resolvedGroup": "Riješeno ({{count}})",
   "agentManager.pr.comment.sendAll": "Pošalji {{count}} neriješenih agentu",

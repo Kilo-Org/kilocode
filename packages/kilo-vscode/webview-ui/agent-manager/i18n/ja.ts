@@ -196,6 +196,7 @@ export const dict = {
   "agentManager.review.commentAction": "コメント",
   "agentManager.review.sendToChat": "チャットに送信",
   "agentManager.pr.comment.title": "コメント",
+  "agentManager.pr.copyLink": "PRリンクをコピー",
   "agentManager.pr.comment.unresolvedCount": "{{count}} 件未解決",
   "agentManager.pr.comment.resolvedGroup": "解決済み ({{count}})",
   "agentManager.pr.comment.sendAll": "{{count}} 件の未解決コメントをエージェントに送信",

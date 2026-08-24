@@ -104,5 +104,16 @@ describe("Agent Manager document state", () => {
     )
     expect(source.defaultPrevented).toBe(true)
     expect(native).toEqual([["src/index.ts", 8, 3, "wt-a"]])
+
+    const missing = new CustomEvent("kilo:open-file", {
+      cancelable: true,
+      detail: { filePath: "src/missing.ts" },
+    })
+    handleDocumentOpen(
+      missing,
+      () => false,
+      () => false,
+    )
+    expect(missing.defaultPrevented).toBe(false)
   })
 })

@@ -192,6 +192,7 @@ export const dict = {
   "agentManager.review.commentAction": "تعليق",
   "agentManager.review.sendToChat": "إرسال إلى الدردشة",
   "agentManager.pr.comment.title": "التعليقات",
+  "agentManager.pr.copyLink": "نسخ رابط PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} غير محلولة",
   "agentManager.pr.comment.resolvedGroup": "تم الحل ({{count}})",
   "agentManager.pr.comment.sendAll": "إرسال {{count}} غير محلولة إلى الوكيل",
