@@ -247,6 +247,8 @@ See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-wor
 
 Each session has a dedicated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session. If the embedded terminal is already visible but the prompt has focus, the same shortcut focuses the terminal without hiding it. Press it again while the terminal has focus to hide the panel.
 
+When you use `@terminal` in an Agent Manager prompt, Kilo captures the focused terminal for the selected session or worktree. This includes embedded **Run** and **Setup** tabs. Terminal context is limited to 500 lines or 50,000 characters; longer output is truncated.
+
 ### Choosing the Terminal Destination
 
 The toolbar's terminal button is a split button: click it to open a terminal, or use its dropdown to choose where terminals open:
