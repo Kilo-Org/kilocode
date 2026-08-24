@@ -33,8 +33,8 @@ import java.awt.Dimension
  *
  * The two actions are registered platform actions (`Kilo.Chat.NewWorktree`, `Kilo.Chat.MoveToWorktree`)
  * rendered through an [com.intellij.openapi.actionSystem.ActionToolbar]; each is invisible when it is
- * not enabled, so the dock never shows a lone action. The dock exposes its state to those actions via
- * [ChatDockKeys.DOCK]. Collapses to nothing unless it has a PR, changes, or an enabled action.
+ * not enabled. The dock exposes its state to those actions via [ChatDockKeys.DOCK]. Collapses to
+ * nothing unless it has a PR, changes, messages, or an enabled action.
  *
  * The action row is offered only while the session is idle: an active turn ([setBusy]) withdraws it.
  * The PR row stays through a turn — it is informational, not an action.
@@ -112,24 +112,25 @@ internal class BranchDock(
     }
 
     /**
-     * Whether the chat already has a persisted session. A brand-new session has no id until its
-     * first prompt, and there is nothing to move until then — even in a repository with local
-     * changes, which would otherwise activate the dock.
+     * Whether the chat already has a persisted session. A session-less move transfers only local
+     * changes; this value affects action wording, not visibility.
      */
     @RequiresEdt
     fun setHasSession(value: Boolean) {
         if (hasSession == value) return
         hasSession = value
-        sync()
+        syncToolbar()
     }
 
     // ---- state read by the toolbar actions ----
 
     fun newWorktreeEnabled(): Boolean = onNewWorktree != null && dockActive()
 
-    fun moveEnabled(): Boolean = onMove != null && hasSession && dockActive()
+    fun moveEnabled(): Boolean = onMove != null && dockActive()
 
     fun changeCount(): Int = files.size
+
+    fun hasSession(): Boolean = hasSession
 
     fun triggerNewWorktree() = onNewWorktree?.invoke() ?: Unit
 

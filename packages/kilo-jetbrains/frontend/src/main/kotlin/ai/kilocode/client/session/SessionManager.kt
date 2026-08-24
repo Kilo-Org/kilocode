@@ -25,7 +25,7 @@ interface SessionManager {
     val supportsMoveToWorktree: Boolean get() = false
 
     /** Opens the Move to Worktree flow. No-op unless [supportsMoveToWorktree] is true. */
-    fun moveToWorktree(sessionId: String, directory: String) {}
+    fun moveToWorktree(sessionId: String?, directory: String) {}
 
     fun showHistory(back: (() -> Unit)? = null)
 

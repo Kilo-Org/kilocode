@@ -148,6 +148,7 @@ class BranchDockTest : BasePlatformTestCase() {
         assertTrue(p.isVisible)
         assertTrue(p.isEnabled)
         assertEquals(KiloBundle.message("session.dock.move"), p.text)
+        assertEquals(KiloBundle.message("session.dock.move.tooltip.empty"), p.description)
     }
 
     fun `test move action visible with changes and no messages`() {
@@ -157,22 +158,23 @@ class BranchDockTest : BasePlatformTestCase() {
             dock.setChanges(listOf(DiffFileDto("src/A.kt", 2, 1)))
             dock.setHasSession(true)
         }
-        assertTrue(update(ChatMoveToWorktreeAction(), dock).isVisible)
+        val p = update(ChatMoveToWorktreeAction(), dock)
+        assertTrue(p.isVisible)
+        assertEquals(KiloBundle.message("session.dock.move.tooltip.one"), p.description)
     }
 
-    fun `test move action hidden until the chat has a session`() {
+    fun `test move action visible with changes and no session`() {
         val dock = dock()
         edt {
             dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
-            dock.setChanges(listOf(DiffFileDto("src/A.kt", 2, 1)))
+            dock.setChanges(listOf(DiffFileDto("src/A.kt", 2, 1), DiffFileDto("src/B.kt", 1, 0)))
         }
-        // A new sidebar session has no id until its first prompt, so there is nothing to move even
-        // though the local changes activate the dock.
-        assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
-
-        edt { dock.setHasSession(true) }
-
-        assertTrue(update(ChatMoveToWorktreeAction(), dock).isVisible)
+        // A new sidebar session has no id until its first prompt; the local changes alone are worth
+        // moving, so the action is offered with changes-only wording.
+        val p = update(ChatMoveToWorktreeAction(), dock)
+        assertTrue(p.isVisible)
+        assertTrue(p.isEnabled)
+        assertEquals(KiloBundle.message("session.dock.move.tooltip.changes.other", 2), p.description)
     }
 
     fun `test move action hidden with nothing to move`() {
@@ -194,7 +196,7 @@ class BranchDockTest : BasePlatformTestCase() {
 
     fun `test move action invokes callback`() {
         var moved = 0
-        val dock = edt { BranchDock(openDiff = {}, onMove = { moved++ }).also { it.setHasSession(true) } }
+        val dock = edt { BranchDock(openDiff = {}, onMove = { moved++ }) }
         val action = ChatMoveToWorktreeAction()
         val event = event(action, dock)
         edt { ActionUtil.updateAction(action, event) }
@@ -207,7 +209,6 @@ class BranchDockTest : BasePlatformTestCase() {
         edt {
             dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
             dock.setHasMessages(true)
-            dock.setHasSession(true)
         }
         assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
     }

@@ -213,9 +213,14 @@ class WorktreeController(
         }
     }
 
+    /**
+     * Copies working-tree changes into a new worktree. When [sessionId] is set, the source session is
+     * also forked into the worktree; otherwise the opened worktree starts with a fresh session.
+     */
     @RequiresEdt
-    fun move(sessionId: String, source: String = directory) {
-        if (!moves.add(sessionId)) return
+    fun move(sessionId: String?, source: String = directory) {
+        val key = sessionId ?: source
+        if (!moves.add(key)) return
         val branch = suggestName()
         val temp = WorktreeDto("pending:$branch:${System.nanoTime()}", branch, branch, "pending:$branch")
         pending[temp.id] = temp
@@ -225,7 +230,7 @@ class WorktreeController(
         cs.launch {
             var stage = MoveStage.CAPTURING
             runCatching {
-                abort(sessionId, source)
+                if (sessionId != null) abort(sessionId, source)
                 service.moveToWorktree(source, sessionId, branch).collect { event ->
                     edt {
                         if (event.stage != MoveStage.ERROR) stage = event.stage
@@ -233,7 +238,7 @@ class WorktreeController(
                         refresh(temp)
                         when (event.stage) {
                             MoveStage.DONE -> {
-                                moves.remove(sessionId)
+                                moves.remove(key)
                                 pending.remove(temp.id)
                                 tasks.remove(temp.id)
                                 val worktree = event.worktree ?: return@edt
@@ -244,14 +249,17 @@ class WorktreeController(
                                 // open; the tab's identity stays the worktree path alone.
                                 event.session?.let { service<PendingWorktreeSession>().put(worktree.path, it) }
                                 onSelect?.invoke(worktree.id)
-                                telemetry("Continue in Worktree", mapOf("surface" to "sidebar"))
+                                telemetry(
+                                    "Continue in Worktree",
+                                    mapOf("surface" to "sidebar", "session" to (sessionId != null).toString()),
+                                )
                             }
-                            MoveStage.ERROR -> failMove(sessionId, temp, event.error, stage)
+                            MoveStage.ERROR -> failMove(key, temp, event.error, stage)
                             else -> Unit
                         }
                     }
                 }
-            }.onFailure { err -> edt { failMove(sessionId, temp, err.message, stage) } }
+            }.onFailure { err -> edt { failMove(key, temp, err.message, stage) } }
         }
     }
 
@@ -331,8 +339,8 @@ class WorktreeController(
         return (0 until model.size).firstOrNull { model.getElementAt(it).id == id } ?: -1
     }
 
-    private fun failMove(session: String, temp: WorktreeDto, err: String?, stage: MoveStage) {
-        moves.remove(session)
+    private fun failMove(key: String, temp: WorktreeDto, err: String?, stage: MoveStage) {
+        moves.remove(key)
         pending.remove(temp.id)
         tasks.remove(temp.id)
         model.remove(temp)

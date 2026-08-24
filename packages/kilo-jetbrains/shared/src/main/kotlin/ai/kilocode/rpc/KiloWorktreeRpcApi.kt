@@ -53,10 +53,11 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     /**
      * Moves the session [sessionId] running in [directory] into a fresh worktree on [branch]:
      * captures uncommitted changes, creates the worktree at the source HEAD, transfers the changes,
-     * then forks the session into it. Emits one [MoveProgressDto] per stage; [branch] is generated
-     * on the frontend from the known branch list.
+     * then forks the session into it. When [sessionId] is null, only the working-tree changes are
+     * transferred and no FORKING stage is emitted. [branch] is generated on the frontend from the
+     * known branch list.
      */
-    suspend fun moveToWorktree(directory: String, sessionId: String, branch: String): Flow<MoveProgressDto>
+    suspend fun moveToWorktree(directory: String, sessionId: String?, branch: String): Flow<MoveProgressDto>
     suspend fun listBranches(directory: String): WorktreeBranchesDto
     suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto
 

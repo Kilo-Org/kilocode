@@ -191,13 +191,13 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test dock move delegates to manager without progress state`() {
-        val calls = mutableListOf<Pair<String, String>>()
+        val calls = mutableListOf<Pair<String?, String>>()
         val owner = object : SessionManager {
             override fun newSession() {}
             override fun showHistory(back: (() -> Unit)?) {}
             override fun openSession(ref: SessionRef) {}
             override val supportsMoveToWorktree: Boolean get() = true
-            override fun moveToWorktree(sessionId: String, directory: String) {
+            override fun moveToWorktree(sessionId: String?, directory: String) {
                 calls += sessionId to directory
             }
         }
@@ -219,12 +219,16 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(dock.moveEnabled())
     }
 
-    fun `test dock move stays disabled for a new session with local changes`() {
+    fun `test dock move forwards a null session for a new session with local changes`() {
+        val calls = mutableListOf<Pair<String?, String>>()
         val owner = object : SessionManager {
             override fun newSession() {}
             override fun showHistory(back: (() -> Unit)?) {}
             override fun openSession(ref: SessionRef) {}
             override val supportsMoveToWorktree: Boolean get() = true
+            override fun moveToWorktree(sessionId: String?, directory: String) {
+                calls += sessionId to directory
+            }
         }
         val worktree = FakeWorktreeRpcApi().apply {
             branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
@@ -232,18 +236,18 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         ApplicationManager.getApplication()
             .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
         workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))
-        // A brand-new sidebar session: no id until the first prompt, so nothing exists to move even
-        // though the local changes keep the dock on screen.
+        // A brand-new sidebar session has no id until its first prompt, but the local changes alone
+        // are worth moving: the worktree gets the changes and starts its own session.
         ui = newUi(manager = owner)
         settle()
         val dock = find<BranchDock>(ui)
 
         assertTrue(dock.isVisible)
-        assertFalse(dock.moveEnabled())
-
-        showMessages()
-
         assertTrue(dock.moveEnabled())
+
+        dock.triggerMove()
+
+        assertEquals(listOf<Pair<String?, String>>(null to "/test"), calls)
     }
 
     fun `test a failed branch status leaves the dock inactive instead of assuming healthy git`() {

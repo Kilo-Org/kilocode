@@ -358,7 +358,53 @@ class WorktreeControllerTest : BasePlatformTestCase() {
             assertNull(service<PendingWorktreeSession>().take(done.path))
         }
         assertEquals(done.id, selected.last())
-        assertTrue(events.any { it.first == "Continue in Worktree" && it.second["surface"] == "sidebar" })
+        assertTrue(
+            events.any {
+                it.first == "Continue in Worktree" && it.second["surface"] == "sidebar" && it.second["session"] == "true"
+            },
+        )
+    }
+
+    fun `test move without a session transfers changes and skips forking`() {
+        val done = WorktreeDto("/wt/moved", "moved", "moved", "/wt/moved")
+        rpc.moveScript = listOf(
+            MoveProgressDto(MoveStage.CREATING),
+            MoveProgressDto(MoveStage.TRANSFERRING),
+            MoveProgressDto(MoveStage.DONE, worktree = done),
+        )
+        val selected = mutableListOf<String>()
+        val aborts = mutableListOf<Pair<String, String>>()
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        val controller = controller(abort = { id, dir -> aborts += id to dir }, telemetry = { name, props -> events += name to props })
+        controller.onSelect = { selected += it }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.move(null, "/repo") }
+        flush()
+
+        assertTrue("a session-less move has no turn to abort", aborts.isEmpty())
+        assertEquals("/repo", rpc.moves.single().first)
+        assertNull(rpc.moves.single().second)
+        assertEquals(done, controller.model.getElementAt(0))
+        // Nothing is queued for the worktree editor, so opening it starts a fresh session.
+        ApplicationManager.getApplication().invokeAndWait {
+            assertNull(service<PendingWorktreeSession>().take(done.path))
+        }
+        assertEquals(done.id, selected.last())
+        assertTrue(events.any { it.first == "Continue in Worktree" && it.second["session"] == "false" })
+    }
+
+    fun `test duplicate move without a session is ignored while in flight`() {
+        rpc.moveScript = listOf(MoveProgressDto(MoveStage.DONE, worktree = WorktreeDto("/wt/moved", "moved", "moved", "/wt/moved")))
+        val controller = controller()
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.move(null, "/repo")
+            controller.move(null, "/repo")
+        }
+        flush()
+
+        assertEquals(1, controller.model.size)
+        assertEquals(1, rpc.moves.size)
     }
 
     fun `test move failure removes placeholder and reports last stage`() {

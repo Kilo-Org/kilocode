@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
+import ai.kilocode.client.agentManager.worktree.NewWorktreeHandle
 import ai.kilocode.client.agentManager.worktree.GhBanner
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
@@ -65,6 +66,7 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
+import java.awt.Component
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 import javax.swing.JComponent
@@ -77,6 +79,16 @@ class AgentManagerPanel(
     parent: Disposable,
     private val controller: WorktreeController,
     private val project: Project? = null,
+    private val dialog: (Component, Project) -> NewWorktreeHandle = { anchor, target ->
+        NewWorktreeDialog(
+            anchor,
+            target,
+            controller.directory,
+            controller.suggestName(),
+            controller.defaultBranch,
+            controller.branches,
+        )
+    },
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val provider = WorktreeDeleteProvider()
     private val edit = RenameAction()
@@ -155,23 +167,21 @@ class AgentManagerPanel(
         project?.service<WorktreeStatusService>()?.refreshPr()
     }
 
-    /** Opens the New Worktree dialog. */
-    fun configure() {
+    /**
+     * Opens the New Worktree dialog anchored at [anchor]. The worktree is created only after the
+     * dialog closes, so [onCreate] — e.g. the chat dock switching the tool window to this panel —
+     * never competes with the modal dialog for focus.
+     */
+    fun configure(anchor: Component = this, onCreate: () -> Unit = {}) {
         val target = project ?: return
-        NewWorktreeDialog(
-            this,
-            target,
-            controller.directory,
-            controller.suggestName(),
-            controller.defaultBranch,
-            controller.branches,
-            onCreate = { branch, base, prompt ->
-                controller.create(branch, base, prompt = prompt)
-            },
-        ).show()
+        val handle = dialog(anchor, target)
+        if (!handle.showAndGet()) return
+        val plan = handle.result() ?: return
+        onCreate()
+        controller.create(plan.branch, plan.base, prompt = plan.prompt)
     }
 
-    internal fun move(sessionId: String, directory: String) = controller.move(sessionId, directory)
+    internal fun move(sessionId: String?, directory: String) = controller.move(sessionId, directory)
 
     private fun remove(item: WorktreeDto, force: Boolean) {
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })

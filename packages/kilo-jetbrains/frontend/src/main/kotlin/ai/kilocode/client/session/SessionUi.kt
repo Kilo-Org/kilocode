@@ -993,8 +993,7 @@ class SessionUi(
     /** Starts the Move to Worktree flow for the current session through the side-panel manager. */
     @RequiresEdt
     private fun moveToWorktree() {
-        val id = controller.id ?: return
-        manager?.moveToWorktree(id, controller.sessionDirectory)
+        manager?.moveToWorktree(controller.id, controller.sessionDirectory)
     }
 
     @RequiresEdt

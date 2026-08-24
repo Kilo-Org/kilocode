@@ -3,6 +3,10 @@ package ai.kilocode.client.agentManager
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.GhStatusCoordinator
+import ai.kilocode.client.agentManager.worktree.NewWorktreeHandle
+import ai.kilocode.client.agentManager.worktree.NewWorktreePlan
+import ai.kilocode.client.agentManager.worktree.PendingPrompt
+import ai.kilocode.client.agentManager.worktree.PendingWorktreePrompt
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
@@ -120,6 +124,40 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(created.path, file.path.params["path"])
         assertSame(WorktreeSessionEditorKind.fileType(file.path.params), file.fileType)
         assertEquals(false, file.getUserData(KiloVfsManager.FOCUS))
+    }
+
+    fun `test configure creates the worktree only after the dialog closes`() {
+        val order = mutableListOf<String>()
+        val plan = NewWorktreePlan("feature/y", "main", PendingPrompt("build it"))
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+        }
+
+        edt { panel.configure(onCreate = { order += "switch" }) }
+        flush()
+
+        // The view switch happens after the modal dialog is gone and before the worktree row lands.
+        assertEquals(listOf("show", "switch"), order)
+        val created = edt { controller.model.getElementAt(0) }
+        assertEquals("feature/y", created.branch)
+        assertEquals("main", rpc.creates.single().baseBranch)
+        edt { assertEquals("build it", service<PendingWorktreePrompt>().take(created.path)?.text) }
+    }
+
+    fun `test configure does nothing when the dialog is cancelled`() {
+        val order = mutableListOf<String>()
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(null, order) })
+        }
+
+        edt { panel.configure(onCreate = { order += "switch" }) }
+        flush()
+
+        assertEquals(listOf("show"), order)
+        assertEquals(0, edt { controller.model.size })
+        assertTrue(rpc.creates.isEmpty())
     }
 
     fun `test panel hides worktree search field`() {
@@ -815,4 +853,17 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
     private fun pump() = pumpEdt()
+}
+
+/** Stands in for the modal New Worktree dialog: records that it was shown, then reports [plan]. */
+private class FakeWorktreeDialog(
+    private val plan: NewWorktreePlan?,
+    private val order: MutableList<String>,
+) : NewWorktreeHandle {
+    override fun showAndGet(): Boolean {
+        order += "show"
+        return plan != null
+    }
+
+    override fun result(): NewWorktreePlan? = plan
 }

@@ -209,11 +209,11 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     /**
      * Every failure path — including a throw from capture, worktree creation bookkeeping, or the
-     * fork — emits [MoveStage.ERROR] and rolls back a worktree that was already created. The
-     * frontend collector has no error handling of its own, so a silent flow completion would leave
-     * the Agent Manager row stuck on its last stage forever.
+     * optional fork — emits [MoveStage.ERROR] and rolls back a worktree that was already created.
+     * The frontend collector has no error handling of its own, so a silent flow completion would
+     * leave the Agent Manager row stuck on its last stage forever.
      */
-    override suspend fun moveToWorktree(directory: String, sessionId: String, branch: String): Flow<MoveProgressDto> = flow {
+    override suspend fun moveToWorktree(directory: String, sessionId: String?, branch: String): Flow<MoveProgressDto> = flow {
         val base = Path.of(directory).normalize()
         LOG.info("worktree move requested: dir=$base session=$sessionId branch=$branch")
         // Both survive the try so `finally` can drop temp patches and the failure paths can drop a
@@ -241,11 +241,14 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 emit(MoveProgressDto(MoveStage.ERROR, error = applied.error ?: "Failed to apply changes to worktree"))
                 return@flow
             }
-            emit(MoveProgressDto(MoveStage.FORKING))
-            val forked = withContext(Dispatchers.IO) { service<KiloBackendAppService>().sessions.fork(sessionId, worktree.path) }
+            // A session-less move transfers changes only: nothing to fork, so no FORKING stage.
+            val forked = sessionId?.let { id ->
+                emit(MoveProgressDto(MoveStage.FORKING))
+                withContext(Dispatchers.IO) { service<KiloBackendAppService>().sessions.fork(id, worktree.path) }
+            }
             leftover = null
-            LOG.info("worktree move done: worktree=${worktree.path} session=${forked.id}")
-            emit(MoveProgressDto(MoveStage.DONE, worktree = worktree, session = forked.id))
+            LOG.info("worktree move done: worktree=${worktree.path} session=${forked?.id}")
+            emit(MoveProgressDto(MoveStage.DONE, worktree = worktree, session = forked?.id))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

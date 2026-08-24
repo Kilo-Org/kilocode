@@ -53,7 +53,7 @@ class SessionSidePanelManager(
     var onNewWorktree: (() -> Unit)? = null
 
     /** Wired by the tool window to move the current chat into an Agent Manager worktree row. */
-    var onMoveToWorktree: ((String, String) -> Unit)? = null
+    var onMoveToWorktree: ((String?, String) -> Unit)? = null
 
     override val supportsNewWorktree: Boolean get() = onNewWorktree != null
 
@@ -63,7 +63,7 @@ class SessionSidePanelManager(
         onNewWorktree?.invoke()
     }
 
-    override fun moveToWorktree(sessionId: String, directory: String) {
+    override fun moveToWorktree(sessionId: String?, directory: String) {
         onMoveToWorktree?.invoke(sessionId, directory)
     }
 

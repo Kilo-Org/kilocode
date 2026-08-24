@@ -549,6 +549,29 @@ class KiloWorktreeRpcApiImplTest {
         assertTrue(api.list(repo.toString()).worktrees.none { it.branch == "feature/x" }, "git must not track the worktree")
     }
 
+    @Test
+    fun `moveToWorktree without a session copies changes and skips forking`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "hello edited\n")
+        Files.writeString(repo.resolve("untracked.txt"), "brand new\n")
+
+        // No session to fork, so the flow must run to DONE instead of throwing in the fork stage.
+        val events = api.moveToWorktree(repo.toString(), null, "feature/x").toList()
+
+        assertEquals(
+            listOf(MoveStage.CAPTURING, MoveStage.CREATING, MoveStage.TRANSFERRING, MoveStage.DONE),
+            events.map { it.stage },
+        )
+        val done = events.last()
+        assertNull(done.session, "a session-less move must not report a forked session")
+        val worktree = assertNotNull(done.worktree)
+        val target = Path.of(worktree.path)
+        assertEquals("hello edited\n", Files.readString(target.resolve("README.md")))
+        assertEquals("brand new\n", Files.readString(target.resolve("untracked.txt")))
+        // The transfer is a copy: the source keeps its work.
+        assertEquals("hello edited\n", Files.readString(repo.resolve("README.md")))
+    }
+
     private fun statusOf(dir: Path): String {
         val cmd = GeneralCommandLine(listOf("git", "status", "--porcelain")).withWorkDirectory(dir.toFile())
         return CapturingProcessHandler(cmd).runProcess(30_000).stdout

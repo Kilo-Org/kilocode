@@ -11,7 +11,8 @@ import com.intellij.openapi.util.IconLoader
 
 /**
  * "Move to Worktree" action shown in the chat branch dock. Visible only when there is something to
- * move (a conversation or local changes).
+ * move (a conversation or local changes). Without a session the wording drops the conversation: the
+ * move copies the local changes into the worktree and starts a fresh session there.
  */
 class ChatMoveToWorktreeAction : AnAction(), DumbAware {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
@@ -26,17 +27,19 @@ class ChatMoveToWorktreeAction : AnAction(), DumbAware {
         e.presentation.isEnabledAndVisible = dock.moveEnabled()
         e.presentation.icon = BRANCH
         e.presentation.text = KiloBundle.message("session.dock.move")
-        e.presentation.description = moveTooltip(dock.changeCount())
+        e.presentation.description = moveTooltip(dock.changeCount(), dock.hasSession())
     }
 
     override fun actionPerformed(e: AnActionEvent) {
         e.getData(ChatDockKeys.DOCK)?.triggerMove()
     }
 
-    private fun moveTooltip(count: Int): String = when (count) {
-        0 -> KiloBundle.message("session.dock.move.tooltip.empty")
-        1 -> KiloBundle.message("session.dock.move.tooltip.one")
-        else -> KiloBundle.message("session.dock.move.tooltip.other", count)
+    private fun moveTooltip(count: Int, session: Boolean): String = when {
+        session && count == 0 -> KiloBundle.message("session.dock.move.tooltip.empty")
+        session && count == 1 -> KiloBundle.message("session.dock.move.tooltip.one")
+        session -> KiloBundle.message("session.dock.move.tooltip.other", count)
+        count == 1 -> KiloBundle.message("session.dock.move.tooltip.changes.one")
+        else -> KiloBundle.message("session.dock.move.tooltip.changes.other", count)
     }
 
     private companion object {

@@ -112,7 +112,7 @@ class KiloWorktreeService internal constructor(
      * Long-lived move flow. Routed through [durable] (via [call]) so it survives reconnects and
      * backend restarts while the move runs.
      */
-    suspend fun moveToWorktree(directory: String, sessionId: String, branch: String): Flow<MoveProgressDto> =
+    suspend fun moveToWorktree(directory: String, sessionId: String?, branch: String): Flow<MoveProgressDto> =
         call { moveToWorktree(directory, sessionId, branch) }
 
     suspend fun create(directory: String, req: CreateWorktreeRequestDto): CreateWorktreeResultDto =
