@@ -153,7 +153,7 @@ export async function terminate(proc: Process, input: Runtime = runtime): Promis
       })
       if ((!killed || input.alive(proc.pid)) && !state.exited) direct(proc)
       if (!state.exited) await input.sleep(GRACE_MS)
-      await verify(proc, state.exited, input)
+      if (!state.exited && input.alive(proc.pid)) throw new Error(`PTY process tree is still alive: ${proc.pid}`)
       return
     }
 

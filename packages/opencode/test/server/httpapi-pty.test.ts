@@ -14,6 +14,10 @@ import { testEffect } from "../lib/effect"
 
 const testPty = process.platform === "win32" ? test.skip : test
 
+// kilocode_change start - route PTY tests must not compete with per-project indexing workers.
+process.env.KILO_DISABLE_CODEBASE_INDEXING = "vscode-no-workspace"
+// kilocode_change end
+
 const testStateLayer = Layer.effectDiscard(
   Effect.gen(function* () {
     yield* Effect.promise(() => resetDatabase())
@@ -325,6 +329,7 @@ describe("pty HttpApi bridge", () => {
 
       yield* write("PING\r")
       expect(yield* takeUntil("PONG:100x40")).toContain("PONG:100x40")
+      yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
 
       const removed = yield* HttpClientRequest.delete(PtyPaths.remove.replace(":ptyID", info.id)).pipe(
         directoryHeader(dir),

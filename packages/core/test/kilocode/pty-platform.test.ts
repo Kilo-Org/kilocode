@@ -70,7 +70,12 @@ describe("cross-platform PTY", () => {
       expect(pid).toBeGreaterThan(0)
 
       yield* pty.remove(info.id)
-      expect(() => process.kill(pid, 0)).toThrow()
+      if (process.platform === "win32") {
+        const result = yield* Effect.promise(() => Bun.$`taskkill /pid ${pid} /f /t`.quiet().nothrow())
+        expect(result.exitCode).toBe(128)
+      } else {
+        expect(() => process.kill(pid, 0)).toThrow()
+      }
     }),
   )
 })

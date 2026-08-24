@@ -208,6 +208,7 @@ describe("v2 pty HttpApi", () => {
       yield* write("PING\r")
       expect(yield* takeUntil("PONG:100x40")).toContain("PONG:100x40")
       yield* write("EXIT\r")
+      yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
       const exit = yield* Effect.gen(function* () {
         while (true) {
           const response = yield* HttpClientRequest.get(`/api/pty/${info.id}`).pipe(
