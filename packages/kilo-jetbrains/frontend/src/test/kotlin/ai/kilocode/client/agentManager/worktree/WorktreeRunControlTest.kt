@@ -41,6 +41,17 @@ class WorktreeRunControlTest : BasePlatformTestCase() {
         assertFalse(run.stateDirs.contains(project.basePath))
     }
 
+    fun `test multiple controls share a single backend states stream`() {
+        control()
+        control()
+
+        assertTrue(coroutines.pumpUntil { run.stateDirs.isNotEmpty() })
+        coroutines.drain(::pumpEdt)
+        // Both editors attach to the shared project WorktreeRunStatusService, so the backend
+        // states stream is opened exactly once instead of once per open worktree editor.
+        assertEquals(listOf(ROOT), run.stateDirs.toList())
+    }
+
     fun `test a process in this worktree switches the button to the live indicator`() {
         val control = control()
         assertTrue(coroutines.pumpUntil { run.stateDirs.isNotEmpty() })

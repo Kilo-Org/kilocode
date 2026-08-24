@@ -14,7 +14,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class WorktreeRunPopupTest : BasePlatformTestCase() {
     fun testEmptyConfigsShowDisabledRowAndFrameAction() {
-        val group = WorktreeRunPopup.group(emptyList(), null, emptyList(), {}, {}, {}, {})
+        val group = WorktreeRunPopup.group(emptyList(), null, emptyList(), {}, {}, {}, {}, false, {})
         val rows = group.getChildren(null)
         assertEquals(3, rows.size)
         assertEquals(KiloBundle.message("worktree.run.empty"), rows[0].templateText)
@@ -24,7 +24,7 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
     }
 
     fun testErrorReplacesEmptyText() {
-        val group = WorktreeRunPopup.group(emptyList(), "backend unavailable", emptyList(), {}, {}, {}, {})
+        val group = WorktreeRunPopup.group(emptyList(), "backend unavailable", emptyList(), {}, {}, {}, {}, false, {})
         assertEquals("backend unavailable", group.getChildren(null)[0].templateText)
         assertFalse(enabled(group.getChildren(null)[0]))
     }
@@ -45,6 +45,8 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
             stop = { stops += it },
             output = { outs += it },
             frame = { frames++ },
+            buildable = false,
+            build = {},
         )
         val rows = group.getChildren(null)
         // separator(Running), stop, output, separator(Start), cfg, idle, separator, frame
@@ -74,7 +76,7 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
         // Gradle/external-system runs cannot be force-killed, so the row offers nothing more.
         val cfg = RunConfigDto("id1", "dev", "Gradle")
         val state = RunStateDto("id1", "dev [wt]", "/wt", RunProcessState.STOPPING)
-        val group = WorktreeRunPopup.group(listOf(cfg), null, listOf(state), {}, {}, {}, {})
+        val group = WorktreeRunPopup.group(listOf(cfg), null, listOf(state), {}, {}, {}, {}, false, {})
         val rows = group.getChildren(null)
         assertEquals(KiloBundle.message("worktree.run.kill", "dev [wt]"), rows[1].templateText)
         assertFalse(enabled(rows[1]))
@@ -110,7 +112,7 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
 
     fun testBuildRowsAreAbsentWhenProjectIsNotBuildable() {
         val cfg = RunConfigDto("id1", "dev", "Gradle")
-        val group = WorktreeRunPopup.group(listOf(cfg), null, emptyList(), {}, {}, {}, {})
+        val group = WorktreeRunPopup.group(listOf(cfg), null, emptyList(), {}, {}, {}, {}, false, {})
 
         assertEquals(
             listOf("dev", "---", KiloBundle.message("worktree.run.open.frame")),
@@ -126,7 +128,7 @@ class WorktreeRunPopupTest : BasePlatformTestCase() {
         val cfg = RunConfigDto("id1", "dev", "Shell Script")
         val state = RunStateDto("id1", "dev [wt]", "/wt", RunProcessState.STOPPING, killable = true)
         val stops = mutableListOf<RunStateDto>()
-        val group = WorktreeRunPopup.group(listOf(cfg), null, listOf(state), {}, { stops += it }, {}, {})
+        val group = WorktreeRunPopup.group(listOf(cfg), null, listOf(state), {}, { stops += it }, {}, {}, false, {})
         val rows = group.getChildren(null)
 
         assertEquals(KiloBundle.message("worktree.run.kill", "dev [wt]"), rows[1].templateText)

@@ -171,6 +171,9 @@ class WorktreeController(
         if (!deleting.add(dto.id)) return
         edt { refresh(dto) }
         cs.launch {
+            // Stop anything the worktree run popup started here first, so git can remove the
+            // directory without orphaning a process left running against a deleted working tree.
+            service<KiloRunService>().release(directory, dto.path)
             val result = service.remove(directory, dto.path, dto.branch, force)
             if (result.ok) {
                 edt {

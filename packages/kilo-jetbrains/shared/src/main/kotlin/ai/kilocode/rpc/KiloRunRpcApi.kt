@@ -28,7 +28,13 @@ interface KiloRunRpcApi : RemoteApi<Unit> {
     /** Run configurations of the project that can be transplanted into a worktree. */
     suspend fun configs(directory: String): RunConfigListDto
 
-    /** Starts config [id] with its working directory switched to [worktree]. Re-running restarts. */
+    /**
+     * Dispatches config [id] into the platform run pipeline with its working directory switched to
+     * [worktree]; re-running restarts. `ok` means the run was dispatched, not that a process is
+     * confirmed live — the platform surfaces execution errors itself and [states] reflects the
+     * real processes. Returns an error only for reasons we can detect up front (unknown or
+     * unsupported configuration, unresolved project).
+     */
     suspend fun run(directory: String, id: String, worktree: String): RunResultDto
 
     /**
@@ -42,6 +48,12 @@ interface KiloRunRpcApi : RemoteApi<Unit> {
 
     /** Brings the Run tool window tab of ([id], [worktree]) to the front. */
     suspend fun focus(directory: String, id: String, worktree: String): Boolean
+
+    /**
+     * Stops every process started in [worktree] and drops its cached clones. Called before a
+     * worktree is removed so a running process is not orphaned with a deleted working directory.
+     */
+    suspend fun release(directory: String, worktree: String): Boolean
 
     /** Observes live per-worktree run process states for the project at [directory]. */
     suspend fun states(directory: String): Flow<List<RunStateDto>>

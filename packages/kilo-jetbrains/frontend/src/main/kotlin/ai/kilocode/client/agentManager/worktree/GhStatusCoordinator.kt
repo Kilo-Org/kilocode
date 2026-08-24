@@ -1,7 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
-import ai.kilocode.client.app.ProjectRoot
+import ai.kilocode.client.app.kiloRoot
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
@@ -130,8 +130,7 @@ class GhStatusCoordinator(
         LOG.info("gh probe start reason=$reason state=$value delay=${delay()}")
         cs.launch {
             runCatching {
-                val dir = project.service<ProjectRoot>().get()
-                if (dir.isBlank()) return@runCatching null
+                val dir = project.kiloRoot() ?: return@runCatching null
                 LOG.info("gh probe dir=$dir")
                 service<KiloWorktreeService>().ghStatus(dir)
             }

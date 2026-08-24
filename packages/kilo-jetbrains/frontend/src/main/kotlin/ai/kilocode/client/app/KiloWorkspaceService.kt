@@ -99,14 +99,25 @@ class KiloWorkspaceService internal constructor(
      * `/home/.cache/JetBrains/RemoteDev/...`). The backend resolves
      * it to the actual project root on the host.
      */
-    suspend fun resolveProjectDirectory(projectId: ProjectId?, hint: String): String {
+    suspend fun resolveProjectDirectory(projectId: ProjectId?, hint: String): String =
+        resolveProjectDirectoryOrNull(projectId, hint) ?: hint
+
+    /**
+     * Resolves the real project directory, or null when the backend could not be reached or returned
+     * nothing. Unlike [resolveProjectDirectory] this does not fall back to [hint], so callers that
+     * cache the result (e.g. [ProjectRoot]) can retry later instead of caching the synthetic
+     * frontend path forever.
+     */
+    suspend fun resolveProjectDirectoryOrNull(projectId: ProjectId?, hint: String): String? {
         return try {
-            val resolved = call { resolveProjectDirectory(projectId, hint) }
+            val resolved = call { resolveProjectDirectory(projectId, hint) }.takeIf { it.isNotBlank() }
             LOG.info("Resolved project directory: projectId=$projectId hint=$hint -> $resolved")
             resolved
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            LOG.warn("Failed to resolve directory, falling back to hint=$hint", e)
-            hint
+            LOG.warn("Failed to resolve directory for hint=$hint", e)
+            null
         }
     }
 

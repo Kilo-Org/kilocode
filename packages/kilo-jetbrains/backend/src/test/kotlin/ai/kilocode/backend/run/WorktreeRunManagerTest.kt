@@ -38,6 +38,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.jdom.Element
 import java.io.OutputStream
+import java.nio.file.Files
 import java.nio.file.Path
 
 class WorktreeRunManagerTest : BasePlatformTestCase() {
@@ -214,7 +215,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         await("dropped handler") { mgr.states.value.isEmpty() }
     }
 
-    fun testEditedSourceCreatesFreshCloneAndKeepsTracking() = runBlocking {
+    fun testEditedSourceStopsTheReplacedCloneAndTracksTheFreshOne() = runBlocking {
         val type = register(paramsType("kilo.test.params.fresh"))
         val settings = add(type, "dev")
         val source = settings.configuration as ParamsConfig
@@ -227,23 +228,72 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         val env1 = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), first, project)
         val handler1 = NopProcessHandler().also { it.startNotify() }
         bus.processStarted(DefaultRunExecutor.EXECUTOR_ID, env1, handler1)
+        assertEquals(RunProcessState.RUNNING, mgr.states.value.single().state)
 
+        // Editing the source makes a fresh clone. The platform's restart matches by settings
+        // identity, so it would leave the previous process orphaned and unmanageable from the
+        // popup; the manager stops it as part of creating the replacement.
         source.envs = mutableMapOf("PORT" to "3001")
         assertTrue(mgr.run(settings.uniqueID, wt).ok)
         val second = launched[1]
         assertNotSame(first, second)
         assertEquals("3001", (second.configuration as ParamsConfig).envs["PORT"])
 
+        await("replaced clone stopped") { handler1.isProcessTerminated }
+        await("no running processes") { mgr.states.value.isEmpty() }
+
         val env2 = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), second, project)
         val handler2 = NopProcessHandler().also { it.startNotify() }
         bus.processStarted(DefaultRunExecutor.EXECUTOR_ID, env2, handler2)
         assertEquals(RunProcessState.RUNNING, mgr.states.value.single().state)
 
-        // The replaced clone's termination must not clear the current process.
+        // A late terminate of the replaced clone must not clear the current process.
         bus.processTerminated(DefaultRunExecutor.EXECUTOR_ID, env1, handler1, 0)
         assertEquals(1, mgr.states.value.size)
         bus.processTerminated(DefaultRunExecutor.EXECUTOR_ID, env2, handler2, 0)
         assertTrue(mgr.states.value.isEmpty())
+    }
+
+    fun testReleaseStopsProcessesAndForgetsClones() = runBlocking {
+        val type = register(paramsType("kilo.test.params.release"))
+        val settings = add(type, "srv")
+        val mgr = manager()
+        val wt = "/tmp/kilo-release-wt"
+        assertTrue(mgr.run(settings.uniqueID, wt).ok)
+        val clone = launched.single()
+
+        val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
+        val handler = NopProcessHandler().also { it.startNotify() }
+        project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
+            .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
+        assertFalse(mgr.states.value.isEmpty())
+
+        assertTrue(mgr.release(wt))
+        await("released process stopped") { handler.isProcessTerminated }
+        assertTrue(mgr.states.value.isEmpty())
+        // The clone and handler are forgotten, so a later stop finds nothing and release is a no-op.
+        assertFalse(mgr.stop(settings.uniqueID, wt))
+        assertFalse(mgr.release(wt))
+    }
+
+    fun testCloneNameUsesStoredWorktreeLabel() = runBlocking {
+        val type = register(paramsType("kilo.test.params.label"))
+        val settings = add(type, "dev")
+        val repo = requireNotNull(project.basePath)
+        val wt = "$repo/.kilo/worktrees/feature"
+        val store = Path.of(repo).resolve(".kilo").resolve("worktree-names.json")
+        Files.createDirectories(store.parent)
+        Files.writeString(store, """{"names":{"$wt":"My Feature"}}""")
+        try {
+            assertTrue(manager().run(settings.uniqueID, wt).ok)
+            assertEquals("dev [My Feature]", launched.single().name)
+        } finally {
+            Files.deleteIfExists(store)
+        }
+    }
+
+    fun testFocusReturnsFalseForUnknownProcess() = runBlocking {
+        assertFalse(manager().focus("no-such-id", "/tmp/wt"))
     }
 
     fun testSecondStopForceKills() = runBlocking {

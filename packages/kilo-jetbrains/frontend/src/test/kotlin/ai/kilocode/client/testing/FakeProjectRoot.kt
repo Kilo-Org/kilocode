@@ -22,6 +22,6 @@ fun fakeRoot(project: Project, cs: CoroutineScope, parent: Disposable, dir: Stri
     val rpc = FakeWorkspaceRpcApi().also { it.directory = dir }
     ApplicationManager.getApplication()
         .replaceService(KiloWorkspaceService::class.java, KiloWorkspaceService(cs, rpc), parent)
-    project.replaceService(ProjectRoot::class.java, ProjectRoot(project, cs), parent)
+    project.replaceService(ProjectRoot::class.java, ProjectRoot(project), parent)
     return rpc
 }

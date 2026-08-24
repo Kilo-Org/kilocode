@@ -8,7 +8,6 @@ import ai.kilocode.rpc.dto.RunResultDto
 import ai.kilocode.rpc.dto.RunStateDto
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.util.io.FileUtil
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -48,6 +47,11 @@ class KiloRunRpcApiImpl : KiloRunRpcApi {
         return project.getService(WorktreeRunManager::class.java).focus(id, worktree)
     }
 
+    override suspend fun release(directory: String, worktree: String): Boolean {
+        val project = resolve(directory) ?: return false
+        return project.getService(WorktreeRunManager::class.java).release(worktree)
+    }
+
     override suspend fun states(directory: String): Flow<List<RunStateDto>> {
         val project = resolve(directory) ?: run {
             LOG.warn("worktree run states: no open project for $directory")
@@ -56,10 +60,18 @@ class KiloRunRpcApiImpl : KiloRunRpcApi {
         return project.getService(WorktreeRunManager::class.java).states
     }
 
+    /**
+     * Maps [directory] to its open project using the same normalization the workspace resolver uses
+     * ([normalizeWorkspacePath]), so a trailing slash or `..` in the argument resolves identically to
+     * the path the frontend obtained from `resolveProjectDirectory`.
+     */
     private fun resolve(directory: String): Project? {
+        val target = normalizeWorkspacePath(directory) ?: return null
         return ProjectManager.getInstance().openProjects.firstOrNull {
             !it.isDefault && !it.isDisposed &&
-                (FileUtil.pathsEqual(it.basePath, directory) || FileUtil.pathsEqual(it.presentableUrl, directory))
+                (norm(it.basePath) == target || norm(it.presentableUrl) == target)
         }
     }
+
+    private fun norm(path: String?): String? = path?.let { normalizeWorkspacePath(it) }
 }

@@ -20,46 +20,63 @@ class FakeRunRpcApi : KiloRunRpcApi {
     var result = RunResultDto(ok = true)
     val states = MutableStateFlow(emptyList<RunStateDto>())
     var buildable = false
+
+    /** When set, every call throws it after recording, so error/cancellation mapping can be tested. */
+    var fail: Throwable? = null
     val configDirs = CopyOnWriteArrayList<String>()
     val stateDirs = CopyOnWriteArrayList<String>()
     val builds = CopyOnWriteArrayList<Triple<String, String, Boolean>>()
     val runs = CopyOnWriteArrayList<Triple<String, String, String>>()
     val stops = CopyOnWriteArrayList<Triple<String, String, String>>()
     val focuses = CopyOnWriteArrayList<Triple<String, String, String>>()
+    val releases = CopyOnWriteArrayList<Pair<String, String>>()
 
     override suspend fun configs(directory: String): RunConfigListDto {
         assertNotEdt("configs")
         configDirs.add(directory)
+        fail?.let { throw it }
         return RunConfigListDto(configs, error, buildable)
     }
 
     override suspend fun build(directory: String, worktree: String, clean: Boolean): RunResultDto {
         assertNotEdt("build")
         builds.add(Triple(directory, worktree, clean))
+        fail?.let { throw it }
         return result
     }
 
     override suspend fun run(directory: String, id: String, worktree: String): RunResultDto {
         assertNotEdt("run")
         runs.add(Triple(directory, id, worktree))
+        fail?.let { throw it }
         return result
     }
 
     override suspend fun stop(directory: String, id: String, worktree: String): Boolean {
         assertNotEdt("stop")
         stops.add(Triple(directory, id, worktree))
+        fail?.let { throw it }
         return true
     }
 
     override suspend fun focus(directory: String, id: String, worktree: String): Boolean {
         assertNotEdt("focus")
         focuses.add(Triple(directory, id, worktree))
+        fail?.let { throw it }
+        return true
+    }
+
+    override suspend fun release(directory: String, worktree: String): Boolean {
+        assertNotEdt("release")
+        releases.add(directory to worktree)
+        fail?.let { throw it }
         return true
     }
 
     override suspend fun states(directory: String): Flow<List<RunStateDto>> {
         assertNotEdt("states")
         stateDirs.add(directory)
+        fail?.let { throw it }
         return states
     }
 }

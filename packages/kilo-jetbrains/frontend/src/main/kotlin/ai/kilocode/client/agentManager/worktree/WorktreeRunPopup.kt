@@ -28,8 +28,8 @@ internal object WorktreeRunPopup {
         stop: (RunStateDto) -> Unit,
         output: (RunStateDto) -> Unit,
         frame: () -> Unit,
-        buildable: Boolean = false,
-        build: (Boolean) -> Unit = {},
+        buildable: Boolean,
+        build: (Boolean) -> Unit,
     ): DefaultActionGroup {
         val group = DefaultActionGroup()
         if (states.isNotEmpty()) {

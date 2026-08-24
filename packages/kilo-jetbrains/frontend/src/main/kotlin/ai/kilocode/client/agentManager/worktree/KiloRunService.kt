@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.RunResultDto
 import ai.kilocode.rpc.dto.RunStateDto
 import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -38,6 +39,8 @@ class KiloRunService internal constructor(
 
     suspend fun configs(directory: String): RunConfigListDto = try {
         call { configs(directory) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("run configs failed for $directory", e)
         RunConfigListDto(error = e.message ?: "run configs failed")
@@ -45,6 +48,8 @@ class KiloRunService internal constructor(
 
     suspend fun run(directory: String, id: String, worktree: String): RunResultDto = try {
         call { run(directory, id, worktree) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("run start failed for $id in $worktree", e)
         RunResultDto(error = e.message ?: "run start failed")
@@ -52,6 +57,8 @@ class KiloRunService internal constructor(
 
     suspend fun build(directory: String, worktree: String, clean: Boolean): RunResultDto = try {
         call { build(directory, worktree, clean) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("worktree build failed for $worktree clean=$clean", e)
         RunResultDto(error = e.message ?: "worktree build failed")
@@ -59,6 +66,8 @@ class KiloRunService internal constructor(
 
     suspend fun stop(directory: String, id: String, worktree: String): Boolean = try {
         call { stop(directory, id, worktree) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("run stop failed for $id in $worktree", e)
         false
@@ -66,8 +75,19 @@ class KiloRunService internal constructor(
 
     suspend fun focus(directory: String, id: String, worktree: String): Boolean = try {
         call { focus(directory, id, worktree) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("run focus failed for $id in $worktree", e)
+        false
+    }
+
+    suspend fun release(directory: String, worktree: String): Boolean = try {
+        call { release(directory, worktree) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LOG.warn("run release failed for $worktree", e)
         false
     }
 
