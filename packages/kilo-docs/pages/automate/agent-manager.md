@@ -149,6 +149,7 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Create a worktree session to start a new agent in an isolated branch
 - Press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux) to start another session in the selected worktree
 - Use session history to reopen local sessions or preview cloud sessions
+- When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
 ### Renaming Worktrees
