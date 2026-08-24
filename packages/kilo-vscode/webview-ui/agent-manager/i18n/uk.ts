@@ -206,6 +206,7 @@ export const dict = {
   "agentManager.review.metaComment": "Коментар користувача",
   "agentManager.review.metaAuthor": "Автор",
   "agentManager.pr.comment.title": "Коментарі",
+  "agentManager.pr.copyLink": "Копіювати посилання на PR",
   "agentManager.pr.comment.unresolvedCount": "{{count}} невирішених",
   "agentManager.pr.comment.resolvedGroup": "Вирішено ({{count}})",
   "agentManager.pr.comment.sendAll": "Надіслати {{count}} невирішених агенту",
