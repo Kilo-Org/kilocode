@@ -1,4 +1,5 @@
 import type { ModelSelection, Provider } from "../types/messages"
+import { KILO_PROVIDER_ID } from "../../../src/shared/provider-model"
 import { isModelValid } from "./provider-utils"
 
 function validate(
@@ -40,4 +41,10 @@ export function resolveModelSelection(input: {
     input.fallback ??
     null
   )
+}
+
+/** Kilo gateway default mode from the backend provider defaults, falling back to `fallback`. */
+export function kiloDefault(defaults: Record<string, string>, fallback: ModelSelection): ModelSelection {
+  const modelID = defaults[KILO_PROVIDER_ID]
+  return modelID ? { providerID: KILO_PROVIDER_ID, modelID } : fallback
 }

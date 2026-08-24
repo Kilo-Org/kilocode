@@ -557,6 +557,53 @@ describe("fetchProviderData", () => {
     })
     expect(result.response.all.every((item) => !("key" in (item as Record<string, unknown>)))).toBe(true)
   })
+
+  it("overlays the kilo default from config/providers onto the provider list default", async () => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [{ id: "kilo", name: "Kilo Gateway", source: "custom", env: [], models: {} }],
+            connected: ["kilo"],
+            default: { kilo: "kilo-auto/frontier" },
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: true, type: "oauth" } }),
+      },
+      config: {
+        providers: async () => ({ data: { providers: [], default: { kilo: "kilo-auto/efficient" } } }),
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/tmp")
+
+    expect(result.response.default).toEqual({ kilo: "kilo-auto/efficient" })
+  })
+
+  it("keeps the provider list default when config/providers is unavailable", async () => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [{ id: "kilo", name: "Kilo Gateway", source: "custom", env: [], models: {} }],
+            connected: ["kilo"],
+            default: { kilo: "kilo-auto/frontier" },
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: true, type: "oauth" } }),
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/tmp")
+
+    expect(result.response.default).toEqual({ kilo: "kilo-auto/frontier" })
+  })
 })
 
 describe("resolveStoredKey", () => {

@@ -73,7 +73,7 @@ import {
   type MessagePageState,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
-import { resolveModelSelection } from "./model-selection"
+import { kiloDefault, resolveModelSelection } from "./model-selection"
 import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
@@ -595,7 +595,7 @@ export const SessionProvider: ParentComponent = (props) => {
       mode: getModeModel(agentName),
       global: getGlobalModel(),
       recent: store.recentModels,
-      fallback: KILO_AUTO,
+      fallback: kiloDefault(provider.defaults(), KILO_AUTO),
     })
   }
 
@@ -782,7 +782,7 @@ export const SessionProvider: ParentComponent = (props) => {
         connected: provider.connected(),
         getModeModel,
         getGlobalModel,
-        fallback: KILO_AUTO,
+        fallback: kiloDefault(provider.defaults(), KILO_AUTO),
       },
       agentName,
       userSetAgents()[agentName] === true,
