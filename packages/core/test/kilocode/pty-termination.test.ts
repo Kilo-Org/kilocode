@@ -15,8 +15,11 @@ function runtime(
   platform: NodeJS.Platform,
   input: {
     taskkill?: boolean
+    taskkillLeavesAlive?: boolean
     signal?: "throw"
     tree?: Array<{ pid: number; parent: number }>
+    treeError?: boolean
+    treeCalls?: { count: number }
   } = {},
 ) {
   const tasks: Array<{
@@ -26,23 +29,31 @@ function runtime(
   }> = []
   const signals: Array<{ pid: number; signal: "SIGTERM" | "SIGKILL" }> = []
   const sleeps: number[] = []
+  let alive = true
   const value: KiloPtyTermination.Runtime = {
     platform,
     taskkill: async (file, args, opts) => {
       tasks.push({ file, args, opts })
-      return input.taskkill ?? true
+      const result = input.taskkill ?? true
+      if (result && !input.taskkillLeavesAlive) alive = false
+      return result
     },
-    tree: async () => input.tree ?? [],
-    alive: () => true,
+    tree: async () => {
+      if (input.treeCalls) input.treeCalls.count++
+      if (input.treeError) throw new Error("process tree unavailable")
+      return input.tree ?? []
+    },
+    alive: () => alive,
     signal: (pid, signal) => {
       signals.push({ pid, signal })
+      if (signal === "SIGKILL") alive = false
       if (input.signal === "throw") throw new Error("process group unavailable")
     },
     sleep: async (ms) => {
       sleeps.push(ms)
     },
   }
-  return { value, tasks, signals, sleeps }
+  return { value, tasks, signals, sleeps, dead: () => (alive = false) }
 }
 
 describe("pty process-tree termination", () => {
@@ -62,6 +73,32 @@ describe("pty process-tree termination", () => {
     expect(input.signals).toEqual([])
     expect(item.calls).toEqual([])
     expect(input.sleeps).toEqual([200])
+  })
+
+  test("falls back when Windows taskkill reports success but the PTY remains alive", async () => {
+    const input = runtime("win32", { taskkillLeavesAlive: true })
+    const item = fake(42)
+    item.proc.kill = (signal) => {
+      item.calls.push(signal)
+      input.dead()
+    }
+
+    await KiloPtyTermination.terminate(item.proc, input.value)
+
+    expect(item.calls).toEqual([undefined])
+    expect(input.sleeps).toEqual([200])
+  })
+
+  test("continues when Windows process-tree inspection is unavailable", async () => {
+    const treeCalls = { count: 0 }
+    const input = runtime("win32", { treeError: true, treeCalls })
+    const item = fake(42)
+
+    await KiloPtyTermination.terminate(item.proc, input.value)
+
+    expect(item.calls).toEqual([])
+    expect(input.sleeps).toEqual([200])
+    expect(treeCalls.count).toBe(0)
   })
 
   test("signals POSIX process groups before escalating", async () => {

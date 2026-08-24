@@ -66,6 +66,7 @@ import { ProjectV2 } from "@opencode-ai/core/project" // kilocode_change
 import { ProjectCopy } from "@opencode-ai/core/project/copy" // kilocode_change
 import { MoveSession } from "@opencode-ai/core/control-plane/move-session" // kilocode_change
 import { PtyTicket } from "@opencode-ai/core/pty/ticket" // kilocode_change
+import { Pty } from "@opencode-ai/core/pty" // kilocode_change
 
 // kilocode_change start - retain Kilo runtime services in the upstream node graph
 const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
@@ -130,6 +131,7 @@ export const AppLayer = AppNodeBuilderV1.build(
     ProjectCopy.node,
     MoveSession.node,
     PtyTicket.node,
+    Pty.shutdownNode, // kilocode_change
     // kilocode_change end
   ]),
 ).pipe(Layer.provideMerge(AppNodeBuilderV1.build(Ripgrep.node)), Layer.provideMerge(Observability.layer))

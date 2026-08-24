@@ -26,6 +26,7 @@ import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
@@ -47,6 +48,7 @@ import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartSourceTextDto
+import ai.kilocode.rpc.dto.ToolApprovalDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionFileDiffDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
@@ -116,6 +118,7 @@ object KiloCliDataParser {
     private val READ_TOOL_LINE = Regex("^\\s*Called\\s+the\\s+Read\\s+tool\\s+with\\s+the\\s+following\\s+input:", RegexOption.IGNORE_CASE)
     private val READ_TOOL_PATH = Regex("\"(?:filePath|path)\"\\s*:")
     private val FIELD_RE = ConcurrentHashMap<String, Regex>()
+    private val APPROVAL_SOURCES = setOf("agent", "global", "project", "yolo", "session", "manual", "default")
 
     // ================================================================
     // SSE event parsing
@@ -822,9 +825,26 @@ object KiloCliDataParser {
         if (variant != null) {
             sb.append(""","variant":${escape(variant)}""")
         }
+        val editor = prompt.editorContext
+        if (editor != null) {
+            sb.append(""","editorContext":${editorContextJson(editor)}""")
+        }
         sb.append("}")
         return sb.toString()
     }
+
+    private fun editorContextJson(ctx: EditorContextDto): String {
+        val fields = mutableListOf<String>()
+        ctx.directory?.let { fields += "\"directory\":${escape(it)}" }
+        ctx.worktree?.let { fields += "\"worktree\":${escape(it)}" }
+        ctx.visibleFiles?.takeIf { it.isNotEmpty() }?.let { fields += "\"visibleFiles\":${array(it)}" }
+        ctx.openTabs?.takeIf { it.isNotEmpty() }?.let { fields += "\"openTabs\":${array(it)}" }
+        ctx.activeFile?.let { fields += "\"activeFile\":${escape(it)}" }
+        ctx.shell?.let { fields += "\"shell\":${escape(it)}" }
+        return "{${fields.joinToString(",")}}"
+    }
+
+    private fun array(values: List<String>): String = values.joinToString(",", "[", "]") { escape(it) }
 
     private fun buildPromptPartJson(part: PromptPartDto): String {
         val fields = mutableListOf("\"type\":${escape(part.type)}")
@@ -1130,6 +1150,9 @@ object KiloCliDataParser {
         val view = sequenceOf(topMeta?.get("view"), stateMeta?.get("view"))
             .mapNotNull(::parseTodoView)
             .firstOrNull()
+        val approval = sequenceOf(stateMeta?.get("approval"), topMeta?.get("approval"))
+            .mapNotNull(::parseToolApproval)
+            .firstOrNull()
         return PartDto(
             id = obj.str("id") ?: "",
             sessionID = obj.str("sessionID") ?: "",
@@ -1147,6 +1170,7 @@ object KiloCliDataParser {
             title = state?.str("title"),
             input = state.map("input"),
             metadata = meta,
+            approval = approval,
             output = state?.str("output"),
             error = state?.str("error"),
             time = obj.time("time") ?: state.time("time"),
@@ -1155,6 +1179,22 @@ object KiloCliDataParser {
             reason = obj.str("reason"),
             cost = obj.num("cost"),
             tokens = tokens?.let(::parseTokens),
+        )
+    }
+
+    private fun parseToolApproval(raw: JsonElement?): ToolApprovalDto? {
+        val obj = raw.obj() ?: return null
+        val source = obj.str("source") ?: return null
+        if (source !in APPROVAL_SOURCES) return null
+        val rule = obj["rule"].obj()
+        return ToolApprovalDto(
+            source = source,
+            agent = obj.str("agent"),
+            rulePermission = rule?.str("permission"),
+            rulePattern = rule?.str("pattern"),
+            ruleAction = rule?.str("action"),
+            outsideWorkspace = obj.flag("outsideWorkspace", false),
+            outsideWorkspacePath = obj.str("outsideWorkspacePath"),
         )
     }
 

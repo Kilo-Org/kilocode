@@ -74,7 +74,6 @@ const fastAgents = Layer.mock(AgentSvc.Service)({
   list: () => Effect.succeed([agent]),
   defaultInfo: () => Effect.succeed(agent),
   defaultAgent: () => Effect.succeed(agent.name),
-  guardRequirements: () => Effect.void,
 })
 
 const summary = Layer.succeed(

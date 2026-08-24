@@ -1,4 +1,8 @@
-import type { Config, ConfigCollections } from "../../types/messages"
+import type { AgentInfo, Config, ConfigCollections } from "../../types/messages"
+
+export function removable(agent: AgentInfo | undefined): boolean {
+  return !!agent && !agent.native && agent.source !== "organization"
+}
 
 export function mcpEnabledPatch(name: string, enabled: boolean): Partial<Config> {
   return {

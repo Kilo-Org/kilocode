@@ -6,7 +6,7 @@ import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
@@ -272,7 +272,7 @@ class QuestionViewTest : BasePlatformTestCase() {
         )
     }
 
-    fun `test question title uses headerFont and hint uses hintFont`() {
+    fun `test question title uses headerFont and hint uses secondary font`() {
         view.show(singleSelectQuestion("q_fonts"))
 
         val style = SessionEditorStyle.current()
@@ -280,7 +280,7 @@ class QuestionViewTest : BasePlatformTestCase() {
         val hint = text(view, "Select one answer")
 
         assertEquals("title should use headerFont", style.headerFont, title.font)
-        assertEquals("hint should use hintFont", style.hintFont, hint.font)
+        assertEquals("hint should use secondary text font", SessionUiStyle.Text.Secondary.font(style), hint.font)
     }
 
     fun `test custom answer editor uses prompt text styling`() {
@@ -1052,9 +1052,9 @@ class QuestionViewTest : BasePlatformTestCase() {
     private fun text(root: Container, value: String): JBTextArea =
         findAll<JBTextArea>(root).first { it.text == value }
 
-    private fun card(): BaseQuestionView = findAll<BaseQuestionView>(view).distinct().single()
+    private fun card(): DialogView = findAll<DialogView>(view).distinct().single()
 
-    private fun spacer(card: BaseQuestionView): Component {
+    private fun spacer(card: DialogView): Component {
         val north = (card.layout as BorderLayout).getLayoutComponent(BorderLayout.NORTH) as Container
         return north.components.last()
     }

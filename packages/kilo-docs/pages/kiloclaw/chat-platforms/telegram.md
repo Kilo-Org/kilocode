@@ -5,6 +5,8 @@ description: "Use KiloClaw with Telegram: setup, DM access control, and group ch
 
 # Telegram
 
+{% partial file="kiloclaw-eol.md" /%}
+
 This page covers everything you need to use KiloClaw with Telegram: connecting your bot and adding it to group chats.
 
 ## Connecting KiloClaw to Telegram

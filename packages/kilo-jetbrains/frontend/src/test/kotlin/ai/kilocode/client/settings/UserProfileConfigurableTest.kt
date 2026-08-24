@@ -1,11 +1,14 @@
 package ai.kilocode.client.settings
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.settings.profile.ProfileUi
 import ai.kilocode.client.settings.profile.formatResetDate
 import ai.kilocode.client.settings.profile.formatShortBalance
 import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.TEST_WAIT_MS
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -20,7 +23,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
-import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -69,7 +71,7 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
-            coroutines.close(::pump)
+            coroutines.close()
         } finally {
             super.tearDown()
         }
@@ -1023,13 +1025,8 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
 
     // -- helpers --
 
-    private fun flushUntil(timeoutMs: Long = 3000, condition: () -> Boolean) = runBlocking {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (!edt { condition() }) {
-            if (System.currentTimeMillis() > deadline) fail("flushUntil timed out after ${timeoutMs}ms")
-            delay(50)
-            edt { UIUtil.dispatchAllInvocationEvents() }
-        }
+    private fun flushUntil(timeoutMs: Long = TEST_WAIT_MS, condition: () -> Boolean) {
+        assertTrue("flushUntil timed out after ${timeoutMs}ms", coroutines.pumpUntil(timeoutMs) { edt(condition) })
     }
 
     private fun labelsByName(root: Container, name: String): List<JLabel> = buildList {
@@ -1067,18 +1064,9 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         }
     }
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
-    private fun flush() = coroutines.drain(::pump)
-
-    private fun pump() {
-        edt { UIUtil.dispatchAllInvocationEvents() }
-    }
+    private fun flush() = coroutines.drain()
 
     private fun visible(comp: Component): Boolean =
         comp.isVisible && (comp.parent?.let(::visible) ?: true)

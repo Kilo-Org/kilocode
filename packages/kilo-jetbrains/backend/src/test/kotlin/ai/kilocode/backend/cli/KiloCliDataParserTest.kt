@@ -8,6 +8,7 @@ import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
@@ -412,6 +413,45 @@ class KiloCliDataParserTest {
             assertEquals(true, result.part.todoView?.todos?.single()?.changed)
             assertEquals("[{\"content\":\"Input fallback\",\"status\":\"pending\",\"priority\":\"low\"}]", result.part.input["todos"])
             assertTrue(result.part.metadata["view"]?.contains("compact") == true)
+        }
+
+        @Test
+        fun `parseChatEvent - tool part parses typed approval metadata`() {
+            val data = globalEvent("""
+                "type": "message.part.updated",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "part": {
+                        "id": "part_bash",
+                        "sessionID": "ses_1",
+                        "messageID": "msg_1",
+                        "type": "tool",
+                        "tool": "bash",
+                        "callID": "call_bash",
+                        "state": {
+                            "status": "completed",
+                            "input": { "command": "pwd" },
+                            "metadata": {
+                                "approval": {
+                                    "source": "global",
+                                    "rule": { "permission": "bash", "pattern": "pwd", "action": "allow" },
+                                    "outsideWorkspace": true,
+                                    "outsideWorkspacePath": "/tmp/project"
+                                }
+                            }
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("message.part.updated", data) as ChatEventDto.PartUpdated
+
+            assertEquals("global", result.part.approval?.source)
+            assertEquals("bash", result.part.approval?.rulePermission)
+            assertEquals("pwd", result.part.approval?.rulePattern)
+            assertEquals("allow", result.part.approval?.ruleAction)
+            assertEquals(true, result.part.approval?.outsideWorkspace)
+            assertEquals("/tmp/project", result.part.approval?.outsideWorkspacePath)
         }
 
         @Test
@@ -1956,6 +1996,25 @@ class KiloCliDataParserTest {
             )
             val result = KiloCliDataParser.buildPromptJson(prompt)
             assertEquals("""{"parts":[{"type":"text","text":"Hi"}],"noReply":true}""", result)
+        }
+
+        @Test
+        fun `buildPromptJson - with editor context`() {
+            val prompt = PromptDto(
+                parts = listOf(PromptPartDto("text", "Hi")),
+                editorContext = EditorContextDto(
+                    activeFile = "src/App.kt",
+                    visibleFiles = listOf("src/App.kt"),
+                    openTabs = listOf("src/App.kt", "src/Other.kt"),
+                ),
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"Hi"}],"editorContext":{"visibleFiles":["src/App.kt"],"openTabs":["src/App.kt","src/Other.kt"],"activeFile":"src/App.kt"}}""",
+                result,
+            )
         }
 
         @Test

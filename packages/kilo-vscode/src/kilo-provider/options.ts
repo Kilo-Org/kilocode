@@ -1,8 +1,17 @@
 import type { ProjectRouteService } from "../agent-manager/project/route"
+import type { SettingsHandler } from "../agent-manager/project/settings"
+
+export type AgentManagerSettingsHandler = SettingsHandler
 
 export type KiloProviderOptions = {
   /** Context key updated from focus events reported by this provider's webview. */
   focusContext?: string
+  /** Context keys updated by Agent Manager prompt and terminal focus events. */
+  focusTargetContext?: {
+    prompt: string
+    mainTerminal: string
+    sideTerminal: string
+  }
   projectDirectory?: string | null
   platform?: string
   snapshotInitialization?: "wait"
@@ -41,4 +50,6 @@ export type KiloProviderOptions = {
   hideTopBar?: boolean
   /** Reports "Open in Tab" as the top bar's telemetry surface instead of the sidebar default. */
   topBarSurface?: "tab"
+  /** Project-aware settings used by the standalone Agent Manager settings tab. */
+  agentManagerSettings?: AgentManagerSettingsHandler
 }

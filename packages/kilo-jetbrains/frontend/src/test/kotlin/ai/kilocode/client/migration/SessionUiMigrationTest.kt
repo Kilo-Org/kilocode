@@ -4,9 +4,8 @@ import ai.kilocode.client.session.SessionUiTestBase
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.migration.ui.MigrationItemRow
-import ai.kilocode.client.migration.ui.MigrationOverlayPanel
 import ai.kilocode.client.migration.ui.MigrationWizardPanel
-import ai.kilocode.client.ui.layout.Align
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.LegacyMigrationDetectionDto
 import ai.kilocode.rpc.dto.LegacyMigrationResultItemDto
 import ai.kilocode.rpc.dto.LegacyMigrationSessionProgressDto
@@ -70,19 +69,27 @@ class SessionUiMigrationTest : SessionUiTestBase() {
         assertTrue(wizard.keepLegacySettingsFileSelectedForTest())
     }
 
-    fun `test migration wizard is centered in overlay`() {
+    fun `test migration wizard is centered and width-capped in the modal blocker`() {
         fakeMigration._state.value = MigrationUiState.Needed(detection = sampleDetection())
         settle()
+        ui.setSize(1600, 1000)
         layout()
 
-        val overlay = find<MigrationOverlayPanel>(ui)
-        overlay.doLayout()
-        val align = find<Align>(overlay)
+        val root = find<SessionRootPanel>(ui)
+        val align = root.blocker.getComponent(0) as Container
         align.doLayout()
-        val wizard = find<MigrationWizardPanel>(overlay)
+        val wizard = find<MigrationWizardPanel>(root.blocker)
 
-        assertTrue("align wrapper should fill most overlay width", align.width > overlay.width / 2)
-        assertTrue("align wrapper should fill most overlay height", align.height > overlay.height / 2)
+        // Standard large padding is kept on every side of the modal content.
+        val pad = UiStyle.Gap.pad()
+        assertEquals("left padding", pad, align.x)
+        assertEquals("top padding", pad, align.y)
+        assertEquals("right padding", pad, root.blocker.width - (align.x + align.width))
+        assertEquals("bottom padding", pad, root.blocker.height - (align.y + align.height))
+
+        assertTrue("align wrapper should fill most blocker width", align.width > root.blocker.width / 2)
+        // The base modal path caps the dialog at the readable width so it does not stretch full width.
+        assertTrue("wizard should not stretch to full width: ${wizard.bounds} in ${align.bounds}", wizard.width in 1 until align.width)
         assertTrue("wizard should be horizontally centered: ${wizard.bounds} in ${align.bounds}", kotlin.math.abs(wizard.x - (align.width - wizard.width) / 2) <= 1)
         assertTrue("wizard should be vertically centered: ${wizard.bounds} in ${align.bounds}", kotlin.math.abs(wizard.y - (align.height - wizard.height) / 2) <= 1)
     }
@@ -120,8 +127,8 @@ class SessionUiMigrationTest : SessionUiTestBase() {
         settle()
         val root = find<SessionRootPanel>(ui)
         assertTrue("blocker should be visible for defaultFocused test", root.blocker.isVisible)
-        val overlay = find<MigrationOverlayPanel>(ui)
-        assertSame(overlay.preferredFocusComponent(), ui.defaultFocusedComponent)
+        val wizard = find<MigrationWizardPanel>(ui)
+        assertSame(wizard.preferredFocusComponent(), ui.defaultFocusedComponent)
         assertNotSame(find<PromptPanel>(ui).defaultFocusedComponent, ui.defaultFocusedComponent)
     }
 

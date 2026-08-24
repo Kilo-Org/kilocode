@@ -4,6 +4,7 @@ import ai.kilocode.client.diff.DiffLineNumbers
 import ai.kilocode.client.diff.installDiffGutter
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -18,8 +19,8 @@ import ai.kilocode.client.ui.md.MdViewFactory
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Component
@@ -63,6 +64,7 @@ class PatchBody(
     private val selection: SessionSelection?,
     private val openFile: SessionFileOpener,
     private val opts: MdCodeBlockOptions = DIFF_OPTS,
+    private val linkFiles: Boolean = true,
 ) : EditBody {
     override var parent: Disposable? = null
     override var overflow: (() -> Unit)? = null
@@ -70,7 +72,7 @@ class PatchBody(
     private var root: Stack? = null
     private var owner: Disposable? = null
     private val views = mutableListOf<MdView>()
-    private val links = mutableListOf<FileLinkLabel>()
+    private val links = mutableListOf<JBLabel>()
     private var style = SessionEditorStyle.current()
     private var signature = ""
     private val rows = mutableListOf<List<DiffLineNumbers.Row>>()
@@ -158,10 +160,14 @@ class PatchBody(
             // (gutter reinit) and freezes; defer to the diff tab, which streams diffs off the EDT.
             panel.next(diffOverflowPanel(open))
         } else {
-            files.filter { it.patch.isNotBlank() }.forEachIndexed { index, file ->
+            val patched = files.filter { it.patch.isNotBlank() }
+            val named = patched.size > 1
+            patched.forEachIndexed { index, file ->
                 if (index > 0) panel.gap(JBUI.scale(SessionUiStyle.View.Code.BLOCK_GAP))
-                panel.next(header(file))
-                panel.gap(UiStyle.Gap.sm())
+                if (named) {
+                    panel.next(header(file))
+                    panel.gap(UiStyle.Gap.sm())
+                }
                 val md = MdViewFactory.create(style, selection, MdCodeBlockFactory.default(opts))
                 Disposer.register(disposable, md)
                 applyMd(md)
@@ -183,22 +189,23 @@ class PatchBody(
 
     @RequiresEdt
     private fun header(file: EditFileChange): JComponent {
-        val link = FileLinkLabel(openFile).apply {
-            foreground = UiStyle.Colors.fg()
+        val label = if (linkFiles) FileLinkLabel(openFile).apply {
+            foreground = SessionUiStyle.Colors.foreground()
             font = style.transcriptFont
             setTarget(file.path, tail(file.path))
             isVisible = true
+        } else JBLabel(tail(file.path)).apply {
+            foreground = SessionUiStyle.Colors.foreground()
+            font = style.transcriptFont
         }
-        links.add(link)
+        links.add(label)
+        // Indent only the filename row; the diff content below stays flush to the card edge.
         val row = Stack.horizontal(UiStyle.Gap.sm())
-            .next(link)
+            .next(label)
             .next(DiffStatBadge(file.additions, file.deletions))
+        row.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.contentIndent())
         return JBUI.Panels.simplePanel(row).apply {
             isOpaque = false
-            border = JBUI.Borders.compound(
-                JBUI.Borders.customLineBottom(NamedColorUtil.getBoundsColor()),
-                JBUI.Borders.emptyLeft(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING),
-            )
         }
     }
 
@@ -207,8 +214,8 @@ class PatchBody(
         md.applyStyle(style)
         md.font = style.editorFont
         md.foreground = style.editorForeground
-        md.background = style.editorBackground
-        md.preBg = style.editorBackground
+        md.background = SessionUiStyle.Colors.codeBlockBackground()
+        md.preBg = SessionUiStyle.Colors.codeBlockBackground()
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
         rows.getOrNull(views.indexOf(md))?.let { installGutter(md, it) }
@@ -223,12 +230,33 @@ class PatchBody(
             ?: emptyList()).forEach { installDiffGutter(it, rows) }
     }
 
-    private companion object {
-        val DIFF_OPTS = MdCodeBlockOptions(
-            border = MdCodeBlockBorder.Bottom,
+    companion object {
+        @RequiresEdt
+        internal fun popup(
+            selection: SessionSelection?,
+            openFile: SessionFileOpener,
+            files: List<EditFileChange>,
+            style: SessionEditorStyle,
+            linkFiles: Boolean,
+            overflow: () -> Unit,
+        ): HeaderPopupBody {
+            val owner = Disposer.newDisposable("Patch popup body")
+            val body = PatchBody(selection, openFile, POPUP_OPTS, linkFiles).also {
+                it.parent = owner
+                it.overflow = overflow
+            }
+            val panel = body.mountFiles(files)
+            body.applyStyle(style)
+            return HeaderPopupBody(panel, owner, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
+        }
+
+        private val DIFF_OPTS = MdCodeBlockOptions(
+            border = MdCodeBlockBorder.None,
             maxLines = SessionUiStyle.View.Tool.DIFF_LINES,
             verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             editorOnly = true,
+            horizontalPadding = 0,
+            overlapScrollbar = true,
         )
     }
 }

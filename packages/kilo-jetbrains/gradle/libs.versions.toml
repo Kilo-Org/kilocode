@@ -37,6 +37,5 @@ intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "int
 rpc = { id = "rpc", version.ref = "intellij-rpc-plugin" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin-jvm-plugin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin-serialization-plugin" }
-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin-jvm-plugin" }
 openapi-generator = { id = "org.openapi.generator", version.ref = "openapi-generator" }
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }

@@ -44,15 +44,21 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   enableQuestionTool: bool("KILO_ENABLE_QUESTION_TOOL"),
   experimentalScout: enabledByExperimental("KILO_EXPERIMENTAL_SCOUT"), // kilocode_change
   experimentalReferences: enabledByExperimental("KILO_EXPERIMENTAL_REFERENCES"),
-  experimentalBackgroundSubagents: enabledByExperimental("KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS"),
+  // kilocode_change start - enabled by default, with an opt-out kill switch
+  experimentalBackgroundSubagents: Config.boolean("KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS").pipe(
+    Config.withDefault(true),
+  ),
+  // kilocode_change end
   experimentalLspTy: bool("KILO_EXPERIMENTAL_LSP_TY"),
   experimentalLspTool: enabledByExperimental("KILO_EXPERIMENTAL_LSP_TOOL"),
   experimentalOxfmt: enabledByExperimental("KILO_EXPERIMENTAL_OXFMT"),
   experimentalPlanMode: enabledByExperimental("KILO_EXPERIMENTAL_PLAN_MODE"),
+  experimentalCodeMode: enabledByExperimental("KILO_EXPERIMENTAL_CODE_MODE"),
   experimentalEventSystem: enabledByExperimental("KILO_EXPERIMENTAL_EVENT_SYSTEM"),
   experimentalSessionSwitcher: enabledByExperimental("KILO_EXPERIMENTAL_SESSION_SWITCHER"), // kilocode_change
   experimentalWorkspaces: enabledByExperimental("KILO_EXPERIMENTAL_WORKSPACES"),
   experimentalIconDiscovery: enabledByExperimental("KILO_EXPERIMENTAL_ICON_DISCOVERY"),
+  experimentalMcpApps: enabledByExperimental("KILO_EXPERIMENTAL_MCP_APPS"), // kilocode_change
   outputTokenMax: positiveInteger("KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX"),
   bashDefaultTimeoutMs: positiveInteger("KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS"),
   experimentalNativeLlm: bool("KILO_EXPERIMENTAL_NATIVE_LLM"),

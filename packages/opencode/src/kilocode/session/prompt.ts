@@ -26,7 +26,7 @@ import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
-import CODE_SWITCH from "@/session/prompt/code-switch.txt"
+import ASK_CODE_SWITCH from "./ask-code-switch.txt"
 import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
 
 export namespace KiloSessionPrompt {
@@ -451,11 +451,31 @@ export namespace KiloSessionPrompt {
       info,
       "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
       "Project/user instructions about plan location (for example plans/ or .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
+      "In the visible final response, cite the saved plan path as an inline code span so the client can open it as a document. Cite other user-facing files you create the same way instead of pasting the full file into chat.",
       supportsPlanFollowup()
         ? "When the plan is implementation-ready, write the main plan file and call plan_exit. Do not ask the user to choose between finalizing and refining in chat; the client follow-up after plan_exit asks whether to implement the saved plan or keep refining."
         : 'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
     ].join("\n")
     add(`<system-reminder>\n${body}\n</system-reminder>`)
+  }
+
+  export function insertAgentSwitchReminder(input: {
+    agent: { name: string }
+    userMessage: MessageV2.WithParts
+    messages: MessageV2.WithParts[]
+  }) {
+    if (mode(input.agent.name) !== "code") return
+    const prior = input.messages.findLast((msg) => msg.info.id !== input.userMessage.info.id)
+    if (!prior || mode(prior.info.agent) !== "ask") return
+    if (input.userMessage.parts.some((part) => part.type === "text" && part.text === ASK_CODE_SWITCH)) return
+    return {
+      id: PartID.ascending(),
+      messageID: input.userMessage.info.id,
+      sessionID: input.userMessage.info.sessionID,
+      type: "text" as const,
+      text: ASK_CODE_SWITCH,
+      synthetic: true,
+    }
   }
 
   /**

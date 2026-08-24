@@ -46,10 +46,11 @@ import {
   wrapFirstByte,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
+import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
 // kilocode_change end
 import { ProviderError } from "./error"
 
-const OPENAI_HEADER_TIMEOUT_DEFAULT = 10_000
+const OPENAI_HEADER_TIMEOUT_DEFAULT = 300_000
 
 function wrapSSE(res: Response, ms: number, ctl: AbortController) {
   if (typeof ms !== "number" || ms <= 0) return res
@@ -225,6 +226,13 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         },
         options: { headerTimeout: OPENAI_HEADER_TIMEOUT_DEFAULT },
       }),
+    meta: () =>
+      Effect.succeed({
+        autoload: false,
+        async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
+          return sdk.responses(modelID)
+        },
+      }),
     xai: () =>
       Effect.succeed({
         autoload: false,
@@ -236,8 +244,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
     "github-copilot": () =>
       Effect.succeed({
         autoload: false,
-        async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
+        async getModel(sdk: any, modelID: string, _options?: Record<string, any>, model?: Model) {
           if (sdk.responses === undefined && sdk.chat === undefined) return sdk.languageModel(modelID)
+          if (model && "endpoint" in model.api) {
+            if (model.api.endpoint === "responses" && sdk.responses) return sdk.responses(modelID)
+            if (model.api.endpoint === "chat" && sdk.chat) return sdk.chat(modelID)
+          }
           const match = /^gpt-(\d+)/.exec(modelID)
           if (match && Number(match[1]) >= 5 && !modelID.startsWith("gpt-5-mini")) return sdk.responses(modelID)
           return sdk.chat(modelID)
@@ -297,7 +309,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         },
       }
     }),
-    "azure-cognitive-services": Effect.fnUntraced(function* () {
+    "azure-cognitive-services": Effect.fnUntraced(function* (provider: Info) {
       const resourceName = yield* dep.get("AZURE_COGNITIVE_SERVICES_RESOURCE_NAME")
       return {
         autoload: false,
@@ -305,19 +317,22 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           return selectAzureLanguageModel(sdk, modelID, Boolean(options?.["useCompletionUrls"]))
         },
         options: {
-          baseURL: resourceName ? `https://${resourceName}.cognitiveservices.azure.com/openai` : undefined,
+          baseURL: resourceName
+            ? `https://${resourceName}.cognitiveservices.azure.com/openai${provider.options?.useDeploymentBasedUrls ? "" : "/v1"}`
+            : undefined,
         },
       }
     }),
     "amazon-bedrock": Effect.fnUntraced(function* () {
       const providerConfig = (yield* dep.config()).provider?.["amazon-bedrock"]
       const auth = yield* dep.auth("amazon-bedrock")
+      const stored = bedrockAuth(auth) // kilocode_change
       const env = yield* dep.env()
 
-      // Region precedence: 1) config file, 2) env var, 3) default
+      // Region precedence: 1) config file, 2) stored credentials, 3) env var, 4) default // kilocode_change
       const configRegion = providerConfig?.options?.region
       const envRegion = env["AWS_REGION"]
-      const defaultRegion = configRegion ?? envRegion ?? "us-east-1"
+      const defaultRegion = configRegion ?? stored?.region ?? envRegion ?? "us-east-1" // kilocode_change
 
       // Profile: config file takes precedence over env var
       const configProfile = providerConfig?.options?.profile
@@ -327,17 +342,10 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const awsAccessKeyId = env["AWS_ACCESS_KEY_ID"]
       const configApiKey = providerConfig?.options?.apiKey
 
-      // TODO: Using process.env directly because Env.set only updates a process.env shallow copy,
-      // until the scope of the Env API is clarified (test only or runtime?)
-      const awsBearerToken = iife(() => {
-        const envToken = process.env.AWS_BEARER_TOKEN_BEDROCK
-        if (envToken) return envToken
-        if (auth?.type === "api") {
-          process.env.AWS_BEARER_TOKEN_BEDROCK = auth.key
-          return auth.key
-        }
-        return undefined
-      })
+      // kilocode_change start - pass stored bearer tokens directly without leaking them into process.env
+      const awsBearerToken =
+        process.env.AWS_BEARER_TOKEN_BEDROCK ?? (auth?.type === "api" && !stored ? auth.key : undefined)
+      // kilocode_change end
 
       const awsWebIdentityTokenFile = env["AWS_WEB_IDENTITY_TOKEN_FILE"]
 
@@ -348,6 +356,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       if (
         !profile &&
         !awsAccessKeyId &&
+        !stored && // kilocode_change
         !awsBearerToken &&
         !configApiKey &&
         !awsWebIdentityTokenFile &&
@@ -359,16 +368,19 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
 
       const providerOptions: Record<string, any> = {
         region: defaultRegion,
+        ...(stored ? { credentialProvider: async () => stored.credentials } : {}), // kilocode_change
       }
 
       // Only use credential chain if no bearer token exists
       // Bearer token takes precedence over credential chain (profiles, access keys, IAM roles, web identity tokens)
-      if (!awsBearerToken && !configApiKey) {
+      // kilocode_change start - stored static credentials use the credential provider above
+      if (!awsBearerToken && !configApiKey && !stored) {
         // Build credential provider options (only pass profile if specified)
         const credentialProviderOptions = profile ? { profile } : {}
 
         providerOptions.credentialProvider = fromNodeProviderChain(credentialProviderOptions)
       }
+      // kilocode_change end
 
       // Add custom endpoint if specified (endpoint takes precedence over baseURL)
       const endpoint = providerConfig?.options?.endpoint ?? providerConfig?.options?.baseURL
@@ -515,10 +527,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       }),
     "google-vertex": Effect.fnUntraced(function* (provider: Info) {
       const env = yield* dep.env()
+      const stored = vertexAuth(yield* dep.auth("google-vertex")) // kilocode_change
       // models.dev advertises GOOGLE_VERTEX_PROJECT for Vertex; keep the wider
       // Google Cloud project env names as fallbacks for existing ADC setups.
       const project =
         provider.options?.project ??
+        stored?.project ?? // kilocode_change
         env["GOOGLE_VERTEX_PROJECT"] ??
         env["GOOGLE_CLOUD_PROJECT"] ??
         env["GCP_PROJECT"] ??
@@ -526,6 +540,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
 
       const location = String(
         provider.options?.location ??
+          stored?.location ?? // kilocode_change
           env["GOOGLE_VERTEX_LOCATION"] ??
           env["GOOGLE_CLOUD_LOCATION"] ??
           env["VERTEX_LOCATION"] ??
@@ -547,9 +562,15 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           project,
           location,
+          ...(stored ? vertexCredentials(stored.credentials) : {}), // kilocode_change
           fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
             const { GoogleAuth } = await import("google-auth-library")
-            const auth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] })
+            // kilocode_change start - authenticate OpenAI-compatible Vertex endpoints with stored credentials
+            const auth = new GoogleAuth({
+              scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+              ...(stored ? { credentials: stored.credentials } : {}),
+            })
+            // kilocode_change end
             const client = await auth.getClient()
             const token = await client.getAccessToken()
 
@@ -919,58 +940,58 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         oauthToken !== undefined && envToken === undefined && apiKeyToken === undefined && configToken === undefined
       if (!useOAuthHandler) {
         options.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
-            if (init?.body && typeof init.body === "string") {
-              try {
-                const body = JSON.parse(init.body)
-                if ("max_tokens" in body) {
-                  body.max_completion_tokens = body.max_tokens
-                  delete body.max_tokens
-                  init = { ...init, body: JSON.stringify(body) }
+          if (init?.body && typeof init.body === "string") {
+            try {
+              const body = JSON.parse(init.body)
+              if ("max_tokens" in body) {
+                body.max_completion_tokens = body.max_tokens
+                delete body.max_tokens
+                init = { ...init, body: JSON.stringify(body) }
+              }
+            } catch {}
+          }
+
+          const response = await fetch(url, init)
+
+          // Cortex returns 400 "conversation complete" as a normal stop condition
+          if (!response.ok && response.status === 400) {
+            try {
+              const errorData = await response.clone().json()
+              const errorMessage = String(errorData.message || errorData.error || "")
+              if (errorMessage.toLowerCase().includes("conversation complete")) {
+                return new Response(
+                  JSON.stringify({
+                    choices: [{ finish_reason: "stop", message: { content: "", role: "assistant" } }],
+                  }),
+                  { status: 200, headers: new Headers({ "content-type": "application/json" }) },
+                )
+              }
+            } catch {}
+          }
+
+          // Cortex returns role:"" in streaming deltas; the AI SDK schema requires "assistant"
+          if (response.body && response.headers.get("content-type")?.includes("text/event-stream")) {
+            const reader = response.body.getReader()
+            const encoder = new TextEncoder()
+            const decoder = new TextDecoder()
+            const stream = new ReadableStream({
+              async pull(ctrl) {
+                const { done, value } = await reader.read()
+                if (done) {
+                  ctrl.close()
+                  return
                 }
-              } catch {}
-            }
+                const text = decoder.decode(value, { stream: true })
+                ctrl.enqueue(encoder.encode(text.replace(/"role"\s*:\s*""/g, '"role":"assistant"')))
+              },
+              cancel() {
+                reader.cancel()
+              },
+            })
+            return new Response(stream, { headers: response.headers, status: response.status })
+          }
 
-            const response = await fetch(url, init)
-
-            // Cortex returns 400 "conversation complete" as a normal stop condition
-            if (!response.ok && response.status === 400) {
-              try {
-                const errorData = await response.clone().json()
-                const errorMessage = String(errorData.message || errorData.error || "")
-                if (errorMessage.toLowerCase().includes("conversation complete")) {
-                  return new Response(
-                    JSON.stringify({
-                      choices: [{ finish_reason: "stop", message: { content: "", role: "assistant" } }],
-                    }),
-                    { status: 200, headers: new Headers({ "content-type": "application/json" }) },
-                  )
-                }
-              } catch {}
-            }
-
-            // Cortex returns role:"" in streaming deltas; the AI SDK schema requires "assistant"
-            if (response.body && response.headers.get("content-type")?.includes("text/event-stream")) {
-              const reader = response.body.getReader()
-              const encoder = new TextEncoder()
-              const decoder = new TextDecoder()
-              const stream = new ReadableStream({
-                async pull(ctrl) {
-                  const { done, value } = await reader.read()
-                  if (done) {
-                    ctrl.close()
-                    return
-                  }
-                  const text = decoder.decode(value, { stream: true })
-                  ctrl.enqueue(encoder.encode(text.replace(/"role"\s*:\s*""/g, '"role":"assistant"')))
-                },
-                cancel() {
-                  reader.cancel()
-                },
-              })
-              return new Response(stream, { headers: response.headers, status: response.status })
-            }
-
-            return response
+          return response
         }
       }
 
@@ -996,10 +1017,15 @@ const ProviderModalities = Schema.Struct({
   pdf: Schema.Boolean,
 })
 
+const ProviderInterleavedField = Schema.Union([
+  Schema.Literals(["reasoning", "reasoning_content", "reasoning_text"]),
+  Schema.String,
+])
+
 const ProviderInterleaved = Schema.Union([
   Schema.Boolean,
   Schema.Struct({
-    field: Schema.Literals(["reasoning", "reasoning_content", "reasoning_details"]),
+    field: ProviderInterleavedField,
   }),
 ])
 
@@ -1105,11 +1131,17 @@ export type ConfigProvidersResult = Types.DeepMutable<Schema.Schema.Type<typeof 
 
 export function toPublicInfo(provider: Info): Info {
   return JSON.parse(
-    JSON.stringify(provider, (_, value) => {
-      if (typeof value === "function" || typeof value === "symbol" || value === undefined) return undefined
-      if (typeof value === "bigint") return value.toString()
-      return value
-    }),
+    JSON.stringify(
+      {
+        ...provider,
+        models: Object.fromEntries(Object.entries(provider.models).filter(([, model]) => Schema.is(Model)(model))),
+      },
+      (_, value) => {
+        if (typeof value === "function" || typeof value === "symbol" || value === undefined) return undefined
+        if (typeof value === "bigint") return value.toString()
+        return value
+      },
+    ),
   )
 }
 
@@ -1270,7 +1302,7 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
         video: model.modalities?.output?.includes("video") ?? false,
         pdf: model.modalities?.output?.includes("pdf") ?? false,
       },
-      interleaved: model.interleaved ?? false,
+      interleaved: typeof model.interleaved === "string" ? { field: model.interleaved } : (model.interleaved ?? false),
     },
     release_date: model.release_date ?? "",
     variants: {},
@@ -1296,14 +1328,7 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
         id: ModelV2.ID.make(id),
         name: `${model.name} ${mode[0].toUpperCase()}${mode.slice(1)}`,
         cost: opts.cost ? mergeDeep(base.cost, cost(opts.cost)) : base.cost,
-        options: opts.provider?.body
-          ? Object.fromEntries(
-              Object.entries(opts.provider.body).map(([k, v]) => [
-                k.replace(/_([a-z])/g, (_, c) => c.toUpperCase()),
-                v,
-              ]),
-            )
-          : base.options,
+        options: modeOptions(base, opts.provider?.body),
         headers: opts.provider?.headers ?? base.headers,
       }
     }
@@ -1317,6 +1342,17 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
     options: {},
     models,
   }
+}
+
+function modeOptions(model: Model, body: Record<string, unknown> | undefined) {
+  if (!body) return model.options
+  const options = Object.fromEntries(
+    Object.entries(body).map(([key, value]) => [key.replace(/_([a-z])/g, (_, char) => char.toUpperCase()), value]),
+  )
+  const reasoning = body.reasoning
+  if (model.api.npm !== "@ai-sdk/openai" || !isRecord(reasoning) || typeof reasoning.mode !== "string") return options
+  const { reasoning: _, ...rest } = options
+  return { ...rest, reasoningMode: reasoning.mode }
 }
 
 function modelSuggestions(provider: Info | undefined, modelID: ModelV2.ID, enableExperimentalModels: boolean) {
@@ -1501,7 +1537,7 @@ const layer = Layer.effect(
                   pdf: model.modalities?.output?.includes("pdf") ?? existingModel?.capabilities.output.pdf ?? false,
                 },
                 interleaved:
-                  model.interleaved ??
+                  (typeof model.interleaved === "string" ? { field: model.interleaved } : model.interleaved) ??
                   existingModel?.capabilities.interleaved ??
                   (!existingModel && apiNpm === "@ai-sdk/openai-compatible" && apiID.includes("deepseek")
                     ? { field: "reasoning_content" }
@@ -1528,9 +1564,15 @@ const layer = Layer.effect(
               ...patchKiloConfigModel(model, existingModel), // kilocode_change
             }
             // kilocode_change start
-            const generated = Object.keys(model.variants ?? {}).length
-              ? {}
-              : customProviderVariants(parsedModel, model.provider?.npm ?? provider.npm, ProviderTransform.variants)
+            const baseGenerate = (m: typeof parsedModel) =>
+              existingModel?.api.npm === m.api.npm
+                ? (existingModel.variants ?? ProviderTransform.variants(m))
+                : ProviderTransform.variants(m)
+            const generated = customProviderVariants(
+              parsedModel,
+              model.provider?.npm ?? provider.npm,
+              baseGenerate,
+            )
             const merged = mergeDeep(generated, model.variants ?? {})
             // kilocode_change end
             parsedModel.variants = mapValues(
@@ -1544,6 +1586,7 @@ const layer = Layer.effect(
 
         // kilocode_change start - load auths before env so OAuth plugins can override inherited credentials
         const auths = yield* auth.all().pipe(Effect.orDie)
+        // kilocode_change end
         // load env
         const envs = yield* env.all()
         for (const [id, provider] of Object.entries(database)) {
@@ -1572,7 +1615,7 @@ const layer = Layer.effect(
           if (provider.type === "api") {
             mergeProvider(providerID, {
               source: "api",
-              key: provider.key,
+              key: providerKey(providerID, provider), // kilocode_change - keep structured credentials provider-specific
             })
           }
         }
@@ -1680,7 +1723,7 @@ const layer = Layer.effect(
             )
               delete provider.models[modelID]
 
-            if (!model.variants || Object.keys(model.variants).length === 0) {
+            if (model.variants === undefined) {
               model.variants = mapValues(ProviderTransform.variants(model), (v) => v)
             }
 
@@ -1718,6 +1761,7 @@ const layer = Layer.effect(
       try {
         const provider = s.providers[model.providerID]
         const options = { ...provider.options }
+        vertexOptions(model.providerID, model.api.npm, options) // kilocode_change - hydrate stored credentials
 
         if (
           model.providerID === "google-vertex" &&
@@ -1817,7 +1861,8 @@ const layer = Layer.effect(
             timeout.clear()
             // kilocode_change start - hand the remaining deadline to the first-byte guard
             const remaining = deadline !== undefined ? deadline - Date.now() : undefined
-            const live = remaining !== undefined && firstByteCtl ? wrapFirstByte(res, Math.max(remaining, 1), firstByteCtl) : res
+            const live =
+              remaining !== undefined && firstByteCtl ? wrapFirstByte(res, Math.max(remaining, 1), firstByteCtl) : res
             if (!chunkAbortCtl) return live
             return wrapSSE(live, chunkTimeout, chunkAbortCtl)
             // kilocode_change end
@@ -2015,7 +2060,7 @@ const layer = Layer.effect(
       }
 
       // kilocode_change start - fall back to kilo's auto small model
-      const kiloFallback = s.providers[ProviderV2.ID.make("kilo")]
+      const kiloFallback = s.providers[ProviderV2.ID.make("kilo")] ?? s.catalog[ProviderV2.ID.make("kilo")]
       if (kiloFallback?.models["kilo-auto/small"]) return kiloFallback.models["kilo-auto/small"]
       // kilocode_change end
 

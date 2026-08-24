@@ -5,6 +5,7 @@ import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { MCP } from "@/mcp"
+import { McpCatalog } from "@/mcp/catalog"
 import { Permission } from "@/permission"
 import { Tool } from "@/tool/tool"
 import { ToolJsonSchema } from "@/tool/json-schema"
@@ -24,11 +25,12 @@ import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 // kilocode_change start
-import { SwePruner } from "@/kilocode/swe-pruner"
 import { Config } from "@/config/config"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
+import { McpApps } from "@/kilocode/mcp/apps"
 // kilocode_change end
 import { isRecord } from "@/util/record"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 const MCP_RESOURCE_TOOLS = {
   list: "list_mcp_resources",
@@ -65,71 +67,86 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const registry = yield* ToolRegistry.Service
   const mcp = yield* MCP.Service
   const truncate = yield* Truncate.Service
-  // kilocode_change start - SWE-Pruner (experimental)
+  // kilocode_change start - permission provenance
   const config = yield* Config.Service
   const cfg = yield* config.get()
-  const swe = SwePruner.enabled(cfg)
   const permissionOrigins = cfg.permission_origins
   // kilocode_change end
-
-  const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
-    sessionID: input.session.id,
-    abort: options.abortSignal!,
-    messageID: input.processor.message.id,
-    callID: options.toolCallId,
-    extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps: input.promptOps },
-    agent: input.agent.name,
-    messages: input.messages,
-    // kilocode_change start
-    metadata: (val) => input.processor.metadata(options.toolCallId, val),
-    ask: (req) =>
-      KiloSessionPrompt.askPermission({
-        permission,
-        agents,
-        sessions,
-        origins: permissionOrigins,
-        agent: input.agent,
-        session: input.session,
-        request: {
-          ...req,
-          sessionID: input.session.id,
-          tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-        },
-      }).pipe(
-        // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
-        Effect.tap((approval) =>
-          input.processor.metadata(options.toolCallId, {
-            metadata: {
-              approval: PermissionProvenance.tagOutsideWorkspace(
-                approval,
-                req.permission,
-                PermissionProvenance.filepathOf(req.metadata),
-              ),
-            },
-          }),
+  const flags = yield* RuntimeFlags.Service
+  const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
+  const sandboxed = (yield* SandboxPolicy.status(input.session.id)).enabled // kilocode_change
+  const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => {
+    const extra = {
+      model: input.model,
+      bypassAgentCheck: input.bypassAgentCheck,
+      promptOps: input.promptOps,
+      sandboxed, // kilocode_change
+      sandboxEscalation: false,
+    }
+    return {
+      sessionID: input.session.id,
+      abort: options.abortSignal!,
+      messageID: input.processor.message.id,
+      callID: options.toolCallId,
+      extra,
+      agent: input.agent.name,
+      messages: input.messages,
+      // kilocode_change start
+      metadata: (val) => input.processor.metadata(options.toolCallId, val),
+      ask: (req) =>
+        KiloSessionPrompt.askPermission({
+          permission,
+          agents,
+          sessions,
+          origins: permissionOrigins,
+          agent: input.agent,
+          session: input.session,
+          request: {
+            ...req,
+            sessionID: input.session.id,
+            tool: { messageID: input.processor.message.id, callID: options.toolCallId },
+          },
+        }).pipe(
+          // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
+          Effect.tap((approval) =>
+            Effect.gen(function* () {
+              if (req.metadata?.["sandboxEscalation"] === true && approval.source === "manual") {
+                extra.sandboxEscalation = true
+              }
+              yield* input.processor.metadata(options.toolCallId, {
+                metadata: {
+                  approval: PermissionProvenance.tagOutsideWorkspace(
+                    approval,
+                    req.permission,
+                    PermissionProvenance.filepathOf(req.metadata),
+                  ),
+                },
+              })
+            }),
+          ),
+          // record why the call was denied too, so JSON exports and clients can explain the denial
+          Effect.tapErrorTag("PermissionDeniedError", (err) =>
+            input.processor.metadata(options.toolCallId, {
+              metadata: {
+                approval: PermissionProvenance.tagOutsideWorkspace(
+                  PermissionProvenance.classifyDenial({
+                    ruleset: err.ruleset,
+                    permission: req.permission,
+                    patterns: req.patterns,
+                    agent: input.agent.name,
+                    origins: permissionOrigins,
+                  }),
+                  req.permission,
+                  PermissionProvenance.filepathOf(req.metadata),
+                ),
+              },
+            }),
+          ),
+          Effect.asVoid,
+          Effect.orDie,
         ),
-        // record why the call was denied too, so JSON exports and clients can explain the denial
-        Effect.tapErrorTag("PermissionDeniedError", (err) =>
-          input.processor.metadata(options.toolCallId, {
-            metadata: {
-              approval: PermissionProvenance.tagOutsideWorkspace(
-                PermissionProvenance.classifyDenial({
-                  ruleset: err.ruleset,
-                  permission: req.permission,
-                  patterns: req.patterns,
-                  agent: input.agent.name,
-                  origins: permissionOrigins,
-                }),
-                req.permission,
-                PermissionProvenance.filepathOf(req.metadata),
-              ),
-            },
-          }),
-        ),
-        Effect.asVoid,
-        Effect.orDie,
-      ),
-  })
+    }
+  }
   // kilocode_change end
 
   for (const item of yield* registry.tools({
@@ -137,12 +154,11 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     providerID: input.model.providerID,
     family: input.model.family, // kilocode_change
     agent: input.agent,
+    permission: input.session.permission,
+    networkRestricted: restricted, // kilocode_change - let the registry suppress code-mode in restricted sessions
   })) {
-    // kilocode_change start - SWE-Pruner (experimental): advertise the focus parameter on prunable tools
-    const pruner = swe && SwePruner.prunable(item.id)
     const base = ToolJsonSchema.fromTool(item)
-    const schema = ProviderTransform.schema(input.model, pruner ? SwePruner.extend(base) : base)
-    // kilocode_change end
+    const schema = ProviderTransform.schema(input.model, base)
     tools[item.id] = tool({
       description: item.description,
       inputSchema: jsonSchema(schema),
@@ -156,11 +172,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { args },
             )
             // kilocode_change start
-            let result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
-            // SWE-Pruner (experimental): prune the output when the model provided a focus question.
-            // Runs before tool.execute.after so plugins observe the final output the model will
-            // see; pruning is signalled to them via metadata.swePruner.
-            if (pruner) result = yield* SwePruner.sweep({ tool: item.id, args, result, abort: ctx.abort })
+            const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
             // kilocode_change end
             const output = {
               ...result,
@@ -188,7 +200,6 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
-  const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
   const hasMcpResourceServer = Object.values(yield* mcp.clients()).some(
     (client) => !!client.getServerCapabilities()?.resources,
   )
@@ -441,114 +452,123 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
+  if (flags.experimentalCodeMode) return tools
+
   const mcpTools = restricted ? {} : yield* mcp.tools() // kilocode_change
+  for (const [key, entry] of Object.entries(mcpTools)) {
+    const item = McpCatalog.convertTool(entry.def, entry.client, entry.timeout)
+    const execute = item.execute
+    if (!execute) continue
 
-  for (const [key, item] of Object.entries(mcpTools)) { // kilocode_change
-  const execute = item.execute
-  if (!execute) continue
-
-  const schema = yield* Effect.promise(() => Promise.resolve(asSchema(item.inputSchema).jsonSchema))
-  const transformed = ProviderTransform.schema(input.model, { ...schema, properties: schema.properties ?? {} })
-  item.inputSchema = jsonSchema(transformed)
-  item.execute = (args, opts) =>
-    run.promise(
-      Effect.gen(function* () {
-        const ctx = context(args, opts)
-        yield* plugin.trigger(
-          "tool.execute.before",
-          { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
-          { args },
-        )
-        // kilocode_change start
-        const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
-          ctx.sessionID,
-          item,
-          Effect.gen(function* () {
-            yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-            return yield* Effect.promise(() => execute(args, opts))
-          }),
-        ).pipe(
+    const schema = yield* Effect.promise(() => Promise.resolve(asSchema(item.inputSchema).jsonSchema))
+    const transformed = ProviderTransform.schema(input.model, { ...schema, properties: schema.properties ?? {} })
+    item.inputSchema = jsonSchema(transformed)
+    item.execute = (args, opts) =>
+      run.promise(
+        Effect.gen(function* () {
+          const ctx = context(args, opts)
+          // kilocode_change start - propagate MCP App UI metadata so hosts can preload the UI resource
+          const mcpAppMeta = McpApps.toolMetadata(entry, flags)
+          if (mcpAppMeta) {
+            yield* input.processor.metadata(opts.toolCallId, { metadata: mcpAppMeta })
+          }
           // kilocode_change end
-          Effect.withSpan("Tool.execute", {
-            attributes: {
-              "tool.name": key,
-              "tool.call_id": opts.toolCallId,
-              "session.id": ctx.sessionID,
-              "message.id": input.processor.message.id,
-            },
-          }),
-        )
-        yield* plugin.trigger(
-          "tool.execute.after",
-          { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
-          result,
-        )
+          yield* plugin.trigger(
+            "tool.execute.before",
+            { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
+            { args },
+          )
+          // kilocode_change start
+          const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
+            ctx.sessionID,
+            entry, // kilocode_change - retain the native entry's local/remote network authority marker
+            Effect.gen(function* () {
+              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+              return yield* Effect.promise(() => execute(args, opts))
+            }),
+          ).pipe(
+            // kilocode_change end
+            Effect.withSpan("Tool.execute", {
+              attributes: {
+                "tool.name": key,
+                "tool.call_id": opts.toolCallId,
+                "session.id": ctx.sessionID,
+                "message.id": input.processor.message.id,
+              },
+            }),
+          )
+          yield* plugin.trigger(
+            "tool.execute.after",
+            { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
+            result,
+          )
 
-        const textParts: string[] = []
-        const attachments: Omit<SessionV1.FilePart, "id" | "sessionID" | "messageID">[] = []
-        for (const contentItem of result.content) {
-          if (contentItem.type === "text") textParts.push(contentItem.text)
-          else if (contentItem.type === "image") {
-            attachments.push({
-              type: "file",
-              mime: contentItem.mimeType,
-              url: `data:${contentItem.mimeType};base64,${contentItem.data}`,
-            })
-          } else if (contentItem.type === "resource") {
-            const { resource } = contentItem
-            if (resource.text) textParts.push(resource.text)
-            if (resource.blob) {
-              const mime = resource.mimeType ?? "application/octet-stream"
-              const size = base64Size(resource.blob)
-              if (!SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES.has(mime)) {
-                textParts.push(
-                  `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) is not a supported attachment type]`,
-                )
-                continue
-              }
-              if (size > MAX_MCP_RESOURCE_BLOB_BYTES) {
-                textParts.push(
-                  `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) exceeds ${formatBytes(MAX_MCP_RESOURCE_BLOB_BYTES)}]`,
-                )
-                continue
-              }
+          const textParts: string[] = []
+          const attachments: Omit<SessionV1.FilePart, "id" | "sessionID" | "messageID">[] = []
+          for (const contentItem of result.content) {
+            if (contentItem.type === "text") textParts.push(contentItem.text)
+            else if (contentItem.type === "image") {
               attachments.push({
                 type: "file",
-                mime,
-                url: `data:${mime};base64,${resource.blob}`,
-                filename: resource.uri,
+                mime: contentItem.mimeType,
+                url: `data:${contentItem.mimeType};base64,${contentItem.data}`,
               })
+            } else if (contentItem.type === "resource") {
+              const { resource } = contentItem
+              if (resource.text) textParts.push(resource.text)
+              if (resource.blob) {
+                const mime = resource.mimeType ?? "application/octet-stream"
+                const size = base64Size(resource.blob)
+                if (!SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES.has(mime)) {
+                  textParts.push(
+                    `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) is not a supported attachment type]`,
+                  )
+                  continue
+                }
+                if (size > MAX_MCP_RESOURCE_BLOB_BYTES) {
+                  textParts.push(
+                    `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) exceeds ${formatBytes(MAX_MCP_RESOURCE_BLOB_BYTES)}]`,
+                  )
+                  continue
+                }
+                attachments.push({
+                  type: "file",
+                  mime,
+                  url: `data:${mime};base64,${resource.blob}`,
+                  filename: resource.uri,
+                })
+              }
             }
           }
-        }
 
-        const truncated = yield* truncate.output(textParts.join("\n\n"), {}, input.agent)
-        const metadata = {
-          ...result.metadata,
-          truncated: truncated.truncated,
-          ...(truncated.truncated && { outputPath: truncated.outputPath }),
-        }
+          const truncated = yield* truncate.output(textParts.join("\n\n"), {}, input.agent)
+          const metadata = {
+            ...result.metadata,
+            truncated: truncated.truncated,
+            ...(truncated.truncated && { outputPath: truncated.outputPath }),
+            ...mcpAppMeta, // kilocode_change - MCP App UI metadata
+          }
 
-        const output = {
-          title: "",
-          metadata,
-          output: truncated.content,
-          attachments: attachments.map((attachment) => ({
-            ...attachment,
-            id: PartID.ascending(),
-            sessionID: ctx.sessionID,
-            messageID: input.processor.message.id,
-          })),
-          content: result.content,
-        }
-        if (opts.abortSignal?.aborted) {
-          yield* input.processor.completeToolCall(opts.toolCallId, output)
-        }
-        return output
-      }),
-    )
-  tools[key] = item
-}
+          const output = {
+            title: "",
+            metadata,
+            output: truncated.content,
+            attachments: attachments.map((attachment) => ({
+              ...attachment,
+              id: PartID.ascending(),
+              sessionID: ctx.sessionID,
+              messageID: input.processor.message.id,
+            })),
+            content: result.content,
+          }
+          if (opts.abortSignal?.aborted) {
+            yield* input.processor.completeToolCall(opts.toolCallId, output)
+          }
+          return output
+        }),
+      )
+    tools[key] = item
+  }
 
   return tools
 })

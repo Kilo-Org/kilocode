@@ -22,19 +22,25 @@ describe("terminal context architecture", () => {
     const util = src("webview-ui/src/hooks/terminal-context-utils.ts")
 
     expect(prompt).toContain("useTerminalContext")
+    expect(prompt).toContain("resolveAttachment(message, id, readTerminalContext(props.terminalContext))")
     expect(prompt).not.toContain("requestTerminalContext")
     expect(prompt).not.toContain("data:text/plain")
     expect(hook).toContain("requestTerminalContext")
+    expect(hook).toContain("useVSCode()")
     expect(util).toContain("data:text/plain")
   })
 
   it("keeps terminal output limits in the shared truncation helper", () => {
     const helper = src("src/services/terminal/truncate.ts")
+    const output = src("webview-ui/agent-manager/terminal/output.ts")
     const provider = src("src/KiloProvider.ts")
     const prompt = src("webview-ui/src/components/chat/PromptInput.tsx")
 
     expect(helper).toContain("TERMINAL_OUTPUT_LINE_LIMIT = 500")
     expect(helper).toContain("TERMINAL_OUTPUT_CHARACTER_LIMIT = 50_000")
+    expect(output).toContain('from "../../../src/services/terminal/truncate"')
+    expect(output).not.toContain("LINE_LIMIT = 500")
+    expect(output).not.toContain("CHAR_LIMIT = 50_000")
     expect(provider).not.toContain("TERMINAL_OUTPUT_LINE_LIMIT")
     expect(prompt).not.toContain("TERMINAL_OUTPUT_LINE_LIMIT")
   })

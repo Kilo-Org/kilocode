@@ -36,7 +36,6 @@ import type { ErrorDisplayProps } from "./ErrorDisplay"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
-import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { TurnOutcome } from "../shared/TurnOutcome"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
@@ -179,10 +178,23 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const isEmpty = () => turns().length === 0 && !session.loading() && !revert()
 
   const activeUserID = createMemo(() =>
-    getActiveUserMessageID(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id)),
+    getActiveUserMessageID(
+      session.messages(),
+      session.statusInfo(),
+      (msg) => session.getParts(msg.id),
+      session.submitting(),
+    ),
   )
   const queuedIDs = createMemo(
-    () => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id))),
+    () =>
+      new Set(
+        queuedUserMessageIDs(
+          session.messages(),
+          session.statusInfo(),
+          (msg) => session.getParts(msg.id),
+          session.submitting(),
+        ),
+      ),
   )
   const rows = createMemo((prev: TranscriptRow[] | undefined) => {
     const active = activeUserID()
@@ -1221,26 +1233,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const id = pendingRestore()
     if (!id || session.loading()) return
     turns().length
-    // Double-rAF: the first frame lets the browser paint the new DOM from
-    // the messagesLoaded batch. The second frame restores scroll position
-    // without forcing a synchronous layout reflow mid-paint.
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (pendingRestore() !== id) return
-        const el = scrollEl()
-        if (!el) return
-        const state = getScroll(id)
-        const anchor = resolveAnchor(state, keys())
-        const handle = virtualizer()
-        if (state?.type === "anchor" && anchor && handle) {
-          handle.scrollToIndex(anchor.index, { offset: anchor.offset })
-          autoScroll.pause()
-          maybeLoadOlder()
-        } else {
-          autoScroll.forceScrollToBottom()
-        }
-        setPendingRestore(undefined)
-      })
+      if (pendingRestore() !== id) return
+      const el = scrollEl()
+      if (!el) return
+      const state = getScroll(id)
+      const anchor = resolveAnchor(state, keys())
+      const handle = virtualizer()
+      if (state?.type === "anchor" && anchor && handle) {
+        handle.scrollToIndex(anchor.index, { offset: anchor.offset })
+        autoScroll.pause()
+        maybeLoadOlder()
+      } else {
+        autoScroll.forceScrollToBottom()
+      }
+      setPendingRestore(undefined)
     })
   })
 
@@ -1356,7 +1363,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
                 />
               )}
             </For>
-            <WorkingIndicator />
             <TurnOutcome />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
@@ -1377,7 +1383,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
         onLoadOlder={() => session.loadOlderMessages()}
         onWheel={(deltaY: number) => {
           const el = scrollEl()
-          if (el) el.scrollTop += deltaY
+          if (!el) return
+          if (deltaY < 0 && el.scrollHeight - el.clientHeight > 1) autoScroll.pause()
+          el.scrollTop += deltaY
         }}
         height={height}
         hasOlder={session.hasOlderMessages}

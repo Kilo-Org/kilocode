@@ -51,6 +51,13 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
     get: (sel: string) => memory()[sel],
     set: (sel: string, tab: string) => setMemory((prev) => (prev[sel] === tab ? prev : { ...prev, [sel]: tab })),
   }
+  /** Last session tab to restore after leaving a central terminal. */
+  const [sessionMemory, setSessionMemory] = createSignal<Record<string, string>>({})
+  const sessionRestore = {
+    all: sessionMemory,
+    get: (sel: string) => sessionMemory()[sel],
+    set: (sel: string, tab: string) => setSessionMemory((prev) => (prev[sel] === tab ? prev : { ...prev, [sel]: tab })),
+  }
 
   const [worktrees, setWorktrees] = field<WorktreeState[]>([])
   const [managedSessions, setManagedSessions] = field<ManagedSessionState[]>([])
@@ -96,6 +103,7 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
     tabs,
     applyState,
     tabMemory,
+    sessionRestore,
     worktrees,
     setWorktrees,
     managedSessions,

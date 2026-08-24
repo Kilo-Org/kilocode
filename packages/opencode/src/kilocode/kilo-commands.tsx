@@ -20,6 +20,7 @@ import { DialogKiloProfile } from "./components/dialog-kilo-profile.js"
 import { DialogClawSetup } from "./components/dialog-claw-setup.js"
 import { DialogClawUpgrade } from "./components/dialog-claw-upgrade.js"
 import { DialogIndexing } from "./components/dialog-indexing.js"
+import { DialogProviderUsage } from "./components/dialog-provider-usage.js"
 import { indexingEnabled } from "./indexing-feature"
 import { refreshBalance } from "./balance-refresh"
 
@@ -127,6 +128,18 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
         },
       },
 
+      {
+        name: "kilo.usage",
+        title: "Plans & usage",
+        desc: "View provider plans and quota",
+        category: "Kilo",
+        slashName: "usage",
+        slashAliases: ["plans", "quota"],
+        run: () => {
+          dialog.replace(() => <DialogProviderUsage />)
+        },
+      },
+
       // /profile command
       {
         name: "kilo.profile",
@@ -139,7 +152,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
         hidden: !isKiloConnected(),
         run: async () => {
           try {
-            if (sync.data.globalConfig.privacy_mode === true) {
+            if (sync.data.config.privacy_mode === true || sync.data.globalConfig.privacy_mode === true) {
               const confirmed = await DialogConfirm.show(
                 dialog,
                 "Privacy Mode Enabled",
@@ -191,19 +204,33 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
       {
         name: "kilo.privacy",
         get title() {
-          return sync.data.globalConfig.privacy_mode === true ? "Disable privacy mode" : "Enable privacy mode"
+          const active = sync.data.config.privacy_mode === true || sync.data.globalConfig.privacy_mode === true
+          return active ? "Disable privacy mode" : "Enable privacy mode"
         },
         desc: "Blur PII (balance, email, etc.) and confirm before showing profile",
         category: "Kilo",
         slashName: "privacy",
         run: async () => {
-          const next = sync.data.globalConfig.privacy_mode !== true
-          const response = await sdk.client.config.overlayUpdate({
-            scope: "global",
-            set: { privacy_mode: next },
-          })
-          if (response.error) {
-            const status = response.response?.status ?? "?"
+          const active = sync.data.config.privacy_mode === true || sync.data.globalConfig.privacy_mode === true
+          const next = !active
+          const updates = [
+            sdk.client.config.overlayUpdate({
+              scope: "global",
+              set: { privacy_mode: next },
+            }),
+          ]
+          if (!next && sync.data.config.privacy_mode === true) {
+            updates.push(
+              sdk.client.config.overlayUpdate({
+                scope: "project",
+                unset: [["privacy_mode"]],
+              }),
+            )
+          }
+          const responses = await Promise.all(updates)
+          const failed = responses.find((r) => r.error)
+          if (failed) {
+            const status = failed.response?.status ?? "?"
             toast.show({ message: `Failed to update privacy mode (${status})`, variant: "error" })
             return
           }

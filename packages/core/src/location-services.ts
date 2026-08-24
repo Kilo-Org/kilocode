@@ -1,4 +1,4 @@
-import { Effect, Layer, LayerMap } from "effect"
+import { Duration, Effect, Layer, LayerMap } from "effect" // kilocode_change
 import { AgentV2 } from "./agent"
 import { AISDK } from "./aisdk"
 import { Catalog } from "./catalog"
@@ -12,6 +12,7 @@ import { FileSystemSearch } from "./filesystem/search"
 import { Watcher } from "./filesystem/watcher"
 import { Image } from "./image"
 import { Integration } from "./integration"
+import { ProviderUsage } from "./kilocode/provider-usage" // kilocode_change
 import { Location } from "./location"
 import { LocationMutation } from "./location-mutation"
 import { LocationServiceMap } from "./location-service-map"
@@ -48,6 +49,7 @@ export const locationServices = LayerNode.group([
   Reference.node,
   Integration.node,
   Catalog.node,
+  ProviderUsage.node, // kilocode_change
   AISDK.node,
   PluginV2.node,
   PluginInternal.node,
@@ -83,12 +85,17 @@ export type LocationError = LayerNode.Error<typeof locationServices>
 
 export function buildLocationServiceMap(
   replacements: LayerNode.Replacements = [],
+  options: { readonly idleTimeToLive?: Duration.Input } = {}, // kilocode_change
 ): Layer.Layer<LocationServiceMap.Service> {
   return Layer.effect(
     LocationServiceMap.Service,
     LayerMap.make(
       (ref: Location.Ref) => {
         const allReplacements = replacements.concat([[Location.node, Location.boundNode(ref)]])
+        // Apply replacements during hoist, not afterward: replacements can
+        // introduce new tagged dependencies (Location.boundNode depends on
+        // Project), and the hoist walk is the only pass that can still slice
+        // those back out.
         const location = LayerNode.hoist(locationServices, Node.tags.values.global, allReplacements)
 
         return LayerNode.compile(location.node).pipe(
@@ -102,7 +109,7 @@ export function buildLocationServiceMap(
           Layer.provide(LayerNode.compile(location.hoisted)),
         )
       },
-      { idleTimeToLive: "60 minutes" },
+      { idleTimeToLive: options.idleTimeToLive ?? "60 minutes" }, // kilocode_change
     ),
   )
 }

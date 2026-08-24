@@ -11,6 +11,8 @@ import {
   versionedName,
 } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+import { GitOps } from "../../src/agent-manager/GitOps"
+import type { PRInfo } from "../../src/agent-manager/git-import"
 import simpleGit from "simple-git"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
@@ -45,9 +47,9 @@ async function createTempRepo(): Promise<string> {
   return dir
 }
 
-function createManager(root: string): WorktreeManager {
+function createManager(root: string, ops?: GitOps): WorktreeManager {
   const logs: string[] = []
-  return new WorktreeManager(root, (msg) => logs.push(msg))
+  return new WorktreeManager(root, (msg) => logs.push(msg), ops)
 }
 
 // Test-only helper to verify metadata writes keep the temp worktree checkout clean.
@@ -1042,6 +1044,26 @@ describe("WorktreeManager.resolveStartPoint", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.resolveBaseBranch", () => {
+  it("uses the shared remote default instead of stale local metadata", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    gitExec(["git", "-C", clone, "branch", "master"])
+    gitExec(["git", "-C", clone, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/master"])
+    const ops = new GitOps({
+      log: () => undefined,
+      runGit: async (args) => {
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
+        if (args[0] === "ls-remote") return "ref: refs/heads/main\tHEAD\nabc123\tHEAD"
+        return ""
+      },
+    })
+    const mgr = createManager(clone, ops)
+
+    expect(await mgr.resolveBaseBranch()).toEqual({ branch: "main", remote: "origin" })
+    expect((await simpleGit(clone).raw(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])).trim()).toBe(
+      "origin/master",
+    )
+  })
+
   it("returns bare branch + remote when origin remote and tracking ref exist", async () => {
     const { clone } = await createTempRepoWithOrigin()
     const mgr = createManager(clone)
@@ -1137,6 +1159,92 @@ describe("WorktreeManager.createWorktree advanced", () => {
     const headParams = await wtGit.log(["-1"])
     const devParams = await git.log(["-1"])
     expect(headParams.latest?.hash).toBe(devParams.latest?.hash)
+  })
+
+  it("creates from a base branch excluded by the remote fetch refspec", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+
+    const result = await createManager(clone).createWorktree({ baseBranch: "topic", prompt: "from topic" })
+    const remoteHead = (await git.revparse(["refs/remotes/origin/topic"])).trim()
+    const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(worktreeHead).toBe(remoteHead)
+    expect(result.parentBranch).toBe("topic")
+  })
+
+  it("creates from a same-repository PR branch excluded by the remote fetch refspec", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+    await git.branch(["-D", "topic"])
+
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    const result = await manager.createFromPR("https://github.com/org/repo/pull/1")
+    const remoteHead = (await git.revparse(["refs/remotes/origin/topic"])).trim()
+    const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(worktreeHead).toBe(remoteHead)
+    expect(result.parentBranch).toBe("topic")
+  })
+
+  it("does not track a deleted PR source branch when using the pull ref fallback", async () => {
+    const { bare, clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    const head = (await git.revparse(["topic"])).trim()
+    await git.checkout("main")
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+    gitExec(["git", "--git-dir", bare, "update-ref", "refs/pull/1/head", head])
+    gitExec(["git", "--git-dir", bare, "update-ref", "-d", "refs/heads/topic"])
+    await git.branch(["-D", "topic"])
+
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    const result = await manager.createFromPR("https://github.com/org/repo/pull/1")
+    const upstream = await git.raw(["config", "--get", "branch.topic.remote"]).catch(() => "")
+    const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(worktreeHead).toBe(head)
+    expect(upstream.trim()).toBe("")
   })
 })
 

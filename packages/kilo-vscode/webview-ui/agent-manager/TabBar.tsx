@@ -13,7 +13,7 @@ import {
   closestCenter,
   type DragEvent,
 } from "@thisbeyond/solid-dnd"
-import type { LocalGitStats, RunStatus, WorktreeGitStats } from "../src/types/messages"
+import type { LocalGitStats, RunStatus, WorktreeGitStats, PRStatus } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
 import { LOCAL } from "./navigate"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
@@ -55,6 +55,15 @@ export interface TabBarProps {
   reviewActive: () => boolean
   onToggleDiff: () => void
   onToggleReview: () => void
+  prStatus: () => PRStatus | undefined
+  prOpen: () => boolean
+  onTogglePR: () => void
+  documentsOpen: () => boolean
+  documentsAvailable: () => boolean
+  onToggleDocuments: () => void
+  subagentsAvailable: () => boolean
+  subagentsOpen: () => boolean
+  onToggleSubagents: () => void
   terminalDestination: () => TerminalDestination
   terminalDestinationActive: () => boolean
   terminalKeybind: () => string
@@ -167,7 +176,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     const title = () => (configured() ? (active() ? "Stop" : "Run") : "Configure run script")
                     return (
                       <span
-                        class={`am-run-group ${active() ? "am-run-active" : ""} ${!configured() ? "am-run-unconfigured" : ""}`}
+                        class={`am-split-button am-run-group ${active() ? "am-run-active" : ""} ${!configured() ? "am-run-unconfigured" : ""}`}
                       >
                         <TooltipKeybind title={title()} keybind={props.bindings().runScript ?? ""} placement="bottom">
                           <Button
@@ -188,18 +197,9 @@ export const TabBar: Component<TabBarProps> = (props) => (
                           </Button>
                         </TooltipKeybind>
                         <DropdownMenu gutter={4} placement="bottom-end">
-                          <DropdownMenu.Trigger
-                            as={(p: Record<string, unknown>) => (
-                              <IconButton
-                                {...p}
-                                icon="chevron-down"
-                                size="small"
-                                variant="ghost"
-                                label={props.t("agentManager.run.options")}
-                                class="am-run-group-chevron"
-                              />
-                            )}
-                          />
+                          <DropdownMenu.Trigger class="am-split-arrow" aria-label={props.t("agentManager.run.options")}>
+                            <Icon name="chevron-down" size="small" />
+                          </DropdownMenu.Trigger>
                           <DropdownMenu.Portal>
                             <DropdownMenu.Content class="am-split-menu">
                               <DropdownMenu.Item
@@ -214,6 +214,44 @@ export const TabBar: Component<TabBarProps> = (props) => (
                       </span>
                     )
                   })()}
+                </Show>
+                <Show when={props.prStatus()}>
+                  {(pr) => (
+                    <Tooltip value={`PR #${pr().number}`} placement="bottom">
+                      <IconButton
+                        icon="pull-request"
+                        size="small"
+                        variant="ghost"
+                        label={`PR #${pr().number}`}
+                        class={props.prOpen() ? "am-tab-diff-btn-active" : ""}
+                        onClick={props.onTogglePR}
+                      />
+                    </Tooltip>
+                  )}
+                </Show>
+                <Show when={props.documentsAvailable()}>
+                  <Tooltip value={props.t("agentManager.documents.toggle")} placement="bottom">
+                    <IconButton
+                      icon="book-open-check"
+                      size="small"
+                      variant="ghost"
+                      label={props.t("agentManager.documents.toggle")}
+                      class={props.documentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleDocuments}
+                    />
+                  </Tooltip>
+                </Show>
+                <Show when={props.subagentsAvailable()}>
+                  <Tooltip value="Subagents" placement="bottom">
+                    <IconButton
+                      icon="task"
+                      size="small"
+                      variant="ghost"
+                      label="Subagents"
+                      class={props.subagentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleSubagents}
+                    />
+                  </Tooltip>
                 </Show>
                 <TooltipKeybind
                   title={props.t("agentManager.diff.toggle")}
@@ -255,7 +293,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
           {/* Terminal destination split button: the primary action
                follows the user's setting (VS Code integrated terminal
                or the embedded side panel), the dropdown picks which.
-               Cmd+Shift+T creates a terminal in the active terminal container. */}
+               Cmd+Shift+T creates a central terminal from center focus. Cmd+T creates a session in the center or a terminal in the right sidebar. */}
           <TerminalDestinationButton
             destination={props.terminalDestination}
             active={props.terminalDestinationActive}

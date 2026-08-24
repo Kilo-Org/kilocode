@@ -26,17 +26,6 @@ const agents = Agent.Service.of({
   list: () => Effect.succeed([agentInfo]),
   defaultInfo: () => Effect.succeed(agentInfo),
   defaultAgent: () => Effect.succeed("code"),
-  requirementStatus: () =>
-    Effect.succeed({
-      agent: "code",
-      directory: "",
-      enabled: false,
-      state: "ready",
-      skills: [],
-      mcps: [],
-      vscode_extensions: [],
-    }),
-  guardRequirements: () => Effect.void,
   generate: () => Effect.succeed({ identifier: "code", whenToUse: "", systemPrompt: "" }),
 })
 
@@ -453,7 +442,6 @@ describe("send_file tool", () => {
     const tool = { id: "send_file" } as Tool.Def
     const extra = KiloToolRegistry.extra(
       {
-        codebase: tool,
         recall: tool,
         managerModels: tool,
         memory: tool,

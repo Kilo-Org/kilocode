@@ -1,10 +1,16 @@
 import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "../../webview-ui/agent-manager/side-panel-layout"
+import {
+  clampPanelWidth,
+  createPanelResize,
+  maxPanelWidth,
+  minPanelWidth,
+} from "../../webview-ui/agent-manager/side-panel-layout"
 
 const css = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/agent-manager.css"), "utf8")
 const app = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/AgentManagerApp.tsx"), "utf8")
+const subagent = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/SubagentPanel.tsx"), "utf8")
 const terminal = readFileSync(
   resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   "utf8",
@@ -20,16 +26,45 @@ test("xterm owns the padding used by FitAddon", () => {
   expect(term).toMatch(/\bpadding\s*:\s*8px\s*;/)
 })
 
-test("uses one persisted width for the diff and terminal inspector", () => {
+test("uses one persisted width for every inspector panel", () => {
   expect(app).toContain("persisted?.sidePanelWidth")
-  expect(app).toContain("setPanelWidth(pendingSideWidth!)")
+  expect(app).toContain("createPanelResize(setPanelWidth")
+  expect(app).toContain("style={{ width: `${panelWidth()}px` }}")
+  expect(subagent).toContain("InspectorTabStrip")
   expect(app).not.toContain("diffWidth")
   expect(app).not.toContain("terminalWidth")
 })
 
+test("hides keyboard hints only in inspector tabs", () => {
+  const side = readFileSync(
+    resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
+    "utf8",
+  )
+
+  expect(subagent).toContain("showKeybind={false}")
+  expect(side).toContain("showKeybind={false}")
+  expect(
+    readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/render.tsx"), "utf8"),
+  ).not.toContain("showKeybind={false}")
+})
+
 test("limits inspector layout updates during resize", () => {
-  expect(app).toContain("SIDE_RESIZE_INTERVAL_MS = 32")
-  expect(app).toContain("time - sideResizeTime < SIDE_RESIZE_INTERVAL_MS")
+  const frames: ((time: number) => void)[] = []
+  const widths: number[] = []
+  const resize = createPanelResize(
+    (width) => widths.push(width),
+    () => 1200,
+    (frame) => frames.push(frame),
+  )
+
+  resize(700)
+  resize(720)
+  expect(frames).toHaveLength(1)
+  frames.shift()!(16)
+  expect(frames).toHaveLength(1)
+  expect(widths).toEqual([])
+  frames.shift()!(32)
+  expect(widths).toEqual([720])
 })
 
 test("does not refit hidden terminal buffers during resize", () => {

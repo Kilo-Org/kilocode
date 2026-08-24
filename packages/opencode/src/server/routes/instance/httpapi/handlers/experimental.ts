@@ -274,24 +274,26 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
       return yield* mcp.resources()
     })
 
-    return handlers
-      .handle("capabilities", capabilities)
-      .handle("console", getConsole)
-      .handle("consoleOrgs", listConsoleOrgs)
-      .handle("consoleSwitch", switchConsole)
-      .handle("tool", tool)
-      .handle("toolIDs", toolIDs)
-      .handle("worktree", worktree)
-      .handle("worktreeCreate", worktreeCreate)
-      .handle("worktreeRemove", worktreeRemove)
-      .handle("worktreeReset", worktreeReset)
-      // kilocode_change start
-      .handle("worktreeDiff", worktreeDiff)
-      .handle("worktreeDiffSummary", worktreeDiffSummary)
-      .handle("worktreeDiffFile", worktreeDiffFile)
-      // kilocode_change end
-      .handle("session", session)
-      .handle("sessionBackground", sessionBackground)
-      .handle("resource", resource)
+    return (
+      handlers
+        .handle("capabilities", capabilities)
+        .handle("console", getConsole)
+        .handle("consoleOrgs", listConsoleOrgs)
+        .handle("consoleSwitch", switchConsole)
+        .handle("tool", tool)
+        .handle("toolIDs", toolIDs)
+        .handle("worktree", worktree)
+        .handle("worktreeCreate", worktreeCreate)
+        .handle("worktreeRemove", worktreeRemove)
+        .handle("worktreeReset", worktreeReset)
+        // kilocode_change start
+        .handle("worktreeDiff", worktreeDiff)
+        .handle("worktreeDiffSummary", worktreeDiffSummary)
+        .handle("worktreeDiffFile", worktreeDiffFile)
+        // kilocode_change end
+        .handle("session", session)
+        .handle("sessionBackground", sessionBackground)
+        .handle("resource", resource)
+    )
   }),
 )
