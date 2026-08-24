@@ -1716,7 +1716,7 @@ export const layer = Layer.effect(
           // kilocode_change start — ephemeral context injection + post-summary
           // media strip (keeps outgoing body under the gateway body-size limit
           // even when filterCompacted couldn't trim the pre-summary history).
-          KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
+          KiloSessionPrompt.injectEditorContext({ msgs, lastUser, session, sessionID, cache: envCache })
           msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
           // kilocode_change end
 
@@ -1740,7 +1740,7 @@ export const layer = Layer.effect(
             msgs = KiloSessionPromptQueue.scope(sessionID, msgs)
             msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs)
             yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
-            KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
+            KiloSessionPrompt.injectEditorContext({ msgs, lastUser, session, sessionID, cache: envCache })
             msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
             modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
               Effect.provideService(Database.Service, database),

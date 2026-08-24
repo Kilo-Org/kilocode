@@ -11,6 +11,10 @@ const model = {
   providerID: ProviderV2.ID.make("openai"),
   modelID: ModelV2.ID.make("gpt-4"),
 }
+const session = {
+  directory: "/repo/session",
+  path: "session",
+}
 const mdl: Provider.Model = {
   id: model.modelID,
   providerID: model.providerID,
@@ -33,7 +37,7 @@ const mdl: Provider.Model = {
   release_date: "2026-01-01",
 }
 
-function user(text: string, created: number, activeFile?: string, route = "/repo/original") {
+function user(text: string, created: number, activeFile?: string, route?: string) {
   const id = MessageID.ascending()
   return {
     info: {
@@ -43,7 +47,10 @@ function user(text: string, created: number, activeFile?: string, route = "/repo
       time: { created },
       agent: "code",
       model,
-      editorContext: { directory: route, worktree: route, ...(activeFile ? { activeFile } : {}) },
+      editorContext: {
+        ...(route ? { directory: route, worktree: route } : {}),
+        ...(activeFile ? { activeFile } : {}),
+      },
     },
     parts: [{ id: PartID.ascending(), messageID: id, sessionID, type: "text" as const, text }],
   } satisfies MessageV2.WithParts
@@ -73,7 +80,7 @@ function assistant(parentID: MessageID, text: string) {
 function inject(msgs: MessageV2.WithParts[], cache: KiloSessionPrompt.EnvCache = {}) {
   const last = msgs.findLast((msg) => msg.info.role === "user")
   if (!last || last.info.role !== "user") throw new Error("missing user message")
-  KiloSessionPrompt.injectEditorContext({ msgs, lastUser: last.info, sessionID, cache })
+  KiloSessionPrompt.injectEditorContext({ msgs, lastUser: last.info, session, sessionID, cache })
 }
 
 function blocks(msg: MessageV2.WithParts) {
@@ -107,7 +114,8 @@ describe("injectEditorContext", () => {
     expect(blocks(turn2[0])[0].text).toContain("Active file: src/one.ts")
     expect(blocks(turn2[2])[0].text).toContain("Active file: src/two.ts")
     expect(blocks(turn2[0])[0].text).toContain("Message time: 2026-08-24T")
-    expect(blocks(turn2[0])[0].text).toContain("Working directory: /repo/original")
+    expect(blocks(turn2[0])[0].text).toContain("Working directory: /repo/session")
+    expect(blocks(turn2[0])[0].text).toContain("Workspace root folder: /repo")
     expect(blocks(turn2[2])[0].text).toContain("Working directory: /repo/next")
   })
 

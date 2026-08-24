@@ -363,17 +363,20 @@ export namespace KiloSessionPrompt {
   export function injectEditorContext(input: {
     msgs: MessageV2.WithParts[]
     lastUser: MessageV2.User
+    session: Pick<Session.Info, "directory" | "path">
     sessionID: SessionID
     cache: EnvCache
   }) {
-    const current = (() => {
-      try {
-        const ctx = Instance.current
-        return { directory: ctx.directory, worktree: ctx.worktree }
-      } catch {
-        return undefined
-      }
-    })()
+    const route = {
+      directory: input.session.directory,
+      worktree: path.resolve(
+        input.session.directory,
+        ...(input.session.path
+          ?.split("/")
+          .filter(Boolean)
+          .map(() => "..") ?? []),
+      ),
+    }
     input.cache.blocks ??= new Map()
     for (const msg of input.msgs) {
       if (msg.info.role !== "user") continue
@@ -387,7 +390,7 @@ export namespace KiloSessionPrompt {
         input.cache.blocks.get(msg.info.id) ??
         environmentDetails(
           {
-            ...current,
+            ...route,
             ...msg.info.editorContext,
           },
           new Date(msg.info.time.created),
