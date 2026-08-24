@@ -21,6 +21,26 @@ const layer = AppNodeBuilder.build(LayerNode.group([Pty.node, EventV2.node]), [
 ])
 const it = testEffect(layer)
 
+async function alive(pid: number) {
+  if (process.platform !== "win32") {
+    try {
+      process.kill(pid, 0)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const proc = Bun.spawn(["tasklist", "/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], {
+    stdout: "pipe",
+    stderr: "ignore",
+    windowsHide: true,
+  })
+  const output = await new Response(proc.stdout).text()
+  await proc.exited
+  return output.includes(`"${pid}"`)
+}
+
 const attach = Effect.fn("PtyPlatformTest.attach")(function* (id: Pty.Info["id"]) {
   const pty = yield* Pty.Service
   const output = yield* Queue.unbounded<string>()
@@ -70,12 +90,7 @@ describe("cross-platform PTY", () => {
       expect(pid).toBeGreaterThan(0)
 
       yield* pty.remove(info.id)
-      if (process.platform === "win32") {
-        const result = yield* Effect.promise(() => Bun.$`taskkill /pid ${pid} /f /t`.quiet().nothrow())
-        expect(result.exitCode).toBe(128)
-      } else {
-        expect(() => process.kill(pid, 0)).toThrow()
-      }
+      expect(yield* Effect.promise(() => alive(pid))).toBe(false)
     }),
   )
 })

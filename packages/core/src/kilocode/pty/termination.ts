@@ -1,4 +1,5 @@
 import { spawn } from "child_process"
+import { readdir, readFile } from "node:fs/promises"
 import { setTimeout as sleep } from "node:timers/promises"
 import type { Proc } from "../../pty/pty"
 import { Log } from "../../util/log"
@@ -87,6 +88,15 @@ function signal(proc: Process, pids: number[], value: "SIGTERM" | "SIGKILL", inp
 }
 
 async function tree(file: string = "ps", args: string[] = ["-axo", "pid=,ppid="]) {
+  if (process.platform === "linux") {
+    try {
+      const rows = await procTree()
+      if (rows.length > 0) return rows
+    } catch (err) {
+      log.debug("failed to read Linux process tree", { err })
+    }
+  }
+
   return await new Promise<Array<{ pid: number; parent: number }>>((resolve, reject) => {
     try {
       const child = spawn(file, args, {
@@ -114,6 +124,21 @@ async function tree(file: string = "ps", args: string[] = ["-axo", "pid=,ppid="]
       reject(error)
     }
   })
+}
+
+async function procTree() {
+  const entries = await readdir("/proc", { withFileTypes: true })
+  const rows = await Promise.all(
+    entries
+      .filter((entry) => entry.isDirectory() && /^\d+$/.test(entry.name))
+      .map(async (entry) => {
+        const stat = await readFile(`/proc/${entry.name}/stat`, "utf8")
+        const match = stat.match(/^\d+ \(.*\) [A-Z] (\d+)/)
+        if (!match) return
+        return { pid: Number(entry.name), parent: Number(match[1]) }
+      }),
+  )
+  return rows.filter((row): row is { pid: number; parent: number } => row !== undefined)
 }
 
 async function taskkill(file: string, args: string[], opts: { stdio: "ignore"; windowsHide: true; timeout: number }) {

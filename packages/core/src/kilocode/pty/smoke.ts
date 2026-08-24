@@ -17,7 +17,8 @@ export async function smoke() {
   const exited = Promise.withResolvers<number>()
   const data = proc.onData((chunk) => {
     state.output += chunk
-    if (state.output.includes("KILO_PTY_READY")) output.resolve()
+    const lines = state.output.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "").split(/\r?\n/)
+    if (lines.some((line) => line.trim() === "KILO_PTY_READY")) output.resolve()
   })
   const exit = proc.onExit((event) => {
     state.exited = true
