@@ -63,7 +63,6 @@ export interface SidebarBodyProps {
   onNewWorktree: () => void
   onNewSection: () => void
   onShortcuts: () => void
-  projectId?: string
   sections: () => SectionState[]
   sortedWorktrees: () => WorktreeState[]
   worktrees: () => WorktreeState[]

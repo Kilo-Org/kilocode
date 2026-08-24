@@ -673,6 +673,12 @@ interface RenameWorktreeIn {
   label: string
 }
 
+interface OpenSettingsPanelIn {
+  type: "openSettingsPanel"
+  tab?: string
+  projectId?: string
+}
+
 interface RequestStateIn {
   type: "agentManager.requestState"
 }
@@ -1093,6 +1099,7 @@ export type AgentManagerInMessage =
   | RequestRepoInfoIn
   | CreateMultiVersionIn
   | RenameWorktreeIn
+  | OpenSettingsPanelIn
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn

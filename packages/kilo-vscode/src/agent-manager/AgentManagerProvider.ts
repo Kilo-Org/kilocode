@@ -72,12 +72,10 @@ import { PLATFORM } from "./constants"
 import { ProjectRegistry } from "./project/registry"
 import type { ProjectContext } from "./project/context"
 import { ProjectContexts } from "./project/contexts"
-import { createSettingsHandler } from "./project/settings"
-import type { SettingsHandler } from "./project/settings"
 import { hydrateExpanded } from "./project/hydrate"
 import { createMultiVersion, type MultiVersionHost } from "./provider-multi-version"
 import { handleProjectMessage, type ProjectMessageDeps } from "./project/messages"
-import { createProjectWiring } from "./project/wiring"
+import { createProjectWiring, type ProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
@@ -118,11 +116,9 @@ export class AgentManagerProvider implements Disposable {
   private destination = new DestinationState()
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
-  // Tracks sessions owned by this panel until they are explicitly closed.
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
-  public readonly settings: SettingsHandler
-
+  readonly settings: ProjectWiring["settings"]
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
   private visiblePresence = new AgentManagerVisiblePresence(
@@ -198,18 +194,13 @@ export class AgentManagerProvider implements Disposable {
       expand: (ctx) => this.initExpanded(ctx),
       ready: (ctx) => initContextState(ctx, (...args) => this.log(...args)),
       push: () => this.pushProjects(),
+      pushState: (ctx) => this.pushState(ctx),
       changed: () => this.onWorkspaceChanged(),
-      refresh: () => this.pushState(),
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
     })
     this.registry = wiring.registry
     this.contexts = wiring.contexts
-    this.settings = createSettingsHandler({
-      contexts: this.contexts,
-      open: (path) => this.host.openDocument(path),
-      push: (ctx) => this.pushState(ctx),
-      log: (...args) => this.log(...args),
-    })
+    this.settings = wiring.settings
     this.projects = wiring.messages
     this.unsubProjects = () => wiring.dispose()
     this.naming = new BranchNamingController({
@@ -518,13 +509,6 @@ export class AgentManagerProvider implements Disposable {
   // Message interceptor
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
-    if (msg.type === "openSettingsPanel") {
-      this.host.openSettings(
-        typeof msg.tab === "string" ? msg.tab : undefined,
-        typeof msg.projectId === "string" ? msg.projectId : undefined,
-      )
-      return null
-    }
     if (this.prBridge.handleMessage(msg)) return null
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }
