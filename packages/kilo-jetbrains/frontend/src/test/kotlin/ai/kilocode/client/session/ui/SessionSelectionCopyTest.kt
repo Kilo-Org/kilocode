@@ -143,6 +143,21 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         assertSame(target, item)
     }
 
+    fun `test hover copy resolver prefers innermost target that owns a toolbar`() {
+        val root = JPanel(null)
+        val outer = InlineTarget(JPanel(), JPanel())
+        val inner = InlineTarget(JPanel(), JPanel())
+        root.setBounds(0, 0, 100, 100)
+        outer.setBounds(10, 10, 80, 80)
+        inner.setBounds(5, 5, 20, 20)
+        root.add(outer)
+        outer.add(inner)
+
+        val item = SessionTargetResolver.copy(root, root, Point(20, 20))
+
+        assertSame(inner, item)
+    }
+
     fun `test code block hover copy target copies full content despite selection`() {
         showText("```text\nalpha code\n```")
         val field = textEditors(ui).first { it.text.contains("alpha code") }

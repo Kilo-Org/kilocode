@@ -11,6 +11,7 @@ import ai.kilocode.client.ui.diagram.FontSpec
 import ai.kilocode.client.ui.diagram.Out
 import ai.kilocode.client.ui.diagram.Palette
 import ai.kilocode.client.ui.diagram.Spec
+import ai.kilocode.client.ui.diagram.ui.DiagramBlock
 import ai.kilocode.client.ui.diagram.ui.DiagramPanel
 import ai.kilocode.client.ui.diagram.ui.Diagrams
 import ai.kilocode.client.ui.layout.Stack
@@ -977,9 +978,10 @@ internal open class MdViewHybrid(
     }
 
     private inner class DiagramView(desc: Desc.Code, kind: Kind.Diagram, disposable: Disposable) :
-        View(desc, Stack.vertical(gap = UiStyle.Gap.sm()), disposable) {
-        private val root = component as Stack
+        View(desc, DiagramBlock(), disposable) {
+        private val root = component as DiagramBlock
         private val codePane = codeBlock(desc.text, Kind.Source(kind.file), disposable)
+        private val panel = DiagramPanel(palette(opts()))
         private val toggle = HyperlinkLabel(KiloBundle.message("diagram.diagram"))
         private val label = JBLabel(KiloBundle.message("diagram.rendering")).apply {
             foreground = SessionUiStyle.Text.Secondary.foreground()
@@ -988,13 +990,18 @@ internal open class MdViewHybrid(
             next(toggle)
             next(label)
         }
-        private var panel: DiagramPanel? = null
         private var hash = 0
         private var gen = 0
         private var font = spec().font
 
         init {
-            root.next(codePane).next(row)
+            // Children keep a fixed order — the diagram above its source, both above the toggle row —
+            // because Stack lays children out in insertion order and ignores add() indexes. Switching
+            // between diagram and source flips visibility instead of re-adding components.
+            panel.background = opts().preBg
+            panel.isVisible = false
+            root.next(panel).next(codePane).next(row)
+            root.text = { (this.desc as Desc.Code).text }
             toggle.addHyperlinkListener { toggle() }
             kick()
         }
@@ -1004,9 +1011,7 @@ internal open class MdViewHybrid(
         override fun update(desc: Desc) {
             if (this.desc == desc) return
             this.desc = desc
-            val item = desc as Desc.Code
-            panel?.source(item.text)
-            updateCode(item.text)
+            updateCode((desc as Desc.Code).text)
             kick()
         }
 
@@ -1030,8 +1035,8 @@ internal open class MdViewHybrid(
                 sizeCodeField(view, fieldText(view))
                 sizeCodePane(codePane, view)
             }
-            panel?.background = opts.preBg
-            panel?.palette(palette(opts))
+            panel.background = opts.preBg
+            panel.palette(palette(opts))
             val next = spec().font
             if (font == next) return
             font = next
@@ -1068,12 +1073,7 @@ internal open class MdViewHybrid(
         }
 
         private fun ok(out: Out.Ok) {
-            val pane = panel ?: DiagramPanel((desc as Desc.Code).text, palette(opts())).also {
-                it.background = opts().preBg
-                panel = it
-            }
-            pane.art(out.art)
-            if (pane.parent == null) root.add(pane, 0)
+            panel.art(out.art)
             showDiagram()
             label.text = ""
             root.revalidate()
@@ -1090,22 +1090,20 @@ internal open class MdViewHybrid(
         }
 
         private fun toggle() {
-            if (panel?.parent === root && codePane.parent == null) showSource() else showDiagram()
+            if (panel.isVisible) showSource() else showDiagram()
             root.revalidate()
             root.repaint()
         }
 
         private fun showDiagram() {
-            val pane = panel ?: return
-            if (pane.parent == null) root.add(pane, 0)
-            if (codePane.parent === root) root.remove(codePane)
+            panel.isVisible = true
+            codePane.isVisible = false
             toggle.setHyperlinkText(KiloBundle.message("diagram.source"))
         }
 
         private fun showSource() {
-            val pane = panel
-            if (pane?.parent === root) root.remove(pane)
-            if (codePane.parent == null) root.add(codePane, 0)
+            panel.isVisible = false
+            codePane.isVisible = true
             toggle.setHyperlinkText(KiloBundle.message("diagram.diagram"))
         }
 

@@ -69,8 +69,12 @@ internal object SessionTargetResolver {
             if (current is SessionCopyTarget && current.copyEligible) targets.add(current)
             current = current.parent
         }
-        val toolbar = targets.indexOfFirst { it.copyToolbar != null }
-        if (toolbar > 0) return targets.take(toolbar).firstOrNull { it.copyToolbar == null }
+        val own = targets.indexOfFirst { it.copyToolbar != null }
+        // The deepest target under the pointer wins when it brings its own toolbar (rendered
+        // diagram); a toolbar-owning ancestor instead yields to a plain inner target (code block),
+        // and plain targets anchor on the outermost one for a stable hover position.
+        if (own == 0) return targets.first()
+        if (own > 0) return targets.take(own).firstOrNull { it.copyToolbar == null }
         return targets.lastOrNull()
     }
 }

@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 class DiagramPanelTest {
     @Test
     fun `test panel fits width and caps height`() {
-        val panel = DiagramPanel("source", palette())
+        val panel = DiagramPanel(palette())
         panel.setSize(100, 1)
         panel.art(scene(300.0, 100.0))
 
@@ -32,20 +32,13 @@ class DiagramPanelTest {
     }
 
     @Test
-    fun `test copy returns source`() {
-        val panel = DiagramPanel("flowchart TD", palette())
+    fun `test block copies fence text and offers copy plus open in editor`() {
+        val block = DiagramBlock()
+        block.text = { "flowchart TD" }
 
-        assertEquals("flowchart TD", panel.copyText())
-        panel.source("sequenceDiagram")
-        assertEquals("sequenceDiagram", panel.copyText())
-    }
+        val buttons = buttons(block.copyToolbar)
 
-    @Test
-    fun `test hover toolbar offers copy and open in editor`() {
-        val panel = DiagramPanel("flowchart TD", palette())
-
-        val buttons = buttons(panel.copyToolbar)
-
+        assertEquals("flowchart TD", block.copyText())
         assertEquals(2, buttons.size)
         assertTrue(buttons.any { it.toolTipText == KiloBundle.message("diagram.open") })
         assertTrue(buttons.any { it.toolTipText == KiloBundle.message("session.copy.hover") })

@@ -1,5 +1,7 @@
 package ai.kilocode.client.ui.md
 
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
+import ai.kilocode.client.session.ui.selection.SessionTargetResolver
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.ui.diagram.Engine
 import ai.kilocode.client.ui.diagram.Mark
@@ -10,6 +12,7 @@ import ai.kilocode.client.ui.diagram.Scene
 import ai.kilocode.client.ui.diagram.Size
 import ai.kilocode.client.ui.diagram.Spec
 import ai.kilocode.client.ui.diagram.Type
+import ai.kilocode.client.ui.diagram.ui.DiagramBlock
 import ai.kilocode.client.ui.diagram.ui.DiagramPanel
 import ai.kilocode.client.ui.diagram.ui.Diagrams
 import com.intellij.openapi.application.ApplicationManager
@@ -17,8 +20,9 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
-import com.intellij.ui.EditorTextField
+import com.intellij.ui.HyperlinkLabel
 import com.intellij.util.ui.UIUtil
+import java.awt.Point
 import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
@@ -44,13 +48,45 @@ class MdViewDiagramTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test mermaid fence renders and hides source`() {
+    fun `test mermaid fence renders above toggle row and hides source`() {
         view.set("```mermaid\nflowchart TD\nA-->B\n```")
         drain()
 
-        assertEquals(1, diagrams().size)
-        assertEquals(0, editors().size)
+        val children = block().components.toList()
+
         assertEquals(1, engine.calls)
+        assertSame(diagram(), children.first())
+        assertSame(row(), children.last())
+        assertTrue(diagram().isVisible)
+        assertFalse(codePane().isVisible)
+    }
+
+    fun `test block is the hover target and copies the fence text`() {
+        view.set("```mermaid\nflowchart TD\nA-->B\n```")
+        drain()
+        block().setSize(400, 200)
+        block().doLayout()
+
+        val target = SessionTargetResolver.copy(block(), diagram(), Point(1, 1))
+
+        assertSame(block(), target)
+        assertEquals("flowchart TD\nA-->B\n", block().copyText())
+        assertSame(block().copyToolbar, (target as SessionCopyTarget).copyToolbar)
+    }
+
+    fun `test toggle switches between diagram and source`() {
+        view.set("```mermaid\nflowchart TD\nA-->B\n```")
+        drain()
+
+        toggle().doClick()
+
+        assertFalse(diagram().isVisible)
+        assertTrue(codePane().isVisible)
+
+        toggle().doClick()
+
+        assertTrue(diagram().isVisible)
+        assertFalse(codePane().isVisible)
     }
 
     fun `test engine error keeps source visible`() {
@@ -59,8 +95,8 @@ class MdViewDiagramTest : BasePlatformTestCase() {
         view.set("```mermaid\nflowchart TD\nA-->\n```")
         drain()
 
-        assertEquals(0, diagrams().size)
-        assertEquals(1, editors().size)
+        assertFalse(diagram().isVisible)
+        assertTrue(codePane().isVisible)
         assertTrue(labels().contains("bad syntax"))
     }
 
@@ -71,13 +107,14 @@ class MdViewDiagramTest : BasePlatformTestCase() {
         drain()
 
         assertEquals(0, engine.calls)
-        assertEquals(1, editors().size)
+        assertTrue(codePane().isVisible)
+        assertFalse(diagram().isVisible)
 
         view.append("```")
         drain()
 
         assertEquals(1, engine.calls)
-        assertEquals(1, diagrams().size)
+        assertTrue(diagram().isVisible)
     }
 
     fun `test repeated set retains diagram view and does not leak editors`() {
@@ -85,12 +122,15 @@ class MdViewDiagramTest : BasePlatformTestCase() {
 
         view.set("```mermaid\nflowchart TD\nA-->B\n```")
         drain()
-        val panel = diagramContainers().single()
+        val block = block()
+        val panel = diagram()
 
         repeat(50) { i ->
             view.set("```mermaid\nflowchart TD\nA-->B$i\n```")
             drain()
-            assertSame(panel, diagramContainers().single())
+            assertSame(block, block())
+            assertSame(panel, diagram())
+            assertEquals(3, block().components.size)
         }
 
         view.clear()
@@ -103,11 +143,15 @@ class MdViewDiagramTest : BasePlatformTestCase() {
 
     private fun root() = view.component as JPanel
 
-    private fun diagramContainers() = root().components.filterIsInstance<ai.kilocode.client.ui.layout.Stack>()
+    private fun block() = descendants(root()).filterIsInstance<DiagramBlock>().single()
 
-    private fun diagrams() = descendants(root()).filterIsInstance<DiagramPanel>()
+    private fun diagram() = descendants(root()).filterIsInstance<DiagramPanel>().single()
 
-    private fun editors() = descendants(root()).filterIsInstance<EditorTextField>()
+    private fun codePane() = block().components[1]
+
+    private fun row() = block().components.last()
+
+    private fun toggle() = descendants(root()).filterIsInstance<HyperlinkLabel>().single()
 
     private fun labels() = descendants(root()).joinToString("\n") { (it as? javax.swing.JLabel)?.text.orEmpty() }
 
