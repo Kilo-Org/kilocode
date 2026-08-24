@@ -68,6 +68,7 @@ import {
   reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
+  revertPromptState,
   upsertSessionToolPart,
   type MessageMutation,
   type MessagePageState,
@@ -2821,31 +2822,16 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (!id) return
     clearClose(id)
-    // Restore the reverted user message's prompt text into the input.
-    // Dispatch as a window message so PromptInput picks it up via onMessage.
-    const parts = store.parts[messageID]
-    if (parts) {
-      const text = parts
-        .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
-        .map((p) => (p as { text: string }).text ?? "")
-        .join("")
-      // Pass the original attachments' exact paths alongside the restored text
-      // so PromptInput can seed them directly rather than re-deriving mentions
-      // from the text via regex, which truncates at the first space in a
-      // filename (see PromptInput's setChatBoxMessage handler).
-      const paths = parts
-        .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
-        .map((p) => p.source?.path)
-        .filter((p): p is string => !!p && !p.startsWith("session:"))
-      const sessions = parts
-        .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
-        .filter((p) => p.url.startsWith("session:"))
-        .map((p) => ({
-          id: p.url.slice("session:".length),
-          title: p.source?.text?.value.replace(/^@/, "") ?? p.filename ?? p.url,
-          updated: 0,
-        }))
-      if (text) window.postMessage({ type: "setChatBoxMessage", text, paths, sessions }, "*")
+    // Restore the reverted user message's prompt text and attachments into the
+    // input. Dispatch as a window message so PromptInput picks it up via onMessage.
+    const state = revertPromptState(getParts(messageID))
+    const { text, paths, sessions, images } = state
+    // Paths carry the attachments' exact locations so PromptInput can seed them
+    // directly rather than re-deriving mentions from the text via regex, which
+    // truncates at the first space in a filename (see PromptInput's
+    // setChatBoxMessage handler).
+    if (text || paths.length > 0 || sessions.length > 0 || images.length > 0) {
+      window.postMessage({ type: "setChatBoxMessage", text, paths, sessions, images }, "*")
     }
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
@@ -2854,7 +2840,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (!id) return
     // Clear the prompt input on full redo (matching TUI/desktop behavior)
-    window.postMessage({ type: "setChatBoxMessage", text: "" }, "*")
+    window.postMessage({ type: "setChatBoxMessage", text: "", images: [] }, "*")
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 

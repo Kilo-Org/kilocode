@@ -724,6 +724,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         textareaRef.value = message.text
         adjustHeight()
       }
+      // When present, images are authoritative: replace current attachments
+      // (an empty array clears them, e.g. on redo). Absent leaves them alone.
+      if (message.images) {
+        const imgs = message.images.map((img) => ({
+          id: crypto.randomUUID(),
+          filename: img.filename ?? "image",
+          mime: img.mime,
+          dataUrl: img.dataUrl,
+        }))
+        imageAttach.replace(imgs)
+        imageDrafts.set(draftKey(), imgs)
+      }
     }
 
     if (message.type === "appendChatBoxMessage") {

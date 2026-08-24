@@ -309,6 +309,13 @@ export interface ActionMessage {
   action: string
 }
 
+/** Image attachment carried back into the prompt input when restoring a message. */
+export interface RestoredImage {
+  dataUrl: string
+  mime: string
+  filename?: string
+}
+
 export interface SetChatBoxMessage {
   type: "setChatBoxMessage"
   text: string
@@ -322,6 +329,12 @@ export interface SetChatBoxMessage {
   paths?: string[]
   /** Past chats referenced by the restored message, seeded the same way as paths. */
   sessions?: SessionSearchItem[]
+  /**
+   * Images attached to the restored message. Present means authoritative:
+   * PromptInput replaces its current attachments with this list (an empty
+   * array clears them); absent leaves current attachments untouched.
+   */
+  images?: RestoredImage[]
 }
 
 export interface AppendChatBoxMessage {
