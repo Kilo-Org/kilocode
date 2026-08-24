@@ -363,18 +363,27 @@ async function blocked(input: Target, dir: string, name: string): Promise<string
     input.client.permission.list({ directory: dir }),
     input.client.question.list({ directory: dir }),
   ])
-  const mine = (qs.error ? [] : (qs.data ?? [])).filter((value) => value.sessionID === input.sessionID)
+  if (perms.error || qs.error)
+    throw new OrchestrationError("host_error", "The managed session blockers could not be read")
+  const mine = (qs.data ?? []).filter((value) => value.sessionID === input.sessionID)
   const first = mine[0]
   if (first) {
-    const info = first.questions[0]
-    const labels = (info?.options ?? []).slice(0, 8).map((option) => option.label)
-    const detail = info
-      ? ` asking "${truncate(info.question, 200)}"${labels.length ? ` (options: ${labels.join(", ")})` : ""}`
-      : ""
-    const more = mine.length > 1 ? ` ${mine.length} questions are pending; answer each in order.` : ""
-    return `The managed session ${input.sessionID} ("${name}") is waiting for an answer to question ${first.id}${detail}. Call agent_manager with action "answer", sessionID "${input.sessionID}", questionID "${first.id}", and one label array per question before prompting.${more}`
+    const detail = mine
+      .map((value) => {
+        const list = value.questions
+          .map((info, index) => {
+            const labels = info.options.slice(0, 8).map((option) => option.label)
+            return `${index + 1}. "${truncate(info.question, 200)}"${labels.length ? ` (options: ${labels.join(", ")})` : ""}`
+          })
+          .join("; ")
+        return `questionID "${value.id}": ${list}`
+      })
+      .join(" | ")
+    const count = first.questions.length
+    const more = mine.length > 1 ? ` Pending request IDs: ${mine.map((value) => value.id).join(", ")}.` : ""
+    return `The managed session ${input.sessionID} ("${name}") is waiting for input. Pending question requests: ${detail}. Call agent_manager with action "answer", sessionID "${input.sessionID}", questionID "${first.id}", and one label array per question in that request (${count} total), in order, before prompting.${more}`
   }
-  if ((perms.error ? [] : (perms.data ?? [])).some((value) => value.sessionID === input.sessionID)) {
+  if ((perms.data ?? []).some((value) => value.sessionID === input.sessionID)) {
     return `The managed session ${input.sessionID} ("${name}") has a pending permission request; resolve it in Agent Manager before prompting`
   }
   return undefined

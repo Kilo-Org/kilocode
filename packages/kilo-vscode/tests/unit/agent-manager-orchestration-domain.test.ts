@@ -251,6 +251,14 @@ describe("Agent Manager orchestration domain", () => {
             { label: "No", description: "Wait" },
           ],
         },
+        {
+          header: "Region",
+          question: "Which region should receive the deployment?",
+          options: [
+            { label: "US", description: "Deploy to the US" },
+            { label: "EU", description: "Deploy to the EU" },
+          ],
+        },
       ],
     }
     const client = {
@@ -288,8 +296,36 @@ describe("Agent Manager orchestration domain", () => {
     expect(failure?.message).toContain('questionID "que_1"')
     expect(failure?.message).toContain('"Should I deploy to production now?"')
     expect(failure?.message).toContain("(options: Yes, No)")
+    expect(failure?.message).toContain('"Which region should receive the deployment?"')
+    expect(failure?.message).toContain("(options: US, EU)")
+    expect(failure?.message).toContain("one label array per question in that request (2 total)")
     expect(client.question.list).toHaveBeenCalledTimes(2)
     expect(promptAsync).not.toHaveBeenCalled()
+  })
+
+  it("fails closed when pending blocker state cannot be read", async () => {
+    const managed = state.addWorktree({ branch: "fix/blocker-error", path: worktree, parentBranch: "main" })
+    state.addSession("ses_blocker_error", managed.id)
+    const client = {
+      session: {
+        get: mock(async () => ({
+          data: { id: "ses_blocker_error", directory: worktree, title: "Blocker error" } as Session,
+        })),
+      },
+      permission: {
+        list: mock(async () => ({ error: { message: "offline" } })),
+      },
+      question: {
+        list: mock(async () => ({ data: noQuestions })),
+      },
+    } as unknown as KiloClient
+
+    await expect(
+      prompt({ client, root, state, sessionID: "ses_blocker_error", text: "Continue", messageID: "amr_error" }),
+    ).rejects.toMatchObject({
+      code: "host_error",
+      message: "The managed session blockers could not be read",
+    } satisfies Partial<OrchestrationError>)
   })
 
   it("rejects unknown, stale, cross-workspace, and busy targets", async () => {
