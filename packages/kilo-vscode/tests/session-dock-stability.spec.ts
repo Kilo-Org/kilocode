@@ -81,23 +81,41 @@ test("only one of the two states is visible in the dock", async ({ page }) => {
   await expect(page.locator('[data-component="session-dock"] .new-task-button-wrapper')).toBeHidden()
 })
 
-test("keeps the prompt flush with the working indicator", async ({ page }) => {
+/**
+ * The dock owns the space above the composer. A gutter left on only one of its
+ * two states put a gap under the actions row that the working indicator did not
+ * have, so the row moved by that gutter on every turn boundary.
+ */
+test("both dock states sit flush on the prompt", async ({ page }) => {
   await openStory(page)
+
+  const measure = async () => {
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+    return page.evaluate(() => {
+      const dock = document.querySelector('[data-component="session-dock"]')
+      const prompt = document.querySelector(".chat-input > .prompt-input-container")
+      if (!(dock instanceof HTMLElement) || !(prompt instanceof HTMLElement)) throw new Error("dock or prompt missing")
+      return {
+        gap: prompt.getBoundingClientRect().top - dock.getBoundingClientRect().bottom,
+        top: prompt.getBoundingClientRect().top,
+        margin: getComputedStyle(prompt).marginTop,
+      }
+    })
+  }
+
+  await expect(page.locator('[data-component="session-dock"] .new-task-button-wrapper')).toBeVisible()
+  const idle = await measure()
+
   await page.getByTestId("toggle-busy").click()
   await expect(page.locator('[data-component="session-dock"] .working-indicator')).toBeVisible()
+  const working = await measure()
 
-  const gap = await page.evaluate(() => {
-    const dock = document.querySelector('[data-component="session-dock"]')
-    const prompt = document.querySelector(".chat-input > .prompt-input-container")
-    if (!(dock instanceof HTMLElement) || !(prompt instanceof HTMLElement)) throw new Error("dock or prompt missing")
-    return {
-      gap: prompt.getBoundingClientRect().top - dock.getBoundingClientRect().bottom,
-      marginTop: getComputedStyle(prompt).marginTop,
-    }
-  })
-
-  expect(gap.gap).toBe(0)
-  expect(gap.marginTop).toBe("0px")
+  expect(idle.gap).toBe(0)
+  expect(working.gap).toBe(0)
+  expect(idle.margin).toBe("0px")
+  expect(working.margin).toBe("0px")
+  // Same spacing on both sides of the swap, so the composer cannot jump.
+  expect(working.top).toBe(idle.top)
 })
 
 test("the indicator stays a centered lane on a wide surface", async ({ page }) => {

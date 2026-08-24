@@ -14,13 +14,12 @@
   width: 100%;
 }
 
-/* Replace the working row's top gutter with padding above the dock. This keeps
-   the composer height stable while the spinner remains flush with the prompt. */
-.chat-input:has(> .session-dock > .session-dock-state:first-child[data-active]) {
-  padding-top: var(--prompt-gutter);
-}
-
-.chat-input > .session-dock:has(> .session-dock-state:first-child[data-active]) + .prompt-input-container {
+/* A visible dock owns the spacing above the composer, so both of its states sit
+   flush on the prompt and swapping the working indicator for the actions row
+   cannot move either of them. The dock is hidden rather than unmounted while
+   idle, so this must not match the inactive row: the composer keeps its own
+   gutter there. */
+.chat-input > .session-dock[data-active] + .prompt-input-container {
   margin-top: 0;
 }
 
