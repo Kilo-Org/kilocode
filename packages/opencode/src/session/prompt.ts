@@ -138,14 +138,10 @@ function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (
-    input: PromptInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error>
+  readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error>
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
-  readonly command: (
-    input: CommandInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
+  readonly command: (input: CommandInput) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -837,6 +833,8 @@ export const layer = Layer.effect(
         (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
       // kilocode_change end
 
+      // kilocode_change start - freeze the route used by dynamic editor context and reuse it for references
+      const ctx = yield* InstanceState.context
       const info: SessionV1.User = {
         id: input.messageID ?? MessageID.ascending(),
         role: "user",
@@ -851,7 +849,7 @@ export const layer = Layer.effect(
         },
         system: input.system,
         format: input.format,
-        editorContext: input.editorContext, // kilocode_change
+        editorContext: { ...input.editorContext, directory: ctx.directory, worktree: ctx.worktree },
       }
 
       const current = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
@@ -881,12 +879,12 @@ export const layer = Layer.effect(
         id: part.id ? PartID.make(part.id) : PartID.ascending(),
       })
 
-      const ctx = yield* InstanceState.context // kilocode_change - resolve V1 reference roots for attachment authorization
       const references = KiloConfiguredReference.resolveAll({
         references: (yield* config.get()).reference ?? {},
         directory: ctx.directory,
         worktree: ctx.worktree,
       }).filter((item) => item.kind !== "invalid")
+      // kilocode_change end
 
       const referenceContextFromFilePart = Effect.fnUntraced(function* (
         part: Extract<PromptInput["parts"][number], { type: "file" }>,
@@ -2518,7 +2516,10 @@ export const PromptInput = Schema.Struct({
 // `parts` type from the exported Schema input types so callers see a proper
 // tagged union.
 type PartInputUnion =
-  MessageV2.TextPartInput | MessageV2.FilePartInput | MessageV2.AgentPartInput | MessageV2.SubtaskPartInput
+  | MessageV2.TextPartInput
+  | MessageV2.FilePartInput
+  | MessageV2.AgentPartInput
+  | MessageV2.SubtaskPartInput
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext
