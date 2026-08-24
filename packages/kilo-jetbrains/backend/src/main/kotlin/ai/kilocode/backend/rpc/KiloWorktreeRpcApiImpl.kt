@@ -610,7 +610,7 @@ internal fun parsePrHeadRef(raw: String): String {
 
 private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
 private val codec = MapSerializer(String.serializer(), String.serializer())
-private const val WORKTREE_NAMES_FILE = "worktree-names.json"
+private const val WORKTREE_NAMES_FILE = "jetbrains.json"
 
 @Serializable
 private data class WorktreeNamesFile(

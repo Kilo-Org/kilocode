@@ -146,7 +146,7 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `worktree names store round trips and tolerates missing or corrupt files`() {
-        val file = repo.resolve(".kilo").resolve("worktree-names.json")
+        val file = repo.resolve(".kilo").resolve("jetbrains.json")
 
         assertTrue(readWorktreeNames(file).isEmpty())
         writeWorktreeNames(file, mapOf("/repo/.kilo/worktrees/feature-x" to "Feature Label", "/blank" to ""))
@@ -160,7 +160,7 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `worktree state round trips and migrates legacy names`() {
-        val file = repo.resolve(".kilo").resolve("worktree-names.json")
+        val file = repo.resolve(".kilo").resolve("jetbrains.json")
         val first = "/repo/.kilo/worktrees/zebra"
         val second = "/repo/.kilo/worktrees/alpha"
 
@@ -241,7 +241,7 @@ class KiloWorktreeRpcApiImplTest {
 
         val listed = api.list(repo.toString()).worktrees.filter { !it.main }
         assertEquals(listOf(first.path, second.path), listed.map { it.path })
-        assertEquals(listOf(first.path, second.path), readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json")).worktreeOrder)
+        assertEquals(listOf(first.path, second.path), readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).worktreeOrder)
     }
 
     @Test
@@ -256,7 +256,7 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(listOf(second.path, first.path), listed.map { it.path })
         assertEquals(
             listOf(second.path, first.path),
-            readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json")).worktreeOrder,
+            readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).worktreeOrder,
         )
     }
 
@@ -268,7 +268,7 @@ class KiloWorktreeRpcApiImplTest {
 
         assertTrue(api.reorder(repo.toString(), listOf("/does/not/exist", second.path)))
 
-        val order = readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json")).worktreeOrder
+        val order = readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).worktreeOrder
         assertEquals(listOf(second.path, first.path), order)
     }
 
@@ -288,7 +288,7 @@ class KiloWorktreeRpcApiImplTest {
         val removed = api.remove(repo.toString(), first.path, first.branch)
 
         assertTrue(removed.ok, "remove should report success: ${removed.error}")
-        val state = readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json"))
+        val state = readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json"))
         assertEquals(mapOf(second.path to "Second"), state.names)
         assertEquals(listOf(second.path), state.worktreeOrder)
     }
@@ -304,7 +304,7 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("Feature Label", assertNotNull(renamed.worktree).name)
         val listed = api.list(repo.toString()).worktrees.single { it.path == created.path }
         assertEquals("Feature Label", listed.name)
-        assertEquals(mapOf(created.path to "Feature Label"), readWorktreeNames(repo.resolve(".kilo").resolve("worktree-names.json")))
+        assertEquals(mapOf(created.path to "Feature Label"), readWorktreeNames(repo.resolve(".kilo").resolve("jetbrains.json")))
     }
 
     @Test
@@ -318,7 +318,7 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("Fix login bug", assertNotNull(adopted.worktree).name)
         val listed = api.list(repo.toString()).worktrees.single { it.path == created.path }
         assertEquals("Fix login bug", listed.name)
-        assertEquals(mapOf(created.path to "Fix login bug"), readWorktreeNames(repo.resolve(".kilo").resolve("worktree-names.json")))
+        assertEquals(mapOf(created.path to "Fix login bug"), readWorktreeNames(repo.resolve(".kilo").resolve("jetbrains.json")))
     }
 
     @Test
