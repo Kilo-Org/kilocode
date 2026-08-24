@@ -367,11 +367,29 @@ function isLikelyChatGPTSubscription(model: Provider.Model): boolean {
   return model.providerID === "openai" && model.cost?.input === 0 && model.cost?.output === 0
 }
 
-function supportsPromptCacheBreakpoint(model: Provider.Model): boolean {
+// Endpoint overrides (options.endpoint / options.baseURL) reroute a first-party
+// provider ID through a proxy that may reject prompt_cache_breakpoint (#13285).
+function isFirstPartyBreakpointEndpoint(model: Provider.Model, options: Record<string, unknown>): boolean {
+  const override = options["providerEndpointOverride"] ?? options["endpoint"] ?? options["baseURL"]
+  if (typeof override !== "string" || override.length === 0) return true
+  let host: string
+  try {
+    host = new URL(override).hostname.toLowerCase()
+  } catch {
+    return false
+  }
+  if (model.providerID === "openai") return host === "openai.com" || host.endsWith(".openai.com")
+  if (model.providerID === "azure")
+    return [".azure.com", ".azure.us", ".azure.cn", ".azure-api.net"].some((s) => host.endsWith(s))
+  return false
+}
+
+function supportsPromptCacheBreakpoint(model: Provider.Model, options: Record<string, unknown> = {}): boolean {
   if (isLikelyChatGPTSubscription(model)) return false
   // Only first-party OpenAI-family deployments support explicit breakpoints;
   // custom @ai-sdk/openai endpoints reject prompt_cache_breakpoint (#13285).
   if (!["openai", "azure", "kilo"].includes(model.providerID)) return false
+  if (!isFirstPartyBreakpointEndpoint(model, options)) return false
   const match = model.api.id.match(/gpt-(\d+)\.(\d+)/)
   if (match) {
     const major = Number(match[1])
@@ -384,7 +402,7 @@ function supportsPromptCacheBreakpoint(model: Provider.Model): boolean {
 }
 // kilocode_change end
 
-function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
+function applyCaching(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown> = {}): ModelMessage[] {
   const system = msgs.filter((msg) => msg.role === "system").slice(0, 2)
   const final = msgs.filter((msg) => msg.role !== "system").slice(-2)
 
@@ -408,7 +426,7 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
       cacheControl: { type: "ephemeral" },
     },
     // kilocode_change start
-    ...(supportsPromptCacheBreakpoint(model)
+    ...(supportsPromptCacheBreakpoint(model, options)
       ? {
           openai: {
             promptCacheBreakpoint: { mode: "explicit" },
@@ -539,11 +557,11 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
       ((model.api.npm === "@ai-sdk/openai" ||
         model.api.npm === "@ai-sdk/azure" ||
         model.api.npm === "@kilocode/kilo-gateway") &&
-        supportsPromptCacheBreakpoint(model))) &&
+        supportsPromptCacheBreakpoint(model, options))) &&
     model.api.npm !== "@ai-sdk/gateway" &&
     !usesAnthropicAutomaticCaching
   ) {
-    msgs = applyCaching(msgs, model)
+    msgs = applyCaching(msgs, model, options)
   }
   // kilocode_change end
 

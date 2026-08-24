@@ -314,6 +314,7 @@ const live: Layer.Layer<
           topK: prepared.params.topK,
           maxOutputTokens: prepared.params.maxOutputTokens,
           providerOptions: prepared.params.options,
+          messageTransformOptions: prepared.messageTransformOptions, // kilocode_change
           headers: prepared.headers,
           abort: input.abort,
         })
