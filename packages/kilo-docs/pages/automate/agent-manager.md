@@ -35,6 +35,16 @@ The panel opens as an editor tab and stays active across focus changes.
 - Use a git repository for worktree features
 - Open the main repository, not an existing worktree checkout, when creating new worktrees
 
+## Project-scoped settings
+
+Agent Manager worktree defaults belong to a repository. Open a project's settings button, then select the **Agent Manager** tab in Kilo Settings. The repository selector controls which project's default base branch and setup script you edit.
+
+- **Automatic selection:** Opening settings from a project selects that repository. When you open the settings tab directly, Agent Manager restores the last selected repository if it is still listed, or uses the current workspace repository.
+- **Explicit selection:** Choose another repository from the **Project** selector before changing its settings. The **Default Base Branch** control uses **Auto-detect** by default, or you can choose a specific branch. The selected value is saved for that repository and is used when creating new worktrees.
+- **Stale branches:** If a saved default branch no longer exists, Agent Manager clears it when it refreshes the repository's branch list and returns to **Auto-detect**. Choose a new branch to set an explicit default again.
+
+The **Worktree Setup Script** control opens or creates the setup script for the selected repository. See [Setup Scripts](#setup-scripts) for supported filenames and execution behavior.
+
 ## Providers and Authentication
 
 Agent Manager uses the same sign-in, provider settings, models, BYOK keys, custom providers, MCP servers, and permission rules as the extension sidebar. Configure them from extension Settings and they apply to Agent Manager as well.
