@@ -4036,7 +4036,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cancelRetry(sid)
     const client = this.client
     if (!client) return Promise.resolve(false)
-    return this.aborts.stop(client, sid, this.getWorkspaceDirectory(sid))
+    const directory = this.getWorkspaceDirectory(sid)
+    const dirs = this.aborts.directories(sid, directory)
+    const ids = new Map(dirs.map((dir) => [dir, this.connectionService.beginExplicitAbort(sid, dir)]))
+    return this.aborts.stop(client, sid, directory, dirs).then((result) => {
+      for (const attempt of result.attempts) {
+        this.connectionService.finishExplicitAbort(sid, attempt.dir, ids.get(attempt.dir)!, attempt.aborted)
+      }
+      return result.complete
+    })
   }
 
   private async handleAbort(sessionID?: string): Promise<void> {
@@ -4044,7 +4052,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!sid || !(await this.stopSession(sid))) return
     this.sessionStatusMap.set(sid, "idle")
     this.streams.flush(sid)
-    this.postMessage({ type: "sessionTurnClosed", sessionID: sid, reason: "interrupted" })
     this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
   }
 

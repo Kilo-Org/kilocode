@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import * as vscode from "vscode"
 import { KiloConnectionService } from "./connection-service"
+import type { SSEPayload } from "./sdk-sse-adapter"
 
 function state(value: boolean) {
   return {
@@ -36,6 +37,74 @@ describe("KiloConnectionService clients", () => {
     } finally {
       workspace.workspaceFolders = folders
     }
+  })
+})
+
+describe("KiloConnectionService explicit aborts", () => {
+  const close = {
+    id: "event-close",
+    type: "session.turn.close",
+    properties: { sessionID: "session", reason: "interrupted" },
+  } as SSEPayload
+  const status = {
+    type: "session.status",
+    properties: { sessionID: "session", status: { type: "busy" } },
+  } as SSEPayload
+
+  test("suppresses a successful explicit abort for every subscriber", () => {
+    const service = new KiloConnectionService({} as any)
+    const raw: SSEPayload[] = []
+    const first: SSEPayload[] = []
+    const second: SSEPayload[] = []
+    service.onEvent((event) => raw.push(event))
+    service.onEventFiltered(
+      () => true,
+      (event) => first.push(event),
+    )
+    service.onEventFiltered(
+      () => true,
+      (event) => second.push(event),
+    )
+    ;(service as any).broadcast(status, "/repo")
+    raw.length = 0
+    first.length = 0
+    second.length = 0
+
+    const id = service.beginExplicitAbort("session", "/repo")
+    ;(service as any).broadcast(close, "/repo")
+    service.finishExplicitAbort("session", "/repo", id, true)
+
+    expect(first).toEqual([])
+    expect(second).toEqual([])
+    expect(raw).toEqual([close])
+  })
+
+  test("replays a failed explicit abort for every subscriber", () => {
+    const service = new KiloConnectionService({} as any)
+    const raw: SSEPayload[] = []
+    const first: SSEPayload[] = []
+    const second: SSEPayload[] = []
+    service.onEvent((event) => raw.push(event))
+    service.onEventFiltered(
+      () => true,
+      (event) => first.push(event),
+    )
+    service.onEventFiltered(
+      () => true,
+      (event) => second.push(event),
+    )
+    ;(service as any).broadcast(status, "/repo")
+    raw.length = 0
+    first.length = 0
+    second.length = 0
+
+    const id = service.beginExplicitAbort("session", "/repo")
+    ;(service as any).broadcast(close, "/repo")
+    service.finishExplicitAbort("session", "/repo", id, false)
+
+    expect(first).toEqual([close])
+    expect(second).toEqual([close])
+    expect(raw).toEqual([close])
   })
 })
 
