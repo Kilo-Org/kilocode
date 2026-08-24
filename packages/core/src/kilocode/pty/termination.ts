@@ -132,7 +132,8 @@ async function procTree() {
     entries
       .filter((entry) => entry.isDirectory() && /^\d+$/.test(entry.name))
       .map(async (entry) => {
-        const stat = await readFile(`/proc/${entry.name}/stat`, "utf8")
+        const stat = await readFile(`/proc/${entry.name}/stat`, "utf8").catch(() => undefined)
+        if (!stat) return
         const match = stat.match(/^\d+ \(.*\) [A-Z] (\d+)/)
         if (!match) return
         return { pid: Number(entry.name), parent: Number(match[1]) }
