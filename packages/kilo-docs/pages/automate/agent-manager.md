@@ -190,6 +190,7 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Create a worktree session to start a new agent in an isolated branch
 - Press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux) to start another session in the selected worktree
 - Use session history to reopen local sessions or preview cloud sessions
+- When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
 When a session delegates work to a subagent, open the child transcript from its task card or background-agent row. Agent Manager displays it in the read-only **Subagents** inspector. The inspector supports multiple child-session tabs and keeps them scoped to the selected project and parent session. For the difference between Agent Manager inspector tabs and the separate subagent editor tabs used by the sidebar, see [Inspecting delegated sessions in VS Code](/docs/customize/custom-subagents#inspecting-delegated-sessions-in-vs-code).
