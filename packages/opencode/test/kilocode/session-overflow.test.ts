@@ -314,17 +314,18 @@ describe("Kilo preflight compaction", () => {
         cfg: conf,
         model: mdl,
         usable: usable({ cfg: conf, model: mdl }),
-        messages: [{ role: "user", content: "x".repeat(500_000) }],
-        tools: {},
+        tokens: 1_000,
+        tail: 100,
+        continuation: false,
         reported: 180_000,
       }),
     ).toBe(true)
   })
 
-  test("does not compact from the inflated estimate when reported usage is far below the threshold", () => {
-    // Regression for #13335: GPT-5-style model (272k input of a 400k context),
-    // threshold 80%, provider reports ~40% displayed usage, and the estimate
-    // overshoots past the old input-based limit. Compaction must not fire.
+  test("does not compact when reported usage plus the new message stays below the threshold", () => {
+    // GPT-5-style model (272k input of a 400k context),
+    // threshold 80%, provider reports ~40% displayed usage, and the whole-payload
+    // estimate overshoots past the old input-based limit. Compaction must not fire.
     const conf = cfg({ threshold_percent: 80 })
     const mdl = model({ context: 400_000, input: 272_000, output: 128_000 })
 
@@ -334,6 +335,7 @@ describe("Kilo preflight compaction", () => {
         model: mdl,
         usable: usable({ cfg: conf, model: mdl }),
         tokens: 230_000,
+        tail: 2_000,
         continuation: false,
         reported: 160_000,
       }),
@@ -350,6 +352,7 @@ describe("Kilo preflight compaction", () => {
         model: mdl,
         usable: usable({ cfg: conf, model: mdl }),
         tokens: 10_000,
+        tail: 0,
         continuation: false,
         reported: 159_999,
       }),
@@ -360,8 +363,113 @@ describe("Kilo preflight compaction", () => {
         model: mdl,
         usable: usable({ cfg: conf, model: mdl }),
         tokens: 10_000,
+        tail: 0,
         continuation: false,
         reported: 160_000,
+      }),
+    ).toBe(true)
+  })
+
+  test("falls back to the full estimate when the provider reports zero usage", () => {
+    // A provider that streams successfully but reports no usage yields a reported
+    // count of 0; that is not a baseline and must not disable the estimate path.
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        tokens: 170_000,
+        tail: 1_000,
+        continuation: false,
+        reported: 0,
+      }),
+    ).toBe(true)
+  })
+
+  test("keeps conservative accounting for dense multilingual payloads", () => {
+    // chars/4 counts 144k tokens for 576k CJK characters, but real tokenizers
+    // emit roughly three times that. The safety factor must stay in the trigger.
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        messages: [{ role: "user", content: "字".repeat(576_000) }],
+        tools: {},
+      }),
+    ).toBe(true)
+  })
+
+  test("adds newly sent content on top of the provider-reported baseline", () => {
+    // Reported usage reflects the previous request only; a large new message must
+    // push the projection past the threshold even when opaque reasoning state in
+    // the history is invisible to the local estimate.
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 1_050_000, output: 128_000 })
+    const reasoning = {
+      type: "reasoning",
+      text: "Checked the previous tool results.",
+      providerMetadata: { openai: { itemId: "rs_1", reasoningEncryptedContent: "x".repeat(3_200_000) } },
+    } as const
+    const history = [{ role: "assistant", content: [reasoning] }] satisfies ModelMessage[]
+
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        messages: [...history, { role: "user", content: "x".repeat(1_000_000) }],
+        tools: {},
+        reported: 624_205,
+      }),
+    ).toBe(true)
+
+    // Without the large new message the same baseline stays below the threshold:
+    // opaque history must not be re-inflated through the pending-content estimate.
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        messages: [...history, { role: "user", content: "Continue." }],
+        tools: {},
+        reported: 624_205,
+      }),
+    ).toBe(false)
+  })
+
+  test("triggers at the reserved input ceiling before a high threshold on input-limited models", () => {
+    // 80% of the 400k window (320k) exceeds the usable input budget (272k - 20k
+    // reserve), so compaction fires at 252k - about 63% of the displayed bar.
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 400_000, input: 272_000, output: 128_000 })
+
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        tokens: 1_000,
+        tail: 0,
+        continuation: false,
+        reported: 251_999,
+      }),
+    ).toBe(false)
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        tokens: 1_000,
+        tail: 0,
+        continuation: false,
+        reported: 252_000,
       }),
     ).toBe(true)
   })

@@ -158,6 +158,7 @@ const live: Layer.Layer<
           model: input.model,
           usable: usable({ cfg, model: input.model, outputTokenMax: flags.outputTokenMax }), // kilocode_change
           tokens: usage.normalized,
+          tail: usage.tail,
           continuation: usage.continuation,
           reported: input.reportedContextTokens,
         })

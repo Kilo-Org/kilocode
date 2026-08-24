@@ -21,6 +21,34 @@ function continued(messages: ModelMessage[]) {
   return messages.slice(idx + 1).some((message) => message.role === "tool")
 }
 
+function size(messages: ModelMessage[]) {
+  let extra = 0
+  const json = JSON.stringify(messages, function (this: unknown, key, value: unknown) {
+    // Providers replay encrypted reasoning state as an opaque continuation value.
+    // Its encoded byte length is not a token count and can be several times larger
+    // than the context the provider reports for the same request.
+    if (key === "reasoningEncryptedContent" && typeof value === "string") {
+      extra += Math.max(0, Token.estimate(value) - OPAQUE_TOKENS)
+      return OPAQUE
+    }
+    if (!["data", "url", "image"].includes(key)) return value
+    if (!this || typeof this !== "object" || !("type" in this)) return value
+    if (!["file", "image", "media"].includes(String(this.type))) return value
+    const tokens =
+      value instanceof Uint8Array
+        ? Math.ceil(value.byteLength / 4)
+        : Token.estimate(typeof value === "string" ? value : (JSON.stringify(value) ?? ""))
+    extra += Math.max(0, tokens - MEDIA_TOKENS)
+    return MEDIA
+  })
+  return { chars: Token.estimate(json), extra }
+}
+
+function pending(messages: ModelMessage[]) {
+  const idx = messages.findLastIndex((message) => message.role === "assistant")
+  return messages.slice(idx + 1)
+}
+
 export namespace KiloSessionOverflow {
   export class PreflightError extends Error {
     constructor() {
@@ -46,27 +74,7 @@ export namespace KiloSessionOverflow {
   }
 
   export function measure(input: Payload) {
-    let extra = 0
-    const normalized = JSON.stringify(input.messages, function (this: unknown, key, value: unknown) {
-      // Providers replay encrypted reasoning state as an opaque continuation value.
-      // Its encoded byte length is not a token count and can be several times larger
-      // than the context the provider reports for the same request.
-      if (key === "reasoningEncryptedContent" && typeof value === "string") {
-        extra += Math.max(0, Token.estimate(value) - OPAQUE_TOKENS)
-        return OPAQUE
-      }
-      if (!["data", "url", "image"].includes(key)) return value
-      if (!this || typeof this !== "object" || !("type" in this)) return value
-      if (!["file", "image", "media"].includes(String(this.type))) return value
-      const tokens =
-        value instanceof Uint8Array
-          ? Math.ceil(value.byteLength / 4)
-          : Token.estimate(typeof value === "string" ? value : (JSON.stringify(value) ?? ""))
-      extra += Math.max(0, tokens - MEDIA_TOKENS)
-      return MEDIA
-    })
-    const messages = Token.estimate(normalized)
-    const raw = messages + extra
+    const full = size(input.messages)
     const tools = Token.estimate(
       JSON.stringify(
         Object.entries(input.tools).map(([name, tool]) => ({
@@ -77,8 +85,9 @@ export namespace KiloSessionOverflow {
       ),
     )
     return {
-      normalized: Math.ceil((messages + tools) * FACTOR),
-      raw: Math.ceil((raw + tools) * FACTOR),
+      normalized: Math.ceil((full.chars + tools) * FACTOR),
+      raw: Math.ceil((full.chars + full.extra + tools) * FACTOR),
+      tail: Math.ceil(size(pending(input.messages)).chars * FACTOR),
       continuation: continued(input.messages),
     }
   }
@@ -97,16 +106,17 @@ export namespace KiloSessionOverflow {
       model: Provider.Model
       usable: number
       reported?: number
-    } & (Payload | { tokens: number; continuation: boolean }),
+    } & (Payload | { tokens: number; tail: number; continuation: boolean }),
   ) {
     if (!enabled(input)) return false
     const stats = "tokens" in input ? input : measure(input)
     if (stats.continuation) return false
-    const estimate = "tokens" in stats ? stats.tokens : stats.normalized
-    // The estimate's safety factor overshoots real usage; deflate it so the preflight
-    // tracks the displayed percentage, and anchor to the provider-reported count from
-    // the last finished turn when available.
-    const tokens = Math.max(input.reported ?? 0, estimate / FACTOR)
-    return tokens >= limit(input)
+    // With a provider baseline from the last finished turn, project the next request as
+    // that report plus conservatively-inflated content added since it. Without one, the
+    // full outgoing estimate decides alone. A failed or usage-less prior report is not
+    // a baseline; the estimate covers it.
+    const baseline = input.reported ? input.reported + stats.tail : undefined
+    const projected = baseline ?? ("tokens" in stats ? stats.tokens : stats.normalized)
+    return projected >= limit(input)
   }
 }
