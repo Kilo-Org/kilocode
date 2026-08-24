@@ -110,9 +110,9 @@ PR badges update automatically in the background. The active worktree refreshes 
 2. Enter a branch name (or let Kilo generate one)
 3. Type your first message, then create the worktree
 
-A new git worktree is created from your current branch. The agent works in isolation — your main branch is unaffected.
+Kilo creates the worktree from the selected project's configured default base branch. In a multi-project workspace, the selected project determines this setting. An explicit base branch selected in the dialog takes precedence. If no default is configured, Kilo falls back to automatic detection of the repository's remote default branch. The agent works in isolation, so your main branch is unaffected.
 
-To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux).
+To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux). This uses the selected project's configured default, or the automatic remote-default fallback when no configured default exists.
 
 ### Slash Commands in the Worktree Prompt
 
@@ -223,6 +223,8 @@ Right-click the section header and select **Delete Section**. The section is rem
 ## Diff / Review Panel
 
 Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It shows a live-updating diff between the worktree and its parent branch.
+
+The worktree creation base and the diff comparison base are separate. The Branch scope starts with the worktree's recorded parent branch, and its base-branch picker changes only the comparison target. It does not change the branch from which the worktree was created.
 
 - Select files and click **Apply to local** to copy the worktree's changes onto your local checkout of the base branch
 - Conflicts are surfaced with a resolution dialog
@@ -428,6 +430,7 @@ Closing a managed worktree removes it from Agent Manager, deletes its `.kilo/wor
 
 - **"Please open a folder…" error** — the Agent Manager requires a VS Code workspace folder
 - **Worktree creation fails** — ensure Git is installed and the workspace is a valid git repository. Open the main repository (where `.git` is a directory), not an existing worktree checkout.
+- **A configured base branch is missing** — Kilo clears the stale project setting and uses automatic remote-default detection for the new worktree. Select the project and configure a new default if needed.
 - **Provider or authentication errors** — open extension Settings and verify your sign-in, provider, model, or BYOK configuration. Agent Manager uses the same settings as the sidebar.
 - **Session history missing cloud sessions** — sign in through the extension and confirm the repository remote matches the sessions you expect to see.
 - **PR badges or PR import missing** — install and authenticate the GitHub CLI (`gh`). This is only required for GitHub PR features.

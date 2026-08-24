@@ -76,7 +76,7 @@ A related pattern: use the sidebar as an investigation surface. Start two or thr
 
 ### 5. A worktree per bug
 
-For a day of small fixes: one worktree per bug. Use `Cmd+N` to configure each worktree or `Cmd+Shift+N` to create one immediately from the default branch, merge each quickly so none drift. Close the worktree when the fix lands.
+For a day of small fixes: one worktree per bug. Use `Cmd+N` to configure each worktree or `Cmd+Shift+N` to create one immediately from the configured default base branch, merge each quickly so none drift. Close the worktree when the fix lands.
 
 ### 6. Multiple sessions on one branch
 
