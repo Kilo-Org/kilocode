@@ -71,6 +71,8 @@ import { PLATFORM } from "./constants"
 import { ProjectRegistry } from "./project/registry"
 import type { ProjectContext } from "./project/context"
 import { ProjectContexts } from "./project/contexts"
+import { createSettingsHandler } from "./project/settings"
+import type { SettingsHandler } from "./project/settings"
 import { hydrateExpanded } from "./project/hydrate"
 import { createMultiVersion, type MultiVersionHost } from "./provider-multi-version"
 import { handleProjectMessage, type ProjectMessageDeps } from "./project/messages"
@@ -118,6 +120,7 @@ export class AgentManagerProvider implements Disposable {
   // Tracks sessions owned by this panel until they are explicitly closed.
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
+  public readonly settings: SettingsHandler
 
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
@@ -200,6 +203,12 @@ export class AgentManagerProvider implements Disposable {
     })
     this.registry = wiring.registry
     this.contexts = wiring.contexts
+    this.settings = createSettingsHandler({
+      contexts: this.contexts,
+      open: (path) => this.host.openDocument(path),
+      push: (ctx) => this.pushState(ctx),
+      log: (...args) => this.log(...args),
+    })
     this.projects = wiring.messages
     this.unsubProjects = () => wiring.dispose()
     this.naming = new BranchNamingController({
@@ -506,6 +515,13 @@ export class AgentManagerProvider implements Disposable {
   // Message interceptor
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
+    if (msg.type === "openSettingsPanel") {
+      this.host.openSettings(
+        typeof msg.tab === "string" ? msg.tab : undefined,
+        typeof msg.projectId === "string" ? msg.projectId : undefined,
+      )
+      return null
+    }
     if (this.prBridge.handleMessage(msg)) return null
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }

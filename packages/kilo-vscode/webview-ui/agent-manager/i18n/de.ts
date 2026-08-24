@@ -5,6 +5,16 @@ export const dict = {
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SITZUNGEN",
   "agentManager.projects": "PROJEKTE",
+  "agentManager.settings.title": "Agent Manager",
+  "agentManager.settings.project.title": "Projekt",
+  "agentManager.settings.project.description":
+    "Wählen Sie das repository aus, dessen worktree-Einstellungen Sie bearbeiten möchten.",
+  "agentManager.settings.project.empty": "Keine Agent Manager-Projekte verfügbar.",
+  "agentManager.settings.defaultBaseBranch.description":
+    "Der branch, der als Ausgangspunkt für neue worktrees verwendet wird.",
+  "agentManager.settings.setupScript.description": "Vor dem Start eines agent in einem neuen worktree ausführen.",
+  "agentManager.settings.setupScript.create": "Script erstellen",
+  "agentManager.settings.setupScript.edit": "Script bearbeiten",
   "agentManager.project.add": "Projekt hinzufügen",
   "agentManager.project.remove": "Aus Agent Manager entfernen",
   "agentManager.project.missing": "Repository nicht gefunden",
