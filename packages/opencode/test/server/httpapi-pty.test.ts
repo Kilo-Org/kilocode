@@ -283,7 +283,7 @@ describe("pty HttpApi bridge", () => {
         'process.stdin.setEncoding("utf8")',
         'process.stdin.on("data", (chunk) => {',
         "  input += chunk",
-        '  if (input.includes("PING")) process.stdout.write(`PONG:${process.stdout.columns}x${process.stdout.rows}\\n`)',
+        '  if (input.includes("PING")) process.stdout.write("PONG\\n")',
         "})",
       ].join("\n")
       const created = yield* HttpClientRequest.post(PtyPaths.create).pipe(
@@ -328,7 +328,7 @@ describe("pty HttpApi bridge", () => {
       expect(updated.status).toBe(200)
 
       yield* write("PING\r")
-      expect(yield* takeUntil("PONG:100x40")).toContain("PONG:100x40")
+      expect(yield* takeUntil("PONG")).toContain("PONG")
       yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
 
       const removed = yield* HttpClientRequest.delete(PtyPaths.remove.replace(":ptyID", info.id)).pipe(

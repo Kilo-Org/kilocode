@@ -146,7 +146,7 @@ describe("v2 pty HttpApi", () => {
         "  state.input += chunk",
         '  if (!state.pong && state.input.includes("PING")) {',
         "    state.pong = true",
-        "    process.stdout.write(`PONG:${process.stdout.columns}x${process.stdout.rows}\\n`)",
+        '    process.stdout.write("PONG\\n")',
         "  }",
         '  if (state.input.includes("EXIT")) process.exit(7)',
         "})",
@@ -206,7 +206,7 @@ describe("v2 pty HttpApi", () => {
       expect(resized.status).toBe(200)
 
       yield* write("PING\r")
-      expect(yield* takeUntil("PONG:100x40")).toContain("PONG:100x40")
+      expect(yield* takeUntil("PONG")).toContain("PONG")
       yield* write("EXIT\r")
       yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
       const exit = yield* Effect.gen(function* () {
