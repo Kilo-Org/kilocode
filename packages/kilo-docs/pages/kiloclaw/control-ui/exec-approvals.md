@@ -5,6 +5,8 @@ description: "Control which commands your KiloClaw agent can run on the host mac
 
 # Exec Approvals
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Exec approvals are the safety interlock that controls which commands your agent can run on the host machine (gateway or node). By default, **all host exec requests are denied** — you must explicitly allowlist the commands you want your agent to run independently. This prevents accidental execution of destructive commands.
 
 {% callout type="warning" %}
