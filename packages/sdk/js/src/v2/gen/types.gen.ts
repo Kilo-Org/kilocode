@@ -382,11 +382,23 @@ export type AgentManagerMoveRequest = {
   sectionID: string | null
 }
 
+export type AgentManagerAnswers = Array<Array<string>>
+
+export type AgentManagerAnswerRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "answer"
+  targetSessionID: string
+  questionID?: string
+  answers: AgentManagerAnswers
+}
+
 export type AgentManagerRequest =
   | AgentManagerOverviewRequest
   | AgentManagerPromptRequest
   | AgentManagerStopRequest
   | AgentManagerMoveRequest
+  | AgentManagerAnswerRequest
 
 export type NotebookRequestId = string
 
@@ -4379,11 +4391,19 @@ export type AgentManagerMoveResult = {
   moved: true
 }
 
+export type AgentManagerAnswerResult = {
+  operation: "answer"
+  sessionID: string
+  questionID: string
+  resolved: true
+}
+
 export type AgentManagerResult =
   | AgentManagerOverviewResult
   | AgentManagerPromptResult
   | AgentManagerStopResult
   | AgentManagerMoveResult
+  | AgentManagerAnswerResult
 
 export type AgentManagerFailure = {
   code:
