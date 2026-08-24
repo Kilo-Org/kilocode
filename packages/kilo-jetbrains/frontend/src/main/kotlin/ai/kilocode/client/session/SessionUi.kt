@@ -1108,6 +1108,7 @@ class SessionUi(
             pendingRedo = null
         }
         prompt.setBusy(busy)
+        dock?.setBusy(busy)
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))

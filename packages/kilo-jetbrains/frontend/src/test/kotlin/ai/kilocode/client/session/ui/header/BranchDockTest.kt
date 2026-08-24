@@ -72,6 +72,85 @@ class BranchDockTest : BasePlatformTestCase() {
         assertTrue(edt { dock.isVisible })
     }
 
+    // ---- active session ----
+
+    fun `test dock hidden while session is busy`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+        }
+        assertTrue(edt { dock.isVisible })
+
+        edt { dock.setBusy(true) }
+        assertFalse(edt { dock.isVisible })
+
+        edt { dock.setBusy(false) }
+        assertTrue(edt { dock.isVisible })
+    }
+
+    fun `test dock hidden while busy with local changes`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setChanges(listOf(DiffFileDto("src/A.kt", 2, 1)))
+            dock.setBusy(true)
+        }
+        assertFalse(edt { dock.isVisible })
+    }
+
+    fun `test dock keeps PR row while session is busy`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(
+                BranchStatusDto(
+                    branch = "feature-x",
+                    worktree = false,
+                    availability = GhAvailability.OK,
+                    pr = WorktreePrDto("/repo", 7, GhState.OPEN, "https://pr/7", "Title"),
+                ),
+            )
+            dock.setHasMessages(true)
+            dock.setBusy(true)
+        }
+        assertTrue(edt { dock.isVisible })
+    }
+
+    fun `test move action hidden while session is busy`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+            dock.setBusy(true)
+        }
+        assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
+    }
+
+    fun `test new worktree action hidden while session is busy`() {
+        val dock = dockWithNewWorktree()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+            dock.setBusy(true)
+        }
+        assertFalse(update(ChatNewWorktreeAction(), dock).isVisible)
+    }
+
+    fun `test move progress keeps the row while session is busy`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+            dock.setBusy(true)
+            dock.setMoveProgress(MoveStage.CREATING, null)
+        }
+        assertTrue(edt { dock.isVisible })
+        val p = update(ChatMoveToWorktreeAction(), dock)
+        assertTrue(p.isVisible)
+        assertFalse(p.isEnabled)
+        assertEquals(KiloBundle.message("session.dock.progress.creating"), p.text)
+    }
+
     // ---- Move to Worktree action ----
 
     fun `test move action visible with messages`() {

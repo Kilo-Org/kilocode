@@ -36,6 +36,9 @@ import java.awt.Dimension
  * rendered through an [com.intellij.openapi.actionSystem.ActionToolbar]; each is invisible when it is
  * not enabled, so the dock never shows a lone action. The dock exposes its state to those actions via
  * [ChatDockKeys.DOCK]. Collapses to nothing unless it has a PR, changes, or an enabled action.
+ *
+ * The action row is offered only while the session is idle: an active turn ([setBusy]) withdraws it,
+ * a move in progress keeps it. The PR row stays through a turn — it is informational, not an action.
  */
 internal class BranchDock(
     openDiff: () -> Unit,
@@ -56,6 +59,7 @@ internal class BranchDock(
     private var files = emptyList<DiffFileDto>()
     private var branch: BranchStatusDto? = null
     private var hasMessages = false
+    private var busy = false
     private var moving = false
     private var stage: MoveStage? = null
 
@@ -103,6 +107,13 @@ internal class BranchDock(
     }
 
     @RequiresEdt
+    fun setBusy(value: Boolean) {
+        if (busy == value) return
+        busy = value
+        sync()
+    }
+
+    @RequiresEdt
     fun setMoveProgress(stage: MoveStage, detail: String?) {
         moving = stage != MoveStage.DONE && stage != MoveStage.ERROR
         this.stage = if (moving) stage else null
@@ -125,7 +136,7 @@ internal class BranchDock(
 
     fun triggerMove() = onMove()
 
-    private fun dockActive(): Boolean = gitAvailable() && (hasMessages || files.isNotEmpty())
+    private fun dockActive(): Boolean = gitAvailable() && !busy && (hasMessages || files.isNotEmpty())
 
     private fun gitAvailable(): Boolean {
         val branch = branch ?: return false

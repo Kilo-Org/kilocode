@@ -1,5 +1,6 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
@@ -23,9 +24,12 @@ import ai.kilocode.client.session.ui.header.BranchDock
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.ui.layout.Align
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
@@ -35,6 +39,8 @@ import com.intellij.util.ui.JBUI
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.components.JBScrollPane
 import java.awt.Dimension
 import javax.swing.JLayeredPane
@@ -160,6 +166,28 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val drop = find<SessionDropOverlay>(ui)
 
         assertNull(drop.dropTarget)
+    }
+
+    fun `test dock hides while a turn runs`() {
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+        val dock = find<BranchDock>(ui)
+        assertTrue(dock.isVisible)
+
+        controller().model.setState(SessionState.Busy("running"))
+
+        assertFalse(dock.isVisible)
+
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertTrue(dock.isVisible)
     }
 
     fun `test dock branch changes refresh on finish and revert`() {
@@ -366,14 +394,15 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
         val root = find<SessionRootPanel>(ui)
-        val top = connection.y
+        // Anchored above the bottom container, not at a fixed y: a pending question makes the branch
+        // dock release its row, so the container itself gets shorter.
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
 
         controller().model.setState(questionStateChanged())
         layout()
 
         assertTrue(find<QuestionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
-        assertEquals(top, connection.y)
         assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
@@ -387,14 +416,15 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
         val root = find<SessionRootPanel>(ui)
-        val top = connection.y
+        // Anchored above the bottom container, not at a fixed y: a pending permission makes the branch
+        // dock release its row, so the container itself gets shorter.
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
 
         controller().model.setState(permissionStateChanged())
         layout()
 
         assertTrue(find<PermissionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
-        assertEquals(top, connection.y)
         assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
