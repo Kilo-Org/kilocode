@@ -234,6 +234,32 @@ export interface CompactRequest {
 export interface OpenSettingsPanelRequest {
   type: "openSettingsPanel"
   tab?: string
+  projectId?: string
+}
+
+export interface RequestAgentManagerSettingsMessage {
+  type: "requestAgentManagerSettings"
+  projectId?: string
+  requestId: string
+}
+
+export interface RequestAgentManagerSettingsBranchesMessage {
+  type: "requestAgentManagerSettingsBranches"
+  projectId: string
+  requestId: string
+}
+
+export interface SetAgentManagerDefaultBaseBranchMessage {
+  type: "setAgentManagerDefaultBaseBranch"
+  projectId: string
+  branch?: string
+  requestId: string
+}
+
+export interface ConfigureAgentManagerSetupScriptMessage {
+  type: "configureAgentManagerSetupScript"
+  projectId: string
+  requestId: string
 }
 
 export interface OpenProfilePanelRequest {
@@ -1488,6 +1514,10 @@ export type WebviewMessage =
   | RefreshProviderUsageMessage
   | OpenExternalRequest
   | OpenSettingsPanelRequest
+  | RequestAgentManagerSettingsMessage
+  | RequestAgentManagerSettingsBranchesMessage
+  | SetAgentManagerDefaultBaseBranchMessage
+  | ConfigureAgentManagerSetupScriptMessage
   | OpenProfilePanelRequest
   | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest

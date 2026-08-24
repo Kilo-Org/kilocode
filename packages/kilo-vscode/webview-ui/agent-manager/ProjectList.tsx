@@ -18,7 +18,6 @@ import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMen
 import type { SidebarSearchItem } from "./sidebar-search"
 import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import { ProjectBranchDialog } from "./ProjectBranchDialog"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
 
@@ -155,15 +154,6 @@ export const ProjectList: Component<Props> = (props) => {
       />
     ))
   }
-  const defaultBranch = (projectId: string, selected?: string, detected?: string) =>
-    dialog.show(() => (
-      <ProjectBranchDialog
-        projectId={projectId}
-        selected={selected}
-        detected={detected}
-        onClose={() => dialog.close()}
-      />
-    ))
   return (
     <ProjectsSection
       projects={props.projects}
@@ -240,7 +230,6 @@ export const ProjectList: Component<Props> = (props) => {
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
           onSelectSession={(projectId, sessionId) => select({ projectId, kind: "session", sessionId })}
           onNewWorktree={newWorktree}
-          onDefaultBranch={defaultBranch}
           shortcutMap={props.shortcutMap}
         />
       )}
