@@ -37,7 +37,7 @@ import { spawn } from "node:child_process"
 const win = process.platform === "win32"
 const root = join(import.meta.dir, "..")
 const repo = resolve(root, "..", "..")
-const temp = tmpdir().replace(/[\r\n]+$/, "")
+const temp = tmpdir().trimEnd()
 
 // ---------------------------------------------------------------------------
 // Argument parsing

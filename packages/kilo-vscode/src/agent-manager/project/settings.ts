@@ -58,7 +58,7 @@ async function loadSettingsProjects(
   log: (...args: unknown[]) => void,
 ): Promise<SettingsProject[]> {
   const snapshots = contexts.snapshots()
-  const selected = snapshots.some((project) => project.id === projectId) ? projectId : snapshots[0]?.id
+  const selected = snapshots.some((project) => project.id === projectId) ? projectId : snapshots.at(0)?.id
   const ctx = selected ? contexts.resolve(selected) : undefined
   if (ctx && !ctx.missing()) {
     const init = await initContextState(ctx, log)
