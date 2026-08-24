@@ -1255,7 +1255,6 @@ export const dict = {
   "task.backgroundAgents.open": "Otwórz agenta w tle",
   "task.backgroundAgents.cancel": "Zatrzymaj",
   "task.backgroundAgents.continueInBackground": "Kontynuuj w tle",
-  "task.backgroundAgents.foreground": "Agent pierwszoplanowy działa",
   "task.backgroundAgents.waiting": "Agent w tle potrzebuje danych wejściowych",
   "task.backgroundAgents.needsInput": "Wymagane dane wejściowe",
   "task.backgroundAgents.dismiss": "Odrzuć",

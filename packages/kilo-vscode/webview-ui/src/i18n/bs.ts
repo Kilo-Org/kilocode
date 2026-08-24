@@ -1255,7 +1255,6 @@ export const dict = {
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
-  "task.backgroundAgents.foreground": "Agent u prvom planu radi",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
   "task.backgroundAgents.needsInput": "Potreban unos",
   "task.backgroundAgents.dismiss": "Odbaci",

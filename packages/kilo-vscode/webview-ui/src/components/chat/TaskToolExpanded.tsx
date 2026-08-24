@@ -38,6 +38,16 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       state: { metadata: props.metadata as { sessionId?: string } },
     })
 
+  const childForeground = createMemo(() => {
+    const id = childSessionId()
+    if (!id) return false
+    const part = props.partMetadata as { background?: boolean } | undefined
+    const state = props.metadata as { background?: boolean } | undefined
+    if (part?.background === true || state?.background === true) return false
+    const status = session.allStatusMap()[id]
+    return status?.type === "busy" || status?.type === "retry"
+  })
+
   const running = createMemo(() => taskRunning(props.status))
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
   // transition — a virtualized remount that starts with forceOpen already
@@ -134,6 +144,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     })
   }
 
+  const background = (e: MouseEvent) => {
+    e.stopPropagation()
+    const id = session.currentSessionID()
+    const child = childSessionId()
+    if (id && child) vscode.postMessage({ type: "promoteBackgroundJob", jobID: child, sessionID: id })
+  }
+
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">
       <div data-slot="basic-tool-tool-info-main">
@@ -150,6 +167,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         </Show>
       </div>
       <Show when={childSessionId()}>
+        <Show when={childForeground()}>
+          <IconButton
+            icon="play"
+            size="small"
+            variant="ghost"
+            aria-label={language.t("task.backgroundAgents.continueInBackground")}
+            onClick={background}
+          />
+        </Show>
         <IconButton
           icon="square-arrow-top-right"
           size="small"

@@ -2,7 +2,6 @@ import { describe, expect, it } from "bun:test"
 import {
   backgroundAgents,
   backgroundJobAgents,
-  foregroundAgent,
   showBackgroundAgent,
 } from "../../webview-ui/src/components/chat/background-agents"
 import type {
@@ -261,14 +260,5 @@ describe("backgroundAgents", () => {
 
     expect(showBackgroundAgent(agent, hidden)).toBe(true)
     expect(showBackgroundAgent({ ...agent, status: "completed" }, hidden)).toBe(false)
-  })
-
-  it("finds a running foreground child that can be promoted", () => {
-    const tools = [
-      taskPart({ id: "part_background", child: "child_background", background: true }),
-      taskPart({ id: "part_foreground", child: "child_foreground", background: false }),
-    ]
-
-    expect(foregroundAgent(tools, { child_background: busy, child_foreground: busy })).toBe("child_foreground")
   })
 })

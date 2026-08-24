@@ -183,6 +183,8 @@ import type {
   KilocodeAgentManagerReplyResponses,
   KilocodeBackgroundJobCancelErrors,
   KilocodeBackgroundJobCancelResponses,
+  KilocodeBackgroundJobPromoteErrors,
+  KilocodeBackgroundJobPromoteResponses,
   KilocodeBackgroundJobsErrors,
   KilocodeBackgroundJobsResponses,
   KilocodeCommandFilesErrors,
@@ -7882,6 +7884,42 @@ export class BackgroundJob extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/background-jobs/{jobID}/cancel",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Promote background job
+   *
+   * Continue one foreground subagent in the background.
+   */
+  public promote<ThrowOnError extends boolean = false>(
+    parameters: {
+      jobID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "jobID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeBackgroundJobPromoteResponses,
+      KilocodeBackgroundJobPromoteErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs/{jobID}/promote",
       ...options,
       ...params,
     })

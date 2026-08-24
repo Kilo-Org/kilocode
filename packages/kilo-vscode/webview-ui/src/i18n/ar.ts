@@ -1221,7 +1221,6 @@ export const dict = {
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
-  "task.backgroundAgents.foreground": "الوكيل الأمامي قيد التشغيل",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",
   "task.backgroundAgents.needsInput": "الإدخال مطلوب",
   "task.backgroundAgents.dismiss": "تجاهل",

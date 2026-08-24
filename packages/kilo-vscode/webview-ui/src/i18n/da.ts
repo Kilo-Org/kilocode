@@ -1250,7 +1250,6 @@ export const dict = {
   "task.backgroundAgents.open": "Åbn baggrundsagent",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Fortsæt i baggrunden",
-  "task.backgroundAgents.foreground": "Forgrundsagenten kører",
   "task.backgroundAgents.waiting": "En baggrundsagent har brug for dit input",
   "task.backgroundAgents.needsInput": "Input kræves",
   "task.backgroundAgents.dismiss": "Afvis",
