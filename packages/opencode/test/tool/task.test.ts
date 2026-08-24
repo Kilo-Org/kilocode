@@ -791,6 +791,85 @@ describe("tool.task", () => {
       }),
     { config: { subagent_depth: 2 } },
   )
+
+  it.instance(
+    "nested subagent does not inherit the parent session edit deny",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const agents = yield* Agent.Service
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+
+        const first = yield* def.execute(
+          {
+            description: "edit lock",
+            prompt: "do some editing",
+            subagent_type: "lockeditor",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps: stubOps() },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        const child = yield* sessions.get(first.metadata.sessionId)
+        const childAssistant = yield* sessions.updateMessage({
+          ...assistant,
+          id: MessageID.ascending(),
+          parentID: MessageID.ascending(),
+          sessionID: child.id,
+        })
+
+        const second = yield* def.execute(
+          {
+            description: "general work",
+            prompt: "continue in general",
+            subagent_type: "general",
+          },
+          {
+            sessionID: child.id,
+            messageID: childAssistant.id,
+            agent: "lockeditor",
+            abort: new AbortController().signal,
+            extra: { promptOps: stubOps() },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        const grandchild = yield* sessions.get(second.metadata.sessionId)
+        const general = (yield* agents.get("general"))!
+        const effective = Permission.merge(general.permission, grandchild.permission ?? [])
+        expect(grandchild.parentID).toBe(child.id)
+        // The lockeditor's edit deny is a ceiling for the child it spawns, but it
+        // must not be written into session.permission in a way that the grandchild
+        // inherits it via deriveSubagentSessionPermission.
+        expect(Permission.resolve("edit", "README.md", effective).action).not.toBe("deny")
+      }),
+    {
+      config: {
+        subagent_depth: 2,
+        agent: {
+          lockeditor: {
+            mode: "subagent",
+            permission: {
+              edit: "deny",
+              task: "allow",
+            },
+          },
+        },
+      },
+    },
+  )
   // kilocode_change end
 
   // kilocode_change start - terminal child assistant errors fail the task tool boundary
