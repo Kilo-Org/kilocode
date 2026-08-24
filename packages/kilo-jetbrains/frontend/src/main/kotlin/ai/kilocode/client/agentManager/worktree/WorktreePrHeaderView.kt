@@ -21,7 +21,7 @@ internal class WorktreePrHeaderView(
     openTerminal: () -> Unit = {},
     openDiff: () -> Unit,
 ) : BorderLayoutPanel() {
-    private val core = PrHeaderView(openDiff)
+    private val core = PrHeaderView(openDiff = openDiff)
     private val terminal = hoverTextButton(
         ToolbarButtonAction(TerminalIcons.OpenTerminal_13x13, KiloBundle.message("worktree.session.terminal.action"), openTerminal),
         tooltip = KiloBundle.message("worktree.session.terminal.tooltip"),

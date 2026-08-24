@@ -10,6 +10,7 @@ import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
@@ -29,6 +30,15 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         assertSame(style(GhState.OPEN), (badge.icon as FilledBadgeIcon).style)
         assertEquals(listOf("Implement header", " #123"), edt { fragments(title) })
         assertEquals(Cursor.HAND_CURSOR, edt { title.cursor.type })
+    }
+
+    fun `test title style can be configured`() {
+        val view = edt { PrHeaderView(openDiff = {}, titleStyle = SimpleTextAttributes.STYLE_PLAIN) }
+
+        edt { view.update(files = 0, additions = 0, deletions = 0, pull = pull(GhState.OPEN), name = "feature-x") }
+
+        val title = edt { title(view) }
+        assertEquals(SimpleTextAttributes.STYLE_PLAIN, edt { firstAttrs(title).style })
     }
 
     fun `test no PR hides badge and title`() {
@@ -110,6 +120,13 @@ class PrHeaderViewTest : BasePlatformTestCase() {
             out += iter.fragment
         }
         return out
+    }
+
+    private fun firstAttrs(title: SimpleColoredComponent): SimpleTextAttributes {
+        val iter = title.iterator()
+        check(iter.hasNext()) { "missing title fragment" }
+        iter.next()
+        return iter.textAttributes
     }
 
     private fun components(root: Component): List<Component> {

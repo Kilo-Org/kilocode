@@ -17,6 +17,7 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.ui.SimpleTextAttributes
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -43,8 +44,9 @@ internal class BranchDock(
     openDiff: () -> Unit,
     private val onMove: (() -> Unit)?,
     private val onNewWorktree: (() -> Unit)? = null,
+    titleStyle: Int = SimpleTextAttributes.STYLE_PLAIN,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, UiDataProvider {
-    private val core = PrHeaderView(openDiff)
+    private val core = PrHeaderView(titleStyle = titleStyle, openDiff = openDiff)
     private val changes = BranchChangesBadge(openDiff)
     private val group = DefaultActionGroup().apply {
         ActionManager.getInstance().getAction("Kilo.Chat.NewWorktree")?.let { add(it) }
@@ -66,7 +68,7 @@ internal class BranchDock(
         toolbar.targetComponent = this
         // Transparent so the toolbar shows the dock's prompt-matching background and tracks LaF.
         toolbar.component.isOpaque = false
-        addToCenter(Stack.vertical().next(core).next(actionRow))
+        addToCenter(Stack.vertical().next(core).next(actionRow).align(HAlign.TRACK, VAlign.CENTER))
         isVisible = false
         sync()
     }
@@ -77,7 +79,7 @@ internal class BranchDock(
         super.updateUI()
         border = JBUI.Borders.compound(
             JBUI.Borders.customLineTop(JBUI.CurrentTheme.EditorTabs.borderColor()),
-            JBUI.Borders.empty(0, 0),
+            JBUI.Borders.empty(),
         )
     }
 

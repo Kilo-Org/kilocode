@@ -36,6 +36,7 @@ import java.awt.event.MouseEvent
  * Stays non-opaque so the host owns background and borders.
  */
 internal class PrHeaderView(
+    private val titleStyle: Int = SimpleTextAttributes.STYLE_BOLD,
     openDiff: () -> Unit,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
     private val status = JBLabel()
@@ -165,10 +166,11 @@ internal class PrHeaderView(
         val number = number ?: return
         title.clear()
         val body = body
+        val attrs = SimpleTextAttributes(titleStyle, UIUtil.getLabelForeground())
         if (body == null) {
-            title.append(number, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, UIUtil.getLabelForeground()))
+            title.append(number, attrs)
         } else {
-            title.append(body, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, UIUtil.getLabelForeground()))
+            title.append(body, attrs)
             title.append(" $number", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
     }
@@ -184,7 +186,7 @@ internal class PrHeaderView(
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         changes.applyStyle(style)
-        // Re-render the title so its bold foreground follows the theme, then repaint.
+        // Re-render the title so its foreground follows the theme, then repaint.
         renderTitle()
         changed()
     }

@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.actions.ChatMoveToWorktreeAction
 import ai.kilocode.client.actions.ChatNewWorktreeAction
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -15,6 +16,13 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.components.JBLabel
+import java.awt.Component
+import java.awt.Container
+import java.awt.Point
+import javax.swing.SwingUtilities
 
 @Suppress("UnstableApiUsage")
 class BranchDockTest : BasePlatformTestCase() {
@@ -69,6 +77,27 @@ class BranchDockTest : BasePlatformTestCase() {
             )
         }
         assertTrue(edt { dock.isVisible })
+    }
+
+    fun `test PR title uses normal text in the tool window dock`() {
+        val dock = dock()
+        edt { dock.setBranch(prBranch()) }
+
+        val title = edt { components(dock).filterIsInstance<SimpleColoredComponent>().single() }
+        assertEquals(SimpleTextAttributes.STYLE_PLAIN, edt { firstAttrs(title).style })
+    }
+
+    fun `test PR state badge is vertically centered in the reserved dock row`() {
+        val dock = dock()
+        edt {
+            dock.setBranch(prBranch())
+            dock.setSize(500, dock.preferredSize.height)
+            layout(dock)
+        }
+
+        val badge = edt { components(dock).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon } }
+        val center = edt { SwingUtilities.convertPoint(badge, Point(0, 0), dock).y + badge.height / 2 }
+        assertTrue(kotlin.math.abs(edt { dock.height / 2 } - center) <= 1)
     }
 
     // ---- active session ----
@@ -256,6 +285,35 @@ class BranchDockTest : BasePlatformTestCase() {
     private fun dock(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}) }
 
     private fun dockWithNewWorktree(): BranchDock = edt { BranchDock(openDiff = {}, onMove = {}, onNewWorktree = {}) }
+
+    private fun prBranch() = BranchStatusDto(
+        branch = "feature-x",
+        worktree = true,
+        availability = GhAvailability.OK,
+        pr = WorktreePrDto("/repo", 7, GhState.OPEN, "https://pr/7", "Title"),
+    )
+
+    private fun firstAttrs(title: SimpleColoredComponent): SimpleTextAttributes {
+        val iter = title.iterator()
+        check(iter.hasNext()) { "missing title fragment" }
+        iter.next()
+        return iter.textAttributes
+    }
+
+    private fun layout(root: Component) {
+        root.doLayout()
+        if (root is Container) root.components.forEach(::layout)
+    }
+
+    private fun components(root: Component): List<Component> {
+        val out = mutableListOf<Component>()
+        fun visit(item: Component) {
+            out += item
+            if (item is Container) item.components.forEach { visit(it) }
+        }
+        visit(root)
+        return out
+    }
 
     private fun update(action: AnAction, dock: BranchDock): Presentation {
         val event = event(action, dock)
