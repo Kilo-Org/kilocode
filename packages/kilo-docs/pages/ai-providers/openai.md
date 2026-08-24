@@ -68,3 +68,20 @@ Then set your default model:
 
 - **Pricing:** Refer to the [OpenAI Pricing](https://openai.com/pricing) page for details on model costs.
 - **Azure OpenAI Service:** Use Kilo Code's native `azure` provider for Azure OpenAI, especially GPT-5 deployments. Do not configure Azure GPT-5 through a generic [OpenAI-compatible](/docs/ai-providers/openai-compatible) custom provider.
+
+## Flex Processing
+
+Kilo Code supports OpenAI Flex processing for verified eligible models when using
+the direct OpenAI API provider with an API key. In the prompt controls, choose
+**Processing** and select **Flex**. The initial supported model is
+`gpt-5.6-luna`; availability may expand as additional models are verified.
+
+Flex processing is lower cost and lower priority than standard processing. It
+may take longer and can be temporarily unavailable when OpenAI has no Flex
+capacity. Choose **Standard** when latency or completion availability is more
+important than the lower processing cost.
+
+Flex is an OpenAI API billing option. It is not included with ChatGPT Plus or
+Pro subscriptions and is not currently supported through Kilo Gateway routing.
+See the [OpenAI Flex processing guide](https://developers.openai.com/api/docs/guides/flex-processing)
+for current model availability and API behavior.

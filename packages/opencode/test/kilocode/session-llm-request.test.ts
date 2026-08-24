@@ -39,6 +39,14 @@ const model: Provider.Model = {
   release_date: "2026-01-01",
 }
 
+const flexModel: Provider.Model = {
+  ...model,
+  id: ModelV2.ID.make("gpt-5.6-luna"),
+  providerID: ProviderV2.ID.make("openai"),
+  api: { ...model.api, id: "gpt-5.6-luna", url: "https://api.openai.com/v1" },
+  options: { serviceTier: "flex" },
+}
+
 const plugin: Plugin.Interface = {
   init: () => Effect.void,
   trigger: (_name, _input, output) => Effect.succeed(output),
@@ -55,24 +63,27 @@ function agent(name: string): Agent.Info {
   }
 }
 
-function user(name: string): SessionV1.User {
+function user(name: string, selected: Provider.Model = model, processingMode?: "standard" | "flex"): SessionV1.User {
   return {
     id: MessageID.make("msg_test"),
     sessionID: SessionID.make("ses_test"),
     role: "user",
     time: { created: Date.now() },
     agent: name,
-    model: { providerID: model.providerID, modelID: model.id },
+    model: { providerID: selected.providerID, modelID: selected.id, processingMode },
     system: "request-specific system text",
   }
 }
 
-async function prepare(name: string, oauth = false) {
+async function prepare(name: string, oauth = false, processingMode?: "standard" | "flex") {
+  const selected = processingMode ? flexModel : model
   const auth: Auth.Info | undefined = oauth
     ? { type: "oauth", refresh: "refresh", access: "access", expires: Date.now() + 60_000 }
-    : undefined
+    : processingMode
+      ? { type: "api", key: "test" }
+      : undefined
   const provider: Provider.Info = {
-    id: ProviderV2.ID.make(oauth ? "openai" : "test"),
+    id: ProviderV2.ID.make(oauth || processingMode ? "openai" : "test"),
     name: "Test provider",
     source: "config",
     env: [],
@@ -84,9 +95,9 @@ async function prepare(name: string, oauth = false) {
   )
   return Effect.runPromise(
     LLMRequestPrep.prepare({
-      user: user(name),
+      user: user(name, selected, processingMode),
       sessionID: "ses_test",
-      model,
+      model: selected,
       agent: agent(name),
       system: [],
       messages: [{ role: "user", content: "Generate a name" }] satisfies ModelMessage[],
@@ -123,5 +134,13 @@ describe("Kilo persona in generated metadata requests", () => {
 
     expect(result.system[0]).toContain(SystemPrompt.soul())
     expect(oauth.params.options.instructions).toContain(SystemPrompt.soul())
+  })
+
+  test("applies Flex and lets Standard clear configured Flex", async () => {
+    const flex = await prepare("code", false, "flex")
+    const standard = await prepare("code", false, "standard")
+
+    expect(flex.params.options.serviceTier).toBe("flex")
+    expect(standard.params.options.serviceTier).toBeUndefined()
   })
 })

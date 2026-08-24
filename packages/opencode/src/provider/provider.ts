@@ -45,6 +45,7 @@ import {
   requestTimeout,
   wrapFirstByte,
 } from "@/kilocode/provider/provider"
+import { FLEX_REQUEST_TIMEOUT_MS, isFlexRequest } from "@/kilocode/provider/processing-mode" // kilocode_change
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
 // kilocode_change end
@@ -1832,13 +1833,19 @@ const layer = Layer.effect(
           const fetchFn = customFetch ?? fetch
           const opts = init ?? {}
           const chunkAbortCtl = typeof chunkTimeout === "number" && chunkTimeout > 0 ? new AbortController() : undefined
-          const timeout = buildTimeoutSignal(options) // kilocode_change - use cancellable timeout for connection phase
+          const flex = isFlexRequest(opts.body) // kilocode_change
+          const timeoutOptions = flex ? { ...options, timeout: FLEX_REQUEST_TIMEOUT_MS } : options // kilocode_change
+          const timeout = buildTimeoutSignal(timeoutOptions) // kilocode_change - use cancellable timeout for connection phase
           // kilocode_change start - extend the same deadline to the first response byte
-          const firstByteMs = requestTimeout(options)
+          const firstByteMs = requestTimeout(timeoutOptions)
           const firstByteCtl = firstByteMs === undefined ? undefined : new AbortController()
           const deadline = firstByteMs === undefined ? undefined : Date.now() + firstByteMs
           // kilocode_change end
-          const headerTimeoutMs = headerTimeout === false ? undefined : headerTimeout
+          const headerTimeoutMs = flex
+            ? FLEX_REQUEST_TIMEOUT_MS
+            : headerTimeout === false
+              ? undefined
+              : headerTimeout // kilocode_change
           const headerTimeoutCtl = typeof headerTimeoutMs === "number" ? timeoutController(headerTimeoutMs) : undefined
           const signals: AbortSignal[] = []
 

@@ -1,9 +1,10 @@
-import type { Message, ModelSelection } from "../types/messages"
+import type { Message, ModelSelection, ProcessingMode } from "../types/messages"
 
 export interface MessagePrefs {
   agent?: string
   model?: ModelSelection
   variant?: string
+  processingMode?: ProcessingMode
 }
 
 export function resolveMessagePrefs(messages: Message[], names: Set<string>): MessagePrefs {
@@ -18,6 +19,7 @@ export function resolveMessagePrefs(messages: Message[], names: Set<string>): Me
     if (!prefs.model && msg.role === "user" && msg.model?.providerID && msg.model.modelID) {
       prefs.model = { providerID: msg.model.providerID, modelID: msg.model.modelID }
       prefs.variant = msg.model.variant
+      prefs.processingMode = msg.model.processingMode
     }
     if (prefs.agent && prefs.model) break
   }

@@ -4266,6 +4266,7 @@ export class Session2 extends HeyApiClient {
         id: string
         providerID: string
         variant?: string
+        processingMode?: "standard" | "flex"
       }
       metadata?: {
         [key: string]: unknown
@@ -4604,6 +4605,7 @@ export class Session2 extends HeyApiClient {
       model?: {
         providerID: string
         modelID: string
+        processingMode?: "standard" | "flex"
       }
       agent?: string
       noReply?: boolean
@@ -4613,6 +4615,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      processingMode?: "standard" | "flex"
       snapshotInitialization?: "wait"
       editorContext?: {
         directory?: string
@@ -4642,6 +4645,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "processingMode" },
             { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
@@ -4968,6 +4972,7 @@ export class Session2 extends HeyApiClient {
       model?: {
         providerID: string
         modelID: string
+        processingMode?: "standard" | "flex"
       }
       agent?: string
       noReply?: boolean
@@ -4977,6 +4982,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      processingMode?: "standard" | "flex"
       snapshotInitialization?: "wait"
       editorContext?: {
         directory?: string
@@ -5006,6 +5012,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "processingMode" },
             { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
@@ -5100,6 +5107,7 @@ export class Session2 extends HeyApiClient {
       model?: {
         providerID: string
         modelID: string
+        processingMode?: "standard" | "flex"
       }
       command?: string
     },

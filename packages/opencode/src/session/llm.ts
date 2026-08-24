@@ -105,6 +105,7 @@ const live: Layer.Layer<
         small: (input.small ?? false).toString(),
         agent: input.agent.name,
         mode: input.agent.mode,
+        processingMode: input.user.model.processingMode ?? "default", // kilocode_change
       })
 
       const [language, cfg, item, info] = yield* Effect.all(
@@ -300,7 +301,7 @@ const live: Layer.Layer<
 
       // Runtime seam: native is an opt-in adapter over @opencode-ai/llm. It
       // either returns a ready LLMEvent stream or a concrete fallback reason.
-      if (flags.experimentalNativeLlm) {
+      if (flags.experimentalNativeLlm && prepared.params.options.serviceTier !== "flex") { // kilocode_change
         const native = LLMNativeRuntime.stream({
           model: input.model,
           provider: item,
@@ -328,6 +329,7 @@ const live: Layer.Layer<
             "llm.runtime": "native",
             "llm.provider": input.model.providerID,
             "llm.model": input.model.id,
+            "llm.service_tier": prepared.params.options.serviceTier ?? "default", // kilocode_change
           })
           return {
             type: "native" as const,
@@ -339,6 +341,7 @@ const live: Layer.Layer<
           "llm.provider": input.model.providerID,
           "llm.model": input.model.id,
           "llm.native_unsupported_reason": native.reason,
+          "llm.service_tier": prepared.params.options.serviceTier ?? "default", // kilocode_change
         })
         yield* Effect.logInfo("native runtime unavailable; falling back to ai-sdk", {
           providerID: input.model.providerID,
@@ -355,6 +358,7 @@ const live: Layer.Layer<
         "llm.runtime": "ai-sdk",
         "llm.provider": input.model.providerID,
         "llm.model": input.model.id,
+        "llm.service_tier": prepared.params.options.serviceTier ?? "default", // kilocode_change
       })
       // Default runtime path: AI SDK owns provider execution and tool dispatch;
       // LLMAISDK.toLLMEvents below normalizes fullStream parts for the processor.

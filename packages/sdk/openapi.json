@@ -6243,6 +6243,10 @@
                       },
                       "variant": {
                         "type": "string"
+                      },
+                      "processingMode": {
+                        "type": "string",
+                        "enum": ["standard", "flex"]
                       }
                     },
                     "required": ["id", "providerID"],
@@ -7086,6 +7090,10 @@
                       },
                       "modelID": {
                         "type": "string"
+                      },
+                      "processingMode": {
+                        "type": "string",
+                        "enum": ["standard", "flex"]
                       }
                     },
                     "required": ["providerID", "modelID"],
@@ -7111,6 +7119,10 @@
                   },
                   "variant": {
                     "type": "string"
+                  },
+                  "processingMode": {
+                    "type": "string",
+                    "enum": ["standard", "flex"]
                   },
                   "snapshotInitialization": {
                     "type": "string",
@@ -8002,6 +8014,10 @@
                       },
                       "modelID": {
                         "type": "string"
+                      },
+                      "processingMode": {
+                        "type": "string",
+                        "enum": ["standard", "flex"]
                       }
                     },
                     "required": ["providerID", "modelID"],
@@ -8027,6 +8043,10 @@
                   },
                   "variant": {
                     "type": "string"
+                  },
+                  "processingMode": {
+                    "type": "string",
+                    "enum": ["standard", "flex"]
                   },
                   "snapshotInitialization": {
                     "type": "string",
@@ -8371,6 +8391,10 @@
                       },
                       "modelID": {
                         "type": "string"
+                      },
+                      "processingMode": {
+                        "type": "string",
+                        "enum": ["standard", "flex"]
                       }
                     },
                     "required": ["providerID", "modelID"],
@@ -27950,6 +27974,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["providerID", "modelID"],
@@ -35280,6 +35308,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -36349,6 +36381,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -36522,6 +36558,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -36714,6 +36754,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -36887,6 +36931,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -37060,6 +37108,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -37233,6 +37285,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -37406,6 +37462,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -37744,6 +37804,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -37917,6 +37981,10 @@
               },
               "variant": {
                 "type": "string"
+              },
+              "processingMode": {
+                "type": "string",
+                "enum": ["standard", "flex"]
               }
             },
             "required": ["id", "providerID"],
@@ -43199,6 +43267,10 @@
           },
           "variant": {
             "type": "string"
+          },
+          "processingMode": {
+            "type": "string",
+            "enum": ["standard", "flex"]
           }
         },
         "required": ["id", "providerID"],

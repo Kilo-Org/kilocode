@@ -1,5 +1,6 @@
 import type { KilocodeSessionModelUsageResponse } from "@kilocode/sdk/v2"
 import type { Part, TokenUsage } from "./parts"
+import type { ProcessingMode } from "./providers"
 
 export type SessionModelUsage = KilocodeSessionModelUsageResponse
 
@@ -15,7 +16,7 @@ export interface Message {
   createdAt: string
   time?: { created: number; completed?: number }
   agent?: string
-  model?: { providerID: string; modelID: string; variant?: string }
+  model?: { providerID: string; modelID: string; variant?: string; processingMode?: ProcessingMode }
   providerID?: string
   modelID?: string
   mode?: string

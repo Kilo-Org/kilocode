@@ -390,6 +390,7 @@ export const User = Schema.Struct({
     providerID: Provider.ID,
     modelID: Model.ID,
     variant: Schema.optional(Schema.String),
+    processingMode: Model.ProcessingMode.pipe(optional), // kilocode_change
   }),
   system: Schema.optional(Schema.String),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),

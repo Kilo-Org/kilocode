@@ -802,6 +802,7 @@ export const layer = Layer.effect(
           providerID: ProviderV2.ID.make(current.model.providerID),
           modelID: ModelV2.ID.make(current.model.id),
           ...(current.model.variant && current.model.variant !== "default" ? { variant: current.model.variant } : {}),
+          processingMode: current.model.processingMode, // kilocode_change
         }
       }
       const match = yield* sessions
@@ -848,6 +849,12 @@ export const layer = Layer.effect(
           providerID: model.providerID,
           modelID: model.modelID,
           variant,
+          // kilocode_change start
+          processingMode:
+            input.processingMode ??
+            (model as { processingMode?: ModelV2.ProcessingMode }).processingMode ??
+            (stored as { processingMode?: ModelV2.ProcessingMode } | undefined)?.processingMode,
+          // kilocode_change end
         },
         system: input.system,
         format: input.format,
@@ -859,7 +866,8 @@ export const layer = Layer.effect(
         current.agent !== info.agent ||
         current.model?.providerID !== info.model.providerID ||
         current.model?.id !== info.model.modelID ||
-        (current.model?.variant === "default" ? undefined : current.model?.variant) !== info.model.variant
+        (current.model?.variant === "default" ? undefined : current.model?.variant) !== info.model.variant || // kilocode_change
+        current.model?.processingMode !== info.model.processingMode // kilocode_change
       ) {
         yield* sessions.setAgentModel({
           sessionID: input.sessionID,
@@ -868,6 +876,7 @@ export const layer = Layer.effect(
             id: info.model.modelID,
             providerID: info.model.providerID,
             variant: info.model.variant ?? "default",
+            processingMode: info.model.processingMode, // kilocode_change
           },
           time: info.time.created,
         })
@@ -2480,6 +2489,7 @@ export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBui
 const ModelRef = Schema.Struct({
   providerID: ProviderV2.ID,
   modelID: ModelV2.ID,
+  processingMode: Schema.optional(ModelV2.ProcessingMode), // kilocode_change
 })
 
 export const PromptInput = Schema.Struct({
@@ -2495,6 +2505,7 @@ export const PromptInput = Schema.Struct({
   format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
+  processingMode: Schema.optional(ModelV2.ProcessingMode), // kilocode_change
   // kilocode_change start - managed product slow-snapshot policy
   snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
     description: "Wait silently if snapshot initialization is slow instead of asking the user.",

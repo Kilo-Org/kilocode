@@ -584,6 +584,7 @@ export type UserMessage = {
     providerID: string
     modelID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   system?: string
   tools?: {
@@ -2957,6 +2958,7 @@ export type GlobalSession = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -3313,6 +3315,7 @@ export type Session1 = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -3367,6 +3370,7 @@ export type Session2 = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -3428,6 +3432,7 @@ export type Session3 = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -3482,6 +3487,7 @@ export type Session4 = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -3536,6 +3542,7 @@ export type Session5 = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -3590,6 +3597,7 @@ export type Session6 = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -3644,6 +3652,7 @@ export type Session7 = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -3753,6 +3762,7 @@ export type Session8 = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -3807,6 +3817,7 @@ export type Session9 = {
     id: string
     providerID: string
     variant?: string
+    processingMode?: "standard" | "flex"
   }
   version: string
   metadata?: {
@@ -5296,6 +5307,7 @@ export type ModelRef = {
   id: string
   providerID: string
   variant?: string
+  processingMode?: "standard" | "flex"
 }
 
 export type EventSessionNextModelSwitched = {
@@ -13087,6 +13099,7 @@ export type SessionCreateData = {
       id: string
       providerID: string
       variant?: string
+      processingMode?: "standard" | "flex"
     }
     metadata?: {
       [key: string]: unknown
@@ -13409,6 +13422,7 @@ export type SessionPromptData = {
     model?: {
       providerID: string
       modelID: string
+      processingMode?: "standard" | "flex"
     }
     agent?: string
     noReply?: boolean
@@ -13418,6 +13432,7 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    processingMode?: "standard" | "flex"
     snapshotInitialization?: "wait"
     editorContext?: {
       directory?: string
@@ -13765,6 +13780,7 @@ export type SessionPromptAsyncData = {
     model?: {
       providerID: string
       modelID: string
+      processingMode?: "standard" | "flex"
     }
     agent?: string
     noReply?: boolean
@@ -13774,6 +13790,7 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    processingMode?: "standard" | "flex"
     snapshotInitialization?: "wait"
     editorContext?: {
       directory?: string
@@ -13877,6 +13894,7 @@ export type SessionShellData = {
     model?: {
       providerID: string
       modelID: string
+      processingMode?: "standard" | "flex"
     }
     command: string
   }

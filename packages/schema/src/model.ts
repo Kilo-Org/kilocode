@@ -11,10 +11,14 @@ export type ID = typeof ID.Type
 export const VariantID = Schema.String.pipe(Schema.brand("VariantID"))
 export type VariantID = typeof VariantID.Type
 
+export const ProcessingMode = Schema.Literals(["standard", "flex"]) // kilocode_change
+export type ProcessingMode = typeof ProcessingMode.Type // kilocode_change
+
 export const Ref = Schema.Struct({
   id: ID,
   providerID: Provider.ID,
   variant: VariantID.pipe(optional),
+  processingMode: ProcessingMode.pipe(optional), // kilocode_change
 }).annotate({ identifier: "Model.Ref" })
 export interface Ref extends Schema.Schema.Type<typeof Ref> {}
 

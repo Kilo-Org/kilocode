@@ -8,6 +8,9 @@ export type ID = typeof ID.Type
 export const VariantID = Model.VariantID
 export type VariantID = typeof VariantID.Type
 
+export const ProcessingMode = Model.ProcessingMode // kilocode_change
+export type ProcessingMode = Model.ProcessingMode // kilocode_change
+
 // Grouping of models, eg claude opus, claude sonnet
 export const Family = Model.Family
 export type Family = Model.Family
