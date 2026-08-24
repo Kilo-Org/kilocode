@@ -183,7 +183,7 @@ export const MarkdownAnnotationLayer: Component<MarkdownAnnotationLayerProps> = 
       layer.appendChild(row)
     }
 
-    observer?.observe(root, { childList: true, subtree: true })
+    observer?.observe(pane, { childList: true, subtree: true })
   }
 
   createEffect(() => {
