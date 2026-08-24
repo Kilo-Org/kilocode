@@ -99,6 +99,7 @@ internal class KiloToolWindowSetupService(
                 workspace.directory,
                 cs,
                 activity = project.service<KiloSessionService>().activity,
+                abort = { id, dir -> project.service<KiloSessionService>().abort(id, dir) },
             )
             val agentManagerPanel = AgentManagerPanel(manager, worktrees, project)
 
@@ -138,13 +139,17 @@ internal class KiloToolWindowSetupService(
             agentContent.putUserData(ToolWindow.SHOW_CONTENT_ICON, true)
             toolWindow.contentManager.addContent(chatContent)
             toolWindow.contentManager.addContent(agentContent)
+            val agents = { toolWindow.contentManager.setSelectedContent(agentContent, true) }
             // The chat branch dock's "New Worktree" action switches to the Agent Manager tab and
             // opens its New Worktree dialog, matching the VS Code sidebar dock.
             manager.onNewWorktree = {
                 Telemetry.send("New Worktree Clicked", mapOf("surface" to "chat_dock"))
-                agentManagerPanel.configure {
-                    toolWindow.contentManager.setSelectedContent(agentContent)
-                }
+                agents()
+                agentManagerPanel.configure()
+            }
+            manager.onMoveToWorktree = { id, dir ->
+                agents()
+                agentManagerPanel.move(id, dir)
             }
             val listener = object : ContentManagerListener {
                 override fun selectionChanged(event: ContentManagerEvent) {

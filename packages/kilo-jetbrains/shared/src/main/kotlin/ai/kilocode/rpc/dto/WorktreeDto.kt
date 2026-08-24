@@ -70,7 +70,6 @@ enum class MoveStage { CAPTURING, CREATING, TRANSFERRING, FORKING, DONE, ERROR }
 @Serializable
 data class MoveProgressDto(
     val stage: MoveStage,
-    val detail: String? = null,
     val error: String? = null,
     val worktree: WorktreeDto? = null,
     val session: String? = null,

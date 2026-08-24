@@ -144,7 +144,7 @@ internal class ActiveListView(
                     if (selection(e)) return
                     val hit = hit(e, enabled = false) ?: return
                     if (hit.id != null) return
-                    if (hit.item.deleting) return
+                    if (hit.item.progress != null) return
                     if (!openOnClick) {
                         onClick?.invoke(hit.item) ?: return
                         e.consume()
@@ -158,7 +158,7 @@ internal class ActiveListView(
                 if (e.clickCount != 2 || !UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) return
                 val hit = hit(e, enabled = false) ?: return
                 if (hit.id != null) return
-                if (hit.item.deleting) return
+                if (hit.item.progress != null) return
                 val action = onOpen
                 if (action != null) action(hit.item, true) else activate(hit.item)
                 e.consume()
@@ -174,7 +174,7 @@ internal class ActiveListView(
                 press = null
                 val hit = hit(e) ?: return
                 if (hit.item.key != down.key || hit.id != down.id) return
-                if (hit.item.deleting) return
+                if (hit.item.progress != null) return
                 fire(hit.item, down.id)
                 e.consume()
             }
@@ -517,7 +517,7 @@ internal class ActiveListView(
     private fun open(focus: Boolean) {
         val item = active() ?: return
         if (item is ActiveListGap) return
-        if (item.deleting) return
+        if (item.progress != null) return
         val action = onOpen
         if (action != null) {
             action(item, focus)
@@ -529,7 +529,7 @@ internal class ActiveListView(
     private fun source() {
         val item = list.selectedValue ?: return
         if (item is ActiveListGap) return
-        if (item.deleting) return
+        if (item.progress != null) return
         onOpen?.invoke(item, true)
     }
 
@@ -548,7 +548,7 @@ internal class ActiveListView(
      */
     private fun activate(item: ActiveListItem) {
         if (item is ActiveListGap) return
-        if (item.deleting) return
+        if (item.progress != null) return
         val action = onActivate
         if (action != null) {
             action(item)
@@ -565,7 +565,7 @@ internal class ActiveListView(
 
     private fun primary(item: ActiveListItem) {
         if (item is ActiveListGap) return
-        if (item.deleting) return
+        if (item.progress != null) return
         val cells = activeListVisibleCells(item, true)
         val cell = cells.firstOrNull { it.enabled && it.primary }
         if (cell != null) {
@@ -606,7 +606,7 @@ internal class ActiveListView(
         if (!list.isEnabled || filter.isNotBlank() || drag != null) return null
         val idx = rowAt(point) ?: return null
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap || item.disabled || item.deleting) return null
+        if (item is ActiveListGap || item.disabled || item.progress != null) return null
         if (!cfg.movable(item)) return null
         val selected = list.isSelectedIndex(idx)
         if (activeListCellAt(list, idx, point, selected, menu?.takeIf { it.available(item) } != null) != null) return null
@@ -746,7 +746,7 @@ internal class ActiveListView(
         if (!bounds.contains(point)) return false
         val item = model.getElementAt(idx)
         if (item is ActiveListGap) return false
-        if (item.disabled || item.deleting || !cfg.available(item)) return false
+        if (item.disabled || item.progress != null || !cfg.available(item)) return false
         val rect = activeListCellBounds(list, idx, list.isSelectedIndex(idx))[ACTIVE_LIST_MENU_CELL] ?: return false
         if (!rect.contains(point)) return false
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
@@ -858,7 +858,7 @@ private data class ActiveListHeightRow(
     val trailing: String?,
     val cells: List<ActiveListCell>,
     val disabled: Boolean,
-    val deleting: Boolean,
+    val progress: String?,
 )
 
 private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
@@ -873,7 +873,7 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
         item.trailing,
         item.cells,
         item.disabled,
-        item.deleting,
+        item.progress,
     )
 }
 

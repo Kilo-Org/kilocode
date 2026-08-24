@@ -2,19 +2,16 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.header.ChatDockKeys
-import ai.kilocode.rpc.dto.MoveStage
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.util.IconLoader
-import com.intellij.ui.AnimatedIcon
 
 /**
  * "Move to Worktree" action shown in the chat branch dock. Visible only when there is something to
- * move (a conversation or local changes). While a move runs it stays visible but disabled, showing a
- * spinner and the current stage.
+ * move (a conversation or local changes).
  */
 class ChatMoveToWorktreeAction : AnAction(), DumbAware {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
@@ -26,14 +23,6 @@ class ChatMoveToWorktreeAction : AnAction(), DumbAware {
             e.presentation.isEnabledAndVisible = false
             return
         }
-        if (dock.moving()) {
-            e.presentation.isVisible = true
-            e.presentation.isEnabled = false
-            e.presentation.icon = AnimatedIcon.Default.INSTANCE
-            e.presentation.text = progressLabel(dock.moveStage())
-            e.presentation.description = null
-            return
-        }
         e.presentation.isEnabledAndVisible = dock.moveEnabled()
         e.presentation.icon = BRANCH
         e.presentation.text = KiloBundle.message("session.dock.move")
@@ -42,14 +31,6 @@ class ChatMoveToWorktreeAction : AnAction(), DumbAware {
 
     override fun actionPerformed(e: AnActionEvent) {
         e.getData(ChatDockKeys.DOCK)?.triggerMove()
-    }
-
-    private fun progressLabel(stage: MoveStage?): String = when (stage) {
-        MoveStage.CAPTURING -> KiloBundle.message("session.dock.progress.capturing")
-        MoveStage.CREATING -> KiloBundle.message("session.dock.progress.creating")
-        MoveStage.TRANSFERRING -> KiloBundle.message("session.dock.progress.transferring")
-        MoveStage.FORKING -> KiloBundle.message("session.dock.progress.forking")
-        else -> KiloBundle.message("session.dock.move")
     }
 
     private fun moveTooltip(count: Int): String = when (count) {

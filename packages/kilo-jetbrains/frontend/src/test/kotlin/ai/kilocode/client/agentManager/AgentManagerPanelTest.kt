@@ -13,6 +13,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
@@ -632,7 +633,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("<html>Open #8<br>Click to open the pull request in your browser.</html>", row.metrics?.prTooltip)
     }
 
-    fun `test worktree row hides badge while pending or deleting`() {
+    fun `test worktree row hides badge while in progress`() {
         val path = "feature/y"
         val activity = MutableStateFlow(mapOf(
             "ses_1" to SessionActivityDto(path, SessionActivityKindDto.RUNNING),
@@ -647,7 +648,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         val pending = row(panel, 0)
         assertSame(WorktreeIcons.spinner, pending.icon)
+        assertEquals(KiloBundle.message("worktree.progress.creating"), pending.progress)
         assertEquals(emptyList<ActiveListBadge>(), pending.badges)
+        assertNull(pending.metrics)
         gate.complete(Unit)
         flush()
     }

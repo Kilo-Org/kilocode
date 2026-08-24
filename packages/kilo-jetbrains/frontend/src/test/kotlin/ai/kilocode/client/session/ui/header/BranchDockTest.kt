@@ -8,7 +8,6 @@ import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
-import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -136,21 +135,6 @@ class BranchDockTest : BasePlatformTestCase() {
         assertFalse(update(ChatNewWorktreeAction(), dock).isVisible)
     }
 
-    fun `test move progress keeps the row while session is busy`() {
-        val dock = dock()
-        edt {
-            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
-            dock.setHasMessages(true)
-            dock.setBusy(true)
-            dock.setMoveProgress(MoveStage.CREATING, null)
-        }
-        assertTrue(edt { dock.isVisible })
-        val p = update(ChatMoveToWorktreeAction(), dock)
-        assertTrue(p.isVisible)
-        assertFalse(p.isEnabled)
-        assertEquals(KiloBundle.message("session.dock.progress.creating"), p.text)
-    }
-
     // ---- Move to Worktree action ----
 
     fun `test move action visible with messages`() {
@@ -191,19 +175,6 @@ class BranchDockTest : BasePlatformTestCase() {
         assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
     }
 
-    fun `test move action shows spinner while moving`() {
-        val dock = dock()
-        edt {
-            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
-            dock.setHasMessages(true)
-            dock.setMoveProgress(MoveStage.CREATING, null)
-        }
-        val p = update(ChatMoveToWorktreeAction(), dock)
-        assertTrue(p.isVisible)
-        assertFalse(p.isEnabled)
-        assertEquals(KiloBundle.message("session.dock.progress.creating"), p.text)
-    }
-
     fun `test move action invokes callback`() {
         var moved = 0
         val dock = edt { BranchDock(openDiff = {}, onMove = { moved++ }) }
@@ -212,6 +183,15 @@ class BranchDockTest : BasePlatformTestCase() {
         edt { ActionUtil.updateAction(action, event) }
         edt { action.actionPerformed(event) }
         assertEquals(1, moved)
+    }
+
+    fun `test move action hidden without a move host`() {
+        val dock = edt { BranchDock(openDiff = {}, onMove = null) }
+        edt {
+            dock.setBranch(BranchStatusDto(branch = "feature-x", worktree = false, availability = GhAvailability.OK))
+            dock.setHasMessages(true)
+        }
+        assertFalse(update(ChatMoveToWorktreeAction(), dock).isVisible)
     }
 
     // ---- New Worktree action ----

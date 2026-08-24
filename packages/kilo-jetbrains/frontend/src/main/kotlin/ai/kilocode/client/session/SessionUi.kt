@@ -44,7 +44,6 @@ import ai.kilocode.client.session.ui.attachment.attachmentParams
 import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
-import ai.kilocode.client.agentManager.worktree.MoveToWorktree
 import ai.kilocode.client.session.ui.header.BranchDock
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.selection.SessionContextMenu
@@ -200,8 +199,6 @@ class SessionUi(
     private var dock: BranchDock? = null
 
     private var bottom: JComponent? = null
-
-    private val move by lazy { MoveToWorktree(project, cs) }
 
     internal lateinit var scroll: SessionScroll
 
@@ -430,7 +427,8 @@ class SessionUi(
         if (!readonly && showBranchDock()) {
             val owner = manager
             val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
-            dock = BranchDock(openDiff = ::openBranchChanges, onMove = ::moveToWorktree, onNewWorktree = newWorktree)
+            val move = if (owner?.supportsMoveToWorktree == true) ::moveToWorktree else null
+            dock = BranchDock(openDiff = ::openBranchChanges, onMove = move, onNewWorktree = newWorktree)
         }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
@@ -990,12 +988,11 @@ class SessionUi(
         }
     }
 
-    /** Starts the Move to Worktree flow for the current session, wiring progress into the dock. */
+    /** Starts the Move to Worktree flow for the current session through the side-panel manager. */
     @RequiresEdt
     private fun moveToWorktree() {
-        val dock = dock ?: return
         val id = controller.id ?: return
-        move.launch(controller.sessionDirectory, id) { stage, detail -> dock.setMoveProgress(stage, detail) }
+        manager?.moveToWorktree(id, controller.sessionDirectory)
     }
 
     @RequiresEdt

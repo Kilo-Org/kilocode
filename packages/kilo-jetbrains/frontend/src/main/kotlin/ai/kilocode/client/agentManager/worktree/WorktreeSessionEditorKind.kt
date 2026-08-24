@@ -7,6 +7,7 @@ import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.vfs.KiloEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFile
+import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
@@ -62,3 +63,8 @@ internal fun unregisterWorktreeSessionEditorKind() {
 internal fun worktreeSessionParams(item: WorktreeDto, session: String? = null): Map<String, String> = linkedMapOf(
     "path" to item.path,
 ).apply { session?.takeIf { it.isNotBlank() }?.let { put("session", it) } }
+
+internal fun openWorktreeSession(project: Project, worktree: WorktreeDto, session: String? = null, focus: Boolean = true) {
+    ensureWorktreeSessionEditorKind()
+    project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(worktree, session), focus)
+}

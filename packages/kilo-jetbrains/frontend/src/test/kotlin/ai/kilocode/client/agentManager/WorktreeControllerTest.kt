@@ -7,11 +7,14 @@ import ai.kilocode.client.agentManager.worktree.PendingPrompt
 import ai.kilocode.client.agentManager.worktree.PendingWorktreePrompt
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeNames
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.MoveProgressDto
+import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionActivityDto
@@ -161,13 +164,13 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
         controller.remove(controller.model.getElementAt(0))
 
-        assertTrue(controller.isDeleting(item.id))
+        assertEquals(KiloBundle.message("common.deleting"), controller.progress(item.id))
         assertEquals(1, controller.model.size)
 
         gate.complete(Unit)
         flush()
 
-        assertFalse(controller.isDeleting(item.id))
+        assertNull(controller.progress(item.id))
         assertEquals(0, controller.model.size)
     }
 
@@ -186,7 +189,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         // git rejected the removal, so the entry must remain instead of vanishing optimistically.
         assertEquals(1, controller.model.size)
         assertEquals("feature/x", controller.model.getElementAt(0).branch)
-        assertFalse(controller.isDeleting(item.id))
+        assertNull(controller.progress(item.id))
         assertEquals(1, failures.size)
         assertTrue(failures.first().locked)
     }
@@ -321,6 +324,75 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("/wt/pr-7", controller.model.getElementAt(0).path)
     }
 
+    fun `test move adds placeholder tracks progress and swaps to worktree`() {
+        val done = WorktreeDto("/wt/moved", "moved", "moved", "/wt/moved")
+        rpc.moveScript = listOf(
+            MoveProgressDto(MoveStage.CREATING),
+            MoveProgressDto(MoveStage.TRANSFERRING),
+            MoveProgressDto(MoveStage.FORKING),
+            MoveProgressDto(MoveStage.DONE, worktree = done, session = "ses_fork"),
+        )
+        val selected = mutableListOf<String>()
+        val aborts = mutableListOf<Pair<String, String>>()
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        val controller = controller(abort = { id, dir -> aborts += id to dir }, telemetry = { name, props -> events += name to props })
+        controller.onSelect = { selected += it }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.move("ses_source", "/repo") }
+        val temp = controller.model.getElementAt(0)
+        assertTrue(controller.isPending(temp.id))
+        assertEquals(KiloBundle.message("worktree.progress.capturing"), controller.progress(temp.id))
+        assertEquals(temp.id, selected.single())
+        flush()
+
+        assertEquals(listOf("ses_source" to "/repo"), aborts)
+        assertEquals("/repo", rpc.moves.single().first)
+        assertEquals("ses_source", rpc.moves.single().second)
+        assertEquals(done, controller.model.getElementAt(0))
+        assertNull(controller.progress(temp.id))
+        assertEquals("ses_fork", controller.takeSession(done.id))
+        assertNull(controller.takeSession(done.id))
+        assertEquals(done.id, selected.last())
+        assertTrue(events.any { it.first == "Continue in Worktree" && it.second["surface"] == "sidebar" })
+    }
+
+    fun `test move failure removes placeholder and reports last stage`() {
+        rpc.moveScript = listOf(
+            MoveProgressDto(MoveStage.CREATING),
+            MoveProgressDto(MoveStage.ERROR, error = "boom"),
+        )
+        val failures = mutableListOf<String?>()
+        val events = mutableListOf<Pair<String, Map<String, String>>>()
+        val controller = controller(telemetry = { name, props -> events += name to props })
+        controller.onMoveFailure = { failures += it }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.move("ses_source", "/repo") }
+        flush()
+
+        assertEquals(0, controller.model.size)
+        assertEquals(listOf("boom"), failures)
+        assertTrue(events.any { it.first == "Continue in Worktree Failed" && it.second["stage"] == "CREATING" })
+    }
+
+    fun `test duplicate move for session is ignored while in flight`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.moveScript = listOf(MoveProgressDto(MoveStage.DONE, worktree = WorktreeDto("/wt/moved", "moved", "moved", "/wt/moved")))
+        val controller = controller(abort = { _, _ -> gate.await() })
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.move("ses_source", "/repo")
+            controller.move("ses_source", "/repo")
+        }
+        flush()
+
+        assertEquals(1, controller.model.size)
+        assertEquals(0, rpc.moves.size)
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(1, rpc.moves.size)
+    }
+
     fun `test create stashes the prompt with its picked selection for the created worktree`() {
         val controller = controller()
 
@@ -354,22 +426,22 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     fun `test worktree row icons show only while running or waiting`() {
         assertSame(
             WorktreeIcons.spinner,
-            WorktreeIcons.forRow(pending = true, kind = SessionActivityKind.RUNNING),
+            WorktreeIcons.forRow(busy = true, kind = SessionActivityKind.RUNNING),
         )
         assertSame(
             WorktreeIcons.running,
-            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.RUNNING),
+            WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.RUNNING),
         )
         assertSame(
             SessionActivityKind.QUESTION.icon(),
-            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.QUESTION),
+            WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.QUESTION),
         )
         assertSame(
             SessionActivityKind.PLAN.icon(),
-            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.PLAN),
+            WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.PLAN),
         )
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR))
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false, kind = null))
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR))
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(busy = false, kind = null))
     }
 
     fun `test worktree icons load at the same size`() {
@@ -402,10 +474,10 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
         val child = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
 
-        assertFalse(worktreeDeletable(null, pending = false))
-        assertFalse(worktreeDeletable(main, pending = false))
-        assertFalse(worktreeDeletable(child, pending = true))
-        assertTrue(worktreeDeletable(child, pending = false))
+        assertFalse(worktreeDeletable(null, busy = false))
+        assertFalse(worktreeDeletable(main, busy = false))
+        assertFalse(worktreeDeletable(child, busy = true))
+        assertTrue(worktreeDeletable(child, busy = false))
     }
 
     fun `test applyName updates the matching row so an adopted name shows live`() {
@@ -468,8 +540,11 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(listOf("/wt" to "Name", "/wt" to null), events)
     }
 
-    private fun controller(activity: MutableStateFlow<Map<String, SessionActivityDto>> = MutableStateFlow(emptyMap())) =
-        WorktreeController(service, "/test", coroutines.scope, activity = activity)
+    private fun controller(
+        activity: MutableStateFlow<Map<String, SessionActivityDto>> = MutableStateFlow(emptyMap()),
+        abort: suspend (String, String) -> Unit = { _, _ -> },
+        telemetry: (String, Map<String, String>) -> Unit = { _, _ -> },
+    ) = WorktreeController(service, "/test", coroutines.scope, activity = activity, abort = abort, telemetry = telemetry)
 
     private fun flush() = coroutines.drain(::pump)
 

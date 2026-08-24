@@ -289,7 +289,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
         val row = row("ses_1")
 
-        assertTrue(row.deleting)
+        assertEquals(KiloBundle.message("common.deleting"), row.progress)
     }
 
     fun `test pending new session groups under today`() {

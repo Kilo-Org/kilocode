@@ -11,7 +11,6 @@ import ai.kilocode.client.ui.layout.align
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.GhAvailability
-import ai.kilocode.rpc.dto.MoveStage
 import com.intellij.ide.ActivityTracker
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DataSink
@@ -37,12 +36,12 @@ import java.awt.Dimension
  * not enabled, so the dock never shows a lone action. The dock exposes its state to those actions via
  * [ChatDockKeys.DOCK]. Collapses to nothing unless it has a PR, changes, or an enabled action.
  *
- * The action row is offered only while the session is idle: an active turn ([setBusy]) withdraws it,
- * a move in progress keeps it. The PR row stays through a turn — it is informational, not an action.
+ * The action row is offered only while the session is idle: an active turn ([setBusy]) withdraws it.
+ * The PR row stays through a turn — it is informational, not an action.
  */
 internal class BranchDock(
     openDiff: () -> Unit,
-    private val onMove: () -> Unit,
+    private val onMove: (() -> Unit)?,
     private val onNewWorktree: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, UiDataProvider {
     private val core = PrHeaderView(openDiff)
@@ -60,8 +59,6 @@ internal class BranchDock(
     private var branch: BranchStatusDto? = null
     private var hasMessages = false
     private var busy = false
-    private var moving = false
-    private var stage: MoveStage? = null
 
     init {
         isOpaque = true
@@ -113,28 +110,17 @@ internal class BranchDock(
         sync()
     }
 
-    @RequiresEdt
-    fun setMoveProgress(stage: MoveStage, detail: String?) {
-        moving = stage != MoveStage.DONE && stage != MoveStage.ERROR
-        this.stage = if (moving) stage else null
-        sync()
-    }
-
     // ---- state read by the toolbar actions ----
 
-    fun newWorktreeEnabled(): Boolean = onNewWorktree != null && dockActive() && !moving
+    fun newWorktreeEnabled(): Boolean = onNewWorktree != null && dockActive()
 
-    fun moveEnabled(): Boolean = dockActive() && !moving
-
-    fun moving(): Boolean = moving
-
-    fun moveStage(): MoveStage? = stage
+    fun moveEnabled(): Boolean = onMove != null && dockActive()
 
     fun changeCount(): Int = files.size
 
     fun triggerNewWorktree() = onNewWorktree?.invoke() ?: Unit
 
-    fun triggerMove() = onMove()
+    fun triggerMove() = onMove?.invoke() ?: Unit
 
     private fun dockActive(): Boolean = gitAvailable() && !busy && (hasMessages || files.isNotEmpty())
 
@@ -151,7 +137,7 @@ internal class BranchDock(
 
         // PR present -> the informational PR header; otherwise the centered action row.
         core.isVisible = pull != null
-        val rowVisible = pull == null && (dockActive() || moving)
+        val rowVisible = pull == null && dockActive()
         actionRow.isVisible = rowVisible
 
         val next = pull != null || rowVisible

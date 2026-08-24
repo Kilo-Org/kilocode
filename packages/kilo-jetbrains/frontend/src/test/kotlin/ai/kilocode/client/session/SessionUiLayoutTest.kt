@@ -190,6 +190,35 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(dock.isVisible)
     }
 
+    fun `test dock move delegates to manager without progress state`() {
+        val calls = mutableListOf<Pair<String, String>>()
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val supportsMoveToWorktree: Boolean get() = true
+            override fun moveToWorktree(sessionId: String, directory: String) {
+                calls += sessionId to directory
+            }
+        }
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = owner)
+        settle()
+        val dock = find<BranchDock>(ui)
+        assertTrue(dock.isVisible)
+
+        dock.triggerMove()
+
+        assertEquals(listOf("ses_test" to "/test"), calls)
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+    }
+
     fun `test dock branch changes refresh on finish and revert`() {
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))

@@ -13,7 +13,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeTitle
-import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
+import ai.kilocode.client.agentManager.worktree.openWorktreeSession
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.ui.prTooltip
@@ -95,7 +95,7 @@ class AgentManagerPanel(
             (row as? WorktreeRow)?.dto?.takeIf { canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) }
         }),
         reorder = ActiveListReorder(
-            movable = { row -> row is WorktreeRow && !row.current && !row.pending && !row.deleting },
+            movable = { row -> row is WorktreeRow && !row.current && row.progress == null },
             onMove = { move -> controller.reorder(move.keys) },
         ),
     )
@@ -114,9 +114,10 @@ class AgentManagerPanel(
             // Focus the list so the freshly created worktree renders as an active selection rather
             // than the inactive highlight it would get while focus stays on the toolbar.
             if (list.select(key)) list.focusList()
-            item(key)?.takeIf { !controller.isPending(it.id) }?.let { open(it, focus = false) }
+            item(key)?.takeIf { controller.progress(it.id) == null }?.let { open(it, focus = false) }
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
+        controller.onMoveFailure = { err -> notifyMoveFailed(err) }
         controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }
         controller.onActivityChanged = {
             sync()
@@ -155,7 +156,7 @@ class AgentManagerPanel(
     }
 
     /** Opens the New Worktree dialog. */
-    fun configure(afterClose: (() -> Unit)? = null) {
+    fun configure() {
         val target = project ?: return
         NewWorktreeDialog(
             this,
@@ -168,8 +169,9 @@ class AgentManagerPanel(
                 controller.create(branch, base, prompt = prompt)
             },
         ).show()
-        afterClose?.invoke()
     }
+
+    internal fun move(sessionId: String, directory: String) = controller.move(sessionId, directory)
 
     private fun remove(item: WorktreeDto, force: Boolean) {
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })
@@ -205,9 +207,8 @@ class AgentManagerPanel(
 
     private fun open(item: WorktreeDto, focus: Boolean) {
         val target = project ?: return
-        if (controller.isPending(item.id)) return
-        ensureWorktreeSessionEditorKind()
-        target.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(item), focus)
+        if (controller.progress(item.id) != null) return
+        openWorktreeSession(target, item, controller.takeSession(item.id), focus)
     }
 
     private fun close(item: WorktreeDto) {
@@ -226,13 +227,13 @@ class AgentManagerPanel(
     /** The PR URL for [item], or null when it has none or is not in a stable, openable state. */
     private fun prUrl(item: WorktreeDto?): String? {
         if (item == null || item.main) return null
-        if (controller.isPending(item.id) || controller.isDeleting(item.id)) return null
+        if (controller.progress(item.id) != null) return null
         return prs[normalizeWorktreePath(item.path)]?.url
     }
 
     internal fun canOpenDiff(item: WorktreeDto?): Boolean {
         if (item == null || item.main || project == null) return false
-        return !controller.isPending(item.id) && !controller.isDeleting(item.id)
+        return controller.progress(item.id) == null
     }
 
     internal fun openDiff(item: WorktreeDto) {
@@ -255,8 +256,7 @@ class AgentManagerPanel(
     }
 
     private fun deletable(item: WorktreeDto?): Boolean {
-        if (!worktreeDeletable(item, item?.id?.let(controller::isPending) == true)) return false
-        return item?.id?.let(controller::isDeleting) != true
+        return worktreeDeletable(item, item?.id?.let(controller::progress) != null)
     }
 
     private fun renameable(item: WorktreeDto?): Boolean {
@@ -266,7 +266,7 @@ class AgentManagerPanel(
 
     private fun renameVisible(item: WorktreeDto?): Boolean {
         if (item == null || item.main) return false
-        return !controller.isPending(item.id) && !controller.isDeleting(item.id)
+        return controller.progress(item.id) == null
     }
 
     /**
@@ -311,6 +311,10 @@ class AgentManagerPanel(
         KiloNotifications.error(project, KiloBundle.message("worktree.create.failed.title"), err)
     }
 
+    private fun notifyMoveFailed(err: String?) {
+        KiloNotifications.error(project, KiloBundle.message("worktree.move.failed.title"), err)
+    }
+
     /** Surfaces a failed removal; offers a force-delete retry when git reported a lock. */
     private fun notifyFailed(item: WorktreeDto, result: RemoveWorktreeResultDto, forced: Boolean) {
         val title = KiloBundle.message("worktree.delete.failed.title", item.name)
@@ -352,8 +356,7 @@ class AgentManagerPanel(
         val current = controller.current?.let { item ->
             WorktreeRow(
                 item,
-                pending = false,
-                deleting = false,
+                progress = null,
                 kind = controller.kind(item.path),
                 stats = null,
                 pr = null,
@@ -368,8 +371,7 @@ class AgentManagerPanel(
                 service<WorktreeNameCache>().putPr(item.path, pull)
                 WorktreeRow(
                     item,
-                    controller.isPending(item.id),
-                    controller.isDeleting(item.id),
+                    controller.progress(item.id),
                     controller.kind(item.path),
                     stats[key],
                     pull,
@@ -418,6 +420,7 @@ class AgentManagerPanel(
     override fun dispose() {
         controller.onSelect = null
         controller.onCreateFailure = null
+        controller.onMoveFailure = null
         controller.onRemoveSuccess = null
         controller.onActivityChanged = null
     }
@@ -469,8 +472,7 @@ class AgentManagerPanel(
      */
     private inner class WorktreeRow(
         val dto: WorktreeDto,
-        val pending: Boolean,
-        override val deleting: Boolean,
+        override val progress: String?,
         val kind: SessionActivityKind?,
         val stats: WorktreeStatsDto?,
         val pr: WorktreePrDto?,
@@ -481,13 +483,13 @@ class AgentManagerPanel(
         override val title: String get() = if (current) dto.branch else WorktreeTitle.text(dto.name, dto.path, pr)
         override val description: String get() = WorktreeTitle.fallback(dto.path)
         override val tooltip: String? get() = null
-        override val icon = WorktreeIcons.forRow(pending, kind, dto.locked, current)
+        override val icon = WorktreeIcons.forRow(progress != null, kind, dto.locked, current)
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)
         override val metrics: ActiveListMetrics?
             get() {
-                if (pending || deleting) return null
+                if (progress != null) return null
                 val s = stats
                 val p = pr
                 if (s == null && p == null) return null
@@ -506,8 +508,7 @@ class AgentManagerPanel(
         override fun equals(other: Any?): Boolean {
             val row = other as? WorktreeRow ?: return false
             return dto == row.dto &&
-                pending == row.pending &&
-                deleting == row.deleting &&
+                progress == row.progress &&
                 kind == row.kind &&
                 stats == row.stats &&
                 pr == row.pr &&
@@ -516,8 +517,7 @@ class AgentManagerPanel(
 
         override fun hashCode(): Int {
             var result = dto.hashCode()
-            result = 31 * result + pending.hashCode()
-            result = 31 * result + deleting.hashCode()
+            result = 31 * result + (progress?.hashCode() ?: 0)
             result = 31 * result + (kind?.hashCode() ?: 0)
             result = 31 * result + (stats?.hashCode() ?: 0)
             result = 31 * result + (pr?.hashCode() ?: 0)
@@ -537,4 +537,4 @@ class AgentManagerPanel(
     }
 }
 
-internal fun worktreeDeletable(item: WorktreeDto?, pending: Boolean): Boolean = item != null && !item.main && !pending
+internal fun worktreeDeletable(item: WorktreeDto?, busy: Boolean): Boolean = item != null && !item.main && !busy

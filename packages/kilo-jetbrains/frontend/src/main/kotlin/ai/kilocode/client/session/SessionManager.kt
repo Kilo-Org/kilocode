@@ -21,6 +21,12 @@ interface SessionManager {
     /** Opens the New Worktree flow. No-op unless [supportsNewWorktree] is true. */
     fun newWorktree() {}
 
+    /** Whether this surface can move the current chat into a worktree (sidebar only). */
+    val supportsMoveToWorktree: Boolean get() = false
+
+    /** Opens the Move to Worktree flow. No-op unless [supportsMoveToWorktree] is true. */
+    fun moveToWorktree(sessionId: String, directory: String) {}
+
     fun showHistory(back: (() -> Unit)? = null)
 
     fun openSession(ref: SessionRef)

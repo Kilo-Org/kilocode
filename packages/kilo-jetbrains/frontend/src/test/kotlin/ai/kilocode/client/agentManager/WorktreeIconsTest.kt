@@ -12,7 +12,7 @@ import java.awt.Color
 
 class WorktreeIconsTest : BasePlatformTestCase() {
     fun `test running session resolves to the animated spinner`() {
-        assertSame(WorktreeIcons.running, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.RUNNING))
+        assertSame(WorktreeIcons.running, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.RUNNING))
     }
 
     fun `test running icon is animated and sized to the row icon`() {
@@ -58,36 +58,36 @@ class WorktreeIconsTest : BasePlatformTestCase() {
         return channels.max() - channels.min()
     }
 
-    fun `test pending outranks running and uses the platform spinner`() {
-        assertSame(WorktreeIcons.spinner, WorktreeIcons.forRow(pending = true, kind = SessionActivityKind.RUNNING))
+    fun `test busy outranks running and uses the platform spinner`() {
+        assertSame(WorktreeIcons.spinner, WorktreeIcons.forRow(busy = true, kind = SessionActivityKind.RUNNING))
     }
 
     fun `test waiting kinds resolve to the attention glyph`() {
         assertSame(
             SessionActivityKind.QUESTION.icon(),
-            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.QUESTION),
+            WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.QUESTION),
         )
-        assertSame(SessionActivityKind.PLAN.icon(), WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.PLAN))
+        assertSame(SessionActivityKind.PLAN.icon(), WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.PLAN))
     }
 
     fun `test rows at rest show what the checkout is`() {
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false))
-        assertSame(WorktreeIcons.locked, WorktreeIcons.forRow(pending = false, locked = true))
-        assertSame(WorktreeIcons.local, WorktreeIcons.forRow(pending = false, current = true))
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(busy = false))
+        assertSame(WorktreeIcons.locked, WorktreeIcons.forRow(busy = false, locked = true))
+        assertSame(WorktreeIcons.local, WorktreeIcons.forRow(busy = false, current = true))
     }
 
     fun `test errored session falls back to the resting glyph`() {
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR))
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR))
         assertSame(
             WorktreeIcons.local,
-            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.ERROR, current = true),
+            WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR, current = true),
         )
     }
 
     fun `test activity outranks the resting glyph on the local row`() {
         assertSame(
             WorktreeIcons.running,
-            WorktreeIcons.forRow(pending = false, kind = SessionActivityKind.RUNNING, current = true),
+            WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.RUNNING, current = true),
         )
     }
 }

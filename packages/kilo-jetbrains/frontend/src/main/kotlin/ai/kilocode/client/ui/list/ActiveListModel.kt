@@ -109,7 +109,8 @@ internal interface ActiveListItem {
     val metrics: ActiveListMetrics? get() = null
     val cells: List<ActiveListCell> get() = emptyList()
     val disabled: Boolean get() = false
-    val deleting: Boolean get() = false
+    /** Non-null while a background operation owns this row; the text is shown trailing. */
+    val progress: String? get() = null
     /** Extra text matched by the filter field in addition to [title]; null matches title only. */
     val search: String? get() = null
 }
@@ -126,7 +127,7 @@ internal fun activeListVisibleCells(
     menu: Boolean = false,
 ): List<ActiveListCell> {
     if (item.disabled) return emptyList()
-    if (item.deleting) return emptyList()
+    if (item.progress != null) return emptyList()
     val cells = item.cells.filter { active || it.alwaysVisible }
     if (!menu) return cells
     return cells + activeListMenuCell()

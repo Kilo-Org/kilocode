@@ -212,6 +212,18 @@ class ActiveListSelectionTest : BasePlatformTestCase() {
         assertEquals("created", view.selected()?.key)
     }
 
+    fun `test progress row keeps cells in model but hides visible actions`() {
+        val item = object : ActiveListItem {
+            override val key = "busy"
+            override val title = "Busy"
+            override val progress = "Working..."
+            override val cells = listOf(ActiveListCell("open", "Open", primary = true))
+        }
+
+        assertEquals(listOf("open"), item.cells.map { it.id })
+        assertEquals(emptyList<ActiveListCell>(), activeListVisibleCells(item, active = true))
+    }
+
     private fun view(onSelect: () -> Unit = {}): ActiveListView {
         return ActiveListView("") { _, _ -> }.apply { this.onSelect = onSelect }
     }

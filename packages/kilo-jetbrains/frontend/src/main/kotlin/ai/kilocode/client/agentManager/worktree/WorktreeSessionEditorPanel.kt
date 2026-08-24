@@ -557,7 +557,7 @@ class WorktreeSessionEditorPanel(
     private inner class SessionRow(
         val session: SessionDto,
         val kind: SessionActivityKind?,
-        override val deleting: Boolean = false,
+        private val deleting: Boolean = false,
         // Live title of the open session, if any; reflects the agent-generated name as it streams in
         // before the listed snapshot catches up.
         private val live: String? = null,
@@ -572,11 +572,9 @@ class WorktreeSessionEditorPanel(
             return name
         }
         override val tooltip: String get() = title
+        override val progress: String? get() = if (deleting) KiloBundle.message("common.deleting") else null
         override val badges: List<ActiveListBadge>
-            get() {
-                if (deleting) return emptyList()
-                return listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
-            }
+            get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
     }

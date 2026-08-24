@@ -6,18 +6,19 @@ import ai.kilocode.client.util.edt
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.ui.CollectionListModel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.util.Collections
 
 /**
  * Owns the worktree list model and drives the [KiloWorktreeService] off the EDT. Model mutations
@@ -28,13 +29,17 @@ class WorktreeController(
     val directory: String,
     private val cs: CoroutineScope,
     activity: StateFlow<Map<String, SessionActivityDto>> = MutableStateFlow(emptyMap()),
+    private val abort: suspend (String, String) -> Unit = { _, _ -> },
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
     val model = CollectionListModel<WorktreeDto>()
     private val pending = LinkedHashMap<String, WorktreeDto>()
-    private val deleting = Collections.synchronizedSet(LinkedHashSet<String>())
+    private val tasks = LinkedHashMap<String, String>()
+    private val moves = LinkedHashSet<String>()
+    private val sessions = LinkedHashMap<String, String>()
     var onSelect: ((String) -> Unit)? = null
     var onCreateFailure: ((String?) -> Unit)? = null
+    var onMoveFailure: ((String?) -> Unit)? = null
     var onRemoveSuccess: ((WorktreeDto, Int) -> Unit)? = null
     var onActivityChanged: (() -> Unit)? = null
 
@@ -73,7 +78,9 @@ class WorktreeController(
 
     fun isPending(id: String): Boolean = id in pending
 
-    fun isDeleting(id: String): Boolean = id in deleting
+    fun progress(id: String): String? = tasks[id]
+
+    fun takeSession(id: String): String? = sessions.remove(id)
 
     fun kind(path: String): SessionActivityKind? = kinds[normalizeWorktreePath(path)]
 
@@ -116,6 +123,7 @@ class WorktreeController(
         val temp = WorktreeDto(id, branch, branch, id)
         edt {
             pending[temp.id] = temp
+            tasks[temp.id] = KiloBundle.message("worktree.progress.creating")
             model.add(temp)
             onSelect?.invoke(temp.id)
         }
@@ -130,6 +138,7 @@ class WorktreeController(
         val temp = WorktreeDto(id, KiloBundle.message("worktree.import.pr.section"), "", id)
         edt {
             pending[temp.id] = temp
+            tasks[temp.id] = KiloBundle.message("worktree.progress.creating")
             model.add(temp)
             onSelect?.invoke(temp.id)
         }
@@ -148,6 +157,7 @@ class WorktreeController(
         val created = result.worktree
         edt {
             pending.remove(temp.id)
+            tasks.remove(temp.id)
             val idx = model.getElementIndex(temp)
             if (created != null) {
                 if (idx >= 0) model.setElementAt(created, idx) else model.add(created)
@@ -174,13 +184,14 @@ class WorktreeController(
         onSuccess: () -> Unit = {},
         onFailure: (RemoveWorktreeResultDto) -> Unit = {},
     ) {
-        if (!deleting.add(dto.id)) return
+        if (dto.id in tasks) return
+        tasks[dto.id] = KiloBundle.message("common.deleting")
         edt { refresh(dto) }
         cs.launch {
             val result = service.remove(directory, dto.path, dto.branch, force)
             if (result.ok) {
                 edt {
-                    deleting.remove(dto.id)
+                    tasks.remove(dto.id)
                     val index = model.getElementIndex(dto)
                     model.remove(dto)
                     cache().remove(dto.path)
@@ -193,7 +204,7 @@ class WorktreeController(
             // Removal failed: git still tracks the worktree. Keep the row and reconcile with
             // ground truth so a stale optimistic delete can't make the entry reappear later.
             edt {
-                deleting.remove(dto.id)
+                tasks.remove(dto.id)
                 refresh(dto)
                 telemetry(
                     "Worktree Delete Failed",
@@ -202,6 +213,46 @@ class WorktreeController(
                 onFailure(result)
             }
             reload()
+        }
+    }
+
+    @RequiresEdt
+    fun move(sessionId: String, source: String = directory) {
+        if (!moves.add(sessionId)) return
+        val branch = suggestName()
+        val temp = WorktreeDto("pending:$branch:${System.nanoTime()}", branch, branch, "pending:$branch")
+        pending[temp.id] = temp
+        tasks[temp.id] = label(MoveStage.CAPTURING)
+        model.add(temp)
+        onSelect?.invoke(temp.id)
+        cs.launch {
+            var stage = MoveStage.CAPTURING
+            runCatching {
+                abort(sessionId, source)
+                service.moveToWorktree(source, sessionId, branch).collect { event ->
+                    edt {
+                        if (event.stage != MoveStage.ERROR) stage = event.stage
+                        tasks[temp.id] = label(event.stage)
+                        refresh(temp)
+                        when (event.stage) {
+                            MoveStage.DONE -> {
+                                moves.remove(sessionId)
+                                pending.remove(temp.id)
+                                tasks.remove(temp.id)
+                                val worktree = event.worktree ?: return@edt
+                                val idx = model.getElementIndex(temp)
+                                if (idx >= 0) model.setElementAt(worktree, idx) else model.add(worktree)
+                                cache().put(worktree)
+                                event.session?.let { sessions[worktree.id] = it }
+                                onSelect?.invoke(worktree.id)
+                                telemetry("Continue in Worktree", mapOf("surface" to "sidebar"))
+                            }
+                            MoveStage.ERROR -> failMove(sessionId, temp, event.error, stage)
+                            else -> Unit
+                        }
+                    }
+                }
+            }.onFailure { err -> edt { failMove(sessionId, temp, err.message, stage) } }
         }
     }
 
@@ -279,6 +330,24 @@ class WorktreeController(
 
     private fun index(id: String): Int {
         return (0 until model.size).firstOrNull { model.getElementAt(it).id == id } ?: -1
+    }
+
+    private fun failMove(session: String, temp: WorktreeDto, err: String?, stage: MoveStage) {
+        moves.remove(session)
+        pending.remove(temp.id)
+        tasks.remove(temp.id)
+        model.remove(temp)
+        onMoveFailure?.invoke(err)
+        telemetry("Continue in Worktree Failed", mapOf("stage" to stage.name))
+    }
+
+    private fun label(stage: MoveStage): String = when (stage) {
+        MoveStage.CAPTURING -> KiloBundle.message("worktree.progress.capturing")
+        MoveStage.CREATING -> KiloBundle.message("worktree.progress.creating")
+        MoveStage.TRANSFERRING -> KiloBundle.message("worktree.progress.transferring")
+        MoveStage.FORKING -> KiloBundle.message("worktree.progress.starting")
+        MoveStage.DONE -> ""
+        MoveStage.ERROR -> ""
     }
 
     private fun cache(): WorktreeNameCache {

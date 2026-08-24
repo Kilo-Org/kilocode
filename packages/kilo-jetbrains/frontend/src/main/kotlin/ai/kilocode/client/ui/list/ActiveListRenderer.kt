@@ -1,7 +1,6 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.agentManager.worktree.WorktreeStatsView
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
@@ -192,7 +191,7 @@ internal class ActiveListRenderer(
         val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
         val weak = UiStyle.Colors.weak()
-        val titleFg = if (value.deleting) weak else fg
+        val titleFg = if (value.progress != null) weak else fg
         val section = activeListSectionTitle(model.items, index)
 
         background = list.background
@@ -239,13 +238,13 @@ internal class ActiveListRenderer(
             JBUI.Borders.empty()
         }
         desc.foreground = weak
-        val data = if (value.deleting) null else value.metrics
+        val data = if (value.progress != null) null else value.metrics
         metrics.update(data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) }, data?.pr, data?.prTooltip ?: data?.pr?.text)
         metrics.setActions(data?.onChanges, data?.onPr)
-        val end = if (value.deleting) KiloBundle.message("common.deleting") else value.trailing.orEmpty()
+        val end = value.progress ?: value.trailing.orEmpty()
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
-        metrics.isVisible = data != null && !value.deleting
+        metrics.isVisible = data != null
         // Hide the wrapper too so a metrics-less row does not reserve the trailing gap on its
         // description, and collapse the whole second row when it would be empty so title-only rows
         // stay vertically centered.
@@ -347,7 +346,7 @@ internal class ActiveListRenderer(
     }
 
     private fun syncBadges(item: ActiveListItem) {
-        val items = if (item.deleting) emptyList() else item.badges
+        val items = if (item.progress != null) emptyList() else item.badges
         while (badges.componentCount > items.size) badges.remove(badges.componentCount - 1)
         while (badges.componentCount < items.size) {
             badges.add(JBLabel().apply {
