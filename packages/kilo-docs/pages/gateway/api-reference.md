@@ -240,7 +240,7 @@ The gateway automatically handles common tool calling issues:
 
 ## FIM completions
 
-Fill-in-the-middle completions for code generation, powered by Mistral Codestral.
+Fill-in-the-middle completions for code generation, powered by Mistral Codestral and Inception Mercury Edit 2.
 
 ```
 POST /api/fim/completions
@@ -250,7 +250,7 @@ POST /api/fim/completions
 
 ```typescript
 type FIMRequest = {
-  model: string // Must be a Mistral model (e.g., "mistralai/codestral-2508")
+  model: string // Supported models: "mistralai/codestral-2508", "inception/mercury-edit-2"
   prompt: string // Code before the cursor
   suffix?: string // Code after the cursor
   max_tokens?: number // Maximum tokens (capped at 1000)
@@ -276,7 +276,7 @@ curl -X POST "https://api.kilo.ai/api/fim/completions" \
 ```
 
 {% callout type="info" %}
-FIM completions are limited to Mistral models (model IDs starting with `mistralai/`). BYOK is supported with the `codestral` key type.
+FIM completions support a fixed model catalog: `mistralai/codestral-2508` (Mistral) and `inception/mercury-edit-2` (Inception). Other model IDs and aliases (for example `mistralai/codestral-latest`) are rejected with a 400 error. BYOK is supported with the `codestral` key type.
 {% /callout %}
 
 ## List models

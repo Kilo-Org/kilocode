@@ -81,6 +81,18 @@ Double-click the current session title at the top of the chat to edit it inline.
 
 You can also rename local sessions from **History** using the edit button or the session's context menu.
 
+### Background agents
+
+When the agent delegates work to subagents in the background, a collapsible strip in the chat header lists each background agent with its status — Running, Done, Cancelled, or Error — so they stay visible after their task card scrolls away. The same strip appears in the sidebar and in Agent Manager, scoped to the current session.
+
+Expand the strip to:
+
+- **Open** an agent's transcript — a read-only sub-agent viewer tab in the sidebar, or the Subagents panel in Agent Manager
+- **Stop** a running agent, or **Dismiss** finished agents individually or with **Clear finished**
+- Spot agents waiting on you — permission and question requests are flagged with **Needs input**
+
+While a foreground subagent is blocking the session, a **Continue in background** button in the strip lets it finish asynchronously instead.
+
 {% /tab %}
 {% tab label="CLI" %}
 

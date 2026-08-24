@@ -35,12 +35,12 @@ Add custom models under the `provider.<provider_id>.models` key in your config f
 - **Provider API** — The protocol used by the provider. Use **OpenAI Responses** for OpenAI and xAI models. Use **Anthropic Messages** for Anthropic and MiniMax models. **OpenAI Compatible** is the default for other OpenAI Chat Completions-compatible endpoints.
 - **Base URL** — The provider's API endpoint (e.g., `https://api.myprovider.com/v1`). When a valid URL is entered, Kilo automatically fetches available models from the endpoint if it exposes an OpenAI-compatible models endpoint.
 - **API key** — Your provider's API key. Optional — leave empty if you manage authentication via headers.
-- **Models** — Add models manually by ID and display name, or select from the auto-fetched list that appears after entering a valid base URL.
+- **Models** — Add models manually by ID and display name, or select from the auto-fetched list that appears after entering a valid base URL. Each model has **Reasoning** and **Image** checkboxes; use **Toggle reasoning for all** and **Toggle image for all** above the list to flip every model at once.
 - **Headers** (optional) — Add custom HTTP headers as key-value pairs if your provider requires them.
 
 4. Click **Submit** to save. Your custom provider appears in the provider list and its models become available in the model picker.
 
-To edit an existing custom provider, click the **Edit provider** button next to it in the connected providers section.
+To edit an existing custom provider, click the **Edit provider** button next to it in the connected providers section. From the edit dialog, click **Edit advanced settings in the JSON config file** to open the provider's entry in `kilo.jsonc` for options the dialog doesn't expose, such as `variants`.
 
 For additional model configuration (token limits, tool calling, reasoning, variants), edit the `kilo.jsonc` config file directly — see the **CLI** tab for the format.
 
@@ -92,6 +92,8 @@ All fields are optional. When a model ID matches one already in the built-in cat
 | `headers` | `object` | Custom HTTP headers to include in requests |
 | `provider` | `object` | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model |
 | `variants` | `object` | Named variant configurations (e.g., different reasoning efforts) |
+
+When a model has `reasoning: true` on a provider using the OpenAI Compatible, OpenAI Responses, or Anthropic Messages API and no variants are configured or detected, Kilo automatically offers the standard reasoning efforts — `none`, `low`, `medium`, `high`, `xhigh`, and `max` — in the variant selector. Any `variants` you configure take precedence over this automatic set.
 
 ### Modalities (modalities)
 

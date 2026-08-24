@@ -23,11 +23,13 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 | Mention | Description | Example |
 |---|---|---|
 | **File** | Attach a file's contents to your message | `@src/utils.ts` |
-| **Terminal** | Include your active VS Code terminal output | `@terminal` |
+| **Terminal** | Include terminal output | `@terminal` |
 | **Git Changes** | Attach uncommitted working-tree diffs and new files | `@git-changes` |
 | **Past chats** | Add a previous session's chat history as context | `@` → **Past chats** → pick a session |
 
 Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
+
+In the sidebar, `@terminal` captures your active VS Code terminal. In an [Agent Manager](/docs/automate/agent-manager) session, it captures the focused Agent Manager terminal instead, including embedded Run and Setup terminal tabs.
 
 ### Referencing Past Chats
 

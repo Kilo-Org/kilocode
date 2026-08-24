@@ -83,6 +83,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | Anthropic | `anthropic` |
 | AWS Bedrock | `bedrock` |
 | Google AI Studio | `google` |
+| Google Vertex AI | `vertex` |
 | Inception | `inception` |
 | OpenAI | `openai` |
 | MiniMax | `minimax` |
@@ -93,6 +94,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | Chutes BYOK | `chutes-byok` |
 | Codestral (FIM) | `codestral` |
 | CrofAI | `crofai` |
+| Eden AI | `edenai` |
 | Inceptron BYOK | `inceptron-byok` |
 | Kimi Code | `kimi-coding` |
 | Martian | `martian` |

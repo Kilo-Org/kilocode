@@ -25,6 +25,7 @@ The mobile app lets you:
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
+- See which pull request a session is working on — a tappable badge in the session detail header shows the PR number, state, and review decision. Tapping it opens the in-app PR review for GitHub PRs, or the browser for PRs on other platforms.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
 ## Privacy and telemetry
@@ -60,6 +61,12 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
 
+## Choosing a mode
+
+The mode picker — on the new-session screen and in an open session — lists the built-in modes first, then a **Custom modes** group with the custom agents available to your account (see [Custom Modes](/docs/customize/custom-modes)). Your pick stays on the composer when you send, and applies to both Cloud Agent sessions and remote sessions on a connected `kilo remote` CLI instance.
+
+A custom mode that pins a model locks the model picker to that model for as long as the mode is selected. If a custom mode shares a slug with a built-in mode, the built-in mode wins and the custom one is hidden.
+
 ## Queueing follow-up messages
 
 The composer stays editable while the agent is working, so you don't have to wait for a session to finish before sending your next message. Type your follow-up and press **Send** to add it to the session's queue; queued messages are processed in order. While a session is streaming, **Stop** appears only when the composer is empty — with text entered, Send takes its place.
@@ -85,13 +92,15 @@ While the CLI is connected, the agent can deliver a file to your phone with the 
 
 ## Reviewing GitHub pull requests
 
-Open a pull request from a PR link to review it without leaving the app:
+The PR review home lists pull requests that are waiting for your review. You can also open any pull request by pasting its link. Recently opened PRs appear on the home screen; an entry that failed to open shows a **Retry** button, and every entry has a **Remove** button.
+
+Each pull request opens with:
 
 - **Overview** — PR state and CI checks at a glance.
-- **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
+- **Files** — syntax-highlighted diffs with line-level comments and a file navigator that loads files as you scroll, so large pull requests open quickly.
 - **Discussion** — review threads with replies, resolve/unresolve, and reactions.
 
-Comments you leave are collected into a pending review on your device and submitted to GitHub as a single review. When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch — all from the app.
+Comments you leave are collected into a pending review on your device and submitted to GitHub as a single review. If the pull request changes after you queue comments, the outdated comments are marked and stay in your queue so you can edit or remove them; when you submit, only comments that still match the current pull request are sent. When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch — all from the app.
 
 PR review uses your connected GitHub account; the app asks you to connect GitHub if you have not already.
 

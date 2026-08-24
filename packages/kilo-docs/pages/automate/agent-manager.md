@@ -104,6 +104,37 @@ Hovering over a worktree item shows a card with additional PR details:
 
 PR badges update automatically in the background. The active worktree refreshes frequently, while other worktrees sync periodically to keep badges current. Polling pauses when the Agent Manager panel is hidden.
 
+### PR Panel
+
+When the selected worktree branch has an associated pull request, the toolbar shows a pull-request button (labeled with the PR number) next to the diff button. Click it to open a panel alongside the chat with:
+
+- The PR title, number, and state, plus the branch it merges into its parent branch
+- A summary of CI checks, review status, and unresolved comments
+- Reviewers and their review states
+- The PR description
+- CI checks with per-check status and duration, each with a link to open the check in the browser
+- Review comments, each with the diff hunk it was left on and actions to send the comment to the agent, resolve the thread, copy it, open the file, or open it on GitHub
+
+Click the link icon in the panel header to open the PR in your browser. The panel refreshes through the same `gh` polling as the badges, so it requires the GitHub CLI to be installed and authenticated.
+
+#### Review comments
+
+Each review comment shows the author, the file and line it applies to, and the code diff hunk the comment was left on, so you can read feedback without opening the PR in a browser. Threads include their replies.
+
+Unresolved threads stay expanded. Threads left on outdated code start collapsed and are marked **Outdated**. Resolved threads collapse into a **Resolved (N)** group at the bottom of the comments section — expand the group to see them, and use **Unresolve** on a comment to reopen its thread.
+
+Each comment card offers these actions:
+
+- **Send to agent** — sends the comment, with its diff context and replies, to the agent as a structured review comment so it can address the feedback in the worktree. Sent comments show a **Sent** badge.
+- **Resolve** / **Unresolve** — resolves or reopens the corresponding GitHub review thread directly from the panel. Resolving writes to GitHub through `gh`; if it fails (for example, because of missing permissions), an error is shown on the comment.
+- **Copy comment** — copies the comment as Markdown.
+- **Open file** — opens the file the comment applies to in the editor.
+- **Open on GitHub** — opens the comment on GitHub in your browser.
+
+To hand all outstanding feedback to the agent at once, click **Send N unresolved to agent** at the top of the comments section. When a terminal is active in the side panel, the button sends the comments to that terminal instead.
+
+Click the comments row in the PR summary at the top of the panel to jump straight to the comments section. On long PRs, a floating **↑** button appears once you scroll down and scrolls back to the top.
+
 ### Creating a New Worktree Session
 
 1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to open the new worktree dialog
@@ -243,9 +274,44 @@ The Branch scope also has a base-branch picker next to it for overriding the com
 
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
 
+### Edit Previews
+
+Edit, write, and `apply_patch` changes made in an Agent Manager session open in the side panel instead of a separate editor tab. Clicking the tool's file name expands the change inline in the transcript, while the open-diff action shows the full change in the panel, sharing the inspector area with the diff, PR, subagent, and terminal views.
+
+- Multi-file `apply_patch` payloads open every changed file, each sized to its own rendered diff
+- The preview keeps the unified or split diff style you last selected in the review view
+
+Outside Agent Manager, edit previews continue to open in a standalone diff editor tab.
+
+## Subagents Panel
+
+When an agent delegates work to a subagent, the subagent's tool block in chat shows an **Open sub-agent in panel** button. Clicking it opens the child session in the **Subagents** panel, which shares the side inspector area with the diff, PR, documents, and terminal views.
+
+- Each opened subagent gets its own tab, so you can inspect several child sessions in parallel while the parent session keeps running
+- Drag tabs to reorder them, close a tab with its close button or middle-click, or right-click a tab for **Close others**
+- `Cmd+W` (macOS) / `Ctrl+W` (Windows/Linux) closes the active subagent tab while the panel is visible
+- The subagent chat is read-only — it shows the child's transcript without taking over the parent session
+
+Subagents launched in background mode also appear in a collapsible strip in the chat header, so they stay visible after their task card scrolls away. See [Background agents](/docs/code-with-ai/agents/chat-interface#background-agents) for details.
+
+## Documents Panel
+
+Markdown and text files referenced in chat — such as plan files and other generated artifacts — open in a dedicated **Documents** view instead of a plain editor, so you can read and review them without leaving the session view.
+
+- **Agent Manager:** documents open as per-worktree tabs in the side panel, sharing the inspector area with the diff, PR, subagent, and terminal views. A documents button appears in the toolbar once the current worktree has open documents.
+- **Sidebar:** documents open in a **Documents** editor tab.
+
+The view renders Markdown by default, with a toggle to show the raw source. Images render inline; binary and oversized files are rejected with an explanatory message instead of loading. Changed Markdown files in the diff panel also have a **Preview document** button in the file header.
+
+### Review comments
+
+Select lines in a rendered document to draft an inline comment. Comments can be edited or deleted, and sent to the active session individually with **Send to chat** or all at once with **Send all to chat** (`Cmd+Enter` on macOS / `Ctrl+Enter` on Windows/Linux), so the agent can address your feedback on the document.
+
 ## Terminals
 
 Each session has a dedicated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session. If the embedded terminal is already visible but the prompt has focus, the same shortcut focuses the terminal without hiding it. Press it again while the terminal has focus to hide the panel.
+
+Type `@terminal` in the Agent Manager chat to attach the focused terminal's output to your message, including embedded Run and Setup terminal tabs. In the sidebar, `@terminal` uses your active VS Code terminal instead.
 
 ### Choosing the Terminal Destination
 
