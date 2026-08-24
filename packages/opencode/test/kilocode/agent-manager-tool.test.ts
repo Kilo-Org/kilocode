@@ -161,7 +161,7 @@ describe("agent_manager tool", () => {
     expect(schema.allOf).toBeUndefined()
     const action = schema.properties?.action
     expect(action && typeof action === "object" ? action.anyOf?.[0] : undefined).toEqual(
-      expect.objectContaining({ enum: ["list", "prompt", "stop", "move"] }),
+      expect.objectContaining({ enum: ["list", "prompt", "stop", "move", "answer"] }),
     )
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Use list first")
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Never edit")
@@ -186,6 +186,8 @@ describe("agent_manager tool", () => {
       "sessionID",
       "prompt",
       "sectionID",
+      "questionID",
+      "answers",
     ])
   })
 
@@ -196,7 +198,18 @@ describe("agent_manager tool", () => {
     const tool = await init()
     const schema = ToolJsonSchema.fromTool(tool)
 
-    for (const key of ["mode", "versions", "tasks", "action", "filter", "sessionID", "prompt", "sectionID"]) {
+    for (const key of [
+      "mode",
+      "versions",
+      "tasks",
+      "action",
+      "filter",
+      "sessionID",
+      "prompt",
+      "sectionID",
+      "questionID",
+      "answers",
+    ]) {
       const property = schema.properties?.[key]
       const branches = property && typeof property === "object" ? property.anyOf : undefined
       expect(
@@ -265,6 +278,82 @@ describe("agent_manager tool", () => {
       sessionID: "ses_target",
       prompt: "go",
     })
+  })
+
+  test("routes a null-filled answer request to its action", () => {
+    const blanks = { mode: null, versions: null, tasks: null, filter: null, sectionID: null, prompt: null }
+    const decode = (input: unknown) => Schema.decodeUnknownSync(Params)(input) as Record<string, unknown>
+
+    expect(decode({ ...blanks, action: "answer", sessionID: "ses_target", answers: [["Yes"]] })).toEqual({
+      action: "answer",
+      sessionID: "ses_target",
+      answers: [["Yes"]],
+    })
+    expect(
+      decode({ ...blanks, action: "answer", sessionID: "ses_target", questionID: "que_1", answers: [["Yes"], []] }),
+    ).toEqual({
+      action: "answer",
+      sessionID: "ses_target",
+      questionID: "que_1",
+      answers: [["Yes"], []],
+    })
+  })
+
+  test("rejects an answer without answers or with an empty label array", () => {
+    const decode = (input: unknown) => Schema.decodeUnknownSync(Params)(input)
+    expect(() => decode({ action: "answer", sessionID: "ses_target" })).toThrow()
+    expect(() => decode({ action: "answer", sessionID: "ses_target", answers: [[""]] })).toThrow()
+    expect(() => decode({ action: "answer", sessionID: "ses_target", answers: [] })).toThrow()
+  })
+
+  test("answers one pending question with a separate mutation permission pattern", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return {
+            operation: "answer" as const,
+            sessionID: SessionID.make("ses_target"),
+            questionID: "que_1",
+            resolved: true as const,
+          }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { action: "answer", sessionID: SessionID.make("ses_target"), answers: [["Yes"], ["detail"]] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["answer"],
+        always: ["answer"],
+        metadata: { action: "answer", sessionID: "ses_target" },
+      },
+    ])
+    expect(requests).toEqual([
+      {
+        operation: "answer",
+        sessionID: ctx.sessionID,
+        targetSessionID: "ses_target",
+        answers: [["Yes"], ["detail"]],
+      },
+    ])
+    expect(result.output).toContain("que_1")
+    expect(result.metadata).toEqual(expect.objectContaining({ action: "answer", sessionID: "ses_target" }))
+    await rt.dispose()
   })
 
   test("asks for agent_manager permission", async () => {

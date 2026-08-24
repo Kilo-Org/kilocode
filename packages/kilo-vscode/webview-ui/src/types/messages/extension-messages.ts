@@ -309,6 +309,13 @@ export interface ActionMessage {
   action: string
 }
 
+/** Image attachment carried back into the prompt input when restoring a message. */
+export interface RestoredImage {
+  dataUrl: string
+  mime: string
+  filename?: string
+}
+
 export interface SetChatBoxMessage {
   type: "setChatBoxMessage"
   text: string
@@ -322,6 +329,12 @@ export interface SetChatBoxMessage {
   paths?: string[]
   /** Past chats referenced by the restored message, seeded the same way as paths. */
   sessions?: SessionSearchItem[]
+  /**
+   * Images attached to the restored message. Present means authoritative:
+   * PromptInput replaces its current attachments with this list (an empty
+   * array clears them); absent leaves current attachments untouched.
+   */
+  images?: RestoredImage[]
 }
 
 export interface AppendChatBoxMessage {
@@ -398,6 +411,36 @@ export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
+  projectId?: string
+}
+
+export interface AgentManagerSettingsProject {
+  id: string
+  root: string
+  label: string
+  pinned: boolean
+  missing: boolean
+  defaultBaseBranch?: string
+  defaultBranch?: string
+  setupScriptPath?: string
+}
+
+export interface AgentManagerSettingsLoadedMessage {
+  type: "agentManagerSettingsLoaded"
+  projects: AgentManagerSettingsProject[]
+  projectId?: string
+  requestId: string
+}
+
+export interface AgentManagerSettingsBranchesLoadedMessage {
+  type: "agentManagerSettingsBranchesLoaded"
+  projectId: string
+  branches: BranchInfo[]
+  defaultBranch: string
+  requestId: string
+  error?: boolean
+  configuredBaseBranch?: string
+  setupScriptPath?: string
 }
 
 export interface IndexingStatusLoadedMessage {
@@ -1407,6 +1450,8 @@ export type ExtensionMessage =
   | DeviceAuthFailedMessage
   | DeviceAuthCancelledMessage
   | NavigateMessage
+  | AgentManagerSettingsLoadedMessage
+  | AgentManagerSettingsBranchesLoadedMessage
   | IndexingStatusLoadedMessage
   | IndexingSettingsLoadedMessage
   | ChatSettingsLoadedMessage

@@ -5,6 +5,8 @@ description: "Frequently asked questions about KiloClaw"
 
 # FAQ
 
+{% partial file="kiloclaw-eol.md" /%}
+
 ## How can I change my model?
 
 You can change the model in two ways:

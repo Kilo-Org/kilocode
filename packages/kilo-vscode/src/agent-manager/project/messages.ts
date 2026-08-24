@@ -31,6 +31,8 @@ export interface ProjectMessageDeps {
   selected: (target: SidebarTarget) => void
   /** Show a user-facing error. */
   error: (message: string) => void
+  /** Open the Kilo Settings editor, optionally on a tab and project. */
+  openSettings: (tab?: string, projectId?: string) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
   ready: (ctx: ProjectContext) => Promise<ProjectInitResult>
   log: (...args: unknown[]) => void
@@ -38,6 +40,10 @@ export interface ProjectMessageDeps {
 
 /** Handle a project-management message. Returns true when the message was consumed. */
 export async function handleProjectMessage(m: AgentManagerInMessage, deps: ProjectMessageDeps): Promise<boolean> {
+  if (m.type === "openSettingsPanel") {
+    deps.openSettings(m.tab, m.projectId)
+    return true
+  }
   if (m.type === "agentManager.requestProjects") {
     deps.push()
     return true

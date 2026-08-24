@@ -35,6 +35,16 @@ The panel opens as an editor tab and stays active across focus changes.
 - Use a git repository for worktree features
 - Open the main repository, not an existing worktree checkout, when creating new worktrees
 
+## Project-scoped settings
+
+Agent Manager worktree defaults belong to a repository. Open a project's settings button, then select the **Agent Manager** tab in Kilo Settings. The repository selector controls which project's default base branch and setup script you edit.
+
+- **Automatic selection:** Opening settings from a project selects that repository. When you open the settings tab directly, Agent Manager restores the last selected repository if it is still listed, or uses the current workspace repository.
+- **Explicit selection:** Choose another repository from the **Project** selector before changing its settings. The **Default Base Branch** control uses **Auto-detect** by default, or you can choose a specific branch. The selected value is saved for that repository and is used when creating new worktrees.
+- **Stale branches:** If a saved default branch no longer exists, Agent Manager clears it when it refreshes the repository's branch list and returns to **Auto-detect**. Choose a new branch to set an explicit default again.
+
+The **Worktree Setup Script** control opens or creates the setup script for the selected repository. See [Setup Scripts](#setup-scripts) for supported filenames and execution behavior.
+
 ## Providers and Authentication
 
 Agent Manager uses the same sign-in, provider settings, models, BYOK keys, custom providers, MCP servers, and permission rules as the extension sidebar. Configure them from extension Settings and they apply to Agent Manager as well.
@@ -104,15 +114,46 @@ Hovering over a worktree item shows a card with additional PR details:
 
 PR badges update automatically in the background. The active worktree refreshes frequently, while other worktrees sync periodically to keep badges current. Polling pauses when the Agent Manager panel is hidden.
 
+### Reviewing a pull request
+
+The PR review panel is available when the selected worktree has an associated pull request. Open it in either of these ways:
+
+- Click the pull request icon in the Agent Manager toolbar
+- Press `Cmd+Shift+R` (macOS) or `Ctrl+Shift+R` (Windows/Linux)
+
+The selected worktree controls the panel. The panel shows the worktree branch and its parent branch, so confirm that you are reviewing the intended branch. The PR association uses the detection methods described above, including the branch tracking ref, branch name, or current commit SHA.
+
+The panel includes:
+
+- **Status:** Open, Draft, Merged, or Closed
+- **Review status:** Approved, Changes Requested, or Review Pending
+- **Checks:** passed, failed, running, cancelled, or skipped checks, with duration and browser links when available
+- **Reviewers:** requested reviewers and their current state, such as Approved, Changes requested, Commented, or Awaiting
+- **Description and summary:** the PR description, file count, additions, deletions, and unresolved comment count
+
+#### Review comments
+
+Expand a comment to read its Markdown body, replies, file and line location, and a bounded diff hunk around the commented line. Outdated threads show an **Outdated** label. Unresolved threads appear first. Resolved threads move into the **Resolved** group and are collapsed by default. Click a thread row to expand or collapse it.
+
+Use the actions on an expanded thread to:
+
+- **Send** the comment, its diff context, and replies to the current agent. **Send all unresolved** sends the unresolved threads together, up to the panel limit.
+- **Resolve** or **Unresolve** the GitHub conversation. The panel refreshes the thread state after the action completes.
+- **Copy** the formatted thread context
+- **Open file** at the comment location in the selected worktree
+- **Open on GitHub** at the comment
+
+The panel header also provides **Copy PR link**, **Open in browser**, and **Close**. Sending a comment gives it to Kilo as review context. It does not post a reply to GitHub. The panel intentionally has no reply composer; write replies in GitHub.
+
 ### Creating a New Worktree Session
 
 1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to open the new worktree dialog
 2. Enter a branch name (or let Kilo generate one)
 3. Type your first message, then create the worktree
 
-A new git worktree is created from your current branch. The agent works in isolation — your main branch is unaffected.
+Kilo creates the worktree from the selected project's configured default base branch. In a multi-project workspace, the selected project determines this setting. An explicit base branch selected in the dialog takes precedence. If no default is configured, Kilo falls back to automatic detection of the repository's remote default branch. The agent works in isolation, so your main branch is unaffected.
 
-To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux).
+To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux). This uses the selected project's configured default, or the automatic remote-default fallback when no configured default exists.
 
 ### Slash Commands in the Worktree Prompt
 
@@ -149,7 +190,12 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Create a worktree session to start a new agent in an isolated branch
 - Press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux) to start another session in the selected worktree
 - Use session history to reopen local sessions or preview cloud sessions
+- When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
+
+File mentions, clickable file links, review-comment file links, file-link validation, and native VS Code opening resolve against the referenced session's directory or worktree. If a session ID is present in multiple projects, Kilo rejects the unqualified reference rather than choosing an arbitrary project.
+
+When a session delegates work to a subagent, open the child transcript from its task card or background-agent row. Agent Manager displays it in the read-only **Subagents** inspector. The inspector supports multiple child-session tabs and keeps them scoped to the selected project and parent session. For the difference between Agent Manager inspector tabs and the separate subagent editor tabs used by the sidebar, see [Inspecting delegated sessions in VS Code](/docs/customize/custom-subagents#inspecting-delegated-sessions-in-vs-code).
 
 ### Renaming Worktrees
 
@@ -220,15 +266,31 @@ Right-click the section header and select **Delete Section**. The section is rem
 - **Cancel:** Sends a cooperative stop signal to the agent
 - **Stop:** Force-terminates the session and marks it as stopped
 
+## Previewing pending edits
+
+When an agent requests permission to run `edit`, `write`, or `apply_patch`, the permission card shows the proposed file changes. In Agent Manager, select the expand button on the file diff to open an **Edit preview** in the side panel.
+
+The preview supports patches that contain multiple files and shows each file's diff. Use the view selector to switch between **unified** and **split** views. You can close the preview without changing the request or its patch.
+
+Previewing only displays the proposed changes. It does not approve or deny the pending tool request, apply changes to your local checkout, or revert a file. Make those decisions and use those actions from their respective controls. Outside Agent Manager, the same file-diff control opens the preview in a separate diff tab instead of the side panel.
+
 ## Diff / Review Panel
 
 Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It shows a live-updating diff between the worktree and its parent branch.
+
+The worktree creation base and the diff comparison base are separate. The Branch scope starts with the worktree's recorded parent branch, and its base-branch picker changes only the comparison target. It does not change the branch from which the worktree was created.
 
 - Select files and click **Apply to local** to copy the worktree's changes onto your local checkout of the base branch
 - Conflicts are surfaced with a resolution dialog
 - Supports unified and split diff views
 - Markdown files include an eye/code toggle in the file header to switch between rendered Markdown and the raw diff
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
+
+### Sending review comments
+
+Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
+
+After sending, the local comment collection is cleared. To discard collected comments without sending them, click **Clear all** in the chat input.
 
 ### Diff Scope
 
@@ -242,6 +304,21 @@ A scope selector in the diff toolbar (both in the side panel and the full-screen
 The Branch scope also has a base-branch picker next to it for overriding the comparison branch. **Apply to local** works only on the Branch scope — switch back to Branch to apply.
 
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
+
+## Documents inspector
+
+The Documents inspector previews Markdown file references from Agent Manager chat without leaving the panel. Open a file reference to add it as a document tab, then use the tab strip to switch, reorder, or close open documents. The inspector keeps one tab per file in the active project and worktree context.
+
+- Markdown files (`.md`, `.mdx`, and `.markdown`) open in rendered view by default. Use the preview/source toggle to switch between rendered Markdown and syntax-highlighted source.
+- The document renderer also supports syntax-highlighted text and inline PNG, JPEG, GIF, WebP, and SVG previews when a document payload is available. Normal Agent Manager file-opening actions route non-Markdown source references to the native VS Code editor.
+- Use **Open file** to open the document in the native VS Code editor. The original line and column are preserved when available.
+- Unsupported, binary, missing, out-of-scope, or oversized files show an error fallback in the inspector. Text previews are limited to 2 MB and image previews to 5 MB; open the file in VS Code to inspect larger or unsupported content.
+
+### Inline document review
+
+In a rendered Markdown preview, use the comment control in the line gutter to add a comment at that line. Clicking a line number opens that location in the native editor. Draft comments can be edited or deleted, sent individually to the active session, or sent together with **Send all to chat**. Comments are attached to the document path and line, and remain isolated to the active project and worktree context.
+
+The project and worktree context owns document tabs, loaded content, and comments. The session ID attached to an opened file selects the session's worktree for reading and native-editor navigation. Sessions that share one worktree also share its document inspector state; switching project or worktree changes the visible context without mixing tabs or comments across worktrees.
 
 ## Terminals
 
@@ -428,9 +505,11 @@ Closing a managed worktree removes it from Agent Manager, deletes its `.kilo/wor
 
 - **"Please open a folder…" error** — the Agent Manager requires a VS Code workspace folder
 - **Worktree creation fails** — ensure Git is installed and the workspace is a valid git repository. Open the main repository (where `.git` is a directory), not an existing worktree checkout.
+- **A configured base branch is missing** — Kilo clears the stale project setting and uses automatic remote-default detection for the new worktree. Select the project and configure a new default if needed.
 - **Provider or authentication errors** — open extension Settings and verify your sign-in, provider, model, or BYOK configuration. Agent Manager uses the same settings as the sidebar.
 - **Session history missing cloud sessions** — sign in through the extension and confirm the repository remote matches the sessions you expect to see.
-- **PR badges or PR import missing** — install and authenticate the GitHub CLI (`gh`). This is only required for GitHub PR features.
+- **PR badges, the review panel, or PR import missing:** install the GitHub CLI (`gh`) and authenticate it for the repository. Run `gh auth status` to check the current login. GitHub PR features do not work until `gh` is available and authenticated.
+- **PR data looks temporarily stale:** polling pauses while the Agent Manager panel is hidden, and background updates are not instantaneous. Close and reopen the PR panel, or switch worktrees and select the original worktree again, to trigger a fresh lookup. A transient GitHub, network, or fork lookup failure can leave the last known PR data visible until the next successful refresh.
 
 ## Related features
 
