@@ -245,7 +245,7 @@ class SessionUi(
         bindMigration()
         onStateChanged(controller.model.state)
         dock?.let {
-            it.setHasMessages(controller.model.messages().isNotEmpty())
+            syncDock()
             refreshBranchChanges()
             refreshBranch()
         }
@@ -644,7 +644,7 @@ class SessionUi(
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.HistoryLoaded,
-                is SessionModelEvent.Cleared -> syncDockMessages()
+                is SessionModelEvent.Cleared -> syncDock()
 
                 is SessionModelEvent.QueueChanged -> Unit
 
@@ -665,8 +665,10 @@ class SessionUi(
     }
 
     @RequiresEdt
-    private fun syncDockMessages() {
-        dock?.setHasMessages(controller.model.messages().isNotEmpty())
+    private fun syncDock() {
+        val dock = dock ?: return
+        dock.setHasMessages(controller.model.messages().isNotEmpty())
+        dock.setHasSession(controller.id != null)
     }
 
     @RequiresEdt
@@ -1114,6 +1116,7 @@ class SessionUi(
     }
 
     private fun onSessionUpdated() {
+        syncDock()
         manager?.activityChanged()
     }
 

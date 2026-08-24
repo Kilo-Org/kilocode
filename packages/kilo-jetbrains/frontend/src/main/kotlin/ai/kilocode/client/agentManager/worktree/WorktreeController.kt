@@ -36,7 +36,6 @@ class WorktreeController(
     private val pending = LinkedHashMap<String, WorktreeDto>()
     private val tasks = LinkedHashMap<String, String>()
     private val moves = LinkedHashSet<String>()
-    private val sessions = LinkedHashMap<String, String>()
     var onSelect: ((String) -> Unit)? = null
     var onCreateFailure: ((String?) -> Unit)? = null
     var onMoveFailure: ((String?) -> Unit)? = null
@@ -79,8 +78,6 @@ class WorktreeController(
     fun isPending(id: String): Boolean = id in pending
 
     fun progress(id: String): String? = tasks[id]
-
-    fun takeSession(id: String): String? = sessions.remove(id)
 
     fun kind(path: String): SessionActivityKind? = kinds[normalizeWorktreePath(path)]
 
@@ -243,7 +240,9 @@ class WorktreeController(
                                 val idx = model.getElementIndex(temp)
                                 if (idx >= 0) model.setElementAt(worktree, idx) else model.add(worktree)
                                 cache().put(worktree)
-                                event.session?.let { sessions[worktree.id] = it }
+                                // Queue the forked session for the editor the selection is about to
+                                // open; the tab's identity stays the worktree path alone.
+                                event.session?.let { service<PendingWorktreeSession>().put(worktree.path, it) }
                                 onSelect?.invoke(worktree.id)
                                 telemetry("Continue in Worktree", mapOf("surface" to "sidebar"))
                             }

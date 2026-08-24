@@ -3,15 +3,18 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -353,7 +356,7 @@ class KiloWorktreeRpcApiImplTest {
         val result = api.remove(repo.toString(), repo.resolve("does-not-exist").toString(), null)
 
         assertFalse(result.ok, "remove of a missing worktree should not report success")
-        assertNotNull(result.error, "failure should carry an error message")
+        assertTrue(result.error != null, "failure should carry an error message")
     }
 
     @Test
@@ -409,7 +412,7 @@ class KiloWorktreeRpcApiImplTest {
         val result = api.create(repo.toString(), CreateWorktreeRequestDto("no-such-branch", existingBranch = true))
 
         assertNull(result.worktree, "unknown branch should not create a worktree")
-        assertNotNull(result.error)
+        assertTrue(result.error != null, "failure should carry an error message")
     }
 
     @Test
@@ -508,6 +511,42 @@ class KiloWorktreeRpcApiImplTest {
         assertFalse(result.ok, "apply should fail when the patch conflicts")
         assertNotNull(result.error)
         WorktreeTransfer.cleanup(snapshot)
+    }
+
+    @Test
+    fun `capture fails instead of reporting a clean tree when git cannot run`() {
+        // No git repository: a failed capture must throw rather than look like "nothing to move".
+        val err = assertFails { WorktreeTransfer.capture(repo) }
+
+        assertTrue(err.message.orEmpty().isNotBlank(), "capture failure should explain itself")
+    }
+
+    @Test
+    fun `moveToWorktree emits ERROR when capture fails`() = runBlocking {
+        val events = api.moveToWorktree(repo.toString(), "ses_1", "feature/x").toList()
+
+        assertEquals(MoveStage.CAPTURING, events.first().stage)
+        val last = events.last()
+        assertEquals(MoveStage.ERROR, last.stage)
+        assertTrue(last.error != null, "the error event should explain the failure")
+    }
+
+    @Test
+    fun `moveToWorktree rolls back the created worktree when a later stage throws`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("untracked.txt"), "brand new\n")
+
+        // The fork resolves a project-level service that no plain unit test provides, so this move
+        // throws after the worktree exists — exactly the case that used to end the flow silently.
+        val events = api.moveToWorktree(repo.toString(), "ses_1", "feature/x").toList()
+
+        assertEquals(MoveStage.ERROR, events.last().stage)
+        assertTrue(events.map { it.stage }.containsAll(listOf(MoveStage.CREATING, MoveStage.TRANSFERRING)))
+        assertFalse(
+            Files.exists(repo.resolve(".kilo").resolve("worktrees").resolve("feature-x")),
+            "a failed move must not leave its worktree behind",
+        )
+        assertTrue(api.list(repo.toString()).worktrees.none { it.branch == "feature/x" }, "git must not track the worktree")
     }
 
     private fun statusOf(dir: Path): String {

@@ -58,6 +58,7 @@ internal class BranchDock(
     private var files = emptyList<DiffFileDto>()
     private var branch: BranchStatusDto? = null
     private var hasMessages = false
+    private var hasSession = false
     private var busy = false
 
     init {
@@ -110,11 +111,23 @@ internal class BranchDock(
         sync()
     }
 
+    /**
+     * Whether the chat already has a persisted session. A brand-new session has no id until its
+     * first prompt, and there is nothing to move until then — even in a repository with local
+     * changes, which would otherwise activate the dock.
+     */
+    @RequiresEdt
+    fun setHasSession(value: Boolean) {
+        if (hasSession == value) return
+        hasSession = value
+        sync()
+    }
+
     // ---- state read by the toolbar actions ----
 
     fun newWorktreeEnabled(): Boolean = onNewWorktree != null && dockActive()
 
-    fun moveEnabled(): Boolean = onMove != null && dockActive()
+    fun moveEnabled(): Boolean = onMove != null && hasSession && dockActive()
 
     fun changeCount(): Int = files.size
 

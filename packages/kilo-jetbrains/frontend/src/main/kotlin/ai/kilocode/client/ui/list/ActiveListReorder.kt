@@ -27,6 +27,9 @@ internal data class ActiveListGap(
     val height: Int,
 ) : ActiveListItem {
     override val key: String get() = source.key
+    // Carry the dragged row's identity so a refresh mid-drag reselects the placeholder instead of
+    // dropping the selection: rows whose identity differs from their key (worktrees) would not match.
+    override val identity: Any get() = source.identity
     override val title: String get() = ""
     override val section: String? get() = source.section
     override val disabled: Boolean get() = true

@@ -1,10 +1,13 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.testing.fire
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import java.awt.Image
 import java.awt.Point
 import java.awt.Rectangle
+import java.awt.event.InputEvent
+import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 
 class ActiveListReorderTest : BasePlatformTestCase() {
@@ -189,6 +192,74 @@ class ActiveListReorderTest : BasePlatformTestCase() {
         assertEquals(plain.getHeight(null), header.getHeight(null))
     }
 
+    fun `test empty space under the last row is neither pickable nor draggable`() {
+        val view = view(mutableListOf())
+        view.update(sectioned())
+        layout(view)
+        val point = below(view)
+
+        // A short list in a viewport-tracking surface leaves empty space; it belongs to no row.
+        assertNull(view.pickable(point))
+        assertNull(view.dragImage(point))
+    }
+
+    fun `test clicking empty space under the last row leaves the selection alone`() {
+        val view = view(mutableListOf())
+        view.update(sectioned())
+        layout(view)
+
+        click(view, below(view))
+
+        assertNull(view.selected())
+    }
+
+    fun `test dragging below the last row still targets the last slot`() {
+        val view = view(mutableListOf())
+        view.update(sectioned())
+        layout(view)
+
+        view.over("a", below(view))
+
+        assertEquals(listOf("cur", "b", "c", "a"), display(view).map { it.key })
+    }
+
+    fun `test the gap carries the dragged row identity so a refresh keeps the selection`() {
+        val rows = listOf(row("cur", null), row("wt1", "wt", "worktree:/a"), row("wt2", "wt", "worktree:/b"))
+        val view = view(mutableListOf())
+        view.update(rows)
+        layout(view)
+        assertTrue(view.select("wt2"))
+
+        view.over("wt2", center(view, 1))
+        // A stats/activity poll refreshing the same rows mid-drag restores by identity, which the
+        // placeholder must answer for — otherwise the selection is dropped while the drag runs.
+        view.update(rows)
+
+        assertEquals("wt2", view.selected()?.key)
+    }
+
+    /** A point in the empty space below the last row, which a tool-window list keeps visible. */
+    private fun below(view: ActiveListView): Point {
+        val last = view.list.model.size - 1
+        val bounds = view.list.getCellBounds(last, last) ?: error("no bounds for $last")
+        return Point(bounds.x + 8, bounds.y + bounds.height + 20)
+    }
+
+    private fun click(view: ActiveListView, point: Point) {
+        val press = MouseEvent(
+            view.list,
+            MouseEvent.MOUSE_PRESSED,
+            System.currentTimeMillis(),
+            InputEvent.BUTTON1_DOWN_MASK,
+            point.x,
+            point.y,
+            1,
+            false,
+            MouseEvent.BUTTON1,
+        )
+        fire(view.list, press)
+    }
+
     private fun view(
         moves: MutableList<ActiveListMove>,
         cfg: ActiveListConfig = ActiveListConfig.Equal,
@@ -239,8 +310,9 @@ class ActiveListReorderTest : BasePlatformTestCase() {
 
     private fun rows(vararg keys: String): List<ActiveListItem> = keys.map { row(it, "wt") }
 
-    private fun row(key: String, section: String?): ActiveListItem = object : ActiveListItem {
+    private fun row(key: String, section: String?, identity: Any = key): ActiveListItem = object : ActiveListItem {
         override val key = key
+        override val identity = identity
         override val title = key
         override val section = section
     }

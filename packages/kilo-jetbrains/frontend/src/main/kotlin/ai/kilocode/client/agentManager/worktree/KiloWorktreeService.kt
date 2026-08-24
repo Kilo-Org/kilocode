@@ -100,12 +100,13 @@ class KiloWorktreeService internal constructor(
         WorktreePrListDto()
     }
 
-    suspend fun branchStatus(directory: String): BranchStatusDto = try {
-        call { branchStatus(directory) }
-    } catch (e: Exception) {
-        LOG.warn("worktree branch status failed for $directory", e)
-        BranchStatusDto()
-    }
+    /**
+     * Branch/PR status for one directory, or a thrown failure. Deliberately not swallowed: an empty
+     * [BranchStatusDto] defaults to [GhAvailability.OK], which the chat dock reads as healthy git and
+     * would offer worktree actions against a directory whose real state is unknown. Callers decide
+     * what an unknown status means.
+     */
+    suspend fun branchStatus(directory: String): BranchStatusDto = call { branchStatus(directory) }
 
     /**
      * Long-lived move flow. Routed through [durable] (via [call]) so it survives reconnects and

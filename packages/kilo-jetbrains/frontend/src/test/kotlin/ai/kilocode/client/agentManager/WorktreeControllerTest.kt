@@ -5,6 +5,7 @@ import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.PendingPrompt
 import ai.kilocode.client.agentManager.worktree.PendingWorktreePrompt
+import ai.kilocode.client.agentManager.worktree.PendingWorktreeSession
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeNames
 import ai.kilocode.client.plugin.KiloBundle
@@ -350,8 +351,12 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("ses_source", rpc.moves.single().second)
         assertEquals(done, controller.model.getElementAt(0))
         assertNull(controller.progress(temp.id))
-        assertEquals("ses_fork", controller.takeSession(done.id))
-        assertNull(controller.takeSession(done.id))
+        // The forked session is queued for the editor the selection opens, keyed by worktree path,
+        // so the tab identity stays the path alone. One-shot: a second open starts a new session.
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals("ses_fork", service<PendingWorktreeSession>().take(done.path))
+            assertNull(service<PendingWorktreeSession>().take(done.path))
+        }
         assertEquals(done.id, selected.last())
         assertTrue(events.any { it.first == "Continue in Worktree" && it.second["surface"] == "sidebar" })
     }

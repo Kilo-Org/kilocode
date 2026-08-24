@@ -219,6 +219,46 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(dock.moveEnabled())
     }
 
+    fun `test dock move stays disabled for a new session with local changes`() {
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val supportsMoveToWorktree: Boolean get() = true
+        }
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))
+        // A brand-new sidebar session: no id until the first prompt, so nothing exists to move even
+        // though the local changes keep the dock on screen.
+        ui = newUi(manager = owner)
+        settle()
+        val dock = find<BranchDock>(ui)
+
+        assertTrue(dock.isVisible)
+        assertFalse(dock.moveEnabled())
+
+        showMessages()
+
+        assertTrue(dock.moveEnabled())
+    }
+
+    fun `test a failed branch status leaves the dock inactive instead of assuming healthy git`() {
+        val worktree = FakeWorktreeRpcApi().apply { branchThrows = IllegalStateException("backend down") }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        // An empty status DTO would default to GhAvailability.OK and offer worktree actions against
+        // a directory whose git state is unknown, so a failure must leave the dock untouched.
+        assertFalse(find<BranchDock>(ui).isVisible)
+    }
+
     fun `test dock branch changes refresh on finish and revert`() {
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))

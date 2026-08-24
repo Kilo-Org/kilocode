@@ -208,7 +208,7 @@ class AgentManagerPanel(
     private fun open(item: WorktreeDto, focus: Boolean) {
         val target = project ?: return
         if (controller.progress(item.id) != null) return
-        openWorktreeSession(target, item, controller.takeSession(item.id), focus)
+        openWorktreeSession(target, item, focus)
     }
 
     private fun close(item: WorktreeDto) {

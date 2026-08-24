@@ -39,7 +39,9 @@ object WorktreeSessionEditorKind : KiloEditorKind {
     @RequiresEdt
     override fun createContent(project: Project, file: KiloVirtualFile, parent: Disposable): JComponent {
         val path = file.path.params[PATH]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
-        val session = file.path.params[SESSION]?.takeIf { it.isNotBlank() }
+        // A move queues its forked session here rather than in the params, which are this editor's
+        // identity: a second param would open a rival tab for the same worktree.
+        val session = service<PendingWorktreeSession>().take(path)
         val worktree = service<KiloWorkspaceService>().workspace(path)
         val cs = service<SessionUiFactory>().scope()
         Disposer.register(parent) { cs.cancel() }
@@ -49,7 +51,6 @@ object WorktreeSessionEditorKind : KiloEditorKind {
     }
 
     private const val PATH = "path"
-    private const val SESSION = "session"
 }
 
 fun ensureWorktreeSessionEditorKind() {
@@ -60,11 +61,10 @@ internal fun unregisterWorktreeSessionEditorKind() {
     service<KiloEditorKindRegistry>().unregister(WorktreeSessionEditorKind.ID)
 }
 
-internal fun worktreeSessionParams(item: WorktreeDto, session: String? = null): Map<String, String> = linkedMapOf(
-    "path" to item.path,
-).apply { session?.takeIf { it.isNotBlank() }?.let { put("session", it) } }
+/** Editor identity for a worktree session tab: the worktree path and nothing else. */
+internal fun worktreeSessionParams(item: WorktreeDto): Map<String, String> = mapOf("path" to item.path)
 
-internal fun openWorktreeSession(project: Project, worktree: WorktreeDto, session: String? = null, focus: Boolean = true) {
+internal fun openWorktreeSession(project: Project, worktree: WorktreeDto, focus: Boolean = true) {
     ensureWorktreeSessionEditorKind()
-    project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(worktree, session), focus)
+    project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(worktree), focus)
 }

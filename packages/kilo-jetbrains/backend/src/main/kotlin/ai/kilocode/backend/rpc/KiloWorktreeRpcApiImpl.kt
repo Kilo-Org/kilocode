@@ -32,6 +32,7 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -206,42 +207,61 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         dto
     }
 
+    /**
+     * Every failure path — including a throw from capture, worktree creation bookkeeping, or the
+     * fork — emits [MoveStage.ERROR] and rolls back a worktree that was already created. The
+     * frontend collector has no error handling of its own, so a silent flow completion would leave
+     * the Agent Manager row stuck on its last stage forever.
+     */
     override suspend fun moveToWorktree(directory: String, sessionId: String, branch: String): Flow<MoveProgressDto> = flow {
         val base = Path.of(directory).normalize()
         LOG.info("worktree move requested: dir=$base session=$sessionId branch=$branch")
-        emit(MoveProgressDto(MoveStage.CAPTURING))
-        val snapshot = withContext(Dispatchers.IO) { WorktreeTransfer.capture(base) }
+        // Both survive the try so `finally` can drop temp patches and the failure paths can drop a
+        // worktree that was already created.
+        var snapshot: WorktreeTransfer.Snapshot? = null
+        var leftover: WorktreeDto? = null
         try {
+            emit(MoveProgressDto(MoveStage.CAPTURING))
+            val captured = withContext(Dispatchers.IO) { WorktreeTransfer.capture(base) }.also { snapshot = it }
             emit(MoveProgressDto(MoveStage.CREATING))
             val created = withContext(Dispatchers.IO) {
-                addWorktree(base, branch.trim(), existing = false, baseRef = snapshot.head)
+                addWorktree(base, branch.trim(), existing = false, baseRef = captured.head)
             }
             val worktree = created.worktree ?: run {
                 emit(MoveProgressDto(MoveStage.ERROR, error = created.error ?: "Failed to create worktree"))
                 return@flow
             }
+            leftover = worktree
             val target = Path.of(worktree.path).normalize()
             emit(MoveProgressDto(MoveStage.TRANSFERRING))
-            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(snapshot, base, target) }
+            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(captured, base, target) }
             if (!applied.ok) {
-                LOG.warn("worktree move: rolling back ${worktree.path} after transfer failure")
-                remove(directory, worktree.path, branch, force = true)
+                leftover = null
+                rollback(directory, worktree, branch, "transfer failure")
                 emit(MoveProgressDto(MoveStage.ERROR, error = applied.error ?: "Failed to apply changes to worktree"))
                 return@flow
             }
             emit(MoveProgressDto(MoveStage.FORKING))
-            val forked = runCatching {
-                withContext(Dispatchers.IO) { service<KiloBackendAppService>().sessions.fork(sessionId, worktree.path) }
-            }.getOrElse { err ->
-                LOG.warn("worktree move: fork failed session=$sessionId", err)
-                emit(MoveProgressDto(MoveStage.ERROR, error = err.message ?: "Failed to fork session"))
-                return@flow
-            }
+            val forked = withContext(Dispatchers.IO) { service<KiloBackendAppService>().sessions.fork(sessionId, worktree.path) }
+            leftover = null
             LOG.info("worktree move done: worktree=${worktree.path} session=${forked.id}")
             emit(MoveProgressDto(MoveStage.DONE, worktree = worktree, session = forked.id))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("worktree move failed: dir=$base session=$sessionId branch=$branch", e)
+            leftover?.let { rollback(directory, it, branch, "move failure") }
+            emit(MoveProgressDto(MoveStage.ERROR, error = e.message ?: "Failed to move session to a worktree"))
         } finally {
             withContext(Dispatchers.IO) { WorktreeTransfer.cleanup(snapshot) }
         }
+    }
+
+    /** Drops a worktree created earlier in a failed move so a retry is not blocked by leftovers. */
+    private suspend fun rollback(directory: String, worktree: WorktreeDto, branch: String, reason: String) {
+        LOG.warn("worktree move: rolling back ${worktree.path} after $reason")
+        runCatching { remove(directory, worktree.path, branch, force = true) }
+            .onFailure { err -> LOG.warn("worktree move: rollback of ${worktree.path} failed", err) }
     }
 
     /** Detects a linked (non-primary) worktree: its git-dir differs from the shared common git-dir. */

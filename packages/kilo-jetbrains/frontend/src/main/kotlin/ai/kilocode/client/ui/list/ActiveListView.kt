@@ -655,7 +655,7 @@ internal class ActiveListView(
         }
         val run = activeListSectionRun(base, from)
         if (run.isEmpty()) return
-        val idx = rowAt(point) ?: state.index
+        val idx = nearestRow(point) ?: state.index
         val next = idx.coerceIn(run.first, run.last)
         if (state.index == next && current != null) return
         drag = state.copy(index = next)
@@ -792,11 +792,27 @@ internal class ActiveListView(
         return e.isShiftDown || e.isMetaDown || e.isControlDown
     }
 
+    /**
+     * The row containing [point], or null when it lands outside every cell. A short list in a
+     * viewport-tracking surface leaves empty space under the last row, and a click or drag there
+     * must not act on that row.
+     */
     private fun rowAt(point: Point): Int? {
         val idx = list.locationToIndex(point)
         if (idx < 0) return null
         val bounds = list.getCellBounds(idx, idx) ?: return null
-        if (bounds.contains(point)) return idx
+        return idx.takeIf { bounds.contains(point) }
+    }
+
+    /**
+     * Like [rowAt], but clamps to the nearest row so dragging above the first or below the last row
+     * still resolves a drop slot. Only the drag-over path wants this.
+     */
+    private fun nearestRow(point: Point): Int? {
+        rowAt(point)?.let { return it }
+        val idx = list.locationToIndex(point)
+        if (idx < 0) return null
+        val bounds = list.getCellBounds(idx, idx) ?: return null
         if (point.y < bounds.y) return 0
         return (model.size - 1).takeIf { it >= 0 }
     }

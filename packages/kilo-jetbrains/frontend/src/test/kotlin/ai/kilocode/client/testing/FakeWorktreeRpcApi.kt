@@ -28,6 +28,8 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     var ghResult = GhAvailability.OK
     var prResult = WorktreePrListDto()
     var branchResult = BranchStatusDto()
+    /** When set, [branchStatus] throws it instead of answering. */
+    var branchThrows: Exception? = null
     var currentBranch: String? = null
     val moves = CopyOnWriteArrayList<Triple<String, String, String>>()
     /** Progress events emitted by [moveToWorktree], in order. */
@@ -95,6 +97,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
 
     override suspend fun branchStatus(directory: String): BranchStatusDto {
         assertNotEdt("branchStatus")
+        branchThrows?.let { throw it }
         return branchResult
     }
 

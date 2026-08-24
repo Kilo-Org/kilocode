@@ -6,6 +6,7 @@ import com.intellij.execution.process.CapturingProcessHandler
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.fileSize
 
 /**
@@ -14,8 +15,11 @@ import kotlin.io.path.fileSize
  * modifying the source working tree.
  *
  * Ported from `packages/kilo-vscode/src/agent-manager/git-transfer.ts`. Patches are captured to temp
- * files with [ProcessBuilder.redirectOutput] rather than decoded to strings: `CapturingProcessHandler`
- * decodes stdout with a charset and would corrupt `--binary` patches.
+ * files with a redirected stdout rather than decoded to strings: `CapturingProcessHandler` decodes
+ * stdout with a charset and would corrupt `--binary` patches.
+ *
+ * [capture] throws when git itself fails. A failure must never look like a clean tree, or the move
+ * would report success while leaving the user's tracked edits behind.
  */
 internal object WorktreeTransfer {
     private val LOG = KiloLog.create(WorktreeTransfer::class.java)
@@ -39,29 +43,39 @@ internal object WorktreeTransfer {
      */
     fun capture(root: Path): Snapshot {
         val branch = git(root, "branch", "--show-current").stdout.trim()
-        val head = git(root, "rev-parse", "HEAD").stdout.trim()
-        val unstaged = capturePatch(root, "diff", "--binary")
-        val staged = capturePatch(root, "diff", "--cached", "--binary")
-        val untracked = git(root, "ls-files", "--others", "--exclude-standard").stdout
-            .lineSequence()
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .filter { rel ->
-                val full = root.resolve(rel).normalize()
-                if (!full.startsWith(root)) {
-                    LOG.warn("worktree move: skipping untracked file outside root: $rel")
-                    return@filter false
+        val rev = git(root, "rev-parse", "HEAD")
+        if (!rev.ok) error("git rev-parse HEAD failed: ${rev.stderr.trim()}")
+        val head = rev.stdout.trim().ifEmpty { error("git rev-parse HEAD returned no commit") }
+        val temps = mutableListOf<Path>()
+        try {
+            val unstaged = capturePatch(root, "diff", "--binary")?.also { temps.add(it) }
+            val staged = capturePatch(root, "diff", "--cached", "--binary")?.also { temps.add(it) }
+            val listed = git(root, "ls-files", "--others", "--exclude-standard")
+            if (!listed.ok) error("git ls-files failed: ${listed.stderr.trim()}")
+            val untracked = listed.stdout
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .filter { rel ->
+                    val full = root.resolve(rel).normalize()
+                    if (!full.startsWith(root)) {
+                        LOG.warn("worktree move: skipping untracked file outside root: $rel")
+                        return@filter false
+                    }
+                    val size = runCatching { full.fileSize() }.getOrDefault(0L)
+                    if (size > MAX_FILE) {
+                        LOG.info("worktree move: skipping untracked file $rel: $size bytes exceeds ${MAX_FILE} limit")
+                        false
+                    } else {
+                        true
+                    }
                 }
-                val size = runCatching { full.fileSize() }.getOrDefault(0L)
-                if (size > MAX_FILE) {
-                    LOG.info("worktree move: skipping untracked file $rel: $size bytes exceeds ${MAX_FILE} limit")
-                    false
-                } else {
-                    true
-                }
-            }
-            .toList()
-        return Snapshot(branch, head, staged, unstaged, untracked)
+                .toList()
+            return Snapshot(branch, head, staged, unstaged, untracked)
+        } catch (e: Exception) {
+            temps.forEach { Files.deleteIfExists(it) }
+            throw e
+        }
     }
 
     /**
@@ -103,31 +117,40 @@ internal object WorktreeTransfer {
         listOfNotNull(snapshot.staged, snapshot.unstaged).forEach { Files.deleteIfExists(it) }
     }
 
-    /** Runs `git diff` capturing raw bytes to a temp file; returns null when clean or on failure. */
+    /**
+     * Runs `git diff` capturing raw bytes to a temp file. Returns null only for a genuinely empty
+     * diff; any failure throws so the move reports an error instead of silently transferring a
+     * subset of the user's work.
+     *
+     * Goes through [GeneralCommandLine.toProcessBuilder] rather than a bare [ProcessBuilder] so git
+     * is resolved with the same PATH as the rest of this class — a Toolbox- or Dock-launched IDE
+     * inherits a minimal environment where a bare `git` can be missing. Output is still redirected
+     * to a file because decoding stdout would corrupt `--binary` patches.
+     */
     private fun capturePatch(root: Path, vararg args: String): Path? {
         val file = Files.createTempFile("kilo-worktree-patch", ".diff")
-        return try {
-            val proc = ProcessBuilder(listOf("git") + args)
-                .directory(root.toFile())
+        val label = "git ${args.joinToString(" ")}"
+        try {
+            val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(root.toFile())
+            val proc = cmd.toProcessBuilder()
                 .redirectOutput(file.toFile())
                 .redirectErrorStream(false)
                 .start()
-            val done = proc.waitFor(TIMEOUT.toLong(), java.util.concurrent.TimeUnit.MILLISECONDS)
-            if (!done) {
+            // stdout goes to the file, so draining stderr first cannot deadlock.
+            val err = proc.errorStream.use { it.readBytes().toString(StandardCharsets.UTF_8) }
+            if (!proc.waitFor(TIMEOUT.toLong(), TimeUnit.MILLISECONDS)) {
                 proc.destroyForcibly()
-                Files.deleteIfExists(file)
-                return null
+                error("$label timed out after ${TIMEOUT}ms")
             }
-            if (proc.exitValue() != 0 || file.fileSize() == 0L) {
-                Files.deleteIfExists(file)
-                null
-            } else {
-                file
-            }
-        } catch (e: Exception) {
-            LOG.warn("worktree move: capture patch failed: ${e.message}", e)
+            val exit = proc.exitValue()
+            if (exit != 0) error("$label failed (exit $exit): ${err.trim()}")
+            if (file.fileSize() > 0L) return file
             Files.deleteIfExists(file)
-            null
+            return null
+        } catch (e: Exception) {
+            Files.deleteIfExists(file)
+            LOG.warn("worktree move: $label failed: ${e.message}", e)
+            throw e
         }
     }
 
