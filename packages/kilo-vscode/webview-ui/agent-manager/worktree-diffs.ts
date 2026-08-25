@@ -29,6 +29,14 @@ export function wireDiffId(id: string) {
   return { sessionId: ctx, scope, diffSessionId: sessionId }
 }
 
+export function diffDataKey(project: string | undefined, id: string): string {
+  return `${project ?? "single"}\0${id}`
+}
+
+function readData(data: Record<string, WorktreeFileDiff[]>, project: string | undefined, id: string) {
+  return data[diffDataKey(project, id)]
+}
+
 export function createWorktreeDiffs(
   vscode: ReturnType<typeof useVSCode>,
   project: () => string | undefined = () => undefined,
@@ -39,11 +47,41 @@ export function createWorktreeDiffs(
   const [diffNotices, setDiffNotices] = createSignal<Record<string, string | undefined>>({})
   const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
 
+  const key = (id: string) => diffDataKey(project(), id)
+
   const reset = () => {
     setDiffDatas({})
     setDiffLoadings({})
     setDiffNotices({})
     setDiffFileLoading({})
+  }
+
+  const drop = (id: string) => {
+    const data = id.includes("\0") ? id : key(id)
+    setDiffDatas((prev) => {
+      if (!(data in prev)) return prev
+      const next = { ...prev }
+      delete next[data]
+      return next
+    })
+    setDiffLoadings((prev) => {
+      if (!(data in prev)) return prev
+      const next = { ...prev }
+      delete next[data]
+      return next
+    })
+    setDiffNotices((prev) => {
+      if (!(data in prev)) return prev
+      const next = { ...prev }
+      delete next[data]
+      return next
+    })
+    setDiffFileLoading((prev) => {
+      if (!(data in prev)) return prev
+      const next = { ...prev }
+      delete next[data]
+      return next
+    })
   }
 
   const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
@@ -74,17 +112,19 @@ export function createWorktreeDiffs(
 
   /** Lazily load a single file's full diff for the given composite diff id. */
   const requestDiffFile = (id: string, file: string) => {
-    if (diffFileLoading()[id]?.[file]) return
-    setDiffFilePending(id, file, true)
+    const data = key(id)
+    if (diffFileLoading()[data]?.[file]) return
+    setDiffFilePending(data, file, true)
     vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", projectId: project(), file, ...wireDiffId(id) })
   }
 
   /** Files the backend flagged as stale in a merged update need a fresh fetch. */
   const refreshStaleDiffs = (id: string, files: Set<string>) => {
-    const loading = diffFileLoading()[id] ?? {}
+    const data = key(id)
+    const loading = diffFileLoading()[data] ?? {}
     for (const file of files) {
       if (loading[file]) continue
-      setDiffFilePending(id, file, true)
+      setDiffFilePending(data, file, true)
       vscode.postMessage({
         type: "agentManager.requestWorktreeDiffFile",
         projectId: project(),
@@ -98,61 +138,65 @@ export function createWorktreeDiffs(
   const diffFileLoadingFor = (sessionId: Accessor<string | undefined>) => {
     const id = sessionId()
     if (!id) return new Set<string>()
-    return new Set(Object.keys(diffFileLoading()[id] ?? {}))
+    return new Set(Object.keys(diffFileLoading()[key(id)] ?? {}))
   }
 
   /** Initial summary loading for one composite diff id. Cached results stay visible while refreshing. */
   const diffLoadingFor = (sessionId: Accessor<string | undefined>) => {
     const id = sessionId()
     if (!id) return false
-    return diffLoadings()[id] === true && !(id in diffDatas())
+    const data = key(id)
+    return diffLoadings()[data] === true && !(data in diffDatas())
   }
 
   // Backend messages.
 
   const onWorktreeDiff = (ev: AgentManagerWorktreeDiffMessage) => {
+    const data = diffDataKey(ev.projectId, ev.sessionId)
     let staleFiles: Set<string> | undefined
     setDiffDatas((prev) => {
-      const existing = prev[ev.sessionId]
+      const existing = readData(prev, project(), ev.sessionId)
       const merged = existing ? mergeWorktreeDiffs(existing, ev.diffs) : { diffs: ev.diffs, stale: new Set<string>() }
       staleFiles = merged.stale
       const next = merged.diffs
       if (existing && existing.length === next.length && existing.every((old, i) => old === next[i])) return prev
-      return { ...prev, [ev.sessionId]: next }
+      return { ...prev, [data]: next }
     })
     if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles)
   }
 
   const onWorktreeDiffFile = (ev: AgentManagerWorktreeDiffFileMessage) => {
+    const data = diffDataKey(ev.projectId, ev.sessionId)
     if (ev.diff) {
       setDiffDatas((prev) => {
-        const existing = prev[ev.sessionId] ?? []
+        const existing = readData(prev, project(), ev.sessionId) ?? []
         const next = existing.map((item) => (item.file === ev.diff!.file ? ev.diff! : item))
-        return { ...prev, [ev.sessionId]: next }
+        return { ...prev, [data]: next }
       })
-      setDiffFilePending(ev.sessionId, ev.diff.file, false)
+      setDiffFilePending(data, ev.diff.file, false)
       return
     }
-    setDiffFilePending(ev.sessionId, ev.file, false)
+    setDiffFilePending(data, ev.file, false)
   }
 
   const onWorktreeDiffLoading = (ev: AgentManagerWorktreeDiffLoadingMessage) => {
+    const data = diffDataKey(ev.projectId, ev.sessionId)
     // One source is active per project. Replacing the map on start also clears
     // an interrupted source whose stale completion is intentionally discarded.
     if (ev.loading) {
-      setDiffLoadings({ [ev.sessionId]: true })
+      setDiffLoadings({ [data]: true })
       return
     }
     setDiffLoadings((prev) => {
-      if (!prev[ev.sessionId]) return prev
+      if (!prev[data]) return prev
       const next = { ...prev }
-      delete next[ev.sessionId]
+      delete next[data]
       return next
     })
   }
 
   const onWorktreeDiffNotice = (ev: AgentManagerWorktreeDiffNoticeMessage) => {
-    setDiffNotices((prev) => ({ ...prev, [ev.sessionId]: ev.notice }))
+    setDiffNotices((prev) => ({ ...prev, [diffDataKey(ev.projectId, ev.sessionId)]: ev.notice }))
   }
 
   return {
@@ -164,6 +208,8 @@ export function createWorktreeDiffs(
     refreshStaleDiffs,
     diffFileLoadingFor,
     diffLoadingFor,
+    diffDataKey,
+    drop,
     reset,
     onWorktreeDiff,
     onWorktreeDiffFile,
