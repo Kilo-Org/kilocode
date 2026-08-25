@@ -254,7 +254,12 @@ const user = Effect.fn("prompt-safety.user")(function* (
 const assistant = Effect.fn("prompt-safety.assistant")(function* (
   sessionID: SessionID,
   parentID: MessageID,
-  input?: { text?: string; summary?: boolean; tokens?: MessageV2.Assistant["tokens"] },
+  input?: {
+    text?: string
+    summary?: boolean
+    tokens?: MessageV2.Assistant["tokens"]
+    finish?: MessageV2.Assistant["finish"]
+  },
 ) {
   const sessions = yield* Session.Service
   const msg = yield* sessions.updateMessage({
@@ -270,7 +275,7 @@ const assistant = Effect.fn("prompt-safety.assistant")(function* (
     modelID: ref.modelID,
     providerID: ref.providerID,
     time: { created: Date.now() },
-    finish: "end_turn",
+    finish: input?.finish ?? "end_turn",
     summary: input?.summary,
   } satisfies MessageV2.Assistant)
   yield* sessions.updatePart({
@@ -578,6 +583,98 @@ describe("SessionPrompt compaction safety", () => {
           expect(
             msgs.flatMap((msg) => msg.parts).filter((part) => part.type === "tool" && part.tool === "glob"),
           ).toHaveLength(1)
+        }),
+        { git: true, config: providerCfg },
+      ),
+    30_000,
+  )
+
+  it.live(
+    "compacts a non-tool finish when it contains tool progress",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const chat = yield* sessions.create({
+            title: "Stop tool compaction",
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          })
+
+          yield* llm.push(
+            reply().tool("glob", { pattern: "**/*.txt" }).finish("length").usage({ input: 95_000, output: 100 }),
+          )
+          yield* llm.text("tool progress summary")
+          yield* llm.text("final answer")
+
+          yield* prompt.prompt({
+            sessionID: chat.id,
+            agent: "code",
+            noReply: true,
+            parts: [{ type: "text", text: "find files once" }],
+          })
+          const result = yield* prompt.loop({ sessionID: chat.id })
+
+          expect(yield* llm.calls).toBe(3)
+          expect(result.parts.some((part) => part.type === "text" && part.text === "final answer")).toBe(true)
+          const msgs = yield* sessions.messages({ sessionID: chat.id })
+          expect(
+            msgs.filter(
+              (msg) =>
+                msg.info.role === "user" &&
+                msg.parts.some((part) => part.type === "text" && part.text === "find files once"),
+            ),
+          ).toHaveLength(1)
+          expect(
+            msgs.flatMap((msg) => msg.parts).filter((part) => part.type === "tool" && part.tool === "glob"),
+          ).toHaveLength(1)
+        }),
+        { git: true, config: providerCfg },
+      ),
+    30_000,
+  )
+
+  it.live(
+    "keeps a tool-bearing turn when recovering a stale preflight marker",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const compaction = yield* SessionCompaction.Service
+          const chat = yield* sessions.create({
+            title: "Tool stale marker",
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          })
+
+          const request = yield* user(chat.id, "run the tool")
+          const replyMessage = yield* assistant(chat.id, request.id, { finish: "tool-calls" })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: replyMessage.id,
+            sessionID: chat.id,
+            type: "tool",
+            callID: "call_stale",
+            tool: "glob",
+            state: {
+              status: "completed",
+              input: { pattern: "**/*.txt" },
+              output: "files",
+              title: "glob",
+              metadata: {},
+              time: { start: Date.now(), end: Date.now() },
+            },
+          } satisfies MessageV2.ToolPart)
+          yield* compaction.create({ sessionID: chat.id, agent: "code", model: ref, auto: true, overflow: false })
+          yield* llm.text("summary")
+          yield* llm.text("final answer")
+
+          const result = yield* prompt.loop({ sessionID: chat.id })
+
+          expect(yield* llm.calls).toBe(2)
+          expect(result.parts.some((part) => part.type === "text" && part.text === "final answer")).toBe(true)
+          const msgs = yield* sessions.messages({ sessionID: chat.id })
+          expect(msgs.some((msg) => msg.parts.some((part) => part.type === "compaction"))).toBe(true)
         }),
         { git: true, config: providerCfg },
       ),
