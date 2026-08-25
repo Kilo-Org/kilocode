@@ -102,16 +102,43 @@ class KiloBackendActivityManagerTest {
         statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
         start()
 
+        // Turn ends on an error: the session goes idle but the error must stay visible.
         events.emit(ChatEventDto.Error("ses_1"))
-        await("ses_1", SessionActivityKindDto.ERROR)
-
-        // Turn ends: session goes idle but the error must stay visible.
         statuses.value = mapOf("ses_1" to SessionStatusDto("idle"))
         events.emit(ChatEventDto.SessionIdle("ses_1"))
         await("ses_1", SessionActivityKindDto.ERROR)
 
         // A new turn clears the error.
         events.emit(ChatEventDto.TurnOpen("ses_1"))
+        withTimeout(5_000) { manager.activity.first { "ses_1" !in it } }
+        assertFalse("ses_1" in manager.activity.value)
+    }
+
+    @Test
+    fun `busy outranks a pending error so a resumed session runs`() = runBlocking {
+        directories["ses_1"] = "/repo/wt"
+        start()
+
+        // A Stop leaves the session errored and idle.
+        events.emit(ChatEventDto.Error("ses_1"))
+        await("ses_1", SessionActivityKindDto.ERROR)
+
+        // Resumed: busy arrives before anything clears the error.
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+
+        await("ses_1", SessionActivityKindDto.RUNNING)
+    }
+
+    @Test
+    fun `busy status event clears a pending error`() = runBlocking {
+        directories["ses_1"] = "/repo/wt"
+        start()
+
+        events.emit(ChatEventDto.Error("ses_1"))
+        await("ses_1", SessionActivityKindDto.ERROR)
+
+        events.emit(ChatEventDto.SessionStatusChanged("ses_1", SessionStatusDto("busy")))
+
         withTimeout(5_000) { manager.activity.first { "ses_1" !in it } }
         assertFalse("ses_1" in manager.activity.value)
     }

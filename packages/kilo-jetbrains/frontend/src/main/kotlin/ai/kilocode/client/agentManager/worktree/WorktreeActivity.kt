@@ -22,11 +22,16 @@ private fun kind(kind: SessionActivityKindDto): SessionActivityKind = when (kind
     SessionActivityKindDto.ERROR -> SessionActivityKind.ERROR
 }
 
+/**
+ * Precedence for a worktree holding several sessions: anything waiting on the user first, then live
+ * work, then a session left in an error. Running beats error so one stopped session cannot hide the
+ * spinner of a sibling that is still working.
+ */
 private fun rank(kind: SessionActivityKind): Int = when (kind) {
     SessionActivityKind.PERMISSION -> 0
     SessionActivityKind.QUESTION -> 1
     SessionActivityKind.PLAN -> 2
-    SessionActivityKind.ERROR -> 3
-    SessionActivityKind.RUNNING -> 4
+    SessionActivityKind.RUNNING -> 3
+    SessionActivityKind.ERROR -> 4
     SessionActivityKind.LOGIN_REQUIRED -> 5
 }
