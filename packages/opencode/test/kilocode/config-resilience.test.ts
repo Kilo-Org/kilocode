@@ -392,6 +392,30 @@ Broken command`,
     })
   })
 
+  test.serial("collects warnings for unknown fields in KILO_CONFIG_CONTENT", async () => {
+    const prior = process.env.KILO_CONFIG_CONTENT
+    process.env.KILO_CONFIG_CONTENT = JSON.stringify({ model: "test/model", unknownField: true })
+    await using tmp = await tmpdir({ git: true })
+
+    try {
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const cfg = await load()
+          const warns = await warnings()
+
+          expect(cfg.model).toBe("test/model")
+          expect(
+            warns.some((warning) => warning.path === "KILO_CONFIG_CONTENT" && warning.message.includes("unknownField")),
+          ).toBe(true)
+        },
+      })
+    } finally {
+      if (prior === undefined) delete process.env.KILO_CONFIG_CONTENT
+      else process.env.KILO_CONFIG_CONTENT = prior
+    }
+  })
+
   test("returns empty warnings when config is valid", async () => {
     await using tmp = await tmpdir({
       config: { model: "test/model" },

@@ -21,6 +21,5 @@
     "@types/react-dom": "^19.2.3",
     "typescript": "^5.8.2"
   },
-  "version": "7.4.23",
-  "peerDependencies": {}
+  "version": "7.4.23"
 }

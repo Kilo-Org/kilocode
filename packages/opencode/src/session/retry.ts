@@ -154,7 +154,7 @@ export function policy(opts: {
       const error = opts.parse(meta.input)
       const retry = retryable(error, opts.provider)
       if (!retry) return Cause.done(meta.attempt)
-      if (meta.attempt > RETRY_MAX_RETRIES) return Cause.done(meta.attempt)
+      if (opts.limit === undefined && meta.attempt > RETRY_MAX_RETRIES) return Cause.done(meta.attempt) // kilocode_change - explicit Kilo limit overrides the upstream default
       return Effect.gen(function* () {
         // kilocode_change start — handle network disconnect via offline handler
         if (opts.offline && SessionNetwork.disconnected(meta.input)) {

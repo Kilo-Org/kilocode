@@ -7,6 +7,7 @@ import { Skill } from "../../src/skill"
 import { Permission } from "../../src/permission"
 import type { Provider } from "../../src/provider/provider"
 import { SystemPrompt } from "../../src/session/system"
+import { MCP } from "../../src/mcp" // kilocode_change - restore upstream MCP coverage in Kilo's AppNodeBuilder harness
 import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { testEffect } from "../lib/effect"
 import { Config } from "../../src/config/config" // kilocode_change
@@ -46,6 +47,26 @@ const build: Agent.Info = {
 
 const it = testEffect(
   AppNodeBuilder.build(SystemPrompt.node, [
+    // kilocode_change start - restore upstream MCP coverage in Kilo's AppNodeBuilder harness
+    [
+      MCP.node,
+      Layer.mock(MCP.Service, {
+        instructions: () =>
+          Effect.succeed([
+            {
+              name: "guide-server",
+              instructions: "Use lookup before mutate.",
+              tools: [],
+            },
+            {
+              name: "tool-server",
+              instructions: "Prefer search before update.",
+              tools: ["tool-server_search", "tool-server_update"],
+            },
+          ]),
+      }),
+    ],
+    // kilocode_change end
     [
       Skill.node,
       Layer.succeed(
@@ -111,4 +132,43 @@ describe("session.system", () => {
       expect(output).not.toContain("manual-skill")
     }),
   )
+
+  // kilocode_change start - restore upstream MCP regression coverage omitted during conflict resolution
+  it.effect("MCP output includes connected server instructions", () =>
+    Effect.gen(function* () {
+      const prompt = yield* SystemPrompt.Service
+      const output = yield* prompt.mcp(build)
+
+      expect(output).toBe(
+        [
+          "<mcp_instructions>",
+          '  <server name="guide-server">',
+          "    Use lookup before mutate.",
+          "  </server>",
+          '  <server name="tool-server">',
+          "    Prefer search before update.",
+          "  </server>",
+          "</mcp_instructions>",
+        ].join("\n"),
+      )
+    }),
+  )
+
+  it.effect("MCP output omits servers when all advertised tools are denied", () =>
+    Effect.gen(function* () {
+      const prompt = yield* SystemPrompt.Service
+      const output = yield* prompt.mcp(build, Permission.fromConfig({ "tool-server_*": "deny" }))
+
+      expect(output).toBe(
+        [
+          "<mcp_instructions>",
+          '  <server name="guide-server">',
+          "    Use lookup before mutate.",
+          "  </server>",
+          "</mcp_instructions>",
+        ].join("\n"),
+      )
+    }),
+  )
+  // kilocode_change end
 })

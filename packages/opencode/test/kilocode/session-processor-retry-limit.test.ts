@@ -157,83 +157,82 @@ afterEach(() => {
 })
 
 describe("session processor retry limit", () => {
-  it.live(
-    "stops after two retries with the normalized retryable error",
-    () =>
-      provideTmpdirProject(
-        (dir) =>
-          Effect.gen(function* () {
-            process.env.KILO_SESSION_RETRY_LIMIT = "2"
-            const test = yield* TestLLM
-            const processors = yield* SessionProcessor.Service
-            const session = yield* Session.Service
+  const run = (limit: number) =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          process.env.KILO_SESSION_RETRY_LIMIT = String(limit)
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
 
-            // 3 retryable 429 errors + sentinel (should not be reached)
-            yield* test.push(Stream.fail(retryable429()))
-            yield* test.push(Stream.fail(retryable429()))
-            yield* test.push(Stream.fail(retryable429()))
-            yield* test.push(Stream.fail(new Error("unexpected extra llm call")))
+          yield* Effect.forEach(Array.from({ length: limit + 1 }), () => test.push(Stream.fail(retryable429())), {
+            discard: true,
+          })
+          yield* test.push(Stream.fail(new Error("unexpected extra llm call")))
 
-            const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
 
-            const chat = yield* session.create({})
-            const parent = yield* session.updateMessage({
-              id: MessageID.ascending(),
-              role: "user",
-              sessionID: chat.id,
-              agent: "code",
-              model: ref,
-              time: { created: Date.now() },
-            })
-            const msg: MessageV2.Assistant = {
-              id: MessageID.ascending(),
-              role: "assistant",
-              sessionID: chat.id,
-              parentID: parent.id,
-              mode: "code",
-              agent: "code",
-              path: { cwd: path.resolve(dir), root: path.resolve(dir) },
-              cost: 0,
-              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-              modelID: ref.modelID,
-              providerID: ref.providerID,
-              time: { created: Date.now() },
-            }
-            yield* session.updateMessage(msg)
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
 
-            const mdl = model()
-            const handle = yield* processors.create({
-              assistantMessage: msg,
-              sessionID: chat.id,
-              model: mdl,
-            })
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
 
-            const input: LLM.StreamInput = {
-              user: parent as MessageV2.User,
-              sessionID: chat.id,
-              model: mdl,
-              agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
-              system: [],
-              messages: [],
-              tools: {},
-            }
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
 
-            const expected = MessageV2.fromError(retryable429(), { providerID: ProviderV2.ID.make("test") })
-            try {
-              const result = yield* handle.process(input)
-              const calls = yield* test.calls
+          const expected = MessageV2.fromError(retryable429(), { providerID: ProviderV2.ID.make("test") })
+          try {
+            const result = yield* handle.process(input)
+            const calls = yield* test.calls
 
-              expect(result).toBe("stop")
-              expect(calls).toBe(3)
-              expect(handle.message.error).toStrictEqual(expected)
-            } finally {
-              delay.mockRestore()
-            }
-          }),
-        { git: true },
-      ),
-    15000,
-  )
+            expect(result).toBe("stop")
+            expect(calls).toBe(limit + 1)
+            expect(handle.message.error).toStrictEqual(expected)
+          } finally {
+            delay.mockRestore()
+          }
+        }),
+      { git: true },
+    )
+
+  it.live("stops after two retries with the normalized retryable error", () => run(2), 15000)
+
+  it.live("honors a configured retry limit above the upstream default", () => run(10), 15000)
 
   it.effect("only positive integers enable the limit", () =>
     Effect.promise(async () => {
