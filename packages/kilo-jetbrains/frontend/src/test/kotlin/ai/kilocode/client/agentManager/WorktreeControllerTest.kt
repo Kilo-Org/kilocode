@@ -493,7 +493,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test worktree row icons show only while running or waiting`() {
+    fun `test worktree row icons show while running, waiting or failed`() {
         assertSame(
             WorktreeIcons.spinner,
             WorktreeIcons.forRow(busy = true, kind = SessionActivityKind.RUNNING),
@@ -510,7 +510,10 @@ class WorktreeControllerTest : BasePlatformTestCase() {
             SessionActivityKind.PLAN.icon(),
             WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.PLAN),
         )
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR))
+        assertSame(
+            SessionActivityKind.ERROR.icon(),
+            WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR),
+        )
         assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(busy = false, kind = null))
     }
 

@@ -76,12 +76,13 @@ class WorktreeIconsTest : BasePlatformTestCase() {
         assertSame(WorktreeIcons.local, WorktreeIcons.forRow(busy = false, current = true))
     }
 
-    fun `test errored session falls back to the resting glyph`() {
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR))
-        assertSame(
-            WorktreeIcons.local,
-            WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR, current = true),
-        )
+    fun `test errored session shows the error glyph over the resting one`() {
+        val error = SessionActivityKind.ERROR.icon()
+        assertSame(error, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR))
+        assertSame(error, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR, current = true))
+        assertSame(error, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR, locked = true))
+        // An operation on the row still outranks it.
+        assertSame(WorktreeIcons.spinner, WorktreeIcons.forRow(busy = true, kind = SessionActivityKind.ERROR))
     }
 
     fun `test activity outranks the resting glyph on the local row`() {
