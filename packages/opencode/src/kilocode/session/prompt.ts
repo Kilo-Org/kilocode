@@ -362,7 +362,6 @@ export namespace KiloSessionPrompt {
    */
   export function injectEditorContext(input: {
     msgs: MessageV2.WithParts[]
-    lastUser: MessageV2.User
     session: Pick<Session.Info, "directory" | "path">
     sessionID: SessionID
     cache: EnvCache

@@ -79,9 +79,7 @@ function assistant(parentID: MessageID, text: string) {
 }
 
 function inject(msgs: MessageV2.WithParts[], cache: KiloSessionPrompt.EnvCache = {}) {
-  const last = msgs.findLast((msg) => msg.info.role === "user")
-  if (!last || last.info.role !== "user") throw new Error("missing user message")
-  KiloSessionPrompt.injectEditorContext({ msgs, lastUser: last.info, session, sessionID, cache })
+  KiloSessionPrompt.injectEditorContext({ msgs, session, sessionID, cache })
 }
 
 function blocks(msg: MessageV2.WithParts) {

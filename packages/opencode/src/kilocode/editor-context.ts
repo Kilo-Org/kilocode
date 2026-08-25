@@ -30,14 +30,7 @@ export function staticEnvLines(ctx?: EditorContext): string[] {
  * Always includes at least the supplied message timestamp.
  */
 function timestamp(now: Date): string {
-  const offset = -now.getTimezoneOffset()
-  const sign = offset >= 0 ? "+" : "-"
-  const h = Math.floor(Math.abs(offset) / 60)
-    .toString()
-    .padStart(2, "0")
-  const m = (Math.abs(offset) % 60).toString().padStart(2, "0")
-  const pad = (n: number) => n.toString().padStart(2, "0")
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}${sign}${h}:${m}`
+  return now.toISOString().replace(".000Z", "Z")
 }
 
 export function environmentDetails(ctx?: EditorContext, now = new Date()): string {
