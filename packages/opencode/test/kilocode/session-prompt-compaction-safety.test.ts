@@ -522,13 +522,15 @@ describe("SessionPrompt compaction safety", () => {
           const request = yield* user(chat.id, "already completed")
           yield* assistant(chat.id, request.id, { text: "completed answer" })
           yield* compaction.create({ sessionID: chat.id, agent: "code", model: ref, auto: true, overflow: false })
+          yield* user(chat.id, "later queued request")
+          yield* llm.text("later answer")
           const before = yield* sessions.messages({ sessionID: chat.id })
           const marker = before.find((msg) => msg.parts.some((part) => part.type === "compaction"))
 
           const result = yield* prompt.loop({ sessionID: chat.id })
 
-          expect(yield* llm.calls).toBe(0)
-          expect(result.parts.some((part) => part.type === "text" && part.text === "completed answer")).toBe(true)
+          expect(yield* llm.calls).toBe(1)
+          expect(result.parts.some((part) => part.type === "text" && part.text === "later answer")).toBe(true)
           const msgs = yield* sessions.messages({ sessionID: chat.id })
           expect(msgs.some((msg) => msg.info.id === marker?.info.id)).toBe(false)
           expect(
@@ -536,6 +538,68 @@ describe("SessionPrompt compaction safety", () => {
               (msg) =>
                 msg.info.role === "user" &&
                 msg.parts.some((part) => part.type === "text" && part.text === "already completed"),
+            ),
+          ).toHaveLength(1)
+        }),
+        { git: true, config: providerCfg },
+      ),
+    30_000,
+  )
+
+  it.live(
+    "resumes the persisted preflight request when a later prompt exists after restart",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const compaction = yield* SessionCompaction.Service
+          const chat = yield* sessions.create({
+            title: "Persisted pending request",
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          })
+
+          const old = yield* user(chat.id, "old prompt")
+          yield* assistant(chat.id, old.id, {
+            text: "old answer",
+            tokens: { input: 95_000, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+          })
+          const pending = yield* user(chat.id, "pending request")
+          yield* compaction.create({
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            auto: true,
+            overflow: false,
+            pending_user_id: pending.id,
+          })
+          const stored = yield* sessions.messages({ sessionID: chat.id })
+          const part = stored
+            .flatMap((msg) => msg.parts)
+            .find((item): item is MessageV2.CompactionPart => item.type === "compaction")
+          expect(part?.pending_user_id).toBe(pending.id)
+          yield* user(chat.id, "later queued request")
+          yield* llm.text("pending summary")
+          yield* llm.text("pending answer")
+          yield* llm.text("later answer")
+
+          const result = yield* prompt.loop({ sessionID: chat.id })
+
+          expect(yield* llm.calls).toBe(3)
+          expect(result.parts.some((part) => part.type === "text" && part.text === "later answer")).toBe(true)
+          const msgs = yield* sessions.messages({ sessionID: chat.id })
+          expect(
+            msgs.filter(
+              (msg) =>
+                msg.info.role === "user" &&
+                msg.parts.some((part) => part.type === "text" && part.text === "pending request"),
+            ),
+          ).toHaveLength(1)
+          expect(
+            msgs.filter(
+              (msg) =>
+                msg.info.role === "user" &&
+                msg.parts.some((part) => part.type === "text" && part.text === "later queued request"),
             ),
           ).toHaveLength(1)
         }),

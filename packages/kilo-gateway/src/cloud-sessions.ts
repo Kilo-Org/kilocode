@@ -98,6 +98,12 @@ const exportSchema = z
           ctx.addIssue({ code: "custom", message: "Invalid message part" })
         if (part.type === "compaction" && part.tail_start_id !== undefined && typeof part.tail_start_id !== "string")
           ctx.addIssue({ code: "custom", message: "Invalid compaction tail" })
+        if (
+          part.type === "compaction" &&
+          part.pending_user_id !== undefined &&
+          typeof part.pending_user_id !== "string"
+        )
+          ctx.addIssue({ code: "custom", message: "Invalid compaction pending user" })
         if (pids.has(part.id)) ctx.addIssue({ code: "custom", message: "Duplicate part ID" })
         pids.add(part.id)
 
@@ -120,8 +126,7 @@ const exportSchema = z
 
     for (const msg of data.messages) {
       const parent = msg.info.parentID
-      if (parent !== undefined && !ids.has(parent))
-        ctx.addIssue({ code: "custom", message: "Dangling message parent" })
+      if (parent !== undefined && !ids.has(parent)) ctx.addIssue({ code: "custom", message: "Dangling message parent" })
 
       const seen = new Set([msg.info.id])
       let current = parent
@@ -135,8 +140,11 @@ const exportSchema = z
       }
 
       for (const part of msg.parts) {
-        if (part.type !== "compaction" || typeof part.tail_start_id !== "string") continue
-        if (!ids.has(part.tail_start_id)) ctx.addIssue({ code: "custom", message: "Dangling compaction tail" })
+        if (part.type !== "compaction") continue
+        if (typeof part.tail_start_id === "string" && !ids.has(part.tail_start_id))
+          ctx.addIssue({ code: "custom", message: "Dangling compaction tail" })
+        if (typeof part.pending_user_id === "string" && !ids.has(part.pending_user_id))
+          ctx.addIssue({ code: "custom", message: "Dangling compaction pending user" })
       }
     }
   })
@@ -287,8 +295,10 @@ export function prepareSessionImport(data: unknown, deps: PrepareDeps) {
     for (const part of msg.parts) {
       const partID = pids.get(part.id)!
       const tail =
-        part.type === "compaction" && typeof part.tail_start_id === "string"
-          ? ids.get(part.tail_start_id)!
+        part.type === "compaction" && typeof part.tail_start_id === "string" ? ids.get(part.tail_start_id)! : undefined
+      const pending =
+        part.type === "compaction" && typeof part.pending_user_id === "string"
+          ? ids.get(part.pending_user_id)!
           : undefined
       const data: Record<string, unknown> = {
         ...part,
@@ -296,6 +306,7 @@ export function prepareSessionImport(data: unknown, deps: PrepareDeps) {
         messageID: id,
         sessionID,
         ...(tail ? { tail_start_id: tail } : {}),
+        ...(pending ? { pending_user_id: pending } : {}),
       }
       const state = completed(part)
       if (state?.attachments) {

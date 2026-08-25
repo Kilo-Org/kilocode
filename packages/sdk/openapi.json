@@ -29158,6 +29158,10 @@
           "overflow": {
             "type": "boolean"
           },
+          "pending_user_id": {
+            "type": "string",
+            "pattern": "^msg"
+          },
           "tail_start_id": {
             "type": "string",
             "pattern": "^msg"

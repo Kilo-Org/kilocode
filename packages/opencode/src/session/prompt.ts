@@ -15,6 +15,7 @@ import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kil
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import * as KiloWorkflowVariant from "@/kilocode/session/workflow-variant" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow" // kilocode_change
+import { KiloSessionCompaction } from "@/kilocode/session/compaction" // kilocode_change
 import { KiloReference } from "@/kilocode/reference/contains" // kilocode_change
 import { KiloReadObject } from "@/kilocode/tool/read-object" // kilocode_change
 import { isInterrupted } from "@/kilocode/effect/cause" // kilocode_change
@@ -1473,6 +1474,8 @@ export const layer = Layer.effect(
       const memoryCache = KiloSessionPrompt.memoryCache() // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
+      let focus: MessageID | undefined // kilocode_change - complete recovered turns before later prompts
+      const handoffs: MessageID[] = [] // kilocode_change
       const ctx = yield* InstanceState.context
       let structured: unknown
       let step = 0
@@ -1491,7 +1494,7 @@ export const layer = Layer.effect(
         msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs) // kilocode_change - trim on any completed summary (e.g. manual /compact against a text user)
 
         // kilocode_change start - select loop state by chronology after retained-tail projection
-        const latest = KiloSessionMessageOrder.latest(msgs)
+        const latest = KiloSessionMessageOrder.latest(msgs, focus)
         const { user: lastUser, assistant: lastAssistant, finished: lastFinished, tasks } = latest
         // kilocode_change end
 
@@ -1520,6 +1523,21 @@ export const layer = Layer.effect(
           lastAssistantMsg?.parts.some(
             (part) => part.type === "tool" && !part.metadata?.providerExecuted && !isOrphanedInterruptedTool(part),
           ) ?? false
+
+        // kilocode_change start - complete recovered turns before later durable prompts
+        if (
+          focus &&
+          handoffs.length > 0 &&
+          latest.userMessage?.info.id === focus &&
+          lastAssistant?.parentID === focus &&
+          lastAssistant.finish &&
+          lastAssistant.finish !== "tool-calls" &&
+          !hasToolCalls
+        ) {
+          focus = handoffs.shift()
+          continue
+        }
+        // kilocode_change end
 
         // kilocode_change start - plan_exit is a hard stop before another model call
         if (
@@ -1578,33 +1596,49 @@ export const layer = Layer.effect(
         }
 
         if (task?.type === "compaction") {
-          // kilocode_change start - recover genuine preflight markers but discard stale v7.4.23 completed-turn markers
-          const target =
-            task.overflow === false
-              ? KiloSessionMessageOrder.latest(
-                  msgs.filter(
-                    (item) => item.info.role !== "user" || !item.parts.some((part) => part.type === "compaction"),
-                  ),
-                ).userMessage
+          // kilocode_change start - resolve the marker's persisted or unambiguous legacy pending turn
+          const marker = msgs.find((item) => item.info.id === task.messageID)
+          const target = marker?.parts.find((part): part is MessageV2.CompactionPart => part.type === "compaction")
+          const resolved =
+            target && (target.pending_user_id || (task.auto && task.overflow === false))
+              ? KiloSessionCompaction.resolve({ part: target, messages: msgs })
               : undefined
-          const answered =
-            target &&
-            msgs.some(
-              (item) => item.info.role === "assistant" && item.info.parentID === target.info.id && !!item.info.finish,
-            )
-          if (answered) {
-            yield* sessions.removeMessage({ sessionID, messageID: lastUser.id })
+          if (resolved?.kind === "unresolved") {
+            const error = new NamedError.Unknown({
+              message: `Automatic compaction could not identify the pending user request: ${resolved.reason}.`,
+            })
+            closeReasons.set(sessionID, "error")
+            yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
+            break
+          }
+          if (resolved?.kind === "stale") {
+            yield* sessions.removeMessage({ sessionID, messageID: task.messageID })
             continue
           }
-          const pending = target?.info.role === "user" ? target.info.id : undefined
+          const pending =
+            resolved?.kind === "found" && resolved.message.info.role === "user" ? resolved.message : undefined
+          if (pending) {
+            for (const item of KiloSessionCompaction.followups({ messages: msgs, after: pending })) {
+              if (!handoffs.includes(item.id)) handoffs.push(item.id)
+            }
+          }
+          const answered =
+            pending &&
+            msgs.some(
+              (item) => item.info.role === "assistant" && item.info.parentID === pending.info.id && !!item.info.finish,
+            )
+          if (answered) {
+            yield* sessions.removeMessage({ sessionID, messageID: task.messageID })
+            continue
+          }
           // kilocode_change end
           const result = yield* compaction.process({
             messages: msgs,
-            parentID: lastUser.id,
+            parentID: task.messageID,
             sessionID,
             auto: task.auto,
             overflow: task.overflow,
-            pending,
+            pending: pending?.info.id,
           })
           // kilocode_change start - compaction.process only returns "stop" after
           // setting ContextOverflowError on the summary message; surface as turn error
@@ -1612,6 +1646,14 @@ export const layer = Layer.effect(
             closeReasons.set(sessionID, "error")
             break
           }
+          const continuation = (yield* sessions.messages({ sessionID }).pipe(Effect.orDie)).findLast(
+            (item) =>
+              item.info.role === "user" &&
+              item.parts.some(
+                (part) => part.type === "text" && part.synthetic && part.metadata?.compaction_continue === true,
+              ),
+          )
+          if (continuation) focus = continuation.info.id
           // kilocode_change end
           continue
         }
@@ -1643,6 +1685,7 @@ export const layer = Layer.effect(
             model: lastUser.model,
             auto: true,
             overflow: false,
+            pending_user_id: lastUser.id, // kilocode_change - persist the preflight request identity
           }) // kilocode_change - compact around the pending turn, then resume it
           continue
         }
@@ -1887,6 +1930,8 @@ export const layer = Layer.effect(
                 model: lastUser.model,
                 auto: true,
                 overflow: handle.message.finish === "tool-calls" || handle.compactProgress?.() ? undefined : overflow,
+                pending_user_id:
+                  handle.message.finish === "tool-calls" || handle.compactProgress?.() ? undefined : lastUser.id, // kilocode_change
               })
             }
             // kilocode_change end

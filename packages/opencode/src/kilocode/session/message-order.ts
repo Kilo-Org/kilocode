@@ -18,7 +18,7 @@ export namespace KiloSessionMessageOrder {
   }
 
   /** Derive active messages by chronology while keeping queued tasks in model-facing projection order. */
-  export function latest(msgs: MessageV2.WithParts[]) {
+  export function latest(msgs: MessageV2.WithParts[], focus?: MessageV2.User["id"]) {
     let user: MessageV2.WithParts | undefined
     let assistant: MessageV2.WithParts | undefined
     let finished: MessageV2.WithParts | undefined
@@ -52,6 +52,35 @@ export namespace KiloSessionMessageOrder {
             part.type === "compaction" || part.type === "subtask",
         ),
       )
+
+    if (focus) {
+      const userMessage = msgs.find((msg) => msg.info.role === "user" && msg.info.id === focus)
+      if (userMessage?.info.role === "user") {
+        let assistantMessage: MessageV2.WithParts | undefined
+        let assistantIndex = -1
+        for (const [index, msg] of msgs.entries()) {
+          if (
+            msg.info.role === "assistant" &&
+            msg.info.parentID === focus &&
+            (!assistantMessage || compare(msg, assistantMessage, index, assistantIndex) > 0)
+          ) {
+            assistantMessage = msg
+            assistantIndex = index
+          }
+        }
+        const finishedMessage =
+          assistantMessage?.info.role === "assistant" && assistantMessage.info.finish ? assistantMessage : undefined
+        return {
+          user: userMessage.info,
+          assistant: assistantMessage?.info.role === "assistant" ? assistantMessage.info : undefined,
+          finished: finishedMessage?.info.role === "assistant" ? finishedMessage.info : undefined,
+          userMessage,
+          assistantMessage,
+          finishedMessage,
+          tasks,
+        }
+      }
+    }
 
     return {
       user: user?.info.role === "user" ? user.info : undefined,

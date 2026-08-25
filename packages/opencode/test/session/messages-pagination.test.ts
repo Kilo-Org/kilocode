@@ -115,6 +115,7 @@ const addCompactionPart = Effect.fn("Test.addCompactionPart")(function* (
   sessionID: SessionID,
   messageID: MessageID,
   tailStartID?: MessageID,
+  pendingUserID?: MessageID, // kilocode_change
 ) {
   const session = yield* SessionNs.Service
   yield* session.updatePart({
@@ -123,6 +124,7 @@ const addCompactionPart = Effect.fn("Test.addCompactionPart")(function* (
     messageID,
     type: "compaction",
     auto: true,
+    pending_user_id: pendingUserID, // kilocode_change
     tail_start_id: tailStartID,
   } as any)
 })
@@ -777,7 +779,7 @@ describe("MessageV2.filterCompacted", () => {
       })
 
       const c1 = yield* addUser(created.id)
-      yield* addCompactionPart(created.id, c1, u2)
+      yield* addCompactionPart(created.id, c1, u2, u2) // kilocode_change
       const s1 = yield* addAssistant(created.id, c1, { summary: true, finish: "end_turn" })
       yield* session.updatePart({
         id: PartID.ascending(),
@@ -809,6 +811,8 @@ describe("MessageV2.filterCompacted", () => {
       if (!tailPart || tailPart.type !== "compaction") throw new Error("Expected forked compaction part")
       expect(tailPart.tail_start_id).toBeDefined()
       expect(childFiltered.some((m) => m.info.id === tailPart.tail_start_id)).toBe(true)
+      expect(tailPart.pending_user_id).toBeDefined() // kilocode_change
+      expect(childFiltered.some((m) => m.info.id === tailPart.pending_user_id)).toBe(true) // kilocode_change
 
       yield* session.remove(forked.id)
       yield* session.remove(created.id)

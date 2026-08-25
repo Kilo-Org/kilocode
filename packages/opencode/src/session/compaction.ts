@@ -24,6 +24,7 @@ import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-pay
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
 import { SessionExport } from "@/kilocode/session-export"
 import { KiloSession } from "@/kilocode/session"
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 // kilocode_change end
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -165,6 +166,7 @@ export interface Interface {
     model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
     auto: boolean
     overflow?: boolean
+    pending_user_id?: MessageID // kilocode_change - persist the user turn resumed by this marker
   }) => Effect.Effect<void>
 }
 
@@ -344,18 +346,18 @@ const layer = Layer.effect(
       let history = input.messages
       // kilocode_change start - replay only explicitly pending turns or provider-overflow requests
       if (pending || input.overflow === true) {
-        const idx = input.messages.findIndex((m) => m.info.id === input.parentID)
-        for (let i = idx - 1; i >= 0; i--) {
-          const msg = input.messages[i]
-          if (
-            msg.info.role === "user" &&
-            !msg.parts.some((p) => p.type === "compaction") &&
-            (!pending || msg.info.id === pending)
-          ) {
-            replay = { info: msg.info, parts: msg.parts }
-            history = input.messages.slice(0, i)
-            break
-          }
+        const indexes = new Map(input.messages.map((msg, index) => [msg.info.id, index]))
+        const compare = (a: SessionV1.WithParts, b: SessionV1.WithParts) =>
+          KiloSessionMessageOrder.compare(a, b, indexes.get(a.info.id) ?? -1, indexes.get(b.info.id) ?? -1)
+        const before = input.messages.filter((msg) => compare(msg, parent) < 0)
+        const target = pending
+          ? before.find((msg) => msg.info.role === "user" && msg.info.id === pending)
+          : [...before]
+              .sort(compare)
+              .findLast((msg) => msg.info.role === "user" && !msg.parts.some((part) => part.type === "compaction"))
+        if (target?.info.role === "user") {
+          replay = { info: target.info, parts: target.parts }
+          history = input.messages.filter((msg) => compare(msg, target) < 0)
         }
       }
       // kilocode_change end
@@ -685,6 +687,7 @@ const layer = Layer.effect(
       model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
       auto: boolean
       overflow?: boolean
+      pending_user_id?: MessageID // kilocode_change - persist the turn resumed by this marker
     }) {
       const msg = yield* session.updateMessage({
         id: MessageID.ascending(),
@@ -701,6 +704,7 @@ const layer = Layer.effect(
         type: "compaction",
         auto: input.auto,
         overflow: input.overflow,
+        pending_user_id: input.pending_user_id, // kilocode_change
       })
       // kilocode_change start - keep auto-compaction markers visible during queued turns
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)

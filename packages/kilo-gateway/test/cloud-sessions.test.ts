@@ -133,6 +133,7 @@ describe("cloud session import preparation", () => {
               sessionID: "ses_cloud",
               type: "compaction",
               auto: true,
+              pending_user_id: "msg_cloud_parent",
               tail_start_id: "msg_cloud_child",
             },
           ],
@@ -217,6 +218,7 @@ describe("cloud session import preparation", () => {
         id: "prt_local_compaction",
         messageID: "msg_local_parent",
         sessionID: "ses_local",
+        pending_user_id: "msg_local_parent",
         tail_start_id: "msg_local_child",
       },
     })

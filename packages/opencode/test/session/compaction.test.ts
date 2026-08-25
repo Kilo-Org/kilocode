@@ -160,7 +160,6 @@ function createSummaryAssistantMessage(sessionID: SessionID, parentID: MessageID
         time: { created: Date.now() },
         finish: "end_turn",
       })
-      // kilocode_change start - cover preservation of non-media attachments
       yield* ssn.updatePart({
         id: PartID.ascending(),
         messageID: msg.id,
@@ -1177,6 +1176,7 @@ describe("session.compaction.process", () => {
     }).pipe(withCompaction({ plugin: autocontinue(false) })),
   )
 
+  // kilocode_change start - preserve non-media attachments during overflow recovery
   it.instance(
     "replays the prior user turn on overflow when earlier context exists",
     Effect.gen(function* () {
@@ -1193,7 +1193,6 @@ describe("session.compaction.process", () => {
         filename: "cat.png",
         url: "https://example.com/cat.png",
       })
-      // kilocode_change start - cover preservation of non-media attachments
       yield* ssn.updatePart({
         id: PartID.ascending(),
         messageID: replay.id,
@@ -1203,7 +1202,6 @@ describe("session.compaction.process", () => {
         filename: "notes.txt",
         url: "https://example.com/notes.txt",
       })
-      // kilocode_change end
       const msg = yield* createUserMessage(session.id, "current")
       const msgs = yield* ssn.messages({ sessionID: session.id })
 
@@ -1223,16 +1221,13 @@ describe("session.compaction.process", () => {
       expect(
         last?.parts.some((part) => part.type === "text" && part.text.includes("Attached image/png: cat.png")),
       ).toBe(true)
-      // kilocode_change start - preserve non-media attachments during overflow recovery
       expect(
         last?.parts.some(
           (part) => part.type === "file" && part.mime === "text/plain" && part.url === "https://example.com/notes.txt",
         ),
       ).toBe(true)
-      // kilocode_change end
     }),
   )
-  // kilocode_change start - explicit pending-turn replay contract
   it.instance(
     "replays a pending turn without stripping media when requested",
     Effect.gen(function* () {
@@ -1311,8 +1306,6 @@ describe("session.compaction.process", () => {
       ).toHaveLength(1)
     }),
   )
-  // kilocode_change end
-
   it.instance(
     "falls back to overflow guidance when no replayable turn exists",
     Effect.gen(function* () {
@@ -1338,6 +1331,7 @@ describe("session.compaction.process", () => {
       }
     }),
   )
+  // kilocode_change end
 
   itCompaction.instance(
     "stops quickly when aborted during retry backoff",

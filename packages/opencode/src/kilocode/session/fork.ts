@@ -116,6 +116,7 @@ function copy(input: { source: Session.Info; parentID: SessionID; ops: Ops }) {
           ...(prepared.type === "step-finish" && { cost: 0 }),
         }
         if (next.type === "compaction" && next.tail_start_id) next.tail_start_id = ids.get(next.tail_start_id)
+        if (next.type === "compaction" && next.pending_user_id) next.pending_user_id = ids.get(next.pending_user_id)
         yield* input.ops.updatePart(next)
       }
     }
