@@ -243,41 +243,21 @@
 ## [7.1.0-rc.4] - 2026-08-25
 
 ### Added
-- feat(agent-manager): replace sessions list with a per-project history button by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13407
+- Let Agent Manager tasks choose both provider and model so similarly named models across providers can be selected reliably.
+- Show clearer missing-folder states for deleted or moved JetBrains worktrees.
 
 ### Fixed
-- fix(vscode): remove model reset button by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13405
-- fix(vscode): promote parallel subagents independently by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13393
-- fix(vscode): eliminate streaming transcript flicker by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13408
-- fix(vscode): deduplicate sync event delivery by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13410
-- fix(agent-manager): remove unsafe WebGL terminal renderer by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13413
-- fix(cli): preserve editor context prompt prefix by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13379
-- fix(cli): share location services across server routes by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13378
-- fix(agent-manager): use valid terminal close code by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13416
-- fix(agent-manager): fix project-scoped history routing by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13421
-- fix(vscode): bound sync filter state by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13417
-- fix(agent-manager): allow explicit provider selection by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13419
-- fix(vscode): guard subagent promotion edge cases by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13425
-- fix(cli): address startup review feedback by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13420
-- fix(agent-manager): avoid stale history switch entries by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13428
-- fix(cli): align file location cache keys by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13418
-- fix(vscode): prevent duplicate reasoning with subagent inspectors by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13430
-- fix(agent-manager): preserve worktree list scroll on deletion by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13429
-- fix(vscode): hide manual interruption warning by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13376
-- fix(jetbrains): harden agent manager worktrees by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13431
-- fix(jetbrains): harden Agent Manager worktree flows by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13423
+- Keep JetBrains Agent Manager worktrees anchored to the main repository's managed storage, preventing nested worktree data loss when the IDE is opened inside a linked worktree.
+- Harden JetBrains worktree cleanup by pruning stale git metadata, hiding dead managed worktrees, refusing unmanaged paths, and blocking parent removal while nested worktrees are live.
+- Surface failed JetBrains sessions consistently in worktree and session lists, and keep the Agents attention dot active until the problem is resolved.
+- Restore running indicators when resuming sessions instead of leaving stale stopped or error state visible.
+- Keep JetBrains session hover popups attached to the correct card, within the visible session area, and hidden behind blocking overlays.
+- Keep worktree PR badges clickable after row reuse and layout changes.
 
 ### Changed
-- release(jetbrains): v7.1.0-rc.3 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13397
-- docs(kilo-docs): document sub-organizations by @jrf0110 in https://github.com/Kilo-Org/kilocode/pull/13050
-- docs(vscode): document background agent status strip by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13391
-- docs(agent-manager): clarify terminal context routing by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13385
-- perf(agent-manager): render terminal output with WebGL and pause hidden terminals by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13406
-- chore(cli): update Bun to 1.4.0 by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13409
-- perf(cli): optimize cold and warm startup by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13412
-- perf(agent-manager): optimize worktree diff loading by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13411
-- test(jetbrains): stop frontend tests opening a real browser by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13432
-
+- Improve Kilo Core startup speed for JetBrains and other clients, especially default TUI launch and short-lived commands.
+- Put new, imported, or moved JetBrains Agent Manager worktrees at the top of the list and keep that ordering across reloads unless manually reordered.
+- Make JetBrains Agent Manager rows visually quieter with regular-weight labels, subdued idle icons, and pruning of stale deleted-session status.
 
 ## [7.1.0-rc.3] - 2026-08-24
 
