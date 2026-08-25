@@ -301,9 +301,21 @@ abstract class AbstractSessionPartView(
         }
     }
 
+    /**
+     * Whether the pointer is still on the row. Bounds alone are not enough: an overlay painted above
+     * the transcript (the connection banner, the modal blocker) owns the pointer while sitting inside
+     * the row's rectangle, and Swing stops delivering to the row without ever leaving it
+     * geometrically. Asking which component is topmost at that point treats a covered row as left, so
+     * the exit clears the hover instead of keeping the row lit — and its popup alive — under the
+     * overlay.
+     */
     private fun inside(e: MouseEvent): Boolean {
         val point = SwingUtilities.convertPoint(e.component, e.point, row)
-        return row.contains(point)
+        if (!row.contains(point)) return false
+        val pane = SwingUtilities.getRootPane(row)?.layeredPane ?: return true
+        val spot = SwingUtilities.convertPoint(e.component, e.point, pane)
+        val top = SwingUtilities.getDeepestComponentAt(pane, spot.x, spot.y) ?: return true
+        return SwingUtilities.isDescendingFrom(top, row)
     }
 
     /**

@@ -89,7 +89,14 @@ class KiloBackendActivityManager(
             is ChatEventDto.Error -> event.sessionID?.let { errors.add(it) }
             is ChatEventDto.TurnOpen -> errors.remove(event.sessionID)
             is ChatEventDto.SessionIdle -> clear(event.sessionID)
-            is ChatEventDto.SessionStatusChanged -> if (event.status.type == "idle") clear(event.sessionID)
+            is ChatEventDto.SessionStatusChanged -> when (event.status.type) {
+                "idle" -> clear(event.sessionID)
+                // Work restarted, so whatever ended the previous turn (a Stop publishes
+                // MessageAbortedError) is stale. Not every resume path publishes a turn event, so
+                // busy has to clear the error itself.
+                "busy" -> errors.remove(event.sessionID)
+                else -> Unit
+            }
             else -> Unit
         }
     }
@@ -115,8 +122,11 @@ class KiloBackendActivityManager(
             if (pending.values.any { it }) return SessionActivityKindDto.PLAN
             return SessionActivityKindDto.QUESTION
         }
-        if (id in errors) return SessionActivityKindDto.ERROR
+        // Live work outranks a past error: the status stream and the chat events are separate
+        // collectors, so a resumed session can go busy before the event that clears its error
+        // arrives, and the row must keep spinning instead of resting on the stale error.
         if (busy) return SessionActivityKindDto.RUNNING
+        if (id in errors) return SessionActivityKindDto.ERROR
         return null
     }
 

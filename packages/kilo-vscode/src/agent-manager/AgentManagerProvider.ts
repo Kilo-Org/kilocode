@@ -213,7 +213,7 @@ export class AgentManagerProvider implements Disposable {
       log: (msg) => this.log(msg),
     })
     const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
-    this.diffCatalog = new DiffSourceCatalog(this.connectionService)
+    this.diffCatalog = new DiffSourceCatalog(this.connectionService, local)
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
@@ -1804,7 +1804,7 @@ export class AgentManagerProvider implements Disposable {
     await continueInWorktree(
       {
         root,
-        getClient: () => this.connectionService.getClient(),
+        connection: this.connectionService,
         createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
         runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
         cleanupWorktree: async (id) => {

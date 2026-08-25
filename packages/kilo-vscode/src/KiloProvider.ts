@@ -163,7 +163,7 @@ import type { StoredProviderKey } from "./provider-actions"
 import { AnacondaDesktopBridge } from "./anaconda-desktop/bridge"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
-import { configFeatures } from "./features"
+import { configFeatures, serverFeatures } from "./features"
 import { fetchSnapshot } from "./kilo-provider/config-snapshot"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
@@ -3394,6 +3394,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const global = snapshot.targets.global.raw as Config
       const projectConfig = bindings.project ? (snapshot.targets.project.raw as Config) : undefined
       this.cachedGlobalConfig = global
+      const features = configFeatures(snapshot.effective, await serverFeatures(this.client, dir))
       this.cachedConfigMessage = {
         type: "configLoaded",
         config: snapshot.effective,
@@ -3401,7 +3402,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         projectConfig,
         bindings,
         settings: this.configSettings(),
-        features: configFeatures(snapshot.effective),
+        features,
       }
       this.postMessage({
         type: "configUpdated",
@@ -3410,7 +3411,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         projectConfig,
         bindings,
         settings: this.configSettings(),
-        features: configFeatures(snapshot.effective),
+        features,
       })
       await Promise.all([
         refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
@@ -4126,7 +4127,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cancelRetry(sid)
     const client = this.client
     if (!client) return Promise.resolve(false)
-    return this.aborts.stop(client, sid, this.getWorkspaceDirectory(sid))
+    const directory = this.getWorkspaceDirectory(sid)
+    const dirs = this.aborts.directories(sid, directory)
+    const ids = new Map(dirs.map((dir) => [dir, this.connectionService.beginExplicitAbort(sid, dir)]))
+    return this.aborts.stop(client, sid, directory, dirs).then((result) => {
+      for (const attempt of result.attempts) {
+        this.connectionService.finishExplicitAbort(sid, attempt.dir, ids.get(attempt.dir)!, attempt.aborted)
+      }
+      return result.complete
+    })
   }
 
   private async handleAbort(sessionID?: string): Promise<void> {
@@ -4134,7 +4143,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!sid || !(await this.stopSession(sid))) return
     this.sessionStatusMap.set(sid, "idle")
     this.streams.flush(sid)
-    this.postMessage({ type: "sessionTurnClosed", sessionID: sid, reason: "interrupted" })
     this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
   }
 

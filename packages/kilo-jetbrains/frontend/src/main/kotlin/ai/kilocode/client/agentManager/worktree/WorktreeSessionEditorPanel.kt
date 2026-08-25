@@ -23,6 +23,7 @@ import ai.kilocode.client.ui.list.ActiveListMenu
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
+import ai.kilocode.client.ui.list.ActiveListWeight
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.vfs.KiloVfsManager
@@ -95,6 +96,7 @@ class WorktreeSessionEditorPanel(
             description = false,
             selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
             hoverActions = true,
+            title = ActiveListWeight.PLAIN,
         ),
         surface = ActiveListSurface.ToolWindow,
         showSearch = false,

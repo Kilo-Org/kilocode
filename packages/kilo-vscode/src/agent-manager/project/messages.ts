@@ -45,6 +45,8 @@ export interface ProjectMessageDeps {
   expand: (ctx: ProjectContext) => void
   /** Push the current project snapshots to the webview. */
   push: () => void
+  /** Push one project's managed state to the webview. */
+  pushState?: (ctx: ProjectContext) => void
   /** Acknowledge an atomically validated sidebar selection. */
   selected: (target: SidebarTarget) => void
   /** Show a user-facing error. */
@@ -156,6 +158,7 @@ async function openSessionLocally(projectId: string, sessionId: string, deps: Pr
   }
   state?.moveSession(sessionId, null)
   deps.routeSession?.(projectId, sessionId, ctx.root, ctx.generation)
+  deps.pushState?.(ctx)
   deps.push()
   finish({ projectId, kind: "session", sessionId }, deps)
 }

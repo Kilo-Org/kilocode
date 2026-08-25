@@ -1851,6 +1851,24 @@ body.am-wt-dragging-active * {
   overflow: hidden;
 }
 
+.am-diff-panel-cache {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: var(--surface-base);
+}
+
+.am-diff-panel-cache-active {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 2;
+}
+
 .am-diff-panel-wrapper > [data-component="resize-handle"]::after {
   background: var(--surface-interactive-base);
 }

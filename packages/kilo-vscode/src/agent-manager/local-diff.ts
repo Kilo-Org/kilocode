@@ -117,26 +117,29 @@ async function ancestor(git: GitOps, dir: string, base: string, log?: Log): Prom
   return result.stdout.trim()
 }
 
-async function numstat(git: GitOps, dir: string, base: string, file?: string) {
-  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
-  if (file) args.push("--", file)
-  const result = await git.execGit(args, dir)
-  const map = new Map<string, { additions: number; deletions: number; binary: boolean }>()
-  if (result.code !== 0) return map
-  for (const line of result.stdout.trim().split("\n")) {
-    if (!line) continue
+function counts(value: string) {
+  const result = new Map<string, { additions: number; deletions: number; binary: boolean }>()
+  for (const line of value.trim().split("\n")) {
+    if (!line || line.startsWith(":")) continue
     const parts = line.split("\t")
     const add = parts[0]
     const del = parts[1]
-    const name = parts.slice(2).join("\t")
-    if (!name) continue
-    map.set(name, {
+    const file = parts.slice(2).join("\t")
+    if (!file) continue
+    result.set(file, {
       additions: add === "-" ? 0 : parseInt(add || "0", 10) || 0,
       deletions: del === "-" ? 0 : parseInt(del || "0", 10) || 0,
       binary: add === "-" || del === "-",
     })
   }
-  return map
+  return result
+}
+
+async function numstat(git: GitOps, dir: string, base: string, file?: string) {
+  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
+  if (file) args.push("--", file)
+  const result = await git.execGit(args, dir)
+  return counts(result.code === 0 ? result.stdout : "")
 }
 
 async function statStamp(dir: string, file: string): Promise<string> {
@@ -144,7 +147,22 @@ async function statStamp(dir: string, file: string): Promise<string> {
   if (!full) return `missing:${file}`
   const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) return `missing:${file}`
-  return `${stat.size}:${stat.mtimeMs}`
+  return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}:${stat.ino ?? 0}`
+}
+
+async function detailReads(git: GitOps, dir: string, anc: string, meta: Meta, signal?: AbortSignal) {
+  return Promise.all([
+    readBefore(git, dir, anc, meta.file, meta.status, signal),
+    readAfter(dir, meta.file, meta.status),
+    meta.tracked ? unifiedPatch(git, dir, anc, meta.file, signal) : Promise.resolve(""),
+  ])
+}
+
+async function sizes(git: GitOps, dir: string, anc: string, meta: Meta, signal?: AbortSignal) {
+  return Promise.all([
+    meta.status === "added" ? 0 : blobSize(git, dir, anc, meta.file, signal),
+    meta.status === "deleted" ? 0 : fileSize(dir, meta.file),
+  ])
 }
 
 async function lineCount(file: string): Promise<number> {
@@ -166,28 +184,28 @@ function statusFromCode(code: string): Status {
 }
 
 async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<Meta[]> {
-  const nameStatus = await git.execGit(
-    ["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", anc],
-    dir,
-  )
-  if (nameStatus.code !== 0) {
-    log?.("git diff --name-status failed", { code: nameStatus.code, stderr: nameStatus.stderr.trim() })
+  const [tracked, untracked] = await Promise.all([
+    git.execGit(["-c", "core.quotepath=false", "diff", "--raw", "--numstat", "--no-renames", anc], dir),
+    git.execGit(["ls-files", "--others", "--exclude-standard"], dir),
+  ])
+  if (tracked.code !== 0) {
+    log?.("git diff --raw --numstat failed", { code: tracked.code, stderr: tracked.stderr.trim() })
     return []
   }
 
-  const counts = await numstat(git, dir, anc)
   const result: Meta[] = []
   const seen = new Set<string>()
+  const stats = counts(tracked.stdout)
 
-  for (const line of nameStatus.stdout.trim().split("\n")) {
-    if (!line) continue
+  for (const line of tracked.stdout.trim().split("\n")) {
+    if (!line.startsWith(":")) continue
     const parts = line.split("\t")
-    const code = parts[0]
+    const code = parts[0]?.split(" ").at(-1)
     const file = parts.slice(1).join("\t")
     if (!file || !code) continue
     seen.add(file)
     const status = statusFromCode(code)
-    const stat = counts.get(file) ?? { additions: 0, deletions: 0, binary: false }
+    const stat = stats.get(file) ?? { additions: 0, deletions: 0, binary: false }
     result.push({
       file,
       additions: stat.additions,
@@ -201,7 +219,6 @@ async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<M
     })
   }
 
-  const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard"], dir)
   if (untracked.code !== 0) {
     log?.("git ls-files --others failed", { code: untracked.code, stderr: untracked.stderr.trim() })
     return result
@@ -265,28 +282,83 @@ export async function diffSummary(git: GitOps, dir: string, base: string, log?: 
 
 export function createLocalDiff(git: GitOps, log?: Log) {
   const states = new Map<string, { anc: string; metas: Map<string, Meta> }>()
+  const generations = new Map<string, number>()
+  const details = new Map<string, { value: WorktreeDiffEntry; bytes: number; stamp: string }>()
+  const pending = new Map<string, { signal?: AbortSignal; work: Promise<WorktreeDiffEntry> }>()
+  let bytes = 0
+
+  const forget = (id: string) => {
+    const value = details.get(id)
+    if (!value) return
+    bytes -= value.bytes
+    details.delete(id)
+  }
+
+  const remember = (id: string, value: WorktreeDiffEntry, stamp: string) => {
+    const size = [value.before, value.after, value.patch, value.image?.before?.data, value.image?.after?.data].reduce(
+      (sum, value) => sum + Buffer.byteLength(value ?? ""),
+      0,
+    )
+    const current = details.get(id)
+    if (current) bytes -= current.bytes
+    details.delete(id)
+    details.set(id, { value, bytes: size, stamp })
+    bytes += size
+    while (details.size > 128 || bytes > 64 * 1024 * 1024) {
+      const key = details.keys().next().value!
+      bytes -= details.get(key)!.bytes
+      details.delete(key)
+    }
+  }
 
   return {
     summary: async (dir: string, base: string): Promise<WorktreeDiffEntry[]> => {
       const id = `${dir}\0${base}`
+      const generation = (generations.get(id) ?? 0) + 1
+      generations.set(id, generation)
       const anc = await ancestor(git, dir, base, log)
       if (!anc) {
-        states.delete(id)
+        if (generations.get(id) === generation) states.delete(id)
         return []
       }
 
       const items = await list(git, dir, anc, log)
+      if (generations.get(id) !== generation) return items.map(summarize)
       states.delete(id)
       states.set(id, { anc, metas: new Map(items.map((item) => [item.file, item])) })
       if (states.size > 8) states.delete(states.keys().next().value!)
       return items.map(summarize)
     },
-    file: async (dir: string, base: string, file: string): Promise<WorktreeDiffEntry | null> => {
+    file: async (dir: string, base: string, file: string, signal?: AbortSignal): Promise<WorktreeDiffEntry | null> => {
       const state = states.get(`${dir}\0${base}`)
       if (!state) return diffFile(git, dir, base, file, log)
       const meta = state.metas.get(file)
       if (!meta) return null
-      return materialize(git, dir, state.anc, meta, log)
+      const id = `${dir}\0${base}\0${state.anc}\0${file}\0${meta.tracked}\0${meta.status}\0${meta.additions}\0${meta.deletions}\0${meta.binary}\0${meta.stamp}`
+      const cached = details.get(id)
+      if (cached) {
+        if (cached.stamp === meta.stamp) {
+          remember(id, cached.value, meta.stamp)
+          return cached.value
+        }
+        forget(id)
+      }
+      const current = pending.get(id)
+      if (current && !current.signal?.aborted) return current.work
+      const work = materialize(git, dir, state.anc, meta, log, signal)
+      pending.set(id, { signal, work })
+      work.then(
+        (value) => {
+          if (pending.get(id)?.work !== work) return
+          pending.delete(id)
+          if (value.image?.before?.error === "unreadable" || value.image?.after?.error === "unreadable") return
+          remember(id, value, meta.stamp)
+        },
+        () => {
+          if (pending.get(id)?.work === work) pending.delete(id)
+        },
+      )
+      return work
     },
   }
 }
@@ -343,9 +415,9 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
   }
 }
 
-async function blobSize(git: GitOps, dir: string, anc: string, file: string): Promise<number> {
-  const result = await git.execGit(["cat-file", "-s", `${anc}:${file}`], dir)
-  if (result.code !== 0) return 0
+async function blobSize(git: GitOps, dir: string, anc: string, file: string, signal?: AbortSignal): Promise<number> {
+  const result = await git.execGit(["cat-file", "-s", `${anc}:${file}`], dir, { signal })
+  if (result.code !== 0) throw new Error(`Could not read base blob for ${file}`)
   return parseInt(result.stdout.trim(), 10) || 0
 }
 
@@ -356,8 +428,14 @@ async function fileSize(dir: string, file: string): Promise<number> {
   return stat?.size ?? 0
 }
 
-async function readBlob(git: GitOps, dir: string, ref: string, file: string): Promise<Buffer | undefined> {
-  const result = await git.execGitBuffer(["show", `${ref}:${file}`], dir)
+async function readBlob(
+  git: GitOps,
+  dir: string,
+  ref: string,
+  file: string,
+  signal?: AbortSignal,
+): Promise<Buffer | undefined> {
+  const result = await git.execGitBuffer(["show", `${ref}:${file}`], dir, { signal })
   return result.code === 0 ? result.stdout : undefined
 }
 
@@ -369,29 +447,47 @@ async function readFile(dir: string, file: string): Promise<Buffer | undefined> 
   return readImageFile(full)
 }
 
-async function readBefore(git: GitOps, dir: string, anc: string, file: string, status: Status): Promise<string> {
+async function readBefore(
+  git: GitOps,
+  dir: string,
+  anc: string,
+  file: string,
+  status: Status,
+  signal?: AbortSignal,
+): Promise<string> {
   if (status === "added") return ""
-  const result = await git.execGit(["show", `${anc}:${file}`], dir)
-  return result.code === 0 ? result.stdout : ""
+  const result = await git.execGit(["show", `${anc}:${file}`], dir, { signal })
+  if (result.code !== 0) throw new Error(`Could not read base file for ${file}`)
+  return result.stdout
 }
 
 async function readAfter(dir: string, file: string, status: Status): Promise<string> {
   if (status === "deleted") return ""
   const full = resolveInside(dir, file)
-  if (!full) return ""
+  if (!full) throw new Error(`Could not resolve working file for ${file}`)
   const stat = await fs.lstat(full).catch(() => undefined)
-  if (!stat) return ""
+  if (!stat) throw new Error(`Could not read working file for ${file}`)
   if (stat.isSymbolicLink()) return fs.readlink(full).catch(() => "")
-  if (!stat.isFile()) return ""
-  return fs.readFile(full, "utf-8").catch(() => "")
+  if (!stat.isFile()) throw new Error(`Working path is not a file: ${file}`)
+  return fs.readFile(full, "utf-8").catch(() => {
+    throw new Error(`Could not read working file for ${file}`)
+  })
 }
 
-async function unifiedPatch(git: GitOps, dir: string, anc: string, file: string): Promise<string> {
+async function unifiedPatch(
+  git: GitOps,
+  dir: string,
+  anc: string,
+  file: string,
+  signal?: AbortSignal,
+): Promise<string> {
   const result = await git.execGit(
     ["-c", "core.quotepath=false", "diff", "--no-ext-diff", "--no-renames", anc, "--", file],
     dir,
+    { signal },
   )
-  return result.code === 0 ? result.stdout : ""
+  if (result.code !== 0) throw new Error(`Could not create diff for ${file}`)
+  return result.stdout
 }
 
 function linesOf(text: string): number {
@@ -418,17 +514,27 @@ export async function diffFile(
   return materialize(git, dir, anc, meta, log)
 }
 
-async function materialize(git: GitOps, dir: string, anc: string, meta: Meta, log?: Log): Promise<WorktreeDiffEntry> {
+async function materialize(
+  git: GitOps,
+  dir: string,
+  anc: string,
+  meta: Meta,
+  log?: Log,
+  signal?: AbortSignal,
+): Promise<WorktreeDiffEntry> {
   const mime = imageMime(meta.file)
   if (meta.binary && !mime) return summarize(meta)
-  const beforeBytes = meta.status === "added" ? 0 : await blobSize(git, dir, anc, meta.file)
-  const afterBytes = meta.status === "deleted" ? 0 : await fileSize(dir, meta.file)
+  const [beforeBytes, afterBytes] = await sizes(git, dir, anc, meta, signal)
+  if (signal?.aborted) throw new Error("Diff detail aborted")
   if (mime) {
     const image = await loadImage(
       meta.file,
-      meta.status === "added" ? undefined : { bytes: beforeBytes, read: () => readBlob(git, dir, anc, meta.file) },
+      meta.status === "added"
+        ? undefined
+        : { bytes: beforeBytes, read: () => readBlob(git, dir, anc, meta.file, signal) },
       meta.status === "deleted" ? undefined : { bytes: afterBytes, read: () => readFile(dir, meta.file) },
     )
+    if (signal?.aborted) throw new Error("Diff detail aborted")
     return { ...summarize(meta), summarized: false, image }
   }
   // Cheap size probe before materializing content — protects the extension
@@ -444,9 +550,9 @@ async function materialize(git: GitOps, dir: string, anc: string, meta: Meta, lo
     return summarize(meta)
   }
 
-  const before = await readBefore(git, dir, anc, meta.file, meta.status)
-  const after = await readAfter(dir, meta.file, meta.status)
-  const patch = meta.tracked ? await unifiedPatch(git, dir, anc, meta.file) : buildUntrackedPatch(meta.file, after)
+  const [before, after, tracked] = await detailReads(git, dir, anc, meta, signal)
+  if (signal?.aborted) throw new Error("Diff detail aborted")
+  const patch = meta.tracked ? tracked : buildUntrackedPatch(meta.file, after)
   const additions = meta.status === "added" && meta.additions === 0 && !meta.tracked ? linesOf(after) : meta.additions
   return {
     file: meta.file,
