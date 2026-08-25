@@ -24,7 +24,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
@@ -456,9 +456,9 @@ describe("Agent Manager Worktree Actions", () => {
   })
 
   it("does not attribute the new-worktree shortcut to session promotion", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"), "utf-8")
 
-    expect(source).toContain('<Tooltip value={t("agentManager.session.openInWorktree")}')
+    expect(source).toContain('t("agentManager.session.openInWorktree")')
     expect(source).not.toContain("TooltipKeybind")
   })
 })

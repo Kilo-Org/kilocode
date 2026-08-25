@@ -415,12 +415,6 @@ html[data-theme="kilo-vscode"]
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-/* Collapsible section toggle */
-
-.am-section-toggle:hover .am-section-label {
-  color: var(--text-base);
-}
-
 .am-section-actions {
   display: flex;
   align-items: center;
@@ -1198,88 +1192,6 @@ html[data-theme="kilo-vscode"]
 
 .am-wt-grouped.am-worktree-item-active {
   border-left-color: var(--border-focus, #007fd4);
-}
-
-/* Session list */
-
-.am-list {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* Session items */
-
-.am-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  background: none;
-  border: none;
-  width: 100%;
-  text-align: left;
-  color: var(--text-base);
-  font-family: inherit;
-  font-size: var(--font-size-base);
-}
-
-.am-item:hover {
-  background: var(--surface-inset-base-hover);
-}
-
-.am-item:active {
-  opacity: 0.8;
-}
-
-.am-item-active {
-  background: var(--surface-interactive-base);
-  color: var(--text-on-interactive-base);
-}
-
-.am-item-title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-  min-width: 0;
-}
-
-.am-item-time {
-  font-size: var(--font-size-small);
-  white-space: nowrap;
-  color: var(--text-weaker);
-  flex-shrink: 0;
-}
-
-.am-item-active .am-item-time {
-  color: var(--text-on-interactive-base);
-  opacity: 0.7;
-}
-
-/* Promote button on session rows */
-
-.am-item-promote {
-  position: absolute;
-  right: 4px;
-  flex-shrink: 0;
-  opacity: 0;
-}
-
-.am-item:hover .am-item-time {
-  opacity: 0;
-}
-
-.am-item:hover .am-item-promote {
-  opacity: 1;
 }
 
 /* Create worktree button (empty state) */
@@ -2803,6 +2715,14 @@ body.am-wt-dragging-active * {
   min-width: 250px;
 }
 
+/* Per-project row actions (history, remove) */
+
+.am-project-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 /* Fixed-width slot so menu items with and without a check mark align. */
 .am-menu-check {
   display: flex;
@@ -3666,7 +3586,7 @@ body.am-wt-dragging-active * {
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-/* Session skeleton — matches .am-item layout */
+/* Session skeleton */
 .am-skeleton-session {
   display: flex;
   align-items: center;
@@ -4624,14 +4544,12 @@ body.vscode-high-contrast-light {
 
   /* Sidebar items */
   .am-local-item,
-  .am-worktree-item,
-  .am-item {
+  .am-worktree-item {
     border: 1px solid var(--vscode-contrastBorder, transparent);
   }
 
   .am-local-item-active,
-  .am-worktree-item-active,
-  .am-item-active {
+  .am-worktree-item-active {
     border-color: var(--vscode-contrastBorder, transparent);
   }
 
@@ -4808,7 +4726,6 @@ body.vscode-high-contrast-light {
   /* Focus states */
   .am-local-item:focus-visible,
   .am-worktree-item:focus-visible,
-  .am-item:focus-visible,
   .am-tab:focus-visible,
   .am-worktree-create:focus-visible,
   .am-nv-pill:focus-visible,
