@@ -1152,3 +1152,14 @@ describe("Shared webview provider shell", () => {
     expect(fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")).not.toContain("WorktreeModeProvider")
   })
 })
+
+describe("Agent Manager worktree setup", () => {
+  it("dismisses successful setup overlays immediately and retains the error delay", () => {
+    const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
+    expect(source).toContain('globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)')
+    expect(source).not.toContain(
+      'globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)',
+    )
+    expect(source).toContain("globalThis.setTimeout")
+  })
+})
