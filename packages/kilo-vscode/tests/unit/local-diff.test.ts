@@ -365,6 +365,22 @@ describe("diffFile", () => {
     })
   })
 
+  it("does not cache detail that is aborted before Git completes", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncached\n")
+      const local = createLocalDiff(git())
+      await local.summary(dir, base)
+
+      const ctl = new AbortController()
+      const pending = local.file(dir, base, "seed.txt", ctl.signal)
+      ctl.abort()
+      await expect(pending).rejects.toThrow()
+
+      const result = await local.file(dir, base, "seed.txt")
+      expect(result?.after).toBe("seed\ncached\n")
+    })
+  })
+
   it("invalidates cached detail after the summary stamp changes", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfirst\n")

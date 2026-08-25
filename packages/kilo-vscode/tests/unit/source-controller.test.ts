@@ -489,4 +489,29 @@ describe("SourceController.refresh", () => {
 
     controller.stop()
   })
+
+  it("shares an in-flight fetch between refresh and polling callers", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let fetches = 0
+    const source: DiffSource = {
+      descriptor: SESSION_DESC,
+      async fetch() {
+        fetches++
+        await gate
+        return { diffs: [] }
+      },
+    }
+    const { controller } = make({ "session:s1": source })
+    controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
+    const activation = controller.activate("session:s1", { poll: false })
+    const refresh = controller.refresh()
+    release()
+    await Promise.all([activation, refresh])
+
+    expect(fetches).toBe(1)
+    controller.stop()
+  })
 })
