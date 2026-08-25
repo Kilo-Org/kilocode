@@ -1748,7 +1748,7 @@ const AgentManagerContent: Component = () => {
   const diffNotice = createMemo(() => {
     const key = diffScopeId()
     if (!key) return undefined
-    return diffNotices()[key]
+    return diffNotices()[diffDataKey(activeProjectId(), key)]
   })
 
   const requestDiffFile = (file: string) => {
