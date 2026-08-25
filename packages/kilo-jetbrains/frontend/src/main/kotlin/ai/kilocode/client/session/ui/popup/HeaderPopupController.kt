@@ -120,7 +120,7 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
         if (!onHeader && !onPopup) return hideAll()
         val req = view.headerPopup() ?: return hideAll()
         val built = req.build()
-        place(req.anchor, built)?.let { open(req, built, it) } ?: hideAll()
+        place(view, req.anchor, built)?.let { open(req, built, it) } ?: hideAll()
     }
 
     @RequiresEdt
@@ -160,15 +160,16 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
     }
 
     /**
-     * Resolves the pointer target beside the session chat, sizing the body to the space available on
-     * the chosen side and to the visible height of the chat. Anchoring on the chat rather than the
-     * hovered row is what keeps the popup off the transcript instead of covering the row the user is
-     * reading.
+     * Resolves the pointer target beside [card], the collapsible view the popup belongs to, sizing the
+     * body to the space available on the chosen side and to the visible height of the chat. Pointing at
+     * the card rather than the hovered row keeps the popup off the transcript instead of covering the
+     * row the user is reading, and pointing at the card rather than the session edge keeps the balloon
+     * attached to the thing it describes.
      *
      * Returns null when the chat is not on screen yet, in which case there is nothing to sit beside.
      */
     @RequiresEdt
-    private fun place(anchor: JComponent, built: HeaderPopupBody): Spot? {
+    private fun place(card: JComponent, anchor: JComponent, built: HeaderPopupBody): Spot? {
         val pane = SwingUtilities.getRootPane(anchor)?.layeredPane
         val chat = ComponentUtil.getParentOfType(SessionRootPanel::class.java, anchor)
         // A showing anchor implies every ancestor, including the chat, is showing and laid out.
@@ -184,7 +185,8 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
         if (area.isEmpty) return null
         val spot = HeaderPopupGeometry.beside(
             pane = Rectangle(pane.size),
-            chat = area,
+            card = SwingUtilities.convertRectangle(card.parent, card.bounds, pane),
+            view = area,
             fit = HeaderPopupFit(
                 chromeWidth = insets.left + insets.right + UiStyle.Balloon.pointer().height + shadow,
                 chromeHeight = chromeHeight,
