@@ -154,11 +154,19 @@ try {
   }
   process.exitCode = 1
 } finally {
-  await KiloCli.shutdown() // kilocode_change - telemetry/session-export shutdown + instance disposal
+  try {
+    await KiloCli.shutdown() // kilocode_change - telemetry/session-export shutdown + instance disposal
+  } catch (e) {
+    // Always surface shutdown failures (KILO_PRINT_LOGS may be off -> black-screen style silent failure)
+    console.error("Kilo shutdown failed", e)
+  }
 
   // Some subprocesses don't react properly to SIGTERM and similar signals.
   // Most notably, some docker-container-based MCP servers don't handle such signals unless
   // run using `docker run --init`.
-  // Explicitly exit to avoid any hanging subprocesses.
+  // Explicitly exit to avoid any hanging subprocesses. Preserve exitCode and handle non-TTY edge.
+  if (process.stdout.isTTY === false && process.stdout.columns === 0) {
+    console.error("stdout is not a TTY with 0 columns at shutdown")
+  }
   process.exit()
 }

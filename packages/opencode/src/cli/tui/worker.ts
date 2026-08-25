@@ -103,13 +103,21 @@ export const rpc = {
     )
   },
   async shutdown() {
-    remoteExit.shutdown() // kilocode_change
-    await runShutdown() // kilocode_change - drain → dispose → stopServer
-    // kilocode_change start - Clear the Rpc message channel so the worker's event loop can drain and
-    // exit naturally. Without this, the active onmessage handle keeps the
-    // worker alive even after all async work is done.
-    onmessage = null
-    // kilocode_change end
+    try {
+      remoteExit.shutdown() // kilocode_change
+      await runShutdown() // kilocode_change - drain → dispose → stopServer
+    } catch (e) {
+      // Always surface shutdown failures (black-screen guard: KILO_PRINT_LOGS off must not hide)
+      console.error("TUI worker shutdown failed", e)
+      throw e
+    } finally {
+      // kilocode_change start - Clear the Rpc message channel so the worker's event loop can drain and
+      // exit naturally. Without this, the active onmessage handle keeps the
+      // worker alive even after all async work is done.
+      onmessage = null
+      if (process.stdout.isTTY === false) console.error("worker stdout is not a TTY at shutdown")
+      // kilocode_change end
+    }
   },
 }
 

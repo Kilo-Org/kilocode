@@ -4,7 +4,7 @@ import type { JSONSchema7 } from "@ai-sdk/provider"
 import type * as Provider from "./provider"
 import type * as ModelsDev from "@opencode-ai/core/models-dev"
 import { iife } from "@/util/iife"
-import { kiloProviderOptions } from "@/kilocode/provider-options"
+import { kiloProviderOptions } from "@/kilocode/provider-options" // kilocode_change
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
 
@@ -1541,8 +1541,9 @@ export function options(input: {
   }
 
   if (input.providerOptions?.setCacheKey !== false) {
+    const cacheKey = ((globalThis as any).__KILO_BTW_OVERRIDES__ as Map<string, string> | undefined)?.get(input.sessionID) ?? input.sessionID // kilocode_change - btw fork reuses parent promptCacheKey
     if (input.model.api.npm === "@ai-sdk/deepinfra" || input.model.api.npm === "@ai-sdk/cerebras") {
-      result["prompt_cache_key"] = input.sessionID
+      result["prompt_cache_key"] = cacheKey
     } else if (
       input.model.api.npm === "@ai-sdk/openai" ||
       input.model.api.npm === "@ai-sdk/azure" ||
@@ -1553,7 +1554,7 @@ export function options(input: {
       (input.model.providerID === "openai" && input.model.api.npm !== "@ai-sdk/openai-compatible") ||
       input.providerOptions?.setCacheKey === true
     ) {
-      result["promptCacheKey"] = input.sessionID
+      result["promptCacheKey"] = cacheKey
     }
   }
 
@@ -1608,7 +1609,7 @@ export function options(input: {
     }
 
     if (input.model.providerID.startsWith("opencode") && input.providerOptions?.setCacheKey !== false) {
-      result["promptCacheKey"] = input.sessionID
+      result["promptCacheKey"] = ((globalThis as any).__KILO_BTW_OVERRIDES__ as Map<string, string> | undefined)?.get(input.sessionID) ?? input.sessionID // kilocode_change - btw fork reuses parent promptCacheKey
       result["include"] = INCLUDE_ENCRYPTED_REASONING
       result["reasoningSummary"] = "auto"
     }

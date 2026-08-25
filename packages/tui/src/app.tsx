@@ -195,6 +195,13 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   const exit = { epilogue: undefined as string | undefined, reason: undefined as unknown }
   const result = yield* Effect.scoped(
     Effect.gen(function* () {
+      // Always surface TUI startup failures even when KILO_PRINT_LOGS is off (otherwise user sees black screen)
+      if (process.stdout.isTTY === false) {
+        console.error("TUI requires an interactive terminal (stdout.isTTY is false). Try `kilo --help`.")
+      }
+      if ((process.stdout.columns ?? 0) === 0 || (process.stdout.rows ?? 0) === 0) {
+        console.error(`TUI terminal dimensions are 0x0 (columns=${process.stdout.columns} rows=${process.stdout.rows}), falling back to 80x24`)
+      }
       const keyboard = kitty() // kilocode_change
       const renderer = yield* Effect.acquireRelease(
         Effect.tryPromise({
@@ -212,8 +219,15 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                 keyBindings: [{ name: "y", ctrl: true, action: "copy-selection" }],
               },
             }),
-          catch: (error) => (error instanceof Error ? error : new Error(String(error))),
-        }),
+          catch: (error) => {
+            const err = error instanceof Error ? error : new Error(String(error))
+            // Ensure renderer errors are visible without KILO_PRINT_LOGS (black-screen guard)
+            console.error("Failed to create TUI renderer", err)
+            return err
+          },
+        }).pipe(
+          Effect.tapError((err) => Effect.sync(() => console.error("TUI renderer creation failed", err))),
+        ),
         (renderer) =>
           Effect.sync(() => {
             destroyRenderer(renderer)
@@ -1121,10 +1135,21 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
     return render({ params: route.data.data })
   })
 
+  const safeDimensions = createMemo(() => {
+    const d = dimensions()
+    const w = d.width || process.stdout.columns || 80
+    const h = d.height || process.stdout.rows || 24
+    if (w === 0 || h === 0) {
+      console.error(`TUI dimensions 0x0 detected, using fallback 80x24`)
+      return { width: 80, height: 24 }
+    }
+    return { width: w, height: h }
+  })
+
   return (
     <box
-      width={dimensions().width}
-      height={dimensions().height}
+      width={safeDimensions().width}
+      height={safeDimensions().height}
       flexDirection="column"
       backgroundColor={theme.background}
       onMouseDown={(evt) => {
