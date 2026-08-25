@@ -11,11 +11,12 @@ import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
 import ai.kilocode.client.agentManager.applySidePanelMode
 import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.AgentAttention
 import ai.kilocode.client.agentManager.AgentManagerPanel
-import ai.kilocode.client.agentManager.sessionAttentionNeeded
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.AttentionDotIcon
 import ai.kilocode.log.KiloLog
+import ai.kilocode.rpc.dto.SessionActivityDto
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DataProvider
@@ -27,6 +28,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowContentUiType
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.openapi.wm.ex.ToolWindowManagerListener
 import com.intellij.platform.project.projectIdOrNull
 import com.intellij.openapi.wm.impl.content.ToolWindowContentUi
 import com.intellij.ui.content.ContentManagerEvent
@@ -34,7 +36,6 @@ import com.intellij.ui.content.ContentManagerListener
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -151,23 +152,40 @@ internal class KiloToolWindowSetupService(
                 agents()
                 agentManagerPanel.move(id, dir)
             }
+            // Notification dot on the Agents tab: attention the user has not looked at yet. Having
+            // the tab on screen is the acknowledgement, so the dot has to be re-evaluated when the
+            // selected tab or the tool window visibility changes, not only when activity arrives.
+            val attention = AgentAttention()
+            var snapshot = emptyMap<String, SessionActivityDto>()
+            fun syncDot() {
+                val showing = toolWindow.isVisible && toolWindow.contentManager.selectedContent === agentContent
+                agentContent.icon = if (attention.update(snapshot, showing)) AttentionDotIcon else null
+            }
+
             val listener = object : ContentManagerListener {
                 override fun selectionChanged(event: ContentManagerEvent) {
                     if (event.operation == ContentManagerEvent.ContentOperation.add && event.content === agentContent) {
                         agentManagerPanel.refresh()
                     }
+                    syncDot()
                 }
             }
             toolWindow.contentManager.addContentManagerListener(listener)
             Disposer.register(manager) { toolWindow.contentManager.removeContentManagerListener(listener) }
+            val windows = object : ToolWindowManagerListener {
+                override fun toolWindowShown(shown: ToolWindow) {
+                    if (shown.id == toolWindow.id) syncDot()
+                }
+            }
+            project.messageBus.connect(manager).subscribe(ToolWindowManagerListener.TOPIC, windows)
             toolWindow.contentManager.setSelectedContent(chatContent)
             manager.newSession()
 
-            // Show a notification dot on the Agents tab whenever a worktree session needs attention.
             val dot = cs.launch {
-                project.service<KiloSessionService>().activity.map(::sessionAttentionNeeded).collect { needed ->
+                project.service<KiloSessionService>().activity.collect { current ->
                     withContext(Dispatchers.Main) {
-                        agentContent.icon = if (needed) AttentionDotIcon else null
+                        snapshot = current
+                        syncDot()
                     }
                 }
             }
