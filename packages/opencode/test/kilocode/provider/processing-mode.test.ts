@@ -21,7 +21,18 @@ test("allows Flex for direct OpenAI API Responses models", () => {
 })
 
 test("allows the currently published GPT and o-series Flex models", () => {
-  for (const id of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.5", "gpt-5.4-mini", "gpt-5", "o3", "o4-mini"]) {
+  for (const id of [
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-5.5",
+    "gpt-5.5-pro",
+    "gpt-5.4-mini",
+    "gpt-5.4-nano",
+    "gpt-5.4-pro",
+    "gpt-5",
+    "o3",
+    "o4-mini",
+  ]) {
     expect(supportsFlex({ provider, model: { ...model, id: ModelV2.ID.make(id) }, auth })).toBe(true)
   }
 })
@@ -31,7 +42,9 @@ test("allows the built-in OpenAI endpoint when catalog URL is empty", () => {
 })
 
 test("rejects models outside the published Flex model list", () => {
-  expect(supportsFlex({ provider, model: { ...model, id: ModelV2.ID.make("gpt-4.1") }, auth })).toBe(false)
+  for (const id of ["gpt-4.1", "gpt-5-pro", "gpt-5.2-pro"]) {
+    expect(supportsFlex({ provider, model: { ...model, id: ModelV2.ID.make(id) }, auth })).toBe(false)
+  }
 })
 
 test("recognizes Flex request bodies and uses the extended timeout", () => {
