@@ -14,6 +14,10 @@ import { testEffect } from "../lib/effect"
 
 const testPty = process.platform === "win32" ? test.skip : test
 
+// kilocode_change start - route PTY tests must not compete with per-project indexing workers.
+process.env.KILO_DISABLE_CODEBASE_INDEXING = "vscode-no-workspace"
+// kilocode_change end
+
 const testStateLayer = Layer.effectDiscard(
   Effect.gen(function* () {
     yield* Effect.promise(() => resetDatabase())
@@ -269,48 +273,70 @@ describe("pty HttpApi bridge", () => {
       message: `PTY session not found: ${missingID}`,
     })
   })
-  ;(process.platform === "win32" ? effectIt.live.skip : effectIt.live)(
-    "serves PTY websocket output and input through Effect routes",
-    () =>
-      Effect.gen(function* () {
-        const dir = yield* tmpdirScoped({ git: true, config: { formatter: false, lsp: false } })
-        const created = yield* HttpClientRequest.post(PtyPaths.create).pipe(
-          directoryHeader(dir),
-          HttpClientRequest.bodyJson({ command: "/bin/cat", title: "websocket" }),
-          Effect.flatMap(HttpClient.execute),
+  // kilocode_change start - portable coverage for the exact legacy routes used by regular Agent Manager terminals
+  effectIt.live("serves Agent Manager regular terminal create, resize, input, output, and remove routes", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true, config: { formatter: false, lsp: false } })
+      const child = [
+        'let input = ""',
+        "process.stdout.write(`READY:${process.stdout.isTTY}:${process.stdout.columns}x${process.stdout.rows}\\n`)",
+        'process.stdin.setEncoding("utf8")',
+        'process.stdin.on("data", (chunk) => {',
+        "  input += chunk",
+        '  if (input.includes("PING")) process.stdout.write("PONG\\n")',
+        "})",
+      ].join("\n")
+      const created = yield* HttpClientRequest.post(PtyPaths.create).pipe(
+        directoryHeader(dir),
+        HttpClientRequest.bodyJson({
+          command: process.execPath,
+          args: ["-e", child],
+          title: "websocket",
+          size: { cols: 80, rows: 24 },
+        }),
+        Effect.flatMap(HttpClient.execute),
+      )
+      expect(created.status).toBe(200)
+      const info = yield* Schema.decodeUnknownEffect(Pty.Info)(yield* created.json)
+
+      const socket = yield* Socket.makeWebSocket(
+        `${(yield* serverUrl()).replace(/^http/, "ws")}${PtyPaths.connect.replace(":ptyID", info.id)}?cursor=0&directory=${encodeURIComponent(dir)}`,
+        { closeCodeIsError: () => false },
+      )
+      const messages = yield* Queue.unbounded<string>()
+      yield* socket
+        .runRaw((message) =>
+          Queue.offer(messages, typeof message === "string" ? message : new TextDecoder().decode(message)),
         )
-        expect(created.status).toBe(200)
-        const info = yield* Schema.decodeUnknownEffect(Pty.Info)(yield* created.json)
+        .pipe(Effect.catch(() => Effect.void))
+        .pipe(Effect.forkScoped)
+      const write = yield* socket.writer
 
-        const socket = yield* Socket.makeWebSocket(
-          `${(yield* serverUrl()).replace(/^http/, "ws")}${PtyPaths.connect.replace(":ptyID", info.id)}?cursor=-1&directory=${encodeURIComponent(dir)}`,
-          { closeCodeIsError: () => false },
-        )
-        const messages = yield* Queue.unbounded<string>()
-        yield* socket
-          .runRaw((message) =>
-            Queue.offer(messages, typeof message === "string" ? message : new TextDecoder().decode(message)),
-          )
-          .pipe(Effect.catch(() => Effect.void))
-          .pipe(Effect.forkScoped)
-        const write = yield* socket.writer
+      const takeUntil = (expected: string, seen = ""): Effect.Effect<string, unknown> =>
+        Effect.gen(function* () {
+          const next = seen + (yield* Queue.take(messages).pipe(Effect.timeout("5 seconds")))
+          if (next.includes(expected)) return next
+          return yield* takeUntil(expected, next)
+        })
 
-        const takeUntil = (expected: string, seen = ""): Effect.Effect<string, unknown> =>
-          Effect.gen(function* () {
-            const next = seen + (yield* Queue.take(messages).pipe(Effect.timeout("5 seconds")))
-            if (next.includes(expected)) return next
-            return yield* takeUntil(expected, next)
-          })
+      expect(yield* takeUntil("READY:")).toContain("READY:true:80x24")
+      const updated = yield* HttpClientRequest.put(PtyPaths.update.replace(":ptyID", info.id)).pipe(
+        directoryHeader(dir),
+        HttpClientRequest.bodyJson({ size: { cols: 100, rows: 40 } }),
+        Effect.flatMap(HttpClient.execute),
+      )
+      expect(updated.status).toBe(200)
 
-        yield* write("ping-route\n")
-        expect(yield* takeUntil("ping-route")).toContain("ping-route")
-        yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
+      yield* write("PING\r")
+      expect(yield* takeUntil("PONG")).toContain("PONG")
+      yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
 
-        const removed = yield* HttpClientRequest.delete(PtyPaths.remove.replace(":ptyID", info.id)).pipe(
-          directoryHeader(dir),
-          HttpClient.execute,
-        )
-        expect(removed.status).toBe(200)
-      }),
+      const removed = yield* HttpClientRequest.delete(PtyPaths.remove.replace(":ptyID", info.id)).pipe(
+        directoryHeader(dir),
+        HttpClient.execute,
+      )
+      expect(removed.status).toBe(200)
+    }),
   )
+  // kilocode_change end
 })

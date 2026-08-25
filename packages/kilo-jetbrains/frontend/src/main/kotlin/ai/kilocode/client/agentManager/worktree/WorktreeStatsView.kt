@@ -9,7 +9,8 @@ import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListHitCell
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.client.ui.prTooltip
+import ai.kilocode.client.ui.style
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.ide.BrowserUtil
@@ -17,7 +18,6 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
-import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
@@ -182,37 +182,4 @@ internal class WorktreeStatsView(
 
         override fun cellAction(): (() -> Unit)? = act
     }
-}
-
-internal fun style(state: GhState): UiStyle.Badge.Style = when (state) {
-    GhState.OPEN -> UiStyle.Badge.PullRequestOpen
-    GhState.DRAFT -> UiStyle.Badge.PullRequestDraft
-    GhState.MERGED -> UiStyle.Badge.PullRequestMerged
-    GhState.CLOSED -> UiStyle.Badge.PullRequestClosed
-}
-
-internal fun stateLabel(state: GhState): String = when (state) {
-    GhState.OPEN -> KiloBundle.message("worktree.pr.state.open")
-    GhState.DRAFT -> KiloBundle.message("worktree.pr.state.draft")
-    GhState.MERGED -> KiloBundle.message("worktree.pr.state.merged")
-    GhState.CLOSED -> KiloBundle.message("worktree.pr.state.closed")
-}
-
-internal fun prTooltip(pull: WorktreePrDto, name: String? = null): String {
-    val title = pull.title.trim()
-    val head = buildString {
-        append(stateLabel(pull.state))
-        append(" #")
-        append(pull.number)
-        if (title.isNotBlank()) {
-            append(' ')
-            append(title)
-        }
-    }
-    val lines = listOfNotNull(
-        head,
-        name?.takeIf { title.isNotBlank() }?.let { "($it)" },
-        KiloBundle.message("worktree.pr.tooltip.open"),
-    ).map(XmlStringUtil::escapeString)
-    return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }

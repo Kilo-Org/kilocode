@@ -274,31 +274,8 @@ class HistoryPanel(
     private fun syncRows() {
         localRows = localHistoryRows(controller.local.visibleItems, snapshot, controller::deleting)
         cloudRows = cloudHistoryRows(controller.cloud.visibleItems, snapshot)
-        restore(localList, localRows)
-        restore(cloudList, cloudRows)
-    }
-
-    /**
-     * Rebuilds [list] while keeping selection stable. Surviving selected rows stay selected; when a
-     * selected row disappears (e.g. it was just deleted) selection slides to the row that took its
-     * slot — the following row, or the last row when the removed one was last — so the highlight
-     * moves naturally instead of vanishing. Selection clears only when nothing was selected or the
-     * list is now empty.
-     */
-    private fun restore(list: ActiveList, rows: List<ActiveListItem>) {
-        val keys = list.selectedKeys()
-        val anchor = list.selectedIndex()
-        list.update(rows, ActiveListSelection.PreserveNoScroll)
-        val indices = keys.mapNotNull { key -> rows.indexOfFirst { it.key == key }.takeIf { it >= 0 } }.toIntArray()
-        if (indices.isNotEmpty()) {
-            list.setSelectionIndices(indices)
-            return
-        }
-        if (keys.isNotEmpty() && rows.isNotEmpty()) {
-            list.selectIndex(anchor.coerceIn(0, rows.size - 1))
-            return
-        }
-        list.clearSelection()
+        localList.update(localRows, ActiveListSelection.Slide)
+        cloudList.update(cloudRows, ActiveListSelection.Slide)
     }
 
     @RequiresEdt
@@ -477,13 +454,7 @@ class HistoryPanel(
 
     private fun activeInfo(): TabInfo = if (tabs.selectedInfo === cloudInfo) cloudInfo else localInfo
 
-    private fun move(step: Int) {
-        val size = itemCount()
-        if (size <= 0) return
-        val cur = selectedIndex().takeIf { it >= 0 } ?: if (step > 0) -1 else size
-        val idx = (cur + step).coerceIn(0, size - 1)
-        activeList().selectIndex(idx)
-    }
+    private fun move(step: Int) = activeList().move(step)
 
     override fun dispose() {
         timer.stop()

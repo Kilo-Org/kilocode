@@ -198,7 +198,7 @@ internal class RulesSettingsUi(
         )
         if (result != Messages.YES) return
         state.update { copy(instructions = instructions - path, edited = edited - path) }
-        view.update(rows(), selectionIndex())
+        view.update(rows(), ActiveListSelection.Slide)
     }
 
     private fun open(path: String) {

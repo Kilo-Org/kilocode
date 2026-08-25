@@ -49,6 +49,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     const promptAsync = mock(async () => ({ data: undefined }))
     const close = mock(async () => undefined)
     const push = mock(() => undefined)
+    const questionReply = mock(async () => ({ data: true }))
     const client = {
       session: {
         get: mock(async ({ sessionID, directory }: { sessionID?: string; directory?: string }) => ({
@@ -62,6 +63,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       },
       question: {
         list: mock(async () => ({ data: [] })),
+        reply: questionReply,
       },
       kilocode: {
         agentManager: {
@@ -129,6 +131,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       managed,
       promptAsync,
       push,
+      questionReply,
       rejections,
       replies,
       request,
@@ -301,6 +304,62 @@ describe("AgentManagerOrchestrationBridge", () => {
       requestID: "amr_stop_live",
       directory: root,
       result: { operation: "stop", sessionID: "ses_live", stopped: true },
+    })
+    test.bridge.dispose()
+  })
+
+  it("answers a managed session's pending question through the backend reply route", async () => {
+    const test = harness()
+    ;(test.client.question.list as ReturnType<typeof mock>).mockImplementation(async () => ({
+      data: [
+        {
+          id: "que_1",
+          sessionID: "ses_target",
+          questions: [{ header: "Approve", question: "Proceed?", options: [{ label: "Yes", description: "go" }] }],
+        },
+      ],
+    }))
+
+    test.request({
+      id: "amr_answer",
+      sessionID: "ses_caller",
+      operation: "answer",
+      targetSessionID: "ses_target",
+      answers: [["Yes"]],
+    })
+    await waitFor(() => test.replies.length === 1)
+
+    expect(test.questionReply).toHaveBeenCalledTimes(1)
+    expect(test.questionReply).toHaveBeenCalledWith(
+      { requestID: "que_1", answers: [["Yes"]], directory: dir },
+      { throwOnError: true },
+    )
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_answer",
+      directory: root,
+      result: { operation: "answer", sessionID: "ses_target", questionID: "que_1", resolved: true },
+    })
+    test.bridge.dispose()
+  })
+
+  it("rejects an answer when the target has no pending question", async () => {
+    const test = harness()
+
+    test.request({
+      id: "amr_answer_none",
+      sessionID: "ses_caller",
+      operation: "answer",
+      targetSessionID: "ses_target",
+      questionID: "que_gone",
+      answers: [["Yes"]],
+    })
+    await waitFor(() => test.rejections.length === 1)
+
+    expect(test.questionReply).not.toHaveBeenCalled()
+    expect(test.rejections[0]).toEqual({
+      requestID: "amr_answer_none",
+      directory: root,
+      error: { code: "unavailable_session", message: expect.stringContaining("no pending question") },
     })
     test.bridge.dispose()
   })

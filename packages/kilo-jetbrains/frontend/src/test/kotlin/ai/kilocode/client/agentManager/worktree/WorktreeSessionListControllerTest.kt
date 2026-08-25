@@ -5,12 +5,22 @@ import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.rpc.dto.SessionChangeDto
+import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 @Suppress("UnstableApiUsage")
 class WorktreeSessionListControllerTest : BasePlatformTestCase() {
+    private companion object {
+        /**
+         * How long to keep pumping while proving a reload never happens. Must comfortably exceed
+         * the controller's change-coalescing window; positive waits use the shared default deadline.
+         */
+        const val QUIET_MS = 1_500L
+    }
+
     private lateinit var coroutines: TestCoroutines
     private lateinit var rpc: FakeSessionRpcApi
     private lateinit var sessions: KiloSessionService
@@ -133,6 +143,59 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
         assertEquals("nope", err)
         assertEquals("Old", controller.session("ses_1")?.title)
     }
+
+    fun `test a session change in this directory brings in the new session`() {
+        rpc.listed += session("ses_1", "One")
+        controller.reload()
+        drain()
+        val before = rpc.lists.size
+
+        // A session started elsewhere in this worktree, then two title updates as it streams. The
+        // burst is emitted back to back so the coalescing window sees it as one.
+        rpc.listed += session("ses_from_other_frame", "Elsewhere")
+        emit(
+            change("ses_from_other_frame", dir, SessionChangeKindDto.CREATED),
+            change("ses_from_other_frame", dir, SessionChangeKindDto.UPDATED),
+            change("ses_from_other_frame", dir, SessionChangeKindDto.UPDATED),
+        )
+
+        assertTrue(coroutines.pumpUntil { controller.session("ses_from_other_frame") != null })
+        // Coalesced: a burst costs one reload, not one per event.
+        assertEquals(1, rpc.lists.size - before)
+    }
+
+    fun `test a session change in another directory is ignored`() {
+        controller.reload()
+        drain()
+        val before = rpc.lists.size
+
+        emit(change("ses_main", "/repo", SessionChangeKindDto.CREATED))
+        // Waiting past the coalescing window proves no reload was merely pending.
+        assertFalse(coroutines.pumpUntil(QUIET_MS) { rpc.lists.size > before })
+    }
+
+    fun `test a session change matches a directory with a trailing separator`() {
+        controller.reload()
+        drain()
+        val before = rpc.lists.size
+
+        emit(change("ses_1", "$dir/", SessionChangeKindDto.CREATED))
+
+        assertTrue(coroutines.pumpUntil { rpc.lists.size > before })
+    }
+
+    /**
+     * Emits into the fake's change flow from a background thread. The flow has no replay, so the
+     * controller's collector must already be subscribed — every caller reloads and drains first.
+     */
+    private fun emit(vararg values: SessionChangeDto) {
+        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Default) {
+            values.forEach { rpc.changes.emit(it) }
+        }
+    }
+
+    private fun change(id: String, directory: String, kind: SessionChangeKindDto) =
+        SessionChangeDto(id, directory, kind)
 
     private fun session(id: String, title: String) = SessionDto(
         id = id,
