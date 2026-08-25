@@ -47,6 +47,7 @@ import type {
   TerminalDestination,
   TerminalFont,
 } from "../src/types/messages"
+import { historyRowActions as historyRowActionsFactory } from "./history-actions"
 import { readFontSize } from "../src/font-size"
 import { IndexingProvider } from "../src/context/indexing"
 import {} from "@thisbeyond/solid-dnd"
@@ -120,7 +121,6 @@ import {
   isKnownRootSession,
   nextSelectionAfterDelete,
   adjacentHint,
-  filterUnassignedSessions,
   focusChatSearch,
   LOCAL,
 } from "./navigate"
@@ -186,8 +186,6 @@ import {
   sortWorktrees,
   type TopLevelItem,
 } from "./section-helpers"
-import {} from "./section-dnd"
-import {} from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
 import { DiffScopeControls } from "../diff-viewer/DiffScopeControls"
 import { scopeCapabilities } from "./diff-scope-state"
@@ -291,14 +289,6 @@ const AgentManagerContent: Component = () => {
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
-  const sessionsCollapsed = () => registry.active().sessionsCollapsed() ?? true
-  const setSessionsCollapsed = (v: Parameters<Setter<boolean>>[0]) =>
-    registry.active().setSessionsCollapsed(typeof v === "function" ? v(sessionsCollapsed()) : v)
-  const toggleSessions = () => {
-    const collapsed = !sessionsCollapsed()
-    setSessionsCollapsed(collapsed)
-    vscode.postMessage({ type: "agentManager.setSessionsCollapsed", collapsed })
-  }
   const sidebar = createSidebarCollapse(vscode, { initial: persisted?.sidebarCollapsed })
   const sidebarCollapsed = sidebar.collapsed
   const expandSidebar = sidebar.expand
@@ -308,6 +298,26 @@ const AgentManagerContent: Component = () => {
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
   const [history, setHistory] = createSignal(false)
+  /** Project whose sessions the history view is scoped to (multi-project). */
+  const [historyProject, setHistoryProject] = createSignal<string | undefined>()
+  const closeHistory = () => {
+    setHistory(false)
+    setHistoryProject(undefined)
+  }
+  /** Open the sessions view; a project id scopes it and activates that project. */
+  const openHistory = (pid?: string) => {
+    const scoped = pid !== undefined && multiProject()
+    if (scoped) {
+      // Activating the target project first lets the shared session store and
+      // the pick routing operate in that project only.
+      vscode.postMessage({
+        type: "agentManager.activateSelection",
+        target: { projectId: pid, kind: "local" },
+      } as never)
+    }
+    setHistoryProject(scoped ? pid : undefined)
+    setHistory(true)
+  }
   const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
   const diffOpen = () => sidePanel() === SidePanel.Diff
   const prOpen = () => sidePanel() === SidePanel.PR
@@ -326,7 +336,7 @@ const AgentManagerContent: Component = () => {
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
-    setHistory(false)
+    closeHistory()
     setReviewActive(false)
     setSidePanel(SidePanel.Terminal)
   }
@@ -349,7 +359,7 @@ const AgentManagerContent: Component = () => {
     currentProjectId,
     () => sidePanel() === SidePanel.Documents,
     () => {
-      setHistory(false)
+      closeHistory()
       setReviewActive(false)
       setSidePanel(SidePanel.Documents)
     },
@@ -364,7 +374,7 @@ const AgentManagerContent: Component = () => {
     sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
     unsync: (id) => session.unsyncSession(id, "inspector"),
     show: () => {
-      setHistory(false)
+      closeHistory()
       setReviewActive(false)
       setSidePanel(SidePanel.Subagents)
     },
@@ -578,7 +588,7 @@ const AgentManagerContent: Component = () => {
   }
   const openWindow = metrics.click("open_worktree_window", "tab_toolbar", openWorktreeDirectory)
   const togglePRPanel = () => {
-    setHistory(false)
+    closeHistory()
     if (reviewActive()) closeReviewTab()
     const opening = sidePanel() !== SidePanel.PR
     setSidePanel((prev) => (prev === SidePanel.PR ? null : SidePanel.PR))
@@ -741,10 +751,6 @@ const AgentManagerContent: Component = () => {
 
   const localSet = createMemo(() => new Set(localSessionIDs()))
 
-  const unassignedSessions = createMemo(() =>
-    filterUnassignedSessions(session.sessions(), worktreeSessionIds(), localSet()),
-  )
-
   const projectSessionsLive = createProjectSessionsLive({
     base: projectLive.sessions,
     pid: currentProjectId,
@@ -752,6 +758,15 @@ const AgentManagerContent: Component = () => {
     store: session.sessions,
     managed: managedSessions,
     locals: localSet,
+  })
+
+  /** Session ids shown in the project-scoped history view (every session of the project). */
+  const historySessionIds = createMemo(() => {
+    const pid = historyProject()
+    if (!pid || !multiProject()) return undefined
+    const sessions = projectSessionsLive()[pid]
+    if (!sessions) return undefined
+    return new Set(sessions.filter(isKnownRootSession).map((s) => s.id))
   })
 
   const localSessions = createLocalSessions({
@@ -913,14 +928,12 @@ const AgentManagerContent: Component = () => {
 
   /** Flat visual order of all visible sidebar items — used for navigation and shortcut assignment. */
   const sidebarOrder = createMemo(() =>
-    buildSidebarOrder(topLevelItems(), sortedWorktrees(), sections(), worktreesInSection, unassignedSessions()),
+    buildSidebarOrder(topLevelItems(), sortedWorktrees(), sections(), worktreesInSection),
   )
   /** Map from sidebar item id → 1-based shortcut number (⌘1 for LOCAL, ⌘2 for first worktree, etc.) */
   const shortcutMap = createMemo(() => buildShortcutMap(sidebarOrder()))
   const projectShortcutMap = createMemo(() =>
-    buildShortcutMap(
-      buildProjectNavEntries(projectList(), projectStates(), projectLive.sessions()).map((entry) => ({ id: entry.id })),
-    ),
+    buildShortcutMap(buildProjectNavEntries(projectList(), projectStates()).map((entry) => ({ id: entry.id }))),
   )
 
   const moveToSection = (ids: string[], sec: string | null) =>
@@ -939,18 +952,9 @@ const AgentManagerContent: Component = () => {
 
   const scrollIntoView = (el: HTMLElement) => el.scrollIntoView({ block: "nearest", behavior: "smooth" })
 
-  const selectUnassigned = (id: string) => {
-    saveTabMemory()
-    setSelection(null)
-    setReviewActive(false)
-    session.selectSession(id)
-    requestChatFocus(true)
-  }
-
   const focusSidebarItem = (item: { type: string; id: string }) => {
     if (item.type === "local") selectLocal()
     else if (item.type === "wt") selectWorktree(item.id)
-    else selectUnassigned(item.id)
     requestChatFocus(true)
     const el = document.querySelector(`[data-sidebar-id="${item.id}"]`)
     if (el instanceof HTMLElement) scrollIntoView(el)
@@ -963,7 +967,6 @@ const AgentManagerContent: Component = () => {
       focus: focusSidebarItem,
       projects: projectList,
       states: projectStates,
-      sessions: projectLive.sessions,
       activeProjectId,
       selection,
       currentSessionID: session.currentSessionID,
@@ -1027,7 +1030,7 @@ const AgentManagerContent: Component = () => {
     const current = managedSessions().find((entry) => entry.id === sid)
     if (current?.worktreeId) return focusManagedSession(current.worktreeId, sid)
     saveTabMemory()
-    setHistory(false)
+    closeHistory()
     setReviewActive(false)
     appendToTabOrder(sel, sid)
     evictLocal(sid)
@@ -1037,7 +1040,7 @@ const AgentManagerContent: Component = () => {
 
   const focusManagedSession = (worktreeId: string, sid: string) => {
     selectWorktree(worktreeId)
-    setHistory(false)
+    closeHistory()
     session.selectSession(sid)
     requestChatFocus()
     return true
@@ -1063,7 +1066,7 @@ const AgentManagerContent: Component = () => {
   const focusSidebarSearchItem = (item: SidebarSearchItem) => {
     if (item.section?.collapsed)
       vscode.postMessage({ type: "agentManager.toggleSectionCollapsed", sectionId: item.section.id })
-    setHistory(false)
+    closeHistory()
     if (item.kind === "local") return selectLocal()
     if (item.kind === "worktree") return selectWorktree(item.worktreeId)
     if (item.location === "local") selectLocal()
@@ -1156,7 +1159,7 @@ const AgentManagerContent: Component = () => {
       first: () => undefined,
       close: () => setReviewActive(false),
       hide: () => setSidePanel(null),
-      history: () => setHistory(false),
+      history: () => closeHistory(),
       reset: subagents.reset,
     })
   }
@@ -1172,7 +1175,7 @@ const AgentManagerContent: Component = () => {
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const msg = event.data
-      if (msg?.type === "navigate" && msg.view === "history") return setHistory(true)
+      if (msg?.type === "navigate" && msg.view === "history") return openHistory()
       if (msg?.type !== "action") return
       if (msg.action === "sessionPrevious") projectNav.step("up")
       else if (msg.action === "sessionNext") projectNav.step("down")
@@ -1580,7 +1583,9 @@ const AgentManagerContent: Component = () => {
       applyProjectSelection(msg, {
         active: (projectId) => activeProjectId() === projectId,
         applied: (projectId) => currentProjectId() === projectId,
-        managed: (projectId) => projectLive.sessions()[projectId] ?? projectStates()[projectId]?.sessions ?? [],
+        // Managed state is the placement authority; the live listing can briefly
+        // keep a stale worktree tag after a session moved back to local.
+        managed: (projectId) => projectStates()[projectId]?.sessions ?? projectLive.sessions()[projectId] ?? [],
         local: () => selectLocal(),
         worktree: (projectId, worktreeId) => selectWorktree(worktreeId),
         focusLocal: focusLocalSession,
@@ -1914,10 +1919,21 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
   }
 
-  const openUnassigned = (id: string) => {
-    metrics.track("open_session_locally", "unassigned_session_menu")
-    openLocally(id)
-  }
+  /** History row menu: start a session in a new worktree or back in the project's local tabs. */
+  const historyRowActions = historyRowActionsFactory({
+    t,
+    onPromote: (sessionId) => {
+      metrics.track("promote_session", "history_row")
+      closeHistory()
+      vscode.postMessage({ type: "agentManager.promoteSession", sessionId })
+    },
+    onLocal: (sessionId) => {
+      const pid = historyProject()
+      if (pid) vscode.postMessage({ type: "agentManager.openSessionLocally", projectId: pid, sessionId } as never)
+      else openLocally(sessionId)
+      closeHistory()
+    },
+  })
 
   const handleAddSession = () => {
     const sel = selection()
@@ -2317,6 +2333,7 @@ const AgentManagerContent: Component = () => {
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
             onShortcuts={handleShowKeyboardShortcuts}
+            onHistory={openHistory}
             shortcutMap={projectShortcutMap}
           />
         </Show>
@@ -2330,8 +2347,6 @@ const AgentManagerContent: Component = () => {
             isLocalBusy={isLocalBusy}
             repoBranch={repoBranch}
             localStats={localStats}
-            sessionsCollapsed={sessionsCollapsed}
-            toggleSessions={toggleSessions}
             search={{ items: sidebarSearch.items, current: sidebarSearch.current }}
             bindings={kb}
             defaultBranch={repoDefaultBranch}
@@ -2345,6 +2360,7 @@ const AgentManagerContent: Component = () => {
             onNewWorktree={showNewWorktreeDialog}
             onNewSection={newSection}
             onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
+            onHistory={() => openHistory()}
             projectId={activeProjectId()}
             sections={sections}
             sortedWorktrees={sortedWorktrees}
@@ -2375,10 +2391,6 @@ const AgentManagerContent: Component = () => {
             confirmDeleteWorktree={confirmDeleteWorktree}
             handleDeleteWorktree={handleDeleteWorktree}
             confirmRemoveStaleWorktree={confirmRemoveStaleWorktree}
-            unassignedSessions={unassignedSessions}
-            selectUnassigned={selectUnassigned}
-            promoteSession={promoteSession}
-            openUnassigned={openUnassigned}
             track={metrics.click}
           />
         </Show>
@@ -2465,7 +2477,7 @@ const AgentManagerContent: Component = () => {
           <HistoryView
             onSelectSession={(id) => {
               if (addSessionToCurrentWorktree(id)) return
-              setHistory(false)
+              closeHistory()
               if (localSessionIDs().includes(id)) {
                 saveTabMemory()
                 session.selectSession(id)
@@ -2483,8 +2495,10 @@ const AgentManagerContent: Component = () => {
               }
               openLocally(id)
             }}
-            onBack={() => setHistory(false)}
-            worktreeSessionIds={activeWorktreeSessionIds}
+            onBack={closeHistory}
+            worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
+            sessionIds={historySessionIds}
+            rowActions={historyRowActions}
           />
         </Show>
         <Show when={showDetailStack()}>
@@ -2552,7 +2566,7 @@ const AgentManagerContent: Component = () => {
                       }
                       openLocally(id)
                     }}
-                    onShowHistory={() => setHistory(true)}
+                    onShowHistory={() => openHistory()}
                     onForkMessage={readOnly() ? undefined : handleForkSession}
                     onForkSession={readOnly() ? undefined : handleForkSession}
                     readonly={readOnly()}

@@ -697,6 +697,13 @@ export interface OpenLocallyRequest {
   sessionId: string
 }
 
+// Move a worktree-bound session back to the project root and open it in the local tabs
+export interface OpenSessionLocallyRequest {
+  type: "agentManager.openSessionLocally"
+  projectId?: string
+  sessionId: string
+}
+
 // Add a new session to an existing worktree
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
@@ -1596,6 +1603,7 @@ export type WebviewMessage =
   | RemoveStaleWorktreeRequest
   | PromoteSessionRequest
   | OpenLocallyRequest
+  | OpenSessionLocallyRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
   | SidebarForkSessionRequest

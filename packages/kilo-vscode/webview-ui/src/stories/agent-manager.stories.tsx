@@ -1550,6 +1550,7 @@ export const MultiProjectSidebar: Story = {
             t={t}
             onSearchRef={() => {}}
             onShortcuts={() => {}}
+            onHistory={() => {}}
           />
         </div>
       </StoryProviders>

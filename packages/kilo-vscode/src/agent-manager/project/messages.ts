@@ -12,7 +12,25 @@ import type { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { ProjectContexts } from "./contexts"
 import { projectIdFor, resolveProjectRoot, samePath } from "./paths"
-import type { SidebarTarget } from "./route"
+import type { SidebarTarget, SessionRef } from "./route"
+
+/** Route one session to a directory inside a project via the shared session provider. */
+export function routeProjectSession(
+  sessions:
+    | {
+        setSessionDirectory(id: string, directory: string): void
+        registerSessionRoute?(ref: SessionRef, directory: string, generation: number): void
+      }
+    | undefined,
+  projectId: string,
+  sessionId: string,
+  directory: string,
+  generation: number,
+): void {
+  if (!sessions) return
+  sessions.setSessionDirectory(sessionId, directory)
+  sessions.registerSessionRoute?.({ projectId, sessionId }, directory, generation)
+}
 
 export interface ProjectMessageDeps {
   registry: ProjectRegistry
@@ -35,6 +53,8 @@ export interface ProjectMessageDeps {
   openSettings: (tab?: string, projectId?: string) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
   ready: (ctx: ProjectContext) => Promise<ProjectInitResult>
+  /** Route one session to a directory inside a project (session override + project route). */
+  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
   log: (...args: unknown[]) => void
 }
 
@@ -62,6 +82,11 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
   }
   if (m.type === "agentManager.activateSelection") {
     await activateSelection(m.target, deps, m.restore === true)
+    return true
+  }
+  if (m.type === "agentManager.openSessionLocally") {
+    if (!m.projectId) return false
+    await openSessionLocally(m.projectId, m.sessionId, deps)
     return true
   }
   if (m.type === "agentManager.rememberTarget") {
@@ -104,6 +129,35 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
     return finish({ projectId: target.projectId, kind: "local" }, deps)
   }
   finish(target, deps)
+}
+
+/**
+ * Move a worktree-bound session back to the project root and open it in the
+ * project's local tabs. Fall back to local gracefully when the worktree is
+ * already gone (the session may be live only).
+ */
+async function openSessionLocally(projectId: string, sessionId: string, deps: ProjectMessageDeps): Promise<void> {
+  if (disabled(deps)) return
+  const ctx = deps.contexts.resolve(projectId)
+  if (!ctx || !deps.contexts.usable(projectId)) {
+    deps.error("The project is unavailable. Check that the repository still exists.")
+    return
+  }
+  const result = await deps.ready(ctx)
+  if (!result.current || !result.ok) {
+    deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
+    deps.push()
+    return
+  }
+  const state = ctx.peekState()
+  if (!state?.getSession(sessionId) && !ctx.hasLiveSession(sessionId)) {
+    deps.log(`openSessionLocally: unknown session ${sessionId}`)
+    return
+  }
+  state?.moveSession(sessionId, null)
+  deps.routeSession?.(projectId, sessionId, ctx.root, ctx.generation)
+  deps.push()
+  finish({ projectId, kind: "session", sessionId }, deps)
 }
 
 /** Commit the active project, persist the target, and acknowledge the selection. */

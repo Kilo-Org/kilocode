@@ -47,6 +47,7 @@ interface Props {
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
   onShortcuts: () => void
+  onHistory: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
 }
 
@@ -202,6 +203,7 @@ export const ProjectList: Component<Props> = (props) => {
         })
       }
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
+      onHistory={props.onHistory}
       onExpand={(projectId, expanded) =>
         vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded })
       }
@@ -228,7 +230,6 @@ export const ProjectList: Component<Props> = (props) => {
           t={props.t}
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
-          onSelectSession={(projectId, sessionId) => select({ projectId, kind: "session", sessionId })}
           onNewWorktree={newWorktree}
           shortcutMap={props.shortcutMap}
         />
