@@ -13,6 +13,7 @@
 import { Component, createEffect, onCleanup, onMount } from "solid-js"
 import { Terminal } from "@xterm/xterm"
 import { FitAddon } from "@xterm/addon-fit"
+import { WebglAddon } from "@xterm/addon-webgl"
 import { WebLinksAddon } from "@xterm/addon-web-links"
 import { ClipboardAddon } from "@xterm/addon-clipboard"
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes"
@@ -21,7 +22,7 @@ import { useVSCode } from "../../src/context/vscode"
 import { useLanguage } from "../../src/context/language"
 import { formatReviewCommentsMarkdown } from "../../src/utils/review-comment-markdown"
 import type { ScriptTerminalStatus, TerminalFont } from "./state"
-import { createInputBuffer, createReplayGate } from "./replay"
+import { createInputBuffer, createReplayGate, createWriteBatcher } from "./replay"
 import { registerTerminalOutput, unregisterTerminalOutput } from "./output"
 
 interface Props {
@@ -32,13 +33,12 @@ interface Props {
   font: TerminalFont
   /** Whether this terminal is currently the focused tab.
    *
-   *  The xterm subtree always stays in the paint tree (see the layer /
-   *  slot CSS in `terminal/render.tsx` and `agent-manager.css`), so we
-   *  do NOT rely on this prop to rescue the canvas after a hypothetical
-   *  `display: none` detach — the layout is designed so that never
-   *  happens. It's used only to auto-focus on activation and to force
-   *  an xterm re-paint when the slot transitions back to visible after
-   *  sitting behind an occluding layer. */
+   *  Inactive slots are translated off-screen (see the layer / slot CSS
+   *  in `terminal/render.tsx` and `agent-manager.css`): xterm's render
+   *  observer pauses invisible terminals and resumes them with a full
+   *  refresh on activation. This prop drives that activation repaint
+   *  plus auto-focus on activation — xterm's own resume is primary, the
+   *  explicit fit + refresh here is insurance. */
   active: boolean
   /** Side terminals only repaint on activation; focus is restored explicitly
    *  when that context's remembered focus owner is the terminal. */
@@ -168,6 +168,28 @@ export const TerminalTab: Component<Props> = (props) => {
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(host)
+    // GPU renderer: the DOM renderer creates one element per cell per row,
+    // which dominates CPU under sustained PTY output (see profiling of
+    // streaming script output). WebGL paints the whole viewport in one
+    // draw batched by first glyph. Falls back to the DOM renderer when
+    // WebGL2 is unavailable; the catch logs without breaking the session.
+    try {
+      const webgl = new WebglAddon()
+      term.loadAddon(webgl)
+      // Browsers hand out a limited number of WebGL contexts and evict
+      // old ones; when a context is lost beyond recovery, dispose the
+      // addon so xterm re-installs its DOM renderer for this terminal
+      // instead of leaving a dead canvas.
+      webgl.onContextLoss(() => {
+        try {
+          webgl.dispose()
+        } catch (err) {
+          log("webgl dispose after context loss failed", err)
+        }
+      })
+    } catch (err) {
+      log("webgl renderer unavailable, using DOM renderer", err)
+    }
     registerTerminalOutput(props.terminalId, () => {
       const buffer = term.buffer.active
       return Array.from(
@@ -296,8 +318,9 @@ export const TerminalTab: Component<Props> = (props) => {
         flush()
       }, 100)
     }
+    const batcher = createWriteBatcher((data, callback) => term.write(data, callback))
     const replay = createReplayGate({
-      write: (data, callback) => term.write(data, callback),
+      write: (data, callback) => batcher.write(data, callback),
       flush: () => flush(true),
     })
     const disposeKey = term.onKey(markUser)
@@ -443,16 +466,15 @@ export const TerminalTab: Component<Props> = (props) => {
 
     // ---- Repaint recovery ----
     //
-    // Every xterm canvas stays mounted in the paint tree (stacking CSS
-    // guarantees this), but browsers still deprioritise canvases that
-    // aren't visibly contributing pixels: after another terminal is
-    // opened on top, or after the window loses focus, the canvas keeps
-    // its last painted bitmap frozen while xterm's internal buffer goes
-    // on updating. When we flip the slot back to opacity:1 the canvas
-    // shows that stale frame until something kicks xterm's render loop
-    // — historically "press Enter to wake it up". Forcing a
-    // `fit + refresh(0, rows-1)` once per activation reclaims the paint
-    // priority; from then on the browser keeps the canvas live.
+    // Inactive xterm slots slide off-screen with their layout box
+    // intact, so their canvases are not composed while hidden but
+    // FitAddon keeps measuring. xterm's render observer pauses hidden
+    // terminals and replays a full refresh when they slide back in, but
+    // browsers still defer some canvas/render work: forcing a
+    // `fit + refresh(0, rows-1)` once per activation reclaims paint
+    // priority immediately; from then on the renderer keeps the canvas
+    // live. Historically the missing insurance step here was "press
+    // Enter to wake it up".
     //
     // Focus is opt-in per repaint (`shouldFocus`): repaints triggered by
     // resizes or font changes must not yank the cursor out of the chat
@@ -590,6 +612,7 @@ export const TerminalTab: Component<Props> = (props) => {
 
     onCleanup(() => {
       closed = true
+      batcher.cancel()
       unregisterTerminalOutput(props.terminalId)
       if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
       if (frame !== undefined) cancelAnimationFrame(frame)
