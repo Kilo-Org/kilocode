@@ -74,7 +74,9 @@ Then set your default model:
 Kilo Code supports OpenAI Flex processing for verified eligible models when using
 the direct OpenAI API provider with an API key. In the prompt controls, choose
 **Processing** and select **Flex**. The initial supported model is
-`gpt-5.6-luna`; availability may expand as additional models are verified.
+the current OpenAI Flex-supported model set, including GPT-5.6 Sol, Terra, and
+Luna, GPT-5.x variants, `o3`, and `o4-mini`. OpenAI's supported-model list can
+change over time.
 
 Flex processing is lower cost and lower priority than standard processing. It
 may take longer and can be temporarily unavailable when OpenAI has no Flex

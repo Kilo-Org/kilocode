@@ -1,7 +1,25 @@
 import type { ModelSelection, ProcessingMode, Provider } from "../types/messages"
 
 export const DEFAULT_PROCESSING_MODE: ProcessingMode = "standard"
-const FLEX_MODEL_IDS = new Set(["gpt-5.6-luna"])
+const FLEX_MODEL_IDS = new Set([
+  "gpt-5.6",
+  "gpt-5.6-sol",
+  "gpt-5.6-terra",
+  "gpt-5.6-luna",
+  "gpt-5.5",
+  "gpt-5.5-pro",
+  "gpt-5.4",
+  "gpt-5.4-mini",
+  "gpt-5.4-pro",
+  "gpt-5.2",
+  "gpt-5.1",
+  "gpt-5",
+  "gpt-5-mini",
+  "gpt-5-nano",
+  "gpt-5-pro",
+  "o3",
+  "o4-mini",
+])
 
 export function supportsFlex(
   providers: Record<string, Provider>,
