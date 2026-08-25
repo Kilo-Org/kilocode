@@ -337,7 +337,7 @@ export function createRoutes(
     ),
     Layer.provide(locationServiceMapV2),
 
-    Layer.provide(AppNodeBuilderV1.build(app, [[LocationServiceMap.node, locationServiceMapV2]])), // kilocode_change
+    Layer.provide(AppNodeBuilderV1.build(app)),
     // Must stay last: layers provided later in this pipe build beneath earlier ones,
     // so Observability must come after every service graph. Otherwise eagerly forked
     // fibers (e.g. the ModelsDev background refresh) capture Effect's default stdout
@@ -348,9 +348,7 @@ export function createRoutes(
 
 // kilocode_change start - keep listener routes local while application services come from AppRuntime
 export function createListenerRoutes(corsOptions?: CorsOptions) {
-  // Re-export AppRuntime's process-wide map through listener-local graphs instead of
-  // materializing another full catalog and native file index for every worktree.
-  const locationServiceMapV2 = Layer.effect(LocationServiceMap.Service, LocationServiceMap.Service)
+  const locationServiceMapV2 = buildLocationServiceMap()
 
   return Layer.mergeAll(
     rootApiRoutes,
@@ -366,8 +364,11 @@ export function createListenerRoutes(corsOptions?: CorsOptions) {
     // satisfied when the layer is built, not at request time, so the listener needs the same chain
     // createRoutes uses.
     //
-    // SessionV2 remains listener-local because it uses SessionExecutionLocal. Its location map is
-    // inherited from AppRuntime so every server graph shares one cache.
+    // These builds sit inside KiloListener's Layer.fresh boundary, so each one self-provides its own
+    // dependency subtree rather than resolving AppRuntime's. That is deliberate: SessionV2 is bound
+    // to this listener's LocationServiceMap and to SessionExecutionLocal, so it cannot be the
+    // process-wide instance. Everything the graph does not rebind (the nodes listed in AppLayer)
+    // still comes from AppRuntime, and the scope teardown releases the rest.
     Layer.provide(sessionLocationLayer),
     Layer.provide(locationLayer),
     Layer.provide(PtyEnvironment.layer),

@@ -20,16 +20,13 @@ describe("shared location service map", () => {
     }
   })
 
-  test("server app graph receives the listener location map", () => {
+  test("listener owns its location map scope", () => {
     expect(source("server/routes/instance/httpapi/server.ts")).toContain(
+      "const locationServiceMapV2 = buildLocationServiceMap()",
+    )
+    expect(source("server/routes/instance/httpapi/server.ts")).not.toContain(
       "AppNodeBuilderV1.build(app, [[LocationServiceMap.node, locationServiceMapV2]])",
     )
-  })
-
-  test("listener inherits the process-wide location map", () => {
-    expect(source("server/routes/instance/httpapi/server.ts")).toContain(
-      "Layer.effect(LocationServiceMap.Service, LocationServiceMap.Service)",
-    )
-    expect(source("effect/app-runtime.ts")).toContain("LocationServiceMap.node")
+    expect(source("effect/app-runtime.ts")).not.toContain("LocationServiceMap.node")
   })
 })

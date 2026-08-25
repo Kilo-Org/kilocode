@@ -67,12 +67,10 @@ import { ProjectCopy } from "@opencode-ai/core/project/copy" // kilocode_change
 import { MoveSession } from "@opencode-ai/core/control-plane/move-session" // kilocode_change
 import { PtyTicket } from "@opencode-ai/core/pty/ticket" // kilocode_change
 import { Pty } from "@opencode-ai/core/pty" // kilocode_change
-import { buildLocationServiceMap, LocationServiceMap } from "@opencode-ai/core/location-services" // kilocode_change
 
 // kilocode_change start - retain Kilo runtime services in the upstream node graph
 const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
 const kilo = LayerNode.group([Credential.node, ModelCache.node, AgentManager.node, Notebook.node, memory])
-const locationServiceMap = buildLocationServiceMap() // kilocode_change - bind fallback consumers to one process-wide map
 // kilocode_change end
 
 export const AppLayer = AppNodeBuilderV1.build(
@@ -134,10 +132,8 @@ export const AppLayer = AppNodeBuilderV1.build(
     MoveSession.node,
     PtyTicket.node,
     Pty.shutdownNode, // kilocode_change
-    LocationServiceMap.node, // kilocode_change - expose the process-wide location cache to listeners
     // kilocode_change end
   ]),
-  [[LocationServiceMap.node, locationServiceMap]], // kilocode_change
 ).pipe(Layer.provideMerge(AppNodeBuilderV1.build(Ripgrep.node)), Layer.provideMerge(Observability.layer))
 
 const rt = ManagedRuntime.make(AppLayer, { memoMap })
