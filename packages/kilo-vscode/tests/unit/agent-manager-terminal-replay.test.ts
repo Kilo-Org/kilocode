@@ -13,11 +13,13 @@ describe("Agent Manager terminal write batcher", () => {
         writes.push(data)
         cbs.push(callback ?? (() => undefined))
       },
-      opts.stallFrames ? () => 0xffff : (callback) => {
-        const id = ++next
-        pending.set(id, callback)
-        return id
-      },
+      opts.stallFrames
+        ? () => 0xffff
+        : (callback) => {
+            const id = ++next
+            pending.set(id, callback)
+            return id
+          },
       (id) => pending.delete(id),
       (callback) => {
         watchdog.push(callback)

@@ -50,7 +50,8 @@ export function createWriteBatcher(
   write: (data: string | Uint8Array, callback?: () => void) => void,
   schedule: (callback: () => void) => number = (callback) => requestAnimationFrame(callback),
   unschedule: (handle: number) => void = (handle) => cancelAnimationFrame(handle),
-  delay: (callback: () => void, ms: number) => ReturnType<typeof setTimeout> = (callback, ms) => setTimeout(callback, ms),
+  delay: (callback: () => void, ms: number) => ReturnType<typeof setTimeout> = (callback, ms) =>
+    setTimeout(callback, ms),
   clearDelay: (handle: ReturnType<typeof setTimeout>) => void = (handle) => clearTimeout(handle),
   maxBytes: number = 512 * 1024,
 ) {
