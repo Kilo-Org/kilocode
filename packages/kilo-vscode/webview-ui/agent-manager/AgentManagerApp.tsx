@@ -1111,7 +1111,7 @@ const AgentManagerContent: Component = () => {
     rename: setRenamingSection,
     font: (font) => font && setTerminalFont(font),
   })
-  const preserveSidebarScroll = createSidebarScrollPreserver()
+  const preserveSidebarScroll = createSidebarScrollPreserver(() => selection() ?? session.currentSessionID())
   /** Apply the active-transition effects of a state payload (data already landed in the store). */
   const applyActiveState = (state: AgentManagerStateMessage) => {
     const switched = applyProjectSwitch(state)

@@ -16,8 +16,8 @@ function cancel(id: number) {
   frames.delete(id)
 }
 
-function preserver() {
-  return createSidebarScrollPreserver(window.document, schedule, cancel)
+function preserver(active: () => string | null | undefined = () => undefined) {
+  return createSidebarScrollPreserver(active, window.document, schedule, cancel)
 }
 
 afterEach(() => {
@@ -86,6 +86,36 @@ describe("Agent Manager sidebar scroll preservation", () => {
     flush()
 
     expect(el.scrollTop).toBe(140)
+  })
+
+  it("does not restore when the selected worktree changes during the update", () => {
+    const el = list()
+    let selected = "first"
+    el.scrollTop = 240
+    const preserve = preserver(() => selected)
+
+    preserve(() => {
+      el.scrollTop = 0
+      selected = "second"
+    })
+    flush()
+
+    expect(el.scrollTop).toBe(0)
+  })
+
+  it("does not restore when selection changes before the delayed frame", () => {
+    const el = list()
+    let selected = "first"
+    el.scrollTop = 240
+    const preserve = preserver(() => selected)
+
+    preserve(() => {
+      el.scrollTop = 0
+    })
+    selected = "second"
+    flush()
+
+    expect(el.scrollTop).toBe(0)
   })
 
   it("keeps intentional scrolling from the top of the list", () => {
