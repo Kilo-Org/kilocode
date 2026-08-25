@@ -28,6 +28,7 @@ import { Identity } from "@kilocode/kilo-telemetry"
 import { KiloSession } from "@/kilocode/session"
 import { stripInternalOptions } from "@/kilocode/agent/options"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
+import * as KiloProcessingMode from "@/kilocode/provider/processing-mode"
 // kilocode_change end
 
 type PrepareInput = {
@@ -162,6 +163,15 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
       options,
     },
   )
+  // kilocode_change start
+  const resolved = KiloProcessingMode.apply({
+    mode: input.small || input.agent.mode !== "primary" ? "standard" : input.user.model.processingMode,
+    provider: input.provider,
+    model: input.model,
+    auth: input.auth,
+    options: params.options,
+  })
+  // kilocode_change end
 
   const { headers } = yield* input.plugin.trigger(
     "chat.headers",
@@ -228,8 +238,8 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
     system,
     messages,
     tools: Object.fromEntries(Object.entries(tools).toSorted(([a], [b]) => a.localeCompare(b))),
-    params,
-    messageTransformOptions: options,
+    params: { ...params, options: resolved }, // kilocode_change
+    messageTransformOptions: resolved, // kilocode_change
     headers: {
       ...(input.model.providerID.startsWith("kilo") // kilocode_change
         ? {

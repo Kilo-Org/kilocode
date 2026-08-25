@@ -40,6 +40,7 @@ body.vscode-high-contrast-light {
   .slash-command-item--active,
   .model-selector-item.active,
   .thinking-selector-item.selected,
+  .processing-selector-item.selected,
   .mode-switcher-item.selected {
     outline: 1px solid var(--vscode-contrastBorder, transparent);
     outline-offset: -1px;

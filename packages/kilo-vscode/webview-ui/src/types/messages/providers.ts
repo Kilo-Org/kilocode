@@ -1,5 +1,7 @@
 // Provider/model types for model selector
 
+export type ProcessingMode = "standard" | "flex"
+
 export interface ProviderModel {
   id: string
   name: string
@@ -11,6 +13,7 @@ export interface ProviderModel {
   // Actual shape returned by the server (Provider.Model)
   limit?: { context: number; input?: number; output: number }
   variants?: Record<string, Record<string, unknown>>
+  api?: { id?: string; npm?: string; url?: string }
   capabilities?: {
     reasoning: boolean
     input?: { text: boolean; image: boolean; audio: boolean; video: boolean; pdf: boolean }
@@ -40,6 +43,7 @@ export interface Provider {
   name: string
   models: Record<string, ProviderModel>
   source?: "env" | "config" | "custom" | "api"
+  options?: { baseURL?: string }
   env?: string[]
   metadata?: {
     noteKey?: string

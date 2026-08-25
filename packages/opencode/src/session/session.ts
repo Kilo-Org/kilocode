@@ -101,6 +101,7 @@ export function fromRow(row: SessionRow): Info {
           id: ModelV2.ID.make(row.model.id),
           providerID: ProviderV2.ID.make(row.model.providerID),
           variant: row.model.variant,
+          processingMode: row.model.processingMode, // kilocode_change
         }
       : undefined,
     version: row.version,
@@ -225,6 +226,7 @@ const Model = Schema.Struct({
   id: ModelV2.ID,
   providerID: ProviderV2.ID,
   variant: optionalOmitUndefined(Schema.String),
+  processingMode: optionalOmitUndefined(ModelV2.ProcessingMode), // kilocode_change
 })
 
 export const Metadata = Schema.Record(Schema.String, Schema.Any)

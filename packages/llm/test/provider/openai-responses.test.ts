@@ -69,6 +69,19 @@ describe("OpenAI Responses route", () => {
     }),
   )
 
+  // kilocode_change start
+  it.effect("lowers Flex service tier options", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare(
+        LLM.updateRequest(request, { providerOptions: { openai: { serviceTier: "flex" } } }),
+      )
+
+      expect(prepared.body).toMatchObject({ service_tier: "flex" })
+      expect(prepared.body).not.toHaveProperty("serviceTier")
+    }),
+  )
+  // kilocode_change end
+
   it.effect("omits unsupported semantic service tiers", () =>
     Effect.gen(function* () {
       const prepared = yield* LLMClient.prepare(

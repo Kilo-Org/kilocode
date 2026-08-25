@@ -40,6 +40,7 @@ import type {
   SuggestionRequest,
   TodoItem,
   ModelSelection,
+  ProcessingMode,
   ModelUsageMap,
   ContextUsage,
   AgentInfo,
@@ -93,6 +94,7 @@ import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
 import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
+import { createSessionProcessingMode } from "./session-processing-mode"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
@@ -231,6 +233,9 @@ interface SessionContextValue {
   currentVariant: (sessionID?: string) => string | undefined
   variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
   selectVariant: (value: string | undefined, sessionID?: string) => void
+  currentProcessingMode: (sessionID?: string) => ProcessingMode
+  selectProcessingMode: (value: ProcessingMode, sessionID?: string) => void
+  supportsFlex: (sessionID?: string) => boolean
 
   // Model favorites
   recentModels: Accessor<ModelSelection[]>
@@ -627,7 +632,12 @@ export const SessionProvider: ParentComponent = (props) => {
     const agentName = agentForScope(sessionID)
     return resolveModel(agentName, store.modelSelections[agentName])
   }
-
+  const processing = createSessionProcessingMode({
+    session: currentSessionID,
+    selected,
+    providers: provider.providers,
+    authStates: provider.authStates,
+  })
   function pushRecent(selection: ModelSelection) {
     const key = `${selection.providerID}/${selection.modelID}`
     const filtered = store.recentModels.filter((r) => `${r.providerID}/${r.modelID}` !== key)
@@ -635,7 +645,6 @@ export const SessionProvider: ParentComponent = (props) => {
     setStore("recentModels", updated)
     vscode.postMessage({ type: "persistRecents", recents: updated })
   }
-
   function recordModelUsage(providerID?: string, modelID?: string) {
     if (!providerID || !modelID) return
     const key = `${providerID}/${modelID}`
@@ -662,7 +671,6 @@ export const SessionProvider: ParentComponent = (props) => {
       modelID: selection.modelID,
     })
   }
-
   const variants = createSessionVariants({
     selections: () => store.variantSelections,
     set: (key, value) => setStore("variantSelections", key, value),
@@ -686,7 +694,6 @@ export const SessionProvider: ParentComponent = (props) => {
     hide: hideErrors,
   })
   const selectModel = models.select
-
   function selectKiloModel(modelID?: string, agent?: string) {
     if (!modelID && !agent) return
     setPendingKiloModel({ ...(modelID && { modelID }), ...(agent && { agent }), after: catalog() })
@@ -1340,6 +1347,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
       const pendingAgent = draftID ? store.agentSelections[draftID] : pendingAgentSelection()
       const pendingModel = draftID ? store.sessionOverrides[draftID] : undefined
+      const pendingProcessing = draftID ? processing.peek(draftID) : undefined
       if (draftID) {
         const entries = transferVariants(store.variantSelections, draftID, session.id)
         for (const [key, value] of Object.entries(entries)) {
@@ -1348,6 +1356,7 @@ export const SessionProvider: ParentComponent = (props) => {
         }
         if (pendingAgent) setStore("agentSelections", session.id, pendingAgent)
         if (pendingModel) setStore("sessionOverrides", session.id, pendingModel)
+        if (pendingProcessing) processing.select(pendingProcessing, session.id)
         setStore(
           "agentSelections",
           produce((agents) => {
@@ -1360,6 +1369,7 @@ export const SessionProvider: ParentComponent = (props) => {
             delete models[draftID]
           }),
         )
+        processing.clear(draftID)
         setStore(
           "variantSelections",
           produce((variants) => {
@@ -1399,6 +1409,7 @@ export const SessionProvider: ParentComponent = (props) => {
       const key = variantKey(prefs.model, agent, sessionID)
       if (store.variantSelections[key] === undefined) setStore("variantSelections", key, prefs.variant)
     }
+    processing.recover(sessionID, prefs.processingMode)
   }
 
   function withPending(sessionID: string, messages: Message[]) {
@@ -2001,6 +2012,7 @@ export const SessionProvider: ParentComponent = (props) => {
     pendingOptimistic.delete(sessionID)
     freshSessions.delete(sessionID)
     aborts.clear(sessionID)
+    processing.clear(sessionID)
     confirmSubmissions(sessionID)
     batch(() => {
       // Collect message IDs so we can clean up their parts (store + stash)
@@ -2273,11 +2285,11 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Cannot send message: not connected")
       return
     }
-
     const messageID = Identifier.ascending("message")
-
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
     const selection = providerID && modelID ? { providerID, modelID } : selected(sid)
+    const modeScope = sid ?? draftID
+    const processingMode = processing.supports(modeScope) ? processing.current(modeScope) : "standard"
     recordModelUsage(selection?.providerID, selection?.modelID)
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
@@ -2301,7 +2313,6 @@ export const SessionProvider: ParentComponent = (props) => {
       })
       return
     }
-
     const suggestion = scopedSuggestions(sid)[0]
     if (suggestion) dismissSuggestion(suggestion.id)
     for (const q of scopedQuestions(sid)) {
@@ -2332,6 +2343,7 @@ export const SessionProvider: ParentComponent = (props) => {
       modelID,
       agent,
       variant: currentVariant(scope),
+      processingMode,
       files,
       review,
       agentManagerContext: context,
@@ -3038,6 +3050,9 @@ export const SessionProvider: ParentComponent = (props) => {
     currentVariant,
     variantForAgent,
     selectVariant,
+    currentProcessingMode: processing.current,
+    selectProcessingMode: processing.select,
+    supportsFlex: processing.supports,
     revert,
     revertedCount,
     summary,

@@ -56,6 +56,7 @@ export const SessionTable = sqliteTable(
       id: string
       providerID: string
       variant?: string
+      processingMode?: "standard" | "flex" // kilocode_change
     }>(),
     ...Timestamps,
     time_compacting: integer(),

@@ -618,6 +618,46 @@
   font-weight: 500;
 }
 
+.processing-selector-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.processing-selector-list {
+  min-width: 220px;
+}
+
+.processing-selector-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: var(--kilo-font-size-12);
+}
+
+.processing-selector-item:hover {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.processing-selector-item.selected {
+  background: var(
+    --surface-interactive-active,
+    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
+  );
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
+}
+
+.processing-selector-item-name {
+  font-weight: 500;
+}
+
+.processing-selector-item-description {
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-11);
+}
+
 /* ============================================
    Mode Switcher (uses kilo-ui Popover)
    ============================================ */

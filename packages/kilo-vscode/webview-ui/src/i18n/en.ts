@@ -175,6 +175,12 @@ export const dict = {
   "common.default": "Default",
 
   "prompt.thinking.tooltip": "Reasoning effort",
+  "prompt.processing.label": "Processing",
+  "prompt.processing.tooltip": "Processing mode",
+  "prompt.processing.standard": "Standard",
+  "prompt.processing.standard.description": "Normal priority and latency.",
+  "prompt.processing.flex": "Flex",
+  "prompt.processing.flex.description": "Lower cost, slower, and may be unavailable.",
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",

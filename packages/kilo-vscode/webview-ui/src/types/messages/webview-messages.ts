@@ -2,7 +2,7 @@ import type { InstallMarketplaceItemOptions, MarketplaceFilters, MarketplaceItem
 import type { FileAttachment } from "./parts"
 import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
-import type { ModelSelection, ProviderConfig } from "./providers"
+import type { ModelSelection, ProcessingMode, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
@@ -33,6 +33,7 @@ export interface SendMessageRequest {
   modelID?: string
   agent?: string
   variant?: string
+  processingMode?: ProcessingMode
   files?: FileAttachment[]
   review?: ReviewMessageData
   agentManagerContext?: string
