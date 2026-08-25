@@ -9,8 +9,9 @@ export function childForeground(
   part: Record<string, unknown> | undefined,
   state: Record<string, unknown> | undefined,
   status: Record<string, SessionStatusInfo>,
+  latest: boolean,
 ) {
-  if (!id) return false
+  if (!id || !latest) return false
   if (part?.background === true || state?.background === true) return false
   return status[id]?.type === "busy" || status[id]?.type === "retry"
 }
@@ -20,9 +21,11 @@ export function showChildPromotion(
   part: Record<string, unknown> | undefined,
   state: Record<string, unknown> | undefined,
   status: Record<string, SessionStatusInfo>,
+  enabled: boolean | undefined,
   readonly: boolean | undefined,
+  latest: boolean,
 ) {
-  return !readonly && childForeground(id, part, state, status)
+  return enabled === true && !readonly && childForeground(id, part, state, status, latest)
 }
 
 export function taskVisible(open: boolean | undefined, id: string | undefined) {
