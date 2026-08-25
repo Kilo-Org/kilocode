@@ -19,6 +19,10 @@ export function hasLazyCommandSelection() {
   return selected
 }
 
+export function resetLazyCommandSelection() {
+  selected = false
+}
+
 export function markLazyCommandSelection() {
   selected = true
 }
