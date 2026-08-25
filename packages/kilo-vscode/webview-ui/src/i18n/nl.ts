@@ -188,7 +188,6 @@ export const dict = {
     "Automatisch goedkeuren is ingeschakeld. Toestemmingsverzoeken worden automatisch goedgekeurd.",
   "prompt.action.autoApprove.disabled":
     "Automatisch goedkeuren is uitgeschakeld. Klik om toestemmingsverzoeken automatisch goed te keuren.",
-  "prompt.action.resetModel": "Model terugzetten naar standaard",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
   "prompt.action.sandbox.enable": "Sandbox inschakelen",
@@ -1236,7 +1235,6 @@ export const dict = {
   "task.backgroundAgents.open": "Achtergrondagent openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
-  "task.backgroundAgents.foreground": "Voorgrondagent actief",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",
   "task.backgroundAgents.needsInput": "Invoer vereist",
   "task.backgroundAgents.dismiss": "Negeren",

@@ -1,5 +1,6 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
@@ -19,12 +20,16 @@ import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.header.BranchDock
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.ui.layout.Align
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
@@ -34,6 +39,8 @@ import com.intellij.util.ui.JBUI
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.components.JBScrollPane
 import java.awt.Dimension
 import javax.swing.JLayeredPane
@@ -82,11 +89,49 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
 
+        // Prompt sits inside an Align inside the bottom Stack container, which is docked SOUTH.
         assertTrue(prompt.parent is Align)
-        assertSame(root.content, prompt.parent.parent)
+        assertSame(root.content, prompt.parent.parent.parent)
         assertSame(root.overlay, connection.parent)
         assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
         assertFalse(root.content.components.contains(connection))
+    }
+
+    fun `test dock is docked between scroll pane and prompt`() {
+        val prompt = find<PromptPanel>(ui)
+        val dock = find<BranchDock>(ui)
+
+        // Dock and the aligned prompt share the bottom container; the dock comes first (above prompt).
+        val container = dock.parent
+        assertSame(container, prompt.parent.parent)
+        assertTrue(container.getComponentZOrder(dock) < container.getComponentZOrder(prompt.parent))
+    }
+
+    fun `test readonly session omits dock`() {
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val readonly: Boolean get() = true
+        }
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = owner)
+        settle()
+
+        assertNull(find(ui, BranchDock::class.java))
+    }
+
+    fun `test dock absent when manager disables branch dock`() {
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val showsBranchDock: Boolean get() = false
+        }
+        ui = newUi(manager = owner)
+        settle()
+
+        assertNull(find(ui, BranchDock::class.java))
     }
 
     fun `test transcript uses larger standard gap before prompts after first item`() {
@@ -123,16 +168,111 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertNull(drop.dropTarget)
     }
 
-    fun `test branch changes badge refreshes on finish and revert`() {
+    fun `test dock hides while a turn runs`() {
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+        val dock = find<BranchDock>(ui)
+        assertTrue(dock.isVisible)
+
+        controller().model.setState(SessionState.Busy("running"))
+
+        assertFalse(dock.isVisible)
+
+        controller().model.setState(SessionState.Idle)
+        settle()
+
+        assertTrue(dock.isVisible)
+    }
+
+    fun `test dock move delegates to manager without progress state`() {
+        val calls = mutableListOf<Pair<String?, String>>()
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val supportsMoveToWorktree: Boolean get() = true
+            override fun moveToWorktree(sessionId: String?, directory: String) {
+                calls += sessionId to directory
+            }
+        }
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test", manager = owner)
+        settle()
+        val dock = find<BranchDock>(ui)
+        assertTrue(dock.isVisible)
+
+        dock.triggerMove()
+
+        assertEquals(listOf("ses_test" to "/test"), calls)
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+    }
+
+    fun `test dock move forwards a null session for a new session with local changes`() {
+        val calls = mutableListOf<Pair<String?, String>>()
+        val owner = object : SessionManager {
+            override fun newSession() {}
+            override fun showHistory(back: (() -> Unit)?) {}
+            override fun openSession(ref: SessionRef) {}
+            override val supportsMoveToWorktree: Boolean get() = true
+            override fun moveToWorktree(sessionId: String?, directory: String) {
+                calls += sessionId to directory
+            }
+        }
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))
+        // A brand-new sidebar session has no id until its first prompt, but the local changes alone
+        // are worth moving: the worktree gets the changes and starts its own session.
+        ui = newUi(manager = owner)
+        settle()
+        val dock = find<BranchDock>(ui)
+
+        assertTrue(dock.isVisible)
+        assertTrue(dock.moveEnabled())
+
+        dock.triggerMove()
+
+        assertEquals(listOf<Pair<String?, String>>(null to "/test"), calls)
+    }
+
+    fun `test a failed branch status leaves the dock inactive instead of assuming healthy git`() {
+        val worktree = FakeWorktreeRpcApi().apply { branchThrows = IllegalStateException("backend down") }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        // An empty status DTO would default to GhAvailability.OK and offer worktree actions against
+        // a directory whose git state is unknown, so a failure must leave the dock untouched.
+        assertFalse(find<BranchDock>(ui).isVisible)
+    }
+
+    fun `test dock branch changes refresh on finish and revert`() {
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/A.kt", 2, 1))
-        val header = find<SessionHeaderPanel>(ui)
+        val badge = find<ai.kilocode.client.session.ui.header.BranchChangesBadge>(ui)
 
         controller().model.setState(SessionState.Busy("running"))
         controller().model.setState(SessionState.Idle)
         settle()
 
-        assertEquals(2 to 1, header.changesStat())
+        assertEquals(2 to 1, badge.stats())
 
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/B.kt", 4, 3))
@@ -140,14 +280,14 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         controller().model.setState(SessionState.Idle)
         settle()
 
-        assertEquals(4 to 3, header.changesStat())
+        assertEquals(4 to 3, badge.stats())
 
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/C.kt", 1, 0))
         controller().model.setRevert(SessionRevertDto("msg1", "part1", diff = "patch"))
         settle()
 
-        assertEquals(1 to 0, header.changesStat())
+        assertEquals(1 to 0, badge.stats())
     }
 
     fun `test prompt file drag leave does not immediately hide drop overlay`() {
@@ -275,7 +415,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(root.overlay, connection.parent)
         assertEquals(point.x + gap, connection.x)
         assertEquals(prompt.width - gap * 2, connection.width)
-        assertEquals(point.y - gap, connection.y + connection.height)
+        assertEquals(bottomTop(root, prompt) - gap, connection.y + connection.height)
     }
 
     fun `test expanded connection panel remains anchored above prompt`() {
@@ -292,7 +432,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         layout()
 
         assertTrue(connection.detailsVisible())
-        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
     }
 
     fun `test expanded connection panel is capped to transcript height`() {
@@ -314,7 +454,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
         assertTrue(connection.detailsVisible())
         assertEquals(0, connection.y)
-        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertTrue(pane.viewport.extentSize.height < pane.viewport.view.preferredSize.height)
     }
 
@@ -327,15 +467,16 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
         val root = find<SessionRootPanel>(ui)
-        val top = connection.y
+        // Anchored above the bottom container, not at a fixed y: a pending question makes the branch
+        // dock release its row, so the container itself gets shorter.
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
 
         controller().model.setState(questionStateChanged())
         layout()
 
         assertTrue(find<QuestionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
-        assertEquals(top, connection.y)
-        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -348,15 +489,16 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
         val root = find<SessionRootPanel>(ui)
-        val top = connection.y
+        // Anchored above the bottom container, not at a fixed y: a pending permission makes the branch
+        // dock release its row, so the container itself gets shorter.
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
 
         controller().model.setState(permissionStateChanged())
         layout()
 
         assertTrue(find<PermissionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
-        assertEquals(top, connection.y)
-        assertEquals(promptPoint(root, prompt).y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
+        assertEquals(bottomTop(root, prompt) - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -825,6 +967,13 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
     private fun promptPoint(root: SessionRootPanel, prompt: PromptPanel) =
         SwingUtilities.convertPoint(prompt.parent, prompt.x, prompt.y, root.overlay)
+
+    // Top of the bottom container (branch dock + prompt) in overlay coordinates. The connection
+    // banner anchors above this so it floats over the dock rather than covering it.
+    private fun bottomTop(root: SessionRootPanel, prompt: PromptPanel): Int {
+        val container = prompt.parent.parent
+        return SwingUtilities.convertPoint(container.parent, container.x, container.y, root.overlay).y
+    }
 
     private fun layoutReadonly() {
         ui.doLayout()

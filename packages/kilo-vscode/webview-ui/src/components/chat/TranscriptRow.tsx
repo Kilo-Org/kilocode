@@ -26,6 +26,7 @@ interface TranscriptRowViewProps {
   activeSearchPartID?: string
   /** For a multi-file apply_patch match, the specific file within that part. */
   activeSearchPartFile?: string
+  readonly?: boolean
 }
 
 export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
@@ -92,6 +93,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               forceOpenPartID={props.activeSearchPartID}
               forceOpenFile={props.activeSearchPartFile}
               highlight={props.highlight}
+              readonly={props.readonly}
               feedback={{
                 enabled: feedback.telemetryEnabled(),
                 rating: feedback.getRating(row().message.id),

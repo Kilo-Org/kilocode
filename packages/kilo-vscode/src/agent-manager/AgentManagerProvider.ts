@@ -74,8 +74,8 @@ import type { ProjectContext } from "./project/context"
 import { ProjectContexts } from "./project/contexts"
 import { hydrateExpanded } from "./project/hydrate"
 import { createMultiVersion, type MultiVersionHost } from "./provider-multi-version"
-import { handleProjectMessage, type ProjectMessageDeps } from "./project/messages"
-import { createProjectWiring } from "./project/wiring"
+import { handleProjectMessage, routeProjectSession, type ProjectMessageDeps } from "./project/messages"
+import { createProjectWiring, type ProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
@@ -116,10 +116,9 @@ export class AgentManagerProvider implements Disposable {
   private destination = new DestinationState()
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
-  // Tracks sessions owned by this panel until they are explicitly closed.
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
-
+  readonly settings: ProjectWiring["settings"]
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
   private visiblePresence = new AgentManagerVisiblePresence(
@@ -195,12 +194,14 @@ export class AgentManagerProvider implements Disposable {
       expand: (ctx) => this.initExpanded(ctx),
       ready: (ctx) => initContextState(ctx, (...args) => this.log(...args)),
       push: () => this.pushProjects(),
+      pushState: (ctx) => this.pushState(ctx),
       changed: () => this.onWorkspaceChanged(),
-      refresh: () => this.pushState(),
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
+      routeSession: (pid, sid, dir, gen) => routeProjectSession(this.panel?.sessions, pid, sid, dir, gen),
     })
     this.registry = wiring.registry
     this.contexts = wiring.contexts
+    this.settings = wiring.settings
     this.projects = wiring.messages
     this.unsubProjects = () => wiring.dispose()
     this.naming = new BranchNamingController({
@@ -212,7 +213,7 @@ export class AgentManagerProvider implements Disposable {
       log: (msg) => this.log(msg),
     })
     const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
-    this.diffCatalog = new DiffSourceCatalog(this.connectionService)
+    this.diffCatalog = new DiffSourceCatalog(this.connectionService, local)
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
@@ -323,9 +324,8 @@ export class AgentManagerProvider implements Disposable {
     }
     const info = ev.properties?.info
     const dir = info?.directory
-    // Session events from sync or older backends can lack time/directory; a
-    // throw here would escape into the SSE dispatch loop and starve the other
-    // listeners (there is no per-listener error isolation).
+    // Session events from sync or older backends can lack time/directory; a throw
+    // would escape into the SSE dispatch loop and starve the other listeners.
     if (!info?.time || !dir || (info.parentID !== undefined && info.parentID !== null)) return
     const ctx = this.contexts.byDirectory(dir)
     if (!ctx || ctx.lifecycle !== "ready") return
@@ -1804,7 +1804,7 @@ export class AgentManagerProvider implements Disposable {
     await continueInWorktree(
       {
         root,
-        getClient: () => this.connectionService.getClient(),
+        connection: this.connectionService,
         createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
         runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
         cleanupWorktree: async (id) => {

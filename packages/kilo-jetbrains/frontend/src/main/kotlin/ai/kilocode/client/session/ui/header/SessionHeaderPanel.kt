@@ -11,7 +11,6 @@ import ai.kilocode.client.session.views.todo.TodoListPanel
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.icons.AllIcons
@@ -43,7 +42,6 @@ class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
     private val readonly: Boolean = false,
-    onOpenBranchDiff: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
@@ -77,7 +75,6 @@ class SessionHeaderPanel(
         accessibleContext.accessibleName = KiloBundle.message("session.header.compact")
         addActionListener { controller.compact() }
     }
-    private val changes = BranchChangesBadge { onOpenBranchDiff?.invoke() }
     private val expand = JBLabel().apply {
         border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
@@ -116,39 +113,6 @@ class SessionHeaderPanel(
         iconTextGap = UiStyle.Gap.xs()
     }
     private val top = BorderLayoutPanel()
-    // Lays the title out first with the branch-changes badge hugging its trailing edge,
-    // both vertically centered. The title ellipsizes so the badge stays visible on long titles.
-    private val centerGroup = object : JPanel(null) {
-        override fun getPreferredSize(): Dimension {
-            val ins = insets
-            val t = title.preferredSize
-            var w = t.width
-            var h = t.height
-            if (changes.isVisible) {
-                val b = changes.preferredSize
-                w += UiStyle.Gap.sm() + b.width
-                h = maxOf(h, b.height)
-            }
-            return Dimension(w + ins.left + ins.right, h + ins.top + ins.bottom)
-        }
-
-        override fun doLayout() {
-            val ins = insets
-            val availW = maxOf(0, width - ins.left - ins.right)
-            val availH = maxOf(0, height - ins.top - ins.bottom)
-            val t = title.preferredSize
-            val gap = if (changes.isVisible) UiStyle.Gap.sm() else 0
-            val b = if (changes.isVisible) changes.preferredSize else Dimension(0, 0)
-            val badgeW = minOf(b.width, availW)
-            val titleW = minOf(t.width, maxOf(0, availW - badgeW - gap))
-            val titleH = minOf(t.height, availH)
-            title.setBounds(ins.left, ins.top + (availH - titleH) / 2, titleW, titleH)
-            if (changes.isVisible) {
-                val badgeH = minOf(b.height, availH)
-                changes.setBounds(ins.left + titleW + gap, ins.top + (availH - badgeH) / 2, badgeW, badgeH)
-            }
-        }
-    }
     private val right = Stack.horizontal()
         .next(cost)
         .gap(UiStyle.Gap.xl())
@@ -203,10 +167,8 @@ class SessionHeaderPanel(
         isOpaque = true
         updateUI()
 
-        centerGroup.add(title)
-        centerGroup.add(changes)
         top.add(expand, BorderLayout.WEST)
-        top.add(centerGroup, BorderLayout.CENTER)
+        top.add(title, BorderLayout.CENTER)
         top.add(right, BorderLayout.EAST)
         add(top, BorderLayout.NORTH)
         timeline.addMouseListener(object : MouseAdapter() {
@@ -307,17 +269,6 @@ class SessionHeaderPanel(
         refresh()
     }
 
-    fun setBranchChanges(files: List<DiffFileDto>) {
-        if (!changes.update(files)) return
-        refresh()
-    }
-
-    fun hideBranchChanges() {
-        if (!changes.isVisible) return
-        changes.isVisible = false
-        refresh()
-    }
-
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         val bg = SessionUiStyle.Colors.sessionBackground()
@@ -326,10 +277,7 @@ class SessionHeaderPanel(
         top.background = bg
         top.isOpaque = true
         top.border = JBUI.Borders.empty(UiStyle.Gap.md(), UiStyle.Gap.sm(), UiStyle.Gap.md(), UiStyle.Gap.sm())
-        centerGroup.background = bg
-        centerGroup.isOpaque = true
         right.background = bg
-        changes.background = bg
         tokens.background = bg
         todoRow.background = bg
         todoBox.background = bg
@@ -337,7 +285,6 @@ class SessionHeaderPanel(
         viewport.background = bg
         title.font = style.boldFont
         title.foreground = style.editorForeground
-        changes.applyStyle(style)
         cost.font = style.regularFont
         cost.foreground = style.editorForeground
         cost.icon = null
@@ -401,16 +348,6 @@ class SessionHeaderPanel(
     internal fun todoListPanel() = todoList
 
     internal fun compactButton() = compact
-
-    internal fun changesBadge() = changes
-
-    internal fun changesVisible() = changes.isVisible
-
-    internal fun changesText() = changes.countText()
-
-    internal fun changesStat() = changes.stats()
-
-    internal fun centerGroupPanel() = centerGroup
 
     internal fun rightPanel() = right
 

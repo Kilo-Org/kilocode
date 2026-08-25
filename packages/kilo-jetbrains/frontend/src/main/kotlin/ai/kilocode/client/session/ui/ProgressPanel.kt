@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
@@ -14,7 +15,6 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -48,7 +48,7 @@ class ProgressPanel(
     private val elapsed = JBLabel().apply {
         foreground = SessionUiStyle.Text.Secondary.foreground()
     }
-    private val spinner = JBLabel(AnimatedIcon.Default())
+    private val spinner = JBLabel(SpinnerIcon.icon)
     private val tick = clock.timer(1000) { syncElapsed() }
 
     init {

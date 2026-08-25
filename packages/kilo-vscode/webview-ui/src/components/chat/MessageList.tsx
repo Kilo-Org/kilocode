@@ -1332,6 +1332,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearch={activeKey() === row.key}
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                        readonly={props.readonly}
                       />
                     )}
                   </Virtualizer>
@@ -1345,6 +1346,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearch={activeKey() === key}
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
+                      readonly={props.readonly}
                     />
                   )}
                 </For>
@@ -1360,6 +1362,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearch={activeKey() === row.key}
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                  readonly={props.readonly}
                 />
               )}
             </For>

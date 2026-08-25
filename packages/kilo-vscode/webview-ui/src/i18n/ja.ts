@@ -184,7 +184,6 @@ export const dict = {
   "prompt.action.autoApprove.disable": "自動承認を無効化",
   "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
   "prompt.action.autoApprove.disabled": "自動承認が無効です。クリックすると権限リクエストを自動的に承認します。",
-  "prompt.action.resetModel": "モデルをデフォルトにリセット",
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
@@ -1242,7 +1241,6 @@ export const dict = {
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
-  "task.backgroundAgents.foreground": "フォアグラウンドエージェントが実行中",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
   "task.backgroundAgents.needsInput": "入力が必要",
   "task.backgroundAgents.dismiss": "閉じる",

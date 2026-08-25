@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.agentManager.worktree.PendingWorktreeSession
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionFileType
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
@@ -31,6 +32,18 @@ class WorktreeSessionEditorKindTest : BasePlatformTestCase() {
         val params = worktreeSessionParams(item)
 
         assertEquals(mapOf("path" to item.path), params)
+    }
+
+    fun `test a moved session is queued out of band so the tab identity stays the path`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        service<PendingWorktreeSession>().put(item.path, "ses_fork")
+
+        // The queued session must not leak into the editor identity, or Agent Manager's path-only
+        // open/close/rename would address a different file than the tab a move produced.
+        assertEquals(mapOf("path" to item.path), worktreeSessionParams(item))
+        // Keyed by normalized path, and consumed once so a later open starts a fresh session.
+        assertEquals("ses_fork", service<PendingWorktreeSession>().take(item.path + "/"))
+        assertNull(service<PendingWorktreeSession>().take(item.path))
     }
 
     fun `test worktree session kind creates a custom virtual file type`() {

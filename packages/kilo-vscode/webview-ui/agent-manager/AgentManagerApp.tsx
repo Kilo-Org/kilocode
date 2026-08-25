@@ -47,6 +47,7 @@ import type {
   TerminalDestination,
   TerminalFont,
 } from "../src/types/messages"
+import { historyRowActions as historyRowActionsFactory } from "./history-actions"
 import { readFontSize } from "../src/font-size"
 import { IndexingProvider } from "../src/context/indexing"
 import {} from "@thisbeyond/solid-dnd"
@@ -78,7 +79,6 @@ import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import { DefaultBaseBranchDialog } from "./DefaultBaseBranchDialog"
 import { createModeRouter } from "./mode-router"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
@@ -121,7 +121,6 @@ import {
   isKnownRootSession,
   nextSelectionAfterDelete,
   adjacentHint,
-  filterUnassignedSessions,
   focusChatSearch,
   LOCAL,
 } from "./navigate"
@@ -155,7 +154,7 @@ import {
   createSideTerminal,
   createAmbientSetup,
   hasSetupTerminal,
-  showTerminalStack,
+  keepTerminalStack,
   readSavedDestination,
   resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
@@ -163,14 +162,14 @@ import {
 import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
-import { DiffPanel } from "./DiffPanel"
+import { DiffPanelCache } from "./DiffPanelCache"
 import { PRPanelHost } from "./pr/PRPanelHost"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
-import { createWorktreeDiffs, wireDiffId } from "./worktree-diffs"
+import { createWorktreeDiffs, diffDataKey, wireDiffId } from "./worktree-diffs"
 import type { ReviewComment } from "../diff-viewer/review-comments"
-import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
+import { createReviewComposers } from "./review-composers"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import { createSidebarSearch, type SidebarSearchItem } from "./sidebar-search"
 import { randomColor } from "./section-colors"
@@ -187,8 +186,6 @@ import {
   sortWorktrees,
   type TopLevelItem,
 } from "./section-helpers"
-import {} from "./section-dnd"
-import {} from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
 import { DiffScopeControls } from "../diff-viewer/DiffScopeControls"
 import { scopeCapabilities } from "./diff-scope-state"
@@ -216,6 +213,7 @@ import { defaultBase as projectDefaultBase } from "./project/default-base"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
+import { createSidebarScrollPreserver } from "./sidebar-scroll"
 const REVIEW_TAB_ID = "review"
 interface SetupState {
   active: boolean
@@ -258,9 +256,6 @@ const AgentManagerContent: Component = () => {
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
   const [repoDetectedBranch, setRepoDetectedBranch] = createSignal<string | undefined>()
-  const defaultBaseBranch = () => registry.active().defaultBaseBranch()
-  const setDefaultBaseBranch = (v: Parameters<Setter<string | undefined>>[0]) =>
-    registry.active().setDefaultBaseBranch(v)
   const [projectList, setProjectList] = createSignal<AgentProjectSnapshot[]>([])
   const [multiProject, setMultiProject] = createSignal(false)
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
@@ -274,7 +269,9 @@ const AgentManagerContent: Component = () => {
   )
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
-  const repoDefaultBranch = () => defaultBaseBranch() ?? repoDetectedBranch() ?? "main"
+
+  const repoDefaultBranch = () => repoDetectedBranch() ?? "main"
+
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
@@ -293,14 +290,6 @@ const AgentManagerContent: Component = () => {
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
-  const sessionsCollapsed = () => registry.active().sessionsCollapsed() ?? true
-  const setSessionsCollapsed = (v: Parameters<Setter<boolean>>[0]) =>
-    registry.active().setSessionsCollapsed(typeof v === "function" ? v(sessionsCollapsed()) : v)
-  const toggleSessions = () => {
-    const collapsed = !sessionsCollapsed()
-    setSessionsCollapsed(collapsed)
-    vscode.postMessage({ type: "agentManager.setSessionsCollapsed", collapsed })
-  }
   const sidebar = createSidebarCollapse(vscode, { initial: persisted?.sidebarCollapsed })
   const sidebarCollapsed = sidebar.collapsed
   const expandSidebar = sidebar.expand
@@ -310,7 +299,29 @@ const AgentManagerContent: Component = () => {
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
   const [history, setHistory] = createSignal(false)
+  const [historyProject, setHistoryProject] = createSignal<string | undefined>()
+  const [historySwitches, setHistorySwitches] = createSignal<string[]>([])
+  const closeHistory = () => {
+    setHistory(false)
+    setHistoryProject(undefined)
+    setHistorySwitches([])
+  }
+  const openHistory = (pid?: string) => {
+    const scoped = pid !== undefined && multiProject()
+    if (scoped && (currentProjectId() !== pid || historySwitches().length > 0))
+      setHistorySwitches((prev) => (prev.includes(pid) ? prev : [...prev, pid]))
+    setHistoryProject(scoped ? pid : undefined)
+    setHistory(true)
+    if (scoped) {
+      // Activate the target so the session store and pick routing use that project.
+      vscode.postMessage({
+        type: "agentManager.activateSelection",
+        target: { projectId: pid, kind: "local" },
+      } as never)
+    }
+  }
   const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
+  const [diffMounted, setDiffMounted] = createSignal(false)
   const diffOpen = () => sidePanel() === SidePanel.Diff
   const prOpen = () => sidePanel() === SidePanel.PR
   const activePR = createMemo(() => {
@@ -321,6 +332,7 @@ const AgentManagerContent: Component = () => {
     return { pr, selected, wt: worktrees().find((w) => w.id === selected) }
   })
   const diffs = createWorktreeDiffs(vscode, activeProjectId)
+  createEffect(on(activeProjectId, diffs.reset, { defer: true }))
   const diffDatas = diffs.diffDatas
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
@@ -328,11 +340,12 @@ const AgentManagerContent: Component = () => {
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
-    setHistory(false)
+    closeHistory()
     setReviewActive(false)
     setSidePanel(SidePanel.Terminal)
   }
-  const reviewComposer = createReviewComposer()
+  const composers = createReviewComposers(currentProjectId)
+  createEffect(on(activeProjectId, (_next, previous) => previous && composers.clearProject(previous), { defer: true }))
   const reviewState = createReviewState()
   const reviewOpenByContext = reviewState.open
   const setReviewOpenByContext = reviewState.setOpen
@@ -351,7 +364,7 @@ const AgentManagerContent: Component = () => {
     currentProjectId,
     () => sidePanel() === SidePanel.Documents,
     () => {
-      setHistory(false)
+      closeHistory()
       setReviewActive(false)
       setSidePanel(SidePanel.Documents)
     },
@@ -366,7 +379,7 @@ const AgentManagerContent: Component = () => {
     sync: (id, parentID) => session.syncSession(id, parentID, "inspector"),
     unsync: (id) => session.unsyncSession(id, "inspector"),
     show: () => {
-      setHistory(false)
+      closeHistory()
       setReviewActive(false)
       setSidePanel(SidePanel.Subagents)
     },
@@ -526,7 +539,6 @@ const AgentManagerContent: Component = () => {
     setPendingDelete(null)
   }
   createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
-  createEffect(on(selection, () => clearReviewComposer(reviewComposer), { defer: true }))
   createEffect(
     on(
       selection,
@@ -550,16 +562,6 @@ const AgentManagerContent: Component = () => {
     if (sel === null) return
     setReviewOpenForContext(sel, open)
   }
-  const reviewComments = createMemo(() => {
-    const sel = selection()
-    if (sel === null) return [] as ReviewComment[]
-    return readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", sel)
-  })
-  const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
-    const sel = selection()
-    if (sel === null) return
-    setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", sel, comments))
-  }
   const apply = createApplyToLocal({
     vscode,
     dialog,
@@ -580,7 +582,7 @@ const AgentManagerContent: Component = () => {
   }
   const openWindow = metrics.click("open_worktree_window", "tab_toolbar", openWorktreeDirectory)
   const togglePRPanel = () => {
-    setHistory(false)
+    closeHistory()
     if (reviewActive()) closeReviewTab()
     const opening = sidePanel() !== SidePanel.PR
     setSidePanel((prev) => (prev === SidePanel.PR ? null : SidePanel.PR))
@@ -720,6 +722,7 @@ const AgentManagerContent: Component = () => {
   })
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
+    composers.prune(ids)
     setReviewOpenByContext((prev) => {
       const next = pruneReviewState(prev, currentProjectId() ?? "single", ids)
       if (Object.keys(next).length === Object.keys(prev).length) return prev
@@ -743,10 +746,6 @@ const AgentManagerContent: Component = () => {
 
   const localSet = createMemo(() => new Set(localSessionIDs()))
 
-  const unassignedSessions = createMemo(() =>
-    filterUnassignedSessions(session.sessions(), worktreeSessionIds(), localSet()),
-  )
-
   const projectSessionsLive = createProjectSessionsLive({
     base: projectLive.sessions,
     pid: currentProjectId,
@@ -754,6 +753,15 @@ const AgentManagerContent: Component = () => {
     store: session.sessions,
     managed: managedSessions,
     locals: localSet,
+  })
+
+  /** Session ids shown in the project-scoped history view (every session of the project). */
+  const historySessionIds = createMemo(() => {
+    const pid = historyProject()
+    if (!pid || !multiProject()) return undefined
+    const sessions = projectSessionsLive()[pid]
+    if (!sessions) return new Set<string>()
+    return new Set(sessions.filter(isKnownRootSession).map((s) => s.id))
   })
 
   const localSessions = createLocalSessions({
@@ -814,7 +822,9 @@ const AgentManagerContent: Component = () => {
     return false
   })
 
-  const showDetailStack = createMemo(() => showTerminalStack(history(), selection(), contextEmpty()))
+  const showDetailStack = createMemo(() =>
+    keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
+  )
 
   const overlay = createMemo((): SetupState | null => {
     const state = setup()
@@ -915,14 +925,12 @@ const AgentManagerContent: Component = () => {
 
   /** Flat visual order of all visible sidebar items — used for navigation and shortcut assignment. */
   const sidebarOrder = createMemo(() =>
-    buildSidebarOrder(topLevelItems(), sortedWorktrees(), sections(), worktreesInSection, unassignedSessions()),
+    buildSidebarOrder(topLevelItems(), sortedWorktrees(), sections(), worktreesInSection),
   )
   /** Map from sidebar item id → 1-based shortcut number (⌘1 for LOCAL, ⌘2 for first worktree, etc.) */
   const shortcutMap = createMemo(() => buildShortcutMap(sidebarOrder()))
   const projectShortcutMap = createMemo(() =>
-    buildShortcutMap(
-      buildProjectNavEntries(projectList(), projectStates(), projectLive.sessions()).map((entry) => ({ id: entry.id })),
-    ),
+    buildShortcutMap(buildProjectNavEntries(projectList(), projectStates()).map((entry) => ({ id: entry.id }))),
   )
 
   const moveToSection = (ids: string[], sec: string | null) =>
@@ -941,18 +949,9 @@ const AgentManagerContent: Component = () => {
 
   const scrollIntoView = (el: HTMLElement) => el.scrollIntoView({ block: "nearest", behavior: "smooth" })
 
-  const selectUnassigned = (id: string) => {
-    saveTabMemory()
-    setSelection(null)
-    setReviewActive(false)
-    session.selectSession(id)
-    requestChatFocus(true)
-  }
-
   const focusSidebarItem = (item: { type: string; id: string }) => {
     if (item.type === "local") selectLocal()
     else if (item.type === "wt") selectWorktree(item.id)
-    else selectUnassigned(item.id)
     requestChatFocus(true)
     const el = document.querySelector(`[data-sidebar-id="${item.id}"]`)
     if (el instanceof HTMLElement) scrollIntoView(el)
@@ -965,7 +964,6 @@ const AgentManagerContent: Component = () => {
       focus: focusSidebarItem,
       projects: projectList,
       states: projectStates,
-      sessions: projectLive.sessions,
       activeProjectId,
       selection,
       currentSessionID: session.currentSessionID,
@@ -1029,7 +1027,7 @@ const AgentManagerContent: Component = () => {
     const current = managedSessions().find((entry) => entry.id === sid)
     if (current?.worktreeId) return focusManagedSession(current.worktreeId, sid)
     saveTabMemory()
-    setHistory(false)
+    closeHistory()
     setReviewActive(false)
     appendToTabOrder(sel, sid)
     evictLocal(sid)
@@ -1039,7 +1037,7 @@ const AgentManagerContent: Component = () => {
 
   const focusManagedSession = (worktreeId: string, sid: string) => {
     selectWorktree(worktreeId)
-    setHistory(false)
+    closeHistory()
     session.selectSession(sid)
     requestChatFocus()
     return true
@@ -1065,7 +1063,7 @@ const AgentManagerContent: Component = () => {
   const focusSidebarSearchItem = (item: SidebarSearchItem) => {
     if (item.section?.collapsed)
       vscode.postMessage({ type: "agentManager.toggleSectionCollapsed", sectionId: item.section.id })
-    setHistory(false)
+    closeHistory()
     if (item.kind === "local") return selectLocal()
     if (item.kind === "worktree") return selectWorktree(item.worktreeId)
     if (item.location === "local") selectLocal()
@@ -1092,7 +1090,6 @@ const AgentManagerContent: Component = () => {
     apply: (state) => applyActiveState(state),
     pruneLive: (ids) => projectLive.prune(ids),
   })
-
   const stateHandlers = createProjectStateHandlers({
     setMulti: setMultiProject,
     setProjects: setProjectList,
@@ -1108,7 +1105,7 @@ const AgentManagerContent: Component = () => {
     rename: setRenamingSection,
     font: (font) => font && setTerminalFont(font),
   })
-
+  const preserveSidebarScroll = createSidebarScrollPreserver(() => selection() ?? session.currentSessionID())
   /** Apply the active-transition effects of a state payload (data already landed in the store). */
   const applyActiveState = (state: AgentManagerStateMessage) => {
     const switched = applyProjectSwitch(state)
@@ -1158,7 +1155,10 @@ const AgentManagerContent: Component = () => {
       first: () => undefined,
       close: () => setReviewActive(false),
       hide: () => setSidePanel(null),
-      history: () => setHistory(false),
+      history: () =>
+        state.projectId && historySwitches().includes(state.projectId)
+          ? setHistorySwitches((prev) => prev.filter((id) => id !== state.projectId))
+          : closeHistory(),
       reset: subagents.reset,
     })
   }
@@ -1174,7 +1174,7 @@ const AgentManagerContent: Component = () => {
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const msg = event.data
-      if (msg?.type === "navigate" && msg.view === "history") return setHistory(true)
+      if (msg?.type === "navigate" && msg.view === "history") return openHistory()
       if (msg?.type !== "action") return
       if (msg.action === "sessionPrevious") projectNav.step("up")
       else if (msg.action === "sessionNext") projectNav.step("down")
@@ -1479,7 +1479,7 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
 
       if (msg.type === "agentManager.state" && msg.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
-      if (msg.type === "agentManager.state") stateHandlers.state(msg)
+      if (msg.type === "agentManager.state") preserveSidebarScroll(() => stateHandlers.state(msg))
 
       // When a multi-version progress update arrives, mark newly created worktrees as loading
       if ((msg as { type: string }).type === "agentManager.multiVersionProgress") {
@@ -1502,18 +1502,11 @@ const AgentManagerContent: Component = () => {
         }
       }
 
-      // Set per-session model selection without clearing busy state.
-      // Used during Phase 1 of multi-version creation so the UI selector
-      // reflects the correct model as soon as the worktree appears.
       if ((msg as { type: string }).type === "agentManager.setSessionModel") {
         const ev = msg as { type: string; sessionId: string; providerID: string; modelID: string }
         session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
       }
 
-      // Handle initial message send for multi-version sessions.
-      // The extension creates the worktrees/sessions, then asks the webview
-      // to send the prompt through the normal KiloProvider sendMessage path.
-      // Once the message is sent, clear the loading state for that worktree.
       if ((msg as { type: string }).type === "agentManager.sendInitialMessage") {
         const ev = msg as unknown as AgentManagerSendInitialMessage
 
@@ -1582,7 +1575,9 @@ const AgentManagerContent: Component = () => {
       applyProjectSelection(msg, {
         active: (projectId) => activeProjectId() === projectId,
         applied: (projectId) => currentProjectId() === projectId,
-        managed: (projectId) => projectLive.sessions()[projectId] ?? projectStates()[projectId]?.sessions ?? [],
+        // Managed state is the placement authority; the live listing can briefly
+        // keep a stale worktree tag after a session moved back to local.
+        managed: (projectId) => projectStates()[projectId]?.sessions ?? projectLive.sessions()[projectId] ?? [],
         local: () => selectLocal(),
         worktree: (projectId, worktreeId) => selectWorktree(worktreeId),
         focusLocal: focusLocalSession,
@@ -1662,6 +1657,17 @@ const AgentManagerContent: Component = () => {
   // The composite id (ctx#scope) the extension keys diff data by.
   const diffScopeId = review.id
 
+  const reviewComments = createMemo(() => {
+    const key = diffScopeId()
+    if (!key) return [] as ReviewComment[]
+    return readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", key)
+  })
+  const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
+    const key = diffScopeId()
+    if (!key) return
+    setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", key, comments))
+  }
+
   const diffScopeControls = (compact: boolean) => (
     <DiffScopeControls
       descriptors={review.descriptors()}
@@ -1727,24 +1733,19 @@ const AgentManagerContent: Component = () => {
     tabFocus.restore()
   }
 
-  // Data for the review tab / side panel: keyed by the composite diff id
-  // (ctx#scope) the extension pushes, so each scope keeps its own file set and
-  // switching back to a fetched scope is instant.
   const reviewDiffs = createMemo(() => {
     const data = diffDatas()
     const key = diffScopeId()
     if (!key) return []
-    return data[key] ?? []
+    return data[diffDataKey(activeProjectId(), key)] ?? []
   })
 
   const diffSessionKey = createMemo(() => diffScopeId() ?? "")
 
-  // Source-level notice for the active composite id (e.g. snapshots disabled
-  // for the Session scope), shown as a banner instead of the empty state.
   const diffNotice = createMemo(() => {
     const key = diffScopeId()
     if (!key) return undefined
-    return diffNotices()[key]
+    return diffNotices()[diffDataKey(activeProjectId(), key)]
   })
 
   const requestDiffFile = (file: string) => {
@@ -1754,25 +1755,11 @@ const AgentManagerContent: Component = () => {
   }
 
   const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(diffScopeId))
+  const diffLoadingForCurrent = createMemo(() => diffs.diffLoadingFor(diffScopeId))
 
   const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), vscode, showToast, t, activeProjectId)
 
-  const handleConfigureSetupScript = () => {
-    vscode.postMessage({ type: "agentManager.configureSetupScript" })
-  }
-  const setupScript = metrics.click("configure_setup_script", "worktree_settings", handleConfigureSetupScript)
-
-  const handleChangeDefaultBaseBranch = () => {
-    dialog.show(() => (
-      <DefaultBaseBranchDialog
-        selected={defaultBaseBranch()}
-        detected={repoDetectedBranch()}
-        onSelect={setDefaultBaseBranch}
-        onDetected={setRepoDetectedBranch}
-        onClose={() => dialog.close()}
-      />
-    ))
-  }
+  createEffect(() => diffOpen() && setDiffMounted(true))
 
   const handleShowKeyboardShortcuts = () => {
     const categories = buildShortcutCategories(kb(), t)
@@ -1933,10 +1920,21 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
   }
 
-  const openUnassigned = (id: string) => {
-    metrics.track("open_session_locally", "unassigned_session_menu")
-    openLocally(id)
-  }
+  /** History row menu: start a session in a new worktree or back in the project's local tabs. */
+  const historyRowActions = historyRowActionsFactory({
+    t,
+    onPromote: (sessionId) => {
+      metrics.track("promote_session", "history_row")
+      closeHistory()
+      vscode.postMessage({ type: "agentManager.promoteSession", sessionId })
+    },
+    onLocal: (sessionId) => {
+      const pid = historyProject()
+      if (pid) vscode.postMessage({ type: "agentManager.openSessionLocally", projectId: pid, sessionId } as never)
+      else openLocally(sessionId)
+      closeHistory()
+    },
+  })
 
   const handleAddSession = () => {
     const sel = selection()
@@ -2336,6 +2334,7 @@ const AgentManagerContent: Component = () => {
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
             onShortcuts={handleShowKeyboardShortcuts}
+            onHistory={openHistory}
             shortcutMap={projectShortcutMap}
           />
         </Show>
@@ -2349,8 +2348,6 @@ const AgentManagerContent: Component = () => {
             isLocalBusy={isLocalBusy}
             repoBranch={repoBranch}
             localStats={localStats}
-            sessionsCollapsed={sessionsCollapsed}
-            toggleSessions={toggleSessions}
             search={{ items: sidebarSearch.items, current: sidebarSearch.current }}
             bindings={kb}
             defaultBranch={repoDefaultBranch}
@@ -2364,8 +2361,8 @@ const AgentManagerContent: Component = () => {
             onNewWorktree={showNewWorktreeDialog}
             onNewSection={newSection}
             onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
-            onSetup={setupScript}
-            onBranch={handleChangeDefaultBaseBranch}
+            onHistory={() => openHistory()}
+            projectId={activeProjectId()}
             sections={sections}
             sortedWorktrees={sortedWorktrees}
             worktrees={worktrees}
@@ -2395,19 +2392,12 @@ const AgentManagerContent: Component = () => {
             confirmDeleteWorktree={confirmDeleteWorktree}
             handleDeleteWorktree={handleDeleteWorktree}
             confirmRemoveStaleWorktree={confirmRemoveStaleWorktree}
-            unassignedSessions={unassignedSessions}
-            selectUnassigned={selectUnassigned}
-            promoteSession={promoteSession}
-            openUnassigned={openUnassigned}
             track={metrics.click}
           />
         </Show>
       </div>
 
       <div class="am-detail">
-        {/* Tab bar — full version with tabs renders when a section is selected
-            and has tabs; otherwise a minimal version still renders so the
-            sidebar toggle button stays at a fixed position. */}
         <TabBar
           t={t}
           bindings={kb}
@@ -2485,7 +2475,7 @@ const AgentManagerContent: Component = () => {
           <HistoryView
             onSelectSession={(id) => {
               if (addSessionToCurrentWorktree(id)) return
-              setHistory(false)
+              closeHistory()
               if (localSessionIDs().includes(id)) {
                 saveTabMemory()
                 session.selectSession(id)
@@ -2503,28 +2493,23 @@ const AgentManagerContent: Component = () => {
               }
               openLocally(id)
             }}
-            onBack={() => setHistory(false)}
-            worktreeSessionIds={activeWorktreeSessionIds}
+            onBack={closeHistory}
+            worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
+            sessionIds={historySessionIds}
+            rowActions={historyRowActions}
           />
         </Show>
         <Show when={showDetailStack()}>
-          {/* Terminal overlay is scoped to the main pane so it does not cover the tab bar or side panel. */}
-          <div class="am-detail-stack">
-            {/* Chat/terminal + side diff panel. Keep it mounted under the
-                review tab so live xterm canvases never leave the paint tree. */}
+          <div class={`am-detail-stack ${history() ? "am-detail-stack-hidden" : ""}`} inert={history()}>
             <div
               class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""} ${reviewActive() ? "am-detail-content-hidden" : ""}`}
             >
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
-                {/* Keep terminal tabs mounted so output streams across worktree switches. */}
                 {renderTerminalLayer({
                   state: terms,
                   onFocusPrompt: focusCtl.focus,
                   onFocusChange: focusCtl.report,
                 })}
-                {/* Session-less context (e.g. a worktree mid-provisioning): the
-                    empty state lives in the main pane so the side terminal
-                    panel can render next to it. */}
                 <Show when={contextEmpty()}>
                   <div class="am-empty-state">
                     <Show
@@ -2572,7 +2557,7 @@ const AgentManagerContent: Component = () => {
                       }
                       openLocally(id)
                     }}
-                    onShowHistory={() => setHistory(true)}
+                    onShowHistory={() => openHistory()}
                     onForkMessage={readOnly() ? undefined : handleForkSession}
                     onForkSession={readOnly() ? undefined : handleForkSession}
                     readonly={readOnly()}
@@ -2619,11 +2604,9 @@ const AgentManagerContent: Component = () => {
                   </Show>
                 </div>
               </div>
-              {/* One inspector host for all right-side modes. It stays
-                  mounted while a side terminal is alive — hidden via
-                  .am-side-host-hidden (absolute + opacity), never
-                  unmounted, so xterm render loops keep streaming. */}
-              <Show when={sidePanel() !== null || terms.sides().length > 0 || subagents.tabs().length > 0}>
+              <Show
+                when={sidePanel() !== null || diffMounted() || terms.sides().length > 0 || subagents.tabs().length > 0}
+              >
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
                   style={{ width: `${panelWidth()}px` }}
@@ -2640,42 +2623,54 @@ const AgentManagerContent: Component = () => {
                     />
                   </Show>
                   <div class="am-diff-panel-wrapper">
-                    <Show when={sidePanel() === SidePanel.Diff}>
-                      <DiffPanel
-                        diffs={reviewDiffs()}
-                        loading={diffLoading()}
-                        loadingFiles={diffFileLoadingForCurrent()}
-                        sessionId={activeDiffSession()}
-                        sessionKey={diffSessionKey()}
-                        notice={diffNotice()}
-                        lead={diffScopeControls(true)}
-                        canRevert={scopeCapabilities(review.scope()).revert}
-                        diffStyle={diffStyle.style()}
-                        onDiffStyleChange={setSharedDiffStyle}
-                        markdownRender={markdown.render()}
-                        onMarkdownRenderChange={markdown.update}
-                        comments={reviewComments()}
-                        onCommentsChange={setReviewCommentsForSelection}
-                        composer={reviewComposer}
-                        onSendClick={() => metrics.track("send_review_comments", "side_review")}
-                        onClose={metrics.click("side_review_close", "side_review", () => setSidePanel(null))}
-                        onExpand={
-                          selection() !== null
-                            ? metrics.click("fullscreen_review", "side_review", openReviewTab, { action: "open" })
-                            : undefined
-                        }
-                        onRequestDiff={requestDiffFile}
-                        onOpenFile={(file, line) => {
-                          const id = diffCtx()
-                          if (id)
-                            vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
-                        }}
-                        onOpenDocument={documentInspector.open}
-                        onRevertFile={metrics.use("revert_file", "side_review", revertCtl.revert)}
-                        revertingFiles={revertCtl.reverting()}
-                        activeTerminalId={terms.activeId()}
-                      />
-                    </Show>
+                    <DiffPanelCache
+                      current={diffScopeId}
+                      context={diffCtx}
+                      project={activeProjectId}
+                      active={() => diffOpen() && !history() && !reviewActive()}
+                      data={diffDatas}
+                      loading={(key) => diffs.diffLoadingFor(() => key)}
+                      loadingFiles={(key) => diffs.diffFileLoadingFor(() => key)}
+                      notice={(key) => diffNotices()[diffDataKey(activeProjectId(), key)]}
+                      comments={(key) =>
+                        readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", key)
+                      }
+                      setComments={(key, comments) =>
+                        setReviewCommentsByContext((prev) =>
+                          setReviewComments(prev, currentProjectId() ?? "single", key, comments),
+                        )
+                      }
+                      composer={composers.get}
+                      lead={() => diffScopeControls(true)}
+                      canRevert={scopeCapabilities(review.scope()).revert}
+                      diffStyle={diffStyle.style()}
+                      onDiffStyleChange={setSharedDiffStyle}
+                      markdownRender={markdown.render()}
+                      onMarkdownRenderChange={markdown.update}
+                      onSendClick={() => metrics.track("send_review_comments", "side_review")}
+                      onClose={metrics.click("side_review_close", "side_review", () => setSidePanel(null))}
+                      onExpand={
+                        selection() !== null
+                          ? metrics.click("fullscreen_review", "side_review", openReviewTab, { action: "open" })
+                          : undefined
+                      }
+                      onRequestDiff={diffs.requestDiffFile}
+                      onOpenFile={(ctx, file, line) =>
+                        vscode.postMessage({ type: "agentManager.openFile", sessionId: ctx, filePath: file, line })
+                      }
+                      onOpenDocument={documentInspector.open}
+                      onRevertFile={(key, ctx, file) => {
+                        metrics.track("revert_file", "side_review")
+                        revertCtl.revertFor(key, ctx, review.scope(), file)
+                      }}
+                      revertingFiles={revertCtl.revertingFor}
+                      activeTerminalId={terms.activeId()}
+                      contexts={() => new Set(worktrees().map((wt) => wt.id))}
+                      onEvict={(key) => {
+                        composers.drop(key)
+                        diffs.drop(key)
+                      }}
+                    />
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
                       <PRPanelHost
                         pr={activePR()!.pr}
@@ -2746,7 +2741,7 @@ const AgentManagerContent: Component = () => {
               <div class="am-review-host" style={{ display: reviewActive() && !terms.activeId() ? undefined : "none" }}>
                 <FullScreenDiffView
                   diffs={reviewDiffs()}
-                  loading={diffLoading()}
+                  loading={diffLoadingForCurrent()}
                   loadingFiles={diffFileLoadingForCurrent()}
                   sessionId={activeDiffSession()}
                   sessionKey={diffSessionKey()}
@@ -2756,7 +2751,7 @@ const AgentManagerContent: Component = () => {
                   canComment={scopeCapabilities(review.scope()).comments}
                   comments={reviewComments()}
                   onCommentsChange={setReviewCommentsForSelection}
-                  composer={reviewComposer}
+                  composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
                   onSendAll={closeReviewTab}
                   onSendClick={() => metrics.track("send_review_comments", "fullscreen_review")}
                   diffStyle={diffStyle.style()}
