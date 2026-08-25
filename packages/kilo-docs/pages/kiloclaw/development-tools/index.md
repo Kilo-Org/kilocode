@@ -5,6 +5,8 @@ description: "Manage integrations and settings for your KiloClaw agent"
 
 # Integrations
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Configure integrations and settings for your KiloClaw agent. Connect third-party services to give your agent access to repositories, issue trackers, calendars, documents, and hundreds of other tools — all without manual intervention.
 
 ## Available Integrations

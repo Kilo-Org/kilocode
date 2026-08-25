@@ -103,7 +103,26 @@ const MoveParams = Schema.Struct({
   }),
 })
 
-export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams])
+const AnswerParams = Schema.Struct({
+  action: Schema.Literal("answer").annotate({
+    description: "Resolve the pending question that blocks exactly one managed session.",
+  }),
+  sessionID: SessionID,
+  questionID: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "Pending question ID, learned from a failed prompt or an earlier answer error. Omit only when exactly one question is pending.",
+  }),
+  answers: Schema.Array(
+    Schema.Array(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200))).check(Schema.isMaxLength(20)),
+  )
+    .check(Schema.isMinLength(1), Schema.isMaxLength(20))
+    .annotate({
+      description:
+        "One array of selected option labels per question of the request, in order. Labels must match the advertised options.",
+    }),
+})
+
+export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams, AnswerParams])
 
 // Anthropic rejects a top-level anyOf/oneOf/allOf, so the advertised schema has to
 // stay one flat object while Params keeps the real per-operation validation. That
@@ -125,7 +144,7 @@ const WireParams = Schema.Struct({
     description: "Start sessions only. Agent Manager sessions to start. Send null whenever action is set.",
   }),
   action: Schema.optional(
-    Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move"])).annotate({
+    Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move", "answer"])).annotate({
       description:
         "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
     }),
@@ -133,13 +152,15 @@ const WireParams = Schema.Struct({
   filter: ListParams.fields.filter,
   sessionID: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
-      "For prompt, stop, and move: a session ID returned by action=list (IDs start with ses_). Send null for every other operation.",
+      "For prompt, stop, move, and answer: a session ID returned by action=list (IDs start with ses_). Send null for every other operation.",
   }),
   prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "For prompt: the instruction to send to that session. Start requests use tasks[].prompt instead, so send null.",
   }),
   sectionID: Schema.optional(MoveParams.fields.sectionID),
+  questionID: AnswerParams.fields.questionID,
+  answers: Schema.optional(Schema.NullOr(AnswerParams.fields.answers)),
 })
 
 type Input = Schema.Schema.Type<typeof Task>
@@ -291,7 +312,13 @@ function select(
 
 export const AgentManagerTool = Tool.define<
   typeof Params,
-  { action: "start" | "list" | "prompt" | "stop" | "move"; requestID?: string; count?: number; sessionID?: string },
+  {
+    action: "start" | "list" | "prompt" | "stop" | "move" | "answer"
+    requestID?: string
+    count?: number
+    sessionID?: string
+    questionID?: string
+  },
   AgentManager.Service | Bus.Service | Provider.Service,
   "agent_manager"
 >(
@@ -391,6 +418,31 @@ export const AgentManagerTool = Tool.define<
                 title: "Session stopped",
                 output: `Stopped Agent Manager session ${result.sessionID} and removed it from Agent Manager.`,
                 metadata: { action: "stop", sessionID: result.sessionID },
+              }
+            }
+            if (params.action === "answer") {
+              yield* ctx.ask({
+                permission: "agent_manager",
+                patterns: ["answer"],
+                always: ["answer"],
+                metadata: { action: "answer", sessionID: params.sessionID },
+              })
+              const result = yield* run(
+                host.request({
+                  operation: "answer",
+                  sessionID: ctx.sessionID,
+                  targetSessionID: params.sessionID,
+                  ...(params.questionID?.trim() ? { questionID: params.questionID.trim() } : {}),
+                  answers: params.answers,
+                }),
+                ctx.abort,
+              )
+              if (result.operation !== "answer")
+                return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+              return {
+                title: "Question answered",
+                output: `Answered Agent Manager question ${result.questionID} for session ${result.sessionID}. The session resumes with those answers.`,
+                metadata: { action: "answer", sessionID: result.sessionID, questionID: result.questionID },
               }
             }
             yield* ctx.ask({

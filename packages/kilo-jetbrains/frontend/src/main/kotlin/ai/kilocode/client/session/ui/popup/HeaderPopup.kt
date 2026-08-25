@@ -35,7 +35,18 @@ class HeaderPopupBody(
     fixedHeight: Boolean = false,
     horizontal: Boolean = false,
 ) {
-    val component: JComponent = HeaderPopupPanel(component, JBUI.scale(maxWidth), minWidth, fixedHeight, horizontal)
+    private val panel = HeaderPopupPanel(component, JBUI.scale(maxWidth), minWidth, fixedHeight, horizontal)
+
+    val component: JComponent get() = panel
+
+    /**
+     * Clamps the body to the space available beside the chat, in already-scaled device px. This wins
+     * over the opt-in floor width, because a body that overflows its side makes the balloon re-point
+     * above or below the chat.
+     */
+    fun fitWithin(width: Int, height: Int) {
+        panel.fitWithin(width, height)
+    }
 }
 
 private class HeaderPopupPanel(
@@ -45,6 +56,9 @@ private class HeaderPopupPanel(
     private val fixedHeight: Boolean,
     horizontal: Boolean,
 ) : JPanel(BorderLayout()) {
+    private var capWidth = Int.MAX_VALUE
+    private var capHeight = Int.MAX_VALUE
+
     // One scroll pane wraps every popup body (single-file edit, multi-file patch, session changes),
     // so bodies taller than the max height scroll instead of clipping. Bodies that carry their own
     // inner scroll pane render at full height inside the viewport, so only this outer pane scrolls.
@@ -64,11 +78,18 @@ private class HeaderPopupPanel(
         add(scroll, BorderLayout.CENTER)
     }
 
+    fun fitWithin(width: Int, height: Int) {
+        capWidth = width
+        capHeight = height
+        invalidate()
+    }
+
     override fun getPreferredSize(): Dimension {
-        val measured = contentWidth(child).takeIf { it > 0 }?.coerceAtMost(maxWidth) ?: maxWidth
-        val width = measured.coerceAtLeast(minWidth).coerceAtMost(maxWidth)
+        val limit = minOf(maxWidth, capWidth)
+        val measured = contentWidth(child).takeIf { it > 0 }?.coerceAtMost(limit) ?: limit
+        val width = measured.coerceAtLeast(minOf(minWidth, limit)).coerceAtMost(limit)
         fit(child, width)
-        val cap = JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT)
+        val cap = minOf(JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT), capHeight)
         val height = if (fixedHeight) cap else child.preferredSize.height.coerceAtMost(cap)
         return Dimension(width, height)
     }

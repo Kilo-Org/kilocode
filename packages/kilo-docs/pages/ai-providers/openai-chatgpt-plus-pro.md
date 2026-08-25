@@ -16,7 +16,7 @@ If you already pay for ChatGPT Plus or Pro, you can use that subscription to run
 - **Multiple AI modes:** Switch between Code, Plan, Debug, and Ask modes for different tasks.
 
 {% callout type="note" %}
-Your ChatGPT subscription works with Kilo Code's core functionality (VS Code extension and CLI), but does **not** include cloud features such as Cloud Agents, Kilo Deploy, or KiloClaw. To use GPT models in those features, use the [Kilo Gateway](/docs/gateway).
+Your ChatGPT subscription works with Kilo Code's core functionality (VS Code extension and CLI), but does **not** include cloud features such as Cloud Agents or Kilo Deploy. To use GPT models in those features, use the [Kilo Gateway](/docs/gateway).
 {% /callout %}
 
 ## Setup
@@ -62,7 +62,7 @@ Then set your default model to one of the OpenAI Codex models available in Kilo 
 
 - **Codex catalog models only.** This provider only exposes the models listed in Kilo Code's Codex model catalog. It does not give access to every model available through the OpenAI API.
 - **OAuth tokens can't be exported with settings.** Tokens are stored in VS Code SecretStorage, which isn't included in Kilo Code's settings export.
-- **Cloud features not included.** Cloud Agents, Kilo Deploy, and KiloClaw require the [Kilo Gateway](/docs/gateway).
+- **Cloud features not included.** Cloud Agents and Kilo Deploy require the [Kilo Gateway](/docs/gateway).
 
 ## FAQ
 
@@ -78,5 +78,5 @@ Usage counts against your ChatGPT subscription limits — there are no separate 
 **Can I still switch to other AI providers?**
 Yes. Use OpenAI when it fits and switch to Claude, Gemini, or any local model at any time.
 
-**Can I use my ChatGPT subscription in KiloClaw?**
-No. For KiloClaw and other cloud features, use GPT models through the [Kilo Gateway](/docs/gateway), which gives access to 500+ models including the latest GPT releases.
+**Can I use my ChatGPT subscription in Kilo's cloud features?**
+No. For Cloud Agents, Kilo Deploy, and other cloud features, use GPT models through the [Kilo Gateway](/docs/gateway), which gives access to 500+ models including the latest GPT releases.

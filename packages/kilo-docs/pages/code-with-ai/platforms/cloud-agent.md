@@ -159,11 +159,8 @@ Triggers allow you to initiate cloud agent sessions automatically, either via HT
 Triggers are currently in beta and subject to change.
 {% /callout %}
 
-Webhook triggers and scheduled triggers use the same trigger concepts across Cloud
-Agent and KiloClaw, but target different agents. Use Cloud Agent triggers when an
-HTTP event or schedule should start a Cloud Agent session against a repository.
-Use KiloClaw triggers when the event should deliver a chat message to a KiloClaw
-instance.
+Use Cloud Agent triggers when an HTTP event or schedule should start a Cloud Agent
+session against a repository.
 
 ### Accessing Triggers
 

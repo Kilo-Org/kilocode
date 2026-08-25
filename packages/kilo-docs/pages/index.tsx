@@ -66,25 +66,6 @@ const terminalContent = {
       <span className="terminal-prompt">$</span> kilo rules list
     </>
   ),
-  kiloclaw: (
-    <>
-      <span className="terminal-comment"># Chat with your KiloClaw agent from the CLI</span>
-      {"\n"}
-      <span className="terminal-prompt">$</span> kilo /claw
-      {"\n"}
-      {"\n"}
-      <span className="terminal-comment"># Or connect via chat platforms</span>
-      {"\n"}
-      <span className="terminal-comment"># Telegram, Discord, Slack — no self-hosting required</span>
-      {"\n"}
-      {"\n"}
-      <span className="terminal-comment"># Trigger your agent via webhook</span>
-      {"\n"}
-      <span className="terminal-prompt">$</span> curl -X POST https://your-instance.kiloclaw.ai/webhook \{"\n"}
-      -H "Content-Type: application/json" \{"\n"}
-      {`  -d '{"event":"deploy","repo":"my-app"}'`}
-    </>
-  ),
 }
 
 // Category card data based on the information architecture
@@ -118,24 +99,6 @@ const categories = [
       { title: "The Chat Interface", href: "/code-with-ai" },
       { title: "Using Modes", href: "/code-with-ai" },
       { title: "Custom Rules", href: "/code-with-ai" },
-    ],
-  },
-  {
-    title: "KiloClaw",
-    description:
-      "Hosted OpenClaw agents — deploy, manage, and integrate AI agents with chat platforms, dev tools, and triggers without self-hosting.",
-    href: "/kiloclaw/overview",
-    icon: (
-      <svg className="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5z" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2 17l10 5 10-5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    links: [
-      { title: "Overview", href: "/kiloclaw/overview" },
-      { title: "Chat Platforms", href: "/kiloclaw/chat-platforms" },
-      { title: "Development Tools", href: "/kiloclaw/development-tools" },
     ],
   },
   {
@@ -230,9 +193,7 @@ const categories = [
 ]
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<"installation" | "firstTask" | "customRules" | "gateway" | "kiloclaw">(
-    "installation",
-  )
+  const [activeTab, setActiveTab] = useState<"installation" | "firstTask" | "customRules" | "gateway">("installation")
 
   return (
     <div className="homepage">
@@ -247,15 +208,15 @@ export default function HomePage() {
         <div className="hero-content">
           <h1 className="hero-title">Kilo Documentation</h1>
           <p className="hero-subtitle">
-            Explore guides and examples for the Kilo platform — from coding agents and AI-powered development to hosted
-            agentic infrastructure with KiloClaw.
+            Explore guides and examples for the Kilo platform — from coding agents and AI-powered development to
+            automation and hosted agentic infrastructure.
           </p>
           <div className="hero-buttons">
             <Link href="/getting-started" className="btn btn-primary">
               Get started with Kilo Code →
             </Link>
-            <Link href="/kiloclaw/overview" className="btn btn-secondary">
-              Explore KiloClaw
+            <Link href="/gateway" className="btn btn-secondary">
+              Explore Kilo Gateway
             </Link>
           </div>
         </div>
@@ -273,20 +234,6 @@ export default function HomePage() {
               </Link>
               <Link href="/getting-started" className="quick-link">
                 Your First Task
-              </Link>
-            </div>
-          </div>
-          <div className="quick-section">
-            <h3 className="quick-title">KILOCLAW</h3>
-            <div className="quick-links">
-              <Link href="/kiloclaw/overview" className="quick-link">
-                Overview
-              </Link>
-              <Link href="/kiloclaw/chat-platforms" className="quick-link">
-                Chat Platforms
-              </Link>
-              <Link href="/kiloclaw/development-tools" className="quick-link">
-                Development Tools
               </Link>
             </div>
           </div>
@@ -348,7 +295,7 @@ export default function HomePage() {
       <section className="terminal-section">
         <div className="terminal-intro">
           <h2 className="section-title">Try it out</h2>
-          <p className="terminal-description">Get started quickly with Kilo Code, KiloClaw, and Kilo Gateway</p>
+          <p className="terminal-description">Get started quickly with Kilo Code and Kilo Gateway</p>
         </div>
         <div className="terminal-container">
           <div className="terminal-tabs">
@@ -369,12 +316,6 @@ export default function HomePage() {
               onClick={() => setActiveTab("customRules")}
             >
               Custom Rules
-            </button>
-            <button
-              className={`terminal-tab ${activeTab === "kiloclaw" ? "active" : ""}`}
-              onClick={() => setActiveTab("kiloclaw")}
-            >
-              KiloClaw
             </button>
             <button
               className={`terminal-tab ${activeTab === "gateway" ? "active" : ""}`}

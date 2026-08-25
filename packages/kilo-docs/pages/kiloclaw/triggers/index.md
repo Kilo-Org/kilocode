@@ -5,6 +5,8 @@ description: "Automate your KiloClaw agent with webhooks and scheduled triggers"
 
 # Triggers
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Triggers let external events and schedules drive your KiloClaw agent automatically. Instead of typing every instruction yourself, triggers deliver messages to your agent on your behalf. This lets it react to real-world events or run tasks on a schedule without polling.
 
 All triggers are managed from the **Settings** page in the KiloClaw section of the sidebar.

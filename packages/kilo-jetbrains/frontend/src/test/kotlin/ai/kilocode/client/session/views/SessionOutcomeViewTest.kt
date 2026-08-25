@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.OutcomeTone
+import ai.kilocode.client.session.ui.SessionLayout
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
@@ -13,7 +14,11 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import java.awt.Container
+import java.awt.Dimension
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import javax.swing.Icon
+import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
 @Suppress("UnstableApiUsage")
@@ -155,7 +160,112 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test realized error body preferred size does not resize text area`() {
+        edt {
+            val msg = "OpenRouter balance is too low. ".repeat(20)
+            val view = realized(msg)
+            val pane = errorScroll(view, msg)
+            val area = pane.viewport.view as JBTextArea
+            val size = Dimension(area.size)
+
+            area.preferredSize
+            pane.preferredSize
+
+            assertEquals(size, area.size)
+        }
+    }
+
+    fun `test realized error body does not fire resize events while measuring`() {
+        edt {
+            val msg = "OpenRouter balance is too low. ".repeat(20)
+            val view = realized(msg)
+            val pane = errorScroll(view, msg)
+            val area = pane.viewport.view as JBTextArea
+            var count = 0
+            area.addComponentListener(object : ComponentAdapter() {
+                override fun componentResized(e: ComponentEvent) {
+                    count++
+                }
+            })
+
+            repeat(4) {
+                area.preferredSize
+                pane.preferredSize
+                view.doLayout()
+                pane.doLayout()
+                pane.viewport.doLayout()
+            }
+
+            assertEquals(0, count)
+        }
+    }
+
+    fun `test realized error card caps height at five text lines`() {
+        edt {
+            val msg = (1..12).joinToString("\n") { idx -> "line $idx" }
+            val view = realized(msg)
+            val pane = errorScroll(view, msg)
+            val area = pane.viewport.view as JBTextArea
+            val line = area.getFontMetrics(area.font).height
+            val chrome = chrome(pane, area)
+
+            assertEquals(line * SessionUiStyle.View.Outcome.ERROR_LINES + chrome, pane.height)
+            assertTrue(area.preferredSize.height > pane.viewport.extentSize.height)
+        }
+    }
+
+    fun `test realized error card shrinks for short messages`() {
+        edt {
+            val msg = "line 1\nline 2"
+            val view = realized(msg)
+            val pane = errorScroll(view, msg)
+            val area = pane.viewport.view as JBTextArea
+            val chrome = chrome(pane, area)
+
+            assertEquals(area.preferredSize.height + chrome, pane.height)
+        }
+    }
+
+    fun `test long single-line error wraps at card width`() {
+        edt {
+            val msg = "OpenRouter balance is too low. ".repeat(20)
+            val view = realized(msg, 260, 600)
+            val pane = errorScroll(view, msg)
+            val area = pane.viewport.view as JBTextArea
+            val line = area.getFontMetrics(area.font).height
+
+            assertTrue(area.preferredSize.height > line + area.insets.top + area.insets.bottom)
+        }
+    }
+
     private fun findText(root: Container, text: String) = findAll<JBTextArea>(root).firstOrNull { it.text == text }
+
+    private fun realized(text: String, width: Int = 640, height: Int = 480): SessionOutcomeView {
+        val view = SessionOutcomeView()
+        view.showError(text, "APIError")
+        val root = JPanel(SessionLayout())
+        root.setSize(width, height)
+        root.add(view)
+        root.addNotify()
+        repeat(4) {
+            layoutTree(root)
+        }
+        return view
+    }
+
+    private fun layoutTree(root: Container) {
+        root.doLayout()
+        for (child in root.components) {
+            if (child is Container) layoutTree(child)
+        }
+    }
+
+    private fun chrome(pane: JBScrollPane, area: JBTextArea): Int {
+        val border = pane.viewportBorder?.getBorderInsets(pane)
+        return pane.insets.top + pane.insets.bottom +
+            (border?.let { it.top + it.bottom } ?: 0) +
+            area.insets.top + area.insets.bottom
+    }
 
     private fun headerBorder(root: SessionOutcomeView) = ((root.layout as java.awt.BorderLayout).getLayoutComponent(java.awt.BorderLayout.NORTH) as Container)
         .let { (it as javax.swing.JPanel).border.getBorderInsets(it) }
