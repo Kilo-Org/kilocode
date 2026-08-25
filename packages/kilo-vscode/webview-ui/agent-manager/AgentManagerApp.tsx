@@ -162,14 +162,14 @@ import {
 import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
-import { DiffPanel } from "./DiffPanel"
+import { DiffPanelCache } from "./DiffPanelCache"
 import { PRPanelHost } from "./pr/PRPanelHost"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
-import { createWorktreeDiffs, wireDiffId } from "./worktree-diffs"
+import { createWorktreeDiffs, diffDataKey, wireDiffId } from "./worktree-diffs"
 import type { ReviewComment } from "../diff-viewer/review-comments"
-import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
+import { createReviewComposers } from "./review-composers"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import { createSidebarSearch, type SidebarSearchItem } from "./sidebar-search"
 import { randomColor } from "./section-colors"
@@ -320,6 +320,7 @@ const AgentManagerContent: Component = () => {
     }
   }
   const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
+  const [diffMounted, setDiffMounted] = createSignal(false)
   const diffOpen = () => sidePanel() === SidePanel.Diff
   const prOpen = () => sidePanel() === SidePanel.PR
   const activePR = createMemo(() => {
@@ -330,6 +331,7 @@ const AgentManagerContent: Component = () => {
     return { pr, selected, wt: worktrees().find((w) => w.id === selected) }
   })
   const diffs = createWorktreeDiffs(vscode, activeProjectId)
+  createEffect(on(activeProjectId, diffs.reset, { defer: true }))
   const diffDatas = diffs.diffDatas
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
@@ -341,7 +343,8 @@ const AgentManagerContent: Component = () => {
     setReviewActive(false)
     setSidePanel(SidePanel.Terminal)
   }
-  const reviewComposer = createReviewComposer()
+  const composers = createReviewComposers(currentProjectId)
+  createEffect(on(activeProjectId, (_next, previous) => previous && composers.clearProject(previous), { defer: true }))
   const reviewState = createReviewState()
   const reviewOpenByContext = reviewState.open
   const setReviewOpenByContext = reviewState.setOpen
@@ -535,7 +538,6 @@ const AgentManagerContent: Component = () => {
     setPendingDelete(null)
   }
   createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
-  createEffect(on(selection, () => clearReviewComposer(reviewComposer), { defer: true }))
   createEffect(
     on(
       selection,
@@ -558,16 +560,6 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (sel === null) return
     setReviewOpenForContext(sel, open)
-  }
-  const reviewComments = createMemo(() => {
-    const sel = selection()
-    if (sel === null) return [] as ReviewComment[]
-    return readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", sel)
-  })
-  const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
-    const sel = selection()
-    if (sel === null) return
-    setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", sel, comments))
   }
   const apply = createApplyToLocal({
     vscode,
@@ -729,6 +721,7 @@ const AgentManagerContent: Component = () => {
   })
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
+    composers.prune(ids)
     setReviewOpenByContext((prev) => {
       const next = pruneReviewState(prev, currentProjectId() ?? "single", ids)
       if (Object.keys(next).length === Object.keys(prev).length) return prev
@@ -1509,18 +1502,11 @@ const AgentManagerContent: Component = () => {
         }
       }
 
-      // Set per-session model selection without clearing busy state.
-      // Used during Phase 1 of multi-version creation so the UI selector
-      // reflects the correct model as soon as the worktree appears.
       if ((msg as { type: string }).type === "agentManager.setSessionModel") {
         const ev = msg as { type: string; sessionId: string; providerID: string; modelID: string }
         session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
       }
 
-      // Handle initial message send for multi-version sessions.
-      // The extension creates the worktrees/sessions, then asks the webview
-      // to send the prompt through the normal KiloProvider sendMessage path.
-      // Once the message is sent, clear the loading state for that worktree.
       if ((msg as { type: string }).type === "agentManager.sendInitialMessage") {
         const ev = msg as unknown as AgentManagerSendInitialMessage
 
@@ -1671,6 +1657,17 @@ const AgentManagerContent: Component = () => {
   // The composite id (ctx#scope) the extension keys diff data by.
   const diffScopeId = review.id
 
+  const reviewComments = createMemo(() => {
+    const key = diffScopeId()
+    if (!key) return [] as ReviewComment[]
+    return readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", key)
+  })
+  const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
+    const key = diffScopeId()
+    if (!key) return
+    setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", key, comments))
+  }
+
   const diffScopeControls = (compact: boolean) => (
     <DiffScopeControls
       descriptors={review.descriptors()}
@@ -1736,24 +1733,19 @@ const AgentManagerContent: Component = () => {
     tabFocus.restore()
   }
 
-  // Data for the review tab / side panel: keyed by the composite diff id
-  // (ctx#scope) the extension pushes, so each scope keeps its own file set and
-  // switching back to a fetched scope is instant.
   const reviewDiffs = createMemo(() => {
     const data = diffDatas()
     const key = diffScopeId()
     if (!key) return []
-    return data[key] ?? []
+    return data[diffDataKey(activeProjectId(), key)] ?? []
   })
 
   const diffSessionKey = createMemo(() => diffScopeId() ?? "")
 
-  // Source-level notice for the active composite id (e.g. snapshots disabled
-  // for the Session scope), shown as a banner instead of the empty state.
   const diffNotice = createMemo(() => {
     const key = diffScopeId()
     if (!key) return undefined
-    return diffNotices()[key]
+    return diffNotices()[diffDataKey(activeProjectId(), key)]
   })
 
   const requestDiffFile = (file: string) => {
@@ -1763,8 +1755,11 @@ const AgentManagerContent: Component = () => {
   }
 
   const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(diffScopeId))
+  const diffLoadingForCurrent = createMemo(() => diffs.diffLoadingFor(diffScopeId))
 
   const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), vscode, showToast, t, activeProjectId)
+
+  createEffect(() => diffOpen() && setDiffMounted(true))
 
   const handleShowKeyboardShortcuts = () => {
     const categories = buildShortcutCategories(kb(), t)
@@ -2403,9 +2398,6 @@ const AgentManagerContent: Component = () => {
       </div>
 
       <div class="am-detail">
-        {/* Tab bar — full version with tabs renders when a section is selected
-            and has tabs; otherwise a minimal version still renders so the
-            sidebar toggle button stays at a fixed position. */}
         <TabBar
           t={t}
           bindings={kb}
@@ -2508,23 +2500,16 @@ const AgentManagerContent: Component = () => {
           />
         </Show>
         <Show when={showDetailStack()}>
-          {/* Terminal overlay is scoped to the main pane so it does not cover the tab bar or side panel. */}
           <div class={`am-detail-stack ${history() ? "am-detail-stack-hidden" : ""}`} inert={history()}>
-            {/* Chat/terminal + side diff panel. Keep it mounted under the
-                review tab so live xterm canvases never leave the paint tree. */}
             <div
               class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""} ${reviewActive() ? "am-detail-content-hidden" : ""}`}
             >
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
-                {/* Keep terminal tabs mounted so output streams across worktree switches. */}
                 {renderTerminalLayer({
                   state: terms,
                   onFocusPrompt: focusCtl.focus,
                   onFocusChange: focusCtl.report,
                 })}
-                {/* Session-less context (e.g. a worktree mid-provisioning): the
-                    empty state lives in the main pane so the side terminal
-                    panel can render next to it. */}
                 <Show when={contextEmpty()}>
                   <div class="am-empty-state">
                     <Show
@@ -2619,11 +2604,9 @@ const AgentManagerContent: Component = () => {
                   </Show>
                 </div>
               </div>
-              {/* One inspector host for all right-side modes. It stays
-                  mounted while a side terminal is alive — hidden via
-                  .am-side-host-hidden (absolute + opacity), never
-                  unmounted, so xterm render loops keep streaming. */}
-              <Show when={sidePanel() !== null || terms.sides().length > 0 || subagents.tabs().length > 0}>
+              <Show
+                when={sidePanel() !== null || diffMounted() || terms.sides().length > 0 || subagents.tabs().length > 0}
+              >
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
                   style={{ width: `${panelWidth()}px` }}
@@ -2640,42 +2623,54 @@ const AgentManagerContent: Component = () => {
                     />
                   </Show>
                   <div class="am-diff-panel-wrapper">
-                    <Show when={sidePanel() === SidePanel.Diff}>
-                      <DiffPanel
-                        diffs={reviewDiffs()}
-                        loading={diffLoading()}
-                        loadingFiles={diffFileLoadingForCurrent()}
-                        sessionId={activeDiffSession()}
-                        sessionKey={diffSessionKey()}
-                        notice={diffNotice()}
-                        lead={diffScopeControls(true)}
-                        canRevert={scopeCapabilities(review.scope()).revert}
-                        diffStyle={diffStyle.style()}
-                        onDiffStyleChange={setSharedDiffStyle}
-                        markdownRender={markdown.render()}
-                        onMarkdownRenderChange={markdown.update}
-                        comments={reviewComments()}
-                        onCommentsChange={setReviewCommentsForSelection}
-                        composer={reviewComposer}
-                        onSendClick={() => metrics.track("send_review_comments", "side_review")}
-                        onClose={metrics.click("side_review_close", "side_review", () => setSidePanel(null))}
-                        onExpand={
-                          selection() !== null
-                            ? metrics.click("fullscreen_review", "side_review", openReviewTab, { action: "open" })
-                            : undefined
-                        }
-                        onRequestDiff={requestDiffFile}
-                        onOpenFile={(file, line) => {
-                          const id = diffCtx()
-                          if (id)
-                            vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
-                        }}
-                        onOpenDocument={documentInspector.open}
-                        onRevertFile={metrics.use("revert_file", "side_review", revertCtl.revert)}
-                        revertingFiles={revertCtl.reverting()}
-                        activeTerminalId={terms.activeId()}
-                      />
-                    </Show>
+                    <DiffPanelCache
+                      current={diffScopeId}
+                      context={diffCtx}
+                      project={activeProjectId}
+                      active={() => diffOpen() && !history() && !reviewActive()}
+                      data={diffDatas}
+                      loading={(key) => diffs.diffLoadingFor(() => key)}
+                      loadingFiles={(key) => diffs.diffFileLoadingFor(() => key)}
+                      notice={(key) => diffNotices()[diffDataKey(activeProjectId(), key)]}
+                      comments={(key) =>
+                        readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", key)
+                      }
+                      setComments={(key, comments) =>
+                        setReviewCommentsByContext((prev) =>
+                          setReviewComments(prev, currentProjectId() ?? "single", key, comments),
+                        )
+                      }
+                      composer={composers.get}
+                      lead={() => diffScopeControls(true)}
+                      canRevert={scopeCapabilities(review.scope()).revert}
+                      diffStyle={diffStyle.style()}
+                      onDiffStyleChange={setSharedDiffStyle}
+                      markdownRender={markdown.render()}
+                      onMarkdownRenderChange={markdown.update}
+                      onSendClick={() => metrics.track("send_review_comments", "side_review")}
+                      onClose={metrics.click("side_review_close", "side_review", () => setSidePanel(null))}
+                      onExpand={
+                        selection() !== null
+                          ? metrics.click("fullscreen_review", "side_review", openReviewTab, { action: "open" })
+                          : undefined
+                      }
+                      onRequestDiff={diffs.requestDiffFile}
+                      onOpenFile={(ctx, file, line) =>
+                        vscode.postMessage({ type: "agentManager.openFile", sessionId: ctx, filePath: file, line })
+                      }
+                      onOpenDocument={documentInspector.open}
+                      onRevertFile={(key, ctx, file) => {
+                        metrics.track("revert_file", "side_review")
+                        revertCtl.revertFor(key, ctx, review.scope(), file)
+                      }}
+                      revertingFiles={revertCtl.revertingFor}
+                      activeTerminalId={terms.activeId()}
+                      contexts={() => new Set(worktrees().map((wt) => wt.id))}
+                      onEvict={(key) => {
+                        composers.drop(key)
+                        diffs.drop(key)
+                      }}
+                    />
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
                       <PRPanelHost
                         pr={activePR()!.pr}
@@ -2746,7 +2741,7 @@ const AgentManagerContent: Component = () => {
               <div class="am-review-host" style={{ display: reviewActive() && !terms.activeId() ? undefined : "none" }}>
                 <FullScreenDiffView
                   diffs={reviewDiffs()}
-                  loading={diffLoading()}
+                  loading={diffLoadingForCurrent()}
                   loadingFiles={diffFileLoadingForCurrent()}
                   sessionId={activeDiffSession()}
                   sessionKey={diffSessionKey()}
@@ -2756,7 +2751,7 @@ const AgentManagerContent: Component = () => {
                   canComment={scopeCapabilities(review.scope()).comments}
                   comments={reviewComments()}
                   onCommentsChange={setReviewCommentsForSelection}
-                  composer={reviewComposer}
+                  composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
                   onSendAll={closeReviewTab}
                   onSendClick={() => metrics.track("send_review_comments", "fullscreen_review")}
                   diffStyle={diffStyle.style()}
