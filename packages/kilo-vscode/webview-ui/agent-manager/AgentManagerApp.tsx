@@ -213,6 +213,7 @@ import { defaultBase as projectDefaultBase } from "./project/default-base"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
+import { createSidebarScrollPreserver } from "./sidebar-scroll"
 const REVIEW_TAB_ID = "review"
 interface SetupState {
   active: boolean
@@ -1111,6 +1112,7 @@ const AgentManagerContent: Component = () => {
     rename: setRenamingSection,
     font: (font) => font && setTerminalFont(font),
   })
+  const preserveSidebarScroll = createSidebarScrollPreserver()
 
   /** Apply the active-transition effects of a state payload (data already landed in the store). */
   const applyActiveState = (state: AgentManagerStateMessage) => {
@@ -1482,7 +1484,7 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
 
       if (msg.type === "agentManager.state" && msg.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
-      if (msg.type === "agentManager.state") stateHandlers.state(msg)
+      if (msg.type === "agentManager.state") preserveSidebarScroll(() => stateHandlers.state(msg))
 
       // When a multi-version progress update arrives, mark newly created worktrees as loading
       if ((msg as { type: string }).type === "agentManager.multiVersionProgress") {
