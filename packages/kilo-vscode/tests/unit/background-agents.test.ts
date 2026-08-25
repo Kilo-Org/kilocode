@@ -4,6 +4,7 @@ import {
   backgroundJobAgents,
   showBackgroundAgent,
 } from "../../webview-ui/src/components/chat/background-agents"
+import { childForeground, showChildPromotion } from "../../webview-ui/src/components/chat/task-tool-state"
 import type {
   BackgroundJobInfo,
   PermissionRequest,
@@ -71,6 +72,22 @@ describe("backgroundAgents", () => {
 
   it("ignores foreground subagents", () => {
     expect(backgroundAgents([taskPart({ child: "ses_child" })], { ses_child: busy })).toEqual([])
+  })
+
+  it("identifies each parallel foreground child independently", () => {
+    const status = { ses_a: busy, ses_b: busy }
+
+    expect(childForeground("ses_a", {}, {}, status)).toBe(true)
+    expect(childForeground("ses_b", {}, {}, status)).toBe(true)
+    expect(childForeground("ses_a", { background: true }, {}, status)).toBe(false)
+    expect(childForeground("ses_b", {}, { background: true }, status)).toBe(false)
+    expect(childForeground("ses_a", {}, {}, { ses_a: idle })).toBe(false)
+    expect(childForeground("ses_a", {}, {}, { ses_a: { type: "retry", attempt: 1, message: "retry", next: 1 } })).toBe(
+      true,
+    )
+    expect(childForeground(undefined, {}, {}, status)).toBe(false)
+    expect(showChildPromotion("ses_a", {}, {}, status, false)).toBe(true)
+    expect(showChildPromotion("ses_a", {}, {}, status, true)).toBe(false)
   })
 
   it("ignores agents whose session is no longer working", () => {

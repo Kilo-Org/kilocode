@@ -21,7 +21,7 @@ import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { childID } from "../../context/session-utils"
 import { openSubagent } from "./open-subagent"
-import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
+import { showChildPromotion, taskResult, taskRunning, taskVisible } from "./task-tool-state"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -38,15 +38,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       state: { metadata: props.metadata as { sessionId?: string } },
     })
 
-  const childForeground = createMemo(() => {
-    const id = childSessionId()
-    if (!id) return false
-    const part = props.partMetadata as { background?: boolean } | undefined
-    const state = props.metadata as { background?: boolean } | undefined
-    if (part?.background === true || state?.background === true) return false
-    const status = session.allStatusMap()[id]
-    return status?.type === "busy" || status?.type === "retry"
-  })
+  const promotable = createMemo(() =>
+    showChildPromotion(
+      childSessionId(),
+      props.partMetadata as Record<string, unknown> | undefined,
+      props.metadata as Record<string, unknown> | undefined,
+      session.allStatusMap(),
+      props.readonly,
+    ),
+  )
 
   const running = createMemo(() => taskRunning(props.status))
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
@@ -167,7 +167,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         </Show>
       </div>
       <Show when={childSessionId()}>
-        <Show when={childForeground()}>
+        <Show when={promotable()}>
           <IconButton
             icon="play"
             size="small"
