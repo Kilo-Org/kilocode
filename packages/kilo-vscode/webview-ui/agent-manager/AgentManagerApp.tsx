@@ -2387,9 +2387,6 @@ const AgentManagerContent: Component = () => {
       </div>
 
       <div class="am-detail">
-        {/* Tab bar — full version with tabs renders when a section is selected
-            and has tabs; otherwise a minimal version still renders so the
-            sidebar toggle button stays at a fixed position. */}
         <TabBar
           t={t}
           bindings={kb}
@@ -2490,23 +2487,16 @@ const AgentManagerContent: Component = () => {
           />
         </Show>
         <Show when={showDetailStack()}>
-          {/* Terminal overlay is scoped to the main pane so it does not cover the tab bar or side panel. */}
           <div class="am-detail-stack">
-            {/* Chat/terminal + side diff panel. Keep it mounted under the
-                review tab so live xterm canvases never leave the paint tree. */}
             <div
               class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""} ${reviewActive() ? "am-detail-content-hidden" : ""}`}
             >
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
-                {/* Keep terminal tabs mounted so output streams across worktree switches. */}
                 {renderTerminalLayer({
                   state: terms,
                   onFocusPrompt: focusCtl.focus,
                   onFocusChange: focusCtl.report,
                 })}
-                {/* Session-less context (e.g. a worktree mid-provisioning): the
-                    empty state lives in the main pane so the side terminal
-                    panel can render next to it. */}
                 <Show when={contextEmpty()}>
                   <div class="am-empty-state">
                     <Show
@@ -2601,10 +2591,6 @@ const AgentManagerContent: Component = () => {
                   </Show>
                 </div>
               </div>
-              {/* One inspector host for all right-side modes. It stays
-                  mounted while a side terminal is alive — hidden via
-                  .am-side-host-hidden (absolute + opacity), never
-                  unmounted, so xterm render loops keep streaming. */}
               <Show
                 when={sidePanel() !== null || diffMounted() || terms.sides().length > 0 || subagents.tabs().length > 0}
               >
