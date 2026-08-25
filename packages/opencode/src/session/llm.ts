@@ -393,7 +393,7 @@ const live: Layer.Layer<
         topP: prepared.params.topP,
         topK: prepared.params.topK,
         providerOptions: ProviderTransform.providerOptions(input.model, prepared.params.options),
-        activeTools: Object.keys(prepared.tools).filter((x) => x !== "invalid"),
+        activeTools: Object.keys(prepared.tools), // kilocode_change - keep "invalid" callable so the tool-call repair fallback can settle (issue #6905)
         // kilocode_change start
         tools: prepared.tools,
         toolChoice: input.toolChoice,
