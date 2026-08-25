@@ -98,13 +98,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.create("feature/y", null) }
 
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
-        val pendingId = edt { controller.model.getElementAt(controller.model.size - 1).id }
+        val pendingId = edt { controller.model.getElementAt(0).id }
         assertEquals(pendingId, edt { (list.selectedValue as ActiveListItem).key })
 
         gate.complete(Unit)
         flush()
 
-        val created = edt { controller.model.getElementAt(controller.model.size - 1) }
+        val created = edt { controller.model.getElementAt(0) }
         assertEquals("feature/y", created.branch)
         assertEquals(created.id, edt { (list.selectedValue as ActiveListItem).key })
     }
@@ -776,10 +776,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         layout(view)
 
         edt {
-            val size = view.list.model.size
-            // Row 0 is the current (main) row; the last row is the pending create.
+            // Row 0 is the current (main) row; row 1 is the pending create.
             assertNull(view.pickable(rowCenter(view, 0)))
-            assertNull(view.pickable(rowCenter(view, size - 1)))
+            assertNull(view.pickable(rowCenter(view, 1)))
         }
         gate.complete(Unit)
         flush()

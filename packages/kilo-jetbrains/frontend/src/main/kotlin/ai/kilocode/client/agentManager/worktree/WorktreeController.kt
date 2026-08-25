@@ -89,7 +89,7 @@ class WorktreeController(
             edt {
                 val main = result.worktrees.firstOrNull { it.main }
                 val extra = result.worktrees.filter { !it.main }
-                val rows = extra + pending.values
+                val rows = pending.values.toList().asReversed() + extra
                 current = main
                 model.replaceAll(rows)
                 cache().putAll(rows)
@@ -121,7 +121,7 @@ class WorktreeController(
         edt {
             pending[temp.id] = temp
             tasks[temp.id] = KiloBundle.message("worktree.progress.creating")
-            model.add(temp)
+            model.add(0, temp)
             onSelect?.invoke(temp.id)
         }
         cs.launch {
@@ -136,7 +136,7 @@ class WorktreeController(
         edt {
             pending[temp.id] = temp
             tasks[temp.id] = KiloBundle.message("worktree.progress.creating")
-            model.add(temp)
+            model.add(0, temp)
             onSelect?.invoke(temp.id)
         }
         cs.launch {
@@ -157,7 +157,7 @@ class WorktreeController(
             tasks.remove(temp.id)
             val idx = model.getElementIndex(temp)
             if (created != null) {
-                if (idx >= 0) model.setElementAt(created, idx) else model.add(created)
+                if (idx >= 0) model.setElementAt(created, idx) else model.add(0, created)
                 cache().put(created)
                 prompt?.let { service<PendingWorktreePrompt>().put(created.path, it) }
                 onSelect?.invoke(created.id)
@@ -225,7 +225,7 @@ class WorktreeController(
         val temp = WorktreeDto("pending:$branch:${System.nanoTime()}", branch, branch, "pending:$branch")
         pending[temp.id] = temp
         tasks[temp.id] = label(MoveStage.CAPTURING)
-        model.add(temp)
+        model.add(0, temp)
         onSelect?.invoke(temp.id)
         cs.launch {
             var stage = MoveStage.CAPTURING
@@ -243,7 +243,7 @@ class WorktreeController(
                                 tasks.remove(temp.id)
                                 val worktree = event.worktree ?: return@edt
                                 val idx = model.getElementIndex(temp)
-                                if (idx >= 0) model.setElementAt(worktree, idx) else model.add(worktree)
+                                if (idx >= 0) model.setElementAt(worktree, idx) else model.add(0, worktree)
                                 cache().put(worktree)
                                 // Queue the forked session for the editor the selection is about to
                                 // open; the tab's identity stays the worktree path alone.
