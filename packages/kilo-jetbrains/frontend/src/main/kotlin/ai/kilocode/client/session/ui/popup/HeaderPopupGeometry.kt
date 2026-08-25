@@ -31,6 +31,11 @@ internal data class HeaderPopupFit(
 )
 
 /**
+ * Vertical pointer target and the distance from the balloon top to that target.
+ */
+internal data class HeaderPopupAim(val y: Int, val distance: Int)
+
+/**
  * Geometry for header popups. Pure functions so the side and fit rules are testable without a frame.
  *
  * Header popups only ever sit beside their card, never over it and never above or below it. The fit part
@@ -68,15 +73,39 @@ internal object HeaderPopupGeometry {
     }
 
     /**
-     * Vertical pointer target for a body of [height], preferring [y] but keeping the balloon inside
-     * [view]. The balloon centres its body on the target, so an unclamped target near an edge would
-     * overflow and trigger the same re-pointing that [beside] avoids horizontally.
+     * Keeps the pointer on [card] while moving the balloon body into [view]. The returned [distance]
+     * is the value the platform uses as `cornerToPointerDistance`, which makes the body slide without
+     * moving the pointer target off the element it describes.
      */
-    fun centerY(view: Rectangle, y: Int, height: Int, gap: Int): Int {
-        val half = height / 2
-        val top = view.y + gap + half
-        val bottom = view.y + view.height - gap - half
-        if (bottom < top) return view.y + view.height / 2
-        return y.coerceIn(top, bottom)
+    fun aim(view: Rectangle, card: Rectangle, y: Int, height: Int, gap: Int, indent: Int): HeaderPopupAim {
+        val hit = card.intersection(view)
+        if (hit.isEmpty) return fallback(view, height, gap, indent)
+        val pointer = clamp(y, hit.y + indent, hit.y + hit.height - indent)
+        val top = top(view, pointer, height, gap)
+        return HeaderPopupAim(y = pointer, distance = legal(pointer - top, height, indent))
+    }
+
+    private fun fallback(view: Rectangle, height: Int, gap: Int, indent: Int): HeaderPopupAim {
+        val y = view.y + view.height / 2
+        val top = top(view, y, height, gap)
+        return HeaderPopupAim(y = y, distance = legal(y - top, height, indent))
+    }
+
+    private fun top(view: Rectangle, y: Int, height: Int, gap: Int): Int {
+        val min = view.y + gap
+        val max = view.y + view.height - gap - height
+        if (max < min) return view.y + (view.height - height) / 2
+        return (y - height / 2).coerceIn(min, max)
+    }
+
+    private fun legal(distance: Int, height: Int, indent: Int): Int {
+        val max = height - indent
+        if (max < indent) return height / 2
+        return distance.coerceIn(indent, max)
+    }
+
+    private fun clamp(value: Int, min: Int, max: Int): Int {
+        if (max < min) return min + (max - min) / 2
+        return value.coerceIn(min, max)
     }
 }

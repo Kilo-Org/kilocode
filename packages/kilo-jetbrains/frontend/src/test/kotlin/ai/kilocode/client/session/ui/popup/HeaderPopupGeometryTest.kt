@@ -13,6 +13,7 @@ class HeaderPopupGeometryTest {
         const val GAP = 10
         const val CAP = 700
         const val CAP_HEIGHT = 450
+        const val INDENT = 16
     }
 
     @Test
@@ -137,31 +138,77 @@ class HeaderPopupGeometryTest {
     }
 
     @Test
-    fun `pointer target keeps the body inside an offset session`() {
-        val view = Rectangle(0, 400, 300, 400)
+    fun `pointer stays on the row when the body already fits`() {
+        val aim = aim(
+            view = Rectangle(0, 0, 300, 1000),
+            card = Rectangle(0, 400, 300, 40),
+            y = 420,
+            height = 300,
+        )
 
-        // Rows above and below the session are pulled back into it.
-        assertEquals(560, HeaderPopupGeometry.centerY(view, y = 0, height = 300, gap = GAP))
-        assertEquals(640, HeaderPopupGeometry.centerY(view, y = 1000, height = 300, gap = GAP))
+        assertEquals(420, aim.y)
+        assertEquals(150, aim.distance)
     }
 
     @Test
-    fun `pointer target keeps a tall body inside the session`() {
+    fun `body shifts down while the pointer stays on the top row`() {
         val view = Rectangle(0, 0, 300, 1000)
+        val aim = aim(view = view, card = Rectangle(0, 20, 300, 40), y = 40, height = 600)
 
-        // Row near the top: target pushed down so the centred body clears the top edge.
-        assertEquals(310, HeaderPopupGeometry.centerY(view, y = 20, height = 600, gap = GAP))
-        // Row near the bottom: target pulled up.
-        assertEquals(690, HeaderPopupGeometry.centerY(view, y = 980, height = 600, gap = GAP))
-        // Row with room on both sides is left alone.
-        assertEquals(500, HeaderPopupGeometry.centerY(view, y = 500, height = 600, gap = GAP))
+        assertEquals(40, aim.y)
+        assertEquals(GAP, aim.y - aim.distance)
+    }
+
+    @Test
+    fun `body shifts up while the pointer stays on the bottom row`() {
+        val view = Rectangle(0, 0, 300, 1000)
+        val aim = aim(view = view, card = Rectangle(0, 940, 300, 40), y = 960, height = 600)
+
+        assertEquals(960, aim.y)
+        assertEquals(view.y + view.height - GAP, aim.y - aim.distance + 600)
+    }
+
+    @Test
+    fun `pointer stays inside a collapsed card`() {
+        val card = Rectangle(0, 100, 300, 30)
+        val aim = aim(view = Rectangle(0, 0, 300, 1000), card = card, y = 115, height = 300)
+
+        assertTrue(card.contains(0, aim.y))
+        assertTrue(aim.distance in INDENT..300 - INDENT)
+    }
+
+    @Test
+    fun `card outside the visible session falls back to the view centre`() {
+        val aim = aim(
+            view = Rectangle(0, 400, 300, 400),
+            card = Rectangle(0, 0, 300, 40),
+            y = 20,
+            height = 300,
+        )
+
+        assertEquals(600, aim.y)
+        assertEquals(150, aim.distance)
     }
 
     @Test
     fun `body taller than the session is centred instead of clamped to an empty range`() {
         val view = Rectangle(0, 0, 300, 400)
+        val aim = aim(view = view, card = Rectangle(0, 0, 300, 40), y = 20, height = 900)
 
-        assertEquals(200, HeaderPopupGeometry.centerY(view, y = 10, height = 900, gap = GAP))
+        assertEquals(20, aim.y)
+        assertEquals(-250, aim.y - aim.distance)
+        assertTrue(aim.distance in INDENT..900 - INDENT)
+    }
+
+    @Test
+    fun `pointer distance stays in the platform legal window`() {
+        listOf(
+            aim(view = Rectangle(0, 0, 300, 200), card = Rectangle(0, 0, 300, 30), y = 15, height = 160) to 160,
+            aim(view = Rectangle(0, 0, 300, 200), card = Rectangle(0, 170, 300, 30), y = 185, height = 160) to 160,
+            aim(view = Rectangle(0, 0, 300, 200), card = Rectangle(0, 80, 300, 40), y = 100, height = 500) to 500,
+        ).forEach { pair ->
+            assertTrue(pair.first.distance in INDENT..pair.second - INDENT)
+        }
     }
 
     private fun beside(card: Rectangle) = HeaderPopupGeometry.beside(
@@ -178,4 +225,14 @@ class HeaderPopupGeometryTest {
         maxWidth = CAP,
         maxHeight = CAP_HEIGHT,
     )
+
+    private fun aim(view: Rectangle, card: Rectangle, y: Int, height: Int) = HeaderPopupGeometry.aim(
+        view = view,
+        card = card,
+        y = y,
+        height = height,
+        gap = GAP,
+        indent = INDENT,
+    )
+
 }

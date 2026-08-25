@@ -131,6 +131,7 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
             .setBorderColor(UiStyle.Balloon.border())
             .setBorderInsets(UiStyle.Balloon.insets())
             .setPointerSize(UiStyle.Balloon.pointer())
+            .setCornerToPointerDistance(spot.distance)
             .setCornerRadius(UiStyle.Balloon.arc())
             .setHideOnClickOutside(true)
             .setHideOnKeyOutside(true)
@@ -177,18 +178,19 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
         val gap = UiStyle.Gap.pad()
         val insets = UiStyle.Balloon.insets()
         // The shadow is reserved on every side, so it counts twice on each axis.
-        val shadow = UiStyle.Balloon.shadow() * 2
-        val chromeHeight = insets.top + insets.bottom + shadow
+        val shadow = UiStyle.Balloon.shadow()
+        val chromeHeight = insets.top + insets.bottom + shadow * 2
         // The visible chat rect, not the whole panel: a session clipped by a short tool window or a
         // scrolled editor tab must keep its popups inside the part the user can actually see.
         val area = SwingUtilities.convertRectangle(chat, chat.visibleRect, pane)
         if (area.isEmpty) return null
+        val rect = SwingUtilities.convertRectangle(card.parent, card.bounds, pane)
         val spot = HeaderPopupGeometry.beside(
             pane = Rectangle(pane.size),
-            card = SwingUtilities.convertRectangle(card.parent, card.bounds, pane),
+            card = rect,
             view = area,
             fit = HeaderPopupFit(
-                chromeWidth = insets.left + insets.right + UiStyle.Balloon.pointer().height + shadow,
+                chromeWidth = insets.left + insets.right + UiStyle.Balloon.pointer().height + shadow * 2,
                 chromeHeight = chromeHeight,
                 gap = gap,
                 maxWidth = JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH),
@@ -197,11 +199,20 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
         )
         built.fitWithin(spot.maxWidth, spot.maxHeight)
         val row = SwingUtilities.convertPoint(anchor, Point(0, anchor.height / 2), pane)
-        val height = built.component.preferredSize.height + chromeHeight
-        return Spot(pane, Point(spot.x, HeaderPopupGeometry.centerY(area, row.y, height, gap)), spot.position)
+        val view = Rectangle(area.x, area.y + shadow, area.width, (area.height - shadow * 2).coerceAtLeast(0))
+        val height = built.component.preferredSize.height + insets.top + insets.bottom
+        val aim = HeaderPopupGeometry.aim(
+            view = view,
+            card = rect,
+            y = row.y,
+            height = height,
+            gap = gap,
+            indent = UiStyle.Balloon.arc() + UiStyle.Balloon.pointer().width / 2,
+        )
+        return Spot(pane, Point(spot.x, aim.y), spot.position, aim.distance)
     }
 
-    private class Spot(val pane: JComponent, val point: Point, val position: Balloon.Position)
+    private class Spot(val pane: JComponent, val point: Point, val position: Balloon.Position, val distance: Int)
 
     private companion object {
         const val SHOW_MS = 500
