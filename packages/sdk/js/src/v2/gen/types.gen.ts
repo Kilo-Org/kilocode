@@ -17172,6 +17172,42 @@ export type KilocodeBackgroundJobCancelResponses = {
 export type KilocodeBackgroundJobCancelResponse =
   KilocodeBackgroundJobCancelResponses[keyof KilocodeBackgroundJobCancelResponses]
 
+export type KilocodeBackgroundJobPromoteData = {
+  body?: never
+  path: {
+    jobID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/background-jobs/{jobID}/promote"
+}
+
+export type KilocodeBackgroundJobPromoteErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeBackgroundJobPromoteError =
+  KilocodeBackgroundJobPromoteErrors[keyof KilocodeBackgroundJobPromoteErrors]
+
+export type KilocodeBackgroundJobPromoteResponses = {
+  /**
+   * Background job promoted
+   */
+  200: boolean
+}
+
+export type KilocodeBackgroundJobPromoteResponse =
+  KilocodeBackgroundJobPromoteResponses[keyof KilocodeBackgroundJobPromoteResponses]
+
 export type AnacondaDesktopStatusData = {
   body?: never
   path?: never

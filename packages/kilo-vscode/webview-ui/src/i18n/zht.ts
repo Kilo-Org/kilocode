@@ -1188,7 +1188,6 @@ export const dict = {
   "task.backgroundAgents.open": "開啟背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",
-  "task.backgroundAgents.foreground": "前景 Agent 執行中",
   "task.backgroundAgents.waiting": "背景 Agent 需要你的輸入",
   "task.backgroundAgents.needsInput": "需要輸入",
   "task.backgroundAgents.dismiss": "關閉",

@@ -57,8 +57,9 @@ export interface CancelBackgroundJobMessage {
   requestID: string
 }
 
-export interface BackgroundSubagentsMessage {
-  type: "backgroundSubagents"
+export interface PromoteBackgroundJobMessage {
+  type: "promoteBackgroundJob"
+  jobID: string
   sessionID: string
 }
 
@@ -1497,7 +1498,7 @@ export type WebviewMessage =
   | AbortRequest
   | RequestBackgroundJobsMessage
   | CancelBackgroundJobMessage
-  | BackgroundSubagentsMessage
+  | PromoteBackgroundJobMessage
   | RevertSessionRequest
   | UnrevertSessionRequest
   | DeleteMessageRequest

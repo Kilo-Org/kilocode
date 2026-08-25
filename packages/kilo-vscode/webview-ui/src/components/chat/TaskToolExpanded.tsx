@@ -13,6 +13,7 @@ import { BasicTool, initialOpen } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
@@ -21,7 +22,7 @@ import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { childID } from "../../context/session-utils"
 import { openSubagent } from "./open-subagent"
-import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
+import { showChildPromotion, taskResult, taskRunning, taskVisible } from "./task-tool-state"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -37,6 +38,16 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       metadata: props.partMetadata as { sessionId?: string } | undefined,
       state: { metadata: props.metadata as { sessionId?: string } },
     })
+
+  const promotable = createMemo(() =>
+    showChildPromotion(
+      childSessionId(),
+      props.partMetadata as Record<string, unknown> | undefined,
+      props.metadata as Record<string, unknown> | undefined,
+      session.allStatusMap(),
+      props.readonly,
+    ),
+  )
 
   const running = createMemo(() => taskRunning(props.status))
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
@@ -134,6 +145,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     })
   }
 
+  const background = (e: MouseEvent) => {
+    e.stopPropagation()
+    const id = session.currentSessionID()
+    const child = childSessionId()
+    if (id && child) vscode.postMessage({ type: "promoteBackgroundJob", jobID: child, sessionID: id })
+  }
+
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">
       <div data-slot="basic-tool-tool-info-main">
@@ -150,6 +168,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         </Show>
       </div>
       <Show when={childSessionId()}>
+        <Show when={promotable()}>
+          <Tooltip value={language.t("task.backgroundAgents.continueInBackground")} placement="top">
+            <IconButton
+              icon="arrow-down-to-line"
+              size="small"
+              variant="ghost"
+              aria-label={language.t("task.backgroundAgents.continueInBackground")}
+              onClick={background}
+            />
+          </Tooltip>
+        </Show>
         <IconButton
           icon="square-arrow-top-right"
           size="small"
