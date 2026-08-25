@@ -81,32 +81,10 @@ class SessionOutcomeView(
 }
 
 private class ErrorBody {
+    // The error text is a JViewport view. Never resize it from getPreferredSize():
+    // JViewport listens for component-resized events and will feed them back into layout.
     private val area = object : JBTextArea() {
-        override fun getPreferredSize() = withWidth(super.getPreferredSize().height)
-
         override fun scrollRectToVisible(aRect: Rectangle) {}
-
-        private fun withWidth(fallback: Int): Dimension {
-            val w = availableWidth()
-            if (w <= 0) return Dimension(super.getPreferredSize().width, fallback)
-            val old = size
-            setSize(w, Int.MAX_VALUE)
-            val ps = super.getPreferredSize()
-            setSize(old)
-            return Dimension(w, ps.height)
-        }
-
-        private fun availableWidth(): Int {
-            var node = parent
-            while (node != null) {
-                if (node.width > 0) {
-                    val ins = node.insets
-                    return (node.width - ins.left - ins.right).coerceAtLeast(0)
-                }
-                node = node.parent
-            }
-            return width
-        }
     }.apply {
         isEditable = false
         isOpaque = false
@@ -124,8 +102,7 @@ private class ErrorBody {
             val ins = viewportBorder?.getBorderInsets(this) ?: JBUI.emptyInsets()
             val chrome = insets.top + insets.bottom + ins.top + ins.bottom + area.insets.top + area.insets.bottom
             val cap = area.getFontMetrics(area.font).height * SessionUiStyle.View.Outcome.ERROR_LINES + chrome
-            val height = minOf(area.preferredSize.height + chrome, cap)
-            return Dimension(size.width, height)
+            return Dimension(size.width, minOf(size.height, cap))
         }
 
         override fun updateUI() {

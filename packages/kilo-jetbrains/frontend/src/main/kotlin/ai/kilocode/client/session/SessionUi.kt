@@ -43,6 +43,8 @@ import ai.kilocode.client.session.ui.attachment.AttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.attachmentParams
 import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.session.ui.header.BranchDock
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.selection.SessionContextMenu
 import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
@@ -50,6 +52,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
@@ -193,6 +196,10 @@ class SessionUi(
 
     private lateinit var header: SessionHeaderPanel
 
+    private var dock: BranchDock? = null
+
+    private var bottom: JComponent? = null
+
     internal lateinit var scroll: SessionScroll
 
     private lateinit var question: QuestionView
@@ -224,6 +231,7 @@ class SessionUi(
     // but never cancel an in-flight user-initiated open.
     private var refreshJob: Job? = null
     private var openJob: Job? = null
+    private var branchJob: Job? = null
     private var disposed = false
 
     init {
@@ -236,7 +244,11 @@ class SessionUi(
         bindStyle()
         bindMigration()
         onStateChanged(controller.model.state)
-        if (showBranchBadge()) refreshBranchChanges()
+        dock?.let {
+            syncDock()
+            refreshBranchChanges()
+            refreshBranch()
+        }
         loaded?.let(::finishOpen)
     }
 
@@ -411,7 +423,13 @@ class SessionUi(
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this, readonly) { openBranchChanges() }
+        header = SessionHeaderPanel(controller, this, readonly)
+        if (!readonly && showBranchDock()) {
+            val owner = manager
+            val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
+            val move = if (owner?.supportsMoveToWorktree == true) ::moveToWorktree else null
+            dock = BranchDock(openDiff = ::openBranchChanges, onMove = move, onNewWorktree = newWorktree)
+        }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
         overlay = SessionHoverCopyOverlay(root, scroll.component, this)
@@ -457,12 +475,16 @@ class SessionUi(
             val point = SwingUtilities.convertPoint(prompt.parent ?: root.content, prompt.x, prompt.y, pane)
             val gap = SessionUiStyle.View.contentGap()
             val wide = (prompt.width - gap * 2).coerceAtLeast(0)
+            // Anchor above the whole bottom container (dock + prompt) so the banner floats over the
+            // dock rather than covering it; fall back to the prompt when there is no dock.
+            val anchor = bottom ?: prompt
+            val topY = SwingUtilities.convertPoint(anchor.parent ?: root.content, anchor.x, anchor.y, pane).y
             // Fix the banner width before measuring so its word-wrapped detail height is known.
             child.setSize(wide, child.height)
-            val height = child.preferredSize.height.coerceAtMost((point.y - gap).coerceAtLeast(0))
+            val height = child.preferredSize.height.coerceAtMost((topY - gap).coerceAtLeast(0))
             java.awt.Rectangle(
                 point.x + gap,
-                point.y - height - gap,
+                topY - height - gap,
                 wide,
                 height,
             )
@@ -484,14 +506,22 @@ class SessionUi(
         sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
         if (!readonly) {
-            root.content.add(
+            // In the sidebar tool window the bottom panel fills the full width; editor tabs keep the
+            // readable-width centering used across the transcript.
+            val aligned = if (manager?.hostedInEditorTab == true) {
                 prompt.align(
                     HAlign.CENTER,
                     VAlign.FIT,
                     maxW = { SessionUiStyle.SessionLayout.readableWidth(prompt, style.transcriptFont) },
-                ),
-                BorderLayout.SOUTH,
-            )
+                )
+            } else {
+                prompt.align(HAlign.FIT, VAlign.FIT)
+            }
+            val container = Stack.vertical()
+            dock?.let { container.next(it) }
+            container.next(aligned)
+            bottom = container
+            root.content.add(container, BorderLayout.SOUTH)
         }
         add(root, BorderLayout.CENTER)
     }
@@ -611,26 +641,34 @@ class SessionUi(
 
                 is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
 
+                is SessionModelEvent.MessageAdded,
+                is SessionModelEvent.MessageRemoved,
+                is SessionModelEvent.HistoryLoaded,
+                is SessionModelEvent.Cleared -> syncDock()
+
                 is SessionModelEvent.QueueChanged -> Unit
 
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
                 is SessionModelEvent.ContentDelta,
-                is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.TurnRemoved,
-                is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
-                is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.ContentUpdated,
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.HeaderUpdated,
-                is SessionModelEvent.Compacted,
-                is SessionModelEvent.Cleared -> Unit
+                is SessionModelEvent.Compacted -> Unit
             }
         }
+    }
+
+    @RequiresEdt
+    private fun syncDock() {
+        val dock = dock ?: return
+        dock.setHasMessages(controller.model.messages().isNotEmpty())
+        dock.setHasSession(controller.id != null)
     }
 
     @RequiresEdt
@@ -677,7 +715,7 @@ class SessionUi(
     private fun bindStyle() {
         addHierarchyListener { event ->
             if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
-            if (!isShowing) popup.hideAll()
+            if (isShowing) refreshBranch() else popup.hideAll()
         }
 
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
@@ -913,13 +951,9 @@ class SessionUi(
         Telemetry.send("Subagent Session Opened", mapOf("sessionId" to sessionId))
     }
 
-    /** Badge-only refresh: fetches stats (no patch text) and updates the header count. */
+    /** Badge-only refresh: fetches stats (no patch text) and updates the dock's changes badge. */
     private fun refreshBranchChanges() {
-        if (!showBranchBadge()) {
-            refreshJob?.cancel()
-            header.hideBranchChanges()
-            return
-        }
+        val dock = dock ?: return
         refreshJob?.cancel()
         refreshJob = cs.launch {
             val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
@@ -930,14 +964,14 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                header.setBranchChanges(files)
+                dock.setChanges(files)
             }
         }
     }
 
     /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
     private fun openBranchChanges() {
-        if (!showBranchBadge()) return
+        val dock = dock ?: return
         openJob?.cancel()
         openJob = cs.launch {
             val dir = workspace.directory
@@ -950,10 +984,16 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                header.setBranchChanges(files)
+                dock.setChanges(files)
                 openBranchDiff(branch)
             }
         }
+    }
+
+    /** Starts the Move to Worktree flow for the current session through the side-panel manager. */
+    @RequiresEdt
+    private fun moveToWorktree() {
+        manager?.moveToWorktree(controller.id, controller.sessionDirectory)
     }
 
     @RequiresEdt
@@ -971,7 +1011,29 @@ class SessionUi(
         Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
     }
 
-    private fun showBranchBadge(): Boolean = manager?.showsBranchBadgeInHeader != false
+    private fun showBranchDock(): Boolean = manager?.showsBranchDock != false
+
+    /**
+     * Refreshes the branch/PR status feeding the dock. Uses the session's own [workspace] directory
+     * (the resolved backend path) — not `project.basePath`, which is a synthetic frontend path in
+     * split mode — so the PR always matches the branch checked out in this session's directory.
+     */
+    private fun refreshBranch() {
+        val dock = dock ?: return
+        branchJob?.cancel()
+        branchJob = cs.launch {
+            val status = runCatching { service<KiloWorktreeService>().branchStatus(workspace.directory) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("branch status refresh failed dir=${workspace.directory}", it)
+                    return@launch
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                dock.setBranch(status)
+            }
+        }
+    }
 
     private fun openAttachment(messageId: String, item: FileAttachment) {
         val url = item.url.takeIf { it.isNotBlank() } ?: run {
@@ -1033,7 +1095,10 @@ class SessionUi(
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         val busy = state.isBusy()
-        if (wasBusy && state is SessionState.Idle) refreshBranchChanges()
+        if (wasBusy && state is SessionState.Idle) {
+            refreshBranchChanges()
+            refreshBranch()
+        }
         wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()
         if (state is SessionState.Error || state is SessionState.TurnEnded) {
@@ -1041,6 +1106,7 @@ class SessionUi(
             pendingRedo = null
         }
         prompt.setBusy(busy)
+        dock?.setBusy(busy)
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))
@@ -1049,6 +1115,7 @@ class SessionUi(
     }
 
     private fun onSessionUpdated() {
+        syncDock()
         manager?.activityChanged()
     }
 
@@ -1065,6 +1132,7 @@ class SessionUi(
         selection.applyStyle(style)
         load.applyStyle(style)
         header.applyStyle(style)
+        dock?.applyStyle(style)
         prompt.applyStyle(style)
         connection.applyStyle(style)
         scroll.applyStyle(style)
@@ -1096,6 +1164,7 @@ class SessionUi(
         disposed = true
         refreshJob?.cancel()
         openJob?.cancel()
+        branchJob?.cancel()
         hide.stop()
         popup.hideAll()
         modalFocus = null
