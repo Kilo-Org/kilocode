@@ -27,7 +27,7 @@ export function createSidebarScrollPreserver(
       inner = schedule(() => {
         inner = undefined
         for (const item of scrolls) {
-          if (item.el.isConnected) item.el.scrollTop = item.top
+          if (item.el.isConnected && item.top > 0 && item.el.scrollTop === 0) item.el.scrollTop = item.top
         }
       })
     })

@@ -1096,7 +1096,6 @@ const AgentManagerContent: Component = () => {
     apply: (state) => applyActiveState(state),
     pruneLive: (ids) => projectLive.prune(ids),
   })
-
   const stateHandlers = createProjectStateHandlers({
     setMulti: setMultiProject,
     setProjects: setProjectList,
@@ -1113,7 +1112,6 @@ const AgentManagerContent: Component = () => {
     font: (font) => font && setTerminalFont(font),
   })
   const preserveSidebarScroll = createSidebarScrollPreserver()
-
   /** Apply the active-transition effects of a state payload (data already landed in the store). */
   const applyActiveState = (state: AgentManagerStateMessage) => {
     const switched = applyProjectSwitch(state)

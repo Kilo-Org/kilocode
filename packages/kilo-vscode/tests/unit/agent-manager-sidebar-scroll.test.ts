@@ -75,6 +75,31 @@ describe("Agent Manager sidebar scroll preservation", () => {
     expect(worktrees.scrollTop).toBe(80)
   })
 
+  it("does not override intentional selection scrolling", () => {
+    const el = list()
+    el.scrollTop = 240
+    const preserve = preserver()
+
+    preserve(() => {
+      el.scrollTop = 140
+    })
+    flush()
+
+    expect(el.scrollTop).toBe(140)
+  })
+
+  it("keeps intentional scrolling from the top of the list", () => {
+    const el = list()
+    const preserve = preserver()
+
+    preserve(() => {
+      el.scrollTop = 180
+    })
+    flush()
+
+    expect(el.scrollTop).toBe(180)
+  })
+
   it("cancels stale restores when a newer state arrives", () => {
     const el = list()
     const preserve = preserver()
