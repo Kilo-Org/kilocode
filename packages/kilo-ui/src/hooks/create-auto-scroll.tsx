@@ -149,8 +149,9 @@ export function createAutoScroll(options: AutoScrollOptions) {
   // waiting for it lets the browser paint one frame with the new content hanging
   // below the viewport, which reads as the transcript twitching as it streams.
   const onContentMutate = () => {
-    if (!scroll || !canScroll(scroll)) return
+    if (!scroll) return
     if (store.userScrolled || userActivity.isRecent()) return
+    if (!canScroll(scroll)) return
 
     follow()
   }
