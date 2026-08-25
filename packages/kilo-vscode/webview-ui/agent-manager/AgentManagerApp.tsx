@@ -307,12 +307,12 @@ const AgentManagerContent: Component = () => {
   }
   const openHistory = (pid?: string) => {
     const scoped = pid !== undefined && multiProject()
-    if (scoped) setHistorySwitches((prev) => (prev.includes(pid) ? prev : [...prev, pid]))
+    if (scoped && (currentProjectId() !== pid || historySwitches().length > 0))
+      setHistorySwitches((prev) => (prev.includes(pid) ? prev : [...prev, pid]))
     setHistoryProject(scoped ? pid : undefined)
     setHistory(true)
     if (scoped) {
-      // Activating the target project first lets the shared session store and
-      // the pick routing operate in that project only.
+      // Activate the target so the session store and pick routing use that project.
       vscode.postMessage({
         type: "agentManager.activateSelection",
         target: { projectId: pid, kind: "local" },
