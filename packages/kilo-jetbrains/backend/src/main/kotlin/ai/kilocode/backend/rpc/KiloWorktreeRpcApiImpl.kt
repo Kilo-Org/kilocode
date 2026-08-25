@@ -371,10 +371,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 !it.main && samePath(it.path, path) && item.parent == storage
             }
                 ?: return@withContext RemoveWorktreeResultDto(error = "Refusing to remove unmanaged worktree: $path")
-            val root = Path.of(path).normalize()
+            // Compare canonical (symlink-resolved) paths: on macOS the temp/repo root is a symlink
+            // (/var -> /private/var), so a raw startsWith against normalized porcelain paths would miss
+            // a live child and let `git worktree remove --force` delete it recursively.
+            val root = realPath(path)
             val nested = all.filter {
-                val item = Path.of(it.path).normalize()
-                !it.prunable && Files.isDirectory(item) && !samePath(it.path, path) && item.startsWith(root)
+                !it.prunable && Files.isDirectory(Path.of(it.path)) && !samePath(it.path, path) && realPath(it.path).startsWith(root)
             }
             if (nested.isNotEmpty()) {
                 val names = nested.joinToString("\n") { it.path }
@@ -387,7 +389,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 val unlock = runGit(base, "worktree", "unlock", target.path)
                 if (!unlock.ok) LOG.info("worktree unlock skipped: path=$path exit=${unlock.exit} stderr=${unlock.stderr.trim()}")
             }
-            val res = if (target.prunable || !Files.isDirectory(Path.of(target.path))) {
+            // Only skip git's own removal when the checkout directory is actually gone. Git also flags a
+            // worktree prunable when its admin metadata is stale while the files remain; those must still
+            // be deleted so a later create of the same slug is not blocked by leftovers.
+            val res = if (!Files.isDirectory(Path.of(target.path))) {
                 GitResult(0, "", "")
             } else {
                 runGit(base, "worktree", "remove", "--force", target.path)
