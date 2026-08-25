@@ -220,9 +220,10 @@ internal class ActiveListRenderer(
         layers.isVisible = true
 
         title.clear()
-        // Bold carries the row: the description under it and the icon beside it both render in the
-        // muted secondary color, so weight is what separates the two lines rather than color alone.
-        title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, titleFg))
+        // Bold carries most rows by default: the description under it and the icon beside it both
+        // render in the muted secondary color, so weight separates the two lines when enabled.
+        val style = if (cfg.bold) SimpleTextAttributes.STYLE_BOLD else SimpleTextAttributes.STYLE_PLAIN
+        title.append(value.title, SimpleTextAttributes(style, titleFg))
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }

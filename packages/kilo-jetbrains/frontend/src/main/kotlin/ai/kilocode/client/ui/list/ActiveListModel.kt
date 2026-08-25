@@ -39,6 +39,7 @@ internal data class ActiveListConfig(
     val tooltip: Boolean = true,
     val selection: Int = ListSelectionModel.SINGLE_SELECTION,
     val hoverActions: Boolean = false,
+    val bold: Boolean = true,
 ) {
     companion object {
         val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)
@@ -83,10 +84,10 @@ internal interface ActiveListHitCell {
 
 /**
  * A row in an [ActiveList]. Carries the display contract shared by settings pages, the worktree
- * list, and the session history stack: a leading icon, a bold title with an inline [note], a
- * secondary [description] line, inline [badges], optional right-aligned [trailing] text, and
- * action [cells]. Action cells are shown only for the active focused selection unless
- * [ActiveListCell.alwaysVisible] is true.
+ * list, and the session history stack: a leading icon, a title whose weight follows
+ * [ActiveListConfig.bold] with an inline [note], a secondary [description] line, inline [badges],
+ * optional right-aligned [trailing] text, and action [cells]. Action cells are shown only for the
+ * active focused selection unless [ActiveListCell.alwaysVisible] is true.
  */
 internal interface ActiveListItem {
     val key: String
