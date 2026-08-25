@@ -160,9 +160,7 @@ describe("transcriptRows", () => {
       { live: new Set(["u2"]) },
     )
 
-    expect(
-      rows.filter((row) => row.type === "assistant").map((row) => ({ turn: row.turn, copy: row.copy })),
-    ).toEqual([
+    expect(rows.filter((row) => row.type === "assistant").map((row) => ({ turn: row.turn, copy: row.copy }))).toEqual([
       { turn: "u1", copy: "p1" },
       { turn: "u2", copy: undefined },
     ])
