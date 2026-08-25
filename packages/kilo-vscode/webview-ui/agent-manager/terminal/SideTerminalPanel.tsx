@@ -5,8 +5,12 @@
  * panels, so every mode uses the same persisted resize width. The tab row is
  * the shared inspector strip used by subagents as well.
  *
- * Visibility is opacity-based, never unmount: the xterm render loop dies when
- * its subtree leaves the paint tree (see `render.tsx`).
+ * Visibility toggles between none and flex, never unmount: xterm keeps its
+ * buffer, socket, and parser alive, while xterm's own render observer
+ * (IntersectionObserver on the screen element) pauses the render loop for
+ * hidden slots and replays a full refresh when a slot becomes visible
+ * again. `TerminalTab` still does an explicit fit + refresh on activation
+ * as insurance (see `render.tsx`).
  */
 
 import type { Accessor, Component } from "solid-js"

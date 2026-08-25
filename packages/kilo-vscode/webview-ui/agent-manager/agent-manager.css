@@ -4878,12 +4878,17 @@ body.vscode-high-contrast-light {
 /*
  * Stacking layout for xterm terminal tabs.
  *
- * The hydration invariant (see the render helpers under `terminal/`) requires that
- * xterm canvases never leave the paint tree. Both the layer and each
- * terminal slot therefore use absolute-positioning + opacity for
- * visibility — NEVER `display: none`, because that would detach the
- * subtree and stop xterm's internal rAF render loop, causing the
- * "press Enter to see content" bug on worktree switches.
+ * Terminals are never unmounted once mounted; inactive slots are hidden
+ * with `display: none`. xterm 6's render service observes the screen
+ * element and pauses hidden terminals' render loops (rAF, model
+ * updates, GPU draws), then replays a full refresh when a slot becomes
+ * visible again — the activation fit + refresh in the TerminalTab
+ * component is insurance on top of that. The historical `display: none`
+ * avoidance was for the "press Enter to see content" bug, caused by older
+ * xterm versions not resuming after a paint-tree detach; opacity-only hiding
+ * instead kept the render loop running at full rate for output no one
+ * sees (such as background setup scripts), which is measurable on the
+ * main thread.
  *
  * Stack:  position:relative container hosting the main pane, review,
  *         and side panel. Sits below the tab bar inside `.am-detail`.
@@ -4891,7 +4896,7 @@ body.vscode-high-contrast-light {
  *         `pointer-events: none` when no terminal is active, letting
  *         clicks fall through to the chat behind it.
  * Slots:  absolute-positioned and stacked inside the layer; only the
- *         active one is opaque and receives pointer events.
+ *         active one is displayed and receives pointer events.
  */
 
 .am-detail-stack {
@@ -4921,9 +4926,17 @@ body.vscode-high-contrast-light {
 }
 
 .am-terminal-slot {
+  /* Hidden slots are display:none, not opacity:0. xterm 6's render
+     service observes the screen element and pauses its render loop for
+     non-intersecting terminals (rAF loop, model updates, WebGL draws),
+     then replays a full refresh when the slot becomes visible again.
+     Opacity-only hiding kept the loop running at full rate for output
+     no one sees, such as background setup scripts streaming while the
+     user works in another context's terminal. */
   position: absolute;
   inset: 0;
-  display: flex;
+  display: none;
+  flex-direction: column;
   min-height: 0;
   min-width: 0;
   opacity: 0;
@@ -4932,6 +4945,7 @@ body.vscode-high-contrast-light {
 }
 
 .am-terminal-slot-visible {
+  display: flex;
   opacity: 1;
   pointer-events: auto;
   z-index: 1;
@@ -4939,9 +4953,9 @@ body.vscode-high-contrast-light {
 
 /* Side terminal panel — lives inside .am-diff-panel-wrapper next to the
    diff and PR panels. Header reuses .am-diff-header metrics so the
-   chrome does not shift when switching inspector modes. Visibility is
-   opacity-only: the xterm render loop dies if the subtree leaves the
-   paint tree. */
+   chrome does not shift when switching inspector modes. The panel is
+   opacity-toggled, its terminal slots flip display (per-slot render
+   pause, see .am-terminal-slot above). */
 .am-side-terminal {
   position: absolute;
   inset: 0;
