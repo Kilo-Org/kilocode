@@ -180,6 +180,13 @@ export class SourceController {
       this.send(this.messages.diffFile(source, file, null))
       return
     }
+    // Yield once so a worktree switch can advance the epoch before queued
+    // detail work enters the shared Git semaphore.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    if (this.epoch !== epoch || this.active !== source) {
+      this.send(this.messages.diffFile(source, file, null))
+      return
+    }
     const diff = await source.fetchFile(file).catch(() => null)
     // Discard stale content after disposal/swap, but still complete the request
     // so consumers can clear per-file loading state.
@@ -239,10 +246,15 @@ export class SourceController {
 
   private startPolling(source: DiffSource, epoch: number): void {
     this.stopPolling()
+    let busy = false
     this.interval = setInterval(async () => {
+      if (busy) return
+      busy = true
       // Self-cancel when the tick reports the source is done
-      const keep = await this.runFetch(source, epoch, false)
-      if (!keep) this.stopPolling()
+      const keep = await this.runFetch(source, epoch, false).finally(() => {
+        busy = false
+      })
+      if (!keep && this.epoch === epoch && this.active === source) this.stopPolling()
     }, DIFF_POLL_INTERVAL_MS)
   }
 

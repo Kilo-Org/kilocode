@@ -162,14 +162,14 @@ import {
 import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
-import { DiffPanel } from "./DiffPanel"
+import { DiffPanelCache } from "./DiffPanelCache"
 import { PRPanelHost } from "./pr/PRPanelHost"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
 import { createWorktreeDiffs, wireDiffId } from "./worktree-diffs"
 import type { ReviewComment } from "../diff-viewer/review-comments"
-import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
+import { createReviewComposers } from "./review-composers"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import { createSidebarSearch, type SidebarSearchItem } from "./sidebar-search"
 import { randomColor } from "./section-colors"
@@ -309,6 +309,7 @@ const AgentManagerContent: Component = () => {
   let pendingSidebarWidth: number | undefined
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
+  const [diffMounted, setDiffMounted] = createSignal(false)
   const diffOpen = () => sidePanel() === SidePanel.Diff
   const prOpen = () => sidePanel() === SidePanel.PR
   const activePR = createMemo(() => {
@@ -319,6 +320,7 @@ const AgentManagerContent: Component = () => {
     return { pr, selected, wt: worktrees().find((w) => w.id === selected) }
   })
   const diffs = createWorktreeDiffs(vscode, activeProjectId)
+  createEffect(on(activeProjectId, diffs.reset, { defer: true }))
   const diffDatas = diffs.diffDatas
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
@@ -330,7 +332,7 @@ const AgentManagerContent: Component = () => {
     setReviewActive(false)
     setSidePanel(SidePanel.Terminal)
   }
-  const reviewComposer = createReviewComposer()
+  const composers = createReviewComposers(currentProjectId)
   const reviewState = createReviewState()
   const reviewOpenByContext = reviewState.open
   const setReviewOpenByContext = reviewState.setOpen
@@ -524,7 +526,6 @@ const AgentManagerContent: Component = () => {
     setPendingDelete(null)
   }
   createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
-  createEffect(on(selection, () => clearReviewComposer(reviewComposer), { defer: true }))
   createEffect(
     on(
       selection,
@@ -1752,8 +1753,11 @@ const AgentManagerContent: Component = () => {
   }
 
   const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(diffScopeId))
+  const diffLoadingForCurrent = createMemo(() => diffs.diffLoadingFor(diffScopeId))
 
   const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), vscode, showToast, t, activeProjectId)
+
+  createEffect(() => diffOpen() && setDiffMounted(true))
 
   const handleShowKeyboardShortcuts = () => {
     const categories = buildShortcutCategories(kb(), t)
@@ -2603,7 +2607,9 @@ const AgentManagerContent: Component = () => {
                   mounted while a side terminal is alive — hidden via
                   .am-side-host-hidden (absolute + opacity), never
                   unmounted, so xterm render loops keep streaming. */}
-              <Show when={sidePanel() !== null || terms.sides().length > 0 || subagents.tabs().length > 0}>
+              <Show
+                when={sidePanel() !== null || diffMounted() || terms.sides().length > 0 || subagents.tabs().length > 0}
+              >
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
                   style={{ width: `${panelWidth()}px` }}
@@ -2620,42 +2626,49 @@ const AgentManagerContent: Component = () => {
                     />
                   </Show>
                   <div class="am-diff-panel-wrapper">
-                    <Show when={sidePanel() === SidePanel.Diff}>
-                      <DiffPanel
-                        diffs={reviewDiffs()}
-                        loading={diffLoading()}
-                        loadingFiles={diffFileLoadingForCurrent()}
-                        sessionId={activeDiffSession()}
-                        sessionKey={diffSessionKey()}
-                        notice={diffNotice()}
-                        lead={diffScopeControls(true)}
-                        canRevert={scopeCapabilities(review.scope()).revert}
-                        diffStyle={diffStyle.style()}
-                        onDiffStyleChange={setSharedDiffStyle}
-                        markdownRender={markdown.render()}
-                        onMarkdownRenderChange={markdown.update}
-                        comments={reviewComments()}
-                        onCommentsChange={setReviewCommentsForSelection}
-                        composer={reviewComposer}
-                        onSendClick={() => metrics.track("send_review_comments", "side_review")}
-                        onClose={metrics.click("side_review_close", "side_review", () => setSidePanel(null))}
-                        onExpand={
-                          selection() !== null
-                            ? metrics.click("fullscreen_review", "side_review", openReviewTab, { action: "open" })
-                            : undefined
-                        }
-                        onRequestDiff={requestDiffFile}
-                        onOpenFile={(file, line) => {
-                          const id = diffCtx()
-                          if (id)
-                            vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
-                        }}
-                        onOpenDocument={documentInspector.open}
-                        onRevertFile={metrics.use("revert_file", "side_review", revertCtl.revert)}
-                        revertingFiles={revertCtl.reverting()}
-                        activeTerminalId={terms.activeId()}
-                      />
-                    </Show>
+                    <DiffPanelCache
+                      current={diffScopeId}
+                      context={diffCtx}
+                      project={activeProjectId}
+                      active={() => diffOpen() && !history() && !reviewActive()}
+                      data={diffDatas}
+                      loading={(key) => diffs.diffLoadingFor(() => key)}
+                      loadingFiles={(key) => diffs.diffFileLoadingFor(() => key)}
+                      notice={(key) => diffNotices()[key]}
+                      comments={(ctx) =>
+                        readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", ctx)
+                      }
+                      setComments={(ctx, comments) =>
+                        setReviewCommentsByContext((prev) =>
+                          setReviewComments(prev, currentProjectId() ?? "single", ctx, comments),
+                        )
+                      }
+                      composer={composers.get}
+                      lead={() => diffScopeControls(true)}
+                      canRevert={scopeCapabilities(review.scope()).revert}
+                      diffStyle={diffStyle.style()}
+                      onDiffStyleChange={setSharedDiffStyle}
+                      markdownRender={markdown.render()}
+                      onMarkdownRenderChange={markdown.update}
+                      onSendClick={() => metrics.track("send_review_comments", "side_review")}
+                      onClose={metrics.click("side_review_close", "side_review", () => setSidePanel(null))}
+                      onExpand={
+                        selection() !== null
+                          ? metrics.click("fullscreen_review", "side_review", openReviewTab, { action: "open" })
+                          : undefined
+                      }
+                      onRequestDiff={diffs.requestDiffFile}
+                      onOpenFile={(ctx, file, line) =>
+                        vscode.postMessage({ type: "agentManager.openFile", sessionId: ctx, filePath: file, line })
+                      }
+                      onOpenDocument={documentInspector.open}
+                      onRevertFile={(key, ctx, file) => {
+                        metrics.track("revert_file", "side_review")
+                        revertCtl.revertFor(key, ctx, review.scope(), file)
+                      }}
+                      revertingFiles={revertCtl.revertingFor}
+                      activeTerminalId={terms.activeId()}
+                    />
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
                       <PRPanelHost
                         pr={activePR()!.pr}
@@ -2726,7 +2739,7 @@ const AgentManagerContent: Component = () => {
               <div class="am-review-host" style={{ display: reviewActive() && !terms.activeId() ? undefined : "none" }}>
                 <FullScreenDiffView
                   diffs={reviewDiffs()}
-                  loading={diffLoading()}
+                  loading={diffLoadingForCurrent()}
                   loadingFiles={diffFileLoadingForCurrent()}
                   sessionId={activeDiffSession()}
                   sessionKey={diffSessionKey()}
@@ -2736,7 +2749,7 @@ const AgentManagerContent: Component = () => {
                   canComment={scopeCapabilities(review.scope()).comments}
                   comments={reviewComments()}
                   onCommentsChange={setReviewCommentsForSelection}
-                  composer={reviewComposer}
+                  composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
                   onSendAll={closeReviewTab}
                   onSendClick={() => metrics.track("send_review_comments", "fullscreen_review")}
                   diffStyle={diffStyle.style()}

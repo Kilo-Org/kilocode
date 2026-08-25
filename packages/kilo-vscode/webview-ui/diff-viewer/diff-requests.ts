@@ -36,7 +36,7 @@ export function createDiffRequests(opts: DiffRequestOptions) {
 
   createEffect(
     on(
-      () => [opts.open(), opts.diffs(), opts.loading()] as const,
+      () => [opts.open(), opts.diffs(), opts.loading(), opts.send()] as const,
       ([open, diffs]) => {
         const files = new Set(open)
         for (const file of requested.keys()) {

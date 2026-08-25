@@ -65,8 +65,19 @@ describe("createWorktreeDiffs", () => {
     withDiffs((diffs) => {
       diffs.onWorktreeDiffLoading({ type: "agentManager.worktreeDiffLoading", sessionId: "s1", loading: true })
       expect(diffs.diffLoading()).toBe(true)
+      expect(diffs.diffLoadingFor(() => "s1")).toBe(true)
+      diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s1", diffs: [] })
+      expect(diffs.diffLoadingFor(() => "s1")).toBe(false)
       diffs.onWorktreeDiffLoading({ type: "agentManager.worktreeDiffLoading", sessionId: "s1", loading: false })
       expect(diffs.diffLoading()).toBe(false)
+    })
+  })
+
+  it("keeps loading isolated to its composite diff id", () => {
+    withDiffs((diffs) => {
+      diffs.onWorktreeDiffLoading({ type: "agentManager.worktreeDiffLoading", sessionId: "s1#branch", loading: true })
+      expect(diffs.diffLoadingFor(() => "s1#branch")).toBe(true)
+      expect(diffs.diffLoadingFor(() => "s2#branch")).toBe(false)
     })
   })
 

@@ -346,6 +346,36 @@ describe("SourceController.requestFile", () => {
     controller.stop()
   })
 
+  it("does not start queued detail work after the source changes", async () => {
+    let details = 0
+    const workspace: DiffSource = {
+      descriptor: WORKSPACE_DESC,
+      async fetch() {
+        return { diffs: [] }
+      },
+      async fetchFile() {
+        details++
+        return null
+      },
+    }
+    const session: DiffSource = {
+      descriptor: SESSION_DESC,
+      async fetch() {
+        return { diffs: [] }
+      },
+    }
+    const { controller } = make({ workspace, "session:s1": session })
+
+    controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
+    await controller.activate("workspace")
+    const request = controller.requestFile("foo.ts")
+    await controller.activate("session:s1")
+    await request
+
+    expect(details).toBe(0)
+    controller.stop()
+  })
+
   it("posts null when a pending fetchFile result is invalidated by stop", async () => {
     let release: () => void = () => {}
     const workspace: DiffSource = {

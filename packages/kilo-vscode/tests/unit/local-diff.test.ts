@@ -352,6 +352,36 @@ describe("diffFile", () => {
     })
   })
 
+  it("reuses cached detail while the summary stamp is unchanged", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncached\n")
+      const local = createLocalDiff(git())
+      await local.summary(dir, base)
+
+      const first = await local.file(dir, base, "seed.txt")
+      const second = await local.file(dir, base, "seed.txt")
+
+      expect(second).toBe(first)
+    })
+  })
+
+  it("invalidates cached detail after the summary stamp changes", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfirst\n")
+      const local = createLocalDiff(git())
+      await local.summary(dir, base)
+      const first = await local.file(dir, base, "seed.txt")
+
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nsecond value\n")
+      await local.summary(dir, base)
+      const second = await local.file(dir, base, "seed.txt")
+
+      expect(second).not.toBe(first)
+      expect(second?.after).toBe("seed\nsecond value\n")
+    })
+  })
+
   it("does not materialize binary detail from a cached summary", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "tone.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03]))

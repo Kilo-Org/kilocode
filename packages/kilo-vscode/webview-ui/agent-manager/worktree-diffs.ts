@@ -34,9 +34,17 @@ export function createWorktreeDiffs(
   project: () => string | undefined = () => undefined,
 ) {
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
-  const [diffLoading, setDiffLoading] = createSignal(false)
+  const [diffLoadings, setDiffLoadings] = createSignal<Record<string, true>>({})
+  const diffLoading = () => Object.keys(diffLoadings()).length > 0
   const [diffNotices, setDiffNotices] = createSignal<Record<string, string | undefined>>({})
   const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
+
+  const reset = () => {
+    setDiffDatas({})
+    setDiffLoadings({})
+    setDiffNotices({})
+    setDiffFileLoading({})
+  }
 
   const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
     setDiffFileLoading((prev) => {
@@ -93,6 +101,13 @@ export function createWorktreeDiffs(
     return new Set(Object.keys(diffFileLoading()[id] ?? {}))
   }
 
+  /** Initial summary loading for one composite diff id. Cached results stay visible while refreshing. */
+  const diffLoadingFor = (sessionId: Accessor<string | undefined>) => {
+    const id = sessionId()
+    if (!id) return false
+    return diffLoadings()[id] === true && !(id in diffDatas())
+  }
+
   // Backend messages.
 
   const onWorktreeDiff = (ev: AgentManagerWorktreeDiffMessage) => {
@@ -122,7 +137,18 @@ export function createWorktreeDiffs(
   }
 
   const onWorktreeDiffLoading = (ev: AgentManagerWorktreeDiffLoadingMessage) => {
-    setDiffLoading(ev.loading)
+    // One source is active per project. Replacing the map on start also clears
+    // an interrupted source whose stale completion is intentionally discarded.
+    if (ev.loading) {
+      setDiffLoadings({ [ev.sessionId]: true })
+      return
+    }
+    setDiffLoadings((prev) => {
+      if (!prev[ev.sessionId]) return prev
+      const next = { ...prev }
+      delete next[ev.sessionId]
+      return next
+    })
   }
 
   const onWorktreeDiffNotice = (ev: AgentManagerWorktreeDiffNoticeMessage) => {
@@ -132,11 +158,13 @@ export function createWorktreeDiffs(
   return {
     diffDatas,
     diffLoading,
-    setDiffLoading,
+    setDiffLoading: (loading: boolean) => setDiffLoadings(loading ? diffLoadings() : {}),
     diffNotices,
     requestDiffFile,
     refreshStaleDiffs,
     diffFileLoadingFor,
+    diffLoadingFor,
+    reset,
     onWorktreeDiff,
     onWorktreeDiffFile,
     onWorktreeDiffLoading,

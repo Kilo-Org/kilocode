@@ -7,12 +7,12 @@
  */
 export class Semaphore {
   private running = 0
-  private readonly pending: (() => void)[] = []
+  private readonly pending: { resolve: () => void; abort?: () => void }[] = []
 
   constructor(private readonly limit: number) {}
 
-  async run<T>(fn: () => Promise<T>): Promise<T> {
-    await this.acquire()
+  async run<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    await this.acquire(signal)
     try {
       return await fn()
     } finally {
@@ -20,22 +20,33 @@ export class Semaphore {
     }
   }
 
-  private acquire(): Promise<void> {
+  private acquire(signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted) return Promise.reject(signal.reason)
     if (this.running < this.limit) {
       this.running++
       return Promise.resolve()
     }
-    return new Promise<void>((resolve) => {
-      this.pending.push(() => {
-        this.running++
-        resolve()
-      })
+    return new Promise<void>((resolve, reject) => {
+      const item = {
+        resolve: () => {
+          if (item.abort) signal?.removeEventListener("abort", item.abort)
+          this.running++
+          resolve()
+        },
+        abort: undefined as (() => void) | undefined,
+      }
+      item.abort = () => {
+        const index = this.pending.indexOf(item)
+        if (index !== -1) this.pending.splice(index, 1)
+        reject(signal?.reason)
+      }
+      signal?.addEventListener("abort", item.abort, { once: true })
+      this.pending.push(item)
     })
   }
 
   private release(): void {
     this.running--
-    const next = this.pending.shift()
-    if (next) next()
+    this.pending.shift()?.resolve()
   }
 }

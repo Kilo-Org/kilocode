@@ -28,9 +28,9 @@ export function createRevertFile(
     return files()[id] ?? new Set<string>()
   })
 
-  function revert(file: string) {
-    const id = diffScopeId()
-    const context = ctx()
+  const revertingFor = (id: string) => files()[id] ?? new Set<string>()
+
+  function revertFor(id: string | undefined, context: string | undefined, source: string, file: string) {
     if (!id || !context) return
     setFiles((prev) => {
       const set = new Set(prev[id] ?? [])
@@ -42,8 +42,12 @@ export function createRevertFile(
       projectId: projectId?.(),
       sessionId: context,
       file,
-      scope: scope(),
+      scope: source,
     })
+  }
+
+  function revert(file: string) {
+    revertFor(diffScopeId(), ctx(), scope(), file)
   }
 
   function onResult(ev: AgentManagerRevertWorktreeFileResultMessage) {
@@ -62,5 +66,5 @@ export function createRevertFile(
     }
   }
 
-  return { reverting, revert, onResult }
+  return { reverting, revertingFor, revert, revertFor, onResult }
 }
