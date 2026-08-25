@@ -20,6 +20,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+enum class CreateKind { CREATE, BRANCH, PR }
+
+data class CreateFailure(val error: String?, val kind: CreateKind, val branch: String)
+
 /**
  * Owns the worktree list model and drives the [KiloWorktreeService] off the EDT. Model mutations
  * are marshalled back onto the EDT via [edt]. Mirrors the History stack's controller shape.
@@ -37,7 +41,7 @@ class WorktreeController(
     private val tasks = LinkedHashMap<String, String>()
     private val moves = LinkedHashSet<String>()
     var onSelect: ((String) -> Unit)? = null
-    var onCreateFailure: ((String?) -> Unit)? = null
+    var onCreateFailure: ((CreateFailure) -> Unit)? = null
     var onMoveFailure: ((String?) -> Unit)? = null
     var onRemoveSuccess: ((WorktreeDto, Int) -> Unit)? = null
     var onActivityChanged: (() -> Unit)? = null
@@ -109,13 +113,19 @@ class WorktreeController(
     fun quickCreate() = create(suggestName(), defaultBranch)
 
     /** Imports a worktree that checks out an existing local branch. */
-    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true)
+    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true, kind = CreateKind.BRANCH)
 
     /**
      * Creates a worktree. When [prompt] is set, it is stashed for the worktree's first session so the
      * editor auto-sends it once it opens with its picked mode/model (see [PendingWorktreePrompt]).
      */
-    fun create(branch: String, base: String?, existingBranch: Boolean = false, prompt: PendingPrompt? = null) {
+    fun create(
+        branch: String,
+        base: String?,
+        existingBranch: Boolean = false,
+        prompt: PendingPrompt? = null,
+        kind: CreateKind = CreateKind.CREATE,
+    ) {
         val id = "pending:$branch:${System.nanoTime()}"
         val temp = WorktreeDto(id, branch, branch, id)
         edt {
@@ -126,7 +136,7 @@ class WorktreeController(
         }
         cs.launch {
             val result = service.create(directory, CreateWorktreeRequestDto(branch, base, existingBranch))
-            finishCreate(temp, branch, prompt, result)
+            finishCreate(temp, branch, prompt, result, kind)
         }
     }
 
@@ -141,7 +151,7 @@ class WorktreeController(
         }
         cs.launch {
             val result = service.importPr(directory, url)
-            finishCreate(temp, "pr", null, result)
+            finishCreate(temp, "pr", null, result, CreateKind.PR)
         }
     }
 
@@ -150,6 +160,7 @@ class WorktreeController(
         branch: String,
         prompt: PendingPrompt?,
         result: CreateWorktreeResultDto,
+        kind: CreateKind,
     ) {
         val created = result.worktree
         edt {
@@ -166,7 +177,7 @@ class WorktreeController(
             }
             if (idx >= 0) model.remove(temp)
             telemetry("Worktree Create Failed", mapOf("branch" to branch))
-            onCreateFailure?.invoke(result.error)
+            onCreateFailure?.invoke(CreateFailure(result.error, kind, branch))
         }
     }
 

@@ -128,7 +128,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     fun `test configure creates the worktree only after the dialog closes`() {
         val order = mutableListOf<String>()
-        val plan = NewWorktreePlan("feature/y", "main", PendingPrompt("build it"))
+        val plan = NewWorktreePlan.Create("feature/y", "main", PendingPrompt("build it"))
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
             AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
@@ -158,6 +158,36 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(listOf("show"), order)
         assertEquals(0, edt { controller.model.size })
         assertTrue(rpc.creates.isEmpty())
+    }
+
+    fun `test configure imports an existing branch`() {
+        val order = mutableListOf<String>()
+        val plan = NewWorktreePlan.Branch("feature/x")
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+        }
+
+        edt { panel.configure() }
+        flush()
+
+        val req = rpc.creates.single()
+        assertEquals("feature/x", req.branch)
+        assertTrue("branch import checks out an existing branch", req.existingBranch)
+    }
+
+    fun `test configure imports a pull request`() {
+        val order = mutableListOf<String>()
+        val plan = NewWorktreePlan.Pr("https://github.com/o/r/pull/7")
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+        }
+
+        edt { panel.configure() }
+        flush()
+
+        assertEquals(listOf("https://github.com/o/r/pull/7"), rpc.prImports.toList())
     }
 
     fun `test panel hides worktree search field`() {

@@ -3,6 +3,7 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
@@ -589,17 +590,6 @@ internal fun parsePr(path: String, raw: String): WorktreePrDto? {
         else -> GhState.OPEN
     }
     return WorktreePrDto(path, number, state, url, title)
-}
-
-internal data class PrRef(val owner: String, val repo: String, val number: Int)
-
-private val PR_URL = Regex("github\\.com[/:]([^/]+)/([^/]+?)(?:\\.git)?/pull/(\\d+)")
-
-/** Parses `https://github.com/<owner>/<repo>/pull/<n>` (and ssh-style hosts) into its parts. */
-internal fun parsePrUrl(url: String): PrRef? {
-    val match = PR_URL.find(url.trim()) ?: return null
-    val number = match.groupValues[3].toIntOrNull() ?: return null
-    return PrRef(match.groupValues[1], match.groupValues[2], number)
 }
 
 /** Reads `headRefName` out of a `gh pr view --json` payload. */

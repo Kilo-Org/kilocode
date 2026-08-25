@@ -1,6 +1,8 @@
 package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.CreateFailure
+import ai.kilocode.client.agentManager.worktree.CreateKind
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.PendingPrompt
@@ -105,7 +107,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     fun `test create failure removes placeholder and reports the error`() {
         rpc.createResult = { CreateWorktreeResultDto(error = "boom") }
         val controller = controller()
-        val failures = mutableListOf<String?>()
+        val failures = mutableListOf<CreateFailure>()
         controller.onCreateFailure = { failures.add(it) }
 
         ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
@@ -115,7 +117,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
         assertEquals(0, controller.model.size)
         assertFalse(controller.isPending(id))
-        assertEquals(listOf("boom"), failures)
+        assertEquals(listOf(CreateFailure("boom", CreateKind.CREATE, "feature/y")), failures)
     }
 
     fun `test reload preserves pending worktrees`() {

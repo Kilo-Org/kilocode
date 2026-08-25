@@ -1,8 +1,11 @@
 package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.agentManager.worktree.CreateFailure
+import ai.kilocode.client.agentManager.worktree.CreateKind
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.NewWorktreeHandle
+import ai.kilocode.client.agentManager.worktree.NewWorktreePlan
 import ai.kilocode.client.agentManager.worktree.GhBanner
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
@@ -24,6 +27,7 @@ import ai.kilocode.client.diff.diffParams
 import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
@@ -178,7 +182,17 @@ class AgentManagerPanel(
         if (!handle.showAndGet()) return
         val plan = handle.result() ?: return
         onCreate()
-        controller.create(plan.branch, plan.base, prompt = plan.prompt)
+        when (plan) {
+            is NewWorktreePlan.Create -> controller.create(plan.branch, plan.base, prompt = plan.prompt)
+            is NewWorktreePlan.Branch -> {
+                Telemetry.send("Worktree Import Submitted", mapOf("kind" to "branch"))
+                controller.importBranch(plan.branch)
+            }
+            is NewWorktreePlan.Pr -> {
+                Telemetry.send("Worktree Import Submitted", mapOf("kind" to "pr"))
+                controller.importPr(plan.url)
+            }
+        }
     }
 
     internal fun move(sessionId: String?, directory: String) = controller.move(sessionId, directory)
@@ -317,8 +331,13 @@ class AgentManagerPanel(
         return controller.model.getElementAt(index.coerceIn(0, size - 1))
     }
 
-    private fun notifyCreateFailed(err: String?) {
-        KiloNotifications.error(project, KiloBundle.message("worktree.create.failed.title"), err)
+    private fun notifyCreateFailed(failure: CreateFailure) {
+        val title = when (failure.kind) {
+            CreateKind.CREATE -> KiloBundle.message("worktree.create.failed.title")
+            CreateKind.BRANCH -> KiloBundle.message("worktree.import.branch.failed.title", failure.branch)
+            CreateKind.PR -> KiloBundle.message("worktree.import.pr.failed.title")
+        }
+        KiloNotifications.error(project, title, failure.error)
     }
 
     private fun notifyMoveFailed(err: String?) {

@@ -1,5 +1,6 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
