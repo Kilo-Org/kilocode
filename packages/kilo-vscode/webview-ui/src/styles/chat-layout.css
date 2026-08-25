@@ -132,6 +132,15 @@
   margin-inline: calc(var(--chat-scrollbar-width, 10px) / 2) calc(var(--chat-scrollbar-width, 10px) / -2);
 }
 
+/* Streaming content reflows under a parked pointer, so without a cursor of its
+   own the transcript alternated between the text cursor over message text and
+   the default cursor over containers and gaps. The whole transcript is
+   selectable text, so it declares the text cursor once and every descendant
+   inherits it. Controls keep their own pointer cursor. */
+.message-list-content {
+  cursor: text;
+}
+
 .message-list-content-empty {
   display: flex;
   min-height: 100%;

@@ -183,7 +183,6 @@ export const dict = {
   "prompt.action.autoApprove.disable": "ปิดใช้การอนุมัติอัตโนมัติ",
   "prompt.action.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขอสิทธิ์จะได้รับการอนุมัติโดยอัตโนมัติ",
   "prompt.action.autoApprove.disabled": "ปิดใช้การอนุมัติอัตโนมัติแล้ว คลิกเพื่ออนุมัติคำขอสิทธิ์โดยอัตโนมัติ",
-  "prompt.action.resetModel": "รีเซ็ตโมเดลเป็นค่าเริ่มต้น",
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
@@ -1226,7 +1225,6 @@ export const dict = {
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
-  "task.backgroundAgents.foreground": "เอเจนต์เบื้องหน้ากำลังทำงาน",
   "task.backgroundAgents.waiting": "เอเจนต์เบื้องหลังต้องการข้อมูลจากคุณ",
   "task.backgroundAgents.needsInput": "ต้องการข้อมูล",
   "task.backgroundAgents.dismiss": "ยกเลิก",

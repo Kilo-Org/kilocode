@@ -25,16 +25,6 @@ export function canOpenRootSession(id: string, sessions: Pick<SessionLike, "id" 
   return !!session && isKnownRootSession(session)
 }
 
-export function filterUnassignedSessions<T extends SessionLike>(
-  sessions: T[],
-  worktree: Set<string>,
-  local: Set<string>,
-): T[] {
-  return [...sessions]
-    .filter((s) => isKnownRootSession(s) && !worktree.has(s.id) && !local.has(s.id))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-}
-
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
   // Determine current position: -1 = local, 0..N-1 = session index
   if (!current) {
@@ -166,22 +156,18 @@ export interface ProjectNavInput {
   /** Persisted top-level order containing worktree and section IDs. */
   worktreeOrder?: string[]
   sections: { id: string; collapsed: boolean }[]
-  sessionsCollapsed: boolean
-  /** Visible unassigned (root, no worktree) sessions in render order. */
-  unassigned: { id: string }[]
 }
 
 export const localNavId = (projectId: string) => `${projectId}:local`
 export const worktreeNavId = (projectId: string, worktreeId: string) => `${projectId}:wt:${worktreeId}`
-export const sessionNavId = (projectId: string, sessionId: string) => `${projectId}:sess:${sessionId}`
 
 /**
  * Build one global visual order across expanded projects.
  *
  * For each expanded project (in input order): Local, then ungrouped worktrees,
- * then members of each non-collapsed section in top-level order, then visible
- * unassigned sessions. This matches `buildTopLevelItems` and the project body.
- * Collapsed projects contribute nothing.
+ * then members of each non-collapsed section in top-level order. This matches
+ * `buildTopLevelItems` and the project body. Collapsed projects contribute
+ * nothing.
  */
 export function buildProjectNavOrder(projects: ProjectNavInput[]): NavEntry[] {
   const order: NavEntry[] = []
@@ -209,11 +195,6 @@ export function buildProjectNavOrder(projects: ProjectNavInput[]): NavEntry[] {
         if (w.sectionId === sec.id) {
           order.push({ id: worktreeNavId(pid, w.id), target: { projectId: pid, kind: "worktree", worktreeId: w.id } })
         }
-      }
-    }
-    if (!p.sessionsCollapsed) {
-      for (const s of p.unassigned) {
-        order.push({ id: sessionNavId(pid, s.id), target: { projectId: pid, kind: "session", sessionId: s.id } })
       }
     }
   }

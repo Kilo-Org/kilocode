@@ -575,6 +575,13 @@ interface AddSessionToWorktreeIn {
   sessionId?: string
 }
 
+/** Move a session back to the project root and open it in the local tabs. */
+interface OpenSessionLocallyIn {
+  type: "agentManager.openSessionLocally"
+  projectId?: string
+  sessionId: string
+}
+
 interface CloseSessionIn {
   type: "agentManager.closeSession"
   sessionId: string
@@ -1081,6 +1088,7 @@ export type AgentManagerInMessage =
   | RemoveStaleWorktreeIn
   | PromoteSessionIn
   | OpenLocallyIn
+  | OpenSessionLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | PersistSessionIn
