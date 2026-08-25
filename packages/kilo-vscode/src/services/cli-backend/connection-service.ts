@@ -3,7 +3,7 @@ import { ServerManager } from "./server-manager"
 import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2/client"
 import { SdkSSEAdapter, type SSEPayload } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
-import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
+import { createDuplicateEventFilter, resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 import { SandboxPreference } from "../sandbox-preference"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
@@ -96,6 +96,7 @@ export class KiloConnectionService {
   private remoteService: import("../RemoteStatusService").RemoteStatusService | null = null
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
+  private readonly duplicateEvent = createDuplicateEventFilter()
   private readonly stateListeners: Set<StateListener> = new Set()
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
   private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
@@ -837,6 +838,8 @@ export class KiloConnectionService {
     // Wire SSE events → broadcast to all registered listeners
     sse.onEvent((event, directory) => {
       if (this.sseClient !== sse) return
+      // EventV2Bridge also emits these durable compatibility envelopes after their normal live events.
+      if (this.duplicateEvent(event)) return
       this.handlePermissionEvent(event, directory)
       this.handleQuestionEvent(event, directory)
       for (const listener of this.eventListeners) {

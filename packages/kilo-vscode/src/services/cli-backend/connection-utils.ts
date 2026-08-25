@@ -4,6 +4,33 @@ export type { SSEPayload } from "./sdk-sse-adapter"
 type SyncPayload = Extract<SSEPayload, { type: "sync" }>
 type TransientPayload = Exclude<SSEPayload, SyncPayload>
 
+const duplicateSyncEvents = new Set([
+  "message.updated.1",
+  "message.removed.1",
+  "message.part.updated.1",
+  "message.part.removed.1",
+  "session.created.1",
+  "session.deleted.1",
+])
+
+const duplicateLiveEvents = new Set([...duplicateSyncEvents].map((name) => name.slice(0, -2)))
+const DUPLICATE_EVENT_LIMIT = 1024
+
+export function createDuplicateEventFilter() {
+  const seen = new Set<string>()
+  return (event: SSEPayload): boolean => {
+    if (event.type === "sync") {
+      return duplicateSyncEvents.has(event.name) && seen.delete(event.id)
+    }
+
+    if (duplicateLiveEvents.has(event.type)) {
+      seen.add(event.id)
+      if (seen.size > DUPLICATE_EVENT_LIMIT) seen.delete(seen.values().next().value!)
+    }
+    return false
+  }
+}
+
 /**
  * Pure session ID resolution for SSE events.
  * The lookupMessageSessionId callback remains part of the public resolver contract for
