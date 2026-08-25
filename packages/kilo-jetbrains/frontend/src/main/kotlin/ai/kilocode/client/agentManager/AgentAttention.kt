@@ -4,30 +4,17 @@ import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 
 /**
- * Notification dot state for the Agents tab.
+ * Whether any session in the activity snapshot is waiting on the user or has failed, i.e. the Agents
+ * tab should show a notification dot.
  *
- * The dot marks attention the user has not looked at yet. That distinction is what lets it clear for
- * good: an error stays in the activity snapshot until its session runs again, so a dot driven by the
- * snapshot alone would come back every time the user left the tab. A session that stops needing
- * attention is forgotten again, so a later failure lights the dot once more.
+ * The dot mirrors that state for as long as it lasts, across every worktree and session. Viewing the
+ * tab does not clear it: only resolving the attention does, by answering the prompt or running the
+ * session again.
  */
-internal class AgentAttention {
-    private var seen = emptySet<String>()
-
-    /**
-     * Whether the dot should be visible. [read] means the user is looking at the Agent Manager,
-     * which marks everything currently pending as seen — the rows carry the badge there.
-     */
-    fun update(activity: Map<String, SessionActivityDto>, read: Boolean): Boolean {
-        val pending = activity.filterValues(::attention).keys
-        seen = if (read) pending else seen intersect pending
-        return (pending - seen).isNotEmpty()
+internal fun sessionAttentionNeeded(activity: Map<String, SessionActivityDto>): Boolean =
+    activity.values.any {
+        it.kind == SessionActivityKindDto.QUESTION ||
+            it.kind == SessionActivityKindDto.PLAN ||
+            it.kind == SessionActivityKindDto.PERMISSION ||
+            it.kind == SessionActivityKindDto.ERROR
     }
-}
-
-/** Whether a session is waiting on the user or has failed. */
-private fun attention(item: SessionActivityDto): Boolean =
-    item.kind == SessionActivityKindDto.QUESTION ||
-        item.kind == SessionActivityKindDto.PLAN ||
-        item.kind == SessionActivityKindDto.PERMISSION ||
-        item.kind == SessionActivityKindDto.ERROR
