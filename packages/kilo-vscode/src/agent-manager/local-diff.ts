@@ -1,4 +1,5 @@
 import * as fs from "fs/promises"
+import { createHash } from "crypto"
 import { binaryFile } from "../diff/shared/binary"
 import { imageMime, loadImage, readImageFile } from "../diff/shared/image"
 import { resolveInside } from "../diff/shared/path"
@@ -144,7 +145,46 @@ async function statStamp(dir: string, file: string): Promise<string> {
   if (!full) return `missing:${file}`
   const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) return `missing:${file}`
-  return `${stat.size}:${stat.mtimeMs}`
+  return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}:${stat.ino ?? 0}`
+}
+
+async function contentStamp(dir: string, file: string, status: Status): Promise<string> {
+  if (status === "deleted") return "deleted"
+  const full = resolveInside(dir, file)
+  if (!full) return `missing:${file}`
+  const stat = await fs.lstat(full).catch(() => undefined)
+  if (!stat) return `missing:${file}`
+  const value = stat.isSymbolicLink()
+    ? Buffer.from(await fs.readlink(full))
+    : stat.isFile()
+      ? await fs.readFile(full).catch(() => undefined)
+      : undefined
+  if (!value) return `unreadable:${file}`
+  return createHash("sha256").update(value).digest("hex")
+}
+
+function detailStamp(value: WorktreeDiffEntry, meta: Meta): string {
+  if (meta.status === "deleted") return "deleted"
+  const data = value.image?.after?.data
+  if (data) return createHash("sha256").update(Buffer.from(data, "base64")).digest("hex")
+  return createHash("sha256")
+    .update(value.after ?? "")
+    .digest("hex")
+}
+
+async function detailReads(git: GitOps, dir: string, anc: string, meta: Meta, signal?: AbortSignal) {
+  return Promise.all([
+    readBefore(git, dir, anc, meta.file, meta.status, signal),
+    readAfter(dir, meta.file, meta.status),
+    meta.tracked ? unifiedPatch(git, dir, anc, meta.file, signal) : Promise.resolve(""),
+  ])
+}
+
+async function sizes(git: GitOps, dir: string, anc: string, meta: Meta, signal?: AbortSignal) {
+  return Promise.all([
+    meta.status === "added" ? 0 : blobSize(git, dir, anc, meta.file, signal),
+    meta.status === "deleted" ? 0 : fileSize(dir, meta.file),
+  ])
 }
 
 async function lineCount(file: string): Promise<number> {
@@ -265,21 +305,26 @@ export async function diffSummary(git: GitOps, dir: string, base: string, log?: 
 export function createLocalDiff(git: GitOps, log?: Log) {
   const states = new Map<string, { anc: string; metas: Map<string, Meta> }>()
   const generations = new Map<string, number>()
-  const details = new Map<string, { value: WorktreeDiffEntry; bytes: number }>()
+  const details = new Map<string, { value: WorktreeDiffEntry; bytes: number; stamp: string }>()
   const pending = new Map<string, { signal?: AbortSignal; work: Promise<WorktreeDiffEntry> }>()
   let bytes = 0
 
-  const remember = (id: string, value: WorktreeDiffEntry) => {
-    const size =
-      (value.before?.length ?? 0) +
-      (value.after?.length ?? 0) +
-      (value.patch?.length ?? 0) +
-      (value.image?.before?.data?.length ?? 0) +
-      (value.image?.after?.data?.length ?? 0)
+  const forget = (id: string) => {
+    const value = details.get(id)
+    if (!value) return
+    bytes -= value.bytes
+    details.delete(id)
+  }
+
+  const remember = (id: string, value: WorktreeDiffEntry, stamp: string) => {
+    const size = [value.before, value.after, value.patch, value.image?.before?.data, value.image?.after?.data].reduce(
+      (sum, value) => sum + Buffer.byteLength(value ?? ""),
+      0,
+    )
     const current = details.get(id)
     if (current) bytes -= current.bytes
     details.delete(id)
-    details.set(id, { value, bytes: size })
+    details.set(id, { value, bytes: size, stamp })
     bytes += size
     while (details.size > 128 || bytes > 64 * 1024 * 1024) {
       const key = details.keys().next().value!
@@ -311,11 +356,14 @@ export function createLocalDiff(git: GitOps, log?: Log) {
       if (!state) return diffFile(git, dir, base, file, log)
       const meta = state.metas.get(file)
       if (!meta) return null
-      const id = `${dir}\0${base}\0${state.anc}\0${file}\0${meta.stamp}`
+      const id = `${dir}\0${base}\0${state.anc}\0${file}\0${meta.tracked}\0${meta.status}\0${meta.additions}\0${meta.deletions}\0${meta.binary}\0${meta.stamp}`
       const cached = details.get(id)
       if (cached) {
-        remember(id, cached.value)
-        return cached.value
+        if (cached.stamp === (await contentStamp(dir, file, meta.status))) {
+          remember(id, cached.value, cached.stamp)
+          return cached.value
+        }
+        forget(id)
       }
       const current = pending.get(id)
       if (current && !current.signal?.aborted) return current.work
@@ -325,7 +373,8 @@ export function createLocalDiff(git: GitOps, log?: Log) {
         (value) => {
           if (pending.get(id)?.work !== work) return
           pending.delete(id)
-          remember(id, value)
+          if (value.image?.before?.error === "unreadable" || value.image?.after?.error === "unreadable") return
+          remember(id, value, detailStamp(value, meta))
         },
         () => {
           if (pending.get(id)?.work === work) pending.delete(id)
@@ -390,7 +439,7 @@ async function detailMeta(git: GitOps, dir: string, anc: string, file: string): 
 
 async function blobSize(git: GitOps, dir: string, anc: string, file: string, signal?: AbortSignal): Promise<number> {
   const result = await git.execGit(["cat-file", "-s", `${anc}:${file}`], dir, { signal })
-  if (result.code !== 0) return 0
+  if (result.code !== 0) throw new Error(`Could not read base blob for ${file}`)
   return parseInt(result.stdout.trim(), 10) || 0
 }
 
@@ -430,18 +479,21 @@ async function readBefore(
 ): Promise<string> {
   if (status === "added") return ""
   const result = await git.execGit(["show", `${anc}:${file}`], dir, { signal })
-  return result.code === 0 ? result.stdout : ""
+  if (result.code !== 0) throw new Error(`Could not read base file for ${file}`)
+  return result.stdout
 }
 
 async function readAfter(dir: string, file: string, status: Status): Promise<string> {
   if (status === "deleted") return ""
   const full = resolveInside(dir, file)
-  if (!full) return ""
+  if (!full) throw new Error(`Could not resolve working file for ${file}`)
   const stat = await fs.lstat(full).catch(() => undefined)
-  if (!stat) return ""
+  if (!stat) throw new Error(`Could not read working file for ${file}`)
   if (stat.isSymbolicLink()) return fs.readlink(full).catch(() => "")
-  if (!stat.isFile()) return ""
-  return fs.readFile(full, "utf-8").catch(() => "")
+  if (!stat.isFile()) throw new Error(`Working path is not a file: ${file}`)
+  return fs.readFile(full, "utf-8").catch(() => {
+    throw new Error(`Could not read working file for ${file}`)
+  })
 }
 
 async function unifiedPatch(
@@ -456,7 +508,8 @@ async function unifiedPatch(
     dir,
     { signal },
   )
-  return result.code === 0 ? result.stdout : ""
+  if (result.code !== 0) throw new Error(`Could not create diff for ${file}`)
+  return result.stdout
 }
 
 function linesOf(text: string): number {
@@ -493,10 +546,8 @@ async function materialize(
 ): Promise<WorktreeDiffEntry> {
   const mime = imageMime(meta.file)
   if (meta.binary && !mime) return summarize(meta)
-  const [beforeBytes, afterBytes] = await Promise.all([
-    meta.status === "added" ? 0 : blobSize(git, dir, anc, meta.file, signal),
-    meta.status === "deleted" ? 0 : fileSize(dir, meta.file),
-  ])
+  const [beforeBytes, afterBytes] = await sizes(git, dir, anc, meta, signal)
+  if (signal?.aborted) throw new Error("Diff detail aborted")
   if (mime) {
     const image = await loadImage(
       meta.file,
@@ -505,6 +556,7 @@ async function materialize(
         : { bytes: beforeBytes, read: () => readBlob(git, dir, anc, meta.file, signal) },
       meta.status === "deleted" ? undefined : { bytes: afterBytes, read: () => readFile(dir, meta.file) },
     )
+    if (signal?.aborted) throw new Error("Diff detail aborted")
     return { ...summarize(meta), summarized: false, image }
   }
   // Cheap size probe before materializing content — protects the extension
@@ -520,11 +572,8 @@ async function materialize(
     return summarize(meta)
   }
 
-  const [before, after, tracked] = await Promise.all([
-    readBefore(git, dir, anc, meta.file, meta.status, signal),
-    readAfter(dir, meta.file, meta.status),
-    meta.tracked ? unifiedPatch(git, dir, anc, meta.file, signal) : Promise.resolve(""),
-  ])
+  const [before, after, tracked] = await detailReads(git, dir, anc, meta, signal)
+  if (signal?.aborted) throw new Error("Diff detail aborted")
   const patch = meta.tracked ? tracked : buildUntrackedPatch(meta.file, after)
   const additions = meta.status === "added" && meta.additions === 0 && !meta.tracked ? linesOf(after) : meta.additions
   return {

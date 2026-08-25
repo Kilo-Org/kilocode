@@ -34,7 +34,7 @@ describe("createWorktreeDiffs", () => {
   it("stores full diffs per session", () => {
     withDiffs((diffs) => {
       diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s1", diffs: [diff("a.ts")] })
-      expect(diffs.diffDatas()["s1"]).toHaveLength(1)
+      expect(diffs.diffDatas()["single\0s1"]).toHaveLength(1)
     })
   })
 
@@ -56,7 +56,7 @@ describe("createWorktreeDiffs", () => {
         file: "a.ts",
         diff: diff("a.ts", 9),
       })
-      expect(diffs.diffDatas()["s1"]![0]!.additions).toBe(9)
+      expect(diffs.diffDatas()["single\0s1"]![0]!.additions).toBe(9)
       expect(diffs.diffFileLoadingFor(() => "s1").size).toBe(0)
     })
   })

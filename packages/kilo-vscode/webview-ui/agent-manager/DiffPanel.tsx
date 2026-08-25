@@ -159,6 +159,21 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       },
     ),
   )
+
+  createEffect(
+    on(
+      () => props.active,
+      (active) => {
+        if (!active) return
+        const value = reviewComposerDraft(composer())
+        const edit = reviewComposerEdit(composer())
+        setDraft(value)
+        setEditing(edit)
+        draftMeta = composer().draft
+        editMeta = composer().edit
+      },
+    ),
+  )
   const setOpen = (files: string[] | ((prev: string[]) => string[])) => {
     const key = props.sessionKey ?? ""
     const current = open()
@@ -249,6 +264,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     on(
       () => props.sessionKey,
       () => {
+        if (props.active === false) return
         setDraft(null)
         draftMeta = null
         setEditing(null)
@@ -393,8 +409,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
     editMeta = result.editMeta
-    composer().draft = draft() ? draftMeta : null
-    composer().edit = editing() ? editMeta : null
+    if (props.active !== false) {
+      composer().draft = draft() ? draftMeta : null
+      composer().edit = editing() ? editMeta : null
+    }
     return result.annotations
   }
 

@@ -3,6 +3,7 @@ import type { WorktreeFileDiff } from "../src/types/messages"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import type { ReviewComposer } from "../diff-viewer/review-annotations"
 import { DiffPanel } from "./DiffPanel"
+import { diffDataKey } from "./worktree-diffs"
 
 const CACHE_SIZE = 4
 
@@ -18,6 +19,8 @@ interface Props {
   context: Accessor<string | undefined>
   project: Accessor<string | undefined>
   active: Accessor<boolean>
+  onEvict?: (key: string) => void
+  contexts: Accessor<Set<string>>
   data: Accessor<Record<string, WorktreeFileDiff[]>>
   loading: (key: string) => boolean
   loadingFiles: (key: string) => Set<string>
@@ -47,6 +50,15 @@ export const DiffPanelCache: Component<Props> = (props) => {
   let used = 0
 
   createEffect(() => {
+    const contexts = props.contexts()
+    setEntries((prev) => {
+      const next = prev.filter((entry) => entry.ctx === "local" || contexts.has(entry.ctx))
+      for (const item of prev) if (!next.includes(item)) props.onEvict?.(item.cacheKey)
+      return next
+    })
+  })
+
+  createEffect(() => {
     if (!props.active()) return
     const key = props.current()
     const ctx = props.context()
@@ -59,12 +71,19 @@ export const DiffPanelCache: Component<Props> = (props) => {
       const current = scoped.find((item) => item.cacheKey === cacheKey)
       if (current) {
         current.used = ++used
+        for (const item of prev) if (!scoped.includes(item)) props.onEvict?.(item.cacheKey)
         return scoped
       }
       const next = [...scoped, { key, cacheKey, ctx, used: ++used }]
-      if (next.length <= CACHE_SIZE) return next
+      if (next.length <= CACHE_SIZE) {
+        for (const item of prev) if (!next.includes(item)) props.onEvict?.(item.cacheKey)
+        return next
+      }
       const oldest = next.reduce((entry, item) => (item.used < entry.used ? item : entry))
-      return next.filter((item) => item !== oldest)
+      const result = next.filter((item) => item !== oldest)
+      props.onEvict?.(oldest.cacheKey)
+      for (const item of prev) if (!result.includes(item)) props.onEvict?.(item.cacheKey)
+      return result
     })
   })
 
@@ -77,7 +96,7 @@ export const DiffPanelCache: Component<Props> = (props) => {
         return (
           <div class="am-diff-panel-cache" classList={{ "am-diff-panel-cache-active": active() }} inert={!active()}>
             <DiffPanel
-              diffs={props.data()[entry.key] ?? []}
+              diffs={props.data()[diffDataKey(props.project(), entry.key)] ?? []}
               loading={props.loading(entry.key)}
               active={active()}
               loadingFiles={props.loadingFiles(entry.key)}
@@ -89,8 +108,8 @@ export const DiffPanelCache: Component<Props> = (props) => {
               onDiffStyleChange={props.onDiffStyleChange}
               markdownRender={props.markdownRender}
               onMarkdownRenderChange={props.onMarkdownRenderChange}
-              comments={props.comments(entry.ctx)}
-              onCommentsChange={(comments) => props.setComments(entry.ctx, comments)}
+              comments={props.comments(entry.key)}
+              onCommentsChange={(comments) => props.setComments(entry.key, comments)}
               composer={props.composer(entry.cacheKey)}
               onSendClick={props.onSendClick}
               onClose={props.onClose}

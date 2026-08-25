@@ -167,7 +167,7 @@ import { PRPanelHost } from "./pr/PRPanelHost"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
-import { createWorktreeDiffs, wireDiffId } from "./worktree-diffs"
+import { createWorktreeDiffs, diffDataKey, wireDiffId } from "./worktree-diffs"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import { createReviewComposers } from "./review-composers"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -333,6 +333,7 @@ const AgentManagerContent: Component = () => {
     setSidePanel(SidePanel.Terminal)
   }
   const composers = createReviewComposers(currentProjectId)
+  createEffect(on(activeProjectId, (_next, previous) => previous && composers.clearProject(previous), { defer: true }))
   const reviewState = createReviewState()
   const reviewOpenByContext = reviewState.open
   const setReviewOpenByContext = reviewState.setOpen
@@ -549,16 +550,6 @@ const AgentManagerContent: Component = () => {
     if (sel === null) return
     setReviewOpenForContext(sel, open)
   }
-  const reviewComments = createMemo(() => {
-    const sel = selection()
-    if (sel === null) return [] as ReviewComment[]
-    return readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", sel)
-  })
-  const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
-    const sel = selection()
-    if (sel === null) return
-    setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", sel, comments))
-  }
   const apply = createApplyToLocal({
     vscode,
     dialog,
@@ -719,6 +710,8 @@ const AgentManagerContent: Component = () => {
   })
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
+    composers.prune(ids)
+    composers.prune(ids)
     setReviewOpenByContext((prev) => {
       const next = pruneReviewState(prev, currentProjectId() ?? "single", ids)
       if (Object.keys(next).length === Object.keys(prev).length) return prev
@@ -1661,6 +1654,17 @@ const AgentManagerContent: Component = () => {
   // The composite id (ctx#scope) the extension keys diff data by.
   const diffScopeId = review.id
 
+  const reviewComments = createMemo(() => {
+    const key = diffScopeId()
+    if (!key) return [] as ReviewComment[]
+    return readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", key)
+  })
+  const setReviewCommentsForSelection = (comments: ReviewComment[]) => {
+    const key = diffScopeId()
+    if (!key) return
+    setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", key, comments))
+  }
+
   const diffScopeControls = (compact: boolean) => (
     <DiffScopeControls
       descriptors={review.descriptors()}
@@ -1726,20 +1730,15 @@ const AgentManagerContent: Component = () => {
     tabFocus.restore()
   }
 
-  // Data for the review tab / side panel: keyed by the composite diff id
-  // (ctx#scope) the extension pushes, so each scope keeps its own file set and
-  // switching back to a fetched scope is instant.
   const reviewDiffs = createMemo(() => {
     const data = diffDatas()
     const key = diffScopeId()
     if (!key) return []
-    return data[key] ?? []
+    return data[diffDataKey(activeProjectId(), key)] ?? []
   })
 
   const diffSessionKey = createMemo(() => diffScopeId() ?? "")
 
-  // Source-level notice for the active composite id (e.g. snapshots disabled
-  // for the Session scope), shown as a banner instead of the empty state.
   const diffNotice = createMemo(() => {
     const key = diffScopeId()
     if (!key) return undefined
@@ -2634,13 +2633,13 @@ const AgentManagerContent: Component = () => {
                       data={diffDatas}
                       loading={(key) => diffs.diffLoadingFor(() => key)}
                       loadingFiles={(key) => diffs.diffFileLoadingFor(() => key)}
-                      notice={(key) => diffNotices()[key]}
-                      comments={(ctx) =>
-                        readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", ctx)
+                      notice={(key) => diffNotices()[diffDataKey(activeProjectId(), key)]}
+                      comments={(key) =>
+                        readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", key)
                       }
-                      setComments={(ctx, comments) =>
+                      setComments={(key, comments) =>
                         setReviewCommentsByContext((prev) =>
-                          setReviewComments(prev, currentProjectId() ?? "single", ctx, comments),
+                          setReviewComments(prev, currentProjectId() ?? "single", key, comments),
                         )
                       }
                       composer={composers.get}
@@ -2668,6 +2667,11 @@ const AgentManagerContent: Component = () => {
                       }}
                       revertingFiles={revertCtl.revertingFor}
                       activeTerminalId={terms.activeId()}
+                      contexts={() => new Set(worktrees().map((wt) => wt.id))}
+                      onEvict={(key) => {
+                        composers.drop(key)
+                        diffs.drop(key)
+                      }}
                     />
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
                       <PRPanelHost
