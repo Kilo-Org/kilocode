@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Render Agent Manager terminal output with the WebGL renderer instead of the DOM renderer, and pause rendering for terminals hidden in the background
+Use the DOM renderer for Agent Manager terminals to avoid WebGL context failures, while batching output and pausing hidden-terminal rendering

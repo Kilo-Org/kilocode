@@ -1,7 +1,12 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { LOCAL } from "../../webview-ui/agent-manager/navigate"
-import { ambientDecision, createAmbientSetup, showTerminalStack } from "../../webview-ui/agent-manager/terminal/ambient"
+import {
+  ambientDecision,
+  createAmbientSetup,
+  keepTerminalStack,
+  showTerminalStack,
+} from "../../webview-ui/agent-manager/terminal/ambient"
 import { createTerminalState } from "../../webview-ui/agent-manager/terminal/state"
 
 describe("showTerminalStack", () => {
@@ -30,6 +35,14 @@ describe("showTerminalStack", () => {
 
   it("hides the detail stack when nothing is selected and the context is empty", () => {
     expect(showTerminalStack(false, null, true)).toBe(false)
+  })
+})
+
+describe("keepTerminalStack", () => {
+  it("keeps live terminals mounted under history", () => {
+    expect(keepTerminalStack(true, "wt-1", false, 1)).toBe(true)
+    expect(keepTerminalStack(true, null, true, 1)).toBe(true)
+    expect(keepTerminalStack(true, "wt-1", false, 0)).toBe(false)
   })
 })
 
