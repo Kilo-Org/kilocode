@@ -20,7 +20,8 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
-import { childID } from "../../context/session-utils"
+import { childID, latestTaskPart } from "../../context/session-utils"
+import { useConfig } from "../../context/config"
 import { openSubagent } from "./open-subagent"
 import { showChildPromotion, taskResult, taskRunning, taskVisible } from "./task-tool-state"
 
@@ -28,6 +29,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
   const language = useLanguage()
   const session = useSession()
+  const { features } = useConfig()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
 
@@ -45,7 +47,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       props.partMetadata as Record<string, unknown> | undefined,
       props.metadata as Record<string, unknown> | undefined,
       session.allStatusMap(),
+      features().backgroundSubagents,
       props.readonly,
+      latestTaskPart(
+        props.partID,
+        childSessionId(),
+        session.currentSessionID() ? session.getSessionToolParts(session.currentSessionID()!) : [],
+      ),
     ),
   )
 
@@ -168,7 +176,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         </Show>
       </div>
       <Show when={childSessionId()}>
-        <Show when={promotable()}>
+        <Show when={features().backgroundSubagents && promotable()}>
           <Tooltip value={language.t("task.backgroundAgents.continueInBackground")} placement="top">
             <IconButton
               icon="arrow-down-to-line"

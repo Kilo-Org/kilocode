@@ -3,7 +3,7 @@ import { InstanceRef } from "@/effect/instance-ref"
 import { isInterrupted } from "@/kilocode/effect/cause"
 import * as KiloReference from "@/kilocode/reference"
 import { InstanceStore } from "@/project/instance-store"
-import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
+import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { Location } from "@opencode-ai/core/location"
 import { PluginV2 } from "@opencode-ai/core/plugin" // kilocode_change
 import { ReferenceReconciler } from "@opencode-ai/server/kilocode/reference-reconciler"
@@ -46,4 +46,4 @@ export const locations = Layer.effect(
         }),
     })
   }),
-).pipe(Layer.provide(locationServiceMapLayer))
+)

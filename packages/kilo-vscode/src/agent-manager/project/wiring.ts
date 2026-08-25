@@ -67,6 +67,7 @@ export function createProjectWiring(opts: {
     expand: opts.expand,
     ready: opts.ready,
     push: opts.push,
+    pushState: opts.pushState,
     selected: opts.selected,
     routeSession: opts.routeSession,
     error: (message) => opts.host.showError(message),

@@ -229,6 +229,14 @@ describe("agent_manager tool", () => {
     expect(Schema.is(Params)({ action: "stop", sessionID: "invalid" })).toBe(false)
   })
 
+  test("validates provider selectors at the task level", () => {
+    expect(Schema.is(Params)({ mode: "local", tasks: [{ prompt: "Fix", model: "Shared", provider: "kilo" }] })).toBe(
+      true,
+    )
+    expect(Schema.is(Params)({ mode: "local", tasks: [{ prompt: "Fix", provider: "kilo" }] })).toBe(false)
+    expect(Schema.is(Params)({ mode: "local", tasks: [{ prompt: "Fix", model: "Shared", provider: 42 }] })).toBe(false)
+  })
+
   // Regression for #13029: the OpenAI Responses API forces a value for every
   // advertised property. With action nullable the model can decline it and the
   // start request survives; with a populated action the action wins instead.
@@ -673,6 +681,12 @@ describe("agent_manager tool", () => {
     expect(task?.variant).toBe("low")
   })
 
+  test("uses an explicitly selected provider for a shared model name", async () => {
+    const task = await publish(runtime, { prompt: "Fix", model: " Shared ", provider: " kilo " })
+    expect(String(task?.model?.providerID)).toBe("kilo")
+    expect(String(task?.model?.modelID)).toBe("kilo/shared")
+  })
+
   test("uses the provider of a different default model when that is the user's choice", async () => {
     const rt = makeRuntime("kilo")
     const task = await publish(rt, { prompt: "Fix", model: "Shared", variant: "low" })
@@ -714,6 +728,43 @@ describe("agent_manager tool", () => {
 
     expect(result.output).toContain("Closest matches:")
     expect(result.output).toContain("Reasoning Model")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  test("reports a model unavailable from an explicit provider", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", model: "Reasoning Model", provider: "kilo" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.output).toContain('model is not available from provider "kilo": Reasoning Model')
+    expect(result.metadata.count).toBe(0)
+  })
+
+  test("rejects an unknown provider without touching inherited object properties", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", model: "Shared", provider: "__proto__" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.output).toContain("provider is not available for model selection: __proto__")
+    expect(result.output).toContain("Requested model: Shared")
     expect(result.metadata.count).toBe(0)
   })
 

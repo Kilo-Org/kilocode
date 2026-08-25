@@ -85,6 +85,11 @@ test("orders local terminal status lines through the output batcher", () => {
   expect(terminal).not.toContain("term.writeln(")
 })
 
+test("uses a browser-valid close code when replay overflows", () => {
+  expect(terminal).not.toContain("close(1009,")
+  expect(terminal).toContain('close(4009, "terminal replay exceeded limit")')
+})
+
 test("keeps raw PTY line endings and initializes Unicode widths before attaching", () => {
   expect(terminal).toContain("convertEol: false")
   expect(terminal).toContain('term.unicode.activeVersion = "15-graphemes"')

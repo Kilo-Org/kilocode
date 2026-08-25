@@ -298,15 +298,18 @@ const AgentManagerContent: Component = () => {
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
   const [history, setHistory] = createSignal(false)
-  /** Project whose sessions the history view is scoped to (multi-project). */
   const [historyProject, setHistoryProject] = createSignal<string | undefined>()
+  const [historySwitches, setHistorySwitches] = createSignal<string[]>([])
   const closeHistory = () => {
     setHistory(false)
     setHistoryProject(undefined)
+    setHistorySwitches([])
   }
-  /** Open the sessions view; a project id scopes it and activates that project. */
   const openHistory = (pid?: string) => {
     const scoped = pid !== undefined && multiProject()
+    if (scoped) setHistorySwitches((prev) => (prev.includes(pid) ? prev : [...prev, pid]))
+    setHistoryProject(scoped ? pid : undefined)
+    setHistory(true)
     if (scoped) {
       // Activating the target project first lets the shared session store and
       // the pick routing operate in that project only.
@@ -315,8 +318,6 @@ const AgentManagerContent: Component = () => {
         target: { projectId: pid, kind: "local" },
       } as never)
     }
-    setHistoryProject(scoped ? pid : undefined)
-    setHistory(true)
   }
   const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
   const diffOpen = () => sidePanel() === SidePanel.Diff
@@ -765,7 +766,7 @@ const AgentManagerContent: Component = () => {
     const pid = historyProject()
     if (!pid || !multiProject()) return undefined
     const sessions = projectSessionsLive()[pid]
-    if (!sessions) return undefined
+    if (!sessions) return new Set<string>()
     return new Set(sessions.filter(isKnownRootSession).map((s) => s.id))
   })
 
@@ -1161,7 +1162,10 @@ const AgentManagerContent: Component = () => {
       first: () => undefined,
       close: () => setReviewActive(false),
       hide: () => setSidePanel(null),
-      history: () => closeHistory(),
+      history: () =>
+        state.projectId && historySwitches().includes(state.projectId)
+          ? setHistorySwitches((prev) => prev.filter((id) => id !== state.projectId))
+          : closeHistory(),
       reset: subagents.reset,
     })
   }

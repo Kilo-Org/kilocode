@@ -99,7 +99,6 @@ export class KiloConnectionService {
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly filteredListeners = new Set<{ filter: SSEEventFilter; listener: SSEEventListener }>()
   private readonly explicitAborts = new ExplicitAbortState()
-  private readonly duplicateEvent = createDuplicateEventFilter()
   private readonly stateListeners: Set<StateListener> = new Set()
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
   private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
@@ -849,6 +848,7 @@ export class KiloConnectionService {
       },
     })
     const sse = new SdkSSEAdapter(client)
+    const duplicateEvent = createDuplicateEventFilter()
     this.client = client
     this.sseClient = sse
 
@@ -867,7 +867,7 @@ export class KiloConnectionService {
     sse.onEvent((event, directory) => {
       if (this.sseClient !== sse) return
       // EventV2Bridge also emits these durable compatibility envelopes after their normal live events.
-      if (this.duplicateEvent(event)) return
+      if (duplicateEvent(event)) return
       this.broadcast(event, directory)
     })
 

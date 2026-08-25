@@ -25,6 +25,7 @@ import { Skill } from "@/skill"
 import { BackgroundJob } from "@/background/job"
 import { SessionRunState } from "@/session/run-state"
 import { SessionID } from "@/session/schema"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import {
   AgentManagerRejectPayload,
   AgentManagerReplyPayload,
@@ -48,6 +49,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const notebook = yield* Notebook.Service
     const background = yield* BackgroundJob.Service
     const runState = yield* SessionRunState.Service
+    const flags = yield* RuntimeFlags.Service
     const locations = yield* LocationServiceMap.Service
 
     // Location-scoped services, keyed by the request's directory and workspace.
@@ -237,6 +239,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const backgroundJobPromote = Effect.fn("KilocodeHttpApi.backgroundJobPromote")(function* (ctx: {
       params: { jobID: string }
     }) {
+      if (!flags.experimentalBackgroundSubagents) return false
       const job = yield* background.get(ctx.params.jobID)
       if (!job) return yield* new HttpApiError.NotFound({})
       const promoted = yield* background.promote(ctx.params.jobID)

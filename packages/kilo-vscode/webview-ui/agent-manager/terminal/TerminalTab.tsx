@@ -334,7 +334,7 @@ export const TerminalTab: Component<Props> = (props) => {
         if (typeof event.data === "string") {
           if (!replay.output(event.data)) {
             input.clear()
-            next.close(1009, "terminal replay exceeded limit")
+            next.close(4009, "terminal replay exceeded limit")
             return
           }
           scheduleFlush()
@@ -345,7 +345,7 @@ export const TerminalTab: Component<Props> = (props) => {
           if (replay.frame(bytes)) return
           if (!replay.output(bytes)) {
             input.clear()
-            next.close(1009, "terminal replay exceeded limit")
+            next.close(4009, "terminal replay exceeded limit")
             return
           }
           scheduleFlush()

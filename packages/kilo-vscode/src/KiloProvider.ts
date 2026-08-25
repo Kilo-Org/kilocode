@@ -163,7 +163,7 @@ import type { StoredProviderKey } from "./provider-actions"
 import { AnacondaDesktopBridge } from "./anaconda-desktop/bridge"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
-import { configFeatures } from "./features"
+import { configFeatures, serverFeatures } from "./features"
 import { fetchSnapshot } from "./kilo-provider/config-snapshot"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
@@ -3394,6 +3394,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const global = snapshot.targets.global.raw as Config
       const projectConfig = bindings.project ? (snapshot.targets.project.raw as Config) : undefined
       this.cachedGlobalConfig = global
+      const features = configFeatures(snapshot.effective, await serverFeatures(this.client, dir))
       this.cachedConfigMessage = {
         type: "configLoaded",
         config: snapshot.effective,
@@ -3401,7 +3402,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         projectConfig,
         bindings,
         settings: this.configSettings(),
-        features: configFeatures(snapshot.effective),
+        features,
       }
       this.postMessage({
         type: "configUpdated",
@@ -3410,7 +3411,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         projectConfig,
         bindings,
         settings: this.configSettings(),
-        features: configFeatures(snapshot.effective),
+        features,
       })
       await Promise.all([
         refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),

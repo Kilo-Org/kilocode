@@ -5,6 +5,7 @@ import {
   showBackgroundAgent,
 } from "../../webview-ui/src/components/chat/background-agents"
 import { childForeground, showChildPromotion } from "../../webview-ui/src/components/chat/task-tool-state"
+import { latestTaskPart } from "../../webview-ui/src/context/session-utils"
 import type {
   BackgroundJobInfo,
   PermissionRequest,
@@ -77,17 +78,32 @@ describe("backgroundAgents", () => {
   it("identifies each parallel foreground child independently", () => {
     const status = { ses_a: busy, ses_b: busy }
 
-    expect(childForeground("ses_a", {}, {}, status)).toBe(true)
-    expect(childForeground("ses_b", {}, {}, status)).toBe(true)
-    expect(childForeground("ses_a", { background: true }, {}, status)).toBe(false)
-    expect(childForeground("ses_b", {}, { background: true }, status)).toBe(false)
-    expect(childForeground("ses_a", {}, {}, { ses_a: idle })).toBe(false)
-    expect(childForeground("ses_a", {}, {}, { ses_a: { type: "retry", attempt: 1, message: "retry", next: 1 } })).toBe(
-      true,
-    )
-    expect(childForeground(undefined, {}, {}, status)).toBe(false)
-    expect(showChildPromotion("ses_a", {}, {}, status, false)).toBe(true)
-    expect(showChildPromotion("ses_a", {}, {}, status, true)).toBe(false)
+    expect(childForeground("ses_a", {}, {}, status, true)).toBe(true)
+    expect(childForeground("ses_b", {}, {}, status, true)).toBe(true)
+    expect(childForeground("ses_a", { background: true }, {}, status, true)).toBe(false)
+    expect(childForeground("ses_b", {}, { background: true }, status, true)).toBe(false)
+    expect(childForeground("ses_a", {}, {}, { ses_a: idle }, true)).toBe(false)
+    expect(
+      childForeground("ses_a", {}, {}, { ses_a: { type: "retry", attempt: 1, message: "retry", next: 1 } }, true),
+    ).toBe(true)
+    expect(childForeground(undefined, {}, {}, status, true)).toBe(false)
+    expect(childForeground("ses_a", {}, {}, status, false)).toBe(false)
+    expect(showChildPromotion("ses_a", {}, {}, status, true, false, true)).toBe(true)
+    expect(showChildPromotion("ses_a", {}, {}, status, true, true, true)).toBe(false)
+    expect(showChildPromotion("ses_a", {}, {}, status, false, false, true)).toBe(false)
+    expect(showChildPromotion("ses_a", {}, {}, status, undefined, false, true)).toBe(false)
+  })
+
+  it("only promotes the latest task part for a resumed child", () => {
+    const parts = [
+      taskPart({ id: "part_old", child: "ses_a" }),
+      taskPart({ id: "part_new", child: "ses_a" }),
+      taskPart({ id: "part_other", child: "ses_b" }),
+    ]
+
+    expect(latestTaskPart("part_old", "ses_a", parts)).toBe(false)
+    expect(latestTaskPart("part_new", "ses_a", parts)).toBe(true)
+    expect(latestTaskPart("part_other", "ses_b", parts)).toBe(true)
   })
 
   it("ignores agents whose session is no longer working", () => {
