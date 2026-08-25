@@ -16,8 +16,7 @@ interface Props {
   onCreate: () => void
   onNew: () => void
   onSection: () => void
-  onSetup: () => void
-  onBranch: () => void
+  onSettings: () => void
 }
 
 export const ProjectActions: Component<Props> = (props) => (
@@ -70,27 +69,12 @@ export const ProjectActions: Component<Props> = (props) => (
         </DropdownMenu.Portal>
       </DropdownMenu>
     </div>
-    <DropdownMenu gutter={4} placement="bottom-end">
-      <DropdownMenu.Trigger
-        as={IconButton}
-        icon="settings-gear"
-        size="small"
-        variant="ghost"
-        label={props.t("agentManager.worktree.settings")}
-      />
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content class="am-split-menu">
-          <DropdownMenu.Item onSelect={props.onSetup}>
-            <DropdownMenu.ItemLabel>{props.t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
-          </DropdownMenu.Item>
-          <DropdownMenu.Separator />
-          <DropdownMenu.Item onSelect={props.onBranch}>
-            <DropdownMenu.ItemLabel>
-              {props.t("agentManager.worktree.defaultBaseBranch")}: {props.branch}
-            </DropdownMenu.ItemLabel>
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu>
+    <IconButton
+      icon="settings-gear"
+      size="small"
+      variant="ghost"
+      label={props.t("agentManager.worktree.settings")}
+      onClick={props.onSettings}
+    />
   </div>
 )

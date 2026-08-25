@@ -863,22 +863,11 @@ html[data-theme="kilo-vscode"]
   }
 }
 
-/* Toolbar Run button group */
-.am-run-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-}
-
-.am-run-group-chevron {
-  padding: 0 2px !important;
-  min-width: 0 !important;
-  width: auto !important;
-}
-
-.am-run-group-chevron [data-component="icon"] {
-  width: 12px;
-  height: 12px;
+/* Toolbar Run button group — split layout comes from .am-split-button.
+   The label button tightens its right edge so the chevron sits as close
+   to the label as it does to the icon in the other split buttons. */
+.am-run-group [data-component="button"][data-size="small"] {
+  padding-right: 2px;
 }
 
 /* Unconfigured — muted until hover */
@@ -1685,16 +1674,27 @@ body.am-wt-dragging-active * {
   align-self: center;
 }
 
+/* Toolbar actions row. Spacing comes only from the container gap so the
+   row stays even no matter which optional buttons (PR, documents,
+   subagents, review) are rendered. */
 .am-tab-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   flex-shrink: 0;
   align-self: stretch;
   margin-left: auto;
-  padding-left: 6px;
+  padding-left: 8px;
   padding-right: 4px;
   border-left: 1px solid var(--border-weak-base);
+}
+
+/* One control height for the row: text buttons (Run, Apply, Open) match
+   the 20px icon buttons so hover fills align across every combination
+   of visible actions. */
+.am-tab-actions [data-component="button"][data-size="small"] {
+  height: 20px;
+  min-height: 20px;
 }
 .am-sidebar-search-popover[data-component="popover-content"] {
   max-height: min(480px, calc(100vh - 64px));
@@ -1823,8 +1823,9 @@ body.am-wt-dragging-active * {
   background: transparent;
   color: var(--text-weak);
   cursor: pointer;
-  padding: 3px 6px;
-  border-radius: 5px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono, monospace);
   font-size: var(--kilo-font-size-10);
   font-variant-numeric: tabular-nums;
@@ -1836,7 +1837,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-diff-toggle-btn:hover {
-  background: var(--button-ghost-hover, var(--surface-base-hover));
+  background: var(--surface-base-hover);
   color: var(--text-base);
 }
 
@@ -2768,7 +2769,7 @@ body.am-wt-dragging-active * {
 .am-split-button {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 2px;
 }
 
 .am-split-arrow {
@@ -2776,7 +2777,8 @@ body.am-wt-dragging-active * {
   align-items: center;
   justify-content: center;
   width: 16px;
-  height: 22px;
+  height: 20px;
+  flex-shrink: 0;
   padding: 0;
   border: none;
   background: none;

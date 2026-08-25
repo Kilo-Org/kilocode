@@ -188,6 +188,19 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         assertEquals(emptyList<String>(), rpc.configPatches.single().instructions)
     }
 
+    fun `test delete selects the rule that took the deleted slot`() {
+        val panel = panel(input = { "./EXTRA.md" })
+        flushUntil { rows(panel).size == 1 }
+        edt { panel.addFile() }
+        flushUntil { rows(panel).size == 2 }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(rulesList(panel), panel, "./RULES.md", "delete")
+
+        assertEquals(listOf("./EXTRA.md"), edt { rows(panel).map { it.key } })
+        assertEquals("./EXTRA.md", edt { rulesList(panel).selectedValue?.key })
+    }
+
     fun `test delete action requires confirmation`() {
         val panel = panel()
         flushUntil { rows(panel).size == 1 }

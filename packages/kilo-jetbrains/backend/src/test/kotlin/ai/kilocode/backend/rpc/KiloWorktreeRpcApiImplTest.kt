@@ -3,15 +3,18 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -143,7 +146,7 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `worktree names store round trips and tolerates missing or corrupt files`() {
-        val file = repo.resolve(".kilo").resolve("worktree-names.json")
+        val file = repo.resolve(".kilo").resolve("jetbrains.json")
 
         assertTrue(readWorktreeNames(file).isEmpty())
         writeWorktreeNames(file, mapOf("/repo/.kilo/worktrees/feature-x" to "Feature Label", "/blank" to ""))
@@ -157,7 +160,7 @@ class KiloWorktreeRpcApiImplTest {
 
     @Test
     fun `worktree state round trips and migrates legacy names`() {
-        val file = repo.resolve(".kilo").resolve("worktree-names.json")
+        val file = repo.resolve(".kilo").resolve("jetbrains.json")
         val first = "/repo/.kilo/worktrees/zebra"
         val second = "/repo/.kilo/worktrees/alpha"
 
@@ -238,7 +241,40 @@ class KiloWorktreeRpcApiImplTest {
 
         val listed = api.list(repo.toString()).worktrees.filter { !it.main }
         assertEquals(listOf(first.path, second.path), listed.map { it.path })
-        assertEquals(listOf(first.path, second.path), readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json")).worktreeOrder)
+        assertEquals(listOf(first.path, second.path), readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).worktreeOrder)
+    }
+
+    @Test
+    fun `reorder persists a new order that a later list returns`() = runBlocking {
+        initRepo()
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
+        val second = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("alpha")).worktree)
+
+        assertTrue(api.reorder(repo.toString(), listOf(second.path, first.path)))
+
+        val listed = api.list(repo.toString()).worktrees.filter { !it.main }
+        assertEquals(listOf(second.path, first.path), listed.map { it.path })
+        assertEquals(
+            listOf(second.path, first.path),
+            readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).worktreeOrder,
+        )
+    }
+
+    @Test
+    fun `reorder drops unknown paths and appends omitted worktrees`() = runBlocking {
+        initRepo()
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
+        val second = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("alpha")).worktree)
+
+        assertTrue(api.reorder(repo.toString(), listOf("/does/not/exist", second.path)))
+
+        val order = readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).worktreeOrder
+        assertEquals(listOf(second.path, first.path), order)
+    }
+
+    @Test
+    fun `reorder returns false when the repo has no worktrees`() = runBlocking {
+        assertFalse(api.reorder(repo.toString(), listOf("/repo/.kilo/worktrees/x")))
     }
 
     @Test
@@ -252,7 +288,7 @@ class KiloWorktreeRpcApiImplTest {
         val removed = api.remove(repo.toString(), first.path, first.branch)
 
         assertTrue(removed.ok, "remove should report success: ${removed.error}")
-        val state = readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json"))
+        val state = readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json"))
         assertEquals(mapOf(second.path to "Second"), state.names)
         assertEquals(listOf(second.path), state.worktreeOrder)
     }
@@ -268,7 +304,7 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("Feature Label", assertNotNull(renamed.worktree).name)
         val listed = api.list(repo.toString()).worktrees.single { it.path == created.path }
         assertEquals("Feature Label", listed.name)
-        assertEquals(mapOf(created.path to "Feature Label"), readWorktreeNames(repo.resolve(".kilo").resolve("worktree-names.json")))
+        assertEquals(mapOf(created.path to "Feature Label"), readWorktreeNames(repo.resolve(".kilo").resolve("jetbrains.json")))
     }
 
     @Test
@@ -282,7 +318,7 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("Fix login bug", assertNotNull(adopted.worktree).name)
         val listed = api.list(repo.toString()).worktrees.single { it.path == created.path }
         assertEquals("Fix login bug", listed.name)
-        assertEquals(mapOf(created.path to "Fix login bug"), readWorktreeNames(repo.resolve(".kilo").resolve("worktree-names.json")))
+        assertEquals(mapOf(created.path to "Fix login bug"), readWorktreeNames(repo.resolve(".kilo").resolve("jetbrains.json")))
     }
 
     @Test
@@ -320,7 +356,7 @@ class KiloWorktreeRpcApiImplTest {
         val result = api.remove(repo.toString(), repo.resolve("does-not-exist").toString(), null)
 
         assertFalse(result.ok, "remove of a missing worktree should not report success")
-        assertNotNull(result.error, "failure should carry an error message")
+        assertTrue(result.error != null, "failure should carry an error message")
     }
 
     @Test
@@ -376,7 +412,7 @@ class KiloWorktreeRpcApiImplTest {
         val result = api.create(repo.toString(), CreateWorktreeRequestDto("no-such-branch", existingBranch = true))
 
         assertNull(result.worktree, "unknown branch should not create a worktree")
-        assertNotNull(result.error)
+        assertTrue(result.error != null, "failure should carry an error message")
     }
 
     @Test
@@ -407,6 +443,138 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(GhState.OPEN, pull.state)
         assertEquals("https://example.test/pr/12", pull.url)
         assertEquals("Fix login bug", pull.title)
+    }
+
+    @Test
+    fun `branchStatus reports plain checkout and linked worktree`() = runBlocking {
+        initRepo()
+
+        val main = api.branchStatus(repo.toString())
+        assertFalse(main.worktree, "main checkout is not a linked worktree")
+        assertTrue(main.branch.isNotBlank(), "main checkout should report a branch")
+
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val wt = api.branchStatus(created.path)
+        assertTrue(wt.worktree, "a linked worktree should be detected")
+        assertEquals("feature/x", wt.branch)
+    }
+
+    @Test
+    fun `worktree transfer round trips changes without touching the source`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("tracked.txt"), "original\n")
+        git(repo, "add", "tracked.txt")
+        git(repo, "commit", "-m", "add tracked")
+        // Staged new file, an unstaged modification to a tracked file, an untracked text file,
+        // and an untracked binary file.
+        Files.writeString(repo.resolve("staged.txt"), "staged content\n")
+        git(repo, "add", "staged.txt")
+        Files.writeString(repo.resolve("tracked.txt"), "modified\n")
+        Files.writeString(repo.resolve("untracked.txt"), "brand new\n")
+        val binary = byteArrayOf(0, 1, 2, 3, 0, 5, 127, -1)
+        Files.write(repo.resolve("blob.bin"), binary)
+
+        val snapshot = WorktreeTransfer.capture(repo)
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val target = Path.of(created.path)
+        // Baseline the source status after worktree creation (which adds .kilo bookkeeping) so the
+        // assertion isolates the effect of apply, which must not touch the source tree.
+        val before = statusOf(repo)
+
+        val result = WorktreeTransfer.apply(snapshot, repo, target)
+        assertTrue(result.ok, "apply should succeed: ${result.error}")
+
+        assertEquals("modified\n", Files.readString(target.resolve("tracked.txt")))
+        assertEquals("staged content\n", Files.readString(target.resolve("staged.txt")))
+        assertEquals("brand new\n", Files.readString(target.resolve("untracked.txt")))
+        assertTrue(binary.contentEquals(Files.readAllBytes(target.resolve("blob.bin"))), "binary file should round-trip")
+
+        // The source working tree must be untouched by capture + apply.
+        assertEquals(before, statusOf(repo), "source working tree must be unchanged")
+        WorktreeTransfer.cleanup(snapshot)
+    }
+
+    @Test
+    fun `worktree transfer reports failure when a staged patch cannot apply`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("staged.txt"), "staged content\n")
+        git(repo, "add", "staged.txt")
+
+        val snapshot = WorktreeTransfer.capture(repo)
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val target = Path.of(created.path)
+        // Pre-create the staged file in the target so the new-file patch cannot apply cleanly.
+        Files.writeString(target.resolve("staged.txt"), "conflicting\n")
+
+        val result = WorktreeTransfer.apply(snapshot, repo, target)
+
+        assertFalse(result.ok, "apply should fail when the patch conflicts")
+        assertNotNull(result.error)
+        WorktreeTransfer.cleanup(snapshot)
+    }
+
+    @Test
+    fun `capture fails instead of reporting a clean tree when git cannot run`() {
+        // No git repository: a failed capture must throw rather than look like "nothing to move".
+        val err = assertFails { WorktreeTransfer.capture(repo) }
+
+        assertTrue(err.message.orEmpty().isNotBlank(), "capture failure should explain itself")
+    }
+
+    @Test
+    fun `moveToWorktree emits ERROR when capture fails`() = runBlocking {
+        val events = api.moveToWorktree(repo.toString(), "ses_1", "feature/x").toList()
+
+        assertEquals(MoveStage.CAPTURING, events.first().stage)
+        val last = events.last()
+        assertEquals(MoveStage.ERROR, last.stage)
+        assertTrue(last.error != null, "the error event should explain the failure")
+    }
+
+    @Test
+    fun `moveToWorktree rolls back the created worktree when a later stage throws`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("untracked.txt"), "brand new\n")
+
+        // The fork resolves a project-level service that no plain unit test provides, so this move
+        // throws after the worktree exists — exactly the case that used to end the flow silently.
+        val events = api.moveToWorktree(repo.toString(), "ses_1", "feature/x").toList()
+
+        assertEquals(MoveStage.ERROR, events.last().stage)
+        assertTrue(events.map { it.stage }.containsAll(listOf(MoveStage.CREATING, MoveStage.TRANSFERRING)))
+        assertFalse(
+            Files.exists(repo.resolve(".kilo").resolve("worktrees").resolve("feature-x")),
+            "a failed move must not leave its worktree behind",
+        )
+        assertTrue(api.list(repo.toString()).worktrees.none { it.branch == "feature/x" }, "git must not track the worktree")
+    }
+
+    @Test
+    fun `moveToWorktree without a session copies changes and skips forking`() = runBlocking {
+        initRepo()
+        Files.writeString(repo.resolve("README.md"), "hello edited\n")
+        Files.writeString(repo.resolve("untracked.txt"), "brand new\n")
+
+        // No session to fork, so the flow must run to DONE instead of throwing in the fork stage.
+        val events = api.moveToWorktree(repo.toString(), null, "feature/x").toList()
+
+        assertEquals(
+            listOf(MoveStage.CAPTURING, MoveStage.CREATING, MoveStage.TRANSFERRING, MoveStage.DONE),
+            events.map { it.stage },
+        )
+        val done = events.last()
+        assertNull(done.session, "a session-less move must not report a forked session")
+        val worktree = assertNotNull(done.worktree)
+        val target = Path.of(worktree.path)
+        assertEquals("hello edited\n", Files.readString(target.resolve("README.md")))
+        assertEquals("brand new\n", Files.readString(target.resolve("untracked.txt")))
+        // The transfer is a copy: the source keeps its work.
+        assertEquals("hello edited\n", Files.readString(repo.resolve("README.md")))
+    }
+
+    private fun statusOf(dir: Path): String {
+        val cmd = GeneralCommandLine(listOf("git", "status", "--porcelain")).withWorkDirectory(dir.toFile())
+        return CapturingProcessHandler(cmd).runProcess(30_000).stdout
     }
 
     private fun initRepo() {

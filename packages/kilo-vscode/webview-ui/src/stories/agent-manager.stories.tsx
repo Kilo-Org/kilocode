@@ -972,6 +972,71 @@ export const TabBarSingleTab: Story = {
   ),
 }
 
+const MockFullContextActions = () => (
+  <div class="am-tab-actions">
+    <span class="am-split-button am-run-group">
+      <TooltipKeybind title="Run" keybind="⌘R" placement="bottom">
+        <Button size="small" variant="ghost" icon="play">
+          Run
+        </Button>
+      </TooltipKeybind>
+      <button class="am-split-arrow" aria-label="Run options">
+        <Icon name="chevron-down" size="small" />
+      </button>
+    </span>
+    <TooltipKeybind title="Pull request" keybind="" placement="bottom">
+      <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Documents" keybind="" placement="bottom">
+      <IconButton icon="book-open-check" size="small" variant="ghost" label="Documents" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Subagents" keybind="" placement="bottom">
+      <IconButton icon="task" size="small" variant="ghost" label="Subagents" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Toggle diff" keybind="" placement="bottom">
+      <button class="am-diff-toggle-btn am-diff-toggle-has-changes" title="Toggle diff">
+        <Icon name="layers" size="small" />
+        <span class="am-diff-toggle-stats">
+          <span class="am-stat-files">4f</span>
+          <span class="am-stat-additions">+32</span>
+          <span class="am-stat-deletions">−8</span>
+        </span>
+      </button>
+    </TooltipKeybind>
+    <TooltipKeybind title="Toggle review" keybind="" placement="bottom">
+      <IconButton icon="expand" size="small" variant="ghost" label="Toggle review" />
+    </TooltipKeybind>
+    <div class="am-split-button">
+      <TooltipKeybind title="Open Terminal" keybind="" placement="bottom">
+        <IconButton icon="console" size="small" variant="ghost" label="Open Terminal" />
+      </TooltipKeybind>
+      <button class="am-split-arrow" aria-label="Choose terminal destination">
+        <Icon name="chevron-down" size="small" />
+      </button>
+    </div>
+  </div>
+)
+
+export const TabBarFullContext: Story = {
+  name: "TabBar — all optional context actions",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <MockTabLeading />
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "1" } as JSX.CSSProperties}>
+              <MockTab title="Full context" active />
+            </div>
+          </div>
+        </div>
+        <MockTabAdd />
+        <MockFullContextActions />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 // Side terminal panel inside the real inspector host chain, empty state —
 // no live PTY, so the start affordance renders. The tab strip header keeps
 // the .am-diff-header height so the a11y/screenshot baseline also guards

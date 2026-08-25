@@ -12,10 +12,13 @@ import { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import { ProjectContexts, type ProjectSnapshot } from "./contexts"
 import type { ProjectMessageDeps } from "./messages"
+import { createSettingsHandler, type SettingsHandler } from "./settings"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
   contexts: ProjectContexts
+  /** Project-scoped settings handler shared with the Kilo Settings editor. */
+  settings: SettingsHandler
   messages: ProjectMessageDeps
   /** Payload for the agentManager.projects webview message. */
   snapshots(): { type: "agentManager.projects"; multiProject: boolean; projects: ProjectSnapshot[] }
@@ -35,10 +38,10 @@ export function createProjectWiring(opts: {
   ready: (ctx: ProjectContext) => Promise<ProjectInitResult>
   /** Push the project catalog to the webview. */
   push: () => void
+  /** Push one project's state (or every context when omitted) to the webview. */
+  pushState: (ctx?: ProjectContext) => void
   /** Re-derive the pinned project after workspace folder changes. */
   changed: () => void
-  /** Re-push worktree state (e.g. after the flag toggles). */
-  refresh: () => void
   /** Acknowledge an atomically validated sidebar selection. */
   selected: (target: import("./route").SidebarTarget) => void
 }): ProjectWiring {
@@ -64,8 +67,15 @@ export function createProjectWiring(opts: {
     push: opts.push,
     selected: opts.selected,
     error: (message) => opts.host.showError(message),
+    openSettings: (tab, projectId) => opts.host.openSettings(tab, projectId),
     log: opts.log,
   }
+  const settings = createSettingsHandler({
+    contexts,
+    open: (path) => opts.host.openDocument(path),
+    push: opts.pushState,
+    log: opts.log,
+  })
   const listeners: Disposable[] = [
     opts.host.onDidChangeWorkspaceFolders(() => opts.changed()),
     opts.host.onDidChangeMultiProject((enabled) => {
@@ -74,12 +84,13 @@ export function createProjectWiring(opts: {
         if (pinned) opts.activate(pinned)
       }
       opts.push()
-      opts.refresh()
+      opts.pushState()
     }),
   ]
   return {
     registry,
     contexts,
+    settings,
     messages,
     snapshots: () => ({
       type: "agentManager.projects",

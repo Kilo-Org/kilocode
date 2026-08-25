@@ -78,7 +78,6 @@ import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import { DefaultBaseBranchDialog } from "./DefaultBaseBranchDialog"
 import { createModeRouter } from "./mode-router"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
@@ -258,9 +257,6 @@ const AgentManagerContent: Component = () => {
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
   const [repoDetectedBranch, setRepoDetectedBranch] = createSignal<string | undefined>()
-  const defaultBaseBranch = () => registry.active().defaultBaseBranch()
-  const setDefaultBaseBranch = (v: Parameters<Setter<string | undefined>>[0]) =>
-    registry.active().setDefaultBaseBranch(v)
   const [projectList, setProjectList] = createSignal<AgentProjectSnapshot[]>([])
   const [multiProject, setMultiProject] = createSignal(false)
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
@@ -274,7 +270,9 @@ const AgentManagerContent: Component = () => {
   )
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
-  const repoDefaultBranch = () => defaultBaseBranch() ?? repoDetectedBranch() ?? "main"
+
+  const repoDefaultBranch = () => repoDetectedBranch() ?? "main"
+
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
@@ -1757,23 +1755,6 @@ const AgentManagerContent: Component = () => {
 
   const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), vscode, showToast, t, activeProjectId)
 
-  const handleConfigureSetupScript = () => {
-    vscode.postMessage({ type: "agentManager.configureSetupScript" })
-  }
-  const setupScript = metrics.click("configure_setup_script", "worktree_settings", handleConfigureSetupScript)
-
-  const handleChangeDefaultBaseBranch = () => {
-    dialog.show(() => (
-      <DefaultBaseBranchDialog
-        selected={defaultBaseBranch()}
-        detected={repoDetectedBranch()}
-        onSelect={setDefaultBaseBranch}
-        onDetected={setRepoDetectedBranch}
-        onClose={() => dialog.close()}
-      />
-    ))
-  }
-
   const handleShowKeyboardShortcuts = () => {
     const categories = buildShortcutCategories(kb(), t)
     dialog.show(() => (
@@ -2364,8 +2345,7 @@ const AgentManagerContent: Component = () => {
             onNewWorktree={showNewWorktreeDialog}
             onNewSection={newSection}
             onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
-            onSetup={setupScript}
-            onBranch={handleChangeDefaultBaseBranch}
+            projectId={activeProjectId()}
             sections={sections}
             sortedWorktrees={sortedWorktrees}
             worktrees={worktrees}

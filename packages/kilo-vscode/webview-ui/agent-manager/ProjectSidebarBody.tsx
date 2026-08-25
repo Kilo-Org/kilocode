@@ -57,7 +57,6 @@ interface Props {
   onSelectWorktree: (projectId: string, worktreeId: string) => void
   onSelectSession: (projectId: string, sessionId: string) => void
   onNewWorktree: (projectId: string) => void
-  onDefaultBranch: (projectId: string, selected?: string, detected?: string) => void
   shortcutMap?: () => Map<string, number>
 }
 
@@ -366,8 +365,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
               onCreate={() => post({ type: "agentManager.createWorktree" })}
               onNew={() => props.onNewWorktree(props.project.id)}
               onSection={() => createSection()}
-              onSetup={() => post({ type: "agentManager.configureSetupScript" })}
-              onBranch={() => props.onDefaultBranch(props.project.id, state()?.defaultBaseBranch, props.local?.branch)}
+              onSettings={() =>
+                vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId: props.project.id })
+              }
             />
           }
         />
