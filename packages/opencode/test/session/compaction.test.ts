@@ -983,6 +983,26 @@ describe("session.compaction.process", () => {
     }).pipe(withCompaction({ config: cfg({ tail_turns: 2, preserve_recent_tokens: 10_000 }) })),
   )
 
+  // kilocode_change start
+  itCompaction.instance(
+    "preserves the latest two turns by default",
+    Effect.gen(function* () {
+      const ssn = yield* SessionNs.Service
+      const session = yield* ssn.create({})
+      yield* createUserMessage(session.id, "older context")
+      const keep = yield* createUserMessage(session.id, "recent request")
+      yield* createUserMessage(session.id, "latest request")
+      yield* createSummaryCompaction(session.id)
+
+      const msgs = yield* ssn.messages({ sessionID: session.id })
+      const parent = msgs.at(-1)!.info.id
+      yield* SessionCompaction.use.process({ parentID: parent, messages: msgs, sessionID: session.id, auto: false })
+
+      expect((yield* readCompactionPart(session.id))?.tail_start_id).toBe(keep.id)
+    }).pipe(withCompaction()),
+  )
+  // kilocode_change end
+
   // kilocode_change start - configured output ceiling controls automatic tail budgeting
   itCompaction.instance(
     "uses the configured output token ceiling for retained tail budgeting",

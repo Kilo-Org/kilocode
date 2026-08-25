@@ -143,6 +143,7 @@ export function policy(opts: {
   offline?: (input: { error: unknown; message: string }) => Effect.Effect<"retry" | "blocked" | "aborted">
   // kilocode_change end
 }) {
+  const state = { offline: 0 } // kilocode_change
   return Schedule.fromStepWithMetadata(
     Effect.succeed((meta: Schedule.InputMetadata<unknown>) => {
       // kilocode_change start — enforce retry limit
@@ -154,7 +155,6 @@ export function policy(opts: {
       const error = opts.parse(meta.input)
       const retry = retryable(error, opts.provider)
       if (!retry) return Cause.done(meta.attempt)
-      if (opts.limit === undefined && meta.attempt > RETRY_MAX_RETRIES) return Cause.done(meta.attempt) // kilocode_change - explicit Kilo limit overrides the upstream default
       return Effect.gen(function* () {
         // kilocode_change start — handle network disconnect via offline handler
         if (opts.offline && SessionNetwork.disconnected(meta.input)) {
@@ -165,20 +165,25 @@ export function policy(opts: {
           if (result !== "retry") {
             return yield* Cause.done(meta.attempt)
           }
+          state.offline += 1
           yield* opts.set({ attempt: 0, message: "Reconnected", next: Date.now() })
           return [0, Duration.zero] as [number, Duration.Duration]
         }
         // kilocode_change end
 
-        const wait = delay(meta.attempt, SessionV1.APIError.isInstance(error) ? error : undefined)
+        // kilocode_change start
+        const attempt = opts.limit === undefined ? meta.attempt - state.offline : meta.attempt
+        if (opts.limit === undefined && attempt > RETRY_MAX_RETRIES) return yield* Cause.done(attempt)
+        // kilocode_change end
+        const wait = delay(attempt, SessionV1.APIError.isInstance(error) ? error : undefined) // kilocode_change
         const now = yield* Clock.currentTimeMillis
         yield* opts.set({
-          attempt: meta.attempt,
+          attempt, // kilocode_change
           message: retry.message,
           action: retry.action,
           next: now + wait,
         })
-        return [meta.attempt, Duration.millis(wait)] as [number, Duration.Duration]
+        return [attempt, Duration.millis(wait)] as [number, Duration.Duration] // kilocode_change
       })
     }),
   )

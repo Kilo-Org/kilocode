@@ -619,6 +619,7 @@ export function topP(model: Provider.Model) {
   if (isLing(model.api.id)) return 0.95 // kilocode_change
   if (
     ["deepseek-v4-flash-0731", "deepseek-v4-flash:0731"].some((name) => id.includes(name)) ||
+    (model.providerID === "kilo" && id.includes("deepseek-v4-flash")) || // kilocode_change
     (id.includes("deepseek-v4-flash") && (model.providerID === "deepseek" || model.providerID.startsWith("opencode")))
   ) {
     return 0.95

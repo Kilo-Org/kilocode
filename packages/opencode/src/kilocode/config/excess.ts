@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
 
 export namespace Excess {
   export function keys(schema: Schema.Top, input: unknown) {
@@ -10,5 +10,11 @@ export namespace Excess {
 
   export function issue(keys: readonly string[]) {
     return `Unrecognized key${keys.length === 1 ? "" : "s"}: ${keys.join(", ")}`
+  }
+
+  export function warn(schema: Schema.Top, input: unknown, source: string) {
+    const invalid = keys(schema, input)
+    if (invalid.length === 0) return Effect.void
+    return Effect.logWarning("ignoring unrecognized tui config settings", { path: source, reason: issue(invalid) })
   }
 }

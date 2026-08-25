@@ -244,8 +244,8 @@ const layer = Layer.effect(
       cfg: ConfigV1.Info
       model: Provider.Model
     }) {
-      const limit = input.cfg.compaction?.tail_turns
-      if (limit !== undefined && limit <= 0) return { head: input.messages, tail_start_id: undefined }
+      const limit = input.cfg.compaction?.tail_turns ?? 2 // kilocode_change
+      if (limit <= 0) return { head: input.messages, tail_start_id: undefined } // kilocode_change
       // kilocode_change start
       const budget = preserveRecentBudget({
         cfg: input.cfg,
@@ -255,7 +255,7 @@ const layer = Layer.effect(
       // kilocode_change end
       const all = turns(input.messages)
       if (!all.length) return { head: input.messages, tail_start_id: undefined }
-      const recent = limit === undefined ? all : all.slice(-limit)
+      const recent = all.slice(-limit) // kilocode_change
 
       let total = 0
       let keep: Tail | undefined

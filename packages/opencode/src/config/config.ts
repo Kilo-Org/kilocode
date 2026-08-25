@@ -1122,7 +1122,11 @@ const layer = Layer.effect(
                 file,
               )
               const next = KilocodeConfig.mergeConfig(writable(existing), patch)
-              const serialized = JSON.stringify(next, null, 2)
+              const serialized = JSON.stringify(
+                KilocodeConfig.preserve(normalizeLoadedConfig(ConfigParse.jsonc(before, file), file), patch, file),
+                null,
+                2,
+              )
               const changed = serialized !== before || propagated
               if (serialized !== before) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
               return { next, changed }

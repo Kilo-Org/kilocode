@@ -9,7 +9,7 @@ import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { NodeFileSystem } from "@effect/platform-node"
 import { afterEach, describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
-import { Context, Effect, Layer } from "effect"
+import { Context, Effect, Exit, Layer, Schedule } from "effect"
 import * as Stream from "effect/Stream"
 import type { LLMEvent } from "@opencode-ai/llm"
 import { Database } from "@opencode-ai/core/database/database"
@@ -79,13 +79,13 @@ function model(): Provider.Model {
   } as Provider.Model
 }
 
-function retryable429() {
+function retryable429(headers?: Record<string, string>) {
   return new APICallError({
     message: "429 status code (no body)",
     url: "https://api.openai.com/v1/chat/completions",
     requestBodyValues: {},
     statusCode: 429,
-    responseHeaders: { "content-type": "application/json" },
+    responseHeaders: headers ?? { "content-type": "application/json" },
     isRetryable: true,
   })
 }
@@ -233,6 +233,64 @@ describe("session processor retry limit", () => {
   it.live("stops after two retries with the normalized retryable error", () => run(2), 15000)
 
   it.live("honors a configured retry limit above the upstream default", () => run(10), 15000)
+
+  const policy = (items: ("offline" | "provider")[], limit?: number) =>
+    Effect.gen(function* () {
+      const attempts: number[] = []
+      const state = { offline: 0, stopped: false }
+      const step = yield* Schedule.toStepWithMetadata(
+        SessionRetry.policy({
+          provider: "test",
+          limit,
+          parse: (error) => MessageV2.fromError(error, { providerID: ref.providerID }),
+          set: (info) => Effect.sync(() => attempts.push(info.attempt)).pipe(Effect.asVoid),
+          offline: () =>
+            Effect.sync(() => {
+              state.offline += 1
+              return "retry" as const
+            }),
+        }),
+      )
+
+      for (const item of items) {
+        const result = yield* Effect.exit(
+          step(item === "offline" ? new Error("fetch failed") : retryable429({ "retry-after-ms": "0" })),
+        )
+        if (Exit.isFailure(result)) {
+          state.stopped = true
+          break
+        }
+      }
+
+      return { attempts, ...state }
+    })
+
+  it.effect("recovers beyond the default cap without consuming provider retries", () =>
+    Effect.gen(function* () {
+      const result = yield* policy([...Array.from({ length: 6 }, () => "offline" as const), "provider"])
+      expect(result.offline).toBe(6)
+      expect(result.attempts).toEqual([0, 0, 0, 0, 0, 0, 1])
+      expect(result.stopped).toBe(false)
+    }),
+  )
+
+  it.effect("preserves the upstream provider cap across mixed reconnects", () =>
+    Effect.gen(function* () {
+      const result = yield* policy(Array.from({ length: 6 }, () => ["provider", "offline"] as const).flat())
+      expect(result.offline).toBe(5)
+      expect(result.attempts).toEqual([1, 0, 2, 0, 3, 0, 4, 0, 5, 0])
+      expect(result.stopped).toBe(true)
+    }),
+  )
+
+  it.effect("preserves explicit raw attempt limits before reconnect handlers", () =>
+    Effect.gen(function* () {
+      const result = yield* policy(["offline", "provider", "offline", "provider", "offline", "offline"], 5)
+      expect(result.offline).toBe(3)
+      expect(result.attempts).toEqual([0, 2, 0, 4, 0])
+      expect(result.stopped).toBe(true)
+    }),
+  )
 
   it.effect("only positive integers enable the limit", () =>
     Effect.promise(async () => {

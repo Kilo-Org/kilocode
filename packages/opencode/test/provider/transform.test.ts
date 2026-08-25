@@ -3547,6 +3547,7 @@ describe("ProviderTransform sampling defaults - DeepSeek", () => {
 
   test.each([
     ["deepseek", "deepseek-v4-flash"],
+    ["kilo", "deepseek/deepseek-v4-flash"], // kilocode_change
     ["opencode", "deepseek-v4-flash"],
     ["opencode-go", "deepseek-v4-flash"],
     ["openrouter", "deepseek/deepseek-v4-flash-0731"],

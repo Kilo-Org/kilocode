@@ -1,11 +1,13 @@
 import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser"
 import { mkdir, stat } from "fs/promises"
 import path from "path"
+import { ConfigErrorV1 } from "@opencode-ai/core/v1/config/error"
 import { Config } from "@/config/config"
 import { ConfigParse } from "@/config/parse"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { KilocodeConfigOverlay } from "./overlay"
+import { Excess } from "./excess"
 
 export namespace KilocodeConfigWriter {
   export type Conflict = {
@@ -49,6 +51,13 @@ export namespace KilocodeConfigWriter {
       }
     }
 
+    const keys = Excess.keys(Config.Info, input.set)
+    if (keys.length) {
+      throw new ConfigErrorV1.InvalidError({
+        path: target.path,
+        issues: [{ message: Excess.issue(keys), path: [] }],
+      })
+    }
     const patch = KilocodeConfigOverlay.patch({ scope: input.scope, set: input.set, unset: input.unset })
     if (Object.keys(patch).length === 0) return { ok: true, target, changed: false, sandboxChanged: false }
     await mkdir(path.dirname(target.path), { recursive: true })
