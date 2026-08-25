@@ -27,18 +27,17 @@ export class Semaphore {
       return Promise.resolve()
     }
     return new Promise<void>((resolve, reject) => {
-      const item = {
+      const item: { resolve: () => void; abort: () => void } = {
         resolve: () => {
-          if (item.abort) signal?.removeEventListener("abort", item.abort)
+          signal?.removeEventListener("abort", item.abort)
           this.running++
           resolve()
         },
-        abort: undefined as (() => void) | undefined,
-      }
-      item.abort = () => {
-        const index = this.pending.indexOf(item)
-        if (index !== -1) this.pending.splice(index, 1)
-        reject(signal?.reason)
+        abort: () => {
+          const index = this.pending.indexOf(item)
+          if (index !== -1) this.pending.splice(index, 1)
+          reject(signal?.reason)
+        },
       }
       signal?.addEventListener("abort", item.abort, { once: true })
       this.pending.push(item)

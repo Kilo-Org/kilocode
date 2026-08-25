@@ -278,14 +278,10 @@ export class SourceController {
     }
     const work = this.runFetch(source, epoch, initial)
     this.fetches.set(source, work)
-    work.then(
-      () => {
-        if (this.fetches.get(source) === work) this.fetches.delete(source)
-      },
-      () => {
-        if (this.fetches.get(source) === work) this.fetches.delete(source)
-      },
-    )
+    const clear = () => {
+      if (this.fetches.get(source) === work) this.fetches.delete(source)
+    }
+    void work.finally(clear).catch(() => undefined)
     return work
   }
 }
