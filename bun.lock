@@ -461,6 +461,7 @@
         "@xterm/addon-fit": "0.11.0",
         "@xterm/addon-unicode-graphemes": "0.4.0",
         "@xterm/addon-web-links": "0.12.0",
+        "@xterm/addon-webgl": "0.19.0",
         "@xterm/xterm": "6.0.0",
         "diff": "8.0.4",
         "fastest-levenshtein": "^1.0.16",
@@ -1000,25 +1001,25 @@
     },
   },
   "trustedDependencies": [
-    "esbuild",
-    "protobufjs",
     "web-tree-sitter",
+    "esbuild",
     "tree-sitter-bash",
+    "protobufjs",
   ],
   "patchedDependencies": {
-    "@ai-sdk/xai@3.0.102": "patches/@ai-sdk%2Fxai@3.0.102.patch",
-    "@modelcontextprotocol/sdk@1.29.0": "patches/@modelcontextprotocol%2Fsdk@1.29.0.patch",
+    "virtua@0.49.1": "patches/virtua@0.49.1.patch",
+    "mammoth@1.12.0": "patches/mammoth@1.12.0.patch",
     "@ff-labs/fff-bun@0.9.4": "patches/@ff-labs%2Ffff-bun@0.9.4.patch",
-    "pacote@21.5.1": "patches/pacote@21.5.1.patch",
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
+    "@modelcontextprotocol/sdk@1.29.0": "patches/@modelcontextprotocol%2Fsdk@1.29.0.patch",
+    "@ai-sdk/google@3.0.73": "patches/@ai-sdk%2Fgoogle@3.0.73.patch",
+    "pacote@21.5.1": "patches/pacote@21.5.1.patch",
+    "@silvia-odwyer/photon-node@0.3.4": "patches/@silvia-odwyer%2Fphoton-node@0.3.4.patch",
     "@ai-sdk/mistral@3.0.51": "patches/@ai-sdk%2Fmistral@3.0.51.patch",
     "effect@4.0.0-beta.83": "patches/effect@4.0.0-beta.83.patch",
-    "@silvia-odwyer/photon-node@0.3.4": "patches/@silvia-odwyer%2Fphoton-node@0.3.4.patch",
     "solid-js@1.9.12": "patches/solid-js@1.9.12.patch",
     "@npmcli/agent@4.0.2": "patches/@npmcli%2Fagent@4.0.2.patch",
-    "virtua@0.49.1": "patches/virtua@0.49.1.patch",
-    "@ai-sdk/google@3.0.73": "patches/@ai-sdk%2Fgoogle@3.0.73.patch",
-    "mammoth@1.12.0": "patches/mammoth@1.12.0.patch",
+    "@ai-sdk/xai@3.0.102": "patches/@ai-sdk%2Fxai@3.0.102.patch",
   },
   "overrides": {
     "@effect/platform-node-shared": "4.0.0-beta.74",
@@ -2793,6 +2794,8 @@
     "@xterm/addon-unicode-graphemes": ["@xterm/addon-unicode-graphemes@0.4.0", "", {}, "sha512-9+/CqwbKcnlkJU4d3wIgO+wjsL8f6vyz+UwUWLu6nADQz8Gr8ONqGCJfdDjIdI+yYZLABQqQy47FzEM6AWELjw=="],
 
     "@xterm/addon-web-links": ["@xterm/addon-web-links@0.12.0", "", {}, "sha512-4Smom3RPyVp7ZMYOYDoC/9eGJJJqYhnPLGGqJ6wOBfB8VxPViJNSKdgRYb8NpaM6YSelEKbA2SStD7lGyqaobw=="],
+
+    "@xterm/addon-webgl": ["@xterm/addon-webgl@0.19.0", "", {}, "sha512-b3fMOsyLVuCeNJWxolACEUED0vm7qC0cy4wRvf3oURSzDTYVQiGPhTnhWZwIHdvC48Y+oLhvYXnY4XDXPoJo6A=="],
 
     "@xterm/xterm": ["@xterm/xterm@6.0.0", "", {}, "sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg=="],
 
