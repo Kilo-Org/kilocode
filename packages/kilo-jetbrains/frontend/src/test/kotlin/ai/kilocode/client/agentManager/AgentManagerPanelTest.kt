@@ -51,9 +51,13 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.SearchTextField
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
+import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
+import java.awt.Component
+import java.awt.Container
 import java.awt.event.MouseEvent
 import java.awt.Point
 import javax.swing.JComponent
@@ -180,6 +184,26 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(activeListToolWindowBackground(), edt { scroll.viewport.background })
         assertEquals(activeListToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
         assertEquals(0, edt { scroll.viewportBorder.getBorderInsets(scroll).top })
+    }
+
+    fun `test worktree list renders row titles in plain weight`() {
+        rpc.listed += worktree("aardvark")
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        @Suppress("UNCHECKED_CAST")
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! as JBList<Any?> }
+        val title = edt {
+            val row = list.model.getElementAt(0)
+            val comp = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, false)
+            components(comp).filterIsInstance<SimpleColoredComponent>().single()
+        }
+        val iter = title.iterator()
+        iter.next()
+
+        assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
     }
 
     fun `test clicking a worktree opens the worktree session editor`() {
@@ -847,6 +871,16 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private fun row(panel: AgentManagerPanel, idx: Int): ActiveListItem {
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
         return edt { list.model.getElementAt(idx) as ActiveListItem }
+    }
+
+    private fun components(root: Component): List<Component> {
+        val out = mutableListOf<Component>()
+        fun visit(item: Component) {
+            out += item
+            if (item is Container) item.components.forEach { visit(it) }
+        }
+        visit(root)
+        return out
     }
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)

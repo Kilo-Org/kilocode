@@ -46,4 +46,7 @@ internal object WorktreeIcons {
             }
         }
     }
+
+    /** The monochrome at-rest glyphs that follow the row text color; status icons are excluded. */
+    fun neutral(icon: Icon?): Boolean = icon === local || icon === locked || icon === branch
 }

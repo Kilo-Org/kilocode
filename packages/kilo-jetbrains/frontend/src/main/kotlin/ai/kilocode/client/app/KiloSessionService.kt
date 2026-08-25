@@ -35,10 +35,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -69,13 +71,21 @@ class KiloSessionService internal constructor(
     private val _sessions = MutableStateFlow<List<SessionDto>>(emptyList())
     val sessions: StateFlow<List<SessionDto>> = _sessions.asStateFlow()
 
-    /** Live session status map from SSE events. */
-    val statuses: StateFlow<Map<String, SessionStatusDto>> =
-        stream { statuses() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
+    // Sessions deleted this run. The backend does not always emit a status/activity clear for a
+    // session left in a waiting or failed state, so a deleted question/error entry would otherwise
+    // linger and keep its badge on the session list, worktree list, and tab attention dot. Pruning
+    // it locally forces every derived status to re-evaluate the moment the delete resolves.
+    private val removed = MutableStateFlow<Set<String>>(emptySet())
 
-    /** Live session activity map from backend global events. */
+    /** Live session status map from SSE events, minus sessions deleted this run. */
+    val statuses: StateFlow<Map<String, SessionStatusDto>> =
+        combine(stream { statuses() }, removed) { map, gone -> map - gone }
+            .stateIn(cs, SharingStarted.Eagerly, emptyMap())
+
+    /** Live session activity map from backend global events, minus sessions deleted this run. */
     val activity: StateFlow<Map<String, SessionActivityDto>> =
-        stream { activity() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
+        combine(stream { activity() }, removed) { map, gone -> map - gone }
+            .stateIn(cs, SharingStarted.Eagerly, emptyMap())
 
     /**
      * Session create/update/delete across every directory the CLI serves, including sessions
@@ -165,6 +175,7 @@ class KiloSessionService internal constructor(
         log.info("${ChatLogSummary.sid(id)} kind=session delete=true dir=${ChatLogSummary.dir(dir)}")
         call { delete(id, dir) }
         log.info("${ChatLogSummary.sid(id)} kind=session delete=true ok=true dir=${ChatLogSummary.dir(dir)}")
+        removed.update { it + id }
         list(dir)
     }
 

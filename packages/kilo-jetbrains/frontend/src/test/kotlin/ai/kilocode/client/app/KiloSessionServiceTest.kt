@@ -163,6 +163,22 @@ class KiloSessionServiceTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test deleting a session prunes its lingering activity and status entries`() = runBlocking(Dispatchers.Default) {
+        rpc.statuses.value = mapOf("ses_asking" to SessionStatusDto("busy"))
+        rpc.activity.value = mapOf(
+            "ses_asking" to SessionActivityDto("/repo/wt", SessionActivityKindDto.QUESTION),
+            "ses_failed" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
+        )
+        service.activity.first { it.size == 2 }
+
+        // The backend keeps reporting the question/error for a deleted session, so the entry must be
+        // pruned locally or the badge lingers on every derived surface.
+        service.deleteSession("ses_asking", "/repo/wt")
+        service.activity.first { "ses_asking" !in it }
+
+        assertEquals(mapOf("ses_failed" to SessionActivityKind.ERROR), service.activitySnapshot())
+    }
+
     private fun session(id: String, title: String) = SessionDto(
         id = id,
         projectID = "prj",
