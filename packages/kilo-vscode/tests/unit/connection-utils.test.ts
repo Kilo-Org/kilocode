@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { resolveEventSessionId } from "../../src/services/cli-backend/connection-utils"
+import { createDuplicateEventFilter, resolveEventSessionId } from "../../src/services/cli-backend/connection-utils"
 import type { SSEPayload as Payload } from "../../src/services/cli-backend/sdk-sse-adapter"
 
 const noLookup = (_: string) => undefined
@@ -170,5 +170,67 @@ describe("resolveEventSessionId", () => {
     const event = { id: "e12", type: "server.connected", properties: {} } satisfies Payload
 
     expect(resolveEventSessionId(event, noLookup)).toBeUndefined()
+  })
+})
+
+describe("isDuplicateSyncEvent", () => {
+  it("drops a compatibility envelope only after its live event", () => {
+    const filter = createDuplicateEventFilter()
+    const live = {
+      id: "e13",
+      type: "message.part.updated",
+      properties: { sessionID: "s6", part, delta: "x" },
+    } satisfies Payload
+    expect(filter(live)).toBe(false)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "e13",
+          seq: 5,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(true)
+  })
+
+  it("keeps replay-only compatibility envelopes", () => {
+    const filter = createDuplicateEventFilter()
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "session.next.model.switched.1",
+          id: "e14",
+          seq: 6,
+          aggregateID: "s6",
+          data: { sessionID: "s6", messageID: "m1", model: { id: "test", providerID: "kilo" } },
+        }),
+      ),
+    ).toBe(false)
+  })
+
+  it("keeps session updates because the provider consumes their sync metadata", () => {
+    const filter = createDuplicateEventFilter()
+    const live = {
+      id: "e15",
+      type: "session.updated",
+      properties: { sessionID: "s6", info: { id: "s6", time: { created: 0, updated: 1 } } },
+    } as Payload
+    expect(filter(live)).toBe(false)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "session.updated.1",
+          id: "e15",
+          seq: 7,
+          aggregateID: "s6",
+          data: { sessionID: "s6", info: { id: "s6", time: { created: 0, updated: 1 } } },
+        }),
+      ),
+    ).toBe(false)
   })
 })

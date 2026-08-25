@@ -190,12 +190,8 @@ interface SessionContextValue {
 
   // Model selection (global, extension-lifetime)
   selected: (sessionID?: string) => ModelSelection | null
-  configModel: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
-  configModelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
-  hasModelOverride: (sessionID?: string) => boolean
-  clearModelOverride: (sessionID?: string) => void
 
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
@@ -736,7 +732,7 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function clearModeModelSelection(agentName: string, persist = false) {
+  function clearModeModelSelection(agentName: string) {
     setUserSetAgents((prev) => {
       const next = { ...prev }
       delete next[agentName]
@@ -748,7 +744,6 @@ export const SessionProvider: ParentComponent = (props) => {
         delete selections[agentName]
       }),
     )
-    if (persist) vscode.postMessage({ type: "clearModelSelection", agent: agentName })
   }
 
   function shouldClearModeModelSelection(agentName: string) {
@@ -763,11 +758,6 @@ export const SessionProvider: ParentComponent = (props) => {
       if (next.size === prev.size) return prev
       return next
     })
-  }
-
-  function configModel(sessionID?: string): ModelSelection | null {
-    const agentName = agentForScope(sessionID)
-    return resolveModel(agentName)
   }
 
   function modelForAgent(agentName: string): ModelSelection | null {
@@ -788,36 +778,6 @@ export const SessionProvider: ParentComponent = (props) => {
       agentName,
       userSetAgents()[agentName] === true,
     )
-  }
-
-  function configModelForAgent(agentName: string): ModelSelection | null {
-    return resolveModel(agentName)
-  }
-
-  /** True when the active model differs from what the config dictates. */
-  function hasModelOverride(sessionID?: string) {
-    const sel = selected(sessionID)
-    const cfg = configModel(sessionID)
-    if (!sel || !cfg) return false
-    return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
-  }
-
-  /** Clear the per-mode model override, falling back to config default. */
-  function clearModelOverride(sessionID?: string) {
-    const sid = sessionID ?? currentSessionID()
-    const agentName = sid ? agentForScope(sid) : selectedAgentName()
-    // Always clear the persisted per-mode model selection so the user's
-    // configured (or fallback) model becomes effective, not the last manual pick.
-    clearModeModelSelection(agentName, true)
-    if (sid) {
-      setStore(
-        "sessionOverrides",
-        produce((overrides) => {
-          delete overrides[sid]
-        }),
-      )
-      hideErrors(sid)
-    }
   }
 
   // Handle agentsLoaded immediately (not in onMount) so we never miss
@@ -932,7 +892,7 @@ export const SessionProvider: ParentComponent = (props) => {
   onCleanup(variants.load())
 
   // Load persisted per-mode model selections from model.json via extension host.
-  // Uses replace semantics so a reset (empty payload) clears old entries.
+  // Uses replace semantics so an empty payload clears old entries.
   const unsubSelections = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "modelSelectionsLoaded") return
     setStore("modelSelections", reconcile(message.selections))
@@ -2994,12 +2954,8 @@ export const SessionProvider: ParentComponent = (props) => {
     scopedQuestions,
     scopedSuggestions,
     selected,
-    configModel,
     modelForAgent,
-    configModelForAgent,
     selectModel,
-    hasModelOverride,
-    clearModelOverride,
     costBreakdown,
     contextUsage,
     modelUsage,

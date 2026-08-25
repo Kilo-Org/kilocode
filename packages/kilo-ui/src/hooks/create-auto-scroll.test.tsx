@@ -12,6 +12,7 @@ mock.module("@solid-primitives/resize-observer", () => ({
 const originalElement = globalThis.Element
 const originalNode = globalThis.Node
 const originalWheelEvent = globalThis.WheelEvent
+const originalMutationObserver = globalThis.MutationObserver
 
 type Listener = {
   callback: (event: Event) => void
@@ -113,9 +114,25 @@ class FakeKeyboardEvent {
   ) {}
 }
 
+const mutators: (() => void)[] = []
+
+class FakeMutationObserver {
+  constructor(readonly callback: () => void) {
+    mutators.push(callback)
+  }
+
+  observe() {}
+
+  disconnect() {
+    const at = mutators.indexOf(this.callback)
+    if (at >= 0) mutators.splice(at, 1)
+  }
+}
+
 globalThis.Element = FakeElement as unknown as typeof Element
 globalThis.Node = FakeElement as unknown as typeof Node
 globalThis.WheelEvent = FakeWheelEvent as unknown as typeof WheelEvent
+globalThis.MutationObserver = FakeMutationObserver as unknown as typeof MutationObserver
 
 const { createAutoScroll } = await import("./create-auto-scroll")
 
@@ -133,6 +150,8 @@ function setup(options?: { doc?: FakeDocument; interacted?: () => void; working?
   root.scroll.scrollRef(el as unknown as HTMLElement)
   root.scroll.contentRef(new FakeElement() as unknown as HTMLElement)
 
+  const mutate = () => mutators.forEach((callback) => callback())
+
   const resize = (index?: number) => {
     if (index !== undefined) {
       observers[index]?.()
@@ -141,11 +160,12 @@ function setup(options?: { doc?: FakeDocument; interacted?: () => void; working?
     observers.forEach((callback) => callback())
   }
 
-  return { ...root, doc, el, resize }
+  return { ...root, doc, el, resize, mutate }
 }
 
 beforeEach(() => {
   observers.length = 0
+  mutators.length = 0
 })
 
 afterAll(() => {
@@ -155,6 +175,8 @@ afterAll(() => {
   else Reflect.deleteProperty(globalThis, "Node")
   if (originalWheelEvent) globalThis.WheelEvent = originalWheelEvent
   else Reflect.deleteProperty(globalThis, "WheelEvent")
+  if (originalMutationObserver) globalThis.MutationObserver = originalMutationObserver
+  else Reflect.deleteProperty(globalThis, "MutationObserver")
 })
 
 describe("createAutoScroll non-scrollable layouts", () => {
@@ -289,16 +311,59 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.el.scrollTop = 800
     ctx.scroll.handleScroll()
 
+    // A tool card that shrinks and recovers inside one frame makes the browser
+    // clamp the pin away without changing the final content size, so no resize
+    // entry follows and the pin has to be restored from the scroll event.
     ctx.el.scrollTop = 760
     ctx.scroll.handleScroll()
 
     expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(1000)
+    ctx.dispose()
+  })
 
-    ctx.el.scrollHeight = 1100
-    ctx.resize(0)
+  test("pins streamed content when it is added, before any resize entry", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+
+    // The resize entry for this growth only arrives after the frame has laid out
+    // and painted, so the mutation itself has to pin the view.
+    ctx.el.scrollHeight = 1080
+    ctx.mutate()
 
     expect(ctx.scroll.userScrolled()).toBe(false)
-    expect(ctx.el.scrollTop).toBe(1100)
+    expect(ctx.el.scrollTop).toBe(1080)
+    ctx.dispose()
+  })
+
+  test("ignores content mutations while the user reads earlier output", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 400
+    ctx.scroll.pause()
+
+    ctx.el.scrollHeight = 1080
+    ctx.mutate()
+
+    expect(ctx.el.scrollTop).toBe(400)
+    ctx.dispose()
+  })
+
+  test("leaves an idle transcript where a layout clamp put it", () => {
+    const ctx = setup()
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+    ctx.scroll.handleScroll()
+
+    ctx.el.scrollTop = 704
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(704)
     ctx.dispose()
   })
 

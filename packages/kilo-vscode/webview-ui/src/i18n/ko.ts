@@ -187,7 +187,6 @@ export const dict = {
   "prompt.action.autoApprove.disable": "자동 승인 사용 안 함",
   "prompt.action.autoApprove.enabled": "자동 승인이 켜져 있습니다. 권한 요청이 자동으로 승인됩니다.",
   "prompt.action.autoApprove.disabled": "자동 승인이 꺼져 있습니다. 클릭하면 권한 요청을 자동으로 승인합니다.",
-  "prompt.action.resetModel": "모델을 기본값으로 재설정",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
   "prompt.action.sandbox.enable": "샌드박스 활성화",
@@ -1229,7 +1228,6 @@ export const dict = {
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
-  "task.backgroundAgents.foreground": "포그라운드 에이전트 실행 중",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
   "task.backgroundAgents.needsInput": "입력 필요",
   "task.backgroundAgents.dismiss": "닫기",

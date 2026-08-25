@@ -187,7 +187,6 @@ export const dict = {
     "L'approbation automatique est activée. Les demandes d'autorisation seront approuvées automatiquement.",
   "prompt.action.autoApprove.disabled":
     "L'approbation automatique est désactivée. Cliquez pour approuver automatiquement les demandes d'autorisation.",
-  "prompt.action.resetModel": "Réinitialiser le modèle par défaut",
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
@@ -1287,7 +1286,6 @@ export const dict = {
   "task.backgroundAgents.open": "Ouvrir l'agent en arrière-plan",
   "task.backgroundAgents.cancel": "Arrêter",
   "task.backgroundAgents.continueInBackground": "Continuer en arrière-plan",
-  "task.backgroundAgents.foreground": "L'agent au premier plan est actif",
   "task.backgroundAgents.waiting": "Un agent en arrière-plan attend votre saisie",
   "task.backgroundAgents.needsInput": "Saisie requise",
   "task.backgroundAgents.dismiss": "Ignorer",

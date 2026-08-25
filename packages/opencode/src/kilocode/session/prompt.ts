@@ -270,7 +270,10 @@ export namespace KiloSessionPrompt {
     const taggedSession = PermissionProvenance.tagSession(session.permission ?? [])
     const ruleset = Permission.merge(
       taggedAgent,
-      guardPermissions({ agent: { name: agent.name, permission: taggedAgent }, session: { permission: taggedSession } }),
+      guardPermissions({
+        agent: { name: agent.name, permission: taggedAgent },
+        session: { permission: taggedSession },
+      }),
     )
     const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset: hardPermissions({ agent }) })
     if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
@@ -278,13 +281,9 @@ export namespace KiloSessionPrompt {
     // kilocode_change end
   })
 
-  /**
-   * Mutable cache for environment details, keyed by user message ID
-   * so it recomputes when a new user message arrives.
-   */
+  /** Mutable per-turn cache for deterministic environment detail blocks. */
   export interface EnvCache {
-    block?: string
-    user?: string
+    blocks?: Map<string, string>
   }
 
   export function memoryToolEnabled(input: { ctx: MemoryPaths.Ctx }) {
@@ -356,46 +355,54 @@ export namespace KiloSessionPrompt {
   }
 
   /**
-   * Ephemerally injects dynamic editor context (visible files, open tabs, etc.)
-   * into the last user message. Caches the result per user message ID so repeated
-   * loop iterations produce byte-identical messages (prompt caching).
+   * Reconstructs dynamic editor context on every user message without
+   * persisting synthetic prompt scaffolding. Using each message's creation
+   * time keeps historical blocks byte-identical, so later turns only append
+   * instead of moving the block and discarding the provider prompt cache.
    */
   export function injectEditorContext(input: {
     msgs: MessageV2.WithParts[]
-    lastUser: MessageV2.User
+    session: Pick<Session.Info, "directory" | "path">
     sessionID: SessionID
     cache: EnvCache
   }) {
-    if (input.cache.user !== input.lastUser.id) {
-      const ctx = (() => {
-        try {
-          return Instance.current
-        } catch {
-          return undefined
-        }
-      })()
-      input.cache.block = environmentDetails({
-        ...input.lastUser.editorContext,
-        ...(ctx ? { directory: ctx.directory, worktree: ctx.worktree } : {}),
-      })
-      input.cache.user = input.lastUser.id
+    const route = {
+      directory: input.session.directory,
+      worktree: path.resolve(
+        input.session.directory,
+        ...(input.session.path
+          ?.split("/")
+          .filter(Boolean)
+          .map(() => "..") ?? []),
+      ),
     }
-    if (!input.cache.block) return
-    const idx = input.msgs.findLastIndex((m) => m.info.role === "user")
-    if (idx === -1) return
-    input.msgs[idx] = {
-      ...input.msgs[idx],
-      parts: [
-        ...input.msgs[idx].parts,
-        {
-          id: PartID.make(Identifier.ascending("part")),
-          sessionID: input.sessionID,
-          messageID: input.msgs[idx].info.id,
-          type: "text",
-          text: input.cache.block,
-          synthetic: true,
-        } satisfies MessageV2.TextPart,
-      ],
+    input.cache.blocks ??= new Map()
+    for (const msg of input.msgs) {
+      if (msg.info.role !== "user") continue
+      if (
+        msg.parts.some(
+          (part) => part.type === "text" && part.synthetic && part.text.startsWith("<environment_details>"),
+        )
+      )
+        continue
+      const block =
+        input.cache.blocks.get(msg.info.id) ??
+        environmentDetails(
+          {
+            ...route,
+            ...msg.info.editorContext,
+          },
+          new Date(msg.info.time.created),
+        )
+      input.cache.blocks.set(msg.info.id, block)
+      msg.parts.push({
+        id: PartID.make(Identifier.ascending("part")),
+        sessionID: input.sessionID,
+        messageID: msg.info.id,
+        type: "text",
+        text: block,
+        synthetic: true,
+      } satisfies MessageV2.TextPart)
     }
   }
 
