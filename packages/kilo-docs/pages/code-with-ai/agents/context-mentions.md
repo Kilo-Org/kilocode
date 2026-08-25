@@ -23,11 +23,13 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 | Mention | Description | Example |
 |---|---|---|
 | **File** | Attach a file's contents to your message | `@src/utils.ts` |
-| **Terminal** | Include your active VS Code terminal output | `@terminal` |
+| **Terminal** | In the sidebar, include the active VS Code terminal output. In Agent Manager, include the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. | `@terminal` |
 | **Git Changes** | Attach uncommitted working-tree diffs and new files | `@git-changes` |
 | **Past chats** | Add a previous session's chat history as context | `@` → **Past chats** → pick a session |
 
 Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
+
+Terminal context is limited to 500 lines or 50,000 characters. Longer output is truncated. If no terminal content is available, Kilo reports that terminal content is unavailable instead of attaching an empty file.
 
 ### Referencing Past Chats
 
@@ -55,6 +57,10 @@ VS Code requires holding **Shift** when dragging files from outside the editor (
 The extension automatically includes context from your editor with each message — your currently focused file and all open editor tabs. You don't need to mention these explicitly.
 
 Selected code and editor diagnostics (errors/warnings) are not included automatically. However, you can send these to Kilo Code through VS Code's Code Actions: select code or hover over an error, then use the lightbulb menu to find context-dependent actions like "Explain with Kilo Code" or "Fix with Kilo Code."
+
+### Session-scoped file references
+
+In Agent Manager, file mentions, clickable file links, and review-comment file links use the referenced session's directory or worktree. File-link validation and native VS Code opening use the same scope, even after you switch sessions. Kilo rejects an unqualified session ID when it is ambiguous across projects instead of opening or validating a file in the wrong project.
 
 ### Tool-Based File Access
 

@@ -170,6 +170,31 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         assertNull(save.third)
     }
 
+    fun `test remove selects the server that took the deleted slot`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcps = agentRpc.mcps.filterNot { it.name == "filesystem" }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(panel, "filesystem", "remove")
+
+        flushUntil { rows(panel).none { it.key == "filesystem" } }
+        assertEquals("github", edt { list(panel).selectedValue?.key })
+    }
+
+    fun `test edit keeps the edited server selected when the reload reorders rows`() {
+        val next = McpConfigDto(type = "local", command = listOf("bun", "new-server"))
+        val panel = panel { name, cfg -> FakeEditDialog(name, cfg, next) }
+        flushUntil { rows(panel).size == 3 }
+        // Sorts above the edited server, so the reload shifts every row down one slot.
+        agentRpc.mcps = agentRpc.mcps + McpStatusDto("alpha", "failed")
+
+        click(panel, "filesystem", "edit")
+
+        flushUntil { rows(panel).size == 4 }
+        assertEquals("filesystem", edt { list(panel).selectedValue?.key })
+    }
+
     fun `test remove action requires confirmation`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }

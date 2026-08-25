@@ -320,6 +320,10 @@ export class VscodeHost implements Host {
     void vscode.env.openExternal(vscode.Uri.parse(url))
   }
 
+  openSettings(tab?: string, projectId?: string): void {
+    void vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", tab, projectId)
+  }
+
   refreshGit(): void {
     void vscode.commands.executeCommand("git.refresh")
   }

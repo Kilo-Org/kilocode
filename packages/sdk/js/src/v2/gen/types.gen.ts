@@ -382,11 +382,23 @@ export type AgentManagerMoveRequest = {
   sectionID: string | null
 }
 
+export type AgentManagerAnswers = Array<Array<string>>
+
+export type AgentManagerAnswerRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "answer"
+  targetSessionID: string
+  questionID?: string
+  answers: AgentManagerAnswers
+}
+
 export type AgentManagerRequest =
   | AgentManagerOverviewRequest
   | AgentManagerPromptRequest
   | AgentManagerStopRequest
   | AgentManagerMoveRequest
+  | AgentManagerAnswerRequest
 
 export type NotebookRequestId = string
 
@@ -4379,11 +4391,19 @@ export type AgentManagerMoveResult = {
   moved: true
 }
 
+export type AgentManagerAnswerResult = {
+  operation: "answer"
+  sessionID: string
+  questionID: string
+  resolved: true
+}
+
 export type AgentManagerResult =
   | AgentManagerOverviewResult
   | AgentManagerPromptResult
   | AgentManagerStopResult
   | AgentManagerMoveResult
+  | AgentManagerAnswerResult
 
 export type AgentManagerFailure = {
   code:
@@ -12123,6 +12143,90 @@ export type McpDisconnectResponses = {
 }
 
 export type McpDisconnectResponse = McpDisconnectResponses[keyof McpDisconnectResponses]
+
+export type McpReadResourceData = {
+  body?: {
+    uri: string
+    server: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/resource/read"
+}
+
+export type McpReadResourceErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpReadResourceError = McpReadResourceErrors[keyof McpReadResourceErrors]
+
+export type McpReadResourceResponses = {
+  /**
+   * Resource content
+   */
+  200: {
+    uri: string
+    mimeType?: string
+    text?: string
+    blob?: string
+  }
+}
+
+export type McpReadResourceResponse = McpReadResourceResponses[keyof McpReadResourceResponses]
+
+export type McpCallToolData = {
+  body?: {
+    server: string
+    name: string
+    arguments?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/mcp/call-tool"
+}
+
+export type McpCallToolErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpCallToolError = McpCallToolErrors[keyof McpCallToolErrors]
+
+export type McpCallToolResponses = {
+  /**
+   * Tool call result
+   */
+  200: {
+    content: Array<unknown>
+    isError?: boolean
+    structuredContent?: {
+      [key: string]: unknown
+    }
+  }
+}
+
+export type McpCallToolResponse = McpCallToolResponses[keyof McpCallToolResponses]
 
 export type ProjectListData = {
   body?: never

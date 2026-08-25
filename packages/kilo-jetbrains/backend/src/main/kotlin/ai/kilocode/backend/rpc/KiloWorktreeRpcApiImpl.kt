@@ -1,11 +1,15 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.MoveProgressDto
+import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -21,15 +25,19 @@ import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.ide.impl.OpenProjectTask
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -63,6 +71,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     private val bases = ConcurrentHashMap<String, Timed<String>>()
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
+    private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
     private val ghLock = Any()
     @Volatile
     private var ghProbe: Timed<GhAvailability>? = null
@@ -176,6 +185,95 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val dto = WorktreePrListDto(status, if (status == GhAvailability.OK) data else emptyList())
         prs[directory] = Timed(System.currentTimeMillis(), dto)
         dto
+    }
+
+    override suspend fun branchStatus(directory: String): BranchStatusDto = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        branches[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
+        val root = Path.of(directory).normalize()
+        val branch = runGit(root, "branch", "--show-current").stdout.trim()
+        val worktree = isLinkedWorktree(root)
+        val availability = ghAvailable(root)
+        val pr = if (availability == GhAvailability.OK && branch.isNotBlank()) {
+            val out = runGh(root, "pr", "view", branch, "--json", "number,state,isDraft,url,title,headRefName")
+            // Only accept a PR whose head branch matches the current branch. Guards against gh
+            // resolving a PR via upstream/remote configuration that isn't for this branch.
+            if (out.ok && parsePrHeadRef(out.stdout) == branch) parsePr(directory, out.stdout) else null
+        } else {
+            null
+        }
+        val dto = BranchStatusDto(branch = branch, worktree = worktree, availability = availability, pr = pr)
+        branches[directory] = Timed(System.currentTimeMillis(), dto)
+        dto
+    }
+
+    /**
+     * Every failure path — including a throw from capture, worktree creation bookkeeping, or the
+     * optional fork — emits [MoveStage.ERROR] and rolls back a worktree that was already created.
+     * The frontend collector has no error handling of its own, so a silent flow completion would
+     * leave the Agent Manager row stuck on its last stage forever.
+     */
+    override suspend fun moveToWorktree(directory: String, sessionId: String?, branch: String): Flow<MoveProgressDto> = flow {
+        val base = Path.of(directory).normalize()
+        LOG.info("worktree move requested: dir=$base session=$sessionId branch=$branch")
+        // Both survive the try so `finally` can drop temp patches and the failure paths can drop a
+        // worktree that was already created.
+        var snapshot: WorktreeTransfer.Snapshot? = null
+        var leftover: WorktreeDto? = null
+        try {
+            emit(MoveProgressDto(MoveStage.CAPTURING))
+            val captured = withContext(Dispatchers.IO) { WorktreeTransfer.capture(base) }.also { snapshot = it }
+            emit(MoveProgressDto(MoveStage.CREATING))
+            val created = withContext(Dispatchers.IO) {
+                addWorktree(base, branch.trim(), existing = false, baseRef = captured.head)
+            }
+            val worktree = created.worktree ?: run {
+                emit(MoveProgressDto(MoveStage.ERROR, error = created.error ?: "Failed to create worktree"))
+                return@flow
+            }
+            leftover = worktree
+            val target = Path.of(worktree.path).normalize()
+            emit(MoveProgressDto(MoveStage.TRANSFERRING))
+            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(captured, base, target) }
+            if (!applied.ok) {
+                leftover = null
+                rollback(directory, worktree, branch, "transfer failure")
+                emit(MoveProgressDto(MoveStage.ERROR, error = applied.error ?: "Failed to apply changes to worktree"))
+                return@flow
+            }
+            // A session-less move transfers changes only: nothing to fork, so no FORKING stage.
+            val forked = sessionId?.let { id ->
+                emit(MoveProgressDto(MoveStage.FORKING))
+                withContext(Dispatchers.IO) { service<KiloBackendAppService>().sessions.fork(id, worktree.path) }
+            }
+            leftover = null
+            LOG.info("worktree move done: worktree=${worktree.path} session=${forked?.id}")
+            emit(MoveProgressDto(MoveStage.DONE, worktree = worktree, session = forked?.id))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("worktree move failed: dir=$base session=$sessionId branch=$branch", e)
+            leftover?.let { rollback(directory, it, branch, "move failure") }
+            emit(MoveProgressDto(MoveStage.ERROR, error = e.message ?: "Failed to move session to a worktree"))
+        } finally {
+            withContext(Dispatchers.IO) { WorktreeTransfer.cleanup(snapshot) }
+        }
+    }
+
+    /** Drops a worktree created earlier in a failed move so a retry is not blocked by leftovers. */
+    private suspend fun rollback(directory: String, worktree: WorktreeDto, branch: String, reason: String) {
+        LOG.warn("worktree move: rolling back ${worktree.path} after $reason")
+        runCatching { remove(directory, worktree.path, branch, force = true) }
+            .onFailure { err -> LOG.warn("worktree move: rollback of ${worktree.path} failed", err) }
+    }
+
+    /** Detects a linked (non-primary) worktree: its git-dir differs from the shared common git-dir. */
+    private fun isLinkedWorktree(root: Path): Boolean {
+        val res = runGit(root, "rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir")
+        if (!res.ok) return false
+        val lines = res.stdout.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        if (lines.size < 2) return false
+        return Path.of(lines[0]).normalize() != Path.of(lines[1]).normalize()
     }
 
     override suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto =
@@ -325,6 +423,23 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             } catch (e: Exception) {
                 LOG.warn("worktree adopt failed: path=$path message=${e.message}", e)
                 RenameWorktreeResultDto(error = e.message ?: "worktree adopt failed")
+            }
+        }
+
+    override suspend fun reorder(directory: String, paths: List<String>): Boolean =
+        withContext(Dispatchers.IO) {
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext false
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items) ?: return@withContext false
+            return@withContext try {
+                val state = readWorktreeState(store)
+                writeWorktreeState(store, state.copy(worktreeOrder = paths).reconcile(worktreePaths(items)))
+                true
+            } catch (e: Exception) {
+                LOG.warn("worktree reorder failed: dir=$directory message=${e.message}", e)
+                false
             }
         }
 
@@ -495,7 +610,7 @@ internal fun parsePrHeadRef(raw: String): String {
 
 private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
 private val codec = MapSerializer(String.serializer(), String.serializer())
-private const val WORKTREE_NAMES_FILE = "worktree-names.json"
+private const val WORKTREE_NAMES_FILE = "jetbrains.json"
 
 @Serializable
 private data class WorktreeNamesFile(
