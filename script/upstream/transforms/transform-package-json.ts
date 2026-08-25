@@ -177,7 +177,8 @@ export function mergeWithNewestVersions(
   theirs: Record<string, string> | undefined,
   changes: string[],
   section: string,
-): Record<string, string> {
+): Record<string, string> | undefined {
+  if (!ours && !theirs) return
   const result: Record<string, string> = {}
 
   // Seed with ours' keys in ours' order, applying newest-wins per key.

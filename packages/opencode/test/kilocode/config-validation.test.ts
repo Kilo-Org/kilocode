@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { ConfigValidation } from "../../src/kilocode/config-validation"
