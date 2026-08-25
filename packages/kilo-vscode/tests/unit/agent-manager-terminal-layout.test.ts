@@ -15,6 +15,7 @@ const terminal = readFileSync(
   resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   "utf8",
 )
+const pkg = readFileSync(resolve(import.meta.dir, "../../package.json"), "utf8")
 
 test("xterm owns the padding used by FitAddon", () => {
   const host = css.match(/\.am-terminal-host\s*\{([^}]*)\}/)?.[1]
@@ -74,6 +75,16 @@ test("does not refit hidden terminal buffers during resize", () => {
   expect(callback!.indexOf("if (!props.active) return")).toBeLessThan(callback!.indexOf("fit.fit()"))
 })
 
+test("uses the scalable DOM renderer for concurrent terminals", () => {
+  expect(terminal).not.toContain("WebglAddon")
+  expect(pkg).not.toContain("@xterm/addon-webgl")
+})
+
+test("orders local terminal status lines through the output batcher", () => {
+  expect(terminal).toContain("const writeLine =")
+  expect(terminal).not.toContain("term.writeln(")
+})
+
 test("keeps raw PTY line endings and initializes Unicode widths before attaching", () => {
   expect(terminal).toContain("convertEol: false")
   expect(terminal).toContain('term.unicode.activeVersion = "15-graphemes"')
@@ -85,7 +96,17 @@ test("keeps raw PTY line endings and initializes Unicode widths before attaching
 test("fits and forces the initial PTY dimensions before socket attach", () => {
   expect(terminal).toContain("const syncSize = (force = false)")
   expect(terminal).toContain("if (props.active) syncSize(true)")
-  expect(terminal.indexOf("fitNow()\n      open(props.wsUrl)")).toBeGreaterThan(-1)
+  expect(terminal.indexOf("fitNow()\n      if (!ws) open(props.wsUrl)")).toBeGreaterThan(-1)
+})
+
+test("keeps terminal sockets mounted while history is open", () => {
+  expect(css).toContain(".am-detail-stack-hidden")
+  expect(css).toMatch(/\.am-detail-stack-hidden[^}]*top: 36px/s)
+  expect(css).toMatch(/\.am-detail-stack-hidden[^}]*transform: translate\(-100vw, 0\)/s)
+})
+
+test("moves a closed side panel outside xterm's intersection area", () => {
+  expect(css).toMatch(/\.am-side-host-hidden[^}]*transform: translate\(-100vw, 0\)/s)
 })
 
 test("re-sends dimensions when an optimistic terminal receives its PTY", () => {

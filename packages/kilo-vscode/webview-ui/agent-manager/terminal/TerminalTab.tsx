@@ -13,7 +13,6 @@
 import { Component, createEffect, onCleanup, onMount } from "solid-js"
 import { Terminal } from "@xterm/xterm"
 import { FitAddon } from "@xterm/addon-fit"
-import { WebglAddon } from "@xterm/addon-webgl"
 import { WebLinksAddon } from "@xterm/addon-web-links"
 import { ClipboardAddon } from "@xterm/addon-clipboard"
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes"
@@ -168,28 +167,12 @@ export const TerminalTab: Component<Props> = (props) => {
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(host)
-    // GPU renderer: the DOM renderer creates one element per cell per row,
-    // which dominates CPU under sustained PTY output (see profiling of
-    // streaming script output). WebGL paints the whole viewport in one
-    // draw batched by first glyph. Falls back to the DOM renderer when
-    // WebGL2 is unavailable; the catch logs without breaking the session.
-    try {
-      const webgl = new WebglAddon()
-      term.loadAddon(webgl)
-      // Browsers hand out a limited number of WebGL contexts and evict
-      // old ones; when a context is lost beyond recovery, dispose the
-      // addon so xterm re-installs its DOM renderer for this terminal
-      // instead of leaving a dead canvas.
-      webgl.onContextLoss(() => {
-        try {
-          webgl.dispose()
-        } catch (err) {
-          log("webgl dispose after context loss failed", err)
-        }
-      })
-    } catch (err) {
-      log("webgl renderer unavailable, using DOM renderer", err)
-    }
+    // Keep xterm's DOM renderer. Every mounted WebGL addon owns a scarce
+    // browser context, including when xterm pauses an off-screen terminal.
+    // Chromium can evict a live renderer once enough Agent Manager terminals
+    // exist, and xterm 6.0's WebGL addon also has unresolved shared-atlas
+    // corruption. Frame batching below removes the per-message render churn
+    // without making terminal correctness depend on GPU resources.
     registerTerminalOutput(props.terminalId, () => {
       const buffer = term.buffer.active
       return Array.from(
@@ -243,6 +226,8 @@ export const TerminalTab: Component<Props> = (props) => {
     let socketEnded = false
     let frame: number | undefined
     let deferred: number | undefined
+    const batcher = createWriteBatcher((data, callback) => term.write(data, callback))
+    const writeLine = (data: string) => batcher.write(`${data}\r\n`)
     // The failure line must not depend on event ordering: the stream can
     // close before the exited snapshot lands (fast failures), or stay open
     // when a background child outlives the script. Write it exactly once,
@@ -254,12 +239,12 @@ export const TerminalTab: Component<Props> = (props) => {
       if (status?.kind !== "setup") return
       if (status.state === "failed") {
         failureWritten = true
-        term.writeln(`\r\n\x1b[31m[${t("agentManager.terminal.setupFailed")}]\x1b[0m`)
+        writeLine(`\r\n\x1b[31m[${t("agentManager.terminal.setupFailed")}]\x1b[0m`)
         return
       }
       if (status.state === "exited" && status.exitCode !== 0) {
         failureWritten = true
-        term.writeln(`\r\n\x1b[31m[${t("agentManager.terminal.setupFailedCode")} ${status.exitCode ?? "?"}]\x1b[0m`)
+        writeLine(`\r\n\x1b[31m[${t("agentManager.terminal.setupFailedCode")} ${status.exitCode ?? "?"}]\x1b[0m`)
       }
     }
     createEffect(() => {
@@ -318,7 +303,6 @@ export const TerminalTab: Component<Props> = (props) => {
         flush()
       }, 100)
     }
-    const batcher = createWriteBatcher((data, callback) => term.write(data, callback))
     const replay = createReplayGate({
       write: (data, callback) => batcher.write(data, callback),
       flush: () => flush(true),
@@ -329,6 +313,7 @@ export const TerminalTab: Component<Props> = (props) => {
     }
     const open = (url: string) => {
       if (closed || !url) return
+      if (ws && ws.readyState !== WebSocket.CLOSING && ws.readyState !== WebSocket.CLOSED) return
       replay.attach(disconnected)
       const next = new WebSocket(url)
       next.binaryType = "arraybuffer"
@@ -347,20 +332,28 @@ export const TerminalTab: Component<Props> = (props) => {
         if (closed || ws !== next) return
         streamed = true
         if (typeof event.data === "string") {
-          replay.output(event.data)
+          if (!replay.output(event.data)) {
+            input.clear()
+            next.close(1009, "terminal replay exceeded limit")
+            return
+          }
           scheduleFlush()
           return
         }
         if (event.data instanceof ArrayBuffer) {
           const bytes = new Uint8Array(event.data)
           if (replay.frame(bytes)) return
-          replay.output(bytes)
+          if (!replay.output(bytes)) {
+            input.clear()
+            next.close(1009, "terminal replay exceeded limit")
+            return
+          }
           scheduleFlush()
         }
       }
       next.onerror = () => {
         if (closed || ws !== next) return
-        term.writeln(`\r\n\x1b[90m[${t("agentManager.terminal.connectionError")}]\x1b[0m`)
+        writeLine(`\r\n\x1b[90m[${t("agentManager.terminal.connectionError")}]\x1b[0m`)
       }
       next.onclose = () => {
         if (closed || ws !== next) return
@@ -380,7 +373,7 @@ export const TerminalTab: Component<Props> = (props) => {
           restartRequested = false
         }
         const key = props.restartable ? "agentManager.terminal.endedRestartable" : "agentManager.terminal.ended"
-        term.writeln(`\r\n\x1b[90m[${t(key)}]\x1b[0m`)
+        writeLine(`\r\n\x1b[90m[${t(key)}]\x1b[0m`)
       }
     }
     const disposeData = term.onData(send)
@@ -448,8 +441,6 @@ export const TerminalTab: Component<Props> = (props) => {
         return
       }
       clearTimeout(resizeTimer)
-      if (readyTimer) clearTimeout(readyTimer)
-      if (fallbackTimer) clearTimeout(fallbackTimer)
       resizeTimer = setTimeout(syncSize, RESIZE_DEBOUNCE_MS)
     })
     ro.observe(host)
@@ -460,7 +451,7 @@ export const TerminalTab: Component<Props> = (props) => {
       frame = undefined
       if (closed) return
       fitNow()
-      open(props.wsUrl)
+      if (!ws) open(props.wsUrl)
       deferred = requestAnimationFrame(loadAddons)
     })
 
@@ -480,6 +471,7 @@ export const TerminalTab: Component<Props> = (props) => {
     // resizes or font changes must not yank the cursor out of the chat
     // input, only explicit activation / focus requests may.
     let pendingFrame: number | null = null
+    let repaintTimer: ReturnType<typeof setTimeout> | undefined
     let shouldFocus = false
     const isRenderable = () => {
       if (!host.isConnected) return false
@@ -488,6 +480,8 @@ export const TerminalTab: Component<Props> = (props) => {
     }
     const runRepaint = () => {
       pendingFrame = null
+      clearTimeout(repaintTimer)
+      repaintTimer = undefined
       if (!props.active) return
       if (!isRenderable()) return
       try {
@@ -505,6 +499,11 @@ export const TerminalTab: Component<Props> = (props) => {
       shouldFocus ||= focus
       if (pendingFrame !== null) return
       pendingFrame = requestAnimationFrame(runRepaint)
+      repaintTimer = setTimeout(() => {
+        if (pendingFrame === null) return
+        cancelAnimationFrame(pendingFrame)
+        runRepaint()
+      }, 250)
     }
     const fontSub = vscode.onMessage((message) => {
       if (message.type === "appendReviewCommentsToTerminal") {
@@ -587,12 +586,12 @@ export const TerminalTab: Component<Props> = (props) => {
     const ownsFocus = () => host.contains(document.activeElement)
     const onVisibilityChange = () => {
       if (document.hidden) return
-      if (!props.active || !ownsFocus()) return
-      scheduleRepaint(true)
+      if (!props.active) return
+      scheduleRepaint(ownsFocus())
     }
     const onWindowFocus = () => {
-      if (!props.active || !ownsFocus()) return
-      scheduleRepaint(true)
+      if (!props.active) return
+      scheduleRepaint(ownsFocus())
     }
     document.addEventListener("visibilitychange", onVisibilityChange)
     window.addEventListener("focus", onWindowFocus)
@@ -613,8 +612,10 @@ export const TerminalTab: Component<Props> = (props) => {
     onCleanup(() => {
       closed = true
       batcher.cancel()
+      replay.cancel()
       unregisterTerminalOutput(props.terminalId)
       if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
+      clearTimeout(repaintTimer)
       if (frame !== undefined) cancelAnimationFrame(frame)
       if (deferred !== undefined) cancelAnimationFrame(deferred)
       document.removeEventListener("visibilitychange", onVisibilityChange)
@@ -628,6 +629,8 @@ export const TerminalTab: Component<Props> = (props) => {
       fontSub()
       themeObserver.disconnect()
       clearTimeout(resizeTimer)
+      clearTimeout(readyTimer)
+      clearTimeout(fallbackTimer)
       ro.disconnect()
       disposeData.dispose()
       disposeBinary.dispose()

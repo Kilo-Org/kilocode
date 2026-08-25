@@ -4773,7 +4773,7 @@ body.vscode-high-contrast-light {
  * Terminals are never unmounted once mounted; inactive slots hide one
  * viewport to the left while keeping their layout box. xterm 6's render
  * service observes the screen element and pauses hidden terminals'
- * render loops (rAF, model updates, GPU draws), then replays a full
+ * render loops (rAF and model updates), then replays a full
  * refresh when a slot becomes visible again — the activation fit +
  * refresh in the TerminalTab component is insurance on top of that. The
  * historical `display: none` avoidance was for the "press Enter to see
@@ -4801,6 +4801,17 @@ body.vscode-high-contrast-light {
   flex-direction: column;
 }
 
+.am-detail-stack-hidden {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-100vw, 0);
+}
+
 .am-terminal-layer {
   position: absolute;
   inset: 0;
@@ -4821,7 +4832,7 @@ body.vscode-high-contrast-light {
 .am-terminal-slot {
   /* Hidden slots stay in layout but are translated one viewport to the
      left, so xterm's render observer sees no intersection and pauses the
-     render loop (rAF loop, model updates, WebGL draws), then replays a
+     render loop (rAF loop and model updates), then replays a
      full refresh when the slot slides back in. Keeping the layout box
      (unlike display:none) lets FitAddon measure the real panel size
      while hidden — background-created terminals such as setup scripts
@@ -4975,6 +4986,7 @@ body.vscode-high-contrast-light {
   bottom: 0;
   opacity: 0;
   pointer-events: none;
+  transform: translate(-100vw, 0);
 }
 
 /* Subagent inspector panel. It remains mounted while another inspector mode
