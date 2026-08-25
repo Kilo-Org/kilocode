@@ -108,7 +108,11 @@ function diffs(msg: Message) {
   return msg.summary.diffs ?? []
 }
 
-function copy(messages: Message[], getParts: (id: string) => Part[]) {
+function copy(messages: Message[], getParts: (id: string) => Part[], live: boolean) {
+  // While the session streams, the last non-empty text part changes at every
+  // part boundary and the copy/feedback row would hop between parts (mount/
+  // unmount churn next to the streamed text). Anchor it only once idle.
+  if (live) return undefined
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const parts = getParts(messages[i]!.id)
     for (let j = parts.length - 1; j >= 0; j -= 1) {
@@ -138,7 +142,7 @@ export function transcriptRows(
       queued: opts.queued?.has(turn.id) === true,
       live: opts.live?.has(turn.id) === true,
     }
-    const copied = copy(turn.assistant, parts)
+    const copied = copy(turn.assistant, parts, meta.live)
 
     if (!turn.partial) {
       rows.push({
