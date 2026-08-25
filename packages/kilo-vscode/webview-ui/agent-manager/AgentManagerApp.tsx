@@ -154,7 +154,7 @@ import {
   createSideTerminal,
   createAmbientSetup,
   hasSetupTerminal,
-  showTerminalStack,
+  keepTerminalStack,
   readSavedDestination,
   resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
@@ -812,7 +812,9 @@ const AgentManagerContent: Component = () => {
     return false
   })
 
-  const showDetailStack = createMemo(() => showTerminalStack(history(), selection(), contextEmpty()))
+  const showDetailStack = createMemo(() =>
+    keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
+  )
 
   const overlay = createMemo((): SetupState | null => {
     const state = setup()
@@ -2489,7 +2491,7 @@ const AgentManagerContent: Component = () => {
         </Show>
         <Show when={showDetailStack()}>
           {/* Terminal overlay is scoped to the main pane so it does not cover the tab bar or side panel. */}
-          <div class="am-detail-stack">
+          <div class={`am-detail-stack ${history() ? "am-detail-stack-hidden" : ""}`} inert={history()}>
             {/* Chat/terminal + side diff panel. Keep it mounted under the
                 review tab so live xterm canvases never leave the paint tree. */}
             <div
