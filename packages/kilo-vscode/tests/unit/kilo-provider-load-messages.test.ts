@@ -191,8 +191,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     },
     connect: async () => {},
     getClient: () => client,
-    beginExplicitAbort: () => 1 as number | undefined,
-    finishExplicitAbort: () => undefined,
+    runExplicitAbort: async (_sid: string, _dir: string, action: () => Promise<void>) => action(),
     onEventFiltered: () => () => undefined,
     onStateChange: (_l: (s: State) => void) => () => undefined,
     onNotificationDismissed: () => () => undefined,
@@ -223,6 +222,7 @@ type ProviderInternals = {
   currentSession: { id: string; directory?: string; cost?: number; revert?: { messageID: string } } | null
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
+  sessionStatusMap: Map<string, string>
   trackedSessionIds: Set<string>
   openSessionIds: Set<string>
   draftSessions: Map<string, { sid: string; dir: string; expires: number }>
@@ -268,6 +268,18 @@ function mockMaxCost(internal: ProviderInternals, value: number) {
 }
 
 describe("KiloProvider.handleAbort", () => {
+  it("aborts a session whose busy status was seeded without an SSE event", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    internal.sessionStatusMap.set("s1", "busy")
+
+    await internal.handleAbort("s1")
+
+    expect(client.aborted).toEqual([{ sessionID: "s1", directory: "/repo" }])
+    expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "idle" })
+    expect(sent).not.toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
+  })
+
   it("aborts the original owner after a running session moves to a worktree", async () => {
     const client = createClient()
     const { provider, internal, sent } = makeProvider(client)
