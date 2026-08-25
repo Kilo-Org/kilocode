@@ -234,7 +234,7 @@ describe("createDuplicateEventFilter", () => {
     ).toBe(false)
   })
 
-  it("does not evict pending live events when the cap is reached", () => {
+  it("continues tracking new live events after the cap is reached", () => {
     const filter = createDuplicateEventFilter()
     for (let index = 0; index < 1024; index++) {
       expect(
@@ -246,18 +246,6 @@ describe("createDuplicateEventFilter", () => {
       ).toBe(false)
     }
 
-    expect(
-      filter(
-        sync({
-          type: "sync",
-          name: "message.part.updated.1",
-          id: "live-0",
-          seq: 8,
-          aggregateID: "s6",
-          data: { sessionID: "s6", part, time: 0 },
-        }),
-      ),
-    ).toBe(true)
     expect(
       filter({
         id: "live-1024",
@@ -277,9 +265,33 @@ describe("createDuplicateEventFilter", () => {
         }),
       ),
     ).toBe(true)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "live-0",
+          seq: 8,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(false)
+    expect(
+      filter(
+        sync({
+          type: "sync",
+          name: "message.part.updated.1",
+          id: "live-1024",
+          seq: 9,
+          aggregateID: "s6",
+          data: { sessionID: "s6", part, time: 0 },
+        }),
+      ),
+    ).toBe(false)
   })
 
-  it("passes overflow events through without evicting pending IDs", () => {
+  it("forwards delayed envelopes for evicted IDs", () => {
     const filter = createDuplicateEventFilter()
     for (let index = 0; index < 1024; index++) {
       expect(
@@ -303,7 +315,7 @@ describe("createDuplicateEventFilter", () => {
         sync({
           type: "sync",
           name: "message.part.updated.1",
-          id: "overflow",
+          id: "pending-0",
           seq: 8,
           aggregateID: "s6",
           data: { sessionID: "s6", part, time: 0 },
@@ -315,27 +327,8 @@ describe("createDuplicateEventFilter", () => {
         sync({
           type: "sync",
           name: "message.part.updated.1",
-          id: "pending-0",
+          id: "pending-1023",
           seq: 9,
-          aggregateID: "s6",
-          data: { sessionID: "s6", part, time: 0 },
-        }),
-      ),
-    ).toBe(true)
-    expect(
-      filter({
-        id: "after-free",
-        type: "message.part.updated",
-        properties: { sessionID: "s6", part, delta: "x" },
-      }),
-    ).toBe(false)
-    expect(
-      filter(
-        sync({
-          type: "sync",
-          name: "message.part.updated.1",
-          id: "after-free",
-          seq: 10,
           aggregateID: "s6",
           data: { sessionID: "s6", part, time: 0 },
         }),
