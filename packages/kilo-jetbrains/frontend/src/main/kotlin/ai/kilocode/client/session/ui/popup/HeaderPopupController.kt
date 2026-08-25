@@ -34,7 +34,15 @@ import javax.swing.SwingUtilities
  * Popup subtree hover is detected via [HoverListener] (an experimental IntelliJ API) so the nested
  * editor counts as "inside the popup".
  */
-class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
+/**
+ * @param suppressed reports whether a blocking overlay (connection banner, modal blocker) currently
+ *   covers the session; while true the hover popup is neither opened nor kept alive so it cannot sit
+ *   on top of the overlay.
+ */
+class HeaderPopupController(
+    timers: UiTimerSource = UiTimers,
+    private val suppressed: () -> Boolean = { false },
+) : Disposable {
     private var target: PartView? = null
     private var balloon: Balloon? = null
     private var body: Disposable? = null
@@ -46,6 +54,7 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
 
     @RequiresEdt
     fun show(view: PartView) {
+        if (suppressed()) return hideAll()
         if (target === view) {
             onHeader = true
             reevaluate()
@@ -117,7 +126,7 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
     @RequiresEdt
     private fun display() {
         val view = target ?: return
-        if (!onHeader && !onPopup) return hideAll()
+        if (suppressed() || (!onHeader && !onPopup)) return hideAll()
         val req = view.headerPopup() ?: return hideAll()
         val built = req.build()
         place(view, req.anchor, built)?.let { open(req, built, it) } ?: hideAll()

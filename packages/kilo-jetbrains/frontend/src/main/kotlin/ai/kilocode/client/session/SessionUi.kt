@@ -216,7 +216,7 @@ class SessionUi(
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
-    private val popup = HeaderPopupController(timers)
+    private val popup = HeaderPopupController(timers) { overlayShown() }
     private val readonly: Boolean get() = manager?.readonly == true
     private val provider = object : TextCopyProvider() {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
@@ -336,8 +336,16 @@ class SessionUi(
 
     internal fun setModalContent(content: JComponent?, maxW: (() -> Int)? = null, focus: (() -> JComponent)? = null) {
         modalFocus = if (content == null) null else focus
+        if (content != null) popup.hideAll()
         root.setModalContent(content, maxW)
     }
+
+    // A blocking overlay — the modal blocker or the connection banner — must not have a hover popup
+    // floating on top of it, so the popup controller checks this before showing or keeping one alive.
+    @RequiresEdt
+    private fun overlayShown(): Boolean =
+        (this::root.isInitialized && root.blocker.isVisible) ||
+            (this::connection.isInitialized && connection.isVisible)
 
     private fun buildUi() {
         root = SessionRootPanel()
@@ -627,7 +635,10 @@ class SessionUi(
                     prompt.setReady(controller.model.isReady())
                 }
 
-                is SessionControllerEvent.ConnectionChanged -> Unit
+                // The banner reacts to the same event; drop any hover popup so it cannot linger on
+                // top of the overlay that is about to cover the session.
+                is SessionControllerEvent.ConnectionChanged ->
+                    if (event !is SessionControllerEvent.ConnectionChanged.Hide) popup.hideAll()
 
                 is SessionControllerEvent.AccountOverlayChanged -> account.onEvent(event)
             }
