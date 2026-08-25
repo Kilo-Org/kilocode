@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { KiloCli } from "../../../src/kilocode/cli/setup"
+import { createHelpCommand } from "../../../src/kilocode/help-command"
+import yargs from "yargs"
 
 describe("CLI bootstrap runtime selection", () => {
   test("uses the narrow runtime for worker-backed TUI launches", () => {
@@ -10,5 +12,12 @@ describe("CLI bootstrap runtime selection", () => {
   test("keeps full bootstrap for explicit, mini, and worktree commands", () => {
     expect(KiloCli.workerTui({ _: [], mini: true })).toBe(false)
     expect(KiloCli.workerTui({ _: [], worktree: "feature" })).toBe(false)
+  })
+
+  test("keeps full bootstrap when the eager help command is selected", () => {
+    const command = createHelpCommand()
+    if (typeof command.builder !== "function") throw new Error("help builder is not a function")
+    command.builder(yargs([]))
+    expect(KiloCli.workerTui({ _: [] })).toBe(false)
   })
 })

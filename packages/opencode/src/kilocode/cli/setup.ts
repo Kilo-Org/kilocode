@@ -153,7 +153,6 @@ export namespace KiloCli {
       if (narrow) {
         const { KiloCliBootstrapRuntime } = await import("@/kilocode/cli/bootstrap-runtime")
         await KiloCliBootstrapRuntime.dispose()
-        return
       }
       const { InstanceRuntime } = await import("@/project/instance-runtime")
       await InstanceRuntime.disposeAllInstances() // safety net (no-op if already disposed)
