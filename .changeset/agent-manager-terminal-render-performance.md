@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Batch Agent Manager terminal output by animation frame and pause rendering for hidden terminals
+Use the DOM renderer for Agent Manager terminals to avoid WebGL context failures, while batching output and pausing hidden-terminal rendering

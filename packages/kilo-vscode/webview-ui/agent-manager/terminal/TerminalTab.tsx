@@ -332,14 +332,22 @@ export const TerminalTab: Component<Props> = (props) => {
         if (closed || ws !== next) return
         streamed = true
         if (typeof event.data === "string") {
-          replay.output(event.data)
+          if (!replay.output(event.data)) {
+            input.clear()
+            next.close(1009, "terminal replay exceeded limit")
+            return
+          }
           scheduleFlush()
           return
         }
         if (event.data instanceof ArrayBuffer) {
           const bytes = new Uint8Array(event.data)
           if (replay.frame(bytes)) return
-          replay.output(bytes)
+          if (!replay.output(bytes)) {
+            input.clear()
+            next.close(1009, "terminal replay exceeded limit")
+            return
+          }
           scheduleFlush()
         }
       }

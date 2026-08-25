@@ -146,6 +146,22 @@ describe("Agent Manager terminal input buffer", () => {
 
     expect(input.take()).toBe("bcde2345")
   })
+
+  it("clears buffered input after a failed replay", () => {
+    const input = createInputBuffer()
+    input.add("command\r")
+    input.add("reply", true)
+    input.clear()
+    expect(input.take()).toBe("")
+  })
+
+  it("does not flush input when replay exceeds its limit", () => {
+    let flushed = 0
+    const gate = createReplayGate({ write: () => undefined, flush: () => flushed++ })
+    gate.attach(false)
+    expect(gate.output("x".repeat(8 * 1024 * 1024 + 1))).toBe(false)
+    expect(flushed).toBe(0)
+  })
 })
 
 describe("Agent Manager terminal replay gate", () => {

@@ -4911,7 +4911,10 @@ body.vscode-high-contrast-light {
 
 .am-detail-stack-hidden {
   position: absolute;
-  inset: 0;
+  top: 36px;
+  right: 0;
+  bottom: 0;
+  left: 0;
   opacity: 0;
   pointer-events: none;
   transform: translate(-100vw, 0);

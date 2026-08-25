@@ -101,6 +101,7 @@ test("fits and forces the initial PTY dimensions before socket attach", () => {
 
 test("keeps terminal sockets mounted while history is open", () => {
   expect(css).toContain(".am-detail-stack-hidden")
+  expect(css).toMatch(/\.am-detail-stack-hidden[^}]*top: 36px/s)
   expect(css).toMatch(/\.am-detail-stack-hidden[^}]*transform: translate\(-100vw, 0\)/s)
 })
 

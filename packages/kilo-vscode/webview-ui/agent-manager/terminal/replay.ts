@@ -43,7 +43,12 @@ export function createInputBuffer(limit = 256 * 1024) {
     return data
   }
 
-  return { add, take }
+  const clear = () => {
+    replies = ""
+    input = ""
+  }
+
+  return { add, clear, take }
 }
 
 /**
