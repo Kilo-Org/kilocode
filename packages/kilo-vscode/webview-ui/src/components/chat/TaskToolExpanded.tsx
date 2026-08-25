@@ -13,6 +13,7 @@ import { BasicTool, initialOpen } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
@@ -168,13 +169,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       </div>
       <Show when={childSessionId()}>
         <Show when={promotable()}>
-          <IconButton
-            icon="play"
-            size="small"
-            variant="ghost"
-            aria-label={language.t("task.backgroundAgents.continueInBackground")}
-            onClick={background}
-          />
+          <Tooltip value={language.t("task.backgroundAgents.continueInBackground")} placement="top">
+            <IconButton
+              icon="arrow-down-to-line"
+              size="small"
+              variant="ghost"
+              aria-label={language.t("task.backgroundAgents.continueInBackground")}
+              onClick={background}
+            />
+          </Tooltip>
         </Show>
         <IconButton
           icon="square-arrow-top-right"
