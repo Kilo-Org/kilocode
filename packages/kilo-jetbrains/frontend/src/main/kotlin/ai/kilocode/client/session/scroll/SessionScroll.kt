@@ -140,9 +140,23 @@ internal class SessionScroll(
         }
     }
 
+    /**
+     * Re-pins the bottom, but only when the transcript is already following it. Call this after
+     * anything that will resize the viewport or the content (transcript reflow, the branch dock
+     * taking or releasing its row above the prompt): it clears a pending user-gesture flag before
+     * the relayout can be mistaken for a scroll away from the bottom.
+     *
+     * The not-following case deliberately only refreshes the jump button. Routing it through
+     * [followBottom] with `false` would bump the generation counter and abort in-flight multi-pass
+     * chains (e.g. the redo [scrollMessageBottom] pass) on the first streamed content growth.
+     */
     @RequiresEdt
     fun followTail() {
-        followBottom(component.viewport.view === messages && tail)
+        if (following()) {
+            followBottom(true)
+            return
+        }
+        updateJump()
     }
 
     @RequiresEdt
@@ -467,10 +481,7 @@ internal class SessionScroll(
             updateJump()
             return
         }
-        // Only re-pin when following. Routing the not-following case through followBottom(false)
-        // would bump seq and abort in-flight multi-pass chains (e.g. the redo scrollMessageBottom
-        // pass) on the first streamed content growth. When not following, just refresh the jump button.
-        if (following()) followTail() else updateJump()
+        followTail()
     }
 
     @RequiresEdt

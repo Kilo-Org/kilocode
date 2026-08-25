@@ -31,6 +31,7 @@ class KiloBackendActivityManager(
 ) {
     private val permissions = mutableMapOf<String, MutableSet<String>>()
     private val questions = mutableMapOf<String, MutableMap<String, Boolean>>()
+    private val errors = mutableSetOf<String>()
     private val lock = Any()
     private val _activity = MutableStateFlow<Map<String, SessionActivityDto>>(emptyMap())
     val activity: StateFlow<Map<String, SessionActivityDto>> = _activity.asStateFlow()
@@ -72,6 +73,7 @@ class KiloBackendActivityManager(
         synchronized(lock) {
             permissions.clear()
             questions.clear()
+            errors.clear()
         }
         _activity.value = emptyMap()
         log.info("Activity manager stopped")
@@ -84,6 +86,8 @@ class KiloBackendActivityManager(
             is ChatEventDto.QuestionAsked -> questions.getOrPut(event.sessionID) { mutableMapOf() }[event.request.id] = plan(event)
             is ChatEventDto.QuestionReplied -> removeMap(questions, event.sessionID, event.requestID)
             is ChatEventDto.QuestionRejected -> removeMap(questions, event.sessionID, event.requestID)
+            is ChatEventDto.Error -> event.sessionID?.let { errors.add(it) }
+            is ChatEventDto.TurnOpen -> errors.remove(event.sessionID)
             is ChatEventDto.SessionIdle -> clear(event.sessionID)
             is ChatEventDto.SessionStatusChanged -> if (event.status.type == "idle") clear(event.sessionID)
             else -> Unit
@@ -96,6 +100,7 @@ class KiloBackendActivityManager(
         ids.addAll(current.filterValues { it.type == "busy" }.keys)
         ids.addAll(permissions.keys)
         ids.addAll(questions.keys)
+        ids.addAll(errors)
         _activity.value = ids.mapNotNull { id ->
             val dir = directory(id) ?: return@mapNotNull null
             val kind = kind(id, current[id]?.type == "busy") ?: return@mapNotNull null
@@ -110,6 +115,7 @@ class KiloBackendActivityManager(
             if (pending.values.any { it }) return SessionActivityKindDto.PLAN
             return SessionActivityKindDto.QUESTION
         }
+        if (id in errors) return SessionActivityKindDto.ERROR
         if (busy) return SessionActivityKindDto.RUNNING
         return null
     }

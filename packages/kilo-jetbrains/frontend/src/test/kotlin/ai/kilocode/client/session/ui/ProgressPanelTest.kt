@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.SessionModel
@@ -55,6 +56,7 @@ class ProgressPanelTest : BasePlatformTestCase() {
         model.setState(SessionState.Busy("Thinking\u2026"))
 
         assertTrue(panel.isVisible)
+        assertSame(SpinnerIcon.icon, spinner().icon)
         assertEquals("Thinking\u2026", panel.labelText())
         assertEquals("0s", panel.elapsedText())
     }

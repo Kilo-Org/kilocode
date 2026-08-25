@@ -27329,6 +27329,50 @@
         "required": ["id", "sessionID", "operation", "targetSessionID", "sectionID"],
         "additionalProperties": false
       },
+      "AgentManagerAnswers": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "maxItems": 20
+        },
+        "minItems": 1,
+        "maxItems": 20
+      },
+      "AgentManagerAnswerRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/AgentManagerRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "targetSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "answers": {
+            "$ref": "#/components/schemas/AgentManagerAnswers"
+          }
+        },
+        "required": ["id", "sessionID", "operation", "targetSessionID", "answers"],
+        "additionalProperties": false
+      },
       "AgentManagerRequest": {
         "anyOf": [
           {
@@ -27342,6 +27386,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveRequest"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerRequest"
           }
         ]
       },
@@ -39691,6 +39738,30 @@
         "required": ["operation", "sessionID", "sectionID", "moved"],
         "additionalProperties": false
       },
+      "AgentManagerAnswerResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "resolved": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["operation", "sessionID", "questionID", "resolved"],
+        "additionalProperties": false
+      },
       "AgentManagerResult": {
         "anyOf": [
           {
@@ -39704,6 +39775,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveResult"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerResult"
           }
         ]
       },

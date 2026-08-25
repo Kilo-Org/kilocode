@@ -213,8 +213,7 @@ export function handleDocumentOpen(
   const line = typeof detail.line === "number" ? detail.line : undefined
   const column = typeof detail.column === "number" ? detail.column : undefined
   if (!isMarkdownPath(file)) {
-    if (!openFile) return
-    if (!openFile(file, line, column, sessionId)) return
+    if (!openFile?.(file, line, column, sessionId)) return
     event.preventDefault()
     return
   }

@@ -50,6 +50,31 @@ data class WorktreePrListDto(
     val items: List<WorktreePrDto> = emptyList(),
 )
 
+/**
+ * Single-directory branch status for the chat branch/PR dock: the current branch, whether the
+ * directory is a linked worktree, gh availability, and the PR for the branch (if any).
+ */
+@Serializable
+data class BranchStatusDto(
+    val branch: String = "",
+    val worktree: Boolean = false,
+    val availability: GhAvailability = GhAvailability.OK,
+    val pr: WorktreePrDto? = null,
+)
+
+/** Stages of the "Move to Worktree" flow. Mirrors VS Code's ContinueInWorktreeStatus minus setup. */
+@Serializable
+enum class MoveStage { CAPTURING, CREATING, TRANSFERRING, FORKING, DONE, ERROR }
+
+/** Progress event streamed while moving a session into a new worktree. */
+@Serializable
+data class MoveProgressDto(
+    val stage: MoveStage,
+    val error: String? = null,
+    val worktree: WorktreeDto? = null,
+    val session: String? = null,
+)
+
 @Serializable
 data class WorktreeBranchesDto(
     val branches: List<String> = emptyList(),
