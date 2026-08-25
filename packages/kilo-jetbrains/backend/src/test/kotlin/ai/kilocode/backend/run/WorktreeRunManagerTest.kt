@@ -276,6 +276,30 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         assertFalse(mgr.release(wt))
     }
 
+    fun testReleaseStopsAStartAlreadyInFlight() = runBlocking {
+        val type = register(paramsType("kilo.test.params.inflight"))
+        val settings = add(type, "srv")
+        val mgr = manager()
+        val wt = "/tmp/kilo-inflight-wt"
+        // run() has created and cached the clone but exec has not produced a processStarted yet.
+        assertTrue(mgr.run(settings.uniqueID, wt).ok)
+        val clone = launched.single()
+
+        // The worktree is released for removal while that start is still in flight.
+        assertTrue(mgr.release(wt))
+
+        // The delayed processStarted must not be tracked; the process is stopped instead so it does
+        // not keep running against the about-to-be-deleted worktree directory.
+        val env = ExecutionEnvironment(DefaultRunExecutor.getRunExecutorInstance(), FakeRunner(), clone, project)
+        val handler = NopProcessHandler().also { it.startNotify() }
+        project.messageBus.syncPublisher(ExecutionManager.EXECUTION_TOPIC)
+            .processStarted(DefaultRunExecutor.EXECUTOR_ID, env, handler)
+
+        await("in-flight start stopped") { handler.isProcessTerminated }
+        assertTrue(mgr.states.value.isEmpty())
+        assertFalse(mgr.stop(settings.uniqueID, wt))
+    }
+
     fun testCloneNameUsesStoredWorktreeLabel() = runBlocking {
         val type = register(paramsType("kilo.test.params.label"))
         val settings = add(type, "dev")

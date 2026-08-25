@@ -8,8 +8,10 @@ import ai.kilocode.rpc.dto.RunResultDto
 import ai.kilocode.rpc.dto.RunStateDto
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.util.io.FileUtil
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import java.nio.file.Path
 
 /**
  * Backend implementation of [KiloRunRpcApi]. Resolves the open project owning [directory]
@@ -61,17 +63,19 @@ class KiloRunRpcApiImpl : KiloRunRpcApi {
     }
 
     /**
-     * Maps [directory] to its open project using the same normalization the workspace resolver uses
-     * ([normalizeWorkspacePath]), so a trailing slash or `..` in the argument resolves identically to
-     * the path the frontend obtained from `resolveProjectDirectory`.
+     * Maps [directory] to its open project by filesystem identity. Uses [FileUtil.pathsEqual], which
+     * already treats trailing slashes as equal and honors platform case sensitivity, after a
+     * best-effort [Path.normalize] to collapse `.`/`..`. Deliberately not the workspace URL decoder,
+     * which would null out on a lone `%` and compare case-sensitively.
      */
     private fun resolve(directory: String): Project? {
-        val target = normalizeWorkspacePath(directory) ?: return null
+        val target = norm(directory)
         return ProjectManager.getInstance().openProjects.firstOrNull {
             !it.isDefault && !it.isDisposed &&
-                (norm(it.basePath) == target || norm(it.presentableUrl) == target)
+                (FileUtil.pathsEqual(norm(it.basePath), target) || FileUtil.pathsEqual(norm(it.presentableUrl), target))
         }
     }
 
-    private fun norm(path: String?): String? = path?.let { normalizeWorkspacePath(it) }
+    private fun norm(path: String?): String? =
+        path?.let { runCatching { Path.of(it).normalize().toString() }.getOrDefault(it) }
 }

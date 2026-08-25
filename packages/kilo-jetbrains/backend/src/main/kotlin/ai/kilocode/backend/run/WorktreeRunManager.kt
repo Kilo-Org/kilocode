@@ -89,6 +89,14 @@ class WorktreeRunManager internal constructor(
     private val listening = AtomicBoolean()
 
     /**
+     * Normalized worktree paths that have been released for removal. Because [exec] runs outside
+     * [lock], a start already in flight when [release] runs would otherwise begin against a deleted
+     * working directory; [processStarted] stops any process whose worktree is in this set. A fresh
+     * [run]/[build] clears its own worktree so a directory recreated at the same path works again.
+     */
+    private val released = ConcurrentHashMap.newKeySet<String>()
+
+    /**
      * Serializes the read-modify-write over [clones] so a double dispatch for the same key cannot
      * create two clones that both execute and lose one process's tracking. Held only around clone
      * creation, never across [exec] (which pumps the EDT and may show a modal).
@@ -130,8 +138,10 @@ class WorktreeRunManager internal constructor(
             ?: return RunResultDto(error = "run configuration not found: $id")
         val repo = project.basePath ?: return RunResultDto(error = "project has no base path")
         val label = label(repo, worktree)
-        val clone = lock.withLock { clone(manager, settings, Key(id, worktree), repo, label) }
-            ?: return RunResultDto(error = "run configuration not supported: ${settings.name}")
+        val clone = lock.withLock {
+            released.remove(pathKey(worktree))
+            clone(manager, settings, Key(id, worktree), repo, label)
+        } ?: return RunResultDto(error = "run configuration not supported: ${settings.name}")
         LOG.info("worktree run: start config=${settings.name} worktree=$worktree")
         exec(clone)
         return RunResultDto(ok = true)
@@ -150,6 +160,7 @@ class WorktreeRunManager internal constructor(
         val manager = RunManager.getInstance(project)
         val many = roots.size > 1
         val prepared = lock.withLock {
+            released.remove(pathKey(worktree))
             roots.map { root ->
                 val settings = WorktreeRunAdapter.buildSettings(root.first, root.second, worktree, repo, clean)
                 val name = name(clean, label, root.second, repo, many)
@@ -279,22 +290,22 @@ class WorktreeRunManager internal constructor(
     }
 
     /**
-     * Stops every process started in [worktree] and forgets its clones. Called before the worktree
+     * Stops every process started in [worktree] and marks it released. Called before the worktree
      * directory is removed so a live process is not left running against a deleted working
      * directory with no way to stop it from the popup.
+     *
+     * Takes [lock] so it cannot interleave with clone creation, and only marks the worktree instead
+     * of dropping the clones: a [run]/[build] whose [exec] is already in flight has its clone in the
+     * cache but no handler yet, so leaving the clone lets [processStarted] resolve the key and stop
+     * that just-started process too. Terminated processes drop their released clones in the listener.
      */
-    fun release(worktree: String): Boolean {
+    suspend fun release(worktree: String): Boolean = lock.withLock {
         val target = pathKey(worktree)
+        released.add(target)
         val keys = clones.keys.filter { pathKey(it.worktree) == target }
-        if (keys.isEmpty()) return false
-        for (key in keys) {
-            handlers[key]?.let { ExecutionManagerImpl.stopProcess(it) }
-            handlers.remove(key)
-            clones.remove(key)
-        }
+        keys.forEach { key -> handlers[key]?.let { ExecutionManagerImpl.stopProcess(it) } }
         LOG.info("worktree run: released worktree=$worktree keys=${keys.size}")
-        sync()
-        return true
+        keys.isNotEmpty()
     }
 
     private fun pathKey(path: String): String = runCatching { Path.of(path).normalize().toString() }.getOrDefault(path)
@@ -310,6 +321,14 @@ class WorktreeRunManager internal constructor(
                 // A replaced clone is no longer in the cache, so its late start resolves no key and
                 // stays manageable only in its own Run tab — never re-adopted here.
                 val key = env.runnerAndConfigurationSettings?.let { keyOf(it) } ?: return
+                // The worktree was released for removal after this start was already dispatched: stop
+                // the process so it does not run against a deleted directory, and forget the clone.
+                if (pathKey(key.worktree) in released) {
+                    LOG.info("worktree run: stopping start on released worktree=${key.worktree} config=${key.id}")
+                    ExecutionManagerImpl.stopProcess(handler)
+                    clones.remove(key)
+                    return
+                }
                 handlers[key] = handler
                 // The handler's own state machine is the source of truth: it reports STOPPING as soon
                 // as termination starts, and drops the entry once the process is gone even if no
@@ -319,6 +338,7 @@ class WorktreeRunManager internal constructor(
 
                     override fun processTerminated(event: ProcessEvent) {
                         if (handlers.remove(key, handler)) sync()
+                        if (pathKey(key.worktree) in released) clones.remove(key)
                     }
                 })
                 sync()
@@ -328,6 +348,7 @@ class WorktreeRunManager internal constructor(
                 val key = env.runnerAndConfigurationSettings?.let { keyOf(it) } ?: return
                 LOG.warn("worktree run: process not started config=${key.id} worktree=${key.worktree}", cause)
                 handlers.remove(key)
+                if (pathKey(key.worktree) in released) clones.remove(key)
                 sync()
             }
 
@@ -335,6 +356,7 @@ class WorktreeRunManager internal constructor(
                 val key = env.runnerAndConfigurationSettings?.let { keyOf(it) } ?: return
                 LOG.info("worktree run: terminated config=${key.id} worktree=${key.worktree} exit=$exitCode")
                 if (handlers.remove(key, handler)) sync()
+                if (pathKey(key.worktree) in released) clones.remove(key)
             }
         })
     }
