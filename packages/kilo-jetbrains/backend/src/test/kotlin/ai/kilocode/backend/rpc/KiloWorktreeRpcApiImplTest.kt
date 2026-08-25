@@ -318,15 +318,18 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
-    fun `create records order so reload keeps creation order`() = runBlocking {
+    fun `create records newest worktree first so reload keeps it on top`() = runBlocking {
         initRepo()
 
         val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
         val second = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("alpha")).worktree)
 
         val listed = api.list(repo.toString()).worktrees.filter { !it.main }
-        assertEquals(listOf(first.path, second.path), listed.map { it.path })
-        assertEquals(listOf(first.path, second.path), readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).worktreeOrder)
+        assertEquals(listOf(second.path, first.path), listed.map { it.path })
+        assertEquals(
+            listOf(second.path, first.path),
+            readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).worktreeOrder,
+        )
     }
 
     @Test

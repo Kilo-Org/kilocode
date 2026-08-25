@@ -35,6 +35,7 @@ import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.ActiveListReorder
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
+import ai.kilocode.client.ui.list.ActiveListWeight
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
@@ -95,7 +96,11 @@ class AgentManagerPanel(
     private val group = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
-        cfg = ActiveListConfig(hoverActions = true),
+        cfg = ActiveListConfig(
+            hoverActions = true,
+            title = ActiveListWeight.PLAIN,
+            header = ActiveListWeight.PLAIN,
+        ),
         surface = ActiveListSurface.ToolWindow,
         showSearch = false,
         onCell = { _, _ -> },
@@ -494,6 +499,7 @@ class AgentManagerPanel(
         override val description: String get() = WorktreeTitle.fallback(dto.path)
         override val tooltip: String? get() = null
         override val icon = WorktreeIcons.forRow(progress != null, kind, dto.locked, current)
+        override val tinted: Boolean get() = WorktreeIcons.neutral(icon)
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)

@@ -352,7 +352,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val items = if (list.ok) managedWorktrees(parseWorktreeList(list.stdout)) else emptyList()
         val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
         val paths = worktreePaths(items).ifEmpty { listOf(path) }
-        appendWorktreeOrder(store, path, paths)
+        prependWorktreeOrder(store, path, paths)
         return CreateWorktreeResultDto(worktree = WorktreeDto(path, dir.fileName.toString(), branch, path))
     }
 
@@ -811,13 +811,12 @@ private fun syncWorktreeState(file: Path, paths: List<String>): WorktreeState {
     return next
 }
 
-private fun appendWorktreeOrder(file: Path, path: String, paths: List<String>) {
+private fun prependWorktreeOrder(file: Path, path: String, paths: List<String>) {
     val state = readWorktreeState(file)
     val set = paths.toSet()
-    val order = state.worktreeOrder.filter { it in set && !samePath(it, path) } +
-        paths.filter { it !in state.worktreeOrder && !samePath(it, path) } +
-        path
-    writeWorktreeState(file, state.copy(worktreeOrder = order.distinct()))
+    val rest = state.worktreeOrder.filter { it in set && !samePath(it, path) } +
+        paths.filter { it !in state.worktreeOrder && !samePath(it, path) }
+    writeWorktreeState(file, state.copy(worktreeOrder = (listOf(path) + rest).distinct()))
 }
 
 private fun removeWorktreeState(file: Path, path: String) {
