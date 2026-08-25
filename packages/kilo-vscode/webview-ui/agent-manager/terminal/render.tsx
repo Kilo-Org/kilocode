@@ -71,16 +71,19 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
  * ## Invariant
  *
  * **Once an xterm instance is mounted, its DOM subtree is only ever
- * hidden, never unmounted.** Inactive slots use `display: none`; xterm
- * 6's render service observes the screen element and pauses the render
- * loop (rAF, model updates, GPU draws) for non-intersecting terminals,
- * then replays a full refresh when the slot re-enters the tree. Toggling
- * visibility via opacity instead — the historical workaround for the
- * "press Enter to see content" bug, where reattachment left a stale
- * canvas — kept the render loop running at full rate for output no one
- * sees, e.g. background setup scripts streaming while the user works in
- * another context's terminal. `TerminalTab`'s activation repaint
- * (fit + refresh) remains as insurance on top of xterm's own resume.
+ * hidden, never unmounted.** Inactive slots keep their layout box but
+ * are translated one viewport off-screen; xterm 6's render service
+ * observes the screen element and pauses the render loop (rAF, model
+ * updates, GPU draws) for non-intersecting terminals, then replays a
+ * full refresh when the slot slides back in. Keeping the box (unlike
+ * `display: none`) also lets FitAddon measure the real panel size while
+ * hidden, so background-created terminals such as setup scripts wrap
+ * output at the panel's width from the start. Hiding via opacity instead
+ * — the historical workaround for the "press Enter to see content" bug,
+ * where reattachment left a stale canvas — kept the render loop running
+ * at full rate for output no one sees. `TerminalTab`'s activation
+ * repaint (fit + refresh) remains as insurance on top of xterm's own
+ * resume.
  *
  * ## Design
  *
@@ -137,9 +140,10 @@ export function renderTerminalLayer(props: {
  * Render the side-panel terminal layer inside the right-hand inspector.
  *
  * Same invariant as `renderTerminalLayer`: every side terminal stays
- * mounted, inactive slots are hidden with `display: none` so xterm's
- * render observer pauses them, and only the visible tab's slot is in the
- * tree. The layer is scoped to `contextKey` — side terminals from other
+ * mounted, inactive slots are translated off-screen so xterm's render
+ * observer pauses them while FitAddon keeps measuring, and only the
+ * visible tab's slot is shown. The layer is scoped to `contextKey` —
+ * side terminals from other
  * contexts stay paused in the background and never refit — and within a
  * context only the active strip tab's terminal is shown.
  */

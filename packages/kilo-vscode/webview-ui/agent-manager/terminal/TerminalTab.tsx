@@ -33,8 +33,8 @@ interface Props {
   font: TerminalFont
   /** Whether this terminal is currently the focused tab.
    *
-   *  Inactive slots are `display: none` (see the layer / slot CSS in
-   *  `terminal/render.tsx` and `agent-manager.css`): xterm's render
+   *  Inactive slots are translated off-screen (see the layer / slot CSS
+   *  in `terminal/render.tsx` and `agent-manager.css`): xterm's render
    *  observer pauses invisible terminals and resumes them with a full
    *  refresh on activation. This prop drives that activation repaint
    *  plus auto-focus on activation — xterm's own resume is primary, the
@@ -174,7 +174,19 @@ export const TerminalTab: Component<Props> = (props) => {
     // draw batched by first glyph. Falls back to the DOM renderer when
     // WebGL2 is unavailable; the catch logs without breaking the session.
     try {
-      term.loadAddon(new WebglAddon())
+      const webgl = new WebglAddon()
+      term.loadAddon(webgl)
+      // Browsers hand out a limited number of WebGL contexts and evict
+      // old ones; when a context is lost beyond recovery, dispose the
+      // addon so xterm re-installs its DOM renderer for this terminal
+      // instead of leaving a dead canvas.
+      webgl.onContextLoss(() => {
+        try {
+          webgl.dispose()
+        } catch (err) {
+          log("webgl dispose after context loss failed", err)
+        }
+      })
     } catch (err) {
       log("webgl renderer unavailable, using DOM renderer", err)
     }
@@ -454,10 +466,11 @@ export const TerminalTab: Component<Props> = (props) => {
 
     // ---- Repaint recovery ----
     //
-    // Inactive xterm slots are display:none, so their canvases are not
-    // composed while hidden. xterm's render observer pauses hidden
-    // terminals and replays a full refresh when they re-enter the tree,
-    // but browsers still defer some canvas/render work: forcing a
+    // Inactive xterm slots slide off-screen with their layout box
+    // intact, so their canvases are not composed while hidden but
+    // FitAddon keeps measuring. xterm's render observer pauses hidden
+    // terminals and replays a full refresh when they slide back in, but
+    // browsers still defer some canvas/render work: forcing a
     // `fit + refresh(0, rows-1)` once per activation reclaims paint
     // priority immediately; from then on the renderer keeps the canvas
     // live. Historically the missing insurance step here was "press
