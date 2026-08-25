@@ -27,22 +27,14 @@ export function staticEnvLines(ctx?: EditorContext): string[] {
  * Build a per-message <environment_details> block from editor context.
  * These change frequently (user switches files/tabs) and belong in the
  * user message so the model always has fresh context.
- * Always includes at least the current timestamp.
+ * Always includes at least the supplied message timestamp.
  */
-function timestamp(): string {
-  const now = new Date()
-  const offset = -now.getTimezoneOffset()
-  const sign = offset >= 0 ? "+" : "-"
-  const h = Math.floor(Math.abs(offset) / 60)
-    .toString()
-    .padStart(2, "0")
-  const m = (Math.abs(offset) % 60).toString().padStart(2, "0")
-  const pad = (n: number) => n.toString().padStart(2, "0")
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}${sign}${h}:${m}`
+function timestamp(now: Date): string {
+  return now.toISOString().replace(/\.\d+Z$/, "Z")
 }
 
-export function environmentDetails(ctx?: EditorContext): string {
-  const lines: string[] = [`Current time: ${timestamp()}`]
+export function environmentDetails(ctx?: EditorContext, now = new Date()): string {
+  const lines: string[] = [`Message time: ${timestamp(now)}`]
   if (ctx?.directory) {
     lines.push(`Working directory: ${ctx.directory}`)
   }
