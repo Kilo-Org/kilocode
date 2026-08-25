@@ -195,6 +195,25 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertTrue(failures.first().locked)
     }
 
+    fun `test refused nested remove keeps the row and surfaces the error`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        rpc.removeResult = { _, _, _ -> RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") }
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        val failures = mutableListOf<RemoveWorktreeResultDto>()
+        controller.remove(controller.model.getElementAt(0), onFailure = { failures.add(it) })
+        flush()
+
+        assertEquals(1, controller.model.size)
+        assertEquals("feature/x", controller.model.getElementAt(0).branch)
+        assertNull(controller.progress(item.id))
+        assertEquals(listOf(false), rpc.removeForces.toList())
+        assertEquals("Delete nested worktrees first:\n/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested", failures.single().error)
+    }
+
     fun `test force remove passes the force flag and drops the row on success`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x", locked = true)
         rpc.listed += item
