@@ -54,30 +54,16 @@ export function createWorktreeDiffs(
 
   const drop = (id: string) => {
     const data = id.includes("\0") ? id : key(id)
-    setDiffDatas((prev) => {
+    const remove = <T extends Record<string, unknown>>(prev: T): T => {
       if (!(data in prev)) return prev
       const next = { ...prev }
       delete next[data]
       return next
-    })
-    setDiffLoadings((prev) => {
-      if (!(data in prev)) return prev
-      const next = { ...prev }
-      delete next[data]
-      return next
-    })
-    setDiffNotices((prev) => {
-      if (!(data in prev)) return prev
-      const next = { ...prev }
-      delete next[data]
-      return next
-    })
-    setDiffFileLoading((prev) => {
-      if (!(data in prev)) return prev
-      const next = { ...prev }
-      delete next[data]
-      return next
-    })
+    }
+    setDiffDatas(remove)
+    setDiffLoadings(remove)
+    setDiffNotices(remove)
+    setDiffFileLoading(remove)
   }
 
   const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
