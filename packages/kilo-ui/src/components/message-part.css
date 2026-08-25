@@ -119,7 +119,6 @@
         color: var(--text-base);
       }
     }
-
   }
 
   [data-slot="message-part-title-filename"] {
@@ -155,7 +154,6 @@
     direction: rtl;
     text-align: left;
   }
-
 }
 
 /* Task tool child-session tool list (v1.0.25 style) */
@@ -825,6 +823,30 @@ html[data-theme="kilo-vscode"] [data-component="reasoning-part"] {
     color: var(--text-weak);
     opacity: 0.9;
     line-height: var(--line-height-large);
+  }
+}
+
+/* The shared collapsible turns overflow visible when expanded, which let the
+   reasoning markdown spill below its box for a frame while the height changed.
+   Clip it at the box instead, and give the auto-collapse at the end of a
+   reasoning block a real animation, so the transcript slides instead of
+   jumping when a tall block closes. */
+[data-component="reasoning-part"] [data-slot="collapsible-content"][data-expanded] {
+  overflow: clip;
+}
+
+[data-component="reasoning-part"] [data-slot="collapsible-content"][data-closed] {
+  overflow: clip;
+  animation: kilo-reasoning-close 180ms ease-out;
+}
+
+@keyframes kilo-reasoning-close {
+  from {
+    height: var(--kb-collapsible-content-height);
+  }
+
+  to {
+    height: 0;
   }
 }
 
