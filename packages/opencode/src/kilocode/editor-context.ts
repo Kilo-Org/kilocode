@@ -30,7 +30,7 @@ export function staticEnvLines(ctx?: EditorContext): string[] {
  * Always includes at least the supplied message timestamp.
  */
 function timestamp(now: Date): string {
-  return now.toISOString().replace(".000Z", "Z")
+  return now.toISOString().replace(/\.\d+Z$/, "Z")
 }
 
 export function environmentDetails(ctx?: EditorContext, now = new Date()): string {

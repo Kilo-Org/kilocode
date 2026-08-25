@@ -143,7 +143,7 @@ describe("environmentDetails", () => {
   })
 
   test("formats the supplied message time", () => {
-    const result = environmentDetails({}, new Date("2026-08-24T12:34:56Z"))
+    const result = environmentDetails({}, new Date("2026-08-24T12:34:56.123Z"))
 
     expect(result).toContain("Message time: 2026-08-24T12:34:56Z")
   })
