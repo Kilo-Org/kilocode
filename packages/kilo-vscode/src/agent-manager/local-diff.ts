@@ -117,26 +117,29 @@ async function ancestor(git: GitOps, dir: string, base: string, log?: Log): Prom
   return result.stdout.trim()
 }
 
-async function numstat(git: GitOps, dir: string, base: string, file?: string) {
-  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
-  if (file) args.push("--", file)
-  const result = await git.execGit(args, dir)
-  const map = new Map<string, { additions: number; deletions: number; binary: boolean }>()
-  if (result.code !== 0) return map
-  for (const line of result.stdout.trim().split("\n")) {
-    if (!line) continue
+function counts(value: string) {
+  const result = new Map<string, { additions: number; deletions: number; binary: boolean }>()
+  for (const line of value.trim().split("\n")) {
+    if (!line || line.startsWith(":")) continue
     const parts = line.split("\t")
     const add = parts[0]
     const del = parts[1]
-    const name = parts.slice(2).join("\t")
-    if (!name) continue
-    map.set(name, {
+    const file = parts.slice(2).join("\t")
+    if (!file) continue
+    result.set(file, {
       additions: add === "-" ? 0 : parseInt(add || "0", 10) || 0,
       deletions: del === "-" ? 0 : parseInt(del || "0", 10) || 0,
       binary: add === "-" || del === "-",
     })
   }
-  return map
+  return result
+}
+
+async function numstat(git: GitOps, dir: string, base: string, file?: string) {
+  const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
+  if (file) args.push("--", file)
+  const result = await git.execGit(args, dir)
+  return counts(result.code === 0 ? result.stdout : "")
 }
 
 async function statStamp(dir: string, file: string): Promise<string> {
@@ -181,28 +184,28 @@ function statusFromCode(code: string): Status {
 }
 
 async function list(git: GitOps, dir: string, anc: string, log?: Log): Promise<Meta[]> {
-  const [nameStatus, counts, untracked] = await Promise.all([
-    git.execGit(["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", anc], dir),
-    numstat(git, dir, anc),
+  const [tracked, untracked] = await Promise.all([
+    git.execGit(["-c", "core.quotepath=false", "diff", "--raw", "--numstat", "--no-renames", anc], dir),
     git.execGit(["ls-files", "--others", "--exclude-standard"], dir),
   ])
-  if (nameStatus.code !== 0) {
-    log?.("git diff --name-status failed", { code: nameStatus.code, stderr: nameStatus.stderr.trim() })
+  if (tracked.code !== 0) {
+    log?.("git diff --raw --numstat failed", { code: tracked.code, stderr: tracked.stderr.trim() })
     return []
   }
 
   const result: Meta[] = []
   const seen = new Set<string>()
+  const stats = counts(tracked.stdout)
 
-  for (const line of nameStatus.stdout.trim().split("\n")) {
-    if (!line) continue
+  for (const line of tracked.stdout.trim().split("\n")) {
+    if (!line.startsWith(":")) continue
     const parts = line.split("\t")
-    const code = parts[0]
+    const code = parts[0]?.split(" ").at(-1)
     const file = parts.slice(1).join("\t")
     if (!file || !code) continue
     seen.add(file)
     const status = statusFromCode(code)
-    const stat = counts.get(file) ?? { additions: 0, deletions: 0, binary: false }
+    const stat = stats.get(file) ?? { additions: 0, deletions: 0, binary: false }
     result.push({
       file,
       additions: stat.additions,
