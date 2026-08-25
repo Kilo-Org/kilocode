@@ -25,6 +25,16 @@ The mobile app lets you:
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
+## Language and region
+
+The app renders in 87 languages. It follows your device language by default and falls back to English when the device language is not supported.
+
+To override the device language, use the language picker on the login screen or in **Preferences**. The picker supports search and shows each language in its own script. Dates, times, and currency formatting follow the active language.
+
+Choosing a language with a different layout direction (such as Arabic or Hebrew) restarts the app into a mirrored, right-to-left layout; a same-direction change applies in place. A restart keeps the email you typed on the login screen.
+
+Push notifications arrive in the language the device had when it registered, so each device gets its own language.
+
 ## Privacy and telemetry
 
 On first launch, the app asks for your consent before enabling optional telemetry — product analytics, attribution, and performance tracing. Optional telemetry is pre-selected during onboarding; you can turn it off before accepting. No optional analytics starts before you make a choice.

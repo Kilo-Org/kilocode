@@ -17,6 +17,28 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. The JetBrains
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
 
+## Chat and Agents tabs
+
+The Kilo Code tool window is split into two tabs:
+
+- **Chat** — the conversation with the agent in the current workspace.
+- **Agents** — the Agent Manager, a control panel for running and orchestrating multiple agents in parallel, each in its own git worktree. A notification dot appears on the tab when a worktree session needs attention.
+
+### Working with worktrees
+
+- The worktree list shows each session's activity state with compact status icons and badges, including a running indicator for active sessions.
+- Drag worktrees to reorder them; the order is persisted and selection stays stable across refreshes.
+- Session history is scoped to the current worktree, so sessions from the main checkout or sibling worktrees are not mixed in. Sessions started from a worktree's separate IDE frame also appear in Agent Manager.
+
+### Chat branch dock
+
+When the workspace is a git repository, the chat header shows a branch dock with the current branch, a file-change summary, and worktree actions:
+
+- **New Worktree** — create a new git worktree with its own branch and session.
+- **Move to Worktree** — move the conversation and your current local changes into a dedicated worktree for isolated follow-up work. Available whenever the repository has local changes, even before the chat has a session.
+
+When the branch has an associated pull request, the dock shows the PR badge and title with access to the diff. Worktree actions appear only while the session is idle.
+
 ## Reviewing session changes
 
 - **Modified files per turn** — each assistant turn that changed files shows a **Modified** card with the affected files and their diff stats. Expand a file to see its diff inline, or open all of the turn's changes in the **Changed files** diff viewer.

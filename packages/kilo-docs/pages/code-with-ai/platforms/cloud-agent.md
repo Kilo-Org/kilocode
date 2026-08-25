@@ -27,6 +27,15 @@ Before using Cloud Agents:
   - Please provide any feedback in our Cloud Agents beta Discord channel: [Kilo Discord](https://kilo.ai/discord)
 - **Kilo Code credits are still used** when the agent performs work (model usage, operations, etc.).
 
+### Session cost display
+
+The session header shows two separate entries:
+
+- **Token Usage** — the session's inference spend (model usage), paid in Kilo credits.
+- **Compute** — a server-provided estimate for the session's container: an estimated hourly rate while idle, a shared interval estimate while active, and **Not currently charged** in shadow mode. Stopping and unavailable states are shown when no estimate is available.
+
+If a compute billing check fails — for example, when the paying account has insufficient credits — the error appears next to the composer with recovery actions appropriate to the paying account (personal or organization) and your role in it. Your prompt text is preserved so you can retry after resolving the billing issue.
+
 ## How to Use
 
 1. **Connect your GitHub or GitLab account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard.

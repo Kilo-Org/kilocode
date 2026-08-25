@@ -375,9 +375,11 @@ SLA notifications require both SLA tracking and SLA notifications to be enabled.
 
 ## Notification delivery
 
-Security Agent currently sends notifications only by email.
+Security Agent sends notifications by email and by push to the mobile app.
 
-Notification kinds:
+Push notifications are sent when an analysis completes or fails, and when a remediation is queued, opens a pull request, fails, is blocked, needs no changes, or is cancelled. For a personal Security Agent, pushes go to the owning user. For an organization Security Agent, they go to the organization owners.
+
+Email notification kinds:
 
 | Kind | When eligible |
 |---|---|
@@ -407,6 +409,8 @@ The audit report shows Security Finding activity recorded for an owner during a 
 
 - `/security-agent/audit-report`
 - `/organizations/:organizationId/security-agent/audit-report`
+
+The audit report is also available as a native screen in the mobile app, showing the report period and each finding's recorded activity.
 
 The audit report is based on activity recorded by Kilo. It does not prove that every historical event is present, show repository scan coverage, or provide aggregate SLA compliance.
 
@@ -480,7 +484,7 @@ The following capabilities are not yet implemented but are being considered for 
 
 - GitLab support for Security Agent findings and remediation.
 - Security Finding sources beyond Dependabot alerts, such as npm audit and SBOM analysis.
-- Notification channels beyond email.
+- Notification channels beyond email and mobile push.
 - Historical replay when you enable New-finding Notifications.
 - Analysis and remediation without queue delays. This work currently runs through queues and can be delayed by account capacity or worker backlog.
 - Automatic finding updates based on the full remediation PR lifecycle. A finding currently closes only when Dependabot reports it fixed or someone dismisses it.
