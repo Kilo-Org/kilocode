@@ -161,8 +161,9 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
 
     /**
      * Resolves the pointer target beside the session chat, sizing the body to the space available on
-     * the chosen side. Anchoring on the chat rather than the hovered row is what keeps the popup off
-     * the transcript instead of covering the row the user is reading.
+     * the chosen side and to the visible height of the chat. Anchoring on the chat rather than the
+     * hovered row is what keeps the popup off the transcript instead of covering the row the user is
+     * reading.
      *
      * Returns null when the chat is not on screen yet, in which case there is nothing to sit beside.
      */
@@ -177,10 +178,13 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
         // The shadow is reserved on every side, so it counts twice on each axis.
         val shadow = UiStyle.Balloon.shadow() * 2
         val chromeHeight = insets.top + insets.bottom + shadow
-        val bounds = Rectangle(pane.size)
+        // The visible chat rect, not the whole panel: a session clipped by a short tool window or a
+        // scrolled editor tab must keep its popups inside the part the user can actually see.
+        val area = SwingUtilities.convertRectangle(chat, chat.visibleRect, pane)
+        if (area.isEmpty) return null
         val spot = HeaderPopupGeometry.beside(
-            pane = bounds,
-            chat = SwingUtilities.convertRectangle(chat.parent, chat.bounds, pane),
+            pane = Rectangle(pane.size),
+            chat = area,
             fit = HeaderPopupFit(
                 chromeWidth = insets.left + insets.right + UiStyle.Balloon.pointer().height + shadow,
                 chromeHeight = chromeHeight,
@@ -192,7 +196,7 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
         built.fitWithin(spot.maxWidth, spot.maxHeight)
         val row = SwingUtilities.convertPoint(anchor, Point(0, anchor.height / 2), pane)
         val height = built.component.preferredSize.height + chromeHeight
-        return Spot(pane, Point(spot.x, HeaderPopupGeometry.centerY(bounds, row.y, height, gap)), spot.position)
+        return Spot(pane, Point(spot.x, HeaderPopupGeometry.centerY(area, row.y, height, gap)), spot.position)
     }
 
     private class Spot(val pane: JComponent, val point: Point, val position: Balloon.Position)

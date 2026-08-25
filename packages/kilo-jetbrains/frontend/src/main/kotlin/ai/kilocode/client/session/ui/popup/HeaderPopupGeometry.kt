@@ -40,7 +40,12 @@ internal data class HeaderPopupFit(
  */
 internal object HeaderPopupGeometry {
 
-    /** Picks the side of [chat] with more room inside [pane] and the body box that fits there. */
+    /**
+     * Picks the side of [chat] with more room inside [pane] and the body box that fits there.
+     *
+     * [pane] only decides which side has room; the body is bounded by [chat] so the popup stays
+     * within the visible session view.
+     */
     fun beside(pane: Rectangle, chat: Rectangle, fit: HeaderPopupFit): HeaderPopupPlacement {
         val left = (chat.x - pane.x).coerceAtLeast(0)
         val right = (pane.x + pane.width - (chat.x + chat.width)).coerceAtLeast(0)
@@ -51,20 +56,22 @@ internal object HeaderPopupGeometry {
             position = if (useRight) Balloon.Position.atRight else Balloon.Position.atLeft,
             x = if (useRight) chat.x + chat.width else chat.x,
             maxWidth = room.coerceIn(0, fit.maxWidth),
-            maxHeight = (pane.height - fit.gap * 2 - fit.chromeHeight).coerceIn(0, fit.maxHeight),
+            // Height is budgeted against the chat, not the pane: the popup belongs to the session
+            // view, so it must not run past it into editor tabs or neighbouring tool windows.
+            maxHeight = (chat.height - fit.gap * 2 - fit.chromeHeight).coerceIn(0, fit.maxHeight),
         )
     }
 
     /**
      * Vertical pointer target for a body of [height], preferring [y] but keeping the balloon inside
-     * [pane]. The balloon centres its body on the target, so an unclamped target near an edge would
+     * [chat]. The balloon centres its body on the target, so an unclamped target near an edge would
      * overflow and trigger the same re-pointing that [beside] avoids horizontally.
      */
-    fun centerY(pane: Rectangle, y: Int, height: Int, gap: Int): Int {
+    fun centerY(chat: Rectangle, y: Int, height: Int, gap: Int): Int {
         val half = height / 2
-        val top = pane.y + gap + half
-        val bottom = pane.y + pane.height - gap - half
-        if (bottom < top) return pane.y + pane.height / 2
+        val top = chat.y + gap + half
+        val bottom = chat.y + chat.height - gap - half
+        if (bottom < top) return chat.y + chat.height / 2
         return y.coerceIn(top, bottom)
     }
 }

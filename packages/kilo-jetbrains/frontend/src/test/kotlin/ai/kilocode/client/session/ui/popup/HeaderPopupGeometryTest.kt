@@ -93,34 +93,55 @@ class HeaderPopupGeometryTest {
     }
 
     @Test
-    fun `height is capped to the pane minus gaps`() {
+    fun `height is capped to the chat minus gaps`() {
         val short = HeaderPopupGeometry.beside(
             pane = Rectangle(0, 0, 2000, 200),
             chat = Rectangle(0, 0, 300, 200),
             fit = fit(),
         )
 
-        // 200 pane, minus both gaps and the chrome the balloon reserves vertically.
+        // 200 chat, minus both gaps and the chrome the balloon reserves vertically.
         assertEquals(200 - GAP * 2 - CHROME_HEIGHT, short.maxHeight)
     }
 
     @Test
-    fun `pointer target keeps a tall body inside the pane`() {
-        val pane = Rectangle(0, 0, 2000, 1000)
+    fun `height follows a short chat inside a tall pane`() {
+        // Session in an editor tab or a short tool window: the window has room the session does not.
+        val spot = HeaderPopupGeometry.beside(
+            pane = Rectangle(0, 0, 2000, 1000),
+            chat = Rectangle(0, 100, 300, 300),
+            fit = fit(),
+        )
 
-        // Row near the top: target pushed down so the centred body clears the top edge.
-        assertEquals(310, HeaderPopupGeometry.centerY(pane, y = 20, height = 600, gap = GAP))
-        // Row near the bottom: target pulled up.
-        assertEquals(690, HeaderPopupGeometry.centerY(pane, y = 980, height = 600, gap = GAP))
-        // Row with room on both sides is left alone.
-        assertEquals(500, HeaderPopupGeometry.centerY(pane, y = 500, height = 600, gap = GAP))
+        assertEquals(300 - GAP * 2 - CHROME_HEIGHT, spot.maxHeight)
     }
 
     @Test
-    fun `body taller than the pane is centred instead of clamped to an empty range`() {
-        val pane = Rectangle(0, 0, 2000, 400)
+    fun `pointer target keeps the body inside an offset chat`() {
+        val chat = Rectangle(0, 400, 300, 400)
 
-        assertEquals(200, HeaderPopupGeometry.centerY(pane, y = 10, height = 900, gap = GAP))
+        // Rows above and below the chat are pulled back into it.
+        assertEquals(560, HeaderPopupGeometry.centerY(chat, y = 0, height = 300, gap = GAP))
+        assertEquals(640, HeaderPopupGeometry.centerY(chat, y = 1000, height = 300, gap = GAP))
+    }
+
+    @Test
+    fun `pointer target keeps a tall body inside the chat`() {
+        val chat = Rectangle(0, 0, 300, 1000)
+
+        // Row near the top: target pushed down so the centred body clears the top edge.
+        assertEquals(310, HeaderPopupGeometry.centerY(chat, y = 20, height = 600, gap = GAP))
+        // Row near the bottom: target pulled up.
+        assertEquals(690, HeaderPopupGeometry.centerY(chat, y = 980, height = 600, gap = GAP))
+        // Row with room on both sides is left alone.
+        assertEquals(500, HeaderPopupGeometry.centerY(chat, y = 500, height = 600, gap = GAP))
+    }
+
+    @Test
+    fun `body taller than the chat is centred instead of clamped to an empty range`() {
+        val chat = Rectangle(0, 0, 300, 400)
+
+        assertEquals(200, HeaderPopupGeometry.centerY(chat, y = 10, height = 900, gap = GAP))
     }
 
     private fun beside(chat: Rectangle) = HeaderPopupGeometry.beside(
