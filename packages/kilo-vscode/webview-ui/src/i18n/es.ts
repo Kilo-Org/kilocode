@@ -187,7 +187,6 @@ export const dict = {
     "La aprobación automática está activada. Las solicitudes de permisos se aprobarán automáticamente.",
   "prompt.action.autoApprove.disabled":
     "La aprobación automática está desactivada. Haz clic para aprobar solicitudes de permisos automáticamente.",
-  "prompt.action.resetModel": "Restablecer modelo al predeterminado",
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",
