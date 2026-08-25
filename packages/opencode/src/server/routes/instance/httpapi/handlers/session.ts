@@ -1,7 +1,6 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
 import { busyMessage, isBusy } from "@/kilocode/database/sqlite-error" // kilocode_change
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
-import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
@@ -342,9 +341,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
               // kilocode_change end
               yield* events.publish(Session.Event.Error, {
                 sessionID: ctx.params.sessionID,
-                error: AgentRequirementError.isInstance(error)
-                  ? error.toObject()
-                  : busy // kilocode_change
+                error: busy // kilocode_change
                     ? new NamedError.Unknown({ message: busyMessage }).toObject() // kilocode_change
                     : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(), // kilocode_change
               })

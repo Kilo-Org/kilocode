@@ -2,6 +2,7 @@
 import { Effect, Schema } from "effect"
 import path from "path"
 import { Permission } from "@/permission"
+import { guarded } from "../agent"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
@@ -64,14 +65,16 @@ export namespace KiloTask {
    */
   export function inherited(input: {
     caller: Agent.Info
-    session: Session.Info
+    session: Pick<Session.Info, "permission">
     mcp: Config.Info["mcp"]
   }): Permission.Ruleset {
     const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
+    // `guarded` covers the tools a read-only mode may never regain from config; keeping
+    // it here too stops a Plan-launched subagent from reaching them under a catch-all.
     // `bash` is intentionally excluded — see the doc comment above (#11523).
-    const mutation = new Set(["edit", "notebook_edit", "notebook_execute"])
+    const mutation = new Set(["edit", ...guarded.filter((p) => p !== "bash")])
     const inherited = rules.filter(
       (r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)),
     )

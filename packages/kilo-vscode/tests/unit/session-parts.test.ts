@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { mergeParts, sameParts } from "../../webview-ui/src/context/session-parts"
+import { mergeOptimisticPart, mergeParts, sameParts } from "../../webview-ui/src/context/session-parts"
 import type { Part } from "../../webview-ui/src/types/messages"
 
 function text(id: string, value: string, time: { start?: number; end?: number } = {}): Part {
@@ -8,6 +8,10 @@ function text(id: string, value: string, time: { start?: number; end?: number } 
 
 function tool(id: string): Part {
   return { id, messageID: "m1", type: "tool", tool: "bash", state: { status: "pending", input: {} } }
+}
+
+function file(id: string): Part {
+  return { id, messageID: "m1", type: "file", mime: "text/plain", url: "data:,file" }
 }
 
 function value(parts: Part[], id: string) {
@@ -97,6 +101,24 @@ describe("mergeParts", () => {
     expect(value(parts, "p1")).toBe("complete snapshot repair")
     expect(value(parts, "p2")).toBe("missed snapshot part")
     expect(value(parts, "p3")).toBe("live tail")
+  })
+})
+
+describe("mergeOptimisticPart", () => {
+  it("replaces the optimistic user part when its canonical event arrives", () => {
+    const current = [text("client", "queued prompt")]
+    const result = mergeOptimisticPart(current, new Set(["client"]), text("server", "queued prompt"))
+
+    expect(result.parts).toEqual([text("server", "queued prompt")])
+    expect(result.replaced).toBe("client")
+  })
+
+  it("keeps unmatched optimistic parts while canonical attachments arrive", () => {
+    const current = [text("client-text", "queued prompt"), file("client-file")]
+    const result = mergeOptimisticPart(current, new Set(["client-text", "client-file"]), file("server-file"))
+
+    expect(result.parts.map((part) => part.id)).toEqual(["client-text", "server-file"])
+    expect(result.replaced).toBe("client-file")
   })
 })
 

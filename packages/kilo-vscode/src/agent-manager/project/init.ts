@@ -182,6 +182,7 @@ export async function collectProjectSessions(
   const out: ProjectSessionView[] = []
   for (const { dir, worktreeId, items } of byDir) {
     for (const s of items) {
+      if (s.parentID !== undefined && s.parentID !== null) continue
       if (seen.has(s.id)) continue
       seen.add(s.id)
       sessions.setSessionDirectory(s.id, dir)

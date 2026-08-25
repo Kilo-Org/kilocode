@@ -17,10 +17,33 @@ import type {
 import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
+
+export interface BackgroundJobsLoadedMessage {
+  type: "backgroundJobsLoaded"
+  sessionID: string
+  requestID: string
+  jobs: BackgroundJobInfo[]
+  error?: string
+}
+
+export interface BackgroundJobInfo {
+  id: string
+  type: string
+  title?: string
+  status: "running" | "completed" | "error" | "cancelled"
+  started_at: number
+  completed_at?: number
+  error?: string
+  metadata?: {
+    parentSessionId?: string
+    sessionId?: string
+    background?: boolean
+  }
+}
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
-import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
+import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
   BrowserSettings,
   Config,
@@ -31,6 +54,7 @@ import type {
 } from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
+import type { ProviderUsageLoadedMessage } from "./provider-usage"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
   AgentManagerApplyWorktreeDiffStatus,
@@ -39,7 +63,7 @@ import type {
   LocalGitStats,
   ManagedSessionState,
   PRStatus,
-  ReviewComment,
+  ReviewCommentEntry,
   RunStatus,
   SectionState,
   TerminalDestination,
@@ -177,6 +201,7 @@ export interface TodoUpdatedMessage {
 
 export interface SessionCreatedMessage {
   type: "sessionCreated"
+  projectId?: string
   session: SessionInfo
   draftID?: string
   activate?: boolean
@@ -184,6 +209,7 @@ export interface SessionCreatedMessage {
 
 export interface SessionForkedMessage {
   type: "sessionForked"
+  projectId?: string
   sessionID: string
   forkedFromID: string
 }
@@ -283,6 +309,13 @@ export interface ActionMessage {
   action: string
 }
 
+/** Image attachment carried back into the prompt input when restoring a message. */
+export interface RestoredImage {
+  dataUrl: string
+  mime: string
+  filename?: string
+}
+
 export interface SetChatBoxMessage {
   type: "setChatBoxMessage"
   text: string
@@ -296,6 +329,12 @@ export interface SetChatBoxMessage {
   paths?: string[]
   /** Past chats referenced by the restored message, seeded the same way as paths. */
   sessions?: SessionSearchItem[]
+  /**
+   * Images attached to the restored message. Present means authoritative:
+   * PromptInput replaces its current attachments with this list (an empty
+   * array clears them); absent leaves current attachments untouched.
+   */
+  images?: RestoredImage[]
 }
 
 export interface AppendChatBoxMessage {
@@ -305,13 +344,35 @@ export interface AppendChatBoxMessage {
 
 export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
-  comments: ReviewComment[]
+  comments: ReviewCommentEntry[]
   autoSend?: boolean
+}
+
+export interface DocumentResultMessage {
+  type: "document.result"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
+export interface DocumentOpenMessage {
+  type: "document.open"
+  sessionId?: string
+  contextKey: string
+  file: string
+  line?: number
+  column?: number
 }
 
 export interface AppendReviewCommentsToTerminalMessage {
   type: "appendReviewCommentsToTerminal"
-  comments: ReviewComment[]
+  comments: ReviewCommentEntry[]
   autoSend?: boolean
   targetTerminalId: string
 }
@@ -350,6 +411,36 @@ export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
+  projectId?: string
+}
+
+export interface AgentManagerSettingsProject {
+  id: string
+  root: string
+  label: string
+  pinned: boolean
+  missing: boolean
+  defaultBaseBranch?: string
+  defaultBranch?: string
+  setupScriptPath?: string
+}
+
+export interface AgentManagerSettingsLoadedMessage {
+  type: "agentManagerSettingsLoaded"
+  projects: AgentManagerSettingsProject[]
+  projectId?: string
+  requestId: string
+}
+
+export interface AgentManagerSettingsBranchesLoadedMessage {
+  type: "agentManagerSettingsBranchesLoaded"
+  projectId: string
+  branches: BranchInfo[]
+  defaultBranch: string
+  requestId: string
+  error?: boolean
+  configuredBaseBranch?: string
+  setupScriptPath?: string
 }
 
 export interface IndexingStatusLoadedMessage {
@@ -410,15 +501,6 @@ export interface AgentsLoadedMessage {
 export interface SkillsLoadedMessage {
   type: "skillsLoaded"
   skills: SkillInfo[]
-}
-
-export interface AgentRequirementsLoadedMessage {
-  type: "agentRequirementsLoaded"
-  result: AgentRequirementResult
-}
-
-export interface AgentRequirementsInvalidatedMessage {
-  type: "agentRequirementsInvalidated"
 }
 
 export interface CommandsLoadedMessage {
@@ -693,6 +775,7 @@ export interface AgentManagerRepoInfoMessage {
   type: "agentManager.repoInfo"
   branch: string
   defaultBranch?: string
+  projectId?: string
 }
 
 // Agent Manager worktree setup progress
@@ -711,6 +794,7 @@ export interface AgentManagerWorktreeSetupMessage {
 // Agent Manager session added to an existing worktree (no setup overlay needed)
 export interface AgentManagerSessionAddedMessage {
   type: "agentManager.sessionAdded"
+  projectId?: string
   sessionId: string
   worktreeId: string
 }
@@ -718,6 +802,7 @@ export interface AgentManagerSessionAddedMessage {
 // Agent Manager session forked from an existing session
 export interface AgentManagerSessionForkedMessage {
   type: "agentManager.sessionForked"
+  projectId?: string
   sessionId: string
   forkedFromId: string
   worktreeId?: string
@@ -725,6 +810,7 @@ export interface AgentManagerSessionForkedMessage {
 
 export interface AgentManagerSessionClosedMessage {
   type: "agentManager.sessionClosed"
+  projectId?: string
   sessionId: string
 }
 
@@ -763,7 +849,6 @@ export interface AgentProjectSnapshot {
   active: boolean
   expanded: boolean
   initialized: boolean
-  trusted: boolean
   missing: boolean
 }
 
@@ -967,20 +1052,36 @@ export interface AgentManagerImportResultMessage {
 // Agent Manager: Diff data push (extension → webview)
 export interface AgentManagerWorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
+  projectId?: string
   sessionId: string
   diffs: WorktreeFileDiff[]
 }
 
 export interface AgentManagerWorktreeDiffFileMessage {
   type: "agentManager.worktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   diff: WorktreeFileDiff | null
 }
 
+export interface AgentManagerDocumentMessage {
+  type: "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
 // Agent Manager: Diff loading state (extension → webview)
 export interface AgentManagerWorktreeDiffLoadingMessage {
   type: "agentManager.worktreeDiffLoading"
+  projectId?: string
   sessionId: string
   loading: boolean
 }
@@ -988,12 +1089,14 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
 // Agent Manager: Source-level diff notice (extension → webview)
 export interface AgentManagerWorktreeDiffNoticeMessage {
   type: "agentManager.worktreeDiffNotice"
+  projectId?: string
   sessionId: string
   notice?: DiffViewerNotice
 }
 
 export interface AgentManagerApplyWorktreeDiffResultMessage {
   type: "agentManager.applyWorktreeDiffResult"
+  projectId?: string
   worktreeId: string
   status: AgentManagerApplyWorktreeDiffStatus
   message: string
@@ -1003,6 +1106,7 @@ export interface AgentManagerApplyWorktreeDiffResultMessage {
 // Agent Manager: Revert single file result (extension → webview)
 export interface AgentManagerRevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
+  projectId?: string
   sessionId: string
   file: string
   status: "success" | "error"
@@ -1012,6 +1116,7 @@ export interface AgentManagerRevertWorktreeFileResultMessage {
 // Agent Manager: Branch picker data for a diff context (extension → webview)
 export interface AgentManagerDiffBranchesMessage {
   type: "agentManager.diffBranches"
+  projectId?: string
   sessionId: string
   branches: BranchInfo[]
   defaultBranch: string
@@ -1130,6 +1235,16 @@ export interface DiffViewerDiffFileMessage {
 
 export interface DiffViewerMarkdownRenderMessage {
   type: "diffViewer.markdownRender"
+  render: boolean
+}
+
+export interface DiffViewerInitialFileMessage {
+  type: "diffViewer.initialFile"
+  file?: string
+}
+
+export interface DiffViewerInitialMarkdownMessage {
+  type: "diffViewer.initialMarkdown"
   render: boolean
 }
 
@@ -1289,7 +1404,14 @@ export interface ClipboardWriteResultMessage {
   error?: string
 }
 
+export interface AgentManagerFocusContextRequestedMessage {
+  type: "agentManager.focusContextRequested"
+}
+
 export type ExtensionMessage =
+  | DocumentResultMessage
+  | DocumentOpenMessage
+  | AgentManagerFocusContextRequestedMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage
@@ -1322,11 +1444,14 @@ export type ExtensionMessage =
   | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
+  | ProviderUsageLoadedMessage
   | DeviceAuthStartedMessage
   | DeviceAuthCompleteMessage
   | DeviceAuthFailedMessage
   | DeviceAuthCancelledMessage
   | NavigateMessage
+  | AgentManagerSettingsLoadedMessage
+  | AgentManagerSettingsBranchesLoadedMessage
   | IndexingStatusLoadedMessage
   | IndexingSettingsLoadedMessage
   | ChatSettingsLoadedMessage
@@ -1336,8 +1461,6 @@ export type ExtensionMessage =
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
-  | AgentRequirementsLoadedMessage
-  | AgentRequirementsInvalidatedMessage
   | CommandsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
@@ -1409,6 +1532,7 @@ export type ExtensionMessage =
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffFileMessage
+  | AgentManagerDocumentMessage
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerWorktreeDiffNoticeMessage
   | AgentManagerApplyWorktreeDiffResultMessage
@@ -1440,6 +1564,8 @@ export type ExtensionMessage =
   | DiffViewerRevertFileResultMessage
   | DiffViewerDiffFileMessage
   | DiffViewerMarkdownRenderMessage
+  | DiffViewerInitialFileMessage
+  | DiffViewerInitialMarkdownMessage
   | SetAvailableSourcesMessage
   | DiffViewerCapabilitiesMessage
   | DiffViewerNoticeMessage
@@ -1471,3 +1597,4 @@ export type ExtensionMessage =
   | MemoryLoadedMessage
   | MemoryEventMessage
   | MemoryOperationResultMessage
+  | BackgroundJobsLoadedMessage

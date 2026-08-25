@@ -26,6 +26,8 @@ test("model selector exposes combobox relationships and active option movement",
   await expect(combobox).toHaveAttribute("aria-controls", await tree.getAttribute("id"))
   await expect(combobox).toHaveAttribute("aria-activedescendant", await alpha.getAttribute("id"))
   await expect(combobox).toHaveAccessibleDescription("Choose the model used for code review tasks.")
+  await expect(alpha.locator(".model-selector-item-provider-tag")).toHaveText("Kilo")
+  await expect(bravo.locator(".model-selector-item-provider-tag")).toHaveText("Kilo")
   await expect(alpha.locator("button")).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Add to favorites: Alpha" })).toBeVisible()
   await expect(page.locator(".model-selector-group-label").nth(0)).toContainText("Auto Models")
@@ -114,7 +116,7 @@ test("provider groups collapse, expand, and skip their model rows", async ({ pag
   await page.getByRole("button", { name: "Review model: Alpha" }).click()
   const combobox = page.getByRole("combobox", { name: "Review model: Alpha. Search models" })
   const kilo = page.getByRole("treeitem", { name: "Kilo", exact: true })
-  const nvidia = page.getByRole("treeitem", { name: "NVIDIA" })
+  const nvidia = page.getByRole("treeitem", { name: "NVIDIA", exact: true })
 
   await combobox.press("ArrowDown")
   await combobox.press("ArrowLeft")
@@ -202,8 +204,8 @@ test("selected favorite remains selected when its duplicate group is collapsed",
 test("large catalogs keep the rendered tree bounded and navigate to distant models", async ({ page }) => {
   await load(page, "shared--model-selector-large-catalog")
 
-  await page.getByRole("button", { name: "Select model: Provider 0 / Model 300" }).click()
-  const combobox = page.getByRole("combobox", { name: "Select model: Provider 0 / Model 300. Search models" })
+  await page.getByRole("button", { name: "Select model: Model 300" }).click()
+  const combobox = page.getByRole("combobox", { name: "Select model: Model 300. Search models" })
   const tree = page.getByRole("tree", { name: "Select model" })
 
   // The window mounts before we measure it, yet stays far smaller than the catalog.

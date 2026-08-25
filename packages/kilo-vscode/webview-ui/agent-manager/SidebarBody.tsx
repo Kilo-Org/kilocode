@@ -32,6 +32,7 @@ import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
+import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -39,6 +40,7 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 /** Everything the legacy single-project sidebar body reads from the app. */
 export interface SidebarBodyProps {
   t: LanguageContextValue["t"]
+  projectId?: string
   selection: () => string | null
   currentSessionID: () => string | undefined
   selectLocal: () => void
@@ -61,8 +63,6 @@ export interface SidebarBodyProps {
   onNewWorktree: () => void
   onNewSection: () => void
   onShortcuts: () => void
-  onSetup: () => void
-  onBranch: () => void
   sections: () => SectionState[]
   sortedWorktrees: () => WorktreeState[]
   worktrees: () => WorktreeState[]
@@ -126,10 +126,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
         </div>
         <div class="am-wt-actions-cell">
           <Show when={props.localStats() === undefined}>
-            <div class="am-worktree-stats-skeleton">
-              <div class="am-worktree-stats-skeleton-row" />
-              <div class="am-worktree-stats-skeleton-row" style={{ width: "70%" }} />
-            </div>
+            <StatsSkeleton />
           </Show>
           <Show
             when={
@@ -206,23 +203,14 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
               onNew={props.onNewWorktree}
               onSection={props.onNewSection}
               onShortcuts={props.onShortcuts}
-              onSetup={props.onSetup}
-              onBranch={props.onBranch}
+              onSettings={() =>
+                vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId: props.projectId })
+              }
             />
           }
         />
         <div class="am-worktree-list">
-          <Show
-            when={props.worktreesLoaded() && props.sessionsLoaded()}
-            fallback={
-              <div class="am-skeleton-list">
-                <div class="am-skeleton-wt">
-                  <div class="am-skeleton-wt-icon" />
-                  <div class="am-skeleton-wt-text" style={{ width: "60%" }} />
-                </div>
-              </div>
-            }
-          >
+          <Show when={props.worktreesLoaded() && props.sessionsLoaded()} fallback={<WorktreeSkeleton />}>
             <Show when={!props.isGitRepo()}>
               <div class="am-not-git-notice">
                 <Icon name="warning" size="small" />
@@ -352,9 +340,15 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                     : undefined
                                 }
                                 runStatus={props.runStatuses()[wt.id]}
-                                onOpenPR={props.track("open_pull_request", "worktree_menu", () =>
-                                  vscode.postMessage({ type: "agentManager.openPR", worktreeId: wt.id }),
-                                )}
+                                onOpenPR={props.track("open_pull_request", "worktree_menu", () => {
+                                  const url = props.prStatuses()[wt.id]?.url
+                                  vscode.postMessage({
+                                    type: "agentManager.openPR",
+                                    projectId: props.projectId,
+                                    worktreeId: wt.id,
+                                    ...(url ? { url } : {}),
+                                  })
+                                })}
                                 sections={props.sections()}
                                 currentSectionId={wt.sectionId}
                                 onMoveToSection={(secId) => props.moveToSection([wt.id], secId)}

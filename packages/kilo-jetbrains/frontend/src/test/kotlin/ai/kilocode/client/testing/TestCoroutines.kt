@@ -12,14 +12,32 @@ class TestCoroutines {
 
     val scope = CoroutineScope(job + dispatcher)
 
-    fun drain(pump: () -> Unit) {
+    fun drain(pump: () -> Unit = ::pumpEdt) {
         repeat(5) {
             await(scope.launch {}, pump)
             pump()
         }
     }
 
-    fun close(pump: () -> Unit) {
+    /**
+     * Drain coroutines + EDT until [cond] holds or [deadlineMs] elapses.
+     *
+     * Re-checks the predicate after each [drain] so a slow cross-thread handoff
+     * (coroutine -> `invokeLater` -> EDT) is observed, instead of relying on a fixed
+     * iteration budget that can run out under CI load. Returns whether [cond] became true.
+     * [cond] is evaluated on the calling thread; wrap it in `edt { }` when it reads UI state.
+     */
+    fun pumpUntil(deadlineMs: Long = TEST_WAIT_MS, pump: () -> Unit = ::pumpEdt, cond: () -> Boolean): Boolean {
+        val end = System.nanoTime() + deadlineMs * 1_000_000
+        while (true) {
+            drain(pump)
+            if (cond()) return true
+            if (System.nanoTime() >= end) return false
+            Thread.sleep(1)
+        }
+    }
+
+    fun close(pump: () -> Unit = ::pumpEdt) {
         job.cancel()
         try {
             await(job, pump)

@@ -1,5 +1,23 @@
 import { reconcile } from "solid-js/store"
-import type { Message, Part, ToolPart } from "../types/messages"
+import type { Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
+
+export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
+
+export type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
+
+export interface MessagePageState {
+  loadingInitial: boolean
+  loadingOlder: boolean
+  before?: string
+  hasMore: boolean
+  lastMutation?: MessageMutation
+}
+
+export const emptyPageState: MessagePageState = {
+  loadingInitial: false,
+  loadingOlder: false,
+  hasMore: false,
+}
 
 /** Remove ids from a Set immutably, returning the original when nothing changed. */
 export function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
@@ -8,7 +26,47 @@ export function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
   return next.size === prev.size ? prev : next
 }
 
-export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
+export function messageParts(messages: Message[]): Record<string, Part[]> {
+  const parts: Record<string, Part[]> = {}
+  for (const msg of messages) {
+    if (msg.parts && msg.parts.length > 0) parts[msg.id] = msg.parts
+  }
+  return parts
+}
+
+/** Prompt input state rebuilt from a reverted user message's parts. */
+export interface RevertPromptState {
+  text: string
+  paths: string[]
+  sessions: Array<{ id: string; title: string; updated: number }>
+  images: Array<{ dataUrl: string; mime: string; filename?: string }>
+}
+
+/**
+ * Extract the prompt content of a user message for restoration into the input
+ * box after a revert. Inline images are returned as data URLs so PromptInput
+ * can re-attach them without re-uploading.
+ */
+export function revertPromptState(parts: readonly Part[]): RevertPromptState {
+  const files = parts.filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
+  return {
+    text: parts
+      .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
+      .map((p) => (p as { text: string }).text ?? "")
+      .join(""),
+    paths: files.map((p) => p.source?.path).filter((p): p is string => !!p && !p.startsWith("session:")),
+    sessions: files
+      .filter((p) => p.url.startsWith("session:"))
+      .map((p) => ({
+        id: p.url.slice("session:".length),
+        title: p.source?.text?.value.replace(/^@/, "") ?? p.filename ?? p.url,
+        updated: 0,
+      })),
+    images: files
+      .filter((p) => p.mime.startsWith("image/") && p.url.startsWith("data:"))
+      .map((p) => ({ dataUrl: p.url, mime: p.mime, filename: p.filename })),
+  }
+}
 
 type SnapshotPart = {
   type?: string

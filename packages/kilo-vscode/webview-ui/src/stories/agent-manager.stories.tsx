@@ -28,6 +28,7 @@ import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
+import { PRComments } from "../../agent-manager/pr/PRComments"
 import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
@@ -40,6 +41,7 @@ import type { ReviewComment } from "../../diff-viewer/review-comments"
 import { createModeRouter } from "../../agent-manager/mode-router"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
+import "../../agent-manager/pr/pr-panel.css"
 
 registerVscodeToolOverrides()
 
@@ -87,13 +89,13 @@ const foldedDiffs: WorktreeFileDiff[] = [
 ]
 
 const ROWS = 140
-function edited(seed: string): WorktreeFileDiff {
+function edited(seed: string, file = "src/agent-edit.ts"): WorktreeFileDiff {
   const before = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-old-${i}"\n`).join("")
   const after = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-new-${i}"\n`).join("")
   const patch = [
-    "diff --git a/src/agent-edit.ts b/src/agent-edit.ts",
-    "--- a/src/agent-edit.ts",
-    "+++ b/src/agent-edit.ts",
+    `diff --git a/${file} b/${file}`,
+    `--- a/${file}`,
+    `+++ b/${file}`,
     `@@ -1,${ROWS} +1,${ROWS} @@`,
     ...before
       .trimEnd()
@@ -107,7 +109,7 @@ function edited(seed: string): WorktreeFileDiff {
   ].join("\n")
 
   return {
-    file: "src/agent-edit.ts",
+    file,
     status: "modified",
     additions: ROWS,
     deletions: ROWS,
@@ -227,6 +229,11 @@ const chatServer = {
   errorDetails: () => undefined,
   isConnected: () => true,
   profileData: () => null,
+  providerUsage: () => undefined,
+  providerUsageLoading: () => false,
+  providerUsageError: () => undefined,
+  requestProviderUsage: () => undefined,
+  refreshProviderUsage: () => undefined,
   deviceAuth: () => ({ status: "idle" as const }),
   startLogin: () => undefined,
   goToLogin: () => undefined,
@@ -320,6 +327,29 @@ export const DiffPanelWithDiffs: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+export const DiffPanelScrollUp: Story = {
+  name: "DiffPanel - scroll upward through large diffs",
+  render: () => {
+    const diffs = Array.from({ length: 5 }, (_, i) => edited(`review-${i}`, `src/review-${i}.ts`))
+    return (
+      <StoryProviders noPadding>
+        <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+          <DiffPanel
+            diffs={diffs}
+            loading={false}
+            sessionKey="inline-scroll-up"
+            diffStyle="unified"
+            onDiffStyleChange={() => {}}
+            comments={[]}
+            onCommentsChange={() => {}}
+            onClose={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    )
+  },
 }
 
 const buttonFixtureStyle: JSX.CSSProperties = {
@@ -942,6 +972,71 @@ export const TabBarSingleTab: Story = {
   ),
 }
 
+const MockFullContextActions = () => (
+  <div class="am-tab-actions">
+    <span class="am-split-button am-run-group">
+      <TooltipKeybind title="Run" keybind="⌘R" placement="bottom">
+        <Button size="small" variant="ghost" icon="play">
+          Run
+        </Button>
+      </TooltipKeybind>
+      <button class="am-split-arrow" aria-label="Run options">
+        <Icon name="chevron-down" size="small" />
+      </button>
+    </span>
+    <TooltipKeybind title="Pull request" keybind="" placement="bottom">
+      <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Documents" keybind="" placement="bottom">
+      <IconButton icon="book-open-check" size="small" variant="ghost" label="Documents" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Subagents" keybind="" placement="bottom">
+      <IconButton icon="task" size="small" variant="ghost" label="Subagents" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Toggle diff" keybind="" placement="bottom">
+      <button class="am-diff-toggle-btn am-diff-toggle-has-changes" title="Toggle diff">
+        <Icon name="layers" size="small" />
+        <span class="am-diff-toggle-stats">
+          <span class="am-stat-files">4f</span>
+          <span class="am-stat-additions">+32</span>
+          <span class="am-stat-deletions">−8</span>
+        </span>
+      </button>
+    </TooltipKeybind>
+    <TooltipKeybind title="Toggle review" keybind="" placement="bottom">
+      <IconButton icon="expand" size="small" variant="ghost" label="Toggle review" />
+    </TooltipKeybind>
+    <div class="am-split-button">
+      <TooltipKeybind title="Open Terminal" keybind="" placement="bottom">
+        <IconButton icon="console" size="small" variant="ghost" label="Open Terminal" />
+      </TooltipKeybind>
+      <button class="am-split-arrow" aria-label="Choose terminal destination">
+        <Icon name="chevron-down" size="small" />
+      </button>
+    </div>
+  </div>
+)
+
+export const TabBarFullContext: Story = {
+  name: "TabBar — all optional context actions",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <MockTabLeading />
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "1" } as JSX.CSSProperties}>
+              <MockTab title="Full context" active />
+            </div>
+          </div>
+        </div>
+        <MockTabAdd />
+        <MockFullContextActions />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 // Side terminal panel inside the real inspector host chain, empty state —
 // no live PTY, so the start affordance renders. The tab strip header keeps
 // the .am-diff-header height so the a11y/screenshot baseline also guards
@@ -1099,7 +1194,6 @@ const projectPickerProjects: AgentProjectSnapshot[] = [
     active: true,
     expanded: true,
     initialized: true,
-    trusted: true,
     missing: false,
   },
   {
@@ -1110,18 +1204,6 @@ const projectPickerProjects: AgentProjectSnapshot[] = [
     active: false,
     expanded: false,
     initialized: true,
-    trusted: true,
-    missing: false,
-  },
-  {
-    id: "project-untrusted",
-    root: "/workspace/sample-app",
-    label: "sample-app",
-    pinned: false,
-    active: false,
-    expanded: false,
-    initialized: false,
-    trusted: false,
     missing: false,
   },
 ]
@@ -1173,10 +1255,7 @@ export const NewWorktreeProjectDropdown: Story = {
                           projects={projectPickerProjects}
                           selected="project-main"
                           onSelect={() => undefined}
-                          labels={{
-                            untrusted: "Trust this project in the sidebar first",
-                            missing: "Repository not found",
-                          }}
+                          labels={{ missing: "Repository not found" }}
                         />
                       </DeferredPopover>
                     </div>
@@ -1332,7 +1411,6 @@ const projectA: AgentProjectSnapshot = {
   active: true,
   expanded: true,
   initialized: true,
-  trusted: true,
   missing: false,
 }
 const projectB: AgentProjectSnapshot = {
@@ -1343,7 +1421,6 @@ const projectB: AgentProjectSnapshot = {
   active: false,
   expanded: true,
   initialized: true,
-  trusted: true,
   missing: false,
 }
 
@@ -1389,6 +1466,7 @@ const projectSession = (
 ): ProjectSessionInfo => ({
   id,
   worktreeId,
+  parentID: null,
   title,
   createdAt: "2026-07-19T09:00:00Z",
   updatedAt,
@@ -1477,4 +1555,85 @@ export const MultiProjectSidebar: Story = {
       </StoryProviders>
     )
   },
+}
+
+// ---------------------------------------------------------------------------
+// PR panel — review comments
+// ---------------------------------------------------------------------------
+
+const prComments: NonNullable<PRStatus["comments"]> = {
+  total: 4,
+  unresolved: 2,
+  comments: [
+    {
+      id: "PRRC_1",
+      threadId: "PRRT_1",
+      author: "octocat",
+      body: "This throws when `gh` is missing. Can we guard it and fall back to the cached status?",
+      file: "packages/kilo-vscode/src/agent-manager/gh.ts",
+      line: 42,
+      url: "https://github.com/org/repo/pull/8594#discussion_r1",
+      resolved: false,
+      outdated: false,
+      diffHunk:
+        '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
+      after: ["  return result", "}", ""],
+      replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
+    },
+    {
+      id: "PRRC_2",
+      threadId: "PRRT_2",
+      author: "hubot",
+      body: "The timeout should be a constant so the poller and the mutation cannot drift apart.",
+      file: "packages/kilo-vscode/src/agent-manager/pr/PRActions.ts",
+      line: 8,
+      url: "https://github.com/org/repo/pull/8594#discussion_r2",
+      resolved: false,
+      outdated: true,
+    },
+    {
+      id: "PRRC_3",
+      threadId: "PRRT_3",
+      author: "octocat",
+      body: "nit: rename this variable to `threads`.\n\nIt reads better next to the loop below.",
+      file: "packages/kilo-vscode/src/agent-manager/pr/am-pr-utils.ts",
+      line: 71,
+      url: "https://github.com/org/repo/pull/8594#discussion_r3",
+      resolved: true,
+      outdated: false,
+    },
+    {
+      id: "PRRC_4",
+      threadId: "PRRT_4",
+      author: "hubot",
+      body: "Good catch, fixed in a9f21c3.",
+      file: "packages/kilo-vscode/webview-ui/agent-manager/pr/PRComments.tsx",
+      line: 118,
+      url: "https://github.com/org/repo/pull/8594#discussion_r4",
+      resolved: true,
+      outdated: false,
+    },
+  ],
+}
+
+export const PRPanelComments: Story = {
+  name: "PR panel — review comments",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)" }}>
+        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRPanelComments200: Story = {
+  name: "PR panel — review comments (narrow)",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)" }}>
+        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+      </div>
+    </StoryProviders>
+  ),
 }

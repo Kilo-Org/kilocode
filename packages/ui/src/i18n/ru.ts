@@ -202,6 +202,7 @@ export const dict = {
   "ui.patch.action.created": "Создано",
   "ui.patch.action.moved": "Перемещено",
   "ui.patch.action.patched": "Изменено",
+  "ui.patch.action.plan": "План", // kilocode_change
 
   "ui.question.subtitle.answered": "Получено ответов: {{count}}",
   "ui.question.answer.none": "(нет ответа)",
@@ -241,6 +242,5 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "Изменено",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  "ui.tool.swePruned": "SWE-Pruner · сохранено {{kept}} из {{total}} строк",
   // kilocode_change end
 }

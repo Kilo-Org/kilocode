@@ -99,7 +99,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   const handleScroll = () => {
     if (!scroll) return
 
-    userActivity.consumeScroll()
+    const input = userActivity.consumeScroll()
     const distance = distanceFromBottom(scroll)
 
     if (!canScroll(scroll)) return
@@ -108,6 +108,10 @@ export function createAutoScroll(options: AutoScrollOptions) {
       if (store.userScrolled && (distance < 2 || !userActivity.isRecent())) setStore("userScrolled", false)
       return
     }
+
+    // Virtualizer and layout corrections can move the viewport without
+    // changing content height. Only an input event should pause auto-follow.
+    if (!store.userScrolled && !input && !userActivity.isRecent()) return
 
     stop()
   }

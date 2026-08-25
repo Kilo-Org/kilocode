@@ -8,6 +8,8 @@ import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.LogConfigDto
+import ai.kilocode.rpc.dto.LogFileDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
@@ -16,7 +18,9 @@ import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
+import ai.kilocode.client.settings.KiloLogSettingsService
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -107,7 +111,18 @@ class KiloAppService internal constructor(
         val platform = state.downloadPlatform
         if (version != null && platform != null) info = CoreInfo(version, platform)
         _state.value = state
-        if (state.status == KiloAppStatusDto.READY) refreshModelFavoritesAsync()
+        if (state.status == KiloAppStatusDto.READY) {
+            refreshModelFavoritesAsync()
+            service<KiloLogSettingsService>().apply(this)
+        }
+    }
+
+    /** Read the backend diagnostic log file for download in split mode. Null when absent or on failure. */
+    suspend fun backendLog(): LogFileDto? = try {
+        call { backendLogFile() }
+    } catch (e: Exception) {
+        LOG.warn("backend log fetch failed", e)
+        null
     }
 
     /** One-shot health check. Returns null on failure. */
@@ -320,6 +335,14 @@ class KiloAppService internal constructor(
     ): Job = cs.launch {
         val state = updateConfig(patch)
         done(state)
+    }
+
+    fun applyLogConfigAsync(config: LogConfigDto): Job = cs.launch {
+        try {
+            call { applyLogConfig(config) }
+        } catch (e: Exception) {
+            LOG.warn("log config apply failed", e)
+        }
     }
 
     private fun setModelState(state: ModelStateDto) {

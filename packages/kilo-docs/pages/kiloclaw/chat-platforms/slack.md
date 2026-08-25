@@ -5,6 +5,8 @@ description: "Using KiloClaw with Slack"
 
 # Slack
 
+{% partial file="kiloclaw-eol.md" /%}
+
 This page covers everything you need to use KiloClaw with Slack: connecting your bot, controlling who can DM it, and adding it to channels.
 
 ## Connecting KiloClaw to Slack

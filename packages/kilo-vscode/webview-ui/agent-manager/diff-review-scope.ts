@@ -25,6 +25,7 @@ export interface DiffReviewScopeOptions {
   /** Whether the full-screen review tab is active. */
   reviewActive: Accessor<boolean>
   vscode: VsCode
+  project: Accessor<string | undefined>
 }
 
 export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
@@ -82,7 +83,13 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
     // Optimistic update; the extension echoes authoritative state back.
     setCurrentBase(branch ?? autoBase())
     setIsAuto(branch === undefined)
-    opts.vscode.postMessage({ type: "agentManager.setDiffBaseBranch", sessionId: ctx, scope: scope.scope(), branch })
+    opts.vscode.postMessage({
+      type: "agentManager.setDiffBaseBranch",
+      projectId: opts.project(),
+      sessionId: ctx,
+      scope: scope.scope(),
+      branch,
+    })
   }
 
   // Fetch branch picker data whenever the Branch scope becomes active for the
@@ -93,7 +100,12 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
     if (!ctx) return
     if (!opts.panelOpen() && !opts.reviewActive()) return
     setLoading(true)
-    opts.vscode.postMessage({ type: "agentManager.requestDiffBranches", sessionId: ctx, scope: scope.scope() })
+    opts.vscode.postMessage({
+      type: "agentManager.requestDiffBranches",
+      projectId: opts.project(),
+      sessionId: ctx,
+      scope: scope.scope(),
+    })
   })
 
   /** Handle the extension's diffBranches push, ignoring stale contexts. */

@@ -15,20 +15,25 @@ import { WorktreeImporter } from "../../src/agent-manager/worktree-importer"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const EDIT_PREVIEW_PANEL_FILE = path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx")
 const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/documents/DocumentPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/ImageDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/VirtualDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownAnnotationLayer.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/markdown-comment-ranges.ts"),
   path.join(ROOT, "webview-ui/diff-viewer/DiffEndMarker.tsx"),
@@ -49,9 +54,11 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ClosableTab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/InspectorTabStrip.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectBranchDialog.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
@@ -158,6 +165,30 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const unused = defined.filter((c) => !tsx.includes(c!))
 
     expect(unused, `Classes defined in CSS but not used in TSX: ${unused.join(", ")}`).toEqual([])
+  })
+})
+
+describe("Agent Manager edit preview", () => {
+  it("provides a visible close action", () => {
+    const source = fs.readFileSync(EDIT_PREVIEW_PANEL_FILE, "utf-8")
+    expect(source).toContain('icon="close"')
+    expect(source).toContain('class="am-edit-preview-close"')
+    expect(source).toContain("onClick={props.state.close}")
+  })
+
+  it("drives every stacked file from one shared style control", () => {
+    const source = fs.readFileSync(EDIT_PREVIEW_PANEL_FILE, "utf-8")
+    expect(source).toContain("RadioGroup")
+    expect(source).toContain("styleSelect={false}")
+  })
+
+  it("sizes stacked files to their own diff instead of a fixed height", () => {
+    const css = readAllCss()
+    expect(css).toContain(".am-edit-preview-files > .am-review-layout")
+    expect(css).not.toContain("flex: 0 0 min(420px, 50%)")
+    const view = fs.readFileSync(path.join(ROOT, "webview-ui/diff-viewer/VirtualDiffView.tsx"), "utf-8")
+    expect(view).toContain("value.fileDiff.hunks.length")
+    expect(view).toContain("virtualized={heavy()}")
   })
 })
 
@@ -393,15 +424,17 @@ describe("Agent Manager Worktree Actions", () => {
     expect(manager).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
   })
 
-  it("creates side terminals only while a side terminal owns focus", () => {
+  it("routes prompt and side-terminal shortcut actions separately", () => {
     const source = fs.readFileSync(TSX_FILE, "utf-8")
-    const start = source.indexOf('else if (msg.action === "newTerminal")')
+    const start = source.indexOf('else if (msg.action === "newTerminalTab")')
     const end = source.indexOf('else if (msg.action === "cycleAgentMode"', start)
     const action = source.slice(start, end)
 
-    expect(action).toContain("if (terms.sideFocusedId()) termHandlers.addSide()")
-    expect(action).not.toContain("terminalVisible()")
-    expect(action).toContain("else termHandlers.requestNew()")
+    expect(action).toContain('msg.action === "newTerminalTab"')
+    expect(action).toContain("termHandlers.requestNew()")
+    expect(action).toContain('msg.action === "newSideTerminal"')
+    expect(action).toContain("termHandlers.addSide()")
+    expect(action).not.toContain('msg.action === "newMainTerminal"')
   })
 
   it("forwards the quick-worktree command to immediate creation", () => {
@@ -521,9 +554,15 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("syncOnSessionSwitch")
   })
 
+  it("does not activate inspector-only transcript loads", () => {
+    const text = body("onSessionMessage")
+    expect(text).toContain("m.focus === false")
+    expect(text.indexOf("m.focus === false")).toBeLessThan(text.indexOf("this.activeSessionId = m.sessionID"))
+  })
+
   it("terminal context reveals the terminal associated with the originating session", () => {
     const text = body("onSessionMessage")
-    const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID)")
+    const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID, m.agentManagerContext)")
     expect(show).toBeGreaterThan(-1)
     expect(text).toContain('type: "terminalContextError"')
   })
@@ -764,7 +803,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
         `${creating}|create|add:false|push|${setup}|setup|session|state-session|register|ready|${success}|log`,
       )
       expect(await run(kind, "setup")).toBe(
-        `${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed`,
+        `${creating}|create|add:false|push|${setup}|setup|disk|state-remove|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|disk|state-remove|push|setup failed|setup failed`,
       )
       const duplicate = branch
         ? 'Branch "topic" is already checked out in another worktree'
@@ -864,35 +903,6 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
 })
 
 // ---------------------------------------------------------------------------
-// handleChangeDefaultBaseBranch — listener leak fix
-// ---------------------------------------------------------------------------
-
-describe("Agent Manager — dialog listener cleanup", () => {
-  const tsx = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"), "utf-8")
-
-  /**
-   * Regression: handleChangeDefaultBaseBranch subscribes to vscode.onMessage
-   * for branch data. Previously unsub() was only called inside selectBranch()
-   * and the Escape keydown handler. If the dialog closed via backdrop click or
-   * external dialog.close(), the listener leaked and stacked on every reopen.
-   *
-   * The fix ties unsub() to the dialog component's Solid cleanup so it always
-   * disposes regardless of how the dialog closes.
-   */
-  it("DefaultBaseBranchDialog disposes its message listener on cleanup", () => {
-    expect(tsx).toContain("const unsub = vscode.onMessage")
-    expect(tsx).toContain("onCleanup(unsub)")
-  })
-
-  it("select does not manually call unsub (handled by onCleanup)", () => {
-    const selStart = tsx.indexOf("const select =")
-    expect(selStart, "select must exist").toBeGreaterThan(-1)
-    const selEnd = tsx.indexOf("}", selStart + 40)
-    const selBody = tsx.slice(selStart, selEnd + 1)
-    expect(selBody, "select should not call unsub() directly").not.toContain("unsub()")
-  })
-})
-
 describe("SetupScriptRunner — task execution model", () => {
   const runner = fs.readFileSync(SETUP_SCRIPT_RUNNER_FILE, "utf-8")
   const taskAdapter = fs.readFileSync(path.join(ROOT, "src/agent-manager/task-runner.ts"), "utf-8")
@@ -1109,7 +1119,6 @@ describe("Shared webview provider shell", () => {
       "ImageModelsProvider",
       "NotificationsProvider",
       "SessionProvider",
-      "AgentRequirementsProvider",
       "MemoryProvider",
       "FeedbackProvider",
     ])

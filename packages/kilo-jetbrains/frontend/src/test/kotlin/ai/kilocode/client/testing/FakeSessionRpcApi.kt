@@ -16,6 +16,8 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -73,6 +75,12 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Push status updates here. */
     val statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
 
+    /** Push activity updates here. */
+    val activity = MutableStateFlow<Map<String, SessionActivityDto>>(emptyMap())
+
+    /** Push session lifecycle changes here. */
+    val changes = MutableSharedFlow<SessionChangeDto>(extraBufferCapacity = 64)
+
     /** Pending permissions returned by [pendingPermissions]. */
     val pendingPermissionList = mutableListOf<PermissionRequestDto>()
 
@@ -109,6 +117,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val questionRejects = mutableListOf<Pair<String, String>>()
     val deletes = java.util.concurrent.CopyOnWriteArrayList<Pair<String, String>>()
     var deleteGate: CompletableDeferred<Unit>? = null
+    var deleteThrows: Exception? = null
     val renames = mutableListOf<Triple<String, String, String>>()
     var renameThrows: Exception? = null
     val lists = mutableListOf<String>()
@@ -117,6 +126,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val imports = mutableListOf<Pair<String, String>>()
     var creates = 0
         private set
+
+    /** When set, [create] throws it after incrementing [creates] — simulates a paused backend. */
+    var createThrows: Exception? = null
 
     data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
@@ -129,6 +141,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun create(directory: String): SessionDto {
         assertNotEdt("create")
         creates++
+        createThrows?.let { throw it }
         return session
     }
 
@@ -156,6 +169,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun delete(id: String, directory: String) {
         assertNotEdt("delete")
+        deleteThrows?.let { throw it }
         deleteGate?.await()
         deletes.add(id to directory)
         listed.removeAll { it.id == id }
@@ -188,6 +202,16 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> {
         assertNotEdt("statuses")
         return statuses
+    }
+
+    override suspend fun activity(): Flow<Map<String, SessionActivityDto>> {
+        assertNotEdt("activity")
+        return activity
+    }
+
+    override suspend fun changes(): Flow<SessionChangeDto> {
+        assertNotEdt("changes")
+        return changes
     }
 
     override suspend fun setDirectory(id: String, directory: String) {

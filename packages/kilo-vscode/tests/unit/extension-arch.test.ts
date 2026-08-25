@@ -117,12 +117,15 @@ describe("Extension — package.json command sync", () => {
     })
   })
 
-  it("keeps Agent Manager terminal shortcuts distinct", () => {
+  it("keeps Agent Manager session and terminal shortcuts focus-aware", () => {
     const terminal = pkg.contributes?.keybindings?.find(
       (item: { command: string }) => item.command === "kilo-code.new.agentManager.showTerminal",
     )
     const create = pkg.contributes?.keybindings?.find(
-      (item: { command: string }) => item.command === "kilo-code.new.agentManager.newTerminal",
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.newTerminalTab",
+    )
+    const sessionCreate = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.newTab",
     )
     expect(terminal).toMatchObject({
       key: "ctrl+/",
@@ -132,8 +135,29 @@ describe("Extension — package.json command sync", () => {
     expect(create).toMatchObject({
       key: "ctrl+shift+t",
       mac: "cmd+shift+t",
-      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused",
     })
+    expect(sessionCreate).toMatchObject({
+      key: "ctrl+t",
+      mac: "cmd+t",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused",
+    })
+    const terminalCreate = pkg.contributes?.keybindings?.find(
+      (item: { command: string; key?: string; mac?: string; when?: string }) =>
+        item.command === "kilo-code.new.agentManager.newSideTerminal" && item.key === "ctrl+t",
+    )
+    expect(terminalCreate).toMatchObject({
+      key: "ctrl+t",
+      mac: "cmd+t",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && kilo-code.new.agentManagerSideTerminalFocused",
+    })
+    expect(
+      pkg.contributes?.keybindings?.some(
+        (item: { command: string }) =>
+          item.command === "kilo-code.new.agentManager.newTerminal" ||
+          item.command === "kilo-code.new.agentManager.newMainTerminal",
+      ),
+    ).toBe(false)
   })
 
   it("declares the Agent Manager terminal destination setting", () => {

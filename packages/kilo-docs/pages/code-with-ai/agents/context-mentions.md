@@ -56,6 +56,10 @@ The extension automatically includes context from your editor with each message 
 
 Selected code and editor diagnostics (errors/warnings) are not included automatically. However, you can send these to Kilo Code through VS Code's Code Actions: select code or hover over an error, then use the lightbulb menu to find context-dependent actions like "Explain with Kilo Code" or "Fix with Kilo Code."
 
+### Session-scoped file references
+
+In Agent Manager, file mentions, clickable file links, and review-comment file links use the referenced session's directory or worktree. File-link validation and native VS Code opening use the same scope, even after you switch sessions. Kilo rejects an unqualified session ID when it is ambiguous across projects instead of opening or validating a file in the wrong project.
+
 ### Tool-Based File Access
 
 Rather than attaching file contents up front, the agent reads files on demand during its work:
