@@ -254,7 +254,6 @@ function select(
   const value = task.model?.trim()
   const provider = task.provider?.trim()
   const variant = task.variant?.trim()
-  if (provider && !value) return { error: `Task ${index + 1} provider requires a model.` }
   if (!value) {
     if (!variant) {
       if (!task.prompt?.trim() || !source) return { task: base }
