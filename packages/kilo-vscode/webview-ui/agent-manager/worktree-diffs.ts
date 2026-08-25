@@ -33,10 +33,6 @@ export function diffDataKey(project: string | undefined, id: string): string {
   return `${project ?? "single"}\0${id}`
 }
 
-function readData(data: Record<string, WorktreeFileDiff[]>, project: string | undefined, id: string) {
-  return data[diffDataKey(project, id)]
-}
-
 export function createWorktreeDiffs(
   vscode: ReturnType<typeof useVSCode>,
   project: () => string | undefined = () => undefined,
@@ -119,15 +115,14 @@ export function createWorktreeDiffs(
   }
 
   /** Files the backend flagged as stale in a merged update need a fresh fetch. */
-  const refreshStaleDiffs = (id: string, files: Set<string>) => {
-    const data = key(id)
+  const refreshStaleDiffs = (id: string, files: Set<string>, data = key(id), owner = project()) => {
     const loading = diffFileLoading()[data] ?? {}
     for (const file of files) {
       if (loading[file]) continue
       setDiffFilePending(data, file, true)
       vscode.postMessage({
         type: "agentManager.requestWorktreeDiffFile",
-        projectId: project(),
+        projectId: owner,
         file,
         ...wireDiffId(id),
       })
@@ -155,21 +150,21 @@ export function createWorktreeDiffs(
     const data = diffDataKey(ev.projectId, ev.sessionId)
     let staleFiles: Set<string> | undefined
     setDiffDatas((prev) => {
-      const existing = readData(prev, project(), ev.sessionId)
+      const existing = prev[data]
       const merged = existing ? mergeWorktreeDiffs(existing, ev.diffs) : { diffs: ev.diffs, stale: new Set<string>() }
       staleFiles = merged.stale
       const next = merged.diffs
       if (existing && existing.length === next.length && existing.every((old, i) => old === next[i])) return prev
       return { ...prev, [data]: next }
     })
-    if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles)
+    if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles, data, ev.projectId)
   }
 
   const onWorktreeDiffFile = (ev: AgentManagerWorktreeDiffFileMessage) => {
     const data = diffDataKey(ev.projectId, ev.sessionId)
     if (ev.diff) {
       setDiffDatas((prev) => {
-        const existing = readData(prev, project(), ev.sessionId) ?? []
+        const existing = prev[data] ?? []
         const next = existing.map((item) => (item.file === ev.diff!.file ? ev.diff! : item))
         return { ...prev, [data]: next }
       })

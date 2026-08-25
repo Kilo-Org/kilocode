@@ -1,5 +1,4 @@
 import * as fs from "fs/promises"
-import { createHash } from "crypto"
 import { binaryFile } from "../diff/shared/binary"
 import { imageMime, loadImage, readImageFile } from "../diff/shared/image"
 import { resolveInside } from "../diff/shared/path"
@@ -146,30 +145,6 @@ async function statStamp(dir: string, file: string): Promise<string> {
   const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) return `missing:${file}`
   return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}:${stat.ino ?? 0}`
-}
-
-async function contentStamp(dir: string, file: string, status: Status): Promise<string> {
-  if (status === "deleted") return "deleted"
-  const full = resolveInside(dir, file)
-  if (!full) return `missing:${file}`
-  const stat = await fs.lstat(full).catch(() => undefined)
-  if (!stat) return `missing:${file}`
-  const value = stat.isSymbolicLink()
-    ? Buffer.from(await fs.readlink(full))
-    : stat.isFile()
-      ? await fs.readFile(full).catch(() => undefined)
-      : undefined
-  if (!value) return `unreadable:${file}`
-  return createHash("sha256").update(value).digest("hex")
-}
-
-function detailStamp(value: WorktreeDiffEntry, meta: Meta): string {
-  if (meta.status === "deleted") return "deleted"
-  const data = value.image?.after?.data
-  if (data) return createHash("sha256").update(Buffer.from(data, "base64")).digest("hex")
-  return createHash("sha256")
-    .update(value.after ?? "")
-    .digest("hex")
 }
 
 async function detailReads(git: GitOps, dir: string, anc: string, meta: Meta, signal?: AbortSignal) {
@@ -359,8 +334,8 @@ export function createLocalDiff(git: GitOps, log?: Log) {
       const id = `${dir}\0${base}\0${state.anc}\0${file}\0${meta.tracked}\0${meta.status}\0${meta.additions}\0${meta.deletions}\0${meta.binary}\0${meta.stamp}`
       const cached = details.get(id)
       if (cached) {
-        if (cached.stamp === (await contentStamp(dir, file, meta.status))) {
-          remember(id, cached.value, cached.stamp)
+        if (cached.stamp === meta.stamp) {
+          remember(id, cached.value, meta.stamp)
           return cached.value
         }
         forget(id)
@@ -374,7 +349,7 @@ export function createLocalDiff(git: GitOps, log?: Log) {
           if (pending.get(id)?.work !== work) return
           pending.delete(id)
           if (value.image?.before?.error === "unreadable" || value.image?.after?.error === "unreadable") return
-          remember(id, value, detailStamp(value, meta))
+          remember(id, value, meta.stamp)
         },
         () => {
           if (pending.get(id)?.work === work) pending.delete(id)

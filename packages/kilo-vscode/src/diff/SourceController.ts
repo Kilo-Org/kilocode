@@ -153,7 +153,7 @@ export class SourceController {
     // Push fresh diffs immediately after a successful revert so the webview
     // doesn't have to wait for the next polling tick.
     if (result.ok && this.epoch === epoch && this.active === source) {
-      await this.fetch(source, epoch, false)
+      await this.fetch(source, epoch, true, true)
     }
   }
 
@@ -162,7 +162,7 @@ export class SourceController {
     const source = this.active
     if (!source) return
     const epoch = this.epoch
-    await this.fetch(source, epoch, true)
+    await this.fetch(source, epoch, true, true)
   }
 
   /**
@@ -267,9 +267,15 @@ export class SourceController {
     }
   }
 
-  private fetch(source: DiffSource, epoch: number, initial: boolean): Promise<boolean> {
+  private fetch(source: DiffSource, epoch: number, initial: boolean, force = false): Promise<boolean> {
     const current = this.fetches.get(source)
-    if (current) return current
+    if (current && !force) return current
+    if (current) {
+      return current.then(() => {
+        if (this.epoch !== epoch || this.active !== source) return false
+        return this.fetch(source, epoch, initial)
+      })
+    }
     const work = this.runFetch(source, epoch, initial)
     this.fetches.set(source, work)
     work.then(

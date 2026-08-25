@@ -490,7 +490,7 @@ describe("SourceController.refresh", () => {
     controller.stop()
   })
 
-  it("shares an in-flight fetch between refresh and polling callers", async () => {
+  it("runs a forced refresh after an in-flight fetch", async () => {
     let release!: () => void
     const gate = new Promise<void>((resolve) => {
       release = resolve
@@ -511,7 +511,7 @@ describe("SourceController.refresh", () => {
     release()
     await Promise.all([activation, refresh])
 
-    expect(fetches).toBe(1)
+    expect(fetches).toBe(2)
     controller.stop()
   })
 })

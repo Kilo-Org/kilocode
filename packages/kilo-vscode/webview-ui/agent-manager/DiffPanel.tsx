@@ -1,4 +1,13 @@
-import { type Component, createSignal, createMemo, Show, createEffect, on, type JSXElement } from "solid-js"
+import {
+  type Component,
+  createSignal,
+  createMemo,
+  Show,
+  createEffect,
+  createRenderEffect,
+  on,
+  type JSXElement,
+} from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
@@ -160,20 +169,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     ),
   )
 
-  createEffect(
-    on(
-      () => props.active,
-      (active) => {
-        if (!active) return
-        const value = reviewComposerDraft(composer())
-        const edit = reviewComposerEdit(composer())
-        setDraft(value)
-        setEditing(edit)
-        draftMeta = composer().draft
-        editMeta = composer().edit
-      },
-    ),
-  )
   const setOpen = (files: string[] | ((prev: string[]) => string[])) => {
     const key = props.sessionKey ?? ""
     const current = open()
@@ -212,6 +207,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // so pierre's annotation cache doesn't invalidate and destroy the textarea.
   let draftMeta: AnnotationMeta | null = composer().draft
   let editMeta: AnnotationMeta | null = composer().edit
+  createRenderEffect(
+    on(
+      () => props.active,
+      (active) => {
+        if (!active) return
+        const value = reviewComposerDraft(composer())
+        const edit = reviewComposerEdit(composer())
+        setDraft(value)
+        setEditing(edit)
+        draftMeta = composer().draft
+        editMeta = composer().edit
+      },
+    ),
+  )
 
   // Ref to the scrollable container — used to preserve scroll position when
   // annotation changes cause pierre to fully re-render diffs
