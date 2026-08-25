@@ -3535,6 +3535,13 @@ body.am-wt-dragging-active * {
   color: var(--text-weak);
 }
 
+.am-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: am-fade-in 0.2s ease;
+}
+
 /* Worktree skeleton — mirrors .am-worktree-item: icon column plus a label row
    and a branch row, so settling into real rows costs no vertical shift. */
 .am-skeleton-wt {
