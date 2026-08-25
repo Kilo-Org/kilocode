@@ -1625,7 +1625,14 @@ export const layer = Layer.effect(
           const answered =
             pending &&
             msgs.some(
-              (item) => item.info.role === "assistant" && item.info.parentID === pending.info.id && !!item.info.finish,
+              (item) =>
+                item.info.role === "assistant" &&
+                item.info.parentID === pending.info.id &&
+                !!item.info.finish &&
+                !item.parts.some(
+                  (part) =>
+                    part.type === "tool" && !part.metadata?.providerExecuted && !isOrphanedInterruptedTool(part),
+                ),
             )
           if (answered) {
             yield* sessions.removeMessage({ sessionID, messageID: task.messageID })
@@ -1908,7 +1915,13 @@ export const layer = Layer.effect(
           // kilocode_change end
           if (result === "compact") {
             // kilocode_change start
-            if (handle.message.finish && handle.message.finish !== "tool-calls") {
+            const parts = yield* MessageV2.parts(handle.message.id).pipe(
+              Effect.provideService(Database.Service, database),
+            )
+            const tools = parts.some(
+              (part) => part.type === "tool" && !part.metadata?.providerExecuted && !isOrphanedInterruptedTool(part),
+            )
+            if (handle.message.finish && handle.message.finish !== "tool-calls" && !tools) {
               yield* sessions.updateMessage(handle.message)
             } else {
               const guard = KiloSessionPrompt.guardCompactionAttempt({
