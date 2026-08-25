@@ -3535,13 +3535,6 @@ body.am-wt-dragging-active * {
   color: var(--text-weak);
 }
 
-.am-skeleton-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  animation: am-fade-in 0.2s ease;
-}
-
 /* Worktree skeleton — mirrors .am-worktree-item: icon column plus a label row
    and a branch row, so settling into real rows costs no vertical shift. */
 .am-skeleton-wt {
@@ -3584,31 +3577,6 @@ body.am-wt-dragging-active * {
   border-radius: 3px;
   background: var(--text-base);
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
-}
-
-/* Session skeleton */
-.am-skeleton-session {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px;
-}
-
-.am-skeleton-session-title {
-  height: 13px;
-  border-radius: 3px;
-  background: var(--text-base);
-  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
-}
-
-.am-skeleton-session-time {
-  height: 10px;
-  width: 52px;
-  border-radius: 3px;
-  background: var(--text-base);
-  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
-  flex-shrink: 0;
 }
 
 /* Tab switcher for New/Import tabs in the dialog */
