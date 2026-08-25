@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import path from "node:path"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import type { Provider } from "../../src/provider/provider"
@@ -115,7 +116,7 @@ describe("injectEditorContext", () => {
     expect(blocks(turn2[2])[0].text).toContain("Active file: src/two.ts")
     expect(blocks(turn2[0])[0].text).toContain("Message time: 2026-08-24T")
     expect(blocks(turn2[0])[0].text).toContain("Working directory: /repo/session")
-    expect(blocks(turn2[0])[0].text).toContain("Workspace root folder: /repo")
+    expect(blocks(turn2[0])[0].text).toContain(`Workspace root folder: ${path.resolve(session.directory, "..")}`)
     expect(blocks(turn2[2])[0].text).toContain("Working directory: /repo/next")
   })
 
