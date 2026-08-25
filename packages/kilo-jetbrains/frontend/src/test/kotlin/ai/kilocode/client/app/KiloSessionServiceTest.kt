@@ -1,9 +1,13 @@
 package ai.kilocode.client.app
 
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestLog
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
@@ -11,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
@@ -137,6 +142,25 @@ class KiloSessionServiceTest : BasePlatformTestCase() {
         }
 
         assertTrue(log.messages.joinToString("\n"), log.messages.any { it.contains("route=client-events stop=true failed message=stream failed") })
+    }
+
+    fun `test activity snapshot carries every kind the backend reports`() = runBlocking(Dispatchers.Default) {
+        // A busy session the backend cannot place in a directory, so only the status map has it.
+        rpc.statuses.value = mapOf("ses_busy" to SessionStatusDto("busy"))
+        rpc.activity.value = mapOf(
+            "ses_failed" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
+            "ses_asking" to SessionActivityDto("/repo/wt", SessionActivityKindDto.QUESTION),
+        )
+        service.activity.first { it.isNotEmpty() }
+
+        assertEquals(
+            mapOf(
+                "ses_busy" to SessionActivityKind.RUNNING,
+                "ses_failed" to SessionActivityKind.ERROR,
+                "ses_asking" to SessionActivityKind.QUESTION,
+            ),
+            service.activitySnapshot(),
+        )
     }
 
     private fun session(id: String, title: String) = SessionDto(

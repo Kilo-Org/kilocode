@@ -28,6 +28,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowContentUiType
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.openapi.wm.ex.ToolWindowManagerListener
 import com.intellij.platform.project.projectIdOrNull
 import com.intellij.openapi.wm.impl.content.ToolWindowContentUi
@@ -152,14 +153,15 @@ internal class KiloToolWindowSetupService(
                 agents()
                 agentManagerPanel.move(id, dir)
             }
-            // Notification dot on the Agents tab: attention the user has not looked at yet. Having
-            // the tab on screen is the acknowledgement, so the dot has to be re-evaluated when the
-            // selected tab or the tool window visibility changes, not only when activity arrives.
+            // Notification dot on the Agents tab: attention the user has not looked at yet. Reading
+            // it means the panel had focus, not merely that it was on screen — a session that fails
+            // while the user works in a session editor must still raise the dot. That makes tool
+            // window activation part of the input, so the dot cannot be driven by activity alone.
             val attention = AgentAttention()
             var snapshot = emptyMap<String, SessionActivityDto>()
             fun syncDot() {
-                val showing = toolWindow.isVisible && toolWindow.contentManager.selectedContent === agentContent
-                agentContent.icon = if (attention.update(snapshot, showing)) AttentionDotIcon else null
+                val read = toolWindow.isActive && toolWindow.contentManager.selectedContent === agentContent
+                agentContent.icon = if (attention.update(snapshot, read)) AttentionDotIcon else null
             }
 
             val listener = object : ContentManagerListener {
@@ -173,6 +175,8 @@ internal class KiloToolWindowSetupService(
             toolWindow.contentManager.addContentManagerListener(listener)
             Disposer.register(manager) { toolWindow.contentManager.removeContentManagerListener(listener) }
             val windows = object : ToolWindowManagerListener {
+                override fun stateChanged(manager: ToolWindowManager) = syncDot()
+
                 override fun toolWindowShown(shown: ToolWindow) {
                     if (shown.id == toolWindow.id) syncDot()
                 }

@@ -1,26 +1,18 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.toKind
 import ai.kilocode.rpc.dto.SessionActivityDto
-import ai.kilocode.rpc.dto.SessionActivityKindDto
 
 internal fun aggregateWorktreeActivity(
     activity: Map<String, SessionActivityDto>,
 ): Map<String, SessionActivityKind> = activity.values
     .groupBy { normalize(it.directory) }
-    .mapValues { (_, items) -> items.map { kind(it.kind) }.minBy(::rank) }
+    .mapValues { (_, items) -> items.map { it.kind.toKind() }.minBy(::rank) }
 
 internal fun normalizeWorktreePath(path: String): String = normalize(path)
 
 private fun normalize(path: String): String = path.trimEnd('/')
-
-private fun kind(kind: SessionActivityKindDto): SessionActivityKind = when (kind) {
-    SessionActivityKindDto.RUNNING -> SessionActivityKind.RUNNING
-    SessionActivityKindDto.QUESTION -> SessionActivityKind.QUESTION
-    SessionActivityKindDto.PLAN -> SessionActivityKind.PLAN
-    SessionActivityKindDto.PERMISSION -> SessionActivityKind.PERMISSION
-    SessionActivityKindDto.ERROR -> SessionActivityKind.ERROR
-}
 
 /**
  * Precedence for a worktree holding several sessions: anything waiting on the user first, then live

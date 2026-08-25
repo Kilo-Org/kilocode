@@ -5,6 +5,7 @@ package ai.kilocode.client.app
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.toKind
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -109,10 +110,15 @@ class KiloSessionService internal constructor(
         }
     }
 
-    internal fun activitySnapshot(): Map<String, SessionActivityKind> =
-        statuses.value
-            .filterValues { it.type == "busy" }
-            .mapValues { SessionActivityKind.RUNNING }
+    /**
+     * Per-session activity for history and session lists. [activity] is the richer source — it also
+     * carries waiting and failed sessions, and it covers sessions that are not open — but it drops
+     * sessions whose directory the backend cannot resolve, so the busy statuses stay as a fallback.
+     */
+    internal fun activitySnapshot(): Map<String, SessionActivityKind> {
+        val busy = statuses.value.filterValues { it.type == "busy" }.mapValues { SessionActivityKind.RUNNING }
+        return busy + activity.value.mapValues { it.value.kind.toKind() }
+    }
 
     suspend fun list(dir: String): SessionListDto {
         val result = call { list(dir) }
