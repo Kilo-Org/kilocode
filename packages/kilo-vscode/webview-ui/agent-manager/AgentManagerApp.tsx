@@ -298,18 +298,16 @@ const AgentManagerContent: Component = () => {
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
   const [history, setHistory] = createSignal(false)
-  /** Project whose sessions the history view is scoped to (multi-project). */
   const [historyProject, setHistoryProject] = createSignal<string | undefined>()
-  const [historySwitch, setHistorySwitch] = createSignal<string | undefined>()
+  const [historySwitches, setHistorySwitches] = createSignal<string[]>([])
   const closeHistory = () => {
     setHistory(false)
     setHistoryProject(undefined)
-    setHistorySwitch(undefined)
+    setHistorySwitches([])
   }
-  /** Open the sessions view; a project id scopes it and activates that project. */
   const openHistory = (pid?: string) => {
     const scoped = pid !== undefined && multiProject()
-    setHistorySwitch(scoped && currentProjectId() !== pid ? pid : undefined)
+    if (scoped) setHistorySwitches((prev) => (prev.includes(pid) ? prev : [...prev, pid]))
     setHistoryProject(scoped ? pid : undefined)
     setHistory(true)
     if (scoped) {
@@ -1164,7 +1162,10 @@ const AgentManagerContent: Component = () => {
       first: () => undefined,
       close: () => setReviewActive(false),
       hide: () => setSidePanel(null),
-      history: () => (historySwitch() === state.projectId ? setHistorySwitch(undefined) : closeHistory()),
+      history: () =>
+        state.projectId && historySwitches().includes(state.projectId)
+          ? setHistorySwitches((prev) => prev.filter((id) => id !== state.projectId))
+          : closeHistory(),
       reset: subagents.reset,
     })
   }
