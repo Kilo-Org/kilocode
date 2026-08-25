@@ -70,38 +70,8 @@ class HeaderPopupControllerTest : BasePlatformTestCase() {
         assertEquals(0, view.requests)
     }
 
-    fun `test an overlay suppresses the hover popup`() {
-        var overlay = false
-        val controller = controller { overlay }
-        val view = view()
-
-        overlay = true
-        controller.show(view)
-
-        // A blocking overlay leaves no target pending and the dwell never asks for a popup body.
-        assertNull(target(controller))
-        assertNull(guard(controller))
-        timers.advanceBy(500)
-        assertEquals(0, view.requests)
-    }
-
-    fun `test an overlay appearing during the dwell cancels the popup`() {
-        var overlay = false
-        val controller = controller { overlay }
-        val view = view()
-
-        controller.show(view)
-        assertNotNull(target(controller))
-
-        overlay = true
-        timers.advanceBy(500)
-
-        assertNull(target(controller))
-        assertEquals(0, view.requests)
-    }
-
-    private fun controller(suppressed: () -> Boolean = { false }): HeaderPopupController {
-        val item = HeaderPopupController(timers, suppressed)
+    private fun controller(): HeaderPopupController {
+        val item = HeaderPopupController(timers)
         controllers.add(item)
         return item
     }
