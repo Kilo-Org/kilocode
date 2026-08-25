@@ -166,7 +166,6 @@ export const dict = {
     "L'approvazione automatica è abilitata. Le richieste di autorizzazione saranno approvate automaticamente.",
   "prompt.action.autoApprove.disabled":
     "L'approvazione automatica è disabilitata. Fai clic per approvare automaticamente le richieste di autorizzazione.",
-  "prompt.action.resetModel": "Ripristina modello predefinito",
   "prompt.action.enhanceDescription":
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",

@@ -90,6 +90,11 @@ internal interface ActiveListHitCell {
  */
 internal interface ActiveListItem {
     val key: String
+    /**
+     * Stable identity used to restore selection across refreshes. Defaults to [key]; override when
+     * the key is not stable for the row's lifetime.
+     */
+    val identity: Any get() = key
     val title: String
     val note: String? get() = null
     val description: String? get() = null
@@ -104,7 +109,8 @@ internal interface ActiveListItem {
     val metrics: ActiveListMetrics? get() = null
     val cells: List<ActiveListCell> get() = emptyList()
     val disabled: Boolean get() = false
-    val deleting: Boolean get() = false
+    /** Non-null while a background operation owns this row; the text is shown trailing. */
+    val progress: String? get() = null
     /** Extra text matched by the filter field in addition to [title]; null matches title only. */
     val search: String? get() = null
 }
@@ -121,7 +127,7 @@ internal fun activeListVisibleCells(
     menu: Boolean = false,
 ): List<ActiveListCell> {
     if (item.disabled) return emptyList()
-    if (item.deleting) return emptyList()
+    if (item.progress != null) return emptyList()
     val cells = item.cells.filter { active || it.alwaysVisible }
     if (!menu) return cells
     return cells + activeListMenuCell()
@@ -224,7 +230,7 @@ internal fun activeListCellAt(
     return activeListCellAt(list, index, point, selected, false)
 }
 
-private fun activeListLayout(component: Component) {
+internal fun activeListLayout(component: Component) {
     if (component !is Container) return
     component.doLayout()
     for (child in component.components) activeListLayout(child)

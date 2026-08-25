@@ -1,17 +1,23 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.SessionMessageListPanel
+import ai.kilocode.client.session.ui.header.BranchDock
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
@@ -23,6 +29,8 @@ import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.ToolRefDto
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBRadioButton
@@ -832,6 +840,135 @@ class SessionScrollTest : SessionUiTestBase() {
         assertBottom(scrollBar())
     }
 
+    // The branch dock sits outside the scroll pane, so it hiding on turn start (and reappearing on
+    // turn end) resizes the transcript viewport by its own row height. Bottom-following must survive
+    // both edges.
+
+    fun `test dock hiding on turn start keeps the transcript following`() {
+        val dock = dockSession()
+        val bar = scrollBar()
+        setBottom(bar)
+        drainScroll()
+        assertTrue(dock.isVisible)
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+
+        controller().model.setState(SessionState.Busy("running"))
+        drainScroll()
+
+        assertFalse(dock.isVisible)
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+    }
+
+    fun `test dock showing on turn end keeps the transcript following`() {
+        val dock = dockSession()
+        val bar = scrollBar()
+        setBottom(bar)
+        controller().model.setState(SessionState.Busy("running"))
+        drainScroll()
+        assertFalse(dock.isVisible)
+
+        controller().model.setState(SessionState.Idle)
+        settle()
+        drainScroll()
+
+        assertTrue(dock.isVisible)
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+    }
+
+    // A wheel gesture that moves nothing (already pinned at the bottom) leaves the user-gesture flag
+    // set until the next adjustment event. Without an explicit re-pin the dock's own viewport resize
+    // is that event, and it reads as a deliberate scroll away from the bottom.
+    fun `test dock toggle keeps following after a wheel gesture at the bottom`() {
+        val dock = dockSession()
+        val bar = scrollBar()
+        setBottom(bar)
+        drainScroll()
+        wheelNoop()
+
+        controller().model.setState(SessionState.Busy("running"))
+        drainScroll()
+
+        assertFalse(dock.isVisible)
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+
+        wheelNoop()
+        controller().model.setState(SessionState.Idle)
+        settle()
+        drainScroll()
+
+        assertTrue(dock.isVisible)
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+    }
+
+    // JViewport notifies the last-registered listener first, and a look and feel change re-installs
+    // the scroll pane UI's own viewport listener after ours. The platform's scrollbar sync then runs
+    // first, so the re-pin must not depend on listener order.
+    fun `test dock toggle keeps following after a look and feel change`() {
+        val dock = dockSession()
+        setBottom(scrollBar())
+        drainScroll()
+        scrollComponent().updateUI()
+        drainScroll()
+        assertTrue(ui.scroll.following())
+        wheelNoop()
+
+        controller().model.setState(SessionState.Busy("running"))
+        drainScroll()
+
+        assertFalse(dock.isVisible)
+        assertBottom(scrollBar())
+        assertTrue(ui.scroll.following())
+    }
+
+    fun `test dock toggle preserves a scrolled-up position`() {
+        val dock = dockSession()
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+        val value = bar.value
+        assertFalse(ui.scroll.following())
+
+        controller().model.setState(SessionState.Busy("running"))
+        drainScroll()
+
+        assertFalse(dock.isVisible)
+        assertEquals(value, bar.value)
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+
+        controller().model.setState(SessionState.Idle)
+        settle()
+        drainScroll()
+
+        assertTrue(dock.isVisible)
+        assertEquals(value, bar.value)
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test dock appearing at turn end does not break a recovered session open`() {
+        installWorktreeStatus()
+        rpc.history.addAll(history(24))
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
+
+        ui = newUi(id = "ses_test")
+        settle()
+        drainScroll()
+        assertBottom(scrollBar())
+
+        emit(ChatEventDto.TurnClose("ses_test", "done"))
+        settle()
+        drainScroll()
+
+        assertTrue(find<BranchDock>(ui).isVisible)
+        assertBottom(scrollBar())
+    }
+
     fun `test replayed event during existing session open cannot cancel initial bottom`() {
         val gate = CompletableDeferred<Unit>()
         rpc.historyGate = gate
@@ -1374,6 +1511,27 @@ class SessionScrollTest : SessionUiTestBase() {
         val expected = messageBottomValue("msg_36")
         assertTrue("expected=$expected bottom=${bottom(bar)}", expected < bottom(bar))
         assertTrue("value=${bar.value} expected=$expected", kotlin.math.abs(bar.value - expected) <= 1)
+    }
+
+    /** Serves a branch status the dock accepts, so it really takes a row above the prompt. */
+    private fun installWorktreeStatus() {
+        val worktree = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "main", availability = GhAvailability.OK)
+        }
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+    }
+
+    /** A filled transcript in a session whose branch dock is visible while idle. */
+    private fun dockSession(): BranchDock {
+        installWorktreeStatus()
+        ui = newUi()
+        layout()
+        showMessages()
+        fillTranscript(24)
+        settle()
+        drainScroll()
+        return find(ui)
     }
 
     private fun button(text: String): JButton = findAll<JButton>(ui).first { it.text == text }

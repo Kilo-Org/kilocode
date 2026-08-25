@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -1341,6 +1342,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals("make a plan", seen)
         assertFalse(enhance.isEnabled)
         assertTrue(enhance.icon is AnimatedIcon)
+        assertSame(SpinnerIcon.icon, enhance.icon)
         val icon = enhance.icon
 
         panel.setReady(true)

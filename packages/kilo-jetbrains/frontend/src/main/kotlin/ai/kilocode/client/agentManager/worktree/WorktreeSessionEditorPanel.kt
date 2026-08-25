@@ -126,7 +126,7 @@ class WorktreeSessionEditorPanel(
         addToCenter(splitter)
         syncExpanded(KiloPluginSettings.getWorktreeSessionListExpanded())
         bindModel()
-        manager.onPresent = { key -> select(key) }
+        manager.onPresent = { key -> key?.let { list.select(it) } }
         manager.onListChanged = {
             sync()
             project?.service<WorktreeStatusService>()?.refreshStats()
@@ -407,14 +407,10 @@ class WorktreeSessionEditorPanel(
         if (pending || key == SessionHost.NEW) rows += NewRow
         rows += HistoryTime.sorted(controller.sessions().map { LocalHistoryItem(it) })
             .map { SessionRow(it.session, kinds[it.id], deleting = it.id in deleting, live = titles[it.id]) }
-        list.update(rows, ActiveListSelection.PreserveNoScroll)
-        select(if (pending) SessionHost.NEW else key)
-    }
-
-    @RequiresEdt
-    private fun select(key: String?) {
-        if (key == null) return
-        list.select(key)
+        // The host owns which session is shown, so it also owns the selection: name the row and let
+        // the list hold that key until a refresh brings it in.
+        val shown = if (pending) SessionHost.NEW else key
+        list.update(rows, shown?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
     }
 
     @RequiresEdt
@@ -561,7 +557,7 @@ class WorktreeSessionEditorPanel(
     private inner class SessionRow(
         val session: SessionDto,
         val kind: SessionActivityKind?,
-        override val deleting: Boolean = false,
+        private val deleting: Boolean = false,
         // Live title of the open session, if any; reflects the agent-generated name as it streams in
         // before the listed snapshot catches up.
         private val live: String? = null,
@@ -576,7 +572,9 @@ class WorktreeSessionEditorPanel(
             return name
         }
         override val tooltip: String get() = title
-        override val badges: List<ActiveListBadge> get() = listOfNotNull(kind?.let(::worktreeActivityBadge))
+        override val progress: String? get() = if (deleting) KiloBundle.message("common.deleting") else null
+        override val badges: List<ActiveListBadge>
+            get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
     }

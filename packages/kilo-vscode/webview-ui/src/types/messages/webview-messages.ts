@@ -1397,11 +1397,6 @@ export interface PersistModelSelectionRequest {
   modelID: string
 }
 
-export interface ClearModelSelectionRequest {
-  type: "clearModelSelection"
-  agent: string
-}
-
 export interface RequestModelSelectionsMessage {
   type: "requestModelSelections"
 }
@@ -1711,7 +1706,6 @@ export type WebviewMessage =
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
   | PersistModelSelectionRequest
-  | ClearModelSelectionRequest
   | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | SetRemoteEnabledMessage

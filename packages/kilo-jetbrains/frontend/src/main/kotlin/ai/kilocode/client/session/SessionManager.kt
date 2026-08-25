@@ -15,6 +15,18 @@ interface SessionManager {
 
     fun newSession()
 
+    /** Whether this surface can open the New Worktree flow (sidebar only). */
+    val supportsNewWorktree: Boolean get() = false
+
+    /** Opens the New Worktree flow. No-op unless [supportsNewWorktree] is true. */
+    fun newWorktree() {}
+
+    /** Whether this surface can move the current chat into a worktree (sidebar only). */
+    val supportsMoveToWorktree: Boolean get() = false
+
+    /** Opens the Move to Worktree flow. No-op unless [supportsMoveToWorktree] is true. */
+    fun moveToWorktree(sessionId: String?, directory: String) {}
+
     fun showHistory(back: (() -> Unit)? = null)
 
     fun openSession(ref: SessionRef)
@@ -27,7 +39,7 @@ interface SessionManager {
 
     fun focusPrompt() {}
 
-    val showsBranchBadgeInHeader: Boolean get() = true
+    val showsBranchDock: Boolean get() = true
 
     val hostedInEditorTab: Boolean get() = false
 

@@ -274,6 +274,17 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(DIR to CUSTOM), agentRpc.skillRemovals)
     }
 
+    fun `test delete selects the skill that took the deleted slot`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        val next = edt { rows(panel)[1].key }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(skillsList(panel), panel, CUSTOM, "delete")
+
+        assertEquals(next, edt { skillsList(panel).selectedValue?.key })
+    }
+
     fun `test delete action requires confirmation`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
