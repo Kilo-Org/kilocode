@@ -45,6 +45,8 @@ export interface WorktreeDiffSourceOptions {
   /** Shared GitOps / log so sources don't each spawn their own channel. */
   git?: GitOps
   log?: (...args: unknown[]) => void
+  summary?: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
+  file?: (dir: string, base: string, file: string, signal?: AbortSignal) => Promise<WorktreeDiffEntry | null>
 }
 
 /**
@@ -57,6 +59,7 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
   const output = opts.git ? undefined : vscode.window.createOutputChannel("Kilo Diff: Workspace")
   const log = opts.log ?? ((...args: unknown[]) => appendOutput(output!, "WorktreeDiffSource", ...args))
   const git = opts.git ?? new GitOps({ log })
+  const controller = new AbortController()
 
   const root = (): string | undefined => {
     const dir = opts.dir?.()
@@ -101,7 +104,9 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
   }
 
   const status: StatusResolver = async (current, file) => {
-    const entry = await diffFile(git, current.directory, current.baseBranch, file, log)
+    const entry = opts.file
+      ? await opts.file(current.directory, current.baseBranch, file)
+      : await diffFile(git, current.directory, current.baseBranch, file, log)
     return entry?.status
   }
 
@@ -112,7 +117,9 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
       const current = await resolveTarget()
       if (!current) return { diffs: [] }
 
-      const entries = await diffSummary(git, current.directory, current.baseBranch, log)
+      const entries = opts.summary
+        ? await opts.summary(current.directory, current.baseBranch)
+        : await diffSummary(git, current.directory, current.baseBranch, log)
       const diffs = entries.map(toDiffFile)
       log(`Diff: ${diffs.length} file(s)`)
       return { diffs }
@@ -124,7 +131,9 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
       if (!current) return null
 
       try {
-        const entry = await diffFile(git, current.directory, current.baseBranch, file, log)
+        const entry = opts.file
+          ? await opts.file(current.directory, current.baseBranch, file, controller.signal)
+          : await diffFile(git, current.directory, current.baseBranch, file, log)
         if (!entry) return null
         return toDiffFile(entry)
       } catch (err) {
@@ -152,6 +161,7 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
       // owned by the caller.
       if (!opts.git) git.dispose()
       output?.dispose()
+      controller.abort()
       target = undefined
     },
   }

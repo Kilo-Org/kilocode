@@ -28,6 +28,10 @@ const Task = Schema.Struct({
     description:
       "Optional model override from agent_manager_models (e.g. 'Claude Opus 4.1'). Omit unless the user requests a different model. Agent Manager otherwise inherits the current turn's model. A qualified provider/model ID is also accepted to force a specific provider.",
   }),
+  provider: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "Optional provider ID to constrain model resolution (e.g. 'anthropic'). Use with model to select a model from a specific provider; omit to use the current-turn provider preference.",
+  }),
   variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "Optional reasoning variant override from agent_manager_models. Specify it without model to override the inherited model's variant. Omit both to inherit the current turn's selection.",
@@ -40,6 +44,9 @@ const Task = Schema.Struct({
   ),
   Schema.makeFilter((task) =>
     task.model?.trim() && !task.prompt?.trim() ? "A task model requires an initial prompt" : undefined,
+  ),
+  Schema.makeFilter((task) =>
+    task.provider?.trim() && !task.model?.trim() ? "A task provider requires a model" : undefined,
   ),
   Schema.makeFilter((task) =>
     task.variant?.trim() && !task.prompt?.trim() ? "A task variant requires an initial prompt" : undefined,
@@ -245,6 +252,7 @@ function select(
     ...(task.branchName != null ? { branchName: task.branchName } : {}),
   }
   const value = task.model?.trim()
+  const provider = task.provider?.trim()
   const variant = task.variant?.trim()
   if (!value) {
     if (!variant) {
@@ -271,12 +279,21 @@ function select(
     return { task: { ...base, model: source.model, variant } }
   }
 
-  const { pool, names } = lookup(all, value)
+  const scope = provider ? all.filter((item) => item.providerID === provider) : all
+  if (provider && scope.length === 0) {
+    return {
+      error: `Task ${index + 1} provider is not available for model selection: ${provider}. Requested model: ${value}.`,
+    }
+  }
+
+  const { pool, names } = lookup(scope, value)
   if (pool.length === 0) {
-    const close = suggest(all, value)
+    const close = suggest(scope, value)
     const hint = close.length ? ` Closest matches: ${close.join(", ")}.` : ""
     return {
-      error: `Task ${index + 1} model is not available: ${value}.${hint} Use agent_manager_models to search models.`,
+      error: provider
+        ? `Task ${index + 1} model is not available from provider "${provider}": ${value}.${hint} Use agent_manager_models to search models.`
+        : `Task ${index + 1} model is not available: ${value}.${hint} Use agent_manager_models to search models.`,
     }
   }
   if (names.length > 1) {
@@ -479,8 +496,9 @@ export const AgentManagerTool = Tool.define<
                 ...(msg.model.variant ? { variant: msg.model.variant } : {}),
               }
             : undefined
-          const need = params.tasks.some((task) => task.model?.trim() || task.variant?.trim())
-          const all = need ? candidates(yield* provider.list()) : []
+          const need = params.tasks.some((task) => task.model?.trim() || task.provider?.trim() || task.variant?.trim())
+          const providers = need ? yield* provider.list() : undefined
+          const all = providers ? candidates(providers) : []
           const preferred = need
             ? (source?.model.providerID ??
               (yield* provider.defaultModel().pipe(

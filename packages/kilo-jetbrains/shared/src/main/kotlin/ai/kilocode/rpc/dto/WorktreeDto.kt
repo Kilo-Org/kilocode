@@ -11,6 +11,7 @@ data class WorktreeDto(
     val main: Boolean = false,     // primary working tree — not deletable
     val locked: Boolean = false,   // git worktree lock — blocks a plain remove
     val lockReason: String? = null, // optional reason recorded when the tree was locked
+    val prunable: Boolean = false, // git marks metadata stale because the directory is gone
 )
 
 @Serializable

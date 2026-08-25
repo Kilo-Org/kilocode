@@ -24,6 +24,7 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMetrics
@@ -73,6 +74,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
+        installBrowser()
         coroutines = TestCoroutines()
         rpc = FakeWorktreeRpcApi()
         service = KiloWorktreeService(coroutines.scope, rpc)

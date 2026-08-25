@@ -23,11 +23,13 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 | Mention | Description | Example |
 |---|---|---|
 | **File** | Attach a file's contents to your message | `@src/utils.ts` |
-| **Terminal** | Include your active VS Code terminal output | `@terminal` |
+| **Terminal** | In the sidebar, include the active VS Code terminal output. In Agent Manager, include the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. | `@terminal` |
 | **Git Changes** | Attach uncommitted working-tree diffs and new files | `@git-changes` |
 | **Past chats** | Add a previous session's chat history as context | `@` → **Past chats** → pick a session |
 
 Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
+
+Terminal context is limited to 500 lines or 50,000 characters. Longer output is truncated. If no terminal content is available, Kilo reports that terminal content is unavailable instead of attaching an empty file.
 
 ### Referencing Past Chats
 

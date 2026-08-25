@@ -74,7 +74,7 @@ import type { ProjectContext } from "./project/context"
 import { ProjectContexts } from "./project/contexts"
 import { hydrateExpanded } from "./project/hydrate"
 import { createMultiVersion, type MultiVersionHost } from "./provider-multi-version"
-import { handleProjectMessage, type ProjectMessageDeps } from "./project/messages"
+import { handleProjectMessage, routeProjectSession, type ProjectMessageDeps } from "./project/messages"
 import { createProjectWiring, type ProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
@@ -197,6 +197,7 @@ export class AgentManagerProvider implements Disposable {
       pushState: (ctx) => this.pushState(ctx),
       changed: () => this.onWorkspaceChanged(),
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
+      routeSession: (pid, sid, dir, gen) => routeProjectSession(this.panel?.sessions, pid, sid, dir, gen),
     })
     this.registry = wiring.registry
     this.contexts = wiring.contexts
@@ -212,7 +213,7 @@ export class AgentManagerProvider implements Disposable {
       log: (msg) => this.log(msg),
     })
     const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
-    this.diffCatalog = new DiffSourceCatalog(this.connectionService)
+    this.diffCatalog = new DiffSourceCatalog(this.connectionService, local)
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
@@ -323,9 +324,8 @@ export class AgentManagerProvider implements Disposable {
     }
     const info = ev.properties?.info
     const dir = info?.directory
-    // Session events from sync or older backends can lack time/directory; a
-    // throw here would escape into the SSE dispatch loop and starve the other
-    // listeners (there is no per-listener error isolation).
+    // Session events from sync or older backends can lack time/directory; a throw
+    // would escape into the SSE dispatch loop and starve the other listeners.
     if (!info?.time || !dir || (info.parentID !== undefined && info.parentID !== null)) return
     const ctx = this.contexts.byDirectory(dir)
     if (!ctx || ctx.lifecycle !== "ready") return
@@ -1804,7 +1804,7 @@ export class AgentManagerProvider implements Disposable {
     await continueInWorktree(
       {
         root,
-        getClient: () => this.connectionService.getClient(),
+        connection: this.connectionService,
         createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
         runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
         cleanupWorktree: async (id) => {

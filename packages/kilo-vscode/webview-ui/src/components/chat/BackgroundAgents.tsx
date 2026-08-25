@@ -19,13 +19,7 @@ import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
-import {
-  backgroundAgents,
-  backgroundJobAgents,
-  foregroundAgent,
-  showBackgroundAgent,
-  type BackgroundAgent,
-} from "./background-agents"
+import { backgroundAgents, backgroundJobAgents, showBackgroundAgent, type BackgroundAgent } from "./background-agents"
 import { openSubagent } from "./open-subagent"
 
 export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
@@ -96,15 +90,9 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
   })
 
   const visible = createMemo(() => agents().filter((agent) => showBackgroundAgent(agent, hidden())))
-  const foreground = createMemo(() => {
-    const id = session.currentSessionID()
-    return id ? foregroundAgent(session.getSessionToolParts(id), session.allStatusMap()) : undefined
-  })
-
   const summary = createMemo(() => {
     const running = visible().filter((agent) => agent.status === "running").length
     const total = visible().length
-    if (total === 0 && foreground()) return language.t("task.backgroundAgents.foreground")
     if (total === 1 && running === 1) return language.t("task.backgroundAgents.running.one")
     if (running === total) return language.t("task.backgroundAgents.running.many", { count: String(total) })
     return language.t("task.backgroundAgents.summary", { running: String(running), total: String(total) })
@@ -142,11 +130,6 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     vscode.postMessage({ type: "cancelBackgroundJob", jobID: agent.jobID, sessionID: id, requestID: pending })
   }
 
-  const background = () => {
-    const id = session.currentSessionID()
-    if (id) vscode.postMessage({ type: "backgroundSubagents", sessionID: id })
-  }
-
   const hideFinished = () =>
     setHidden(
       new Set(
@@ -157,7 +140,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     )
 
   return (
-    <Show when={visible().length > 0 || (!props.readonly && foreground())}>
+    <Show when={visible().length > 0}>
       <div data-component="task-header-agents">
         <div data-slot="task-header-agents-toolbar">
           <Show when={visible().length > 0}>
@@ -192,16 +175,6 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
                 data-open={open() ? "" : undefined}
               />
             </button>
-          </Show>
-          <Show when={!props.readonly && foreground()}>
-            <Button
-              variant="ghost"
-              size="small"
-              aria-label={language.t("task.backgroundAgents.continueInBackground")}
-              onClick={background}
-            >
-              {language.t("task.backgroundAgents.continueInBackground")}
-            </Button>
           </Show>
           <Show when={!props.readonly && visible().some((agent) => agent.status !== "running")}>
             <Button
