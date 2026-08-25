@@ -24,8 +24,7 @@ export function createDuplicateEventFilter() {
     }
 
     if (duplicateLiveEvents.has(event.type)) {
-      seen.add(event.id)
-      if (seen.size > DUPLICATE_EVENT_LIMIT) seen.delete(seen.values().next().value!)
+      if (seen.size < DUPLICATE_EVENT_LIMIT) seen.add(event.id)
     }
     return false
   }
