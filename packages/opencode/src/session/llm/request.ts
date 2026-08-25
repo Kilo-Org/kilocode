@@ -165,7 +165,7 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
   )
   // kilocode_change start
   const resolved = KiloProcessingMode.apply({
-    mode: input.user.model.processingMode,
+    mode: input.small || input.agent.mode !== "primary" ? "standard" : input.user.model.processingMode,
     provider: input.provider,
     model: input.model,
     auth: input.auth,

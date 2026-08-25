@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test"
+import { createSignal } from "solid-js"
 import { supportsFlex } from "../../webview-ui/src/context/processing-mode"
+import { createSessionProcessingMode } from "../../webview-ui/src/context/session-processing-mode"
 import type { ModelSelection, Provider } from "../../webview-ui/src/types/messages"
 
 const selection: ModelSelection = { providerID: "openai", modelID: "gpt-5.6-luna" }
@@ -23,5 +25,18 @@ describe("processing mode eligibility", () => {
     expect(
       supportsFlex({ openai: provider({ baseURL: "https://proxy.example/v1" }) }, { openai: "api" }, selection),
     ).toBe(false)
+  })
+
+  it("does not leak draft Flex into another session", () => {
+    const [session] = createSignal<string | undefined>()
+    const state = createSessionProcessingMode({
+      session,
+      selected: () => selection,
+      providers: () => ({ openai: provider() }),
+      authStates: () => ({ openai: "api" }),
+    })
+
+    state.select("flex")
+    expect(state.current("other-session")).toBe("standard")
   })
 })

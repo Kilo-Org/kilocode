@@ -10,6 +10,7 @@ import {
 
 const model = {
   id: ModelV2.ID.make("gpt-5.6-luna"),
+  providerID: ProviderV2.ID.make("openai"),
   api: { id: "gpt-5.6-luna", npm: "@ai-sdk/openai", url: "https://api.openai.com/v1" },
 }
 const provider = { id: ProviderV2.ID.make("openai"), options: {}, source: "env" as const }
@@ -28,8 +29,8 @@ test("rejects models outside the initial verified Flex allowlist", () => {
 })
 
 test("recognizes Flex request bodies and uses the extended timeout", () => {
-  expect(isFlexRequest('{"service_tier":"flex"}')).toBe(true)
-  expect(isFlexRequest('{"service_tier":"default"}')).toBe(false)
+  expect(isFlexRequest({ model, body: '{"service_tier":"flex"}' })).toBe(true)
+  expect(isFlexRequest({ model, body: '{"service_tier":"default"}' })).toBe(false)
   expect(FLEX_REQUEST_TIMEOUT_MS).toBe(900_000)
 })
 

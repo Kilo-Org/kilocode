@@ -15,7 +15,10 @@ export function createSessionProcessingMode(options: Options) {
   const key = (sessionID?: string) => sessionID ?? options.session() ?? "global"
 
   const current = (sessionID?: string): ProcessingMode =>
-    selections[key(sessionID)] ?? (sessionID ? selections.global : undefined) ?? DEFAULT_PROCESSING_MODE
+    selections[key(sessionID)] ??
+    (sessionID ? DEFAULT_PROCESSING_MODE : undefined) ??
+    selections.global ??
+    DEFAULT_PROCESSING_MODE
 
   const peek = (sessionID?: string) => selections[sessionID ?? options.session() ?? "global"]
   const select = (value: ProcessingMode, sessionID?: string) => setSelections(key(sessionID), value)

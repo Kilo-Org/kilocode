@@ -1833,7 +1833,7 @@ const layer = Layer.effect(
           const fetchFn = customFetch ?? fetch
           const opts = init ?? {}
           const chunkAbortCtl = typeof chunkTimeout === "number" && chunkTimeout > 0 ? new AbortController() : undefined
-          const flex = isFlexRequest(opts.body) // kilocode_change
+          const flex = isFlexRequest({ model, body: opts.body }) // kilocode_change
           const timeoutOptions = flex ? { ...options, timeout: FLEX_REQUEST_TIMEOUT_MS } : options // kilocode_change
           const timeout = buildTimeoutSignal(timeoutOptions) // kilocode_change - use cancellable timeout for connection phase
           // kilocode_change start - extend the same deadline to the first response byte

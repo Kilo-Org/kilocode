@@ -5,8 +5,11 @@ export type ProcessingMode = "standard" | "flex"
 export const FLEX_REQUEST_TIMEOUT_MS = 900_000
 const FLEX_MODEL_IDS = new Set(["gpt-5.6-luna"])
 
-export function isFlexRequest(body: unknown) {
-  return typeof body === "string" && /"service_tier"\s*:\s*"flex"/.test(body)
+export function isFlexRequest(input: { model: Pick<Provider.Model, "api" | "id" | "providerID">; body: unknown }) {
+  if (input.model.providerID !== "openai") return false
+  if (input.model.api.npm !== "@ai-sdk/openai") return false
+  if (!FLEX_MODEL_IDS.has(input.model.id)) return false
+  return typeof input.body === "string" && /"service_tier"\s*:\s*"flex"/.test(input.body)
 }
 
 type Input = {

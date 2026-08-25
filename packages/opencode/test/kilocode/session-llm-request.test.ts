@@ -75,7 +75,7 @@ function user(name: string, selected: Provider.Model = model, processingMode?: "
   }
 }
 
-async function prepare(name: string, oauth = false, processingMode?: "standard" | "flex") {
+async function prepare(name: string, oauth = false, processingMode?: "standard" | "flex", small = false) {
   const selected = processingMode ? flexModel : model
   const auth: Auth.Info | undefined = oauth
     ? { type: "oauth", refresh: "refresh", access: "access", expires: Date.now() + 60_000 }
@@ -107,6 +107,7 @@ async function prepare(name: string, oauth = false, processingMode?: "standard" 
       plugin,
       flags,
       isWorkflow: false,
+      small,
     }),
   )
 }
@@ -142,5 +143,11 @@ describe("Kilo persona in generated metadata requests", () => {
 
     expect(flex.params.options.serviceTier).toBe("flex")
     expect(standard.params.options.serviceTier).toBeUndefined()
+  })
+
+  test("keeps background generation on Standard when the user turn uses Flex", async () => {
+    const title = await prepare("title", false, "flex", true)
+
+    expect(title.params.options.serviceTier).toBeUndefined()
   })
 })

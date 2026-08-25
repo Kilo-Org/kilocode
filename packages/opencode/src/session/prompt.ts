@@ -822,6 +822,7 @@ export const layer = Layer.effect(
         yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
+      const current = yield* sessions.get(input.sessionID).pipe(Effect.orDie) // kilocode_change
       const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID))
       // kilocode_change start - retain the source session variant across Agent Manager's model-less fork handoff
       const stored = !input.model && !ag.model ? model : undefined
@@ -853,7 +854,8 @@ export const layer = Layer.effect(
           processingMode:
             input.processingMode ??
             (model as { processingMode?: ModelV2.ProcessingMode }).processingMode ??
-            (stored as { processingMode?: ModelV2.ProcessingMode } | undefined)?.processingMode,
+            (stored as { processingMode?: ModelV2.ProcessingMode } | undefined)?.processingMode ??
+            current.model?.processingMode,
           // kilocode_change end
         },
         system: input.system,
@@ -861,7 +863,6 @@ export const layer = Layer.effect(
         editorContext: input.editorContext, // kilocode_change
       }
 
-      const current = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
       if (
         current.agent !== info.agent ||
         current.model?.providerID !== info.model.providerID ||
