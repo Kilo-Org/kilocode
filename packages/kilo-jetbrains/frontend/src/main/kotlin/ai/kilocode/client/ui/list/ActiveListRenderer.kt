@@ -208,7 +208,7 @@ internal class ActiveListRenderer(
             glyph.isVisible = false
             wrap.update(list, false, false)
             wrap.setPreferredSize(Dimension(0, bodyHeight ?: value.height))
-            top.invalidate()
+            activeListInvalidate(this)
             return this
         }
         gap = false
@@ -262,7 +262,10 @@ internal class ActiveListRenderer(
         pill.background = if (selected && list.isEnabled) UIUtil.getListBackground(true, active) else list.background
         val height = bodyHeight
         wrap.setPreferredSize(height?.let { Dimension(0, it) })
-        top.invalidate()
+        // Neither the content mutations above nor setPreferredSize invalidate reliably: a same-size
+        // icon swap, an equal label text, or an explicit preferred size leave the tree valid, and a
+        // valid subtree keeps the sizes it was measured with for another row.
+        activeListInvalidate(this)
         return this
     }
 

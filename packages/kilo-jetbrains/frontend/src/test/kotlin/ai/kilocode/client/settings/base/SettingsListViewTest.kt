@@ -46,6 +46,7 @@ import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
 import javax.swing.JLayeredPane
 import javax.swing.JPanel
 import javax.swing.ListSelectionModel
@@ -1111,6 +1112,60 @@ class SettingsListViewTest : BasePlatformTestCase() {
             assertNull(activeListCellAt(view.list, 0, center(area), selected = true))
             hover(view, center(area))
             assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+        }
+    }
+
+    fun `test pr badge hit region ignores the metrics of other rows`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(
+                listOf(
+                    metricsItem(
+                        "wide",
+                        "Alpha",
+                        ActiveListMetrics(
+                            additions = 1234,
+                            deletions = 987,
+                            ahead = 42,
+                            behind = 17,
+                            pr = ActiveListBadge("#12345"),
+                            onPr = { calls += "wide" },
+                        ),
+                    ),
+                    metricsItem("narrow", "Beta", ActiveListMetrics(pr = ActiveListBadge("#7"), onPr = { calls += "narrow" })),
+                ),
+            )
+            view.list.size = Dimension(360, 160)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val wide = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_PR_CELL)
+            val narrow = activeListCellBounds(view.list, 1, selected = false).getValue(ACTIVE_LIST_PR_CELL)
+            // Both badges trail their row, so they share a right edge no matter how wide the changes
+            // beside them are.
+            assertEquals(wide.x + wide.width, narrow.x + narrow.width)
+
+            // The renderer is one reused stamp: rendering the wide row, or a full paint pass over
+            // every row, must not move the narrow row's hit region.
+            activeListCellBounds(view.list, 0, selected = false)
+            assertEquals(narrow, activeListCellBounds(view.list, 1, selected = false).getValue(ACTIVE_LIST_PR_CELL))
+            paint(view.list)
+            assertEquals(narrow, activeListCellBounds(view.list, 1, selected = false).getValue(ACTIVE_LIST_PR_CELL))
+
+            click(view, center(narrow))
+            click(view, center(wide))
+            assertEquals(listOf("narrow", "wide"), calls)
+        }
+    }
+
+    private fun paint(list: JBList<*>) {
+        val image = UIUtil.createImage(list, list.width, list.height, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            list.paint(g)
+        } finally {
+            g.dispose()
         }
     }
 

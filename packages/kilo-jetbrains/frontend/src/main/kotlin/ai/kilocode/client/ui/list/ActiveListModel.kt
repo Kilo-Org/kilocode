@@ -250,6 +250,21 @@ internal fun activeListLayout(component: Component) {
     for (child in component.components) activeListLayout(child)
 }
 
+/**
+ * Marks a rendered row and everything under it invalid.
+ *
+ * A list renderer is one component reused for every row, and it changes content without changing
+ * size. Swing caches each container's preferred/minimum size and - through
+ * [java.awt.Container.validate], the layout pass painting uses - skips subtrees that are still
+ * valid, so a row would otherwise be laid out with sizes measured for whichever row the renderer
+ * rendered before it. Invalidating the whole stamp keeps painting and the [activeListLayout] pass
+ * behind [activeListHits] on the same geometry.
+ */
+internal fun activeListInvalidate(component: Component) {
+    component.invalidate()
+    if (component is Container) for (child in component.components) activeListInvalidate(child)
+}
+
 private fun forEachHitCell(component: Component, action: (ActiveListHitCell) -> Unit) {
     fun visit(c: Component) {
         // Skip hidden subtrees so a badge left visible inside a hidden trailing panel is not
