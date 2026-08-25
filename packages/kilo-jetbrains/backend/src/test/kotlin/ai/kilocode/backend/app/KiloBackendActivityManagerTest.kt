@@ -34,7 +34,14 @@ class KiloBackendActivityManagerTest {
         scope.cancel()
     }
 
-    private fun start() = manager.start(statuses, { directories[it] }, events)
+    /**
+     * Starts the manager and waits until its event collector has subscribed. [events] has no
+     * replay, so an emit before that point is silently discarded and the test hangs.
+     */
+    private suspend fun start() {
+        manager.start(statuses, { directories[it] }, events)
+        withTimeout(5_000) { events.subscriptionCount.first { it > 0 } }
+    }
 
     @Test
     fun `busy status with known directory emits running activity`() = runBlocking {
@@ -87,6 +94,38 @@ class KiloBackendActivityManagerTest {
 
         withTimeout(5_000) { manager.activity.first { "ses_1" !in it } }
         assertFalse("ses_1" in manager.activity.value)
+    }
+
+    @Test
+    fun `error persists through idle and clears on next turn`() = runBlocking {
+        directories["ses_1"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+
+        events.emit(ChatEventDto.Error("ses_1"))
+        await("ses_1", SessionActivityKindDto.ERROR)
+
+        // Turn ends: session goes idle but the error must stay visible.
+        statuses.value = mapOf("ses_1" to SessionStatusDto("idle"))
+        events.emit(ChatEventDto.SessionIdle("ses_1"))
+        await("ses_1", SessionActivityKindDto.ERROR)
+
+        // A new turn clears the error.
+        events.emit(ChatEventDto.TurnOpen("ses_1"))
+        withTimeout(5_000) { manager.activity.first { "ses_1" !in it } }
+        assertFalse("ses_1" in manager.activity.value)
+    }
+
+    @Test
+    fun `global error without session is ignored`() = runBlocking {
+        directories["ses_1"] = "/repo/wt"
+        start()
+
+        events.emit(ChatEventDto.Error(null))
+        events.emit(ChatEventDto.QuestionAsked("ses_1", question("q_1", "ses_1")))
+
+        val snap = await("ses_1", SessionActivityKindDto.QUESTION)
+        assertEquals(1, snap.size)
     }
 
     @Test

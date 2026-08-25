@@ -55,10 +55,43 @@
   padding: 0;
 }
 
+.prompt-review-comments-toggle {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  cursor: pointer;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+.prompt-review-comments-toggle:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+  border-radius: 4px;
+}
+
 .prompt-review-comments-title {
+  flex-shrink: 0;
   font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: var(--vscode-foreground);
+}
+
+/* The file summary is the first thing to give up room in a narrow sidebar. */
+.prompt-review-comments-meta {
+  min-width: 0;
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weaker, var(--vscode-descriptionForeground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prompt-review-comments-meta::before {
+  content: "·";
+  margin-right: 4px;
 }
 
 .prompt-review-comments-header [data-component="button"] {
@@ -68,53 +101,48 @@
   font-size: var(--kilo-font-size-10);
 }
 
-.prompt-review-chip-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 280px));
-  gap: 6px;
-  max-height: 124px;
-  overflow: auto;
-  align-content: start;
-  justify-content: start;
-  padding: 0;
-}
-
-.prompt-review-chip {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
-  border-radius: 6px;
-  background: var(--vscode-editor-background, rgba(127, 127, 127, 0.08));
-  min-width: 0;
-}
-
-.prompt-review-chip-body {
-  all: unset;
+.prompt-review-list {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
-  box-sizing: border-box;
-  padding: 6px;
-  cursor: pointer;
 }
 
-.prompt-review-chip:hover {
-  border-color: var(--border-focus, var(--vscode-focusBorder));
+.prompt-review-list--scroll {
+  max-height: 320px;
+  overflow: auto;
 }
 
-.prompt-review-chip-body:focus-visible {
-  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+.prompt-review-row {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid transparent;
   border-radius: 6px;
+  background: var(--surface-inset-base, rgba(127, 127, 127, 0.08));
+  min-width: 0;
 }
 
-.prompt-review-chip-icon {
-  width: 20px;
-  height: 20px;
+.prompt-review-row:hover {
+  border-color: var(--border-weak-base, var(--vscode-panel-border));
+}
+
+.prompt-review-row--full {
+  border-color: var(--border-weak-base, var(--vscode-panel-border));
+  background: var(--vscode-editor-background, rgba(127, 127, 127, 0.12));
+}
+
+.prompt-review-row-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px;
+}
+
+.prompt-review-row-icon {
+  width: 18px;
+  height: 18px;
   border-radius: 5px;
-  background: var(--surface-inset-base, rgba(127, 127, 127, 0.12));
   color: var(--text-weak, var(--vscode-descriptionForeground));
   display: flex;
   align-items: center;
@@ -122,21 +150,29 @@
   flex-shrink: 0;
 }
 
-.prompt-review-chip-copy {
-  min-width: 0;
+.prompt-review-row-main {
+  all: unset;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
 }
 
-.prompt-review-chip-main {
+.prompt-review-row-main:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+  border-radius: 4px;
+}
+
+.prompt-review-row-head {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
 
-.prompt-review-chip-title {
-  flex: 1;
+.prompt-review-row-label {
   min-width: 0;
   font-size: var(--kilo-font-size-10);
   font-weight: 600;
@@ -146,17 +182,104 @@
   text-overflow: ellipsis;
 }
 
-.prompt-review-chip-line {
+.prompt-review-row-line,
+.prompt-review-row-author {
   flex-shrink: 0;
   font-size: var(--kilo-font-size-10);
   font-weight: 600;
   color: var(--text-weak, var(--vscode-descriptionForeground));
 }
 
-.prompt-review-chip-remove {
-  margin-right: 4px;
-  width: 14px;
-  height: 14px;
+.prompt-review-row-badge {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--surface-inset-base-hover, rgba(127, 127, 127, 0.2));
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  white-space: nowrap;
+}
+
+.prompt-review-row-preview {
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.35;
+  color: var(--vscode-foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-align: start;
+  white-space: pre-wrap;
+}
+
+.prompt-review-row-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 6px 6px 30px;
+  min-width: 0;
+}
+
+.prompt-review-row-path {
+  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weaker, var(--vscode-descriptionForeground));
+  overflow-wrap: anywhere;
+}
+
+.prompt-review-row-text {
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.4;
+  color: var(--vscode-foreground);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Markdown bodies are authored for full-width panels; keep them compact here.
+   Flex on the root also drops the whitespace line box the renderer emits. */
+.prompt-review-row-text [data-component="markdown"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.4;
+}
+
+.prompt-review-row-text :where(p, ul, ol, pre, blockquote, h1, h2, h3, h4, h5, h6) {
+  margin: 0 0 4px;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.prompt-review-row-text :where(p, ul, ol, pre, blockquote, h1, h2, h3, h4, h5, h6):last-child {
+  margin-bottom: 0;
+}
+
+.prompt-review-row-text :where(code) {
+  font-size: var(--kilo-font-size-10);
+}
+
+.prompt-review-row-snippet {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.12));
+  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+  font-size: var(--kilo-font-size-10);
+  line-height: 1.35;
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prompt-review-row-remove {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
   border: none;
   border-radius: 999px;
   background: var(--surface-inset-base, rgba(127, 127, 127, 0.16));
@@ -170,91 +293,32 @@
   padding: 0;
 }
 
-.prompt-review-chip-remove:hover {
+.prompt-review-row-remove:hover {
   color: var(--vscode-foreground);
   background: var(--surface-inset-base-hover, rgba(127, 127, 127, 0.24));
 }
 
-.prompt-review-chip-remove:focus-visible {
+.prompt-review-row-remove:focus-visible {
   outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
 }
 
-.prompt-review-modal {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 0 20px 10px;
-  min-width: 360px;
-  max-width: 600px;
-}
-
-.prompt-review-modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.prompt-review-modal-headline {
-  font-size: var(--font-size-base);
+.prompt-review-more {
+  all: unset;
+  align-self: flex-start;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 600;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  cursor: pointer;
+}
+
+.prompt-review-more:hover {
   color: var(--vscode-foreground);
 }
 
-.prompt-review-modal-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 6px 12px;
-  align-items: flex-start;
-}
-
-.prompt-review-modal-label {
-  font-size: var(--kilo-font-size-10);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--text-weaker, var(--vscode-descriptionForeground));
-  white-space: nowrap;
-}
-
-.prompt-review-modal-value {
-  margin: 0;
-  min-width: 0;
-  font-size: var(--kilo-font-size-11);
-  line-height: 1.35;
-  color: var(--vscode-foreground);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.prompt-review-modal-grid code.prompt-review-modal-value {
-  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
-}
-
-.prompt-review-modal-snippet {
-  margin: 0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--vscode-panel-border);
-  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.12));
-  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
-  font-size: var(--kilo-font-size-10);
-  line-height: 1.35;
-  max-height: 120px;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-@media (max-width: 700px) {
-  .prompt-review-chip-list {
-    grid-template-columns: 1fr;
-  }
-
-  .prompt-review-modal {
-    min-width: min(360px, calc(100vw - 32px));
-    max-width: calc(100vw - 24px);
-    padding: 0 16px 10px;
-  }
+.prompt-review-more:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
 }
 
 /* Image Attachments */

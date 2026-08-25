@@ -1,37 +1,42 @@
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
-import { RunCommand } from "./cli/cmd/run"
-import { GenerateCommand } from "./cli/cmd/generate"
 // kilocode_change - upstream account console intentionally omitted; KiloCli registers `kilo console` for local settings
-import { ProvidersCommand } from "./cli/cmd/providers"
-import { AgentCommand } from "./cli/cmd/agent"
-import { UpgradeCommand } from "./cli/cmd/upgrade"
-import { UninstallCommand } from "./cli/cmd/uninstall"
-import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
+import { TuiThreadCommand } from "./cli/cmd/tui" // kilocode_change - yargs requires the default command builder eagerly
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { FormatError } from "./cli/error"
-import { ServeCommand } from "./cli/cmd/serve"
-import { DebugCommand } from "./cli/cmd/debug"
-import { StatsCommand } from "./cli/cmd/stats"
-import { McpCommand } from "./cli/cmd/mcp"
-import { GithubCommand } from "./cli/cmd/github"
-import { ExportCommand } from "./cli/cmd/export"
-import { ImportCommand } from "./cli/cmd/import"
-import { AttachCommand } from "./cli/cmd/attach"
-import { TuiThreadCommand } from "./cli/cmd/tui"
-import { AcpCommand } from "./cli/cmd/acp"
 import { EOL } from "os"
 // kilocode_change - upstream web command intentionally omitted; Kilo does not ship an embedded web UI
-import { PrCommand } from "./cli/cmd/pr"
-import { SessionCommand } from "./cli/cmd/session"
-import { DbCommand } from "./cli/cmd/db"
 import { errorMessage } from "./util/error"
-import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 import { KiloCli } from "@/kilocode/cli/setup" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" // kilocode_change
+// kilocode_change start - defer heavy command implementations until yargs selects them
+import {
+  AcpCommand,
+  AgentCommand,
+  AttachCommand,
+  DbCommand,
+  DebugCommand,
+  ExportCommand,
+  GenerateCommand,
+  GithubCommand,
+  ImportCommand,
+  McpCommand,
+  ModelsCommand,
+  PluginCommand,
+  PrCommand,
+  ProvidersCommand,
+  RunCommand,
+  ServeCommand,
+  SessionCommand,
+  StatsCommand,
+  UninstallCommand,
+  UpgradeCommand,
+  waitForLazyCommands,
+} from "@/kilocode/cli/lazy-commands"
+// kilocode_change end
 
 const args = hideBin(process.argv)
 const metadata = ensureProcessMetadata("main") // kilocode_change - correlate logs across the CLI and TUI worker
@@ -119,6 +124,7 @@ let cli = yargs(args) // kilocode_change
 
 // kilocode_change start - register Kilo-specific commands after the upstream chain
 cli = KiloCli.register(cli)
+await waitForLazyCommands() // kilocode_change - yargs completion invokes builders synchronously
 cli = cli
   // kilocode_change end
   .fail((msg, err) => {

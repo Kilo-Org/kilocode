@@ -415,12 +415,6 @@ html[data-theme="kilo-vscode"]
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-/* Collapsible section toggle */
-
-.am-section-toggle:hover .am-section-label {
-  color: var(--text-base);
-}
-
 .am-section-actions {
   display: flex;
   align-items: center;
@@ -863,22 +857,11 @@ html[data-theme="kilo-vscode"]
   }
 }
 
-/* Toolbar Run button group */
-.am-run-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-}
-
-.am-run-group-chevron {
-  padding: 0 2px !important;
-  min-width: 0 !important;
-  width: auto !important;
-}
-
-.am-run-group-chevron [data-component="icon"] {
-  width: 12px;
-  height: 12px;
+/* Toolbar Run button group — split layout comes from .am-split-button.
+   The label button tightens its right edge so the chevron sits as close
+   to the label as it does to the icon in the other split buttons. */
+.am-run-group [data-component="button"][data-size="small"] {
+  padding-right: 2px;
 }
 
 /* Unconfigured — muted until hover */
@@ -1209,88 +1192,6 @@ html[data-theme="kilo-vscode"]
 
 .am-wt-grouped.am-worktree-item-active {
   border-left-color: var(--border-focus, #007fd4);
-}
-
-/* Session list */
-
-.am-list {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* Session items */
-
-.am-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  background: none;
-  border: none;
-  width: 100%;
-  text-align: left;
-  color: var(--text-base);
-  font-family: inherit;
-  font-size: var(--font-size-base);
-}
-
-.am-item:hover {
-  background: var(--surface-inset-base-hover);
-}
-
-.am-item:active {
-  opacity: 0.8;
-}
-
-.am-item-active {
-  background: var(--surface-interactive-base);
-  color: var(--text-on-interactive-base);
-}
-
-.am-item-title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-  min-width: 0;
-}
-
-.am-item-time {
-  font-size: var(--font-size-small);
-  white-space: nowrap;
-  color: var(--text-weaker);
-  flex-shrink: 0;
-}
-
-.am-item-active .am-item-time {
-  color: var(--text-on-interactive-base);
-  opacity: 0.7;
-}
-
-/* Promote button on session rows */
-
-.am-item-promote {
-  position: absolute;
-  right: 4px;
-  flex-shrink: 0;
-  opacity: 0;
-}
-
-.am-item:hover .am-item-time {
-  opacity: 0;
-}
-
-.am-item:hover .am-item-promote {
-  opacity: 1;
 }
 
 /* Create worktree button (empty state) */
@@ -1685,16 +1586,27 @@ body.am-wt-dragging-active * {
   align-self: center;
 }
 
+/* Toolbar actions row. Spacing comes only from the container gap so the
+   row stays even no matter which optional buttons (PR, documents,
+   subagents, review) are rendered. */
 .am-tab-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   flex-shrink: 0;
   align-self: stretch;
   margin-left: auto;
-  padding-left: 6px;
+  padding-left: 8px;
   padding-right: 4px;
   border-left: 1px solid var(--border-weak-base);
+}
+
+/* One control height for the row: text buttons (Run, Apply, Open) match
+   the 20px icon buttons so hover fills align across every combination
+   of visible actions. */
+.am-tab-actions [data-component="button"][data-size="small"] {
+  height: 20px;
+  min-height: 20px;
 }
 .am-sidebar-search-popover[data-component="popover-content"] {
   max-height: min(480px, calc(100vh - 64px));
@@ -1823,8 +1735,9 @@ body.am-wt-dragging-active * {
   background: transparent;
   color: var(--text-weak);
   cursor: pointer;
-  padding: 3px 6px;
-  border-radius: 5px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono, monospace);
   font-size: var(--kilo-font-size-10);
   font-variant-numeric: tabular-nums;
@@ -1836,7 +1749,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-diff-toggle-btn:hover {
-  background: var(--button-ghost-hover, var(--surface-base-hover));
+  background: var(--surface-base-hover);
   color: var(--text-base);
 }
 
@@ -2768,7 +2681,7 @@ body.am-wt-dragging-active * {
 .am-split-button {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 2px;
 }
 
 .am-split-arrow {
@@ -2776,7 +2689,8 @@ body.am-wt-dragging-active * {
   align-items: center;
   justify-content: center;
   width: 16px;
-  height: 22px;
+  height: 20px;
+  flex-shrink: 0;
   padding: 0;
   border: none;
   background: none;
@@ -2799,6 +2713,14 @@ body.am-wt-dragging-active * {
 
 .am-split-menu {
   min-width: 250px;
+}
+
+/* Per-project row actions (history, remove) */
+
+.am-project-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 /* Fixed-width slot so menu items with and without a check mark align. */
@@ -3662,31 +3584,6 @@ body.am-wt-dragging-active * {
   border-radius: 3px;
   background: var(--text-base);
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
-}
-
-/* Session skeleton — matches .am-item layout */
-.am-skeleton-session {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px;
-}
-
-.am-skeleton-session-title {
-  height: 13px;
-  border-radius: 3px;
-  background: var(--text-base);
-  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
-}
-
-.am-skeleton-session-time {
-  height: 10px;
-  width: 52px;
-  border-radius: 3px;
-  background: var(--text-base);
-  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
-  flex-shrink: 0;
 }
 
 /* Tab switcher for New/Import tabs in the dialog */
@@ -4622,14 +4519,12 @@ body.vscode-high-contrast-light {
 
   /* Sidebar items */
   .am-local-item,
-  .am-worktree-item,
-  .am-item {
+  .am-worktree-item {
     border: 1px solid var(--vscode-contrastBorder, transparent);
   }
 
   .am-local-item-active,
-  .am-worktree-item-active,
-  .am-item-active {
+  .am-worktree-item-active {
     border-color: var(--vscode-contrastBorder, transparent);
   }
 
@@ -4806,7 +4701,6 @@ body.vscode-high-contrast-light {
   /* Focus states */
   .am-local-item:focus-visible,
   .am-worktree-item:focus-visible,
-  .am-item:focus-visible,
   .am-tab:focus-visible,
   .am-worktree-create:focus-visible,
   .am-nv-pill:focus-visible,
@@ -4876,12 +4770,18 @@ body.vscode-high-contrast-light {
 /*
  * Stacking layout for xterm terminal tabs.
  *
- * The hydration invariant (see the render helpers under `terminal/`) requires that
- * xterm canvases never leave the paint tree. Both the layer and each
- * terminal slot therefore use absolute-positioning + opacity for
- * visibility — NEVER `display: none`, because that would detach the
- * subtree and stop xterm's internal rAF render loop, causing the
- * "press Enter to see content" bug on worktree switches.
+ * Terminals are never unmounted once mounted; inactive slots hide one
+ * viewport to the left while keeping their layout box. xterm 6's render
+ * service observes the screen element and pauses hidden terminals'
+ * render loops (rAF, model updates, GPU draws), then replays a full
+ * refresh when a slot becomes visible again — the activation fit +
+ * refresh in the TerminalTab component is insurance on top of that. The
+ * historical `display: none` avoidance was for the "press Enter to see
+ * content" bug, caused by older xterm versions not resuming after a
+ * paint-tree detach; it also stops FitAddon from measuring, so hidden
+ * content wraps wrong. Keeping the box fixes wrap and still lets the
+ * render observer pause, saving the full-rate render cost for output no
+ * one sees (such as background setup scripts).
  *
  * Stack:  position:relative container hosting the main pane, review,
  *         and side panel. Sits below the tab bar inside `.am-detail`.
@@ -4889,7 +4789,7 @@ body.vscode-high-contrast-light {
  *         `pointer-events: none` when no terminal is active, letting
  *         clicks fall through to the chat behind it.
  * Slots:  absolute-positioned and stacked inside the layer; only the
- *         active one is opaque and receives pointer events.
+ *         active one is displayed and receives pointer events.
  */
 
 .am-detail-stack {
@@ -4919,17 +4819,28 @@ body.vscode-high-contrast-light {
 }
 
 .am-terminal-slot {
+  /* Hidden slots stay in layout but are translated one viewport to the
+     left, so xterm's render observer sees no intersection and pauses the
+     render loop (rAF loop, model updates, WebGL draws), then replays a
+     full refresh when the slot slides back in. Keeping the layout box
+     (unlike display:none) lets FitAddon measure the real panel size
+     while hidden — background-created terminals such as setup scripts
+     wrap their output at the panel's width from the start instead of
+     the 80 column default. */
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   min-height: 0;
   min-width: 0;
   opacity: 0;
   pointer-events: none;
+  transform: translate(-100vw, 0);
   z-index: 0;
 }
 
 .am-terminal-slot-visible {
+  transform: none;
   opacity: 1;
   pointer-events: auto;
   z-index: 1;
@@ -4937,9 +4848,9 @@ body.vscode-high-contrast-light {
 
 /* Side terminal panel — lives inside .am-diff-panel-wrapper next to the
    diff and PR panels. Header reuses .am-diff-header metrics so the
-   chrome does not shift when switching inspector modes. Visibility is
-   opacity-only: the xterm render loop dies if the subtree leaves the
-   paint tree. */
+   chrome does not shift when switching inspector modes. The panel is
+   opacity-toggled, its terminal slots hide by off-screen translate
+   (per-slot render pause, see .am-terminal-slot above). */
 .am-side-terminal {
   position: absolute;
   inset: 0;

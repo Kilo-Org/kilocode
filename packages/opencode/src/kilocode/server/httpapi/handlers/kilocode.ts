@@ -234,6 +234,15 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return true
     })
 
+    const backgroundJobPromote = Effect.fn("KilocodeHttpApi.backgroundJobPromote")(function* (ctx: {
+      params: { jobID: string }
+    }) {
+      const job = yield* background.get(ctx.params.jobID)
+      if (!job) return yield* new HttpApiError.NotFound({})
+      const promoted = yield* background.promote(ctx.params.jobID)
+      return promoted !== undefined
+    })
+
     return handlers
       .handle("heapSnapshot", heapSnapshot)
       .handle("commandFiles", commandFiles)
@@ -251,5 +260,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("sessionModelUsage", sessionModelUsage)
       .handle("backgroundJobs", backgroundJobs)
       .handle("backgroundJobCancel", backgroundJobCancel)
+      .handle("backgroundJobPromote", backgroundJobPromote)
   }),
 )

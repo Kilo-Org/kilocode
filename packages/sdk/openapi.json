@@ -3921,6 +3921,220 @@
         ]
       }
     },
+    "/experimental/resource/read": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.readResource",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uri": {
+                      "type": "string"
+                    },
+                    "mimeType": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "blob": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["uri"],
+                  "additionalProperties": false,
+                  "description": "Resource content"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read a resource from a connected MCP server by URI. Used by MCP Apps to load UI resources.",
+        "summary": "Read MCP resource",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "uri": {
+                    "type": "string"
+                  },
+                  "server": {
+                    "type": "string"
+                  }
+                },
+                "required": ["uri", "server"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.readResource({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/mcp/call-tool": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.callTool",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool call result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "array"
+                    },
+                    "isError": {
+                      "type": "boolean"
+                    },
+                    "structuredContent": {
+                      "type": "object"
+                    }
+                  },
+                  "required": ["content"],
+                  "additionalProperties": false,
+                  "description": "Tool call result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.",
+        "summary": "Call MCP tool",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "server": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "arguments": {
+                    "type": "object"
+                  }
+                },
+                "required": ["server", "name"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.callTool({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/project": {
       "get": {
         "tags": ["project"],
@@ -27115,6 +27329,50 @@
         "required": ["id", "sessionID", "operation", "targetSessionID", "sectionID"],
         "additionalProperties": false
       },
+      "AgentManagerAnswers": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "maxItems": 20
+        },
+        "minItems": 1,
+        "maxItems": 20
+      },
+      "AgentManagerAnswerRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/AgentManagerRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "targetSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "answers": {
+            "$ref": "#/components/schemas/AgentManagerAnswers"
+          }
+        },
+        "required": ["id", "sessionID", "operation", "targetSessionID", "answers"],
+        "additionalProperties": false
+      },
       "AgentManagerRequest": {
         "anyOf": [
           {
@@ -27128,6 +27386,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveRequest"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerRequest"
           }
         ]
       },
@@ -39477,6 +39738,30 @@
         "required": ["operation", "sessionID", "sectionID", "moved"],
         "additionalProperties": false
       },
+      "AgentManagerAnswerResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "resolved": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["operation", "sessionID", "questionID", "resolved"],
+        "additionalProperties": false
+      },
       "AgentManagerResult": {
         "anyOf": [
           {
@@ -39490,6 +39775,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveResult"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerResult"
           }
         ]
       },

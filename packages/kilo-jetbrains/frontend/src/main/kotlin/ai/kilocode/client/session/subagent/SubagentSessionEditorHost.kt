@@ -44,7 +44,7 @@ class SubagentSessionEditorHost(
 ) : SessionHost(project, workspace, create, resolve, status, timers, request) {
     override val readonly: Boolean get() = true
     override val hostedInEditorTab: Boolean get() = true
-    override val showsBranchBadgeInHeader: Boolean get() = false
+    override val showsBranchDock: Boolean get() = false
 
     val component = JPanel(BorderLayout())
 

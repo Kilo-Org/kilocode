@@ -3,7 +3,7 @@ import { ServerManager } from "./server-manager"
 import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2/client"
 import { SdkSSEAdapter, type SSEPayload } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
-import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
+import { createDuplicateEventFilter, resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 import { SandboxPreference } from "../sandbox-preference"
 import { ExplicitAbortState } from "./explicit-abort"
 
@@ -99,6 +99,7 @@ export class KiloConnectionService {
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly filteredListeners = new Set<{ filter: SSEEventFilter; listener: SSEEventListener }>()
   private readonly explicitAborts = new ExplicitAbortState()
+  private readonly duplicateEvent = createDuplicateEventFilter()
   private readonly stateListeners: Set<StateListener> = new Set()
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
   private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
@@ -865,6 +866,8 @@ export class KiloConnectionService {
     // Wire SSE events → broadcast to all registered listeners
     sse.onEvent((event, directory) => {
       if (this.sseClient !== sse) return
+      // EventV2Bridge also emits these durable compatibility envelopes after their normal live events.
+      if (this.duplicateEvent(event)) return
       this.broadcast(event, directory)
     })
 
