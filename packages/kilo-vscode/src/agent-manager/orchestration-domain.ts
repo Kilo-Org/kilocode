@@ -316,6 +316,7 @@ interface Target {
   root: string
   state: WorktreeStateManager
   sessionID: string
+  managed?: ManagedSession
 }
 
 interface Located {
@@ -326,8 +327,8 @@ interface Located {
 // Verify the target is a live managed session of this workspace and return its authoritative
 // directory plus display name, so error messages can echo exact IDs back to the caller.
 async function locate(input: Target): Promise<Located> {
-  const managed = input.state.getSession(input.sessionID)
-  if (!managed)
+  const managed = input.state.getSession(input.sessionID) ?? input.managed
+  if (!managed || managed.id !== input.sessionID)
     throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
   const dir = directory(input.root, input.state, managed)
   if (
@@ -398,6 +399,7 @@ export async function prompt(input: {
   messageID: string
   signal?: AbortSignal
   idleTimeoutMs?: number
+  managed?: ManagedSession
 }): Promise<void> {
   if (input.signal?.aborted) return
   const target = await locate(input)
@@ -424,6 +426,7 @@ export async function answer(input: {
   sessionID: string
   questionID?: string
   answers: string[][]
+  managed?: ManagedSession
 }): Promise<{ questionID: string }> {
   const dir = (await locate(input)).dir
   const listed = await input.client.question.list({ directory: dir })
@@ -487,9 +490,14 @@ async function waitForIdle(
   return waitForIdle(client, directory, sessionID, signal, timeout, start)
 }
 
-export function move(input: { state: WorktreeStateManager; sessionID: string; sectionID: string | null }): void {
-  const session = input.state.getSession(input.sessionID)
-  if (!session)
+export function move(input: {
+  state: WorktreeStateManager
+  sessionID: string
+  sectionID: string | null
+  managed?: ManagedSession
+}): void {
+  const session = input.state.getSession(input.sessionID) ?? input.managed
+  if (!session || session.id !== input.sessionID)
     throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
   if (!session.worktreeId) {
     if (input.sectionID === null) return
