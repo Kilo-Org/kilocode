@@ -67,6 +67,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   }
 
   const resume = () => {
+    userActivity.reset()
     if (store.userScrolled) setStore("userScrolled", false)
     force()
   }

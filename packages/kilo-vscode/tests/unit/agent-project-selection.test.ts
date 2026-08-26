@@ -19,6 +19,7 @@ function fakeState(persisted?: { current?: unknown }) {
   return {
     getWorktree: (id: string) => (id === "wt1" ? { path: "/repo/prj-extra/wt1" } : undefined),
     getSession: (id: string) => (id === "sess1" ? {} : undefined),
+    moveSession: () => {},
     getActiveTarget: () => store.current,
     setActiveTarget: (target: unknown) => {
       store.current = target
@@ -169,6 +170,27 @@ describe("activateSelection — cross-project selection", () => {
     expect(contexts.active()?.id).toBe(extra)
     expect(calls.activate).toEqual([])
     expect(calls.selected).toEqual(["worktree"])
+    expect(calls.error).toEqual([])
+  })
+
+  it("pushes moved-session state before acknowledging local activation", async () => {
+    const { contexts, deps, calls, extra } = setup()
+    const ctx = contexts.expand(extra)!
+    ctx.stateManager()
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    contexts.activate(extra)
+
+    const order: string[] = []
+    deps.push = () => order.push("projects")
+    deps.pushState = () => order.push("state")
+    deps.selected = () => order.push("selected")
+
+    await handleProjectMessage(
+      { type: "agentManager.openSessionLocally", projectId: extra, sessionId: "sess1" } as never,
+      deps,
+    )
+
+    expect(order).toEqual(["state", "projects", "projects", "selected"])
     expect(calls.error).toEqual([])
   })
 

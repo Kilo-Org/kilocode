@@ -5,6 +5,7 @@ import { SdkSSEAdapter, type SSEPayload } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { createDuplicateEventFilter, resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 import { SandboxPreference } from "../sandbox-preference"
+import { ExplicitAbortState } from "./explicit-abort"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: SSEPayload, directory?: string) => void
@@ -96,7 +97,8 @@ export class KiloConnectionService {
   private remoteService: import("../RemoteStatusService").RemoteStatusService | null = null
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
-  private readonly duplicateEvent = createDuplicateEventFilter()
+  private readonly filteredListeners = new Set<{ filter: SSEEventFilter; listener: SSEEventListener }>()
+  private readonly explicitAborts = new ExplicitAbortState()
   private readonly stateListeners: Set<StateListener> = new Set()
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
   private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
@@ -277,13 +279,27 @@ export class KiloConnectionService {
    * Subscribe to SSE events with a filter. The filter runs for every incoming SSE event.
    */
   onEventFiltered(filter: SSEEventFilter, listener: SSEEventListener): () => void {
-    const wrapped: SSEEventListener = (event, directory) => {
-      if (!filter(event, directory)) {
-        return
-      }
-      listener(event, directory)
+    const entry = { filter, listener }
+    this.filteredListeners.add(entry)
+    return () => {
+      this.filteredListeners.delete(entry)
     }
-    return this.onEvent(wrapped)
+  }
+
+  async runExplicitAbort<T>(sessionID: string, directory: string, action: () => Promise<T>): Promise<T> {
+    const id = this.explicitAborts.begin(sessionID, directory)
+    return action().then(
+      (result) => {
+        this.explicitAborts.finish(sessionID, directory, id, true)
+        return result
+      },
+      (error) => {
+        for (const item of this.explicitAborts.finish(sessionID, directory, id, false)) {
+          this.broadcastFiltered(item.event, item.directory)
+        }
+        throw error
+      },
+    )
   }
 
   /**
@@ -306,6 +322,7 @@ export class KiloConnectionService {
    * id after external (CLI/TUI/cascade) deletes arrive via SSE.
    */
   pruneSession(sessionId: string): void {
+    this.explicitAborts.remove(sessionId)
     for (const [mid, sid] of this.messageSessionIdsByMessageId) {
       if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
     }
@@ -682,6 +699,8 @@ export class KiloConnectionService {
     this.sseClient?.dispose()
     this.serverManager.dispose()
     this.eventListeners.clear()
+    this.filteredListeners.clear()
+    this.explicitAborts.clear()
     this.stateListeners.clear()
     this.notificationDismissListeners.clear()
     this.profileChangeListeners.clear()
@@ -781,6 +800,7 @@ export class KiloConnectionService {
     this.stopHealthPoll()
     this.stopCheckin()
     const sse = this.sseClient
+    this.explicitAborts.clear()
     this.sseClient = null
     sse?.disconnect()
     this.client = null
@@ -821,6 +841,7 @@ export class KiloConnectionService {
       },
     })
     const sse = new SdkSSEAdapter(client)
+    const duplicateEvent = createDuplicateEventFilter()
     this.client = client
     this.sseClient = sse
 
@@ -839,12 +860,8 @@ export class KiloConnectionService {
     sse.onEvent((event, directory) => {
       if (this.sseClient !== sse) return
       // EventV2Bridge also emits these durable compatibility envelopes after their normal live events.
-      if (this.duplicateEvent(event)) return
-      this.handlePermissionEvent(event, directory)
-      this.handleQuestionEvent(event, directory)
-      for (const listener of this.eventListeners) {
-        listener(event, directory)
-      }
+      if (duplicateEvent(event)) return
+      this.broadcast(event, directory)
     })
 
     sse.onError((error) => {
@@ -888,6 +905,20 @@ export class KiloConnectionService {
     this.startCheckin()
     // Start the independent health poll once we are confirmed connected.
     this.startHealthPoll(config.baseUrl, config.password)
+  }
+
+  private broadcast(event: SSEPayload, directory?: string): void {
+    this.handlePermissionEvent(event, directory)
+    this.handleQuestionEvent(event, directory)
+    for (const listener of this.eventListeners) listener(event, directory)
+    if (!this.explicitAborts.event(event, directory)) return
+    this.broadcastFiltered(event, directory)
+  }
+
+  private broadcastFiltered(event: SSEPayload, directory?: string): void {
+    for (const entry of this.filteredListeners) {
+      if (entry.filter(event, directory)) entry.listener(event, directory)
+    }
   }
 
   private startCheckin(): void {

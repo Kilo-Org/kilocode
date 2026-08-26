@@ -4,6 +4,7 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloProviderService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.FakeProviderRpcApi
+import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListActionCell
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -985,6 +986,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
 
     fun `test provider oauth auto response shows device auth panel`() {
         val callback = CompletableDeferred<ai.kilocode.rpc.dto.ProviderActionResultDto>()
+        val browser = installBrowser()
         val rpc = installProvider(
             ProviderSettingsDto(
                 providers = listOf(provider("openai", "OpenAI")),
@@ -1016,6 +1018,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             assertTrue(t, t.contains("Open Browser"))
             assertTrue(t, t.contains("Cancel"))
             assertEquals("https://auth.openai.com/device", fieldsByName(panel, "kilo.provider.oauth.url").single().text)
+            assertEquals(listOf("https://auth.openai.com/device"), browser.urls)
             val qr = components(panel).filterIsInstance<JBLabel>().single { it.name == "kilo.provider.oauth.qr" }
             assertNotNull(qr.icon)
         }

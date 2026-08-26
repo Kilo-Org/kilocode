@@ -19,6 +19,14 @@ export function hasLazyCommandSelection() {
   return selected
 }
 
+export function resetLazyCommandSelection() {
+  selected = false
+}
+
+export function markLazyCommandSelection() {
+  selected = true
+}
+
 export function lazy<T = {}, U = {}>(input: {
   command: string | readonly string[]
   aliases?: string | readonly string[]
@@ -29,9 +37,11 @@ export function lazy<T = {}, U = {}>(input: {
   const load = () => (state.task ??= input.load())
   if (completion) {
     tasks.push(
-      load().then((command) => {
-        state.command = command
-      }),
+      load()
+        .then((command) => {
+          state.command = command
+        })
+        .catch(() => undefined),
     )
   }
   return {
@@ -39,7 +49,7 @@ export function lazy<T = {}, U = {}>(input: {
     aliases: input.aliases,
     describe: input.describe,
     builder: ((args: Argv<T>) => {
-      selected = true
+      markLazyCommandSelection()
       if (state.command) return build(state.command, args)
       return load().then((command) => build(command, args))
     }) as never,

@@ -426,6 +426,7 @@ interface PRStatusOutMessage {
 
 interface PRErrorOutMessage {
   type: "agentManager.prError"
+  projectId?: string
   error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 

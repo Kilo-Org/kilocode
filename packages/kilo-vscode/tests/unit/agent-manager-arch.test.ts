@@ -29,6 +29,8 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/DiffPanelCache.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/review-composers.ts"),
   path.join(ROOT, "webview-ui/documents/DocumentPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/ImageDiffView.tsx"),
@@ -1150,5 +1152,16 @@ describe("Shared webview provider shell", () => {
       "AgentManagerContent",
     ])
     expect(fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")).not.toContain("WorktreeModeProvider")
+  })
+})
+
+describe("Agent Manager worktree setup", () => {
+  it("dismisses successful setup overlays immediately and retains the error delay", () => {
+    const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
+    expect(source).toContain('globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)')
+    expect(source).not.toContain(
+      'globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)',
+    )
+    expect(source).toContain("globalThis.setTimeout")
   })
 })

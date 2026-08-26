@@ -19,6 +19,7 @@ import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListView
+import ai.kilocode.client.ui.list.ActiveListWeight
 import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
 import ai.kilocode.client.ui.list.ACTIVE_LIST_MENU_CELL
 import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
@@ -30,6 +31,7 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.CollectionListModel
+import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
@@ -44,6 +46,7 @@ import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
 import javax.swing.JLayeredPane
 import javax.swing.JPanel
 import javax.swing.ListSelectionModel
@@ -217,6 +220,61 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test renderer draws the row title in plain weight when configured`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal.copy(title = ActiveListWeight.PLAIN))
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val iter = title.iterator()
+            iter.next()
+            assertEquals(SimpleTextAttributes.STYLE_PLAIN, iter.textAttributes.style)
+            assertEquals("Alpha", iter.fragment)
+        }
+    }
+
+    fun `test renderer styles section header weight from config`() {
+        edt {
+            val first = sectionItem("one", "Alpha", "Local")
+            val second = sectionItem("two", "Beta", "Remote")
+            val model = CollectionListModel<ActiveListItem>(listOf(first, second))
+            val list = JBList(model)
+            val bold = ActiveListRenderer(model, ActiveListConfig.Equal)
+            val plain = ActiveListRenderer(model, ActiveListConfig.Equal.copy(header = ActiveListWeight.PLAIN))
+
+            bold.getListCellRendererComponent(list, second, 1, false, false)
+            plain.getListCellRendererComponent(list, second, 1, false, false)
+
+            assertTrue(components(bold).filterIsInstance<GroupHeaderSeparator>().single().font.isBold)
+            assertFalse(components(plain).filterIsInstance<GroupHeaderSeparator>().single().font.isBold)
+        }
+    }
+
+    fun `test renderer reads section divider visibility from config`() {
+        edt {
+            val first = sectionItem("one", "Alpha", "Local")
+            val second = sectionItem("two", "Beta", "Remote")
+            val model = CollectionListModel<ActiveListItem>(listOf(first, second))
+            val list = JBList(model)
+            val divider = ActiveListRenderer(model, ActiveListConfig.Equal)
+            val none = ActiveListRenderer(model, ActiveListConfig.Equal.copy(divider = false))
+
+            divider.getListCellRendererComponent(list, first, 0, false, false)
+            assertTrue(components(divider).filterIsInstance<GroupHeaderSeparator>().single().isHideLine)
+            divider.getListCellRendererComponent(list, second, 1, false, false)
+            assertFalse(components(divider).filterIsInstance<GroupHeaderSeparator>().single().isHideLine)
+
+            none.getListCellRendererComponent(list, first, 0, false, false)
+            assertTrue(components(none).filterIsInstance<GroupHeaderSeparator>().single().isHideLine)
+            none.getListCellRendererComponent(list, second, 1, false, false)
+            assertTrue(components(none).filterIsInstance<GroupHeaderSeparator>().single().isHideLine)
+        }
+    }
+
     fun `test narrow row squeezes title but keeps tags full width`() {
         edt {
             val row = object : ActiveListItem {
@@ -254,13 +312,54 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val list = JBList(model)
             val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, true)
+            renderer.getListCellRendererComponent(list, row, 0, false, false)
             renderer.setSize(320, renderer.preferredSize.height)
             layout(renderer)
 
             val icon = components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin }
 
             assertTrue(kotlin.math.abs(centerY(renderer, icon) - renderer.height / 2) <= 1)
+        }
+    }
+
+    fun `test renderer recolors a tinted leading icon to the foreground on selection`() {
+        edt {
+            val row = object : ActiveListItem {
+                override val key = "with"
+                override val title = "Alpha"
+                override val icon = AllIcons.Nodes.Plugin
+                override val tinted = true
+            }
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, false, false)
+            val mark = components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin }
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            // At rest the row keeps the icon's own theme color; a focused selection swaps in a
+            // foreground-tinted copy so the glyph matches the highlighted title.
+            assertNotSame(AllIcons.Nodes.Plugin, mark.icon)
+        }
+    }
+
+    fun `test renderer keeps an untinted colored icon on selection`() {
+        edt {
+            val row = object : ActiveListItem {
+                override val key = "with"
+                override val title = "Alpha"
+                override val icon = AllIcons.Nodes.Plugin
+            }
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            // Colored status glyphs (running, question, error) opt out and keep their own hue: the
+            // leading label still holds the original icon by identity after a focused selection.
+            assertNotNull(components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin })
         }
     }
 
@@ -1013,6 +1112,60 @@ class SettingsListViewTest : BasePlatformTestCase() {
             assertNull(activeListCellAt(view.list, 0, center(area), selected = true))
             hover(view, center(area))
             assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+        }
+    }
+
+    fun `test pr badge hit region ignores the metrics of other rows`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(
+                listOf(
+                    metricsItem(
+                        "wide",
+                        "Alpha",
+                        ActiveListMetrics(
+                            additions = 1234,
+                            deletions = 987,
+                            ahead = 42,
+                            behind = 17,
+                            pr = ActiveListBadge("#12345"),
+                            onPr = { calls += "wide" },
+                        ),
+                    ),
+                    metricsItem("narrow", "Beta", ActiveListMetrics(pr = ActiveListBadge("#7"), onPr = { calls += "narrow" })),
+                ),
+            )
+            view.list.size = Dimension(360, 160)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val wide = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_PR_CELL)
+            val narrow = activeListCellBounds(view.list, 1, selected = false).getValue(ACTIVE_LIST_PR_CELL)
+            // Both badges trail their row, so they share a right edge no matter how wide the changes
+            // beside them are.
+            assertEquals(wide.x + wide.width, narrow.x + narrow.width)
+
+            // The renderer is one reused stamp: rendering the wide row, or a full paint pass over
+            // every row, must not move the narrow row's hit region.
+            activeListCellBounds(view.list, 0, selected = false)
+            assertEquals(narrow, activeListCellBounds(view.list, 1, selected = false).getValue(ACTIVE_LIST_PR_CELL))
+            paint(view.list)
+            assertEquals(narrow, activeListCellBounds(view.list, 1, selected = false).getValue(ACTIVE_LIST_PR_CELL))
+
+            click(view, center(narrow))
+            click(view, center(wide))
+            assertEquals(listOf("narrow", "wide"), calls)
+        }
+    }
+
+    private fun paint(list: JBList<*>) {
+        val image = UIUtil.createImage(list, list.width, list.height, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            list.paint(g)
+        } finally {
+            g.dispose()
         }
     }
 

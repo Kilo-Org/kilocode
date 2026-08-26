@@ -1154,6 +1154,7 @@ export interface AgentManagerPRStatusMessage {
 
 export interface AgentManagerPRErrorMessage {
   type: "agentManager.prError"
+  projectId?: string
   error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
