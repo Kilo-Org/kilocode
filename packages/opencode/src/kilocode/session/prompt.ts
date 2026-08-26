@@ -225,6 +225,41 @@ export namespace KiloSessionPrompt {
     },
   )
 
+  /**
+   * Removes a failed assistant tail that produced nothing the user can see, so the next prompt does not
+   * append after an "An error occurred" shell. The error itself has already been surfaced to clients via
+   * `session.error` and the outcome card.
+   *
+   * Distinct from [recoverProviderFinishError], which handles a `finish === "error"` tail carrying no
+   * `info.error`. This one is the inverse: `info.error` is set.
+   *
+   * The parts guard is an allowlist of turn scaffolding on purpose. A turn that emitted text or
+   * reasoning, or ran a tool, keeps its message: that record is what explains file changes which are
+   * still applied on disk. Any part type not listed here blocks removal, so a new part type fails safe.
+   */
+  export const recoverFailedAssistant = Effect.fn("KiloSessionPrompt.recoverFailedAssistant")(function* (input: {
+    sessionID: SessionID
+    status: Pick<SessionStatus.Interface, "get">
+    sessions: Pick<Session.Interface, "messages" | "removeMessage">
+  }) {
+    const state = yield* input.status.get(input.sessionID)
+    if (state.type !== "idle") return
+
+    const msgs = yield* input.sessions.messages({ sessionID: input.sessionID, limit: 2 })
+    const tail = msgs.at(-1)
+    if (!tail || tail.info.role !== "assistant") return
+    if (!tail.info.error) return
+    // A user Stop is not a failure. Its record is what clients read back to show "Stopped", so it stays.
+    if (MessageV2.AbortedError.isInstance(tail.info.error)) return
+    if (!tail.parts.every((part) => part.type === "step-start" || part.type === "step-finish")) return
+
+    const prev = msgs.at(-2)
+    if (!prev || prev.info.role !== "user") return
+    if (tail.info.parentID !== prev.info.id) return
+
+    yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
+  })
+
   export function guardPermissions(input: {
     agent: { name: string; permission: Permission.Ruleset }
     session: Pick<Session.Info, "permission">
