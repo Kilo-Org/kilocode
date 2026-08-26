@@ -69,11 +69,7 @@ export class PRStatusBridge {
   replay(): void {
     this.cache.forEach((msg) => this.host.postToWebview(msg))
     if (this.lastErrorNotified === "gh_auth" || this.lastErrorNotified === "gh_missing")
-      this.host.postToWebview({
-        type: "agentManager.prError",
-        error: this.lastErrorNotified,
-        ...(this.host.projectId?.() ? { projectId: this.host.projectId() } : {}),
-      })
+      this.error(this.lastErrorNotified)
   }
 
   snapshot(): Map<string, PRStatus> {
@@ -160,10 +156,15 @@ export class PRStatusBridge {
   notifyError(err: "gh_missing" | "gh_auth" | "fetch_failed"): void {
     if (this.lastErrorNotified === err) return
     this.lastErrorNotified = err
+    this.error(err)
+  }
+
+  private error(err: "gh_missing" | "gh_auth" | "fetch_failed"): void {
+    const project = this.host.projectId?.()
     this.host.postToWebview({
       type: "agentManager.prError",
       error: err,
-      ...(this.host.projectId?.() ? { projectId: this.host.projectId() } : {}),
+      ...(project ? { projectId: project } : undefined),
     })
   }
 }
