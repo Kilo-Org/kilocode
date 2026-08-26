@@ -31,7 +31,7 @@ export type StepResult<T> = { ok: true; value: T } | { ok: false; error: string 
 export async function abortSession(ctx: ContinueContext, sessionId: string): Promise<void> {
   try {
     const client = ctx.getClient()
-    await client.session.abort({ sessionID: sessionId }).catch((err) => {
+    await client.session.abort({ sessionID: sessionId }, { throwOnError: true }).catch((err) => {
       ctx.log("Session abort failed (may already be idle):", getErrorMessage(err))
     })
   } catch (err) {
