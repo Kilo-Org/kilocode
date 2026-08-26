@@ -10,6 +10,24 @@ class LimitsTest {
     private val engine = Mermaid(FakeMeasure())
 
     @Test
+    fun `character cap is enforced before preprocessing`() {
+        val source = "flowchart TD\n  A --> B"
+        val out = runBlocking { engine.draw(source, spec().copy(limits = Limits(chars = 10))) }
+
+        assertEquals(Fault.Limit, err(out).fault)
+    }
+
+    /** A single line can fan out to n*m links, so the cap has to bite while the edges are built. */
+    @Test
+    fun `ampersand fan out is capped as it expands`() {
+        val left = (1..40).joinToString(" & ") { "a$it" }
+        val right = (1..40).joinToString(" & ") { "b$it" }
+        val out = runBlocking { engine.draw("flowchart TD\n $left --> $right", spec().copy(limits = Limits(edges = 5))) }
+
+        assertEquals(Fault.Limit, err(out).fault)
+    }
+
+    @Test
     fun `line cap is enforced before parsing`() {
         val source = "flowchart TD\n" + (1..50).joinToString("\n") { "  n$it --> n${it + 1}" }
         val out = runBlocking { engine.draw(source, spec().copy(limits = Limits(lines = 10))) }

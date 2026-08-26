@@ -56,6 +56,23 @@ class SourceTest {
     }
 
     @Test
+    fun `an unterminated directive leaves the rest of the source intact`() {
+        val clean = Source.clean("%%{init: {'theme':'dark'}\ngraph TD\n  A --> B")
+
+        assertEquals(3, clean.lines.size)
+        assertEquals("graph TD", clean.lines[1].text)
+        assertEquals(2, clean.lines[1].at)
+    }
+
+    /** A lazy `%%\{[\s\S]*?}%%` regex rescans to the end of the text per opener; this would stall. */
+    @Test
+    fun `many unterminated directives do not stall preprocessing`() {
+        val clean = Source.clean("%%{".repeat(50_000) + "\ngraph TD\n  A --> B")
+
+        assertEquals("graph TD", clean.lines[1].text)
+    }
+
+    @Test
     fun `labels split on break forms and drop quotes`() {
         assertEquals(listOf("one", "two"), Source.label("\"one<br/>two\""))
         assertEquals(listOf("a", "b"), Source.label("a<br>b"))

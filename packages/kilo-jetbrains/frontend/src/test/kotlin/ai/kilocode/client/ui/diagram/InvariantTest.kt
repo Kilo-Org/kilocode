@@ -24,11 +24,12 @@ class InvariantTest {
 
     private fun check(measure: Measure) {
         val engine = Mermaid(measure)
+        val spec = spec(size = 12)
         for (name in ConformanceTest.CORPUS) {
-            val out = runBlocking { engine.draw(read(name), spec(size = 12)) }
+            val out = runBlocking { engine.draw(read(name), spec) }
             val scene = scene(out)
 
-            assertInBounds(scene)
+            assertInBounds(scene, measure, spec)
             assertNoOverlap(scene)
             assertEdgesTouchNodes(scene)
         }

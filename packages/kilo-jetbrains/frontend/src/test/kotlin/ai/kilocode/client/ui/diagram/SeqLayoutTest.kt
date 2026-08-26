@@ -7,10 +7,11 @@ import kotlin.test.Test
 class SeqLayoutTest {
     private val engine = Mermaid(FakeMeasure())
 
+    /** The reported width must cover the left-anchored loop label, not just its anchor. */
     @Test
     fun `self messages render loops`() = assertScene(
         """
-        scene Sequence 92x230
+        scene Sequence 127x230
         edge 28,38 28,222 role=Muted dash=true thick=false head=None tail=None
         box 8,8 39x30 arc=4 fill=Surface line=Border dash=false
         text "A" at=28,23 anchor=Center role=Text bold=true
@@ -79,6 +80,24 @@ class SeqLayoutTest {
         text "2. two" at=71,175 anchor=Center role=Muted bold=false
         """,
         draw("sequenceDiagram\n autonumber\n A->>B: one\n B->>A: two"),
+    )
+
+    /** `A->>+B` with no matching deactivate is normal mermaid and must still draw the bar. */
+    @Test
+    fun `unmatched activations still draw a bar`() = assertScene(
+        """
+        scene Sequence 142x196
+        edge 28,38 28,188 role=Muted dash=true thick=false head=None tail=None
+        edge 115,38 115,188 role=Muted dash=true thick=false head=None tail=None
+        box 8,8 39x30 arc=4 fill=Surface line=Border dash=false
+        text "A" at=28,23 anchor=Center role=Text bold=true
+        box 95,8 39x30 arc=4 fill=Surface line=Border dash=false
+        text "B" at=115,23 anchor=Center role=Text bold=true
+        edge 28,116 111,116 role=Line dash=false thick=false head=Arrow tail=None
+        text "open" at=69,105 anchor=Center role=Muted bold=false
+        box 111,94 8x70 arc=0 fill=Accent line=Border dash=false
+        """,
+        draw("sequenceDiagram\n A->>+B: open"),
     )
 
     @Test

@@ -1,6 +1,9 @@
 package ai.kilocode.client.ui.diagram.mermaid
 
 import ai.kilocode.client.ui.diagram.Head
+import ai.kilocode.client.ui.diagram.Limits
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.ensureActive
 
 internal enum class NoteAt { Left, Right, Over }
 
@@ -34,30 +37,40 @@ internal data class Script(
 internal sealed interface SeqOut {
     data class Ok(val script: Script) : SeqOut
     data class Err(val message: String, val line: Int) : SeqOut
+    data class Over(val message: String) : SeqOut
 }
 
 /** Line-oriented sequence diagram parser. Unknown statements are skipped rather than failing. */
-internal class Seq {
+internal class Seq(private val limits: Limits = Limits()) {
     private val actors = linkedMapOf<String, Actor>()
     private val steps = mutableListOf<Step>()
     private var title = emptyList<String>()
     private var numbered = false
     private var depth = 0
 
-    fun parse(clean: Clean): SeqOut {
+    suspend fun parse(clean: Clean): SeqOut {
         var first = true
         for (line in clean.lines) {
+            coroutineContext.ensureActive()
             val text = line.text.trim()
             if (text.isEmpty()) continue
             if (first) {
                 first = false
                 if (text.substringBefore(' ').lowercase() == "sequencediagram") continue
             }
-            val err = stmt(text, line.at) ?: continue
-            return SeqOut.Err(err, line.at)
+            val err = stmt(text, line.at)
+            if (err != null) return SeqOut.Err(err, line.at)
+            over()?.let { return it }
         }
         if (depth > 0) return SeqOut.Err("block is missing a matching end", clean.lines.lastOrNull()?.at ?: 1)
         return SeqOut.Ok(Script(actors, steps, title, numbered))
+    }
+
+    /** Caps are checked per statement so a refusal never waits for the whole script to be built. */
+    private fun over(): SeqOut.Over? {
+        if (actors.size > limits.nodes) return SeqOut.Over("sequence diagram exceeds ${limits.nodes} participants")
+        if (steps.size > limits.edges) return SeqOut.Over("sequence diagram exceeds ${limits.edges} steps")
+        return null
     }
 
     private fun stmt(text: String, at: Int): String? {
@@ -101,12 +114,17 @@ internal class Seq {
         return message(text, at)
     }
 
+    /**
+     * `participant "Alice"` must land on the same column as a later `Alice->>Bob`, so the id goes
+     * through [name] the way message endpoints do. The ` as ` separator is matched case-insensitively
+     * and only outside quotes, so `participant "Bob as builder"` stays a single quoted name.
+     */
     private fun actor(text: String): String? {
         val rest = text.substringAfter(' ', "").trim()
         if (rest.isEmpty()) return "participant needs a name"
-        val cut = rest.indexOf(" as ")
-        val id = if (cut < 0) rest else rest.substring(0, cut).trim()
-        val label = if (cut < 0) rest else rest.substring(cut + 4).trim()
+        val cut = AS.findAll(rest).firstOrNull { Source.open(rest, it.range.first) }
+        val id = name(if (cut == null) rest else rest.substring(0, cut.range.first))
+        val label = if (cut == null) rest else rest.substring(cut.range.last + 1)
         add(id, Source.label(label))
         return null
     }
@@ -127,6 +145,7 @@ internal class Seq {
     }
 
     private fun message(text: String, at: Int): String? {
+        if (!text.contains(':')) return null
         val match = MSG.find(text) ?: return null
         val from = name(match.groupValues[1])
         val arrow = match.groupValues[2]
@@ -145,6 +164,7 @@ internal class Seq {
         if (id.isEmpty()) return
         val prior = actors[id]
         if (prior == null) {
+            if (actors.size > limits.nodes) return
             actors[id] = Actor(id, label, actors.size)
             return
         }
@@ -168,7 +188,10 @@ internal class Seq {
 
         val NOTE = Regex("""^[Nn]ote\s+(left of|right of|over)\s+([^:]+):\s*(.*)$""")
 
-        val MSG = Regex("""^(.+?)\s*(--?>>|--?>|--?[x)])\s*([+-]?)\s*(.+?)\s*:\s*(.*)$""")
+        val AS = Regex("""\s+as\s+""", RegexOption.IGNORE_CASE)
+
+        /** The receiver is `[^:]+?` rather than `.+?` so a colon-free line cannot backtrack quadratically. */
+        val MSG = Regex("""^(.+?)\s*(--?>>|--?>|--?[x)])\s*([+-]?)\s*([^:]+?)\s*:\s*(.*)$""")
 
         fun linkOf(arrow: String) = if (arrow.startsWith("--")) Link.Dotted else Link.Solid
 

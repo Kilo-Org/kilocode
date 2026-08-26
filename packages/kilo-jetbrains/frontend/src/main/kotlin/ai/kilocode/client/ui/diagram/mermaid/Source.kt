@@ -14,7 +14,8 @@ internal data class Clean(val lines: List<Line>)
  */
 internal object Source {
     private const val RAILS = "-.="
-    private val DIRECTIVE = Regex("""%%\{[\s\S]*?}%%""")
+    private const val OPEN = "%%{"
+    private const val CLOSE = "}%%"
 
     fun clean(text: String): Clean {
         val raw = mask(normalize(text)).split("\n")
@@ -60,8 +61,26 @@ internal object Source {
         .replace("\r", "\n")
         .replace("\t", "    ")
 
-    private fun mask(text: String) = DIRECTIVE.replace(text) { match ->
-        match.value.map { if (it == '\n') '\n' else ' ' }.joinToString("")
+    /**
+     * Blanks `%%{ ... }%%` directives in place. Scanned by hand rather than with a lazy regex
+     * because `%%\{[\s\S]*?}%%` rescans to the end of the text for every unterminated `%%{`, which
+     * is quadratic on pathological input.
+     */
+    private fun mask(text: String): String {
+        if (!text.contains(OPEN)) return text
+        val out = StringBuilder(text)
+        var idx = 0
+        while (idx < out.length) {
+            val open = out.indexOf(OPEN, idx)
+            if (open < 0) return out.toString()
+            val close = out.indexOf(CLOSE, open + OPEN.length)
+            if (close < 0) return out.toString()
+            for (at in open until close + CLOSE.length) {
+                if (out[at] != '\n') out[at] = ' '
+            }
+            idx = close + CLOSE.length
+        }
+        return out.toString()
     }
 
     /** Returns the index of the first content line, skipping terminated frontmatter. */

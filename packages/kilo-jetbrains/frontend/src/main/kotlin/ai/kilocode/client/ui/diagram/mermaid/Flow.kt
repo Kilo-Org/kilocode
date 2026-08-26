@@ -1,6 +1,9 @@
 package ai.kilocode.client.ui.diagram.mermaid
 
 import ai.kilocode.client.ui.diagram.Head
+import ai.kilocode.client.ui.diagram.Limits
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.ensureActive
 
 internal enum class Dir { Down, Up, Left, Right }
 
@@ -53,32 +56,45 @@ internal data class Graph(
 internal sealed interface FlowOut {
     data class Ok(val graph: Graph) : FlowOut
     data class Err(val message: String, val line: Int) : FlowOut
+    data class Over(val message: String) : FlowOut
 }
 
 /** Line-oriented flowchart parser. Unknown statements are skipped rather than failing the diagram. */
-internal class Flow {
+internal class Flow(private val limits: Limits = Limits()) {
     private val nodes = linkedMapOf<String, FlowNode>()
     private val edges = mutableListOf<FlowEdge>()
     private val clusters = linkedMapOf<String, Cluster>()
     private val stack = ArrayDeque<String>()
     private var dir = Dir.Down
 
-    fun parse(clean: Clean): FlowOut {
+    suspend fun parse(clean: Clean): FlowOut {
         var first = true
         for (line in clean.lines) {
+            coroutineContext.ensureActive()
             val text = line.text.trim()
             if (text.isEmpty()) continue
             if (first) {
                 first = false
                 if (header(text)) continue
             }
-            val err = stmt(text, line.at) ?: continue
-            return FlowOut.Err(err, line.at)
+            val err = stmt(text, line.at)
+            if (err != null) return FlowOut.Err(err, line.at)
+            over()?.let { return it }
         }
         if (stack.isNotEmpty()) {
             return FlowOut.Err("subgraph is missing a matching end", clean.lines.lastOrNull()?.at ?: 1)
         }
         return FlowOut.Ok(Graph(dir, nodes, edges, clusters))
+    }
+
+    /**
+     * Caps are checked per statement, and [add] / [chain] stop one item past the cap, so a single
+     * pathological line cannot build an unbounded model before the refusal is reported.
+     */
+    private fun over(): FlowOut.Over? {
+        if (nodes.size > limits.nodes) return FlowOut.Over("flowchart exceeds ${limits.nodes} nodes")
+        if (edges.size > limits.edges) return FlowOut.Over("flowchart exceeds ${limits.edges} links")
+        return null
     }
 
     private fun header(text: String): Boolean {
@@ -133,6 +149,7 @@ internal class Flow {
             val label = labels[idx] ?: hit.label
             for (from in groups[idx]) {
                 for (to in groups[idx + 1]) {
+                    if (edges.size > limits.edges) return null
                     edges.add(FlowEdge(from, to, hit.link, hit.head, hit.tail, label, edges.size))
                 }
             }
@@ -219,15 +236,24 @@ internal class Flow {
         return text.substring(0, cut)
     }
 
+    /**
+     * A node first mentioned outside a subgraph still joins the first subgraph that mentions it,
+     * which is how mermaid reads `Client --> Gateway` followed by `subgraph core` / `Gateway --> Auth`.
+     */
     private fun add(id: String, label: List<String>, shape: Shape) {
         val prior = nodes[id]
         if (prior == null) {
+            if (nodes.size > limits.nodes) return
             nodes[id] = FlowNode(id, label, shape, nodes.size, stack.lastOrNull())
             return
         }
+        val cluster = prior.cluster ?: stack.lastOrNull()
         val implicit = prior.label == listOf(prior.id) && prior.shape == Shape.Rect
-        if (!implicit || label == listOf(id)) return
-        nodes[id] = prior.copy(label = label, shape = shape)
+        if (!implicit || label == listOf(id)) {
+            if (cluster != prior.cluster) nodes[id] = prior.copy(cluster = cluster)
+            return
+        }
+        nodes[id] = prior.copy(label = label, shape = shape, cluster = cluster)
     }
 
     private fun hits(text: String): List<Hit> {

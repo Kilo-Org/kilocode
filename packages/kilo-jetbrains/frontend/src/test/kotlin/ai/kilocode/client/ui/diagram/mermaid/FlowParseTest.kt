@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui.diagram.mermaid
 
 import ai.kilocode.client.ui.diagram.Head
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -134,8 +135,45 @@ class FlowParseTest {
         assertNull(graph.clusters.getValue("core").parent)
         assertEquals("core", graph.clusters.getValue("store").parent)
         assertNull(graph.nodes.getValue("Client").cluster)
+        assertEquals("core", graph.nodes.getValue("Gate").cluster)
         assertEquals("core", graph.nodes.getValue("Auth").cluster)
         assertEquals("store", graph.nodes.getValue("Db").cluster)
+    }
+
+    @Test
+    fun `a node mentioned before a subgraph still joins it`() {
+        val graph = graph(
+            """
+            flowchart TD
+              Client --> Gateway
+              subgraph core [Core]
+                Gateway --> Auth
+              end
+              Gateway[API Gateway] --> Report
+        """,
+        )
+
+        assertEquals("core", graph.nodes.getValue("Gateway").cluster)
+        assertEquals(listOf("API Gateway"), graph.nodes.getValue("Gateway").label)
+        assertNull(graph.nodes.getValue("Report").cluster)
+    }
+
+    @Test
+    fun `the first subgraph to mention a node wins`() {
+        val graph = graph(
+            """
+            flowchart TD
+              subgraph one [One]
+                A --> B
+              end
+              subgraph two [Two]
+                B --> C
+              end
+        """,
+        )
+
+        assertEquals("one", graph.nodes.getValue("B").cluster)
+        assertEquals("two", graph.nodes.getValue("C").cluster)
     }
 
     @Test
@@ -166,15 +204,15 @@ class FlowParseTest {
 
     @Test
     fun `dangling subgraph and stray end are reported with line numbers`() {
-        val open = Flow().parse(Source.clean("flowchart TD\n subgraph s\n  A --> B"))
-        val stray = Flow().parse(Source.clean("flowchart TD\n A --> B\n end"))
+        val open = runBlocking { Flow().parse(Source.clean("flowchart TD\n subgraph s\n  A --> B")) }
+        val stray = runBlocking { Flow().parse(Source.clean("flowchart TD\n A --> B\n end")) }
 
         assertEquals(3, (open as FlowOut.Err).line)
         assertEquals(3, (stray as FlowOut.Err).line)
     }
 
     private fun graph(source: String): Graph {
-        val out = Flow().parse(Source.clean(source.trimIndent()))
+        val out = runBlocking { Flow().parse(Source.clean(source.trimIndent())) }
         assertTrue(out is FlowOut.Ok, "expected a parsed graph but was $out")
         return (out as FlowOut.Ok).graph
     }

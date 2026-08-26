@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui.diagram.mermaid
 
 import ai.kilocode.client.ui.diagram.Head
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -13,6 +14,29 @@ class SeqParseTest {
         assertEquals(listOf("C", "S"), script.actors.keys.toList())
         assertEquals(listOf("Client"), script.actors.getValue("C").label)
         assertEquals(listOf("Server"), script.actors.getValue("S").label)
+    }
+
+    @Test
+    fun `the as separator is case insensitive`() {
+        val script = script("sequenceDiagram\n PARTICIPANT C AS Client\n C->>S: hi")
+
+        assertEquals(listOf("C", "S"), script.actors.keys.toList())
+        assertEquals(listOf("Client"), script.actors.getValue("C").label)
+    }
+
+    @Test
+    fun `quoted participant ids match unquoted usages`() {
+        val script = script("sequenceDiagram\n participant \"Alice\"\n Alice->>Bob: hi")
+
+        assertEquals(listOf("Alice", "Bob"), script.actors.keys.toList())
+        assertEquals(listOf("Alice"), script.actors.getValue("Alice").label)
+    }
+
+    @Test
+    fun `as inside a quoted name is not an alias`() {
+        val script = script("sequenceDiagram\n participant \"Bob as builder\"\n")
+
+        assertEquals(listOf("Bob as builder"), script.actors.keys.toList())
     }
 
     @Test
@@ -125,15 +149,15 @@ class SeqParseTest {
 
     @Test
     fun `unbalanced blocks are reported with line numbers`() {
-        val open = Seq().parse(Source.clean("sequenceDiagram\n loop forever\n  A->>B: x"))
-        val stray = Seq().parse(Source.clean("sequenceDiagram\n A->>B: x\n end"))
+        val open = runBlocking { Seq().parse(Source.clean("sequenceDiagram\n loop forever\n  A->>B: x")) }
+        val stray = runBlocking { Seq().parse(Source.clean("sequenceDiagram\n A->>B: x\n end")) }
 
         assertEquals(3, (open as SeqOut.Err).line)
         assertEquals(3, (stray as SeqOut.Err).line)
     }
 
     private fun script(source: String): Script {
-        val out = Seq().parse(Source.clean(source.trimIndent()))
+        val out = runBlocking { Seq().parse(Source.clean(source.trimIndent())) }
         assertTrue(out is SeqOut.Ok, "expected a parsed script but was $out")
         return (out as SeqOut.Ok).script
     }

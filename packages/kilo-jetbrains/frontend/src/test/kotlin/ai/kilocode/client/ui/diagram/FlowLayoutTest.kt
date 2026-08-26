@@ -70,8 +70,8 @@ class FlowLayoutTest {
         """
         scene Flowchart 55x210
         group s
-          box 0,134 55x76 arc=4 fill=- line=Cluster dash=true
-          text "Group" at=28,149 anchor=Center role=Muted bold=true
+          box 0,56 55x154 arc=4 fill=- line=Cluster dash=true
+          text "Group" at=28,71 anchor=Center role=Muted bold=true
         edge 28,38 28,86 role=Line dash=false thick=false head=Arrow tail=None
         edge 28,116 28,164 role=Line dash=false thick=false head=Arrow tail=None
         box 16,8 23x30 arc=0 fill=Surface line=Border dash=false

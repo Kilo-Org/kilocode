@@ -36,5 +36,15 @@ internal data class Metrics(
     val wrap: Double = 0.0,
 )
 
+/**
+ * Guards against pathological model output. [chars] is checked before any preprocessing so a single
+ * enormous line cannot reach the parsers; [nodes] and [edges] are enforced while the model is built
+ * rather than after, so `A & B & … --> …` cannot expand into a huge edge list first.
+ */
 @Serializable
-internal data class Limits(val nodes: Int = 400, val edges: Int = 800, val lines: Int = 2_000)
+internal data class Limits(
+    val nodes: Int = 400,
+    val edges: Int = 800,
+    val lines: Int = 2_000,
+    val chars: Int = 100_000,
+)

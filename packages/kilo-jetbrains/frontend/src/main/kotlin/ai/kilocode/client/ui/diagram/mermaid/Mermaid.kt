@@ -6,6 +6,8 @@ import ai.kilocode.client.ui.diagram.Measure
 import ai.kilocode.client.ui.diagram.Out
 import ai.kilocode.client.ui.diagram.Spec
 import ai.kilocode.client.ui.diagram.Type
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * In-process mermaid engine covering flowcharts and sequence diagrams.
@@ -17,6 +19,10 @@ internal class Mermaid(private val measure: Measure) : Engine {
     override fun accepts(type: Type) = type == Type.Flowchart || type == Type.Sequence
 
     override suspend fun draw(source: String, spec: Spec): Out {
+        if (source.length > spec.limits.chars) {
+            return Out.Err(Fault.Limit, "source exceeds ${spec.limits.chars} characters")
+        }
+        coroutineContext.ensureActive()
         val clean = Source.clean(source)
         if (clean.lines.size > spec.limits.lines) {
             return Out.Err(Fault.Limit, "source exceeds ${spec.limits.lines} lines")
@@ -28,31 +34,21 @@ internal class Mermaid(private val measure: Measure) : Engine {
     }
 
     private suspend fun flow(clean: Clean, spec: Spec): Out {
-        val parsed = Flow().parse(clean)
+        val parsed = Flow(spec.limits).parse(clean)
+        if (parsed is FlowOut.Over) return Out.Err(Fault.Limit, parsed.message)
         if (parsed is FlowOut.Err) return Out.Err(Fault.Syntax, parsed.message, parsed.line)
         val graph = (parsed as FlowOut.Ok).graph
         if (graph.nodes.isEmpty()) return Out.Err(Fault.Syntax, "flowchart has no nodes")
-        if (graph.nodes.size > spec.limits.nodes) {
-            return Out.Err(Fault.Limit, "flowchart exceeds ${spec.limits.nodes} nodes")
-        }
-        if (graph.edges.size > spec.limits.edges) {
-            return Out.Err(Fault.Limit, "flowchart exceeds ${spec.limits.edges} links")
-        }
         val placed = FlowLayout(measure, spec).run(graph)
         return Out.Ok(FlowMarks(measure, spec).run(placed))
     }
 
     private suspend fun seq(clean: Clean, spec: Spec): Out {
-        val parsed = Seq().parse(clean)
+        val parsed = Seq(spec.limits).parse(clean)
+        if (parsed is SeqOut.Over) return Out.Err(Fault.Limit, parsed.message)
         if (parsed is SeqOut.Err) return Out.Err(Fault.Syntax, parsed.message, parsed.line)
         val script = (parsed as SeqOut.Ok).script
         if (script.actors.isEmpty()) return Out.Err(Fault.Syntax, "sequence diagram has no participants")
-        if (script.actors.size > spec.limits.nodes) {
-            return Out.Err(Fault.Limit, "sequence diagram exceeds ${spec.limits.nodes} participants")
-        }
-        if (script.steps.size > spec.limits.edges) {
-            return Out.Err(Fault.Limit, "sequence diagram exceeds ${spec.limits.edges} steps")
-        }
         return Out.Ok(SeqLayout(measure, spec).run(script))
     }
 }

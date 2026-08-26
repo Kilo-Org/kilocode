@@ -22,6 +22,7 @@ internal class SeqLayout(private val measure: Measure, private val spec: Spec) {
     private val pad get() = spec.metrics.pad
     private val gap get() = spec.metrics.gap
     private val step get() = spec.metrics.rank
+    private val bold get() = spec.font.copy(bold = true)
 
     private val marks = mutableListOf<Mark>()
     private val heads = linkedMapOf<String, Rect>()
@@ -47,7 +48,18 @@ internal class SeqLayout(private val measure: Measure, private val spec: Spec) {
                 Step.Close -> close()
             }
         }
+        drain()
         return scene(lines() + marks)
+    }
+
+    /**
+     * `A->>+B: hi` without a matching deactivate is normal mermaid, so any activation still open at
+     * the end of the script is closed at the cursor instead of being dropped without a bar.
+     */
+    private fun drain() {
+        for (entry in live.entries.toList()) {
+            while (entry.value.isNotEmpty()) toggle(Step.Toggle(entry.key, false))
+        }
     }
 
     private fun title(script: Script, high: Double): Double {
@@ -228,8 +240,21 @@ internal class SeqLayout(private val measure: Measure, private val spec: Spec) {
         is Mark.Oval -> corners(mark.rect)
         is Mark.Poly -> mark.points
         is Mark.Edge -> mark.points
-        is Mark.Text -> listOf(mark.at)
+        is Mark.Text -> span(mark)
         is Mark.Group -> mark.marks.flatMap(::pts)
+    }
+
+    /**
+     * A text mark contributes its glyph extent, not just its anchor. Renderers use [Scene.size] for
+     * scroll and clip bounds, so a left-anchored self-message label would otherwise be clipped.
+     */
+    private fun span(mark: Mark.Text): List<Pt> {
+        val room = measure.width(mark.text, if (mark.bold) bold else spec.font)
+        return when (mark.anchor) {
+            Anchor.Left, Anchor.TopLeft, Anchor.BottomLeft -> listOf(mark.at, Pt(mark.at.x + room, mark.at.y))
+            Anchor.Right, Anchor.TopRight, Anchor.BottomRight -> listOf(Pt(mark.at.x - room, mark.at.y), mark.at)
+            else -> listOf(Pt(mark.at.x - room / 2, mark.at.y), Pt(mark.at.x + room / 2, mark.at.y))
+        }
     }
 
     private fun corners(rect: Rect) = listOf(Pt(rect.x, rect.y), Pt(rect.x + rect.w, rect.y + rect.h))
