@@ -151,6 +151,55 @@ class SessionRetryTest : SessionControllerTestBase() {
         assertEquals("claude-opus-5", prompt.modelID)
     }
 
+    /** The auto-routing model id contains a slash ("kilo-auto/free"), so only the provider may split off. */
+    fun `test retry uses an auto routing model whose id contains a slash`() {
+        rpc.history.add(
+            MessageWithPartsDto(
+                msg("msg_user", "ses_test", "user").copy(
+                    providerID = "snowflake",
+                    modelID = "cortex",
+                    agent = "code",
+                ),
+                emptyList(),
+            ),
+        )
+        rpc.history.add(
+            MessageWithPartsDto(
+                msg("msg_fail", "ses_test", "assistant").copy(
+                    parentID = "msg_user",
+                    error = MessageErrorDto(type = "UnknownError", message = "missing credentials"),
+                ),
+                emptyList(),
+            ),
+        )
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                ProviderDto(
+                    id = "kilo",
+                    name = "Kilo",
+                    models = mapOf("kilo-auto/free" to ModelDto(id = "kilo-auto/free", name = "Auto Free")),
+                ),
+                ProviderDto(
+                    id = "snowflake",
+                    name = "Snowflake",
+                    models = mapOf("cortex" to ModelDto(id = "cortex", name = "Cortex")),
+                ),
+            ),
+            connected = listOf("kilo", "snowflake"),
+        )
+        val m = controller("ses_test")
+        flush()
+
+        edt { m.selectModel("kilo", "kilo-auto/free") }
+        flush()
+        edt { m.retry() }
+        flush()
+
+        val prompt = rpc.prompts.single().third
+        assertEquals("kilo", prompt.providerID)
+        assertEquals("kilo-auto/free", prompt.modelID)
+    }
+
     fun `test retry does not prompt until the revert completes`() {
         failed()
         val gate = CompletableDeferred<Unit>()
