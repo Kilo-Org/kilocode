@@ -225,12 +225,12 @@ type ProviderInternals = {
   currentSession: { id: string; directory?: string; cost?: number; revert?: { messageID: string } } | null
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
+  sessionStatusMap: Map<string, string>
   trackedSessionIds: Set<string>
   openSessionIds: Set<string>
   draftSessions: Map<string, { sid: string; dir: string; expires: number }>
   checkpoints: Map<string, Promise<void>>
   revisions: Map<string, { id: string; seq: number }>
-  sessionStatusMap: Map<string, SessionStatus["type"]>
   streams: { push: (msg: PartUpdate) => void }
   checkpoint: (sid: string, run: () => Promise<void>) => void
   gatherEditorContext: () => Promise<Record<string, never>>
