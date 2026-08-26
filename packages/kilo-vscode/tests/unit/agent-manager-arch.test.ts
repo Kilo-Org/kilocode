@@ -637,12 +637,37 @@ describe("Agent Manager Provider — onMessage routing", () => {
    * Regression: deletion must clean up both disk (manager) and state, then
    * push to webview. Missing any step leaves ghost worktrees or stale UI.
    */
-  it("onDeleteWorktree removes from disk, state, clears orphans, and pushes", () => {
+  it("does not restore running indicators after a session is deleted", () => {
+    const lifecycle = body("onSessionLifecycle")
+    const status = body("onSessionStatus")
+
+    expect(lifecycle).toContain("this.removedSessions.add(id)")
+    expect(lifecycle).toContain("this.busySessions.delete(id)")
+    expect(status).toContain("this.removedSessions.has(sid)")
+  })
+
+  it("onDeleteWorktree removes snapshots after disk cleanup before state cleanup", () => {
     const text = body("onDeleteWorktree")
-    expect(text).toContain("worktreeManager().removeWorktree")
-    expect(text).toContain("state.removeWorktree")
-    expect(text).toContain("sessions.clearDirectory")
+    const check = text.indexOf("client.session.status")
+    const disk = text.indexOf("await ctx.worktreeManager().removeWorktree(worktree.path, branch)")
+    const snapshot = text.indexOf(".kilocode.removeSnapshot")
+    const state = text.indexOf("state.removeWorktree")
+
+    expect(check).toBeGreaterThanOrEqual(0)
+    expect(check).toBeLessThan(disk)
+    expect(disk).toBeGreaterThanOrEqual(0)
+    expect(snapshot).toBeGreaterThan(disk)
+    expect(state).toBeGreaterThan(snapshot)
+    expect(text).toContain("directory: ctx.root")
+    expect(text).toContain("worktree: worktree.path")
+    expect(text).toContain("throwOnError: true")
+    expect(text).not.toContain("session.delete")
+    expect(text).toContain("routeProjectSession(host.sessions, ctx.id, s.id, ctx.root, ctx.generation)")
+    expect(text).not.toContain("sessions.clearDirectory(s.id)")
     expect(text).toContain("host.push()")
+    for (const name of ["onCreateWorktree", "onCreateMultiVersion", "onRemoveStaleWorktree"]) {
+      expect(body(name)).not.toContain("removeSnapshot")
+    }
   })
 
   // -- onCreateWorktree invariants -------------------------------------------

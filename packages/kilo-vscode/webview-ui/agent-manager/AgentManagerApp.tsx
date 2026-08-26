@@ -1386,6 +1386,10 @@ const AgentManagerContent: Component = () => {
     })
 
     const unsub = vscode.onMessage((msg) => {
+      if (msg.type === "error" && msg.code === "agentManager.worktreeDeleteFailed" && msg.worktreeId) {
+        const store = msg.projectId ? registry.ensure(msg.projectId) : registry.active()
+        store.setBusy((prev) => new Map([...prev].filter(([id]) => id !== msg.worktreeId)))
+      }
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
         setRepoBranch(info.branch)
@@ -1820,8 +1824,8 @@ const AgentManagerContent: Component = () => {
 
   const confirmDeleteWorktree = (worktreeId: string) => {
     const wt = worktrees().find((w) => w.id === worktreeId)
-    if (!wt) return
-
+    const run = runStatuses()[worktreeId]?.state
+    if (!wt || busyWorktrees().has(worktreeId) || isAgentBusy(worktreeId) || (run && run !== "idle")) return
     // Second press/click: execute the delete
     if (pendingDelete() === worktreeId) {
       cancelPendingDelete()

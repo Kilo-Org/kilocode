@@ -16761,6 +16761,36 @@ export type KilocodeRemoveAgentResponses = {
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
 
+export type KilocodeRemoveSnapshotData = {
+  body?: {
+    worktree: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/snapshot/remove"
+}
+
+export type KilocodeRemoveSnapshotErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KilocodeRemoveSnapshotError = KilocodeRemoveSnapshotErrors[keyof KilocodeRemoveSnapshotErrors]
+
+export type KilocodeRemoveSnapshotResponses = {
+  /**
+   * Snapshot repository removed
+   */
+  200: boolean
+}
+
+export type KilocodeRemoveSnapshotResponse = KilocodeRemoveSnapshotResponses[keyof KilocodeRemoveSnapshotResponses]
+
 export type KilocodeProviderUsageGetData = {
   body?: never
   path?: never

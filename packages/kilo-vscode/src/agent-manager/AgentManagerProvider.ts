@@ -118,6 +118,7 @@ export class AgentManagerProvider implements Disposable {
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
+  private removedSessions = new Set<string>()
   readonly settings: ProjectWiring["settings"]
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
@@ -300,7 +301,6 @@ export class AgentManagerProvider implements Disposable {
       (event) => this.onSessionLifecycle(event),
     )
   }
-
   /**
    * Keep each project's cached sidebar session list in sync with backend
    * session lifecycle events, so sessions created outside this panel (another
@@ -315,6 +315,7 @@ export class AgentManagerProvider implements Disposable {
     if (ev.type === "session.deleted") {
       const id = ev.properties?.sessionID
       if (!id) return
+      this.removedSessions.add(id)
       this.busySessions.delete(id)
       const ctx = this.contexts.byLiveSession(id)
       if (!ctx) return
@@ -323,6 +324,7 @@ export class AgentManagerProvider implements Disposable {
       return
     }
     const info = ev.properties?.info
+    if (ev.type === "session.created" && info) this.removedSessions.delete(info.id)
     const dir = info?.directory
     // Session events from sync or older backends can lack time/directory; a throw
     // would escape into the SSE dispatch loop and starve the other listeners.
@@ -339,12 +341,11 @@ export class AgentManagerProvider implements Disposable {
     ctx.invalidateSessions()
     this.postToWebview({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...ctx.sessions()] })
   }
-
   private onSessionStatus(event: unknown): void {
     const props = (event as { properties?: { sessionID?: string; status?: { type?: string } } }).properties
     const sid = props?.sessionID
     const type = props?.status?.type
-    if (!sid || !type) return
+    if (!sid || !type || this.removedSessions.has(sid)) return
     if (type === "idle") {
       this.busySessions.delete(sid)
       this.naming.idle(sid)
@@ -353,12 +354,10 @@ export class AgentManagerProvider implements Disposable {
     this.busySessions.add(sid)
     this.naming.busy(sid)
   }
-
   private log(...args: unknown[]) {
     const msg = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ")
     this.outputChannel.appendLine(`${new Date().toISOString()} ${msg}`)
   }
-
   public openPanel(preserveFocus?: boolean): void {
     if (this.panel) {
       this.log("Panel already open, revealing")
@@ -1129,7 +1128,6 @@ export class AgentManagerProvider implements Disposable {
       req,
     )
   }
-
   // Worktree actions
 
   /** Create a new worktree with an auto-created first session. */
@@ -1468,6 +1466,8 @@ export class AgentManagerProvider implements Disposable {
       sessions: {
         register: (session) => this.panel?.sessions.registerSession(session),
         clearDirectory: (sid) => this.panel?.sessions.clearSessionDirectory(sid),
+        setSessionDirectory: (sid, dir) => this.panel?.sessions.setSessionDirectory(sid, dir),
+        registerSessionRoute: (ref, dir, gen) => this.panel?.sessions.registerSessionRoute?.(ref, dir, gen),
         directories: () => this.panel?.sessions.getSessionDirectories(),
         abort: (ids) => this.panel?.sessions.abortSessions(ids) ?? Promise.resolve(),
         forget: (sid) => void this.panelSessions.delete(sid),

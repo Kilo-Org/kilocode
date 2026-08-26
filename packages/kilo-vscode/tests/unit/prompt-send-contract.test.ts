@@ -209,6 +209,18 @@ describe("handleSessionDeleted draft cleanup contract", () => {
     const body = extractFunctionBody(source, "handleSessionDeleted")
     expect(body).toContain("setRespondingPermissions")
   })
+
+  it("prevents late status and attention events from reviving a deleted session", () => {
+    expect(extractFunctionBody(source, "handleSessionDeleted")).toContain("removedSessions.add(sessionID)")
+    expect(extractFunctionBody(source, "handleSessionStatus")).toContain("removedSessions.has(sessionID)")
+    expect(extractFunctionBody(source, "handlePermissionRequest")).toContain(
+      "removedSessions.has(permission.sessionID)",
+    )
+    expect(extractFunctionBody(source, "handleQuestionRequest")).toContain("removedSessions.has(question.sessionID)")
+    expect(extractFunctionBody(source, "handleSuggestionRequest")).toContain(
+      "removedSessions.has(suggestion.sessionID)",
+    )
+  })
 })
 
 describe("KiloProvider pruneDeletedSession contract", () => {
@@ -222,7 +234,9 @@ describe("KiloProvider pruneDeletedSession contract", () => {
     // warning for the new current session.
     const match = source.match(/pruneDeletedSession\(sessionID: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
+    expect(match![1]).toContain("this.removedSessionIds.add(sessionID)")
     expect(match![1]).toContain("this.sessionStatusMap.delete(sessionID)")
+    expect(source).toContain("if (this.removedSessionIds.has(sid)) return")
   })
 
   it("clears currentSession and contextSessionID when the deleted id matches", () => {

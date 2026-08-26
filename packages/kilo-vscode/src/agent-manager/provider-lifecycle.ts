@@ -9,6 +9,8 @@ import type { CreateWorktreeResult, WorktreeManager } from "./WorktreeManager"
 import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./worktree-create"
 import { recordPromotionHandoff } from "./promotion-handoff"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
+import { routeProjectSession } from "./project/messages"
+const DELETE_ERROR = "agentManager.worktreeDeleteFailed"
 
 /**
  * Provider capabilities the worktree lifecycle needs beyond project state.
@@ -25,6 +27,12 @@ export interface LifecycleHost {
   sessions: {
     register: (session: Session) => void
     clearDirectory: (sessionId: string) => void
+    setSessionDirectory: (sessionId: string, directory: string) => void
+    registerSessionRoute?: (
+      ref: { projectId: string; sessionId: string },
+      directory: string,
+      generation: number,
+    ) => void
     directories: () => ReadonlyMap<string, string> | undefined
     abort: (sessionIds: string[]) => Promise<void>
     forget: (sessionId: string) => void
@@ -114,13 +122,68 @@ export async function deleteLifecycleWorktree(
     host.log(`Worktree ${worktreeId} not found in state`)
     return null
   }
+  let client: KiloClient
+  try {
+    client = host.client()
+    const [status, permissions, questions] = await Promise.all([
+      client.session.status({ directory: worktree.path }, { throwOnError: true }),
+      client.permission.list({ directory: worktree.path }, { throwOnError: true }),
+      client.question.list({ directory: worktree.path }, { throwOnError: true }),
+    ])
+    if (status.data === undefined || permissions.data === undefined || questions.data === undefined)
+      throw new Error("Deletion safety checks returned no data")
+    const active = Object.values(status.data).some((value) => value.type !== "idle")
+    if (active || permissions.data.length > 0 || questions.data.length > 0) {
+      host.post({
+        type: "error",
+        code: DELETE_ERROR,
+        projectId: ctx.id,
+        worktreeId,
+        message: "Cannot delete a worktree while a session is active or waiting for input",
+      })
+      return null
+    }
+  } catch (error) {
+    host.log(`Failed to verify worktree deletion safety: ${error}`)
+    host.post({
+      type: "error",
+      code: DELETE_ERROR,
+      projectId: ctx.id,
+      worktreeId,
+      message: "Cannot verify worktree sessions before deletion",
+    })
+    return null
+  }
   // Stop pollers before cleanup. State is removed only after PTYs and disk are gone so a failed
   // process cleanup cannot leave a live shell rooted in an untracked worktree.
-  host.skipStats(worktreeId)
-  await host.removeRun(worktreeId)
-  if (!(await host.clearRun(worktreeId))) {
+  try {
+    host.skipStats(worktreeId)
+    await host.removeRun(worktreeId)
+  } catch (error) {
     host.unskipStats(worktreeId)
-    host.post({ type: "error", message: "Failed to stop the Run script before deleting the worktree" })
+    host.log(`Failed to stop worktree services: ${error}`)
+    host.post({
+      type: "error",
+      code: DELETE_ERROR,
+      projectId: ctx.id,
+      worktreeId,
+      message: "Failed to stop worktree services before deletion",
+    })
+    return null
+  }
+  const cleared = await host.clearRun(worktreeId).catch((error) => {
+    host.log(`Failed to stop the Run script: ${error}`)
+    return false
+  })
+  if (!cleared) {
+    host.unskipStats(worktreeId)
+    host.post({
+      type: "error",
+      code: DELETE_ERROR,
+      projectId: ctx.id,
+      worktreeId,
+      message: "Failed to stop the Run script before deleting the worktree",
+    })
     return null
   }
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
@@ -130,17 +193,40 @@ export async function deleteLifecycleWorktree(
   } catch (error) {
     host.log(`Failed to remove worktree from disk: ${error}`)
     host.unskipStats(worktreeId)
+    host.post({
+      type: "error",
+      code: DELETE_ERROR,
+      projectId: ctx.id,
+      worktreeId,
+      message: "Failed to remove worktree PTYs before deletion",
+    })
     return null
   }
   try {
     await ctx.worktreeManager().removeWorktree(worktree.path, branch)
+    try {
+      await client.kilocode.removeSnapshot({ directory: ctx.root, worktree: worktree.path }, { throwOnError: true })
+    } catch (error) {
+      host.log(`Failed to remove worktree snapshots: ${error}`)
+    }
     const orphaned = state.removeWorktree(worktreeId)
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
     host.stopDiffs(worktree.path, orphaned)
-    for (const s of orphaned) host.sessions.clearDirectory(s.id)
+    for (const s of orphaned) routeProjectSession(host.sessions, ctx.id, s.id, ctx.root, ctx.generation)
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
+  } catch (error) {
+    host.unskipStats(worktreeId)
+    host.log(`Failed to delete worktree ${worktreeId}: ${error}`)
+    host.post({
+      type: "error",
+      code: DELETE_ERROR,
+      projectId: ctx.id,
+      worktreeId,
+      message: "Failed to delete the worktree",
+    })
+    return null
   } finally {
     releasePtyCleanup()
   }

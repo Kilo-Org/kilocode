@@ -258,6 +258,9 @@ interface ScriptTerminalsMessage {
 interface ErrorOutMessage {
   type: "error"
   message: string
+  code?: string
+  projectId?: string
+  worktreeId?: string
 }
 
 interface SessionAddedMessage {

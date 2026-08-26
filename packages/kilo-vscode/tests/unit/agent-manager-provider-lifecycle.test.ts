@@ -1,0 +1,155 @@
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
+import * as fs from "node:fs"
+import * as os from "node:os"
+import * as path from "node:path"
+import type { KiloClient, SessionStatus } from "@kilocode/sdk/v2/client"
+import { ProjectContext } from "../../src/agent-manager/project/context"
+import { deleteLifecycleWorktree, type LifecycleHost } from "../../src/agent-manager/provider-lifecycle"
+import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+
+describe("Agent Manager worktree deletion lifecycle", () => {
+  let root: string
+  let worktree: string
+  let state: WorktreeStateManager
+  let ctx: ProjectContext
+  let calls: string[]
+  let routes: Array<{ sessionID: string; directory: string; projectID: string; generation: number }>
+  let client: {
+    session: { status: ReturnType<typeof mock>; delete: ReturnType<typeof mock> }
+    permission: { list: ReturnType<typeof mock> }
+    question: { list: ReturnType<typeof mock> }
+    kilocode: { removeSnapshot: ReturnType<typeof mock> }
+  }
+  let host: LifecycleHost
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "am-delete-lifecycle-"))
+    worktree = path.join(root, "worktree")
+    fs.mkdirSync(path.join(root, ".kilo"), { recursive: true })
+    fs.mkdirSync(worktree)
+    calls = []
+    routes = []
+    state = new WorktreeStateManager(root, () => undefined)
+    ctx = new ProjectContext("project", root, true, {
+      log: () => undefined,
+      state: () => state,
+      worktrees: () =>
+        ({
+          removeWorktree: mock(async () => calls.push("disk")),
+        }) as never,
+    })
+    ctx.stateManager().addWorktree({ branch: "feature", path: worktree, parentBranch: "main" })
+    client = {
+      session: {
+        status: mock(async () => ({ data: {} as Record<string, SessionStatus> })),
+        delete: mock(async () => ({ data: true })),
+      },
+      permission: { list: mock(async () => ({ data: [] })) },
+      question: { list: mock(async () => ({ data: [] })) },
+      kilocode: { removeSnapshot: mock(async () => ({ data: true })) },
+    }
+    host = {
+      createOnDisk: async () => null,
+      runSetup: async () => undefined,
+      createSession: async () => null,
+      notifyReady: () => undefined,
+      sessions: {
+        register: () => undefined,
+        clearDirectory: (id) => calls.push(`clear:${id}`),
+        setSessionDirectory: (id, directory) => calls.push(`directory:${id}:${directory}`),
+        registerSessionRoute: (ref, directory, generation) =>
+          routes.push({ sessionID: ref.sessionId, projectID: ref.projectId, directory, generation }),
+        directories: () => new Map(),
+        abort: async () => undefined,
+        forget: () => undefined,
+      },
+      push: () => calls.push("push"),
+      register: () => undefined,
+      skipStats: () => calls.push("stats:skip"),
+      unskipStats: () => calls.push("stats:unskip"),
+      removePR: () => calls.push("pr"),
+      removeRun: async () => calls.push("run:remove"),
+      clearRun: async () => {
+        calls.push("run:clear")
+        return true
+      },
+      forgetName: () => calls.push("name"),
+      stopDiffs: () => calls.push("diff"),
+      capture: () => undefined,
+      autoName: () => ({ enabled: false }),
+      client: () => client as unknown as KiloClient,
+      acquirePtyCleanup: async () => {
+        calls.push("pty")
+        return () => calls.push("pty:release")
+      },
+      metadata: async () => ({}),
+      post: (message) => calls.push(`post:${message.type}`),
+      log: () => undefined,
+    }
+  })
+
+  afterEach(async () => {
+    await state.flush()
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+
+  const deleteWorktree = async () => deleteLifecycleWorktree(ctx, host, state.getWorktrees()[0]!.id)
+
+  it.each([
+    ["busy", { type: "busy" }],
+    ["retry", { type: "retry", attempt: 1, message: "retry", next: 100 }],
+    ["offline", { type: "offline", requestID: "req", message: "offline" }],
+  ] as const)("refuses a %s session before cleanup", async (_name, status) => {
+    const session = state.addSession("session", state.getWorktrees()[0]!.id)
+    client.session.status.mockResolvedValue({ data: { [session.id]: status } })
+
+    await deleteWorktree()
+
+    expect(calls).toEqual(["post:error"])
+    expect(state.getWorktree(session.worktreeId!)).toBeDefined()
+    expect(client.session.status).toHaveBeenCalledWith({ directory: worktree }, { throwOnError: true })
+    expect(client.permission.list).toHaveBeenCalledWith({ directory: worktree }, { throwOnError: true })
+    expect(client.question.list).toHaveBeenCalledWith({ directory: worktree }, { throwOnError: true })
+  })
+
+  it.each(["permission", "question"] as const)("refuses a pending %s before cleanup", async (kind) => {
+    const session = state.addSession("session", state.getWorktrees()[0]!.id)
+    const list = kind === "permission" ? client.permission.list : client.question.list
+    list.mockResolvedValue({ data: [{ id: kind, sessionID: session.id }] })
+
+    await deleteWorktree()
+
+    expect(calls).toEqual(["post:error"])
+    expect(state.getWorktree(session.worktreeId!)).toBeDefined()
+  })
+
+  it("fails closed before cleanup when an authoritative check fails", async () => {
+    client.question.list.mockRejectedValue(new Error("backend unavailable"))
+
+    await deleteWorktree()
+
+    expect(calls).toEqual(["post:error"])
+    expect(state.getWorktrees()).toHaveLength(1)
+  })
+
+  it("retargets orphaned sessions to the exact project root without deleting them", async () => {
+    const first = state.addSession("first", state.getWorktrees()[0]!.id)
+    const second = state.addSession("second", state.getWorktrees()[0]!.id)
+
+    await deleteWorktree()
+
+    expect(routes).toEqual([
+      { sessionID: first.id, projectID: ctx.id, directory: ctx.root, generation: ctx.generation },
+      { sessionID: second.id, projectID: ctx.id, directory: ctx.root, generation: ctx.generation },
+    ])
+    expect(calls).not.toContain(`clear:${first.id}`)
+    expect(calls).not.toContain(`clear:${second.id}`)
+    expect(client.session.delete).not.toHaveBeenCalled()
+    expect(client.kilocode.removeSnapshot).toHaveBeenCalledWith(
+      { directory: ctx.root, worktree },
+      { throwOnError: true },
+    )
+    expect(state.getWorktrees()).toHaveLength(0)
+    expect(state.getSessions()).toHaveLength(0)
+  })
+})
