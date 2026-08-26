@@ -114,33 +114,44 @@ export async function deleteLifecycleWorktree(
     host.log(`Worktree ${worktreeId} not found in state`)
     return null
   }
-  // Stop pollers before cleanup. State is removed only after PTYs and disk are gone so a failed
-  // process cleanup cannot leave a live shell rooted in an untracked worktree.
+  const sessions = state.getSessions(worktreeId)
+  const fail = (message: string) => {
+    host.unskipStats(worktreeId)
+    host.post({ type: "agentManager.worktreeSetup", status: "error", message, worktreeId })
+  }
   host.skipStats(worktreeId)
+  host.stopDiffs(worktree.path, sessions)
   await host.removeRun(worktreeId)
   if (!(await host.clearRun(worktreeId))) {
-    host.unskipStats(worktreeId)
-    host.post({ type: "error", message: "Failed to stop the Run script before deleting the worktree" })
+    fail("Failed to stop the Run script before deleting the worktree")
     return null
   }
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
   let releasePtyCleanup: () => void
   try {
+    if (sessions.length > 0) {
+      await host.sessions.abort(sessions.map((session) => session.id))
+      const client = host.client()
+      await Promise.all(sessions.map((session) => stopSessionProcesses(client, session.id, worktree.path)))
+    }
     releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
   } catch (error) {
-    host.log(`Failed to remove worktree from disk: ${error}`)
-    host.unskipStats(worktreeId)
+    host.log(`Failed to stop worktree processes: ${error}`)
+    fail(`Failed to stop worktree processes: ${getErrorMessage(error)}`)
     return null
   }
   try {
+    await host.client().instance.dispose({ directory: worktree.path }, { throwOnError: true })
     await ctx.worktreeManager().removeWorktree(worktree.path, branch)
     const orphaned = state.removeWorktree(worktreeId)
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
-    host.stopDiffs(worktree.path, orphaned)
-    for (const s of orphaned) host.sessions.clearDirectory(s.id)
+    for (const session of orphaned) host.sessions.clearDirectory(session.id)
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
+  } catch (error) {
+    host.log(`Failed to remove worktree from disk: ${error}`)
+    fail(`Failed to delete worktree: ${getErrorMessage(error)}`)
   } finally {
     releasePtyCleanup()
   }

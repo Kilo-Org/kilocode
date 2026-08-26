@@ -1033,11 +1033,11 @@ export class AgentManagerProvider implements Disposable {
     return acquirePtyCleanup({
       directory,
       terminals: this.terminalRouter,
+      integrated: this.terminalManager,
       scripts: this.scripts.manager,
       getClient: (dir) => this.connectionService.getClientAsync(dir),
     })
   }
-
   private async discardWorktree(id: string, dir: string, branch: string, sessionId?: string): Promise<void> {
     const ctx = this.context
     if (!ctx) return

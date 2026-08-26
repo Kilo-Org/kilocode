@@ -1,5 +1,6 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { ScriptTerminalManager } from "./ScriptTerminalManager"
+import type { SessionTerminalManager } from "./SessionTerminalManager"
 import type { TerminalRouter } from "./terminal-routing"
 
 export async function removePtys(
@@ -24,6 +25,7 @@ export async function removePtys(
 export async function acquirePtyCleanup(input: {
   directory: string
   terminals: TerminalRouter
+  integrated: SessionTerminalManager
   scripts: ScriptTerminalManager
   getClient: (directory: string) => Promise<KiloClient>
 }) {
@@ -32,6 +34,7 @@ export async function acquirePtyCleanup(input: {
     input.scripts.blockDirectory(input.directory),
   ])
   try {
+    input.integrated.closeDirectory(input.directory)
     await input.terminals.closeDirectory(input.directory)
     await input.scripts.closeDirectory(input.directory)
     await removePtys(input.getClient, input.directory)
