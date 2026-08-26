@@ -1802,7 +1802,7 @@ export class AgentManagerProvider implements Disposable {
     await continueInWorktree(
       {
         root,
-        connection: this.connectionService,
+        getClient: () => this.connectionService.getClient(),
         createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
         runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
         cleanupWorktree: async (id) => {

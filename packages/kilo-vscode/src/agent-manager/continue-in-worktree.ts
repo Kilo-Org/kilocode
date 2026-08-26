@@ -8,10 +8,7 @@ import { recordForkHandoff } from "./fork-handoff"
 
 export interface ContinueContext {
   root: string
-  connection: {
-    getClient: () => KiloClient
-    runExplicitAbort: <T>(sessionId: string, directory: string, action: () => Promise<T>) => Promise<T>
-  }
+  getClient: () => KiloClient
   createWorktreeOnDisk: (opts: { baseBranch: string; baseRef: string }) => Promise<{
     worktree: { id: string }
     result: CreateWorktreeResult
@@ -33,13 +30,10 @@ export type StepResult<T> = { ok: true; value: T } | { ok: false; error: string 
 /** Abort a running session. Best-effort — failures are logged but not fatal. */
 export async function abortSession(ctx: ContinueContext, sessionId: string): Promise<void> {
   try {
-    await ctx.connection
-      .runExplicitAbort(sessionId, ctx.root, async () => {
-        await ctx.connection.getClient().session.abort({ sessionID: sessionId }, { throwOnError: true })
-      })
-      .catch((err) => {
-        ctx.log("Session abort failed (may already be idle):", getErrorMessage(err))
-      })
+    const client = ctx.getClient()
+    await client.session.abort({ sessionID: sessionId }, { throwOnError: true }).catch((err) => {
+      ctx.log("Session abort failed (may already be idle):", getErrorMessage(err))
+    })
   } catch (err) {
     ctx.log("Client not available for abort, continuing:", getErrorMessage(err))
   }
@@ -102,7 +96,7 @@ async function rollback(
 export async function forkSession(ctx: ContinueContext, sessionId: string, dir: string): Promise<StepResult<Session>> {
   let client: KiloClient
   try {
-    client = ctx.connection.getClient()
+    client = ctx.getClient()
   } catch (err) {
     ctx.log("Client not available for session fork:", getErrorMessage(err))
     return { ok: false, error: "Not connected to CLI backend" }

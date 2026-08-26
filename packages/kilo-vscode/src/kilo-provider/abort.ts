@@ -27,27 +27,30 @@ export class SessionAbort {
     this.observe(sessionID, status, dir)
   }
 
-  directories(sessionID: string, fallback: string) {
+  async stop(
+    client: KiloClient,
+    sessionID: string,
+    fallback: string,
+    run?: (dir: string, action: () => Promise<void>) => Promise<void>,
+  ) {
+    const known = this.active.has(sessionID)
     const dirs = [...(this.active.get(sessionID) ?? [])]
     if (!dirs.some((dir) => sameDirectory(dir, fallback))) dirs.push(fallback)
-    return dirs
-  }
-
-  async stop(client: KiloClient, sessionID: string, fallback: string, dirs = this.directories(sessionID, fallback)) {
-    const known = this.active.has(sessionID)
-    const results = await Promise.allSettled(dirs.map((dir) => abortSession({ client, sessionID, dir })))
+    const results = await Promise.allSettled(
+      dirs.map((dir) => {
+        const action = () => abortSession({ client, sessionID, dir })
+        return known && run ? run(dir, action) : action()
+      }),
+    )
     const failures = results.flatMap((result, index) =>
       result.status === "rejected" ? [{ dir: dirs[index], error: result.reason }] : [],
     )
     if (failures.length > 0) {
       console.error("[Kilo New] KiloProvider: Failed to abort session in one or more directories:", failures)
-      return {
-        complete: false,
-        attempts: results.map((result, index) => ({ dir: dirs[index], aborted: result.status === "fulfilled" })),
-      }
+      return false
     }
     if (known) this.active.delete(sessionID)
-    return { complete: known, attempts: dirs.map((dir) => ({ dir, aborted: true })) }
+    return known
   }
 
   dispose(dir: string) {
