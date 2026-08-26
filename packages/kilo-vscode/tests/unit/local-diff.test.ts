@@ -517,6 +517,60 @@ describe("diffFile", () => {
     })
   })
 
+  it("keeps in-flight bulk detail when an unchanged summary refreshes", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nunchanged\n")
+      const ops = git()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      let release!: () => void
+      let started!: () => void
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const ready = new Promise<void>((resolve) => {
+        started = resolve
+      })
+      const original = ops.execGit.bind(ops)
+      ops.execGit = async (...args: Parameters<GitOps["execGit"]>) => {
+        if (args[0][0] === "cat-file" && args[0][1] === "--batch-check") {
+          started()
+          await gate
+        }
+        return original(...args)
+      }
+      const pending = local.files(dir, base, ["seed.txt"])
+      await ready
+      await local.summary(dir, base)
+      release()
+      const result = await pending
+
+      expect(result.entries.get("seed.txt")?.after).toBe("seed\nunchanged\n")
+      expect(result.deferred.size).toBe(0)
+    })
+  })
+
+  it("defers every requested file when bulk Git inspection fails", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfallback\n")
+      const ops = git()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      const original = ops.execGit.bind(ops)
+      ops.execGit = async (...args: Parameters<GitOps["execGit"]>) => {
+        if (args[0][0] === "cat-file" && args[0][1] === "--batch-check") {
+          return { code: 1, stdout: "", stderr: "batch inspection failed" }
+        }
+        return original(...args)
+      }
+      const result = await local.files(dir, base, ["seed.txt"])
+
+      expect(result.entries.has("seed.txt")).toBe(false)
+      expect(result.deferred.has("seed.txt")).toBe(true)
+      expect((await local.file(dir, base, "seed.txt"))?.after).toBe("seed\nfallback\n")
+    })
+  })
+
   it("discards bulk detail when a newer summary replaces its snapshot", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfirst\n")
@@ -546,7 +600,8 @@ describe("diffFile", () => {
       release()
       const stale = await pending
 
-      expect(stale.entries.get("seed.txt")).toBeNull()
+      expect(stale.entries.has("seed.txt")).toBe(false)
+      expect(stale.deferred.has("seed.txt")).toBe(true)
       expect((await local.file(dir, base, "seed.txt"))?.after).toBe("seed\nnewer summary\n")
     })
   })

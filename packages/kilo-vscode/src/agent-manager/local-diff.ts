@@ -510,11 +510,28 @@ export function createLocalDiff(git: GitOps, log?: Log) {
         fresh.map((item) => item.meta),
         log,
         signal,
-      ).then((values) => {
-        if (states.get(key) !== state) throw new Error("Diff summary changed")
-        for (const path of values.deferred) deferred.add(path)
-        return values
-      })
+      )
+        .then((values) => {
+          const current = states.get(key)
+          if (
+            !current ||
+            current.anc !== state.anc ||
+            fresh.some((item) => {
+              const meta = current.metas.get(item.meta.file)
+              return !meta || identity(dir, base, current.anc, meta) !== item.id
+            })
+          ) {
+            throw new Error("Diff summary changed")
+          }
+          for (const path of values.deferred) deferred.add(path)
+          return values
+        })
+        .catch((err): DiffBatch<WorktreeDiffEntry> => {
+          check(signal)
+          log?.("Bulk diff detail failed, falling back to single-file requests", err)
+          for (const item of fresh) deferred.add(item.meta.file)
+          return { entries: new Map(), deferred }
+        })
       for (const item of fresh) {
         const work = batch.then((values) => {
           const value = values.entries.get(item.meta.file)
