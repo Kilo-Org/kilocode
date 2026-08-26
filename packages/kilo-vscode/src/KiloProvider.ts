@@ -5363,6 +5363,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   // ── Worktree stats polling (sidebar diff badge) ──────────────────
   private startStatsPolling(): void {
+    if (this.opts.disableStatsPolling) return
     this.statsPoller?.stop()
     this.statsGitOps?.dispose()
     const git = new GitOps({ log: () => {} })
