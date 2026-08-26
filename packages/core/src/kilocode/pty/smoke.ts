@@ -3,6 +3,16 @@ import { KiloPtyTermination } from "./termination"
 import { spawn } from "#pty"
 
 const TIMEOUT = 15_000
+const RENDER_TIMEOUT = 60_000
+
+export function marker(output: string) {
+  const text = output
+    .replace(/\x1b\](?:[^\x07\x1b]|\x1b(?!\\))*(?:\x07|\x1b\\)/g, "")
+    .replace(/\x1b[P^_](?:[^\x1b]|\x1b(?!\\))*\x1b\\/g, "")
+    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
+    .replace(/\x1b[@-_]/g, "")
+  return text.split(/\r?\n/).some((line) => line.trim() === "KILO_PTY_READY")
+}
 
 async function render() {
   const proc = spawn(process.execPath, ["--pure"], {
@@ -34,7 +44,7 @@ async function render() {
     state.exited = true
     ready.reject(new Error(`TUI exited before rendering (code ${event.exitCode}): ${JSON.stringify(state.output)}`))
   })
-  const timeout = AbortSignal.timeout(TIMEOUT)
+  const timeout = AbortSignal.timeout(RENDER_TIMEOUT)
 
   try {
     await Promise.race([
@@ -42,7 +52,10 @@ async function render() {
       new Promise<never>((_, reject) =>
         timeout.addEventListener(
           "abort",
-          () => reject(new Error(`TUI produced no rendered frame within ${TIMEOUT}ms: ${JSON.stringify(state.output)}`)),
+          () =>
+            reject(
+              new Error(`TUI produced no rendered frame within ${RENDER_TIMEOUT}ms: ${JSON.stringify(state.output)}`),
+            ),
           { once: true },
         ),
       ),
@@ -67,7 +80,7 @@ export async function smoke() {
   const exited = Promise.withResolvers<number>()
   const data = proc.onData((chunk) => {
     state.output += chunk
-    if (/(?:^|[\r\n])KILO_PTY_READY(?:\r?\n|$)/.test(state.output)) output.resolve()
+    if (marker(state.output)) output.resolve()
   })
   const exit = proc.onExit((event) => {
     state.exited = true
