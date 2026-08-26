@@ -155,25 +155,6 @@ exports[`tool parameters JSON Schema (wire shape) grep 1`] = `
 }
 `;
 
-exports[`tool parameters JSON Schema (wire shape) invalid 1`] = `
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "properties": {
-    "error": {
-      "type": "string",
-    },
-    "tool": {
-      "type": "string",
-    },
-  },
-  "required": [
-    "tool",
-    "error",
-  ],
-  "type": "object",
-}
-`;
-
 exports[`tool parameters JSON Schema (wire shape) lsp 1`] = `
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",

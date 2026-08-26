@@ -22,7 +22,6 @@ import type { ShellTool as BashTool } from "@/tool/shell"
 import type { EditTool } from "@/tool/edit"
 import type { GlobTool } from "@/tool/glob"
 import type { GrepTool } from "@/tool/grep"
-import type { InvalidTool } from "@/tool/invalid"
 import type { LspTool } from "@/tool/lsp"
 import type { PlanExitTool } from "@/tool/plan"
 import type { InteractiveTerminalTool } from "@/kilocode/tool/interactive-terminal" // kilocode_change
@@ -93,7 +92,6 @@ type ToolPermissionCtx = {
 }
 
 type ToolDefs = {
-  invalid: typeof InvalidTool
   bash: typeof BashTool
   write: typeof WriteTool
   edit: typeof EditTool
@@ -451,15 +449,6 @@ function scrollInteractiveTerminalFinal(p: ToolProps<typeof InteractiveTerminalT
   return typeof code === "number" ? `interactive terminal completed (exit ${code})` : "interactive terminal completed"
 }
 // kilocode_change end
-
-function runInvalid(p: ToolProps<typeof InvalidTool>): ToolInline {
-  return {
-    icon: "✗",
-    title: text(p.frame.state.title) || "Invalid Tool",
-    mode: "block",
-    body: p.frame.status === "completed" ? text(p.frame.state.output) : undefined,
-  }
-}
 
 function runBatch(p: ToolProps): ToolInline {
   const calls = list(dict(p.input).tool_calls).length
@@ -1049,16 +1038,6 @@ function permLsp(p: ToolPermissionProps<typeof LspTool>): ToolPermissionInfo {
 }
 
 const TOOL_RULES = {
-  invalid: {
-    view: {
-      output: true,
-      final: false,
-    },
-    run: runInvalid,
-    scroll: {
-      start: () => "",
-    },
-  },
   bash: {
     view: {
       output: true,
