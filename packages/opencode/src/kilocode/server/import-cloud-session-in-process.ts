@@ -162,18 +162,25 @@ export namespace CloudSessionImportInProcess {
         catch: (err) => {
           log.error("cloud session import restore failed", { route: "cloud/session/import/restore", error: name(err) })
         },
-      }).pipe(Effect.catchAll(() => Effect.succeed(undefined)))
+      }).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
       yield* Effect.all([
         storage.write(baseKey(imported.id), diffs),
         storage.write(["session_diff", imported.id], diffs),
       ]).pipe(
-        Effect.catchAll((err) => {
-          log.error("cloud session import diff failed", { route: "cloud/session/import/diff", error: name(err) })
+        Effect.catchCause((cause) => {
+          log.error("cloud session import diff failed", {
+            route: "cloud/session/import/diff",
+            error: name(Cause.squash(cause)),
+          })
           return Effect.succeed(undefined)
         }),
       )
     }
 
-    return imported
+    // The canonical Session.Info contract is the mutable DeepMutable type, not
+    // the readonly Schema.decodeUnknownSync output. Cast so the remote
+    // create_session clone seam (Promise<Session.Info>) and the HTTP handler
+    // both receive the same shape.
+    return imported as DeepMutable<typeof imported>
   })
 }

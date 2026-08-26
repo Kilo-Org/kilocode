@@ -31,8 +31,11 @@ import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { Database } from "@opencode-ai/core/database/database"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import { Auth } from "@/auth"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { Storage } from "@/storage/storage"
 import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
@@ -55,6 +58,9 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     const auth = yield* Auth.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
+    const events = yield* EventV2Bridge.Service
+    const database = yield* Database.Service
+    const storage = yield* Storage.Service
 
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
@@ -448,23 +454,35 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const { CloudSessionImportInProcess } = yield* Effect.promise(() =>
         import("@/kilocode/server/import-cloud-session-in-process"),
       )
-      return yield* CloudSessionImportInProcess.importSession(ctx.payload.sessionId).pipe(
-        Effect.matchEffect({
+      const outcome = yield* CloudSessionImportInProcess.importSession(ctx.payload.sessionId).pipe(
+        Effect.provideService(Auth.Service, auth),
+        Effect.provideService(EventV2Bridge.Service, events),
+        Effect.provideService(Database.Service, database),
+        Effect.provideService(Storage.Service, storage),
+        Effect.match({
           onFailure: (err) => {
-            if (err instanceof CloudSessionImportInProcess.Unauthorized) {
-              return Effect.fail(new HttpApiError.Unauthorized({}))
-            }
+            if (err instanceof CloudSessionImportInProcess.Unauthorized) return { tag: "unauthorized" as const }
             if (err instanceof CloudSessionImportInProcess.Upstream) {
-              return Effect.succeed(jsonError(err.error, err.status))
+              return { tag: "upstream" as const, error: err.error, status: err.status }
             }
-            if (err instanceof CloudSessionImportInProcess.BadRequest) {
-              return Effect.fail(new HttpApiError.BadRequest({}))
-            }
-            return Effect.fail(new CloudSessionImportError({ error: "Internal error" }))
+            if (err instanceof CloudSessionImportInProcess.BadRequest) return { tag: "badrequest" as const }
+            return { tag: "internal" as const }
           },
-          onSuccess: (session) => Effect.succeed(session),
+          onSuccess: (session) => ({ tag: "ok" as const, session }),
         }),
       )
+      switch (outcome.tag) {
+        case "unauthorized":
+          return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+        case "upstream":
+          return jsonError(outcome.error, outcome.status)
+        case "badrequest":
+          return yield* Effect.fail(new HttpApiError.BadRequest({}))
+        case "internal":
+          return yield* Effect.fail(new CloudSessionImportError({ error: "Internal error" }))
+        case "ok":
+          return outcome.session
+      }
     })
 
     const imageModels = Effect.fn("KiloGatewayHttpApi.imageModels")(function* () {
