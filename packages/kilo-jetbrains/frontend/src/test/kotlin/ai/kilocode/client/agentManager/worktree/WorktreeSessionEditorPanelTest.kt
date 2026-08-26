@@ -35,6 +35,8 @@ import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SearchTextField
+import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
@@ -234,6 +236,26 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
         assertEquals("New session", edt { (list.model.getElementAt(0) as ActiveListItem).title })
         assertEquals("new", edt { (list.selectedValue as ActiveListItem).key })
+    }
+
+    fun `test session row title uses regular font`() {
+        rpc.listed += session("ses_1", nowSeconds())
+        edt { controller.reload() }
+        flush()
+
+        val style = edt {
+            @Suppress("UNCHECKED_CAST")
+            val list = UIUtil.findComponentOfType(panel, JBList::class.java)!! as JBList<ActiveListItem>
+            val row = list.model.getElementAt(0) as ActiveListItem
+            val comp = list.cellRenderer.getListCellRendererComponent(list, row, 0, true, true)
+            val title = components(comp).filterIsInstance<SimpleColoredComponent>().single()
+            val iter = title.iterator()
+            assertTrue(iter.hasNext())
+            iter.next()
+            iter.textAttributes.style
+        }
+
+        assertEquals(SimpleTextAttributes.STYLE_PLAIN, style)
     }
 
     fun `test running session row shows activity badge without leading icon`() {

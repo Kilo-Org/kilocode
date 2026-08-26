@@ -89,7 +89,7 @@ export const AgentManagerModelsTool = Tool.define<
               offset,
               total: matches.length,
               nextOffset,
-              hint: "Pass a model name (or one of its providers/IDs) as the agent_manager task `model`. Agent Manager picks the provider, preferring the one used by the current turn.",
+              hint: "Pass a model name (or one of its providers/IDs) as the agent_manager task `model`. Add the task `provider` to force one of the listed providers; otherwise Agent Manager prefers the provider used by the current turn.",
             }),
             metadata: { count: models.length, total: matches.length },
           }

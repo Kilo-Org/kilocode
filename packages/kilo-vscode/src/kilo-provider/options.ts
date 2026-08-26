@@ -26,6 +26,7 @@ export type KiloProviderOptions = {
   rootDirectory?: () => string | undefined
   /** Composite hosts (Agent Manager) own viewed/presence registration themselves. */
   disableViewedRegistration?: boolean
+  disableStatsPolling?: boolean
   /**
    * Project route registry shared by all Agent Manager panels. When set, the
    * provider resolves project-qualified session refs to exact directories and

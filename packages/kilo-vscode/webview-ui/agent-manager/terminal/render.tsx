@@ -73,8 +73,8 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
  * **Once an xterm instance is mounted, its DOM subtree is only ever
  * hidden, never unmounted.** Inactive slots keep their layout box but
  * are translated one viewport off-screen; xterm 6's render service
- * observes the screen element and pauses the render loop (rAF, model
- * updates, GPU draws) for non-intersecting terminals, then replays a
+ * observes the screen element and pauses the render loop (rAF and model
+ * updates) for non-intersecting terminals, then replays a
  * full refresh when the slot slides back in. Keeping the box (unlike
  * `display: none`) also lets FitAddon measure the real panel size while
  * hidden, so background-created terminals such as setup scripts wrap

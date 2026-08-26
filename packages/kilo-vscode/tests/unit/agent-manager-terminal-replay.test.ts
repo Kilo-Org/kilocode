@@ -51,6 +51,14 @@ describe("Agent Manager terminal write batcher", () => {
     expect(h.writes).toEqual(["abc"])
   })
 
+  it("keeps local status output after pending PTY output", () => {
+    const h = harness()
+    h.batcher.write("last output")
+    h.batcher.write("\r\n[terminal ended]\r\n")
+    h.run()
+    expect(h.writes).toEqual(["last output\r\n[terminal ended]\r\n"])
+  })
+
   it("coalesces many frames into separate writes", () => {
     const h = harness()
     h.batcher.write("1")
@@ -65,9 +73,9 @@ describe("Agent Manager terminal write batcher", () => {
     h.batcher.write("txt")
     h.batcher.write(new Uint8Array([1, 2]))
     h.run()
-    expect(h.writes).toHaveLength(1)
-    const merged = h.writes[0] as Uint8Array
-    expect(Array.from(merged)).toEqual([116, 120, 116, 1, 2])
+    expect(h.writes).toHaveLength(2)
+    expect(h.writes[0]).toBe("txt")
+    expect(Array.from(h.writes[1] as Uint8Array)).toEqual([1, 2])
   })
 
   it("fires chunk callbacks after the batch write completes", () => {
@@ -137,6 +145,22 @@ describe("Agent Manager terminal input buffer", () => {
     input.add("abcde", true)
 
     expect(input.take()).toBe("bcde2345")
+  })
+
+  it("clears buffered input after a failed replay", () => {
+    const input = createInputBuffer()
+    input.add("command\r")
+    input.add("reply", true)
+    input.clear()
+    expect(input.take()).toBe("")
+  })
+
+  it("does not flush input when replay exceeds its limit", () => {
+    let flushed = 0
+    const gate = createReplayGate({ write: () => undefined, flush: () => flushed++ })
+    gate.attach(false)
+    expect(gate.output("x".repeat(8 * 1024 * 1024 + 1))).toBe(false)
+    expect(flushed).toBe(0)
   })
 })
 

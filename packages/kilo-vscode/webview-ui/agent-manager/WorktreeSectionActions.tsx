@@ -5,7 +5,7 @@ import { Show } from "solid-js"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { LanguageContextValue } from "../src/context/language"
 import { parseBindingTokens } from "./keybind-tokens"
 import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -26,6 +26,7 @@ interface WorktreeSectionActionsProps {
   onSection: () => void
   onShortcuts: () => void
   onSettings: () => void
+  onHistory: () => void
 }
 
 export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (props) => (
@@ -107,6 +108,15 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
           onClick={props.onShortcuts}
         />
       </TooltipKeybind>
+      <Tooltip value={props.t("session.showHistory")} placement="bottom">
+        <IconButton
+          icon="history"
+          size="small"
+          variant="ghost"
+          aria-label={props.t("session.showHistory")}
+          onClick={props.onHistory}
+        />
+      </Tooltip>
       <IconButton
         icon="settings-gear"
         size="small"

@@ -6,6 +6,7 @@ const unresolveComment = mock(async (_threadId: string, _cwd: string) => {})
 mock.module("../../src/agent-manager/pr/PRActions", () => ({ resolveComment, unresolveComment }))
 
 import { PRStatusBridge } from "../../src/agent-manager/pr-status-bridge"
+import { PRStatusPoller } from "../../src/agent-manager/PRStatusPoller"
 import type { AgentManagerOutMessage, PRStatus } from "../../src/agent-manager/types"
 
 const pr: PRStatus = {
@@ -24,6 +25,7 @@ const pr: PRStatus = {
 function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
   const sent: AgentManagerOutMessage[] = []
   const opened: string[] = []
+  const reads: (string | undefined)[] = []
   const worktrees: { id: string; path: string; branch: string; prUrl?: string }[] = [
     { id: "wt1", path: "/repo/wt1", branch: "feature" },
   ]
@@ -35,11 +37,100 @@ function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
     hasPersistedPR: () => opts.hasPersisted ?? false,
     openExternal: (url) => opened.push(url),
     log: () => {},
-    projectId: () => opts.projectId,
+    projectId: () => {
+      reads.push(opts.projectId)
+      return opts.projectId
+    },
   })
   const onStatus = (bridge.poller as unknown as { options: { onStatus: (...a: unknown[]) => void } }).options.onStatus
-  return { bridge, sent, opened, onStatus, worktrees }
+  return { bridge, sent, opened, onStatus, worktrees, reads }
 }
+
+describe("PRStatusPoller batched GitHub queries", () => {
+  it("loads checks and reviewers with one request and isolates projects and detached worktrees", async () => {
+    let root = "/alpha"
+    const tree = { id: "wt1", path: "/alpha/feature", branch: "feature" }
+    const calls: string[][] = []
+    const values: PRStatus[] = []
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [tree] as never,
+      getWorkspaceRoot: () => root,
+      onStatus: (_id, status) => {
+        if (status) values.push(status)
+      },
+      log: () => undefined,
+    })
+    const internal = poller as unknown as {
+      fetchOne: (id: string) => Promise<void>
+      target: (id: string) => typeof tree
+      gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+    }
+    internal.target = () => tree
+    internal.gh = async (args) => {
+      calls.push(args)
+      return {
+        stdout: JSON.stringify({
+          number: root === "/alpha" ? 1 : tree.branch === "HEAD" ? (tree.path.endsWith("one") ? 3 : 4) : 2,
+          url: `https://github.com/example/${root.slice(1)}/pull/1`,
+          statusCheckRollup: [{ name: "build", conclusion: "SUCCESS" }],
+          reviewRequests: [{ login: "reviewer" }],
+          reviews: [],
+        }),
+        stderr: "",
+      }
+    }
+
+    await internal.fetchOne("wt1")
+    root = "/beta"
+    tree.path = "/beta/feature"
+    await internal.fetchOne("wt1")
+    tree.branch = "HEAD"
+    tree.path = "/beta/one"
+    await internal.fetchOne("wt1")
+    tree.path = "/beta/two"
+    await internal.fetchOne("wt1")
+
+    expect(calls).toHaveLength(4)
+    expect(calls.every((args) => args[0] === "pr" && args[1] === "view")).toBe(true)
+    expect(calls[0]?.at(-1)).toContain("statusCheckRollup,reviewRequests,reviews")
+    expect(values.map((item) => item.number)).toEqual([1, 2, 3, 4])
+    expect(values[0]?.checks.passed).toBe(1)
+    expect(values[0]?.reviewers).toEqual([{ login: "reviewer", avatar: undefined, state: "pending" }])
+  })
+
+  it.each([['Unknown JSON field: "statusCheckRollup"'], ["GraphQL: Resource not accessible by integration"]])(
+    "retries basic pull request fields after %s",
+    async (message) => {
+      const poller = new PRStatusPoller({
+        getWorktrees: () => [],
+        getWorkspaceRoot: () => "/repo",
+        onStatus: () => undefined,
+        log: () => undefined,
+      })
+      const calls: string[][] = []
+      const internal = poller as unknown as {
+        query: (args: string[], cwd: string) => Promise<string>
+        gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+      }
+      internal.gh = async (args) => {
+        calls.push(args)
+        if (args.at(-1)?.includes("statusCheckRollup")) throw new Error(message)
+        return { stdout: '{"number":1}', stderr: "" }
+      }
+
+      expect(await internal.query(["pr", "view"], "/repo")).toBe('{"number":1}')
+      expect(await internal.query(["pr", "view"], "/repo")).toBe('{"number":1}')
+      expect(calls).toHaveLength(3)
+      expect(calls[1]?.at(-1)).not.toContain("statusCheckRollup")
+      expect(calls[2]?.at(-1)).not.toContain("statusCheckRollup")
+
+      poller.stop()
+      expect(await internal.query(["pr", "view"], "/repo")).toBe('{"number":1}')
+      expect(calls).toHaveLength(5)
+      expect(calls[3]?.at(-1)).toContain("statusCheckRollup")
+    },
+  )
+})
 
 describe("PRStatusBridge.handleMessage openPR", () => {
   it("opens an explicit URL from a background project", () => {
@@ -73,6 +164,13 @@ describe("PRStatusBridge.notifyError", () => {
     bridge.notifyError("gh_missing")
     expect(sent).toHaveLength(1)
     expect(sent[0]).toEqual(expect.objectContaining({ type: "agentManager.prError", error: "gh_missing" }))
+  })
+
+  it("tags errors with their owning project", () => {
+    const { bridge, sent, reads } = harness({ projectId: "project-a" })
+    bridge.notifyError("gh_missing")
+    expect(sent).toEqual([{ type: "agentManager.prError", projectId: "project-a", error: "gh_missing" }])
+    expect(reads).toEqual(["project-a"])
   })
 
   it("deduplicates the same error type", () => {
@@ -198,6 +296,16 @@ describe("PRStatusBridge.replay", () => {
     expect(
       sent.some((m) => m.type === "agentManager.prError" && (m as never as { error: string }).error === "gh_auth"),
     ).toBe(true)
+  })
+
+  it("preserves project ownership when replaying an error", () => {
+    const { bridge, sent, onStatus, reads } = harness({ projectId: "project-a" })
+    onStatus("wt1", null, "gh_missing")
+    sent.length = 0
+    reads.length = 0
+    bridge.replay()
+    expect(sent).toEqual([{ type: "agentManager.prError", projectId: "project-a", error: "gh_missing" }])
+    expect(reads).toEqual(["project-a"])
   })
 
   it("does not replay fetch_failed errors", () => {

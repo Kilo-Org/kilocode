@@ -105,6 +105,7 @@ type ToolState = {
 }
 
 type TaskPart = {
+  id?: string
   type: string
   tool?: string
   metadata?: { sessionId?: string }
@@ -114,6 +115,11 @@ type TaskPart = {
 export function childID(part: TaskPart): string | undefined {
   if (part.type !== "tool" || part.tool !== "task") return undefined
   return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
+}
+
+export function latestTaskPart(partID: string | undefined, child: string | undefined, parts: readonly TaskPart[]) {
+  if (!partID || !child) return false
+  return parts.findLast((part) => childID(part) === child)?.id === partID
 }
 
 function stringField(value: unknown): string | undefined {

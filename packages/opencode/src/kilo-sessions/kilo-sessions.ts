@@ -47,6 +47,7 @@ import { Snapshot } from "@/snapshot"
 import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
+import { KiloShutdown } from "@/kilocode/cli/shutdown"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { provide } = await import("@/kilocode/instance")
@@ -257,9 +258,15 @@ export namespace KiloSessions {
     () => ingest.drain(),
     (err) => log.warn("ingest drain failed", { err }),
   )
+  KiloShutdown.register(drainIngest)
 
   export async function drainIngestForShutdown() {
     await drainIngest()
+  }
+
+  /** @internal - lifecycle regression coverage */
+  export function _queueIngestForTest(sessionId: string) {
+    return ingest.sync(sessionId, [{ type: "session_status", data: { status: "idle" } }])
   }
 
   const remoteEnabled = process.env["KILO_REMOTE"] === "1"
