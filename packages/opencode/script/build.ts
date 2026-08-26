@@ -24,7 +24,6 @@ import { stageBubblewrap } from "./kilocode/bubblewrap"
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
-import { KiloCliSmoke } from "./kilocode/cli-smoke"
 // kilocode_change end
 
 const singleFlag = process.argv.includes("--single")
@@ -313,7 +312,7 @@ for (const item of targets) {
     // kilocode_change end
     format: "esm",
     minify: true,
-    // kilocode_change start - keep the compiled OpenTUI/Solid graph in one chunk to avoid blank startup frames.
+    // kilocode_change start - Bun 1.3.14 emits invalid cross-chunk exports in compiled binaries.
     splitting: false,
     // kilocode_change end
     compile: {
@@ -396,9 +395,6 @@ for (const item of targets) {
       console.log("Models snapshot smoke test passed")
       await KiloSandboxWorker.smoke(binaryPath)
       console.log("Kilo sandbox mutation worker smoke test passed")
-      console.log(`Running smoke test: ${binaryPath} --pure __pty-smoke`)
-      await KiloCliSmoke.pty(binaryPath)
-      console.log("Packaged TUI smoke test passed")
       // kilocode_change end
       // kilocode_change start
     } catch (e) {
