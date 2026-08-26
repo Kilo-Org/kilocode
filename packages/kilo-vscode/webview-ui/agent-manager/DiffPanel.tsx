@@ -1,4 +1,13 @@
-import { type Component, createSignal, createMemo, Show, createEffect, on, type JSXElement } from "solid-js"
+import {
+  type Component,
+  createSignal,
+  createMemo,
+  Show,
+  createEffect,
+  createRenderEffect,
+  on,
+  type JSXElement,
+} from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
@@ -8,7 +17,6 @@ import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
@@ -74,6 +82,7 @@ const DIFF_NOTICE_KEYS: Record<string, string> = {
 interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
+  active?: boolean
   loadingFiles?: Set<string>
   sessionId?: string
   sessionKey?: string
@@ -159,6 +168,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       },
     ),
   )
+
   const setOpen = (files: string[] | ((prev: string[]) => string[])) => {
     const key = props.sessionKey ?? ""
     const current = open()
@@ -197,6 +207,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // so pierre's annotation cache doesn't invalidate and destroy the textarea.
   let draftMeta: AnnotationMeta | null = composer().draft
   let editMeta: AnnotationMeta | null = composer().edit
+  createRenderEffect(
+    on(
+      () => props.active,
+      (active) => {
+        if (!active) return
+        const value = reviewComposerDraft(composer())
+        const edit = reviewComposerEdit(composer())
+        setDraft(value)
+        setEditing(edit)
+        draftMeta = composer().draft
+        editMeta = composer().edit
+      },
+    ),
+  )
 
   // Ref to the scrollable container — used to preserve scroll position when
   // annotation changes cause pierre to fully re-render diffs
@@ -249,6 +273,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     on(
       () => props.sessionKey,
       () => {
+        if (props.active === false) return
         setDraft(null)
         draftMeta = null
         setEditing(null)
@@ -264,7 +289,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     diffs: () => props.diffs,
     open,
     loading: () => props.loadingFiles,
-    send: () => props.onRequestDiff,
+    send: () => (props.active === false ? undefined : props.onRequestDiff),
   })
 
   // --- CRUD ---
@@ -327,6 +352,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     on(
       () => [props.diffs, comments()] as const,
       ([diffs, current]) => {
+        if (props.active === false) return
         const valid = sanitizeReviewComments(current, diffs)
         if (valid.length !== current.length) {
           setComments(valid)
@@ -392,8 +418,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
     editMeta = result.editMeta
-    composer().draft = draft() ? draftMeta : null
-    composer().edit = editing() ? editMeta : null
+    if (props.active !== false) {
+      composer().draft = draft() ? draftMeta : null
+      composer().edit = editing() ? editMeta : null
+    }
     return result.annotations
   }
 
@@ -553,7 +581,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
       <Show when={props.loading && props.diffs.length === 0}>
         <div class="am-diff-loading">
-          <Spinner />
           <span>{t("session.review.loadingChanges")}</span>
         </div>
       </Show>
@@ -714,10 +741,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                           fallback={
                             <div class="am-diff-summary-state">
                               <Show when={isLoadingDetail()} fallback={<span>Diff preview loads on demand.</span>}>
-                                <>
-                                  <Spinner />
-                                  <span>Loading diff...</span>
-                                </>
+                                <span>Loading diff...</span>
                               </Show>
                             </div>
                           }

@@ -114,6 +114,7 @@ interface AssistantMessageProps {
   forceOpenFile?: string
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
+  readonly?: boolean
 }
 
 type ToolStateProps = {
@@ -339,6 +340,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       feedback={props.feedback}
                                       throughput={throughputEl()}
+                                      readonly={props.readonly}
                                       animate={
                                         part.type === "tool" &&
                                         ((part as unknown as ToolPart).state?.status === "pending" ||

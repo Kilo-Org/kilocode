@@ -1184,7 +1184,6 @@ export const dict = {
   "task.backgroundAgents.open": "打开后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",
-  "task.backgroundAgents.foreground": "前台智能体正在运行",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",
   "task.backgroundAgents.needsInput": "需要输入",
   "task.backgroundAgents.dismiss": "关闭",

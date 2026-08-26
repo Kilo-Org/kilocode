@@ -50,8 +50,9 @@ export function pruneReviewState<T>(
 ): Record<string, T> {
   return Object.fromEntries(
     Object.entries(values).filter(([key]) => {
-      const [owner, context] = key.split(":")
-      return owner !== project || context === "local" || contexts.has(context)
+      const [owner, value] = key.split(":")
+      const context = value?.split("#", 1)[0]
+      return owner !== project || context === "local" || (context !== undefined && contexts.has(context))
     }),
   )
 }

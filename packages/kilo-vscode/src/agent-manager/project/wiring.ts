@@ -44,6 +44,8 @@ export function createProjectWiring(opts: {
   changed: () => void
   /** Acknowledge an atomically validated sidebar selection. */
   selected: (target: import("./route").SidebarTarget) => void
+  /** Route one session to a directory inside a project (override + project route). */
+  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
 }): ProjectWiring {
   const registry = new ProjectRegistry(
     { read: () => opts.host.readProjects(), write: (value) => opts.host.writeProjects(value) },
@@ -65,7 +67,9 @@ export function createProjectWiring(opts: {
     expand: opts.expand,
     ready: opts.ready,
     push: opts.push,
+    pushState: opts.pushState,
     selected: opts.selected,
+    routeSession: opts.routeSession,
     error: (message) => opts.host.showError(message),
     openSettings: (tab, projectId) => opts.host.openSettings(tab, projectId),
     log: opts.log,

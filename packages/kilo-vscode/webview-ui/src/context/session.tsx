@@ -79,7 +79,7 @@ import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { mergeOptimisticPart, mergeParts } from "./session-parts"
+import { isolate, mergeOptimisticPart, mergeParts } from "./session-parts"
 import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { state as todoState } from "./todo-revert"
 import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
@@ -1457,7 +1457,7 @@ export const SessionProvider: ParentComponent = (props) => {
       const cutoff = Math.max(0, messages.length - 15)
       for (let i = 0; i < messages.length; i++) {
         const msg = messages[i]!
-        const parts = msg.parts ?? []
+        const parts = msg.parts?.map(isolate) ?? []
         if (mode === "reconcile" && store.parts[msg.id] && !optimisticParts.has(msg.id)) {
           const merged = mergeParts(store.parts[msg.id], parts, input.since ?? Number.POSITIVE_INFINITY)
           setStore("parts", msg.id, reconcile(merged, { key: "id" }))
@@ -1546,7 +1546,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (message.parts && message.parts.length > 0) {
       optimisticParts.delete(message.id)
       stash.remove(message.id)
-      setStore("parts", message.id, message.parts)
+      setStore("parts", message.id, message.parts.map(isolate))
     }
     rebuildToolParts(message.sessionID, store.messages[message.sessionID] ?? [])
   }
@@ -1624,7 +1624,7 @@ export const SessionProvider: ParentComponent = (props) => {
           }
         } else {
           // Add new part
-          list.push(part)
+          list.push(isolate(part))
         }
       }),
     )
@@ -2067,7 +2067,7 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore("messages", key, messages)
       for (const msg of messages) {
         if (msg.parts && msg.parts.length > 0) {
-          setStore("parts", msg.id, msg.parts)
+          setStore("parts", msg.id, msg.parts.map(isolate))
         }
       }
       rebuildToolParts(key, messages)

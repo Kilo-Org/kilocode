@@ -32,6 +32,8 @@ internal data class ActiveListMetrics(
 
 internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
 
+internal enum class ActiveListWeight { PLAIN, BOLD }
+
 internal data class ActiveListConfig(
     val height: ActiveListRowHeight = ActiveListRowHeight.EQUAL,
     val description: Boolean = true,
@@ -39,6 +41,12 @@ internal data class ActiveListConfig(
     val tooltip: Boolean = true,
     val selection: Int = ListSelectionModel.SINGLE_SELECTION,
     val hoverActions: Boolean = false,
+    /** Weight used for the primary row title. */
+    val title: ActiveListWeight = ActiveListWeight.BOLD,
+    /** Weight used for section headers. */
+    val header: ActiveListWeight = ActiveListWeight.BOLD,
+    /** Show a separator line above section headers, except above the first row. */
+    val divider: Boolean = true,
 ) {
     companion object {
         val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)
@@ -83,10 +91,10 @@ internal interface ActiveListHitCell {
 
 /**
  * A row in an [ActiveList]. Carries the display contract shared by settings pages, the worktree
- * list, and the session history stack: a leading icon, a bold title with an inline [note], a
- * secondary [description] line, inline [badges], optional right-aligned [trailing] text, and
- * action [cells]. Action cells are shown only for the active focused selection unless
- * [ActiveListCell.alwaysVisible] is true.
+ * list, and the session history stack: a leading icon, a title whose weight follows
+ * [ActiveListConfig.title] with an inline [note], a secondary [description] line, inline [badges],
+ * optional right-aligned [trailing] text, and action [cells]. Action cells are shown only for the
+ * active focused selection unless [ActiveListCell.alwaysVisible] is true.
  */
 internal interface ActiveListItem {
     val key: String
@@ -102,6 +110,12 @@ internal interface ActiveListItem {
     val tooltip: String? get() = description
     val doubleClick: String? get() = null
     val icon: Icon? get() = null
+    /**
+     * Recolor [icon] to the row foreground when the row is the focused selection. Enable it only for
+     * monochrome glyphs that should read as part of the highlighted text; leave it off for colored
+     * status icons (running, question, error) so they keep their own hue.
+     */
+    val tinted: Boolean get() = false
     val section: String? get() = null
     val badges: List<ActiveListBadge> get() = emptyList()
     /** Right-aligned secondary text, such as a relative timestamp. */
@@ -234,6 +248,21 @@ internal fun activeListLayout(component: Component) {
     if (component !is Container) return
     component.doLayout()
     for (child in component.components) activeListLayout(child)
+}
+
+/**
+ * Marks a rendered row and everything under it invalid.
+ *
+ * A list renderer is one component reused for every row, and it changes content without changing
+ * size. Swing caches each container's preferred/minimum size and - through
+ * [java.awt.Container.validate], the layout pass painting uses - skips subtrees that are still
+ * valid, so a row would otherwise be laid out with sizes measured for whichever row the renderer
+ * rendered before it. Invalidating the whole stamp keeps painting and the [activeListLayout] pass
+ * behind [activeListHits] on the same geometry.
+ */
+internal fun activeListInvalidate(component: Component) {
+    component.invalidate()
+    if (component is Container) for (child in component.components) activeListInvalidate(child)
 }
 
 private fun forEachHitCell(component: Component, action: (ActiveListHitCell) -> Unit) {

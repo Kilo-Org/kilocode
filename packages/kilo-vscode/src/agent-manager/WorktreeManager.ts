@@ -361,8 +361,8 @@ export class WorktreeManager {
     }
 
     const existing = await this.git
-      .branch()
-      .then((result) => result.all)
+      .raw(["for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads"])
+      .then((refs) => refs.trim().split(/\r?\n/).filter(Boolean))
       .catch(() => [] as string[])
     const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
     const branch = sanitized || generateBranchName(params.prompt || "agent-task", existing)
@@ -392,7 +392,13 @@ export class WorktreeManager {
    */
   private async runWorktreeAdd(args: string[], wtPath: string): Promise<void> {
     try {
-      await this.git.raw(args)
+      const workers = await this.git.getConfig("checkout.workers").catch((error: unknown) => {
+        this.log(
+          `Failed to inspect checkout worker configuration: ${error instanceof Error ? error.message : String(error)}`,
+        )
+        return undefined
+      })
+      await this.git.raw(workers?.value === null ? ["-c", "checkout.workers=2", ...args] : args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (this.isHookError(msg) && (await this.worktreeRegistered(wtPath))) {

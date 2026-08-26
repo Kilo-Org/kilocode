@@ -163,7 +163,9 @@ internal class KiloToolWindowSetupService(
             toolWindow.contentManager.setSelectedContent(chatContent)
             manager.newSession()
 
-            // Show a notification dot on the Agents tab whenever a worktree session needs attention.
+            // Notification dot on the Agents tab: up for as long as any worktree session is waiting
+            // on the user or has failed. Viewing the tab must not clear it — only resolving the
+            // attention does, so the dot stays a reliable "something still needs you" signal.
             val dot = cs.launch {
                 project.service<KiloSessionService>().activity.map(::sessionAttentionNeeded).collect { needed ->
                     withContext(Dispatchers.Main) {

@@ -21,9 +21,9 @@ internal object WorktreeIcons {
 
     /**
      * Leading icon for a worktree row. At rest the row shows what it is — the local machine, a locked
-     * checkout, or a branch checkout — while a running or waiting session takes the slot over so the
-     * list still surfaces activity at a glance. An operation on the row ([busy]) outranks all of it,
-     * and an errored session falls back to the resting glyph instead of shouting in the leading slot.
+     * checkout, or a branch checkout — while a running, waiting or failed session takes the slot over
+     * so the list still surfaces activity at a glance. An operation on the row ([busy]) outranks all
+     * of it.
      */
     fun forRow(
         busy: Boolean,
@@ -37,12 +37,16 @@ internal object WorktreeIcons {
             SessionActivityKind.QUESTION,
             SessionActivityKind.PERMISSION,
             SessionActivityKind.PLAN,
-            SessionActivityKind.LOGIN_REQUIRED -> kind.icon()
-            SessionActivityKind.ERROR, null -> when {
+            SessionActivityKind.LOGIN_REQUIRED,
+            SessionActivityKind.ERROR -> kind.icon()
+            null -> when {
                 current -> local
                 locked -> this.locked
                 else -> branch
             }
         }
     }
+
+    /** The monochrome at-rest glyphs that follow the row text color; status icons are excluded. */
+    fun neutral(icon: Icon?): Boolean = icon === local || icon === locked || icon === branch
 }
