@@ -279,6 +279,26 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertEquals(NewWorktreePlan.Pr("https://github.com/o/r/pull/7"), taken())
     }
 
+    fun `test the deselected tab stops painting`() {
+        open()
+        val fresh = newTab()
+
+        selectPr()
+
+        assertFalse(edt { fresh.isVisible })
+        assertTrue(edt { prTab().isVisible })
+    }
+
+    fun `test reselecting a tab shows it again`() {
+        open()
+        selectPr()
+
+        select(0)
+
+        assertTrue(edt { newTab().isVisible })
+        assertFalse(edt { prTab().isVisible })
+    }
+
     fun `test an empty branch list disables the branch picker`() {
         open(branches = emptyList())
         selectBranch()

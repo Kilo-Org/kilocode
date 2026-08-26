@@ -184,6 +184,14 @@ internal class NewWorktreeDialog(
             addTab(pr).setPreferredFocusableComponent(url)
             addTab(local).setPreferredFocusableComponent(pick)
             addListener(object : TabsListener {
+                override fun beforeSelectionChanged(oldSelection: TabInfo?, newSelection: TabInfo?) {
+                    // JBTabs defers removing the old body while focus settles, and that body keeps
+                    // its previous bounds. Hide it before layout so stale content cannot paint over
+                    // the newly selected tab.
+                    newSelection?.component?.isVisible = true
+                    oldSelection?.component?.isVisible = false
+                }
+
                 override fun selectionChanged(oldSelection: TabInfo?, newSelection: TabInfo?) {
                     tab = when {
                         newSelection === pr -> DialogTab.PR
