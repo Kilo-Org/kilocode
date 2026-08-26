@@ -533,6 +533,74 @@ describe("indexing startup degradation", () => {
     })
   })
 
+  test("does not allocate an indexing worker for a filesystem root", async () => {
+    const created: string[] = []
+    IndexingWorker.override((directory, root, hooks) => {
+      created.push(directory)
+      return inline(directory, root, hooks)
+    })
+
+    const root = path.parse(process.cwd()).root
+    await using tmp = await tmpdir()
+    const link = process.platform === "win32" ? undefined : path.join(tmp.path, "root")
+    if (link) await fs.symlink(root, link)
+
+    for (const directory of [root, link].filter((item): item is string => item !== undefined)) {
+      await provideTestInstance({
+        directory,
+        fn: async () => {
+          const status = await KiloIndexing.current()
+
+          expect(status).toMatchObject({
+            state: "Disabled",
+            message: "Codebase indexing is disabled for filesystem roots.",
+          })
+          expect(await KiloIndexing.available()).toBe(false)
+          expect(KiloIndexing.ready()).toBe(false)
+          expect(await KiloIndexing.search("filesystem root")).toEqual([])
+          expect(created).toEqual([])
+        },
+      })
+    }
+  })
+
+  test.each([false, true])("handles removed directories with no-workspace flag %s", async (disabled) => {
+    await using tmp = await tmpdir({ config: cfg })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    delete process.env["KILO_DISABLE_CODEBASE_INDEXING"]
+    if (disabled) process.env["KILO_DISABLE_CODEBASE_INDEXING"] = "vscode-no-workspace"
+    const directory = path.join(tmp.path, "project")
+    await fs.mkdir(directory)
+    const created: string[] = []
+    IndexingWorker.override((directory) => {
+      created.push(directory)
+      throw new Error("removed workspaces must not start an indexing worker")
+    })
+
+    await provideTestInstance({
+      directory,
+      fn: async () => {
+        await fs.rmdir(directory)
+        await KiloIndexing.init()
+        const status = await KiloIndexing.current()
+        expect(await KiloIndexing.available()).toBe(false)
+        expect(KiloIndexing.ready()).toBe(false)
+        expect(await KiloIndexing.search("removed workspace")).toEqual([])
+        expect(created).toEqual([])
+        if (disabled) {
+          expect(status).toMatchObject({
+            state: "Disabled",
+            message: "Codebase indexing is disabled because no workspace folder is open in VS Code.",
+          })
+          return
+        }
+        expect(status.state).toBe("Error")
+        expect(status.message).toContain("Failed to initialize:")
+        expect(status.message).toContain("ENOENT")
+      },
+    })
+  })
+
   test("does not validate the indexing model when indexing is disabled", async () => {
     global.fetch = (() =>
       Promise.resolve(
