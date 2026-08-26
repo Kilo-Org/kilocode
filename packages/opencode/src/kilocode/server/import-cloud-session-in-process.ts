@@ -31,9 +31,7 @@ const log = Log.create({ service: "import-cloud-session" })
  */
 export namespace CloudSessionImportInProcess {
   // Missing kilo credentials (auth absent or no token).
-  export class Unauthorized extends Schema.TaggedErrorClass<Unauthorized>()("CloudSessionImportUnauthorized", {
-    message: Schema.String,
-  }) {}
+  export class Unauthorized extends Schema.TaggedErrorClass<Unauthorized>()("CloudSessionImportUnauthorized", {}) {}
 
   // The cloud fetch returned a non-ok status; carries the upstream status and
   // error string so callers can map 404/401/403 without logging tokens.
@@ -43,16 +41,12 @@ export namespace CloudSessionImportInProcess {
   }) {}
 
   // The export failed validation or decoding before any persistence.
-  export class BadRequest extends Schema.TaggedErrorClass<BadRequest>()("CloudSessionImportBadRequest", {
-    message: Schema.String,
-  }) {}
+  export class BadRequest extends Schema.TaggedErrorClass<BadRequest>()("CloudSessionImportBadRequest", {}) {}
 
   // Any other failure (fetch threw, prepare threw, or the write failed).
-  export class Internal extends Schema.TaggedErrorClass<Internal>()("CloudSessionImportInternal", {
-    message: Schema.String,
-  }) {}
+  export class Internal extends Schema.TaggedErrorClass<Internal>()("CloudSessionImportInternal", {}) {}
 
-  export function name(error: unknown): string {
+  function name(error: unknown): string {
     if (error instanceof Error) return error.name
     if (typeof error === "object" && error !== null && "_tag" in error && typeof error._tag === "string") {
       return error._tag
@@ -67,37 +61,37 @@ export namespace CloudSessionImportInProcess {
     const storage = yield* Storage.Service
     const workspaceID = yield* WorkspaceRef
 
-    const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new Unauthorized({ message: "missing kilo auth" })))
+    const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new Unauthorized()))
     const token = getToken(info)
-    if (!token) return yield* Effect.fail(new Unauthorized({ message: "missing kilo token" }))
+    if (!token) return yield* Effect.fail(new Unauthorized())
 
     const fetched = yield* Effect.tryPromise({
       try: () => fetchCloudSessionForImport(token, sessionId),
       catch: (err) => {
         log.error("cloud session import failed", { route: "cloud/session/import", stage: "fetch", error: name(err) })
-        return new Internal({ message: "fetch failed" })
+        return new Internal()
       },
     })
     if (!fetched.ok) return yield* Effect.fail(new Upstream({ status: fetched.status, error: fetched.error }))
-    if (!fetched.data?.info?.id) return yield* Effect.fail(new BadRequest({ message: "invalid session export" }))
+    if (!fetched.data?.info?.id) return yield* Effect.fail(new BadRequest())
 
     const diffs = extractSessionDiffs(fetched.data)
     const subdir = path.relative(path.resolve(Instance.worktree), Instance.directory).replaceAll("\\", "/")
     const prepared = yield* Effect.try({
       try: () => prepareSessionImport(fetched.data, { Instance, Identifier, workspaceID, path: subdir }),
       catch: (err) => {
-        if (err instanceof SessionImportValidationError) return new BadRequest({ message: "invalid session export" })
+        if (err instanceof SessionImportValidationError) return new BadRequest()
         log.error("cloud session import failed", {
           route: "cloud/session/import",
           stage: "prepare",
           error: name(err),
         })
-        return new Internal({ message: "prepare failed" })
+        return new Internal()
       },
     })
     const session = yield* Effect.try({
       try: () => Schema.decodeUnknownSync(Session.Info)(prepared.info),
-      catch: () => new BadRequest({ message: "invalid session info" }),
+      catch: () => new BadRequest(),
     })
     const messages = yield* Effect.try({
       try: () =>
@@ -107,7 +101,7 @@ export namespace CloudSessionImportInProcess {
           // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- decoding validates the shape; the database type only removes readonly modifiers
           return { id, session_id: sessionID, time_created: row.time_created, data: data as DeepMutable<typeof data> }
         }),
-      catch: () => new BadRequest({ message: "invalid session message" }),
+      catch: () => new BadRequest(),
     })
     const parts = yield* Effect.try({
       try: () =>
@@ -122,7 +116,7 @@ export namespace CloudSessionImportInProcess {
             data: data as DeepMutable<typeof data>,
           }
         }),
-      catch: () => new BadRequest({ message: "invalid session part" }),
+      catch: () => new BadRequest(),
     })
 
     const imported = yield* Effect.gen(function* () {
@@ -152,7 +146,7 @@ export namespace CloudSessionImportInProcess {
           messages: messages.length,
           parts: parts.length,
         })
-        return Effect.fail(new Internal({ message: "write failed" }))
+        return Effect.fail(new Internal())
       }),
     )
 
