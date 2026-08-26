@@ -96,6 +96,64 @@ describe("GitStatsSnapshot", () => {
       const refs = await snapshots.refs(dir)
       expect(refOID(refs, "origin/main")).toBe(run(dir, ["rev-parse", "HEAD"]))
       expect(refs.upstreams.get("refs/heads/main")).toBe("refs/remotes/origin/main")
+      expect(refs.worktreePaths?.get(await fs.realpath(dir))).toBe("main")
     })
+  })
+
+  it("keeps linked worktree maps isolated for repositories with the same branch names", async () => {
+    const roots = await Promise.all([
+      fs.mkdtemp(path.join(os.tmpdir(), "git-stats-snapshot-one-")),
+      fs.mkdtemp(path.join(os.tmpdir(), "git-stats-snapshot-two-")),
+    ])
+    const worktrees = roots.map((root) => path.join(root, "linked"))
+    try {
+      for (const [index, root] of roots.entries()) {
+        run(root, ["init", "-b", "main"])
+        run(root, ["config", "commit.gpgsign", "false"])
+        await fs.writeFile(path.join(root, "tracked.txt"), `${index}\n`)
+        run(root, ["add", "."])
+        run(root, ["commit", "-m", "base"])
+        run(root, ["worktree", "add", "-b", "feature", worktrees[index]!, "main"])
+      }
+
+      const snapshots = roots.map(() => new GitStatsSnapshot(new GitOps({ log: () => undefined })))
+      const refs = await Promise.all(roots.map((root, index) => snapshots[index]!.refs(root)))
+      const paths = await Promise.all(worktrees.map((worktree) => fs.realpath(worktree)))
+
+      expect(refs[0]!.worktreePaths?.get(paths[0]!)).toBe("feature")
+      expect(refs[0]!.worktreePaths?.has(paths[1]!)).toBe(false)
+      expect(refs[1]!.worktreePaths?.get(paths[1]!)).toBe("feature")
+      expect(refs[1]!.worktreePaths?.has(paths[0]!)).toBe(false)
+    } finally {
+      await Promise.all(roots.map((root) => fs.rm(root, { recursive: true, force: true })))
+    }
+  })
+
+  it("parses a linked worktree path containing a newline", async () => {
+    await repo(async (dir) => {
+      const worktree = path.join(dir, "linked\nworktree")
+      run(dir, ["worktree", "add", "-b", "feature", worktree, "main"])
+      const refs = await new GitStatsSnapshot(new GitOps({ log: () => undefined })).refs(dir)
+      expect(refs.worktreePaths?.get(await fs.realpath(worktree))).toBe("feature")
+    })
+  })
+
+  it("falls back to the plain ref query when worktreepath is unsupported", async () => {
+    const calls: string[][] = []
+    const git = new GitOps({ log: () => undefined })
+    git.execGitBuffer = async (args): Promise<ExecBufferResult> => {
+      calls.push(args)
+      if (args[1]?.includes("%(worktreepath)")) {
+        return { code: 1, stdout: Buffer.alloc(0), stderr: "unknown field name: worktreepath" }
+      }
+      return { code: 0, stdout: Buffer.from("refs/heads/main\0abc\0\0\0"), stderr: "" }
+    }
+
+    const refs = await new GitStatsSnapshot(git).refs("/repo")
+    expect(refs.oids.get("refs/heads/main")).toBe("abc")
+    expect(refs.worktreePaths).toBeUndefined()
+    expect(calls).toHaveLength(2)
+    expect(calls[0]![1]).toContain("%(worktreepath)")
+    expect(calls[1]![1]).not.toContain("%(worktreepath)")
   })
 })

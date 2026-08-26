@@ -46,7 +46,7 @@ export class PRStatusPoller {
   private ghAvailable: boolean | undefined
   private ghProbeTime = 0
   private activeWorktreeId: string | undefined
-  private cachedRepo: { owner: string; name: string; cwd: string } | undefined
+  private cachedRepo: { owner: string; name: string; root: string } | undefined
   private prCache = new Map<string, { result: PRResult | null; expires: number }>()
   private lastFullSync = 0 // timestamp of last full (all-worktree) sync
   private readonly intervalMs: number
@@ -134,7 +134,7 @@ export class PRStatusPoller {
   refresh(worktreeId: string): void {
     if (!this.active) return
     const wt = this.options.getWorktrees().find((w) => w.id === worktreeId)
-    if (wt) this.prCache.delete(wt.branch)
+    if (wt) this.prCache.delete(this.key(wt.branch, wt.path))
     void this.fetchOne(worktreeId)
   }
 
@@ -258,8 +258,7 @@ export class PRStatusPoller {
       }
 
       const [checks, reviewers, comments] = await Promise.all([
-        this.fetchChecks(pr.number, wt.path),
-        this.fetchReviewers(pr.number, wt.path),
+        ...this.extras(pr, wt.path),
         this.activeWorktreeId === worktreeId ? this.fetchComments(pr.number, wt.path) : undefined,
       ])
       if (this.stale(generation)) return
@@ -294,6 +293,10 @@ export class PRStatusPoller {
     }
   }
 
+  private extras(pr: PRResult, cwd: string) {
+    return [pr.checks ?? this.fetchChecks(pr.number, cwd), pr.reviewers ?? this.fetchReviewers(pr.number, cwd)] as const
+  }
+
   private handleError(worktreeId: string, branch: string, cwd: string, err: unknown): void {
     const msg = err instanceof Error ? err.message : String(err)
     const kind = existsSync(cwd) ? classifyPRError(msg) : "unknown"
@@ -313,18 +316,24 @@ export class PRStatusPoller {
     return worktree
   }
 
-  private static readonly PR_JSON_FIELDS =
+  private static readonly BASE_JSON_FIELDS =
     "number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,headRefOid"
+  private static readonly PR_JSON_FIELDS = `${PRStatusPoller.BASE_JSON_FIELDS},statusCheckRollup,reviewRequests,reviews`
 
   /** Return a cached PR lookup if still fresh, otherwise fetch and cache.
    *  Keyed by branch name so multiple worktrees on the same branch share
    *  the cache, and a branch switch in a worktree naturally misses. */
   private async cachedFetchPR(branch: string, cwd: string): Promise<PRResult | null> {
-    const cached = this.prCache.get(branch)
+    const key = this.key(branch, cwd)
+    const cached = this.prCache.get(key)
     if (cached && Date.now() < cached.expires) return cached.result
     const result = await this.fetchPRForBranch(branch, cwd)
-    this.prCache.set(branch, { result, expires: Date.now() + PR_LOOKUP_TTL })
+    this.prCache.set(key, { result, expires: Date.now() + PR_LOOKUP_TTL })
     return result
+  }
+
+  private key(branch: string, cwd: string): string {
+    return `${this.options.getWorkspaceRoot() ?? cwd}\0${branch === "HEAD" ? cwd : branch}`
   }
 
   private async fetchPRForBranch(branch: string, cwd: string): Promise<PRResult | null> {
@@ -340,14 +349,21 @@ export class PRStatusPoller {
     try {
       const args = ["pr", "view"]
       if (branch) args.push(branch)
-      args.push("--json", PRStatusPoller.PR_JSON_FIELDS)
-
-      const { stdout } = await this.gh(args, { cwd, timeout: 15_000 })
-      return parsePRResult(stdout)
+      return parsePRResult(await this.query(args, cwd))
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes("no pull requests found") || msg.includes("Could not resolve")) return null
       throw err
+    }
+  }
+
+  private async query(args: string[], cwd: string): Promise<string> {
+    try {
+      return (await this.gh([...args, "--json", PRStatusPoller.PR_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!/unknown.*field|does(?:n't| not) exist|not accessible|insufficient|forbidden/i.test(msg)) throw err
+      return (await this.gh([...args, "--json", PRStatusPoller.BASE_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
     }
   }
 
@@ -358,20 +374,9 @@ export class PRStatusPoller {
       const head = sha.trim()
       if (!head) return null
 
-      const { stdout } = await this.gh(
-        [
-          "pr",
-          "list",
-          "--state",
-          "all",
-          "--search",
-          `${head} is:pr`,
-          "--limit",
-          "5",
-          "--json",
-          PRStatusPoller.PR_JSON_FIELDS,
-        ],
-        { cwd, timeout: 15_000 },
+      const stdout = await this.query(
+        ["pr", "list", "--state", "all", "--search", `${head} is:pr`, "--limit", "5"],
+        cwd,
       )
       const items = JSON.parse(stdout) as unknown[]
       if (!Array.isArray(items) || items.length === 0) return null
@@ -433,15 +438,14 @@ export class PRStatusPoller {
   }
 
   private async getRepoInfo(cwd: string): Promise<{ owner: string; name: string }> {
-    if (this.cachedRepo && this.cachedRepo.cwd === cwd) {
-      return this.cachedRepo
-    }
+    const root = this.options.getWorkspaceRoot() ?? cwd
+    if (this.cachedRepo?.root === root) return this.cachedRepo
     const { stdout } = await this.gh(["repo", "view", "--json", "owner,name"], {
       cwd,
       timeout: 10_000,
     })
     const data = JSON.parse(stdout)
-    const info = { owner: data.owner.login as string, name: data.name as string, cwd }
+    const info = { owner: data.owner.login as string, name: data.name as string, root }
     this.cachedRepo = info
     return info
   }
