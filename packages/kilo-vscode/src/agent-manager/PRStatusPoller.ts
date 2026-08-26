@@ -1,7 +1,7 @@
 import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import { existsSync } from "fs"
 import type { Worktree } from "./WorktreeStateManager"
-import type { PRStatus, PRCheck, PRComment, PRReviewer, AggregateCheckStatus } from "./types"
+import type { PRStatus, PRCheck, PRComment, PRReviewer } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
@@ -13,6 +13,7 @@ import {
   formatCheckDuration,
   parseComments,
   parseReviewers,
+  summarize,
 } from "./pr/am-pr-utils"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./pr/am-pr-types"
 import { withContext } from "./pr/pr-comment-context"
@@ -45,6 +46,7 @@ export class PRStatusPoller {
   private failures = 0 // consecutive failure count for backoff
   private ghAvailable: boolean | undefined
   private ghProbeTime = 0
+  private rich = true
   private activeWorktreeId: string | undefined
   private cachedRepo: { owner: string; name: string; root: string } | undefined
   private prCache = new Map<string, { result: PRResult | null; expires: number }>()
@@ -125,6 +127,7 @@ export class PRStatusPoller {
     this.failures = 0
     this.ghAvailable = undefined
     this.ghProbeTime = 0
+    this.rich = true
     this.cachedRepo = undefined
     this.prCache.clear()
     this.lastFullSync = 0
@@ -358,13 +361,16 @@ export class PRStatusPoller {
   }
 
   private async query(args: string[], cwd: string): Promise<string> {
-    try {
-      return (await this.gh([...args, "--json", PRStatusPoller.PR_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (!/unknown.*field|does(?:n't| not) exist|not accessible|insufficient|forbidden/i.test(msg)) throw err
-      return (await this.gh([...args, "--json", PRStatusPoller.BASE_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
+    if (this.rich) {
+      try {
+        return (await this.gh([...args, "--json", PRStatusPoller.PR_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (!/unknown.*field|does(?:n't| not) exist|not accessible|insufficient|forbidden/i.test(msg)) throw err
+        this.rich = false
+      }
     }
+    return (await this.gh([...args, "--json", PRStatusPoller.BASE_JSON_FIELDS], { cwd, timeout: 15_000 })).stdout
   }
 
   /** Search for PRs containing the current HEAD SHA. Finds PRs when branch name/tracking ref don't match. */
@@ -392,17 +398,7 @@ export class PRStatusPoller {
     }
   }
 
-  private async fetchChecks(
-    prNumber: number,
-    cwd: string,
-  ): Promise<{
-    status: AggregateCheckStatus
-    total: number
-    passed: number
-    failed: number
-    pending: number
-    checks: PRCheck[]
-  }> {
+  private async fetchChecks(prNumber: number, cwd: string): Promise<PRStatus["checks"]> {
     try {
       const { stdout } = await this.gh(
         ["pr", "checks", String(prNumber), "--json", "name,state,link,startedAt,completedAt"],
@@ -423,15 +419,7 @@ export class PRStatusPoller {
         duration: formatCheckDuration(c.startedAt, c.completedAt),
       }))
 
-      const total = checks.filter((c) => c.status !== "skipped").length
-      const passed = checks.filter((c) => c.status === "success").length
-      const failed = checks.filter((c) => c.status === "failure").length
-      const pending = checks.filter((c) => c.status === "pending").length
-
-      const status: AggregateCheckStatus =
-        total === 0 ? "none" : failed > 0 ? "failure" : pending > 0 ? "pending" : "success"
-
-      return { status, total, passed, failed, pending, checks }
+      return summarize(checks)
     } catch {
       return { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] }
     }

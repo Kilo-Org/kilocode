@@ -208,6 +208,21 @@ describe("parsePRResult", () => {
     expect(result?.checks?.failed).toBe(1)
   })
 
+  it("keeps CI running when cancelled checks coexist with pending checks", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 11,
+        statusCheckRollup: [
+          { name: "cancelled", conclusion: "CANCELLED" },
+          { name: "running", status: "IN_PROGRESS" },
+        ],
+      }),
+    )
+    expect(result?.checks?.status).toBe("pending")
+    expect(result?.checks?.failed).toBe(1)
+    expect(result?.checks?.pending).toBe(1)
+  })
+
   it("preserves reviewer history and ignores dismissed reviews", () => {
     const result = parsePRResult(
       JSON.stringify({

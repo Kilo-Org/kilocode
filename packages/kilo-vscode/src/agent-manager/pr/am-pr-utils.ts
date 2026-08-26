@@ -54,12 +54,18 @@ function checks(items: unknown[]): PRStatus["checks"] {
       duration: formatCheckDuration(check.startedAt, check.completedAt),
     }
   })
-  const total = values.filter((item) => item.status !== "skipped").length
-  const passed = values.filter((item) => item.status === "success").length
-  const failed = values.filter((item) => item.status === "failure" || item.status === "cancelled").length
-  const pending = values.filter((item) => item.status === "pending").length
-  const status = total === 0 ? "none" : failed > 0 ? "failure" : pending > 0 ? "pending" : "success"
-  return { status, total, passed, failed, pending, checks: values }
+  return summarize(values)
+}
+
+export function summarize(checks: PRCheck[]): PRStatus["checks"] {
+  const total = checks.filter((item) => item.status !== "skipped").length
+  const passed = checks.filter((item) => item.status === "success").length
+  const failed = checks.filter((item) => item.status === "failure" || item.status === "cancelled").length
+  const pending = checks.filter((item) => item.status === "pending").length
+  const broken = checks.some((item) => item.status === "failure")
+  const status =
+    total === 0 ? "none" : broken ? "failure" : pending > 0 ? "pending" : failed > 0 ? "failure" : "success"
+  return { status, total, passed, failed, pending, checks }
 }
 
 export function checkStatus(state: string): CheckStatus {

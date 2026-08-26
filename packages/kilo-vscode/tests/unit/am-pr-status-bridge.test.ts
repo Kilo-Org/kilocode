@@ -119,8 +119,15 @@ describe("PRStatusPoller batched GitHub queries", () => {
       }
 
       expect(await internal.query(["pr", "view"], "/repo")).toBe('{"number":1}')
-      expect(calls).toHaveLength(2)
+      expect(await internal.query(["pr", "view"], "/repo")).toBe('{"number":1}')
+      expect(calls).toHaveLength(3)
       expect(calls[1]?.at(-1)).not.toContain("statusCheckRollup")
+      expect(calls[2]?.at(-1)).not.toContain("statusCheckRollup")
+
+      poller.stop()
+      expect(await internal.query(["pr", "view"], "/repo")).toBe('{"number":1}')
+      expect(calls).toHaveLength(5)
+      expect(calls[3]?.at(-1)).toContain("statusCheckRollup")
     },
   )
 })
