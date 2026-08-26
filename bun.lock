@@ -1035,6 +1035,7 @@
     "fastify": ">=5.8.3",
     "happy-dom": ">=20.8.9",
     "lodash": "4.18.1",
+    "nanoid": ">=3.3.18",
     "path-to-regexp": ">=8.4.0",
     "picomatch": ">=2.3.2",
     "smol-toml": ">=1.6.1",
@@ -3998,7 +3999,7 @@
 
     "nanoevents": ["nanoevents@7.0.1", "", {}, "sha512-o6lpKiCxLeijK4hgsqfR6CNToPyRU3keKyyI6uwuHRvpRTbZ0wXw51WRgyldVugZqoJfkGFrjrIenYH3bfEO3Q=="],
 
-    "nanoid": ["nanoid@3.3.17", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-xQLf0A3HOMlgHq0n247/LRuAOYmB7dXJ/DvAxGvsSBij45XtBSmQycu+F8ODbHwns/XyFZagyL1+J0Offw1E0g=="],
+    "nanoid": ["nanoid@3.3.18", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w=="],
 
     "napi-build-utils": ["napi-build-utils@2.0.0", "", {}, "sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA=="],
 
