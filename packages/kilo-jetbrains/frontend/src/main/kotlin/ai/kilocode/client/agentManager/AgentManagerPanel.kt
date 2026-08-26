@@ -137,6 +137,13 @@ class AgentManagerPanel(
             if (list.select(key)) list.focusList()
             item(key)?.takeIf { controller.progress(it.id) == null }?.let { open(it, focus = false) }
         }
+        // A fresh worktree changes what git reports, so bypass the refresh throttle instead of
+        // leaving the new row without its stats and PR badge until the next poll.
+        controller.onCreated = {
+            project?.service<WorktreeStatusService>()?.refreshStats()
+            project?.service<WorktreeStatusService>()?.refreshPr(force = true)
+        }
+        controller.onReload = { sync() }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onMoveFailure = { err -> notifyMoveFailed(err) }
         controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }
@@ -255,7 +262,7 @@ class AgentManagerPanel(
 
     /** The PR URL for [item], or null when it has none or is not in a stable, openable state. */
     private fun prUrl(item: WorktreeDto?): String? {
-        if (item == null || item.main) return null
+        if (item == null) return null
         if (controller.progress(item.id) != null) return null
         return prs[normalizeWorktreePath(item.path)]?.url
     }
@@ -393,7 +400,8 @@ class AgentManagerPanel(
                 progress = null,
                 kind = controller.kind(item.path),
                 stats = null,
-                pr = null,
+                // The main checkout can sit on a PR branch just like a worktree can.
+                pr = prs[normalizeWorktreePath(item.path)],
                 current = true,
             )
         }
@@ -453,6 +461,8 @@ class AgentManagerPanel(
 
     override fun dispose() {
         controller.onSelect = null
+        controller.onCreated = null
+        controller.onReload = null
         controller.onCreateFailure = null
         controller.onMoveFailure = null
         controller.onRemoveSuccess = null

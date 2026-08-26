@@ -41,6 +41,16 @@ class WorktreeController(
     private val tasks = LinkedHashMap<String, String>()
     private val moves = LinkedHashSet<String>()
     var onSelect: ((String) -> Unit)? = null
+
+    /** Fired on the EDT once a worktree exists, so callers can refresh state git just changed. */
+    var onCreated: ((WorktreeDto) -> Unit)? = null
+
+    /**
+     * Fired on the EDT after a reload settled. Replacing the model only notifies list listeners when
+     * the rows actually changed, so a repo whose sole worktree is the main one would otherwise never
+     * render its [current] row.
+     */
+    var onReload: (() -> Unit)? = null
     var onCreateFailure: ((CreateFailure) -> Unit)? = null
     var onMoveFailure: ((String?) -> Unit)? = null
     var onRemoveSuccess: ((WorktreeDto, Int) -> Unit)? = null
@@ -101,6 +111,7 @@ class WorktreeController(
                 val worktreeBranches = rows.mapTo(HashSet()) { it.branch }
                 branches = branchInfo.branches.filter { it !in worktreeBranches }
                 known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
+                onReload?.invoke()
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }
         }
@@ -172,6 +183,7 @@ class WorktreeController(
                 cache().put(created)
                 prompt?.let { service<PendingWorktreePrompt>().put(created.path, it) }
                 onSelect?.invoke(created.id)
+                onCreated?.invoke(created)
                 telemetry("Worktree Created", mapOf("branch" to branch))
                 return@edt
             }
@@ -260,6 +272,7 @@ class WorktreeController(
                                 // open; the tab's identity stays the worktree path alone.
                                 event.session?.let { service<PendingWorktreeSession>().put(worktree.path, it) }
                                 onSelect?.invoke(worktree.id)
+                                onCreated?.invoke(worktree)
                                 telemetry(
                                     "Continue in Worktree",
                                     mapOf("surface" to "sidebar", "session" to (sessionId != null).toString()),

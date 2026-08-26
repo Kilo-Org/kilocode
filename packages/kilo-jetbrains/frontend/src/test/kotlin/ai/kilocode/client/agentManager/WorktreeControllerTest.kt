@@ -123,6 +123,31 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertFalse(controller.isPending(controller.model.getElementAt(0).id))
     }
 
+    fun `test created worktrees are announced once they exist`() {
+        val controller = controller()
+        val created = mutableListOf<WorktreeDto>()
+        controller.onCreated = { created.add(it) }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
+        // Nothing exists on disk while the create is still pending.
+        assertEquals(emptyList<WorktreeDto>(), created)
+        flush()
+
+        assertEquals(listOf("feature/y"), created.map { it.branch })
+    }
+
+    fun `test a failed create announces nothing`() {
+        rpc.createResult = { CreateWorktreeResultDto(error = "boom") }
+        val controller = controller()
+        val created = mutableListOf<WorktreeDto>()
+        controller.onCreated = { created.add(it) }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
+        flush()
+
+        assertEquals(emptyList<WorktreeDto>(), created)
+    }
+
     fun `test create failure removes placeholder and reports the error`() {
         rpc.createResult = { CreateWorktreeResultDto(error = "boom") }
         val controller = controller()
