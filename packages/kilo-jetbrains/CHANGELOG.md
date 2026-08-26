@@ -316,6 +316,38 @@
 
 ## [Unreleased]
 
+## [7.1.0-rc.5] - 2026-08-26
+
+### Added
+- feat(jetbrains): retry failed turns and stop badging manual stops by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13482
+- feat(jetbrains): add From PR and From Branch tabs to New Worktree dialog by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13440
+
+### Fixed
+- fix(agent-manager): speed up worktree session startup by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13447
+- fix(agent-manager): batch worktree diff details by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13449
+- fix(vscode): prevent completed sessions from staying busy by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13450
+- fix(agent-manager): prevent false GitHub CLI warnings on project switches by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13448
+- fix(vscode): remove top-level Auto-Approve permission on onboarding by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13453
+- fix(ci): skip unsupported PTY smoke targets by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13454
+- fix(vscode): preserve chat scroll intent by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13457
+- fix(vscode): space review follow-up messages by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13458
+- fix(agent-manager): restore promoted session metadata by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13459
+- fix(agent-manager): reduce background Git and GitHub process churn by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13463
+- fix(security): DOMPurify updated due dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13465
+- fix(security): Mermaid updated due dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13464
+- fix(jetbrains): prune deleted sessions in the merged activity snapshot by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13470
+- fix(cli): restore terminal startup by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13472
+- fix(cli): stabilize packaged PTY smoke test by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13474
+- fix(cli): roll back Bun 1.4 by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13481
+- fix(windows): revert unsafe PowerShell alias probing by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13489
+
+### Changed
+- release(jetbrains): v7.1.0-rc.4 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13441
+- refactor(vscode): simplify manual interruption handling by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13435
+- revert(agent-manager): remove diff batching regression by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13456
+- docs(kilo-docs): clarify pricing and processing fees by @jobrietbergen in https://github.com/Kilo-Org/kilocode/pull/13478
+
+
 ## [7.1.0-rc.4] - 2026-08-25
 
 ### Added
