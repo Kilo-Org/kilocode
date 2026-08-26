@@ -124,10 +124,14 @@ class KiloSessionService internal constructor(
      * Per-session activity for history and session lists. [activity] is the richer source — it also
      * carries waiting and failed sessions, and it covers sessions that are not open — but it drops
      * sessions whose directory the backend cannot resolve, so the busy statuses stay as a fallback.
+     *
+     * [statuses] and [activity] prune [removed] through separate collectors, so one can still carry
+     * a deleted session while the other has already dropped it. Subtracting [removed] here keeps the
+     * merged snapshot consistent instead of briefly badging a deleted session as running.
      */
     internal fun activitySnapshot(): Map<String, SessionActivityKind> {
         val busy = statuses.value.filterValues { it.type == "busy" }.mapValues { SessionActivityKind.RUNNING }
-        return busy + activity.value.mapValues { it.value.kind.toKind() }
+        return (busy + activity.value.mapValues { it.value.kind.toKind() }) - removed.value
     }
 
     suspend fun list(dir: String): SessionListDto {
