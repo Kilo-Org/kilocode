@@ -54,6 +54,7 @@ jobs:
         working-directory: packages/kilo-vscode
         run: bun run check-kilocode-change
 
+  # kilocode_change start
   windows-worktree:
     name: Windows worktree cleanup
     runs-on: blacksmith-4vcpu-windows-2025
@@ -75,3 +76,4 @@ jobs:
         run: |
           bun test tests/unit/worktree-manager.test.ts --test-name-pattern "Windows|directory remains locked" --timeout 30000
           bun test tests/unit/session-terminal-manager.test.ts tests/unit/pty-cleanup.test.ts tests/unit/run-script-manager.test.ts --timeout 30000
+  # kilocode_change end
