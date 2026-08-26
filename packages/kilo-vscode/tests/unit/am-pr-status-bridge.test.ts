@@ -75,6 +75,12 @@ describe("PRStatusBridge.notifyError", () => {
     expect(sent[0]).toEqual(expect.objectContaining({ type: "agentManager.prError", error: "gh_missing" }))
   })
 
+  it("tags errors with their owning project", () => {
+    const { bridge, sent } = harness({ projectId: "project-a" })
+    bridge.notifyError("gh_missing")
+    expect(sent).toEqual([{ type: "agentManager.prError", projectId: "project-a", error: "gh_missing" }])
+  })
+
   it("deduplicates the same error type", () => {
     const { bridge, sent } = harness()
     bridge.notifyError("gh_auth")
@@ -198,6 +204,14 @@ describe("PRStatusBridge.replay", () => {
     expect(
       sent.some((m) => m.type === "agentManager.prError" && (m as never as { error: string }).error === "gh_auth"),
     ).toBe(true)
+  })
+
+  it("preserves project ownership when replaying an error", () => {
+    const { bridge, sent, onStatus } = harness({ projectId: "project-a" })
+    onStatus("wt1", null, "gh_missing")
+    sent.length = 0
+    bridge.replay()
+    expect(sent).toEqual([{ type: "agentManager.prError", projectId: "project-a", error: "gh_missing" }])
   })
 
   it("does not replay fetch_failed errors", () => {
