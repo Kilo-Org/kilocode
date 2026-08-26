@@ -1,4 +1,5 @@
 import { describe, it, expect, spyOn } from "bun:test"
+import type { SessionStatus } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
 
@@ -65,6 +66,7 @@ function createClient(options?: {
   revertDeferred?: Deferred<{ data?: unknown; error?: unknown }>
   sessionData?: unknown
   sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
+  status?: (params: { directory?: string }) => Promise<{ data: Record<string, SessionStatus> | null }>
   createDeferred?: Deferred<{ data: ReturnType<typeof mkCreatedSession> }>
   abortFailures?: string[]
   abortDeferred?: Deferred<void>
@@ -105,7 +107,7 @@ function createClient(options?: {
         if (options?.sessionGet) return options.sessionGet(params)
         return { data: options?.sessionData ?? null }
       },
-      status: async () => ({ data: {} }),
+      status: async (params: { directory?: string }) => options?.status?.(params) ?? { data: {} },
       revert: async (params: Record<string, unknown>) => {
         reverted.push(params)
         if (options?.revertDeferred) return options.revertDeferred.promise
@@ -191,6 +193,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     },
     connect: async () => {},
     getClient: () => client,
+    runExplicitAbort: async (_sid: string, _dir: string, action: () => Promise<void>) => action(),
     onEventFiltered: () => () => undefined,
     onStateChange: (_l: (s: State) => void) => () => undefined,
     onNotificationDismissed: () => () => undefined,
@@ -221,6 +224,7 @@ type ProviderInternals = {
   currentSession: { id: string; directory?: string; cost?: number; revert?: { messageID: string } } | null
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
+  sessionStatusMap: Map<string, string>
   trackedSessionIds: Set<string>
   openSessionIds: Set<string>
   draftSessions: Map<string, { sid: string; dir: string; expires: number }>
@@ -230,6 +234,7 @@ type ProviderInternals = {
   checkpoint: (sid: string, run: () => Promise<void>) => void
   gatherEditorContext: () => Promise<Record<string, never>>
   refreshSessionDetails: (sid: string, dir: string) => void
+  seedSessionStatusMap: (reconcile?: boolean) => Promise<void>
   stopCurrentSessionProcesses: (next?: string) => void
   handleEvent: (event: unknown, directory?: string) => void
   handleAbort: (sid?: string) => Promise<void>
@@ -261,11 +266,27 @@ function makeProvider(client: ReturnType<typeof createClient>) {
   return { provider, internal, sent }
 }
 
+function status(internal: ProviderInternals, type: "busy" | "idle", directory = "/repo", sessionID = "s1") {
+  internal.handleEvent({ type: "session.status", properties: { sessionID, status: { type } } }, directory)
+}
+
 function mockMaxCost(internal: ProviderInternals, value: number) {
   internal.setMaxCost(value)
 }
 
 describe("KiloProvider.handleAbort", () => {
+  it("aborts a session whose busy status was seeded without an SSE event", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    internal.sessionStatusMap.set("s1", "busy")
+
+    await internal.handleAbort("s1")
+
+    expect(client.aborted).toEqual([{ sessionID: "s1", directory: "/repo" }])
+    expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "idle" })
+    expect(sent).not.toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
+  })
+
   it("aborts the original owner after a running session moves to a worktree", async () => {
     const client = createClient()
     const { provider, internal, sent } = makeProvider(client)
@@ -285,6 +306,7 @@ describe("KiloProvider.handleAbort", () => {
       { sessionID: "s1", directory: "/repo/worktree" },
     ])
     expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "idle" })
+    expect(sent).not.toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
   })
 
   it("preserves the original owner when the status event lacks a directory", async () => {
@@ -407,6 +429,110 @@ describe("KiloProvider.handleAbort", () => {
     await provider.abortSessions(["pending:1"])
 
     expect(client.aborted).toEqual([])
+  })
+})
+
+describe("KiloProvider session status reconciliation", () => {
+  it("rejects a stale busy snapshot after a newer idle event", async () => {
+    const pending = defer<{ data: Record<string, SessionStatus> }>()
+    const client = createClient({ status: async () => pending.promise })
+    const { internal } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+    status(internal, "busy")
+
+    internal.refreshSessionDetails("s1", "/repo")
+    status(internal, "idle")
+    pending.resolve({ data: { s1: { type: "busy" } } })
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+  })
+
+  it("preserves newer busy status when a stale snapshot omits the session", async () => {
+    const pending = defer<{ data: Record<string, SessionStatus> }>()
+    const client = createClient({ status: async () => pending.promise })
+    const { internal } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+    internal.refreshSessionDetails("s1", "/repo")
+    status(internal, "busy")
+    pending.resolve({ data: {} })
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("busy")
+  })
+
+  it("recovers missing idle after a completed assistant response", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+    status(internal, "busy")
+
+    internal.handleEvent(
+      {
+        type: "message.updated",
+        properties: {
+          sessionID: "s1",
+          info: { id: "m1", sessionID: "s1", role: "assistant", finish: "stop", time: { created: 1, completed: 2 } },
+        },
+      },
+      "/repo",
+    )
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+    expect(sent).toContainEqual({ type: "sessionStatus", sessionID: "s1", status: "idle" })
+  })
+
+  it("accepts the latest overlapping directory snapshot", async () => {
+    const first = defer<{ data: Record<string, SessionStatus> }>()
+    const second = defer<{ data: Record<string, SessionStatus> }>()
+    const pending = [first, second]
+    const client = createClient({ status: async () => pending.shift()!.promise })
+    const { internal } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+    internal.trackedSessionIds.add("s2")
+    status(internal, "busy", "/repo", "s1")
+    status(internal, "busy", "/repo", "s2")
+
+    internal.refreshSessionDetails("s1", "/repo")
+    internal.refreshSessionDetails("s2", "/repo")
+    second.resolve({ data: { s2: { type: "busy" } } })
+    await Bun.sleep(0)
+    first.resolve({ data: { s1: { type: "busy" }, s2: { type: "busy" } } })
+    await Bun.sleep(0)
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+    expect(internal.sessionStatusMap.get("s2")).toBe("busy")
+  })
+
+  it("accepts the latest overlapping seeded snapshot", async () => {
+    const first = defer<{ data: Record<string, SessionStatus> }>()
+    const second = defer<{ data: Record<string, SessionStatus> }>()
+    const pending = [first, second]
+    const client = createClient({ status: async () => pending.shift()!.promise })
+    const { internal } = makeProvider(client)
+    status(internal, "busy")
+
+    const older = internal.seedSessionStatusMap()
+    const newer = internal.seedSessionStatusMap()
+    first.resolve({ data: { s1: { type: "busy" } } })
+    await older
+    second.resolve({ data: {} })
+    await newer
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("idle")
+  })
+
+  it("does not idle a worktree session from a root snapshot", async () => {
+    const client = createClient()
+    const { provider, internal } = makeProvider(client)
+    provider.setSessionDirectory("s1", "/repo/worktree")
+    internal.trackedSessionIds.add("s1")
+    status(internal, "busy", "/repo/worktree")
+
+    await internal.seedSessionStatusMap()
+
+    expect(internal.sessionStatusMap.get("s1")).toBe("busy")
   })
 })
 
@@ -1238,7 +1364,7 @@ describe("KiloProvider.handleLoadMessages / slim payload", () => {
 
     expect(client.aborted).toContainEqual({ sessionID: "s1", directory: "/repo" })
     expect(sent).toContainEqual({ type: "sessionCostAlertResolved", sessionID: "s1", limit: 1 })
-    expect(sent).toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
+    expect(sent).not.toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
   })
 
   it("strips transcript-only metadata before posting messages to the webview", async () => {

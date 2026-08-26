@@ -24,11 +24,13 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SubagentPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/DiffPanelCache.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/review-composers.ts"),
   path.join(ROOT, "webview-ui/documents/DocumentPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/ImageDiffView.tsx"),
@@ -456,9 +458,9 @@ describe("Agent Manager Worktree Actions", () => {
   })
 
   it("does not attribute the new-worktree shortcut to session promotion", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"), "utf-8")
 
-    expect(source).toContain('<Tooltip value={t("agentManager.session.openInWorktree")}')
+    expect(source).toContain('t("agentManager.session.openInWorktree")')
     expect(source).not.toContain("TooltipKeybind")
   })
 })
@@ -1150,5 +1152,16 @@ describe("Shared webview provider shell", () => {
       "AgentManagerContent",
     ])
     expect(fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")).not.toContain("WorktreeModeProvider")
+  })
+})
+
+describe("Agent Manager worktree setup", () => {
+  it("dismisses successful setup overlays immediately and retains the error delay", () => {
+    const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
+    expect(source).toContain('globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)')
+    expect(source).not.toContain(
+      'globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)',
+    )
+    expect(source).toContain("globalThis.setTimeout")
   })
 })

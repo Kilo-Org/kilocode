@@ -28,6 +28,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -75,6 +77,11 @@ class KiloBackendWorkspace(
                 if (reason != null) {
                     log.info("Workspace directory is unsupported for host-side Kilo runtime: $reason [$directory]")
                     _state.value = KiloWorkspaceState.Unsupported(reason)
+                    return@launch
+                }
+                if (!Files.isDirectory(Path.of(directory))) {
+                    log.info("Workspace directory is missing: $directory")
+                    _state.value = KiloWorkspaceState.Missing(directory)
                     return@launch
                 }
                 val progress = AtomicReference(KiloWorkspaceLoadProgress())

@@ -109,7 +109,6 @@ export type Event =
   | EventInteractiveTerminalData
   | EventInteractiveTerminalDeleted
   | EventSandboxStatusChanged
-  | EventLspClientDiagnostics
   | EventSuggestionShown
   | EventSuggestionAccepted
   | EventSuggestionDismissed
@@ -119,6 +118,7 @@ export type Event =
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
   | EventKiloSessionsRemoteStatusChanged
+  | EventLspClientDiagnostics
   | EventMemoryStatus1
   | EventMemoryUpdated1
   | EventMemoryError1
@@ -382,11 +382,23 @@ export type AgentManagerMoveRequest = {
   sectionID: string | null
 }
 
+export type AgentManagerAnswers = Array<Array<string>>
+
+export type AgentManagerAnswerRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "answer"
+  targetSessionID: string
+  questionID?: string
+  answers: AgentManagerAnswers
+}
+
 export type AgentManagerRequest =
   | AgentManagerOverviewRequest
   | AgentManagerPromptRequest
   | AgentManagerStopRequest
   | AgentManagerMoveRequest
+  | AgentManagerAnswerRequest
 
 export type NotebookRequestId = string
 
@@ -1155,7 +1167,6 @@ export type GlobalEvent = {
     | EventInteractiveTerminalData
     | EventInteractiveTerminalDeleted
     | EventSandboxStatusChanged
-    | EventLspClientDiagnostics
     | EventSuggestionShown
     | EventSuggestionAccepted
     | EventSuggestionDismissed
@@ -1165,6 +1176,7 @@ export type GlobalEvent = {
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
     | EventKiloSessionsRemoteStatusChanged
+    | EventLspClientDiagnostics
     | EventMemoryStatus
     | EventMemoryUpdated
     | EventMemoryError
@@ -4379,11 +4391,19 @@ export type AgentManagerMoveResult = {
   moved: true
 }
 
+export type AgentManagerAnswerResult = {
+  operation: "answer"
+  sessionID: string
+  questionID: string
+  resolved: true
+}
+
 export type AgentManagerResult =
   | AgentManagerOverviewResult
   | AgentManagerPromptResult
   | AgentManagerStopResult
   | AgentManagerMoveResult
+  | AgentManagerAnswerResult
 
 export type AgentManagerFailure = {
   code:
@@ -4931,15 +4951,6 @@ export type EventSandboxStatusChanged = {
   }
 }
 
-export type EventLspClientDiagnostics = {
-  id: string
-  type: "lsp.client.diagnostics"
-  properties: {
-    serverID: string
-    path: string
-  }
-}
-
 export type EventSuggestionShown = {
   id: string
   type: "suggestion.shown"
@@ -5036,6 +5047,15 @@ export type EventKiloSessionsRemoteStatusChanged = {
   properties: {
     enabled: boolean
     connected: boolean
+  }
+}
+
+export type EventLspClientDiagnostics = {
+  id: string
+  type: "lsp.client.diagnostics"
+  properties: {
+    serverID: string
+    path: string
   }
 }
 
@@ -17151,6 +17171,42 @@ export type KilocodeBackgroundJobCancelResponses = {
 
 export type KilocodeBackgroundJobCancelResponse =
   KilocodeBackgroundJobCancelResponses[keyof KilocodeBackgroundJobCancelResponses]
+
+export type KilocodeBackgroundJobPromoteData = {
+  body?: never
+  path: {
+    jobID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/background-jobs/{jobID}/promote"
+}
+
+export type KilocodeBackgroundJobPromoteErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeBackgroundJobPromoteError =
+  KilocodeBackgroundJobPromoteErrors[keyof KilocodeBackgroundJobPromoteErrors]
+
+export type KilocodeBackgroundJobPromoteResponses = {
+  /**
+   * Background job promoted
+   */
+  200: boolean
+}
+
+export type KilocodeBackgroundJobPromoteResponse =
+  KilocodeBackgroundJobPromoteResponses[keyof KilocodeBackgroundJobPromoteResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never

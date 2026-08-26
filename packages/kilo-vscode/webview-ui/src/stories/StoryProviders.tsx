@@ -230,10 +230,7 @@ export function mockSessionValue(overrides?: {
     scopedSuggestions: (sid?: string) => (sid ? suggestions.filter((item) => item.sessionID === sid) : suggestions),
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     modelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
-    configModelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
-    hasModelOverride: () => false,
-    clearModelOverride: noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
     modelUsage: () => undefined,
@@ -340,6 +337,7 @@ const ConfigWrapper: ParentComponent<{
       return {
         indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
         sandboxControls: props.features?.sandboxControls ?? false,
+        backgroundSubagents: props.features?.backgroundSubagents ?? false,
       }
     })
 

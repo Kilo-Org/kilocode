@@ -30,7 +30,8 @@ export function createProjectSessionsLive(opts: {
     const live = new Map(store.filter(isKnownRootSession).map((item) => [item.id, item]))
     const merged = pushed.map((item) => {
       const fresh = live.get(item.id)
-      return fresh ? { ...fresh, worktreeId: item.worktreeId } : item
+      const worktreeId = managed.has(item.id) ? managed.get(item.id)! : item.worktreeId
+      return fresh ? { ...fresh, worktreeId } : worktreeId === item.worktreeId ? item : { ...item, worktreeId }
     })
     const known = new Set(pushed.map((item) => item.id))
     const owned = (id: string) => managed.has(id) || opts.locals().has(id)

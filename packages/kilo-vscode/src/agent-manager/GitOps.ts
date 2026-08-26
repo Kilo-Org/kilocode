@@ -44,6 +44,7 @@ interface ExecOptions {
   env?: NodeJS.ProcessEnv
   stdin?: string
   timeout?: number
+  signal?: AbortSignal
 }
 
 export interface ExecResult {
@@ -594,12 +595,12 @@ export class GitOps {
    * suitable for callers that need to tolerate legitimate failures (e.g.
    * `merge-base` on an orphan branch, `ls-files --error-unmatch`).
    */
-  execGit(args: string[], cwd: string, options?: { stdin?: string }): Promise<ExecResult> {
+  execGit(args: string[], cwd: string, options?: { stdin?: string; signal?: AbortSignal }): Promise<ExecResult> {
     return this.exec(args, cwd, options)
   }
 
-  execGitBuffer(args: string[], cwd: string): Promise<ExecBufferResult> {
-    return this.execBuffer(args, cwd)
+  execGitBuffer(args: string[], cwd: string, options?: { signal?: AbortSignal }): Promise<ExecBufferResult> {
+    return this.execBuffer(args, cwd, options)
   }
 
   private async exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
@@ -616,7 +617,7 @@ export class GitOps {
       return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
     }
     const invoke = () => this.invoke(cmd, args, cwd, options)
-    return this.semaphore ? this.semaphore.run(invoke) : invoke()
+    return this.semaphore ? this.semaphore.run(invoke, options?.signal) : invoke()
   }
 
   private executable(): Promise<string> {
@@ -642,7 +643,7 @@ export class GitOps {
   }
 
   private invoke(cmd: string, args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
-    if (this.controller.signal.aborted) {
+    if (this.controller.signal.aborted || options?.signal?.aborted) {
       return Promise.resolve({ code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" })
     }
 
@@ -664,6 +665,7 @@ export class GitOps {
         : undefined
 
       this.controller.signal.addEventListener("abort", abort, { once: true })
+      options?.signal?.addEventListener("abort", abort, { once: true })
       child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
       child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
@@ -673,6 +675,7 @@ export class GitOps {
       child.on("close", (code) => {
         if (timeout) clearTimeout(timeout)
         this.controller.signal.removeEventListener("abort", abort)
+        options?.signal?.removeEventListener("abort", abort)
         resolve({
           code: code ?? 1,
           stdout: Buffer.concat(out),
