@@ -195,6 +195,7 @@ export const dict = {
   "ui.patch.action.created": "สร้าง",
   "ui.patch.action.moved": "ย้าย",
   "ui.patch.action.patched": "แพตช์",
+  "ui.patch.action.plan": "แผน", // kilocode_change
 
   "ui.question.subtitle.answered": "ตอบแล้ว {{count}} ข้อ",
   "ui.question.answer.none": "(ไม่มีคำตอบ)",

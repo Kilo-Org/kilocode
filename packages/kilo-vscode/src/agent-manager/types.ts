@@ -59,6 +59,11 @@ export interface PRCheck {
   duration?: string
 }
 
+export interface PRCommentReply {
+  author: string
+  body: string
+}
+
 export interface PRComment {
   id: string
   threadId: string
@@ -69,8 +74,12 @@ export interface PRComment {
   line?: number
   url?: string
   resolved: boolean
+  outdated: boolean
   createdAt?: number
   diffHunk?: string
+  /** Lines after the commented line, read from the worktree: a hunk has none. */
+  after?: string[]
+  replies?: PRCommentReply[]
 }
 
 export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
@@ -253,12 +262,14 @@ interface ErrorOutMessage {
 
 interface SessionAddedMessage {
   type: "agentManager.sessionAdded"
+  projectId?: string
   sessionId: string
   worktreeId: string
 }
 
 interface SessionForkedMessage {
   type: "agentManager.sessionForked"
+  projectId?: string
   sessionId: string
   forkedFromId: string
   worktreeId?: string
@@ -266,6 +277,7 @@ interface SessionForkedMessage {
 
 interface SessionClosedMessage {
   type: "agentManager.sessionClosed"
+  projectId?: string
   sessionId: string
 }
 
@@ -326,10 +338,12 @@ interface RepoInfoMessage {
   type: "agentManager.repoInfo"
   branch: string
   defaultBranch?: string
+  projectId?: string
 }
 
 interface ApplyWorktreeDiffResultMessage {
   type: "agentManager.applyWorktreeDiffResult"
+  projectId?: string
   worktreeId: string
   status: ApplyDiffStatus
   message: string
@@ -338,6 +352,7 @@ interface ApplyWorktreeDiffResultMessage {
 
 interface WorktreeDiffLoadingMessage {
   type: "agentManager.worktreeDiffLoading"
+  projectId?: string
   sessionId: string
   loading: boolean
 }
@@ -345,25 +360,42 @@ interface WorktreeDiffLoadingMessage {
 /** Source-level notice for a diff context (e.g. snapshots disabled). */
 interface WorktreeDiffNoticeMessage {
   type: "agentManager.worktreeDiffNotice"
+  projectId?: string
   sessionId: string
   notice?: string
 }
 
 interface WorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
+  projectId?: string
   sessionId: string
   diffs: WorktreeDiffEntry[]
 }
 
 interface WorktreeDiffFileMessage {
   type: "agentManager.worktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   diff: WorktreeDiffEntry | null
 }
 
+interface DocumentMessage {
+  type: "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
 interface RevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
+  projectId?: string
   sessionId: string
   file: string
   status: "success" | "error"
@@ -373,6 +405,7 @@ interface RevertWorktreeFileResultMessage {
 /** Branch picker data for a context's diff directory. */
 interface DiffBranchesMessage {
   type: "agentManager.diffBranches"
+  projectId?: string
   sessionId: string
   branches: BranchListItem[]
   defaultBranch: string
@@ -398,6 +431,7 @@ interface PRErrorOutMessage {
 
 interface CommentActionResultMessage {
   type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
+  projectId?: string
   worktreeId: string
   threadId: string
   success: boolean
@@ -440,6 +474,7 @@ export type AgentManagerOutMessage =
   | WorktreeDiffNoticeMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | DocumentMessage
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
@@ -540,6 +575,13 @@ interface AddSessionToWorktreeIn {
   sessionId?: string
 }
 
+/** Move a session back to the project root and open it in the local tabs. */
+interface OpenSessionLocallyIn {
+  type: "agentManager.openSessionLocally"
+  projectId?: string
+  sessionId: string
+}
+
 interface CloseSessionIn {
   type: "agentManager.closeSession"
   sessionId: string
@@ -638,6 +680,12 @@ interface RenameWorktreeIn {
   label: string
 }
 
+interface OpenSettingsPanelIn {
+  type: "openSettingsPanel"
+  tab?: string
+  projectId?: string
+}
+
 interface RequestStateIn {
   type: "agentManager.requestState"
 }
@@ -700,18 +748,21 @@ interface ImportFromPRIn {
 
 interface RequestWorktreeDiffIn {
   type: "agentManager.requestWorktreeDiff"
+  projectId?: string
   sessionId: string
   scope?: string
 }
 
 interface ApplyWorktreeDiffIn {
   type: "agentManager.applyWorktreeDiff"
+  projectId?: string
   worktreeId: string
   selectedFiles?: string[]
 }
 
 interface RequestWorktreeDiffFileIn {
   type: "agentManager.requestWorktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   scope?: string
@@ -721,6 +772,7 @@ interface RequestWorktreeDiffFileIn {
 
 interface StartDiffWatchIn {
   type: "agentManager.startDiffWatch"
+  projectId?: string
   sessionId: string
   scope?: string
   /** Active session for the session scope (ctx alone is a worktree/local id). */
@@ -729,10 +781,12 @@ interface StartDiffWatchIn {
 
 interface StopDiffWatchIn {
   type: "agentManager.stopDiffWatch"
+  projectId?: string
 }
 
 interface RevertWorktreeFileIn {
   type: "agentManager.revertWorktreeFile"
+  projectId?: string
   sessionId: string
   file: string
   scope?: string
@@ -740,12 +794,14 @@ interface RevertWorktreeFileIn {
 
 interface RequestDiffBranchesIn {
   type: "agentManager.requestDiffBranches"
+  projectId?: string
   sessionId: string
   scope?: string
 }
 
 interface SetDiffBaseBranchIn {
   type: "agentManager.setDiffBaseBranch"
+  projectId?: string
   sessionId: string
   scope?: string
   branch?: string
@@ -753,6 +809,7 @@ interface SetDiffBaseBranchIn {
 
 interface RefreshPRIn {
   type: "agentManager.refreshPR"
+  projectId?: string
   worktreeId: string
 }
 
@@ -765,6 +822,7 @@ interface OpenPRIn {
 
 interface CommentActionIn {
   type: "agentManager.resolveComment" | "agentManager.unresolveComment"
+  projectId?: string
   worktreeId: string
   threadId: string
 }
@@ -785,6 +843,13 @@ interface OpenFileIn {
   filePath: string
   line?: number
   column?: number
+}
+
+interface RequestDocumentIn {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
 }
 
 // Pass-through messages intercepted for side effects
@@ -1023,6 +1088,7 @@ export type AgentManagerInMessage =
   | RemoveStaleWorktreeIn
   | PromoteSessionIn
   | OpenLocallyIn
+  | OpenSessionLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | PersistSessionIn
@@ -1041,6 +1107,7 @@ export type AgentManagerInMessage =
   | RequestRepoInfoIn
   | CreateMultiVersionIn
   | RenameWorktreeIn
+  | OpenSettingsPanelIn
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn
@@ -1066,6 +1133,7 @@ export type AgentManagerInMessage =
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn
+  | RequestDocumentIn
   | GenericOpenFileIn
   | PreviewImageIn
   | SaveImageIn

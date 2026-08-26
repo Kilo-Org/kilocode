@@ -11,6 +11,7 @@ import {
   versionedName,
 } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+import { GitOps } from "../../src/agent-manager/GitOps"
 import type { PRInfo } from "../../src/agent-manager/git-import"
 import simpleGit from "simple-git"
 
@@ -46,9 +47,9 @@ async function createTempRepo(): Promise<string> {
   return dir
 }
 
-function createManager(root: string): WorktreeManager {
+function createManager(root: string, ops?: GitOps): WorktreeManager {
   const logs: string[] = []
-  return new WorktreeManager(root, (msg) => logs.push(msg))
+  return new WorktreeManager(root, (msg) => logs.push(msg), ops)
 }
 
 // Test-only helper to verify metadata writes keep the temp worktree checkout clean.
@@ -330,6 +331,45 @@ describe("WorktreeManager.createWorktree", () => {
     const result = await mgr.createWorktree({ prompt: "test" })
 
     expect(result.parentBranch).toBe(branch)
+  })
+
+  it("uses two checkout workers without changing Git configuration", async () => {
+    const root = await createTempRepo()
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    const file = path.join(root, "workers")
+    await fs.writeFile(hook, `#!/bin/sh\ngit config --get checkout.workers > "${file}"\n`)
+    await fs.chmod(hook, 0o755)
+
+    await createManager(root).createWorktree({ branchName: "parallel-checkout" })
+
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("2")
+    expect((await simpleGit(root).getConfig("checkout.workers")).value).toBeNull()
+  })
+
+  it("preserves an explicitly configured checkout worker count", async () => {
+    const root = await createTempRepo()
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    const file = path.join(root, "workers")
+    gitExec(["git", "-C", root, "config", "checkout.workers", "1"])
+    await fs.writeFile(hook, `#!/bin/sh\ngit config --get checkout.workers > "${file}"\n`)
+    await fs.chmod(hook, 0o755)
+
+    await createManager(root).createWorktree({ branchName: "configured-checkout" })
+
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("1")
+    expect((await simpleGit(root).getConfig("checkout.workers")).value).toBe("1")
+  })
+
+  it("retains post-checkout hook failure tolerance with parallel checkout", async () => {
+    const root = await fs.realpath(await createTempRepo())
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    await fs.writeFile(hook, "#!/bin/sh\nprintf 'post-checkout hook failed' >&2\nexit 1\n")
+    await fs.chmod(hook, 0o755)
+
+    const result = await createManager(root).createWorktree({ branchName: "hook-failure" })
+
+    expect(existsSync(result.path)).toBe(true)
+    expect((await simpleGit(root).raw(["worktree", "list", "--porcelain"])).includes(result.path)).toBe(true)
   })
 })
 
@@ -812,6 +852,17 @@ describe("WorktreeManager.createWorktree branch collision", () => {
     expect(second.branch).toBe("collide-2")
     expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
   })
+
+  it("does not treat remote-tracking refs as local branch collisions", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+    const hash = (await git.revparse(["HEAD"])).trim()
+    await git.raw(["update-ref", "refs/remotes/origin/remote-name", hash])
+
+    const result = await createManager(root).createWorktree({ branchName: "remote-name" })
+
+    expect(result.branch).toBe("remote-name")
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -1043,6 +1094,26 @@ describe("WorktreeManager.resolveStartPoint", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.resolveBaseBranch", () => {
+  it("uses the shared remote default instead of stale local metadata", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    gitExec(["git", "-C", clone, "branch", "master"])
+    gitExec(["git", "-C", clone, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/master"])
+    const ops = new GitOps({
+      log: () => undefined,
+      runGit: async (args) => {
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
+        if (args[0] === "ls-remote") return "ref: refs/heads/main\tHEAD\nabc123\tHEAD"
+        return ""
+      },
+    })
+    const mgr = createManager(clone, ops)
+
+    expect(await mgr.resolveBaseBranch()).toEqual({ branch: "main", remote: "origin" })
+    expect((await simpleGit(clone).raw(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])).trim()).toBe(
+      "origin/master",
+    )
+  })
+
   it("returns bare branch + remote when origin remote and tracking ref exist", async () => {
     const { clone } = await createTempRepoWithOrigin()
     const mgr = createManager(clone)

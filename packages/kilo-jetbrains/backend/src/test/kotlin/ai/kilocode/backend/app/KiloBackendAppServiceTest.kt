@@ -536,6 +536,8 @@ class KiloBackendAppServiceTest {
         assertTrue(log.messages.any {
             it.contains("App error: Failed to load required data") && it.contains("config")
         })
+        assertTrue(log.messages.any { it.contains("WARN: config: all 3 attempts failed") })
+        assertTrue(log.messages.none { it.contains("ERROR: config: all 3 attempts failed") })
     }
 
     @Test

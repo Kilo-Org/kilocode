@@ -102,6 +102,7 @@ const withCodeMode = testEffect(
               inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
             } as MCPToolDef,
             client: {} as MCP.McpTool["client"],
+            clientName: "weather", // kilocode_change
           },
         }),
       clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
@@ -134,6 +135,7 @@ const withRestrictedCodeMode = testEffect(
               inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
             } as MCPToolDef,
             client: {} as MCP.McpTool["client"],
+            clientName: "weather", // kilocode_change
           },
         }),
       clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
@@ -307,7 +309,8 @@ describe("tool.registry", () => {
   )
   // kilocode_change end
 
-  it.instance("hides task background parameter unless experimental background subagents are enabled", () =>
+  // kilocode_change start - background task parameters are available by default
+  it.instance("exposes the task background parameter by default", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
       const agent = yield* Agent.Service
@@ -319,10 +322,12 @@ describe("tool.registry", () => {
         agent: build,
       })).find((tool) => tool.id === "task")
 
-      expect(task?.jsonSchema).toBeDefined()
-      expect((task?.jsonSchema?.properties as Record<string, unknown> | undefined)?.background).toBeUndefined()
+      if (!task) throw new Error("task tool not found")
+      const jsonSchema = ToolJsonSchema.fromTool(task)
+      expect((jsonSchema.properties as Record<string, unknown> | undefined)?.background).toBeDefined()
     }),
   )
+  // kilocode_change end
 
   it.instance("loads tools from .kilo/tool (singular)" /* kilocode_change */, () =>
     Effect.gen(function* () {

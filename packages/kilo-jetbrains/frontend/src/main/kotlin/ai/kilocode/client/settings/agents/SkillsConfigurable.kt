@@ -283,7 +283,7 @@ internal class SkillsSettingsUi(
         )
         if (result != Messages.YES) return
         state.update { copy(deleted = deleted + skill.location, edited = edited - skill.location) }
-        view.update(rows(), selectionIndex())
+        view.update(rows(), ActiveListSelection.Slide)
     }
 
     private fun content(skill: SkillDto) = draft.edited[skill.location] ?: skill.content

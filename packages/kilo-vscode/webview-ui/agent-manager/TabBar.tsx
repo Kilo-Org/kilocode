@@ -58,6 +58,12 @@ export interface TabBarProps {
   prStatus: () => PRStatus | undefined
   prOpen: () => boolean
   onTogglePR: () => void
+  documentsOpen: () => boolean
+  documentsAvailable: () => boolean
+  onToggleDocuments: () => void
+  subagentsAvailable: () => boolean
+  subagentsOpen: () => boolean
+  onToggleSubagents: () => void
   terminalDestination: () => TerminalDestination
   terminalDestinationActive: () => boolean
   terminalKeybind: () => string
@@ -170,7 +176,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     const title = () => (configured() ? (active() ? "Stop" : "Run") : "Configure run script")
                     return (
                       <span
-                        class={`am-run-group ${active() ? "am-run-active" : ""} ${!configured() ? "am-run-unconfigured" : ""}`}
+                        class={`am-split-button am-run-group ${active() ? "am-run-active" : ""} ${!configured() ? "am-run-unconfigured" : ""}`}
                       >
                         <TooltipKeybind title={title()} keybind={props.bindings().runScript ?? ""} placement="bottom">
                           <Button
@@ -191,18 +197,9 @@ export const TabBar: Component<TabBarProps> = (props) => (
                           </Button>
                         </TooltipKeybind>
                         <DropdownMenu gutter={4} placement="bottom-end">
-                          <DropdownMenu.Trigger
-                            as={(p: Record<string, unknown>) => (
-                              <IconButton
-                                {...p}
-                                icon="chevron-down"
-                                size="small"
-                                variant="ghost"
-                                label={props.t("agentManager.run.options")}
-                                class="am-run-group-chevron"
-                              />
-                            )}
-                          />
+                          <DropdownMenu.Trigger class="am-split-arrow" aria-label={props.t("agentManager.run.options")}>
+                            <Icon name="chevron-down" size="small" />
+                          </DropdownMenu.Trigger>
                           <DropdownMenu.Portal>
                             <DropdownMenu.Content class="am-split-menu">
                               <DropdownMenu.Item
@@ -231,6 +228,30 @@ export const TabBar: Component<TabBarProps> = (props) => (
                       />
                     </Tooltip>
                   )}
+                </Show>
+                <Show when={props.documentsAvailable()}>
+                  <Tooltip value={props.t("agentManager.documents.toggle")} placement="bottom">
+                    <IconButton
+                      icon="book-open-check"
+                      size="small"
+                      variant="ghost"
+                      label={props.t("agentManager.documents.toggle")}
+                      class={props.documentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleDocuments}
+                    />
+                  </Tooltip>
+                </Show>
+                <Show when={props.subagentsAvailable()}>
+                  <Tooltip value="Subagents" placement="bottom">
+                    <IconButton
+                      icon="task"
+                      size="small"
+                      variant="ghost"
+                      label="Subagents"
+                      class={props.subagentsOpen() ? "am-tab-diff-btn-active" : ""}
+                      onClick={props.onToggleSubagents}
+                    />
+                  </Tooltip>
                 </Show>
                 <TooltipKeybind
                   title={props.t("agentManager.diff.toggle")}

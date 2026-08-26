@@ -191,6 +191,8 @@ function createConnection(client: ReturnType<typeof createClient>) {
     },
     connect: async () => {},
     getClient: () => client,
+    beginExplicitAbort: () => 1 as number | undefined,
+    finishExplicitAbort: () => undefined,
     onEventFiltered: () => () => undefined,
     onStateChange: (_l: (s: State) => void) => () => undefined,
     onNotificationDismissed: () => () => undefined,
@@ -1238,7 +1240,7 @@ describe("KiloProvider.handleLoadMessages / slim payload", () => {
 
     expect(client.aborted).toContainEqual({ sessionID: "s1", directory: "/repo" })
     expect(sent).toContainEqual({ type: "sessionCostAlertResolved", sessionID: "s1", limit: 1 })
-    expect(sent).toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
+    expect(sent).not.toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
   })
 
   it("strips transcript-only metadata before posting messages to the webview", async () => {

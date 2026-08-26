@@ -21,9 +21,10 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     private readonly context: vscode.ExtensionContext,
   ) {}
 
-  openPanel(sessionID: string, title?: string): void {
+  openPanel(sessionID: string, title?: string, directory?: string): void {
     const existing = this.panels.get(sessionID)
     if (existing) {
+      if (directory) this.providers.get(sessionID)?.setSessionDirectory(sessionID, directory)
       existing.reveal(vscode.ViewColumn.One)
       return
     }
@@ -42,6 +43,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     }
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, { hideTopBar: true })
+    if (directory) provider.setSessionDirectory(sessionID, directory)
     // Start accepting this session's SSE events as soon as the panel subscribes.
     // Reasoning deltas are not persisted until the reasoning part finishes.
     provider.trackSession(sessionID)
@@ -59,7 +61,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
       try {
         const client = this.connectionService.getClient()
         void client.session
-          .get({ sessionID }, { throwOnError: true })
+          .get({ sessionID, directory }, { throwOnError: true })
           .then(({ data: session }) => provider.registerSession(session))
           .catch((err: unknown) => {
             console.error("[Kilo New] SubAgentViewerProvider: Failed to load session metadata:", err)

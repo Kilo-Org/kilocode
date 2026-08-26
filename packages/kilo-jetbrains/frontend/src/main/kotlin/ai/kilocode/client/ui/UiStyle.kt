@@ -3,6 +3,8 @@ package ai.kilocode.client.ui
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
+import com.intellij.openapi.util.registry.Registry
+import com.intellij.ui.ColorUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
@@ -38,6 +40,9 @@ object UiStyle {
 
     /** Platform balloon styling used by lightweight contextual overlays. */
     object Balloon {
+        /** Mirrors the platform default for `ide.balloon.shadow.size`, used only if the key is gone. */
+        private const val SHADOW_SIZE = 24
+
         fun bg(): Color = UIUtil.getPanelBackground()
 
         fun border(): Color = JBUI.CurrentTheme.Popup.borderColor(true)
@@ -48,10 +53,25 @@ object UiStyle {
         fun pointer() = JBUI.size(16, 8)
 
         fun arc() = JBUI.scale(8)
+
+        /**
+         * Drop-shadow inset the platform reserves on every side of a balloon, or 0 when shadows are
+         * off. Read from the same registry keys `BalloonImpl` uses, because callers that size a
+         * balloon to fit an area have to account for it: an overflowing balloon is silently
+         * re-pointed to another side.
+         */
+        fun shadow(): Int =
+            if (Registry.`is`("ide.balloon.shadowEnabled", true)) {
+                JBUI.scale(Registry.intValue("ide.balloon.shadow.size", SHADOW_SIZE))
+            } else {
+                0
+            }
     }
 
     /** Filled badge styles shared across JetBrains UI surfaces. */
     object Badge {
+        private const val PR_SOFT_ALPHA = 0.15
+
         interface Style {
             fun bg(): Color
 
@@ -108,64 +128,84 @@ object UiStyle {
             )
         }
 
-        object SessionRunning : Style {
+        object ActivityRunning : Style {
             override fun bg(): Color = JBColor.namedColor(
-                "Kilo.SessionStatus.runningBadgeBackground",
-                JBColor(Color(0xF9, 0x73, 0x16), Color(0xC2, 0x41, 0x0C)),
+                "Kilo.Activity.runningBackground",
+                JBColor(Color(0x55, 0xA7, 0x6A), Color(0x57, 0x96, 0x5C)),
             )
 
             override fun fg(): Color = JBColor.namedColor(
-                "Kilo.SessionStatus.runningBadgeForeground",
+                "Kilo.Activity.runningForeground",
+                Color.WHITE,
+            )
+        }
+
+        object ActivityAttention : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.Activity.attentionBackground",
+                JBColor(Color(0xE6, 0x6D, 0x17), Color(0xC7, 0x7D, 0x55)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.Activity.attentionForeground",
+                Color.WHITE,
+            )
+        }
+
+        object ActivityError : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.Activity.errorBackground",
+                JBColor(Color(0xE5, 0x57, 0x65), Color(0xDB, 0x5C, 0x5C)),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.Activity.errorForeground",
                 Color.WHITE,
             )
         }
 
         object PullRequestOpen : Style {
-            override fun bg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.openBadgeBackground",
-                JBColor(Color(0x1F, 0x88, 0x3D), Color(0x23, 0x86, 0x36)),
+            private val accent = JBColor.namedColor(
+                "Kilo.PullRequest.openBadgeForeground",
+                JBColor(Color(0x1A, 0x7F, 0x37), Color(0x3F, 0xB9, 0x50)),
             )
 
-            override fun fg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.openBadgeForeground",
-                Color.WHITE,
-            )
+            override fun bg(): Color = ColorUtil.withAlpha(accent, PR_SOFT_ALPHA)
+
+            override fun fg(): Color = accent
         }
 
         object PullRequestDraft : Style {
-            override fun bg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.draftBadgeBackground",
-                JBColor(Color(0x6E, 0x77, 0x81), Color(0x6E, 0x76, 0x81)),
+            private val accent = JBColor.namedColor(
+                "Kilo.PullRequest.draftBadgeForeground",
+                JBColor(Color(0x59, 0x63, 0x6E), Color(0x91, 0x98, 0xA1)),
             )
 
-            override fun fg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.draftBadgeForeground",
-                Color.WHITE,
-            )
+            override fun bg(): Color = ColorUtil.withAlpha(accent, PR_SOFT_ALPHA)
+
+            override fun fg(): Color = accent
         }
 
         object PullRequestMerged : Style {
-            override fun bg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.mergedBadgeBackground",
-                JBColor(Color(0x82, 0x50, 0xDF), Color(0x89, 0x57, 0xE5)),
+            private val accent = JBColor.namedColor(
+                "Kilo.PullRequest.mergedBadgeForeground",
+                JBColor(Color(0x82, 0x50, 0xDF), Color(0xA3, 0x71, 0xF7)),
             )
 
-            override fun fg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.mergedBadgeForeground",
-                Color.WHITE,
-            )
+            override fun bg(): Color = ColorUtil.withAlpha(accent, PR_SOFT_ALPHA)
+
+            override fun fg(): Color = accent
         }
 
         object PullRequestClosed : Style {
-            override fun bg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.closedBadgeBackground",
-                JBColor(Color(0xCF, 0x22, 0x2E), Color(0xDA, 0x36, 0x33)),
+            private val accent = JBColor.namedColor(
+                "Kilo.PullRequest.closedBadgeForeground",
+                JBColor(Color(0xCF, 0x22, 0x2E), Color(0xF8, 0x51, 0x49)),
             )
 
-            override fun fg(): Color = JBColor.namedColor(
-                "Kilo.PullRequest.closedBadgeForeground",
-                Color.WHITE,
-            )
+            override fun bg(): Color = ColorUtil.withAlpha(accent, PR_SOFT_ALPHA)
+
+            override fun fg(): Color = accent
         }
     }
 
@@ -176,6 +216,17 @@ object UiStyle {
         fun fg(): Color = UIUtil.getLabelForeground()
 
         fun weak(): Color = UIUtil.getContextHelpForeground()
+
+        // Neutral icon greys from the New UI palette: the same values our svg row icons paint with, so
+        // an animated icon reads at the row's icon weight instead of as a colored status light. Each
+        // variant carries the contrast its own theme needs — mid grey on light, near-white on dark.
+        val runningLight = Color(0x6C, 0x70, 0x7E)
+        val runningDark = Color(0xCE, 0xD0, 0xD6)
+
+        fun running(): Color = JBColor.namedColor(
+            "Kilo.Activity.runningSpinnerForeground",
+            JBColor(runningLight, runningDark),
+        )
 
         /** Uses the editor background so chat cards feel native beside editor content. */
         fun editorBackground(): Color = JBColor.lazy { EditorColorsManager.getInstance().globalScheme.defaultBackground }

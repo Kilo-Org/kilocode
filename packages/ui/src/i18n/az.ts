@@ -188,6 +188,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.created": "Yaradıldı",
   "ui.patch.action.moved": "Köçürüldü",
   "ui.patch.action.patched": "Yamaq tətbiq edildi",
+  "ui.patch.action.plan": "Plan", // kilocode_change
   "ui.question.subtitle.answered": "{{count}} cavablandı",
   "ui.question.answer.none": "(cavab yoxdur)",
   "ui.question.review.notAnswered": "(cavablanmayıb)",

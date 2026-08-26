@@ -5,6 +5,8 @@ description: "How KiloClaw instances are structured"
 
 # Architecture Notes
 
+{% partial file="kiloclaw-eol.md" /%}
+
 For advanced users — how KiloClaw instances are structured:
 
 - **Dedicated machine** — Each user gets their own machine and persistent volume. There is no shared infrastructure between users.

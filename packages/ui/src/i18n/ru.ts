@@ -202,6 +202,7 @@ export const dict = {
   "ui.patch.action.created": "Создано",
   "ui.patch.action.moved": "Перемещено",
   "ui.patch.action.patched": "Изменено",
+  "ui.patch.action.plan": "План", // kilocode_change
 
   "ui.question.subtitle.answered": "Получено ответов: {{count}}",
   "ui.question.answer.none": "(нет ответа)",

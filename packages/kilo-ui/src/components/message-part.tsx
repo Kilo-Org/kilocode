@@ -163,6 +163,7 @@ export interface MessagePartProps {
   working?: boolean
   feedback?: MessageFeedbackControls
   throughput?: JSX.Element
+  readonly?: boolean
 }
 
 export type PartComponent = Component<MessagePartProps>
@@ -1044,6 +1045,7 @@ export function Part(props: MessagePartProps) {
         working={props.working}
         feedback={props.feedback}
         throughput={props.throughput}
+        readonly={props.readonly}
       />
     </Show>
   )
@@ -1068,6 +1070,7 @@ export interface ToolProps {
   locked?: boolean
   animate?: boolean
   reveal?: boolean
+  readonly?: boolean
 }
 
 export type ToolComponent = Component<ToolProps>
@@ -1267,6 +1270,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                     forceOpen={props.forceOpen}
                     animate
                     reveal={props.animate}
+                    readonly={props.readonly}
                   />
                 )
               }
@@ -1346,6 +1350,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 forceOpenFile={props.forceOpenFile}
                 animate
                 reveal={props.animate}
+                readonly={props.readonly}
               />
             </ToolApprovalProvider>
           </Match>
@@ -1429,10 +1434,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (!exists) {
       el.classList.remove("file-link-candidate")
       el.classList.remove("file-link")
+      el.classList.remove("plan-document-link")
       el.removeAttribute("data-file-candidate")
       el.removeAttribute("data-file-path")
+      el.removeAttribute("data-file-kind")
       el.removeAttribute("data-file-line")
       el.removeAttribute("data-file-col")
+      el.removeAttribute("title")
       return
     }
     // Strip ./ prefix for the click handler — VS Code resolves relative
@@ -1442,6 +1450,16 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     el.classList.add("file-link")
     el.setAttribute("data-file-path", clean)
     el.removeAttribute("data-file-candidate")
+    // A plan document gets a document glyph and a localized kind hint instead of
+    // an inline badge, so the reference stays readable inside a sentence.
+    el.classList.remove("plan-document-link")
+    el.removeAttribute("data-file-kind")
+    el.removeAttribute("title")
+    if (/(?:^|\/)(?:plans|\.plans?)\/.*\.md$/i.test(clean)) {
+      el.classList.add("plan-document-link")
+      el.setAttribute("data-file-kind", "plan")
+      el.setAttribute("title", i18n.t("ui.patch.action.plan"))
+    }
   }
 
   const dispatch = (el: HTMLElement, p: string) => {
@@ -2055,9 +2073,9 @@ ToolRegistry.register({
               animate={props.reveal}
               onClick={data.openFile ? () => data.openFile!(filepath) : undefined}
             />
-          )}
+    )}
         </For>
-        <Show when={images().length > 0}>
+      <Show when={images().length > 0}>
           <div data-slot="tool-read-images">
             <For each={images()}>
               {(file) => (
@@ -2554,8 +2572,6 @@ ToolRegistry.register({
       })
     })
     const canOpenDiff = () => !!data.openDiff && !!path() && !!view()
-    const canOpenFile = () => !!data.openFile && !!path()
-
     const openDiff = () => {
       const v = view()
       if (!canOpenDiff() || !v) return
@@ -2565,19 +2581,6 @@ ToolRegistry.register({
         additions: v.additions,
         deletions: v.deletions,
       })
-    }
-
-    const handleFileClick = (e: MouseEvent) => {
-      e.stopPropagation()
-
-      if (canOpenDiff()) {
-        openDiff()
-        return
-      }
-
-      if (canOpenFile()) {
-        data.openFile!(path())
-      }
     }
 
     const handleOpenDiffClick = (e: MouseEvent) => {
@@ -2606,7 +2609,6 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
@@ -2671,8 +2673,6 @@ ToolRegistry.register({
       return normalize(diff)
     })
     const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!view()
-    const canOpenFile = () => !!data.openFile && !!props.input.filePath
-
     const openDiff = () => {
       const v = view()
       if (!data.openDiff || !props.input.filePath || !v) return
@@ -2682,17 +2682,6 @@ ToolRegistry.register({
         additions: v.additions,
         deletions: v.deletions,
       })
-    }
-
-    const handleFileClick = (e: MouseEvent) => {
-      e.stopPropagation()
-      if (canOpenDiff()) {
-        openDiff()
-        return
-      }
-      if (canOpenFile()) {
-        data.openFile!(props.input.filePath!)
-      }
     }
 
     const handleOpenDiffClick = (e: MouseEvent) => {
@@ -2721,7 +2710,6 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
@@ -2804,13 +2792,65 @@ ToolRegistry.register({
     const view = (file: ApplyPatchFile) => {
       const patch = file.patch ?? file.diff
       if (!patch) return
-      return normalize({
+      const value = normalize({
         file: file.relativePath,
         patch,
         additions: file.additions,
         deletions: file.deletions,
       })
+      // apply_patch can report a file whose payload is not a parsable unified
+      // diff. Rendering it yields an empty "+0 -0" pane, so treat such a file
+      // as having no preview instead of showing a blank diff.
+      if (!value.fileDiff.hunks.length) return
+      return value
     }
+    const openAllDiff = () => {
+      const diffs = files().flatMap((file) => {
+        const diff = view(file)
+        return diff
+          ? [{
+              file: file.relativePath,
+              patch: diff.patch,
+              status:
+                file.type === "add"
+                  ? ("added" as const)
+                  : file.type === "delete"
+                    ? ("deleted" as const)
+                    : ("modified" as const),
+              additions:
+                file.type === "add" && diff.additions === 0
+                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.additionLines, 0)
+                  : diff.additions,
+              deletions:
+                file.type === "delete" && diff.deletions === 0
+                  ? diff.fileDiff.hunks.reduce((sum, hunk) => sum + hunk.deletionLines, 0)
+                  : diff.deletions,
+            }]
+          : []
+      })
+      const first = diffs[0]
+      if (!data.openDiff || !first) return
+      data.openDiff(diffs.length === 1 ? first : { ...first, files: diffs })
+    }
+    const allDiffAction = () => (
+      <Show when={data.openDiff && files().some((file) => view(file))}>
+        <span data-slot="tool-trigger-actions">
+          <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+            <IconButton
+              icon="square-arrow-top-right"
+              size="small"
+              variant="ghost"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation()
+                openAllDiff()
+              }}
+              aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+            />
+          </Tooltip>
+        </span>
+      </Show>
+    )
     const pending = createMemo(() => busy(props.status))
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const single = createMemo(() => {
@@ -2879,14 +2919,6 @@ ToolRegistry.register({
                         path={file().relativePath.includes("/") ? getDirectory(file().relativePath) : undefined}
                         changes={{ additions: file().additions, deletions: file().deletions }}
                         animate={reveal()}
-                        onClick={
-                          data.openFile && file().filePath
-                            ? (e: MouseEvent) => {
-                                e.stopPropagation()
-                                data.openFile!(file().filePath)
-                              }
-                            : undefined
-                        }
                       />
                     )}
                   </Show>
@@ -2902,6 +2934,7 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
+              {allDiffAction()}
             </div>
           }
         >
@@ -2943,12 +2976,6 @@ ToolRegistry.register({
 
                                     <span
                                       data-slot="apply-patch-filename"
-                                      classList={{ clickable: !!data.openFile }}
-                                      onClick={(e: MouseEvent) => {
-                                        if (!data.openFile) return
-                                        e.stopPropagation()
-                                        data.openFile(file.filePath)
-                                      }}
                                     >
                                       {getFilename(file.relativePath)}
                                     </span>
@@ -3151,7 +3178,7 @@ ToolRegistry.register({
     return (
       <BasicTool
         {...props}
-        defaultOpen={false}
+        defaultOpen={completed() && !dismissed()}
         icon="bubble-5"
         trigger={
           <ToolTriggerRow

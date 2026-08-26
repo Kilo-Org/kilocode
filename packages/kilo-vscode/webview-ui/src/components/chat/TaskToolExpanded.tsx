@@ -13,20 +13,24 @@ import { BasicTool, initialOpen } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
-import { childID } from "../../context/session-utils"
-import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
+import { childID, latestTaskPart } from "../../context/session-utils"
+import { useConfig } from "../../context/config"
+import { openSubagent } from "./open-subagent"
+import { showChildPromotion, taskResult, taskRunning, taskVisible } from "./task-tool-state"
 import { MODE_SWITCH_TRANSITION_ICON, modeSwitchEvent } from "./mode-switch-ui"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
   const language = useLanguage()
   const session = useSession()
+  const { features } = useConfig()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
 
@@ -37,6 +41,22 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       metadata: props.partMetadata as { sessionId?: string } | undefined,
       state: { metadata: props.metadata as { sessionId?: string } },
     })
+
+  const promotable = createMemo(() =>
+    showChildPromotion(
+      childSessionId(),
+      props.partMetadata as Record<string, unknown> | undefined,
+      props.metadata as Record<string, unknown> | undefined,
+      session.allStatusMap(),
+      features().backgroundSubagents,
+      props.readonly,
+      latestTaskPart(
+        props.partID,
+        childSessionId(),
+        session.currentSessionID() ? session.getSessionToolParts(session.currentSessionID()!) : [],
+      ),
+    ),
+  )
 
   const running = createMemo(() => taskRunning(props.status))
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
@@ -125,16 +145,20 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     e.stopPropagation()
     const id = childSessionId()
     if (!id) return
-    const title = description()
-    if (worktree) {
-      window.dispatchEvent(
-        new CustomEvent("agentManager.openSubagent", {
-          detail: { sessionID: id, title, parentSessionID: session.currentSessionID() },
-        }),
-      )
-      return
-    }
-    vscode.postMessage({ type: "openSubAgentViewer", sessionID: id, title })
+    openSubagent({
+      sessionID: id,
+      title: description(),
+      parentSessionID: session.currentSessionID(),
+      worktree: !!worktree,
+      post: vscode.postMessage,
+    })
+  }
+
+  const background = (e: MouseEvent) => {
+    e.stopPropagation()
+    const id = session.currentSessionID()
+    const child = childSessionId()
+    if (id && child) vscode.postMessage({ type: "promoteBackgroundJob", jobID: child, sessionID: id })
   }
 
   const trigger = () => (
@@ -153,6 +177,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         </Show>
       </div>
       <Show when={childSessionId()}>
+        <Show when={features().backgroundSubagents && promotable()}>
+          <Tooltip value={language.t("task.backgroundAgents.continueInBackground")} placement="top">
+            <IconButton
+              icon="arrow-down-to-line"
+              size="small"
+              variant="ghost"
+              aria-label={language.t("task.backgroundAgents.continueInBackground")}
+              onClick={background}
+            />
+          </Tooltip>
+        </Show>
         <IconButton
           icon="square-arrow-top-right"
           size="small"

@@ -76,6 +76,7 @@ function PlanExitCard(props: { part: ToolPart }) {
     <Show when={info()}>
       <div data-component="plan-exit-card">
         <span data-slot="plan-exit-label">{label()}</span>{" "}
+        <span data-slot="plan-exit-badge">{language.t("ui.patch.action.plan")}</span>
         <a data-slot="plan-exit-link" href="#" onClick={open}>
           {display()}
         </a>
@@ -113,6 +114,7 @@ interface AssistantMessageProps {
   forceOpenFile?: string
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
+  readonly?: boolean
 }
 
 type ToolStateProps = {
@@ -338,6 +340,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       feedback={props.feedback}
                                       throughput={throughputEl()}
+                                      readonly={props.readonly}
                                       animate={
                                         part.type === "tool" &&
                                         ((part as unknown as ToolPart).state?.status === "pending" ||

@@ -25,6 +25,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,6 +41,8 @@ class KiloBackendWorkspaceTest {
     private val log = TestLog()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val apps = mutableListOf<KiloBackendAppService>()
+    private val root: Path = Files.createTempDirectory("kilo-backend-workspace")
+    private val project: Path = Files.createDirectories(root.resolve("project"))
 
     @AfterTest
     fun tearDown() {
@@ -48,6 +52,7 @@ class KiloBackendWorkspaceTest {
             scope.cancel()
             mock.close()
             withTimeout(10_000) { scope.coroutineContext[Job]?.join() }
+            delete(root)
         }
     }
 
@@ -69,8 +74,10 @@ class KiloBackendWorkspaceTest {
 
     private suspend fun ready(app: KiloBackendAppService): KiloBackendWorkspace {
         connect(app)
-        return app.workspaces.get("/test/project")
+        return app.workspaces.get(project.toString())
     }
+
+    private fun dir(name: String): String = Files.createDirectories(root.resolve(name)).toString()
 
     private suspend fun loaded(ws: KiloBackendWorkspace) {
         withTimeout(15_000) {
@@ -112,8 +119,9 @@ class KiloBackendWorkspaceTest {
         val app = setup()
         connect(app)
 
-        val ws1 = app.workspaces.get("/test")
-        val ws2 = app.workspaces.get("/test")
+        val path = dir("same")
+        val ws1 = app.workspaces.get(path)
+        val ws2 = app.workspaces.get(path)
         // LLM note: get() starts background loading; settle it so teardown is not racing active HTTP calls in CI.
         loaded(ws1)
         assertTrue(ws1 === ws2)
@@ -124,14 +132,16 @@ class KiloBackendWorkspaceTest {
         val app = setup()
         connect(app)
 
-        val ws1 = app.workspaces.get("/project-a")
-        val ws2 = app.workspaces.get("/project-b")
+        val first = dir("project-a")
+        val second = dir("project-b")
+        val ws1 = app.workspaces.get(first)
+        val ws2 = app.workspaces.get(second)
         // LLM note: get() starts background loading; settle both loads before the scope-cancelling teardown.
         loaded(ws1)
         loaded(ws2)
         assertTrue(ws1 !== ws2)
-        assertEquals("/project-a", ws1.directory)
-        assertEquals("/project-b", ws2.directory)
+        assertEquals(first, ws1.directory)
+        assertEquals(second, ws2.directory)
     }
 
     @Test
@@ -150,7 +160,7 @@ class KiloBackendWorkspaceTest {
 
         // Manager should throw since app is disconnected
         assertFailsWith<IllegalStateException> {
-            app.workspaces.get("/test/project")
+            app.workspaces.get(project.toString())
         }
     }
 
@@ -187,7 +197,7 @@ class KiloBackendWorkspaceTest {
         connect(app)
 
         // get() creates workspace and starts loading immediately
-        val ws = app.workspaces.get("/test")
+        val ws = app.workspaces.get(dir("plain"))
 
         withTimeout(15_000) {
             ws.state.first { it is KiloWorkspaceState.Ready }
@@ -211,7 +221,7 @@ class KiloBackendWorkspaceTest {
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("providers"))
         assertTrue(err.errors.any { it.resource == "providers" })
-        assertTrue(log.messages.any { it.contains("Workspace error [/test/project]: Failed to load:") && it.contains("providers") })
+        assertTrue(log.messages.any { it.contains("Workspace error [${project}]: Failed to load:") && it.contains("providers") })
     }
 
     @Test
@@ -232,6 +242,7 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `agents failure retries then transitions to Error`() = runBlocking {
         mock.agentsStatus = 500
+        mock.agents = """{"error":"invalid agent config"}"""
         val app = setup()
         val ws = ready(app)
 
@@ -241,6 +252,80 @@ class KiloBackendWorkspaceTest {
 
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("agents"))
+        val item = err.errors.single { it.resource == "agents" }
+        assertEquals(500, item.status)
+        assertTrue(item.detail?.contains("invalid agent config") == true)
+        assertTrue(log.messages.any { it.contains("agents response body:") && it.contains("invalid agent config") })
+        assertTrue(log.messages.any { it.contains("WARN: agents: all 3 attempts failed") })
+        assertTrue(log.messages.none { it.contains("ERROR: agents: all 3 attempts failed") })
+    }
+
+    @Test
+    fun `dev container virtual directory transitions to Unsupported without fetching agents`() = runBlocking {
+        val app = setup()
+        connect(app)
+        mock.resetCounts()
+        val ws = app.workspaces.get("/${'$'}devcontainer.ij/abc@u~run~user~1001~podman~podman.sock/workspaces/project")
+
+        val state = withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Unsupported }
+        } as KiloWorkspaceState.Unsupported
+
+        assertEquals("devcontainer_virtual_filesystem", state.reason)
+        assertEquals(0, mock.requestCount("/agent"))
+        assertEquals(0, mock.requestCount("/provider"))
+        assertTrue(log.messages.none { it.contains("all 3 attempts failed") })
+        assertTrue(log.messages.none { it.contains("Workspace error") })
+    }
+
+    @Test
+    fun `wsl virtual directory transitions to Unsupported without fetching agents`() = runBlocking {
+        val app = setup()
+        connect(app)
+        mock.resetCounts()
+        val ws = app.workspaces.get("\\\\wsl${'$'}\\Ubuntu\\home\\user\\project")
+
+        val state = withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Unsupported }
+        } as KiloWorkspaceState.Unsupported
+
+        assertEquals("wsl_virtual_filesystem", state.reason)
+        assertEquals(0, mock.requestCount("/agent"))
+    }
+
+    @Test
+    fun `invalid virtual directory transitions to Unsupported without fetching agents`() = runBlocking {
+        val app = setup()
+        connect(app)
+        mock.resetCounts()
+        val ws = app.workspaces.get("bad" + Char.MIN_VALUE + "path")
+
+        val state = withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Unsupported }
+        } as KiloWorkspaceState.Unsupported
+
+        assertEquals("invalid_virtual_path", state.reason)
+        assertEquals(0, mock.requestCount("/agent"))
+    }
+
+    @Test
+    fun `missing directory transitions to Missing without fetching workspace data`() = runBlocking {
+        val app = setup()
+        connect(app)
+        mock.resetCounts()
+        val dir = Files.createTempDirectory("kilo-missing-workspace")
+        Files.delete(dir)
+        val ws = app.workspaces.get(dir.toString())
+
+        val state = withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Missing }
+        } as KiloWorkspaceState.Missing
+
+        assertEquals(dir.toString(), state.path)
+        assertEquals(0, mock.requestCount("/agent"))
+        assertEquals(0, mock.requestCount("/provider"))
+        assertEquals(0, mock.requestCount("/command"))
+        assertEquals(0, mock.requestCount("/skill"))
     }
 
     @Test
@@ -391,7 +476,7 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `workspace exposes sessions for its directory`() = runBlocking {
         mock.sessions = """[
-            {"id":"ses_1","slug":"s","projectID":"p","directory":"/test/project","title":"T","version":"1","time":{"created":1,"updated":1}}
+            {"id":"ses_1","slug":"s","projectID":"p","directory":"${project}","title":"T","version":"1","time":{"created":1,"updated":1}}
         ]"""
         val app = setup()
         val ws = ready(app)
@@ -405,7 +490,7 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `workspace maps missing session timestamps to zero`() = runBlocking {
         mock.sessions = """[
-            {"id":"ses_1","slug":"s","projectID":"p","directory":"/test/project","title":"T","version":"1","time":{"created":null,"updated":null}}
+            {"id":"ses_1","slug":"s","projectID":"p","directory":"${project}","title":"T","version":"1","time":{"created":null,"updated":null}}
         ]"""
         val app = setup()
         val ws = ready(app)
@@ -418,14 +503,14 @@ class KiloBackendWorkspaceTest {
 
     @Test
     fun `workspace creates session in its directory`() = runBlocking {
-        mock.sessionCreate = """{"id":"ses_new","slug":"n","projectID":"p","directory":"/test/project","title":"New","version":"1","time":{"created":1,"updated":1}}"""
+        mock.sessionCreate = """{"id":"ses_new","slug":"n","projectID":"p","directory":"${project}","title":"New","version":"1","time":{"created":1,"updated":1}}"""
         val app = setup()
         val ws = ready(app)
         loaded(ws)
 
         val session = ws.createSession()
         assertEquals("ses_new", session.id)
-        assertEquals("/test/project", session.directory)
+        assertEquals(project.toString(), session.directory)
     }
 
     // ------ Concurrency tests ------
@@ -443,7 +528,7 @@ class KiloBackendWorkspaceTest {
         try {
             val results = (1..10).map {
                 async(Dispatchers.Default) {
-                    manager.get("/same/dir")
+                    manager.get(dir("same-concurrent"))
                 }
             }.awaitAll()
 
@@ -517,7 +602,7 @@ class KiloBackendWorkspaceTest {
         )
         withTimeout(15_000) { reload.await() }
 
-        val ws = app.workspaces.get("/test/project")
+        val ws = app.workspaces.get(project.toString())
         assertTrue(ws !== initial)
         val state = withTimeout(15_000) {
             ws.state.first {
@@ -590,5 +675,12 @@ class KiloBackendWorkspaceTest {
         private val SKILLS_JSON = """[
             {"name":"test-skill","description":"A test skill","location":"file:///test","content":"# Test"}
         ]""".trimIndent()
+    }
+
+    private fun delete(dir: Path) {
+        if (!Files.exists(dir)) return
+        Files.walk(dir).use { paths ->
+            paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+        }
     }
 }

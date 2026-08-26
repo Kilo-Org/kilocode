@@ -361,8 +361,8 @@ export class WorktreeManager {
     }
 
     const existing = await this.git
-      .branch()
-      .then((result) => result.all)
+      .raw(["for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads"])
+      .then((refs) => refs.trim().split(/\r?\n/).filter(Boolean))
       .catch(() => [] as string[])
     const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
     const branch = sanitized || generateBranchName(params.prompt || "agent-task", existing)
@@ -392,7 +392,13 @@ export class WorktreeManager {
    */
   private async runWorktreeAdd(args: string[], wtPath: string): Promise<void> {
     try {
-      await this.git.raw(args)
+      const workers = await this.git.getConfig("checkout.workers").catch((error: unknown) => {
+        this.log(
+          `Failed to inspect checkout worker configuration: ${error instanceof Error ? error.message : String(error)}`,
+        )
+        return undefined
+      })
+      await this.git.raw(workers?.value === null ? ["-c", "checkout.workers=2", ...args] : args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (this.isHookError(msg) && (await this.worktreeRegistered(wtPath))) {
@@ -965,8 +971,18 @@ export class WorktreeManager {
   }
 
   async defaultBranch(): Promise<string> {
-    // 1. Try symbolic-ref against the resolved remote (not hardcoded "origin")
     const remote = await this.resolveRemote()
+
+    // 1. Prefer the shared resolver, which verifies the remote's current HEAD.
+    if (this.ops && remote) {
+      const ref = await this.ops.resolveDefaultBranch(this.root).catch((e) => {
+        this.log(`defaultBranch: shared resolver failed: ${e}`)
+        return undefined
+      })
+      if (ref?.startsWith(`${remote}/`)) return ref.slice(remote.length + 1)
+    }
+
+    // 2. Try local symbolic-ref against the resolved remote (not hardcoded "origin")
     if (remote) {
       try {
         const head = await this.git.raw(["symbolic-ref", `refs/remotes/${remote}/HEAD`])
@@ -978,7 +994,7 @@ export class WorktreeManager {
       }
     }
 
-    // 2. Try current branch (if not detached)
+    // 3. Try current branch (if not detached)
     try {
       const current = await this.currentBranch()
       if (current && current !== "HEAD") return current
@@ -986,7 +1002,7 @@ export class WorktreeManager {
       this.log(`defaultBranch: currentBranch failed: ${e}`)
     }
 
-    // 3. Try first local branch
+    // 4. Try first local branch
     try {
       const branches = await this.git.branchLocal()
       if (branches.all.length > 0) return branches.all[0]

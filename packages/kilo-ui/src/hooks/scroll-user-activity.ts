@@ -3,6 +3,9 @@ interface UserActivityOptions {
   onWheelUp: () => void
 }
 
+const SCROLL_KEYS = new Set(["ArrowDown", "ArrowUp", "End", "Home", "PageDown", "PageUp", " "])
+const owners = new WeakMap<Document, Set<HTMLElement>>()
+
 const isPotentialScrollInput = (event: Event) => {
   if (!(event.target instanceof Element)) return true
   const editable = event.target.closest<HTMLElement>("[contenteditable]")
@@ -31,20 +34,40 @@ export const createUserActivity = (options: UserActivityOptions) => {
     options.onWheelUp()
   }
 
+  const handleKey = (event: KeyboardEvent) => {
+    if (!scroll || event.defaultPrevented || !SCROLL_KEYS.has(event.key)) return
+    const target = event.target
+    const root = target === scroll.ownerDocument.body || target === scroll.ownerDocument.documentElement
+    const up = event.key === "ArrowUp" || event.key === "Home" || event.key === "PageUp" || (event.key === " " && event.shiftKey)
+    const matches = [...(owners.get(scroll.ownerDocument) ?? [])].filter((el) => {
+      const owns = root ? el.matches(":hover") : target instanceof Node && el.contains(target)
+      if (!owns) return false
+      return up ? el.scrollTop > 1 : el.scrollHeight - el.clientHeight - el.scrollTop > 1
+    })
+    const owner = matches.find((el) => !matches.some((candidate) => candidate !== el && el.contains(candidate)))
+    if (owner !== scroll) return
+    mark(event)
+  }
+
   return {
     listen: (el: HTMLElement) => {
       scroll = el
+      const registered = owners.get(el.ownerDocument) ?? new Set<HTMLElement>()
+      registered.add(el)
+      owners.set(el.ownerDocument, registered)
       el.addEventListener("wheel", handleWheel, { passive: true, capture: true })
       el.addEventListener("pointerdown", mark, { passive: true })
-      el.addEventListener("keydown", mark, { passive: true })
       el.addEventListener("touchstart", mark, { passive: true })
+      el.ownerDocument.addEventListener("keydown", handleKey, { passive: true })
 
       return () => {
         if (scroll === el) scroll = undefined
+        registered.delete(el)
+        if (registered.size === 0) owners.delete(el.ownerDocument)
         el.removeEventListener("wheel", handleWheel, { capture: true })
         el.removeEventListener("pointerdown", mark)
-        el.removeEventListener("keydown", mark)
         el.removeEventListener("touchstart", mark)
+        el.ownerDocument.removeEventListener("keydown", handleKey)
       }
     },
     consumeScroll: () => {

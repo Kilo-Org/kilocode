@@ -25,8 +25,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let settling = false
   let settleTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
-  let lastTop = 0
-  let lastHeight = 0
+  let watcher: MutationObserver | undefined
 
   const [store, setStore] = createStore({
     contentRef: undefined as HTMLElement | undefined,
@@ -103,9 +102,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     const input = userActivity.consumeScroll()
     const distance = distanceFromBottom(scroll)
-    const moved = Math.abs(scroll.scrollTop - lastTop) > 1 && Math.abs(scroll.scrollHeight - lastHeight) <= 1
-    lastTop = scroll.scrollTop
-    lastHeight = scroll.scrollHeight
 
     if (!canScroll(scroll)) return
 
@@ -114,9 +110,17 @@ export function createAutoScroll(options: AutoScrollOptions) {
       return
     }
 
-    // Virtualizer and layout remeasurement can emit scroll before the
-    // ResizeObserver restores bottom-follow. Only user input should pause it.
-    if (!store.userScrolled && !input && !userActivity.isRecent() && !moved) return
+    // Virtualizer and layout corrections can move the viewport without
+    // changing content height. Only an input event should pause auto-follow.
+    if (!store.userScrolled && !input && !userActivity.isRecent()) {
+      // A tool card that swaps views shrinks the transcript and recovers inside
+      // the same frame. The shrink makes the browser clamp the pin away, and
+      // because the final content size is unchanged no resize entry follows, so
+      // the correction has to happen here or the transcript stays parked below
+      // its bottom until the next content update.
+      if (active()) bottom()
+      return
+    }
 
     stop()
   }
@@ -136,6 +140,18 @@ export function createAutoScroll(options: AutoScrollOptions) {
       }
       return
     }
+
+    follow()
+  }
+
+  // Content mutations are pinned while they are still queued, before the frame
+  // lays out and paints. A ResizeObserver entry arrives after that layout, so
+  // waiting for it lets the browser paint one frame with the new content hanging
+  // below the viewport, which reads as the transcript twitching as it streams.
+  const onContentMutate = () => {
+    if (!scroll) return
+    if (store.userScrolled || userActivity.isRecent()) return
+    if (!canScroll(scroll)) return
 
     follow()
   }
@@ -198,6 +214,18 @@ export function createAutoScroll(options: AutoScrollOptions) {
     el.style.overflowAnchor = store.userScrolled ? "auto" : "none"
   }
 
+  const setContent = (el: HTMLElement | undefined) => {
+    watcher?.disconnect()
+    watcher = undefined
+
+    setStore("contentRef", el)
+
+    if (!el || typeof MutationObserver !== "function") return
+
+    watcher = new MutationObserver(onContentMutate)
+    watcher.observe(el, { childList: true, subtree: true, characterData: true })
+  }
+
   const setScroll = (el: HTMLElement | undefined) => {
     if (cleanup) {
       cleanup()
@@ -209,14 +237,14 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     if (!el) return
 
-    lastTop = el.scrollTop
-    lastHeight = el.scrollHeight
     updateOverflowAnchor(el)
     cleanup = userActivity.listen(el)
   }
 
   onCleanup(() => {
     if (settleTimer) clearTimeout(settleTimer)
+    watcher?.disconnect()
+    watcher = undefined
     if (cleanup) cleanup()
   })
 
@@ -226,7 +254,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   return {
     scrollRef: setScroll,
-    contentRef: (el: HTMLElement | undefined) => setStore("contentRef", el),
+    contentRef: setContent,
     handleScroll,
     pause,
     resume,

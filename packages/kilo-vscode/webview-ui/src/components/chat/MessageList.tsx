@@ -36,7 +36,6 @@ import type { ErrorDisplayProps } from "./ErrorDisplay"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
-import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { TurnOutcome } from "../shared/TurnOutcome"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
@@ -179,10 +178,23 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const isEmpty = () => turns().length === 0 && !session.loading() && !revert()
 
   const activeUserID = createMemo(() =>
-    getActiveUserMessageID(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id)),
+    getActiveUserMessageID(
+      session.messages(),
+      session.statusInfo(),
+      (msg) => session.getParts(msg.id),
+      session.submitting(),
+    ),
   )
   const queuedIDs = createMemo(
-    () => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id))),
+    () =>
+      new Set(
+        queuedUserMessageIDs(
+          session.messages(),
+          session.statusInfo(),
+          (msg) => session.getParts(msg.id),
+          session.submitting(),
+        ),
+      ),
   )
   const rows = createMemo((prev: TranscriptRow[] | undefined) => {
     const active = activeUserID()
@@ -1320,6 +1332,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearch={activeKey() === row.key}
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                        readonly={props.readonly}
                       />
                     )}
                   </Virtualizer>
@@ -1333,6 +1346,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearch={activeKey() === key}
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
+                      readonly={props.readonly}
                     />
                   )}
                 </For>
@@ -1348,10 +1362,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearch={activeKey() === row.key}
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                  readonly={props.readonly}
                 />
               )}
             </For>
-            <WorkingIndicator />
             <TurnOutcome />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
@@ -1372,7 +1386,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
         onLoadOlder={() => session.loadOlderMessages()}
         onWheel={(deltaY: number) => {
           const el = scrollEl()
-          if (el) el.scrollTop += deltaY
+          if (!el) return
+          if (deltaY < 0 && el.scrollHeight - el.clientHeight > 1) autoScroll.pause()
+          el.scrollTop += deltaY
         }}
         height={height}
         hasOlder={session.hasOlderMessages}

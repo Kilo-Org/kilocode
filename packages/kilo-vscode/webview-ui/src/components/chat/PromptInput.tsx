@@ -56,7 +56,7 @@ import {
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
-import type { ExtensionMessage, ReviewComment, SendMessageFailedMessage, TextPart } from "../../types/messages"
+import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
@@ -84,7 +84,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
 
-function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
+function mergeReviewComments(current: ReviewCommentEntry[], incoming: ReviewCommentEntry[]): ReviewCommentEntry[] {
   if (incoming.length === 0) return current
   const map = new Map(current.map((item) => [item.id, item]))
   for (const item of incoming) {
@@ -232,7 +232,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const saveDraft = (
     key: string,
     next: string,
-    comments: ReviewComment[],
+    comments: ReviewCommentEntry[],
     imgs: ImageAttachment[],
     scroll = textareaRef?.scrollTop ?? scrollDrafts.get(key) ?? 0,
   ) => savePromptDraft(key, next, comments, imgs, scroll)
@@ -244,7 +244,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   const [text, setText] = createSignal("")
-  const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
+  const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
@@ -358,7 +358,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const speech = useSpeechToText(vscode, server, language)
   const speechModels = useSpeechToTextModels()
 
-  const replaceReviewComments = (next: ReviewComment[]) => {
+  const replaceReviewComments = (next: ReviewCommentEntry[]) => {
     setReviewComments(next)
     if (next.length === 0) {
       reviewDrafts.delete(draftKey())
@@ -723,6 +723,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
+      }
+      // When present, images are authoritative: replace current attachments
+      // (an empty array clears them, e.g. on redo). Absent leaves them alone.
+      if (message.images) {
+        const imgs = message.images.map((img) => ({
+          id: crypto.randomUUID(),
+          filename: img.filename ?? "image",
+          mime: img.mime,
+          dataUrl: img.dataUrl,
+        }))
+        imageAttach.replace(imgs)
+        imageDrafts.set(draftKey(), imgs)
       }
     }
 
@@ -1510,20 +1522,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <ModeSwitcher sessionID={sid} />
           <ModelSelector sessionID={sid} />
           <ThinkingSelector sessionID={sid} />
-          <Show when={session.hasModelOverride(sid())}>
-            <Tooltip value={language.t("prompt.action.resetModel")} placement="top" openDelay={0}>
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={() => session.clearModelOverride(sid())}
-                aria-label={language.t("prompt.action.resetModel")}
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
-                </svg>
-              </Button>
-            </Tooltip>
-          </Show>
         </div>
         <div class="prompt-input-hint-actions">
           <Show when={showIndexing()}>
