@@ -1,8 +1,11 @@
 package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.agentManager.worktree.CreateFailure
+import ai.kilocode.client.agentManager.worktree.CreateKind
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.NewWorktreeHandle
+import ai.kilocode.client.agentManager.worktree.NewWorktreePlan
 import ai.kilocode.client.agentManager.worktree.GhBanner
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
@@ -24,6 +27,7 @@ import ai.kilocode.client.diff.diffParams
 import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
@@ -133,6 +137,13 @@ class AgentManagerPanel(
             if (list.select(key)) list.focusList()
             item(key)?.takeIf { controller.progress(it.id) == null }?.let { open(it, focus = false) }
         }
+        // A fresh worktree changes what git reports, so bypass the refresh throttle instead of
+        // leaving the new row without its stats and PR badge until the next poll.
+        controller.onCreated = {
+            project?.service<WorktreeStatusService>()?.refreshStats()
+            project?.service<WorktreeStatusService>()?.refreshPr(force = true)
+        }
+        controller.onReload = { sync() }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onMoveFailure = { err -> notifyMoveFailed(err) }
         controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }
@@ -183,7 +194,17 @@ class AgentManagerPanel(
         if (!handle.showAndGet()) return
         val plan = handle.result() ?: return
         onCreate()
-        controller.create(plan.branch, plan.base, prompt = plan.prompt)
+        when (plan) {
+            is NewWorktreePlan.Create -> controller.create(plan.branch, plan.base, prompt = plan.prompt)
+            is NewWorktreePlan.Branch -> {
+                Telemetry.send("Worktree Import Submitted", mapOf("kind" to "branch"))
+                controller.importBranch(plan.branch)
+            }
+            is NewWorktreePlan.Pr -> {
+                Telemetry.send("Worktree Import Submitted", mapOf("kind" to "pr"))
+                controller.importPr(plan.url)
+            }
+        }
     }
 
     internal fun move(sessionId: String?, directory: String) = controller.move(sessionId, directory)
@@ -241,7 +262,7 @@ class AgentManagerPanel(
 
     /** The PR URL for [item], or null when it has none or is not in a stable, openable state. */
     private fun prUrl(item: WorktreeDto?): String? {
-        if (item == null || item.main) return null
+        if (item == null) return null
         if (controller.progress(item.id) != null) return null
         return prs[normalizeWorktreePath(item.path)]?.url
     }
@@ -322,8 +343,13 @@ class AgentManagerPanel(
         return controller.model.getElementAt(index.coerceIn(0, size - 1))
     }
 
-    private fun notifyCreateFailed(err: String?) {
-        KiloNotifications.error(project, KiloBundle.message("worktree.create.failed.title"), err)
+    private fun notifyCreateFailed(failure: CreateFailure) {
+        val title = when (failure.kind) {
+            CreateKind.CREATE -> KiloBundle.message("worktree.create.failed.title")
+            CreateKind.BRANCH -> KiloBundle.message("worktree.import.branch.failed.title", failure.branch)
+            CreateKind.PR -> KiloBundle.message("worktree.import.pr.failed.title")
+        }
+        KiloNotifications.error(project, title, failure.error)
     }
 
     private fun notifyMoveFailed(err: String?) {
@@ -374,7 +400,8 @@ class AgentManagerPanel(
                 progress = null,
                 kind = controller.kind(item.path),
                 stats = null,
-                pr = null,
+                // The main checkout can sit on a PR branch just like a worktree can.
+                pr = prs[normalizeWorktreePath(item.path)],
                 current = true,
             )
         }
@@ -434,6 +461,8 @@ class AgentManagerPanel(
 
     override fun dispose() {
         controller.onSelect = null
+        controller.onCreated = null
+        controller.onReload = null
         controller.onCreateFailure = null
         controller.onMoveFailure = null
         controller.onRemoveSuccess = null

@@ -86,14 +86,15 @@ class KiloBackendActivityManager(
             is ChatEventDto.QuestionAsked -> questions.getOrPut(event.sessionID) { mutableMapOf() }[event.request.id] = plan(event)
             is ChatEventDto.QuestionReplied -> removeMap(questions, event.sessionID, event.requestID)
             is ChatEventDto.QuestionRejected -> removeMap(questions, event.sessionID, event.requestID)
-            is ChatEventDto.Error -> event.sessionID?.let { errors.add(it) }
+            // A Stop publishes MessageAbortedError. That is a deliberate user action, not a failure, so
+            // it must not badge the session list, worktree rows, or the Agents tab attention dot.
+            is ChatEventDto.Error -> if (event.error?.aborted != true) event.sessionID?.let { errors.add(it) }
             is ChatEventDto.TurnOpen -> errors.remove(event.sessionID)
             is ChatEventDto.SessionIdle -> clear(event.sessionID)
             is ChatEventDto.SessionStatusChanged -> when (event.status.type) {
                 "idle" -> clear(event.sessionID)
-                // Work restarted, so whatever ended the previous turn (a Stop publishes
-                // MessageAbortedError) is stale. Not every resume path publishes a turn event, so
-                // busy has to clear the error itself.
+                // Work restarted, so whatever ended the previous turn is stale. Not every resume
+                // path publishes a turn event, so busy has to clear the error itself.
                 "busy" -> errors.remove(event.sessionID)
                 else -> Unit
             }

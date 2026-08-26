@@ -316,6 +316,25 @@
 
 ## [Unreleased]
 
+## [7.1.0-rc.5] - 2026-08-26
+
+### Added
+
+- Add separate New, From PR, and From Branch tabs to the JetBrains New Worktree dialog, replacing the old import radio buttons with clearer workflows.
+- Add Retry to failed JetBrains chat turns so you can roll back the failed response and rerun the original request without retyping it.
+
+### Fixed
+
+- Stop showing error badges and Agents-tab attention dots after you manually stop a turn.
+- Keep deleted sessions from briefly reappearing as running, failed, or waiting in session lists and Agent Manager activity badges.
+- Prevent the New Worktree dialog from crashing when IntelliJ drops an editable branch picker editor during layout.
+- Detect pull requests for imported worktrees more reliably and avoid worktree tab paint artifacts.
+- Clear empty failed assistant responses when you send a normal follow-up after a provider failure.
+
+### Changed
+
+- Show failed-turn details in a clearer error card with the error kind and retry action, while stopped turns now render as a simple muted "Stopped" note.
+
 ## [7.1.0-rc.4] - 2026-08-25
 
 ### Added
