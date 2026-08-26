@@ -586,6 +586,8 @@ const AgentManagerContent: Component = () => {
     if (reviewActive()) closeReviewTab()
     const opening = sidePanel() !== SidePanel.PR
     setSidePanel((prev) => (prev === SidePanel.PR ? null : SidePanel.PR))
+    // Trigger an immediate refresh when opening so the panel shows fresh data
+    // rather than waiting for the next poll cycle
     if (opening) {
       const sel = selection()
       if (sel && sel !== LOCAL)
@@ -1722,6 +1724,9 @@ const AgentManagerContent: Component = () => {
     openReviewTab()
   }
 
+  // Deferred close: flip signal immediately for instant UI feedback,
+  // the <Show> unmount triggers heavy FileDiff cleanup but the tab bar
+  // and chat view are already visible before that work runs.
   const closeReviewTab = () => {
     freezeTabs()
     setReviewActive(false)
@@ -1744,10 +1749,9 @@ const AgentManagerContent: Component = () => {
     return diffNotices()[diffDataKey(activeProjectId(), key)]
   })
 
-  const requestDiffFile = (file: string | string[]) => {
+  const requestDiffFile = (file: string) => {
     const id = diffScopeId()
     if (!id) return
-    if (Array.isArray(file)) return diffs.requestDiffFiles(id, file)
     diffs.requestDiffFile(id, file)
   }
 
@@ -2652,7 +2656,6 @@ const AgentManagerContent: Component = () => {
                           : undefined
                       }
                       onRequestDiff={diffs.requestDiffFile}
-                      onRequestDiffs={diffs.requestDiffFiles}
                       onOpenFile={(ctx, file, line) =>
                         vscode.postMessage({ type: "agentManager.openFile", sessionId: ctx, filePath: file, line })
                       }
@@ -2740,7 +2743,6 @@ const AgentManagerContent: Component = () => {
                 <FullScreenDiffView
                   diffs={reviewDiffs()}
                   loading={diffLoadingForCurrent()}
-                  active={reviewActive()}
                   loadingFiles={diffFileLoadingForCurrent()}
                   sessionId={activeDiffSession()}
                   sessionKey={diffSessionKey()}
@@ -2758,7 +2760,6 @@ const AgentManagerContent: Component = () => {
                   markdownRender={markdown.render()}
                   onMarkdownRenderChange={markdown.update}
                   onRequestDiff={requestDiffFile}
-                  onRequestDiffs={requestDiffFile}
                   onOpenFile={(file, line) => {
                     const id = diffCtx()
                     if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })

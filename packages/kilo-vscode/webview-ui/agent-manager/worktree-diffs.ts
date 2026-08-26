@@ -100,20 +100,6 @@ export function createWorktreeDiffs(
     vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", projectId: project(), file, ...wireDiffId(id) })
   }
 
-  const requestDiffFiles = (id: string, files: string[]) => {
-    const data = key(id)
-    const pending = diffFileLoading()[data] ?? {}
-    const next = [...new Set(files)].filter((file) => !pending[file])
-    if (next.length === 0) return
-    for (const file of next) setDiffFilePending(data, file, true)
-    vscode.postMessage({
-      type: "agentManager.requestWorktreeDiffFiles",
-      projectId: project(),
-      files: next,
-      ...wireDiffId(id),
-    })
-  }
-
   /** Files the backend flagged as stale in a merged update need a fresh fetch. */
   const refreshStaleDiffs = (id: string, files: Set<string>, data = key(id), owner = project()) => {
     const loading = diffFileLoading()[data] ?? {}
@@ -200,7 +186,6 @@ export function createWorktreeDiffs(
     setDiffLoading: (loading: boolean) => setDiffLoadings(loading ? diffLoadings() : {}),
     diffNotices,
     requestDiffFile,
-    requestDiffFiles,
     refreshStaleDiffs,
     diffFileLoadingFor,
     diffLoadingFor,

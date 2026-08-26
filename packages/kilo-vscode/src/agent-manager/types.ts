@@ -771,15 +771,6 @@ interface RequestWorktreeDiffFileIn {
   diffSessionId?: string
 }
 
-interface RequestWorktreeDiffFilesIn {
-  type: "agentManager.requestWorktreeDiffFiles"
-  projectId?: string
-  sessionId: string
-  files: string[]
-  scope?: string
-  diffSessionId?: string
-}
-
 interface StartDiffWatchIn {
   type: "agentManager.startDiffWatch"
   projectId?: string
@@ -1131,7 +1122,6 @@ export type AgentManagerInMessage =
   | ImportFromPRIn
   | RequestWorktreeDiffIn
   | RequestWorktreeDiffFileIn
-  | RequestWorktreeDiffFilesIn
   | ApplyWorktreeDiffIn
   | StartDiffWatchIn
   | StopDiffWatchIn

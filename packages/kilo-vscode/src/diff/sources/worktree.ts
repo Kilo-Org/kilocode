@@ -5,7 +5,7 @@ import type { WorktreeDiffEntry } from "../../agent-manager/types"
 import { WorktreeDiffReverter, type DiffTarget, type StatusResolver } from "../shared/reverter"
 import { resolveLocalDiffTarget } from "../shared/target"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
-import type { DiffBatch, DiffFile } from "../types"
+import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
 
 export const WORKSPACE_SOURCE_ID = "workspace"
@@ -47,12 +47,6 @@ export interface WorktreeDiffSourceOptions {
   log?: (...args: unknown[]) => void
   summary?: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
   file?: (dir: string, base: string, file: string, signal?: AbortSignal) => Promise<WorktreeDiffEntry | null>
-  files?: (
-    dir: string,
-    base: string,
-    files: readonly string[],
-    signal?: AbortSignal,
-  ) => Promise<DiffBatch<WorktreeDiffEntry>>
 }
 
 /**
@@ -116,8 +110,6 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
     return entry?.status
   }
 
-  const bulk = opts.files
-
   return {
     descriptor: WORKSPACE_DESCRIPTOR,
 
@@ -141,7 +133,7 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
       try {
         const entry = opts.file
           ? await opts.file(current.directory, current.baseBranch, file, controller.signal)
-          : await diffFile(git, current.directory, current.baseBranch, file, log, controller.signal)
+          : await diffFile(git, current.directory, current.baseBranch, file, log)
         if (!entry) return null
         return toDiffFile(entry)
       } catch (err) {
@@ -149,27 +141,6 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
         return null
       }
     },
-
-    ...(bulk
-      ? {
-          async fetchFiles(files: readonly string[]): Promise<DiffBatch<DiffFile>> {
-            const result = new Map<string, DiffFile | null>()
-            const current = await resolveTarget()
-            if (!current) return { entries: result, deferred: new Set() }
-            const batch = await bulk(current.directory, current.baseBranch, files, controller.signal).catch((err) => {
-              log("Failed to fetch worktree diff files:", err)
-              return undefined
-            })
-            if (!batch) return { entries: result, deferred: new Set(files) }
-            for (const file of files) {
-              if (batch.deferred.has(file)) continue
-              const entry = batch.entries.get(file)
-              result.set(file, entry ? toDiffFile(entry) : null)
-            }
-            return { entries: result, deferred: batch.deferred }
-          },
-        }
-      : {}),
 
     async revert(file: string): Promise<{ ok: boolean; message: string }> {
       const current = await resolveTarget()

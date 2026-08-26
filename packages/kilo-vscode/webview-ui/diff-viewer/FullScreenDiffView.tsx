@@ -75,7 +75,6 @@ const DIFF_NOTICE_KEYS: Record<string, string> = {
 interface FullScreenDiffViewProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
-  active?: boolean
   loadingFiles?: Set<string>
   sessionId?: string
   sessionKey?: string
@@ -91,7 +90,6 @@ interface FullScreenDiffViewProps {
   markdownRender?: boolean
   onMarkdownRenderChange?: (render: boolean) => void
   onRequestDiff?: (file: string) => void
-  onRequestDiffs?: (files: string[]) => void
   onOpenFile?: (relativePath: string, line?: number) => void
   initialFile?: string
   onRevertFile?: (file: string) => void
@@ -290,8 +288,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     diffs: () => props.diffs,
     open,
     loading: () => props.loadingFiles,
-    send: () => (props.active === false ? undefined : props.onRequestDiff),
-    batch: () => (props.active === false ? undefined : props.onRequestDiffs),
+    send: () => props.onRequestDiff,
   })
 
   // --- CRUD ---

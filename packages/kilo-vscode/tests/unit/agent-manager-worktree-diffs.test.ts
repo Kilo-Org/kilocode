@@ -13,12 +13,8 @@ const diff = (file: string, additions = 1): WorktreeFileDiff => ({
 
 interface Sent {
   type: string
-  projectId?: string
   sessionId?: string
-  diffSessionId?: string
-  scope?: string
   file?: string
-  files?: string[]
 }
 
 // Only `postMessage` is exercised by the diff workflow, so a recording stub is
@@ -26,13 +22,10 @@ interface Sent {
 const vscode = (sent: Sent[]) =>
   ({ postMessage: (msg: Sent) => sent.push(msg) }) as unknown as Parameters<typeof createWorktreeDiffs>[0]
 
-const withDiffs = (
-  fn: (diffs: ReturnType<typeof createWorktreeDiffs>, sent: Sent[]) => void,
-  project: () => string | undefined = () => undefined,
-) => {
+const withDiffs = (fn: (diffs: ReturnType<typeof createWorktreeDiffs>, sent: Sent[]) => void) => {
   createRoot((dispose) => {
     const sent: Sent[] = []
-    fn(createWorktreeDiffs(vscode(sent), project), sent)
+    fn(createWorktreeDiffs(vscode(sent)), sent)
     dispose()
   })
 }
@@ -95,43 +88,6 @@ describe("createWorktreeDiffs", () => {
       expect(sent.filter((m) => m.type === "agentManager.requestWorktreeDiffFile")).toHaveLength(1)
       expect(diffs.diffFileLoadingFor(() => "s1").has("a.ts")).toBe(true)
     })
-  })
-
-  it("requestDiffFiles marks unique files pending and reuses singular completion messages", () => {
-    withDiffs((diffs, sent) => {
-      diffs.requestDiffFiles("s1#branch", ["a.ts", "b.ts", "a.ts"])
-      expect(sent).toHaveLength(1)
-      expect(sent[0]?.type).toBe("agentManager.requestWorktreeDiffFiles")
-      expect(sent[0]?.files).toEqual(["a.ts", "b.ts"])
-      expect(diffs.diffFileLoadingFor(() => "s1#branch")).toEqual(new Set(["a.ts", "b.ts"]))
-      diffs.requestDiffFiles("s1#branch", ["a.ts"])
-      expect(sent).toHaveLength(1)
-      diffs.onWorktreeDiffFile({
-        type: "agentManager.worktreeDiffFile",
-        sessionId: "s1#branch",
-        file: "a.ts",
-        diff: diff("a.ts"),
-      })
-      expect(diffs.diffFileLoadingFor(() => "s1#branch")).toEqual(new Set(["b.ts"]))
-    })
-  })
-
-  it("keeps bulk requests qualified by project and session scope", () => {
-    withDiffs(
-      (diffs, sent) => {
-        diffs.requestDiffFiles("wt-1#session:ses-1", ["a.ts", "b.ts"])
-        expect(sent[0]).toMatchObject({
-          type: "agentManager.requestWorktreeDiffFiles",
-          projectId: "project-1",
-          sessionId: "wt-1",
-          scope: "session",
-          diffSessionId: "ses-1",
-          files: ["a.ts", "b.ts"],
-        })
-        expect(diffs.diffFileLoadingFor(() => "wt-1#session:ses-1")).toEqual(new Set(["a.ts", "b.ts"]))
-      },
-      () => "project-1",
-    )
   })
 
   it("refreshStaleDiffs requests only files not already loading", () => {

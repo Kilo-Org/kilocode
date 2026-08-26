@@ -100,7 +100,6 @@ interface DiffPanelProps {
   onClose: () => void
   onExpand?: () => void
   onRequestDiff?: (file: string) => void
-  onRequestDiffs?: (files: string[]) => void
   onOpenFile?: (relativePath: string, line?: number) => void
   onOpenDocument?: (relativePath: string) => void
   onRevertFile?: (file: string) => void
@@ -291,7 +290,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     open,
     loading: () => props.loadingFiles,
     send: () => (props.active === false ? undefined : props.onRequestDiff),
-    batch: () => (props.active === false ? undefined : props.onRequestDiffs),
   })
 
   // --- CRUD ---

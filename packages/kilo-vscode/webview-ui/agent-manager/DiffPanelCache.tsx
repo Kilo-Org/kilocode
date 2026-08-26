@@ -38,7 +38,6 @@ interface Props {
   onClose: () => void
   onExpand?: () => void
   onRequestDiff: (key: string, file: string) => void
-  onRequestDiffs: (key: string, files: string[]) => void
   onOpenFile: (ctx: string, file: string, line?: number) => void
   onOpenDocument: (file: string) => void
   onRevertFile: (key: string, ctx: string, file: string) => void
@@ -116,7 +115,6 @@ export const DiffPanelCache: Component<Props> = (props) => {
               onClose={props.onClose}
               onExpand={props.onExpand}
               onRequestDiff={(file) => props.onRequestDiff(entry.key, file)}
-              onRequestDiffs={(files) => props.onRequestDiffs(entry.key, files)}
               onOpenFile={(file, line) => props.onOpenFile(entry.ctx, file, line)}
               onOpenDocument={props.onOpenDocument}
               onRevertFile={(file) => props.onRevertFile(entry.key, entry.ctx, file)}

@@ -599,11 +599,7 @@ export class GitOps {
     return this.exec(args, cwd, options)
   }
 
-  execGitBuffer(
-    args: string[],
-    cwd: string,
-    options?: { stdin?: string; signal?: AbortSignal },
-  ): Promise<ExecBufferResult> {
+  execGitBuffer(args: string[], cwd: string, options?: { signal?: AbortSignal }): Promise<ExecBufferResult> {
     return this.execBuffer(args, cwd, options)
   }
 
@@ -613,40 +609,32 @@ export class GitOps {
   }
 
   private async execBuffer(args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
-    if (this.controller.signal.aborted || options?.signal?.aborted) {
+    if (this.controller.signal.aborted) {
       return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
     }
-    const cmd = await this.executable(options?.signal).catch(() => undefined)
-    if (!cmd || this.controller.signal.aborted || options?.signal?.aborted) {
+    const cmd = await this.executable().catch(() => undefined)
+    if (!cmd || this.controller.signal.aborted) {
       return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
     }
     const invoke = () => this.invoke(cmd, args, cwd, options)
     return this.semaphore ? this.semaphore.run(invoke, options?.signal) : invoke()
   }
 
-  private executable(cancel?: AbortSignal): Promise<string> {
+  private executable(): Promise<string> {
     const signal = this.controller.signal
-    if (signal.aborted || cancel?.aborted) return Promise.reject(new Error("GitOps disposed"))
+    if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
 
     return new Promise<string>((resolve, reject) => {
-      const clear = () => {
-        signal.removeEventListener("abort", abort)
-        cancel?.removeEventListener("abort", abort)
-      }
-      const abort = () => {
-        clear()
-        reject(new Error("GitOps disposed"))
-      }
-      signal.addEventListener("abort", abort, { once: true })
-      cancel?.addEventListener("abort", abort, { once: true })
+      const onAbort = () => reject(new Error("GitOps disposed"))
+      signal.addEventListener("abort", onAbort, { once: true })
       const cache = (this.executableCache ??= Promise.resolve().then(() => this.binary()))
       cache.then(
         (value) => {
-          clear()
+          signal.removeEventListener("abort", onAbort)
           resolve(value)
         },
         (err) => {
-          clear()
+          signal.removeEventListener("abort", onAbort)
           if (this.executableCache === cache) this.executableCache = undefined
           reject(err)
         },
