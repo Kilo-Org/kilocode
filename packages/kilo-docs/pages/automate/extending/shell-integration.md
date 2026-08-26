@@ -42,13 +42,13 @@ The CLI automatically detects the appropriate shell for your platform using `She
 
 ## Agent Manager Terminals (VS Code Extension)
 
-When using the Kilo Code VS Code extension with the Agent Manager, each agent session gets its own dedicated VS Code terminal.
+When using the Kilo Code VS Code extension with the Agent Manager, each agent session gets its own terminal. Depending on the terminal destination, this is either a dedicated VS Code integrated terminal or an embedded terminal in the Agent Manager panel.
 
 ### Per-Session Terminals
 
-- Each session creates a terminal named **`Agent: {branch}`**, where `{branch}` is the git branch or worktree the session is working in
+- Each session creates a terminal named **`Agent: {branch}`**, where `{branch}` is the git branch or worktree the session is working in, when you use a VS Code integrated terminal
 - The terminal's working directory is automatically set to the session's worktree directory
-- Terminals are standard VS Code integrated terminals — you can interact with them directly
+- VS Code terminal destinations are standard integrated terminals. The Agent Manager panel destination uses embedded terminals in the Agent Manager layout.
 
 ### Keyboard Shortcuts
 
@@ -59,7 +59,7 @@ When using the Kilo Code VS Code extension with the Agent Manager, each agent se
 
 ### Terminal Context Menu Actions
 
-Right-click in an Agent Manager terminal to access these actions:
+Right-click in a VS Code integrated Agent Manager terminal to access these actions:
 
 - **Add Terminal Content to Context** — sends the terminal's visible output to the agent as context
 - **Fix This Command** — asks the agent to diagnose and fix the last failed command

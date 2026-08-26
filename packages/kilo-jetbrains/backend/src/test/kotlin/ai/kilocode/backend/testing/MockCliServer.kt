@@ -104,6 +104,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var sessions = "[]"
     @Volatile var recentSessions = "[]"
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var sessionFork = """{"id":"ses_forked","slug":"forked","projectID":"prj_test","directory":"/worktree","title":"Forked Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var sessionForkStatus = 200
+    @Volatile var lastForkPath: String? = null
+    @Volatile var lastForkBody: String? = null
     @Volatile var sessionStatuses = "{}"
     @Volatile var sessionDiff = "[]"
     @Volatile var lastSessionDiffPath: String? = null
@@ -441,6 +445,11 @@ class MockCliServer : AutoCloseable {
                     lastSessionRenameBody = body
                     lastSessionRenameMethod = method
                     respond(output, sessionRenameStatus, sessionRenameResponse)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/fork")) && method == "POST" -> {
+                    lastForkPath = path
+                    lastForkBody = body
+                    respond(output, sessionForkStatus, sessionFork)
                 }
                 bare.matches(Regex("/session/ses_[^/]+/diff")) && method == "GET" -> {
                     lastSessionDiffPath = path

@@ -187,7 +187,6 @@ export const dict = {
     "Automatsko odobravanje je uključeno. Zahtjevi za dozvole bit će automatski odobreni.",
   "prompt.action.autoApprove.disabled":
     "Automatsko odobravanje je isključeno. Kliknite za automatsko odobravanje zahtjeva za dozvole.",
-  "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
   "prompt.action.sandbox.enable": "Omogući sandbox",
@@ -1255,7 +1254,6 @@ export const dict = {
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
-  "task.backgroundAgents.foreground": "Agent u prvom planu radi",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
   "task.backgroundAgents.needsInput": "Potreban unos",
   "task.backgroundAgents.dismiss": "Odbaci",

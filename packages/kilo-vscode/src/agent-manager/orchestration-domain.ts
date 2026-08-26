@@ -311,17 +311,21 @@ export async function overview(input: OverviewInput): Promise<Overview> {
   return grouped(input, sessions, summaries, worktreeSummaries(input, summaries, filters))
 }
 
-export async function prompt(input: {
+interface Target {
   client: KiloClient
   root: string
   state: WorktreeStateManager
   sessionID: string
-  text: string
-  messageID: string
-  signal?: AbortSignal
-  idleTimeoutMs?: number
-}): Promise<void> {
-  if (input.signal?.aborted) return
+}
+
+interface Located {
+  dir: string
+  name: string
+}
+
+// Verify the target is a live managed session of this workspace and return its authoritative
+// directory plus display name, so error messages can echo exact IDs back to the caller.
+async function locate(input: Target): Promise<Located> {
   const managed = input.state.getSession(input.sessionID)
   if (!managed)
     throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
@@ -343,18 +347,121 @@ export async function prompt(input: {
   if (!(await sameManagedDirectory(response.data.directory, dir))) {
     throw new OrchestrationError("cross_workspace", "The managed session belongs to a different workspace directory")
   }
-  await waitForIdle(input.client, dir, input.sessionID, input.signal, input.idleTimeoutMs ?? 30_000)
+  return { dir, name: response.data.title.trim() || input.sessionID }
+}
+
+function truncate(value: string, max: number): string {
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`
+}
+
+// Name what keeps the target from accepting a prompt. A session blocked on a question
+// never becomes idle on its own, so naming the blocker here lets an orchestrating agent
+// answer it instead of waiting out the idle timeout. The message echoes the exact session
+// and question IDs so a follow-up answer call can copy them without guessing.
+async function blocked(input: Target, dir: string, name: string): Promise<string | undefined> {
+  const [perms, qs] = await Promise.all([
+    input.client.permission.list({ directory: dir }),
+    input.client.question.list({ directory: dir }),
+  ])
+  if (perms.error || qs.error)
+    throw new OrchestrationError("host_error", "The managed session blockers could not be read")
+  const mine = (qs.data ?? []).filter((value) => value.sessionID === input.sessionID)
+  const first = mine[0]
+  if (first) {
+    const detail = mine
+      .map((value) => {
+        const list = value.questions
+          .map((info, index) => {
+            const labels = info.options.slice(0, 8).map((option) => option.label)
+            return `${index + 1}. "${truncate(info.question, 200)}"${labels.length ? ` (options: ${labels.join(", ")})` : ""}`
+          })
+          .join("; ")
+        return `questionID "${value.id}": ${list}`
+      })
+      .join(" | ")
+    const count = first.questions.length
+    const more = mine.length > 1 ? ` Pending request IDs: ${mine.map((value) => value.id).join(", ")}.` : ""
+    return `The managed session ${input.sessionID} ("${name}") is waiting for input. Pending question requests: ${detail}. Call agent_manager with action "answer", sessionID "${input.sessionID}", questionID "${first.id}", and one label array per question in that request (${count} total), in order, before prompting.${more}`
+  }
+  if ((perms.data ?? []).some((value) => value.sessionID === input.sessionID)) {
+    return `The managed session ${input.sessionID} ("${name}") has a pending permission request; resolve it in Agent Manager before prompting`
+  }
+  return undefined
+}
+
+export async function prompt(input: {
+  client: KiloClient
+  root: string
+  state: WorktreeStateManager
+  sessionID: string
+  text: string
+  messageID: string
+  signal?: AbortSignal
+  idleTimeoutMs?: number
+}): Promise<void> {
+  if (input.signal?.aborted) return
+  const target = await locate(input)
+  const blocker = await blocked(input, target.dir, target.name)
+  if (blocker) throw new OrchestrationError("unavailable_session", blocker)
+  await waitForIdle(input.client, target.dir, input.sessionID, input.signal, input.idleTimeoutMs ?? 30_000)
   if (input.signal?.aborted) return
   await input.client.session.promptAsync(
     {
       sessionID: input.sessionID,
-      directory: dir,
+      directory: target.dir,
       messageID: `msg_agent_manager_${input.messageID}`,
       parts: [{ type: "text", text: input.text }],
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
     { throwOnError: true },
   )
+}
+
+export async function answer(input: {
+  client: KiloClient
+  root: string
+  state: WorktreeStateManager
+  sessionID: string
+  questionID?: string
+  answers: string[][]
+}): Promise<{ questionID: string }> {
+  const dir = (await locate(input)).dir
+  const listed = await input.client.question.list({ directory: dir })
+  if (listed.error) throw new OrchestrationError("host_error", "The managed session questions could not be read")
+  const mine = (listed.data ?? []).filter((value) => value.sessionID === input.sessionID)
+  if (mine.length === 0) {
+    // The caller may have mixed up lookalike session IDs. Point at the sessions that
+    // actually hold pending questions so one retry with the right ID resolves it.
+    const others = (listed.data ?? []).map((value) => `${value.sessionID} (question ${value.id})`)
+    const hint = others.length ? ` Sessions with pending questions: ${others.join(", ")}.` : ""
+    throw new OrchestrationError("unavailable_session", `The managed session has no pending question to answer.${hint}`)
+  }
+  let target = mine[0]
+  if (input.questionID) {
+    const found = mine.find((value) => value.id === input.questionID)
+    if (!found)
+      throw new OrchestrationError(
+        "unavailable_session",
+        `The session has no pending question ${input.questionID}; pending: ${mine.map((value) => value.id).join(", ")}`,
+      )
+    target = found
+  } else if (mine.length > 1) {
+    throw new OrchestrationError(
+      "unavailable_session",
+      `Several questions are pending: ${mine.map((value) => value.id).join(", ")}. Name one with questionID.`,
+    )
+  }
+  if (input.answers.length !== target.questions.length) {
+    throw new OrchestrationError(
+      "unavailable_session",
+      `Question ${target.id} expects one answer array per question (${target.questions.length}), received ${input.answers.length}`,
+    )
+  }
+  await input.client.question.reply(
+    { requestID: target.id, answers: input.answers, directory: dir },
+    { throwOnError: true },
+  )
+  return { questionID: target.id }
 }
 
 async function waitForIdle(

@@ -42,7 +42,19 @@ import javax.swing.JTextField
 import javax.swing.event.DocumentEvent
 import javax.swing.plaf.basic.BasicComboPopup
 
-private const val NAME_COLUMNS = 100
+private const val NAME_COLUMNS = 67
+
+/** What the user confirmed in the New Worktree dialog. */
+data class NewWorktreePlan(val branch: String, val base: String?, val prompt: PendingPrompt?)
+
+/**
+ * The New Worktree dialog as seen by its caller: show it, then read what the user confirmed.
+ * [result] stays null while the dialog is cancelled or its input never validates.
+ */
+interface NewWorktreeHandle {
+    fun showAndGet(): Boolean
+    fun result(): NewWorktreePlan?
+}
 
 /**
  * New Worktree dialog with parity to the VS Code Agent Manager dialog: a worktree name (top), an
@@ -50,8 +62,9 @@ private const val NAME_COLUMNS = 100
  * branch name + base branch (bottom). Creating a worktree starts a session automatically with the
  * prompt.
  *
- * The dialog performs no worktree work itself — it invokes [onCreate] and closes; the panel drives
- * the controller. Mode, model, and reasoning selections are persisted the same way the chat prompt
+ * The dialog performs no worktree work itself — it records the confirmed [result] and closes; the
+ * panel then drives the controller, so no view switch or worktree work runs while the modal dialog
+ * still owns focus. Mode, model, and reasoning selections are persisted the same way the chat prompt
  * does, so the freshly-started session inherits them.
  */
 internal class NewWorktreeDialog(
@@ -61,14 +74,13 @@ internal class NewWorktreeDialog(
     private val suggestedName: String,
     private val defaultBase: String,
     private val branches: List<String>,
-    private val onCreate: (branch: String, base: String?, prompt: PendingPrompt?) -> Unit,
     private val app: KiloAppService = service(),
     private val workspaces: KiloWorkspaceService = service(),
-) : DialogWrapper(parent, false) {
+) : DialogWrapper(parent, false), NewWorktreeHandle {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // A wide name field so the dialog opens wide enough to type long worktree names and prompts.
+    // Sizes the dialog: the name field is its widest fixed-width child.
     private val name = JBTextField(NAME_COLUMNS).apply {
         emptyText.text = KiloBundle.message("worktree.dialog.name.placeholder")
     }
@@ -99,6 +111,8 @@ internal class NewWorktreeDialog(
     }
     private var syncing = false
 
+    private var plan: NewWorktreePlan? = null
+
     /** The agent (mode) for the new session; model selections persist against it. */
     private var agent: String? = null
 
@@ -125,9 +139,12 @@ internal class NewWorktreeDialog(
     /** The built content, so tests can drive the real Swing tree before the dialog is shown. */
     internal fun centerComponent(): JComponent = center ?: error("center panel not built")
 
+    override fun result(): NewWorktreePlan? = plan
+
     override fun getPreferredFocusedComponent(): JComponent = prompt.defaultFocusedComponent
 
-    override fun getDimensionServiceKey(): String = "ai.kilocode.NewWorktreeDialog"
+    // Versioned: DialogWrapper persists the size per key, so a stale entry would keep the old width.
+    override fun getDimensionServiceKey(): String = "ai.kilocode.NewWorktreeDialog.v2"
 
     override fun doOKAction() = submitCreate()
 
@@ -301,7 +318,7 @@ internal class NewWorktreeDialog(
         val resolved = explicit.ifEmpty { name.text.trim() }.ifEmpty { suggestedName }
         val target = resolvedBase()
         if (!validBase(target)) return
-        onCreate(resolved, target, pending(text))
+        plan = NewWorktreePlan(resolved, target, pending(text))
         close(OK_EXIT_CODE)
     }
 

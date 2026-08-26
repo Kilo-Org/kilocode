@@ -57,8 +57,9 @@ export interface CancelBackgroundJobMessage {
   requestID: string
 }
 
-export interface BackgroundSubagentsMessage {
-  type: "backgroundSubagents"
+export interface PromoteBackgroundJobMessage {
+  type: "promoteBackgroundJob"
+  jobID: string
   sessionID: string
 }
 
@@ -234,6 +235,32 @@ export interface CompactRequest {
 export interface OpenSettingsPanelRequest {
   type: "openSettingsPanel"
   tab?: string
+  projectId?: string
+}
+
+export interface RequestAgentManagerSettingsMessage {
+  type: "requestAgentManagerSettings"
+  projectId?: string
+  requestId: string
+}
+
+export interface RequestAgentManagerSettingsBranchesMessage {
+  type: "requestAgentManagerSettingsBranches"
+  projectId: string
+  requestId: string
+}
+
+export interface SetAgentManagerDefaultBaseBranchMessage {
+  type: "setAgentManagerDefaultBaseBranch"
+  projectId: string
+  branch?: string
+  requestId: string
+}
+
+export interface ConfigureAgentManagerSetupScriptMessage {
+  type: "configureAgentManagerSetupScript"
+  projectId: string
+  requestId: string
 }
 
 export interface OpenProfilePanelRequest {
@@ -667,6 +694,13 @@ export interface PromoteSessionRequest {
 // Open an unassigned session locally (clear any worktree directory override)
 export interface OpenLocallyRequest {
   type: "agentManager.openLocally"
+  projectId?: string
+  sessionId: string
+}
+
+// Move a worktree-bound session back to the project root and open it in the local tabs
+export interface OpenSessionLocallyRequest {
+  type: "agentManager.openSessionLocally"
   projectId?: string
   sessionId: string
 }
@@ -1371,11 +1405,6 @@ export interface PersistModelSelectionRequest {
   modelID: string
 }
 
-export interface ClearModelSelectionRequest {
-  type: "clearModelSelection"
-  agent: string
-}
-
 export interface RequestModelSelectionsMessage {
   type: "requestModelSelections"
 }
@@ -1469,7 +1498,7 @@ export type WebviewMessage =
   | AbortRequest
   | RequestBackgroundJobsMessage
   | CancelBackgroundJobMessage
-  | BackgroundSubagentsMessage
+  | PromoteBackgroundJobMessage
   | RevertSessionRequest
   | UnrevertSessionRequest
   | DeleteMessageRequest
@@ -1488,6 +1517,10 @@ export type WebviewMessage =
   | RefreshProviderUsageMessage
   | OpenExternalRequest
   | OpenSettingsPanelRequest
+  | RequestAgentManagerSettingsMessage
+  | RequestAgentManagerSettingsBranchesMessage
+  | SetAgentManagerDefaultBaseBranchMessage
+  | ConfigureAgentManagerSetupScriptMessage
   | OpenProfilePanelRequest
   | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
@@ -1571,6 +1604,7 @@ export type WebviewMessage =
   | RemoveStaleWorktreeRequest
   | PromoteSessionRequest
   | OpenLocallyRequest
+  | OpenSessionLocallyRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
   | SidebarForkSessionRequest
@@ -1681,7 +1715,6 @@ export type WebviewMessage =
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
   | PersistModelSelectionRequest
-  | ClearModelSelectionRequest
   | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | SetRemoteEnabledMessage

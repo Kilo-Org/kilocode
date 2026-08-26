@@ -9,9 +9,14 @@ import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
+import ai.kilocode.rpc.dto.SessionChangeKindDto
 import kotlinx.coroutines.CompletableDeferred
 
 class ViewSwitchingTest : SessionControllerTestBase() {
+    private companion object {
+        /** How long to keep draining while proving a recents refresh never happens. */
+        const val QUIET_MS = 1_000L
+    }
 
     fun `test first prompt shows messages view`() {
         val m = controller()
@@ -96,6 +101,52 @@ class ViewSwitchingTest : SessionControllerTestBase() {
             WorkspaceReady
             ViewChanged empty
         """, events)
+        assertTrue(m.recents().isEmpty())
+    }
+
+    fun `test session change in this directory refreshes recents`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller()
+        collect(m)
+        flush()
+        assertEquals(1, rpc.recentCalls.size)
+
+        // A session created elsewhere for the same directory — another editor tab, or another IDE
+        // frame opened on this worktree.
+        rpc.recent.add(session("ses_2"))
+        change("ses_2", "/test", SessionChangeKindDto.CREATED)
+
+        assertTrue(waitFor { rpc.recentCalls.size > 1 })
+        assertEquals(2, m.recents().size)
+    }
+
+    fun `test session change in another directory does not refresh recents`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller()
+        collect(m)
+        flush()
+        assertEquals(1, rpc.recentCalls.size)
+
+        change("ses_other", "/repo/.kilo/worktrees/other", SessionChangeKindDto.CREATED)
+
+        assertFalse(waitFor(QUIET_MS) { rpc.recentCalls.size > 1 })
+        assertEquals(1, m.recents().size)
+    }
+
+    fun `test session change does not refresh recents while a session is open`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller("ses_test")
+        collect(m)
+        flush()
+        assertTrue(rpc.recentCalls.isEmpty())
+
+        change("ses_test", "/test", SessionChangeKindDto.UPDATED)
+
+        // The empty state is not showing, so recents must stay untouched.
+        assertFalse(waitFor(QUIET_MS) { rpc.recentCalls.isNotEmpty() })
         assertTrue(m.recents().isEmpty())
     }
 

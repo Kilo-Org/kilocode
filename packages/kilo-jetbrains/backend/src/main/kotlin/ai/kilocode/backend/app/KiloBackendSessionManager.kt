@@ -7,6 +7,8 @@ import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.model.GlobalSession
 import ai.kilocode.jetbrains.api.model.SessionStatus
 import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.SessionChangeDto
+import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionRevertDto
@@ -15,9 +17,11 @@ import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -56,6 +60,10 @@ class KiloBackendSessionManager(
     private val _statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
     val statuses: StateFlow<Map<String, SessionStatusDto>> = _statuses.asStateFlow()
 
+    // Field, not created in start(), so frontend subscribers survive a disconnect/reconnect.
+    private val _changes = MutableSharedFlow<SessionChangeDto>(extraBufferCapacity = 64)
+    val changes: SharedFlow<SessionChangeDto> = _changes.asSharedFlow()
+
     private var client: DefaultApi? = null
     private var http: OkHttpClient? = null
     private var base: String? = null
@@ -83,6 +91,7 @@ class KiloBackendSessionManager(
                         }
                     }
                 }
+                KiloCliDataParser.parseSessionChange(event.type, event.data)?.let { track(it) }
             }
         }
         log.info("Session manager started")
@@ -106,6 +115,31 @@ class KiloBackendSessionManager(
     private fun requireClient(): DefaultApi =
         client ?: throw IllegalStateException("Session manager not started")
 
+    /**
+     * Records a session lifecycle change and republishes it.
+     *
+     * Keeping [owned] current from events — not just from listings — is what lets
+     * [KiloBackendActivityManager] resolve a directory for a session this frame never listed, so
+     * Agent Manager can badge a worktree whose session was started in another project frame.
+     *
+     * Publishing is non-blocking: this runs on the collector that also feeds [statuses], and a slow
+     * change subscriber must never stall status handling. A dropped change only costs a list
+     * refresh, which the next change or a reopened tab recovers.
+     */
+    private fun track(change: SessionChangeDto) {
+        if (change.kind == SessionChangeKindDto.DELETED) {
+            owned.remove(change.id)
+            directories.remove(change.id)
+        } else {
+            owned[change.id] = change.directory
+        }
+        val kind = change.kind.name.lowercase()
+        log.debug { "${ChatLogSummary.sid(change.id)} evt=session.$kind ${ChatLogSummary.dir(change.directory)}" }
+        if (!_changes.tryEmit(change)) {
+            log.warn("${ChatLogSummary.sid(change.id)} kind=session-change evt=session.$kind dropped=true")
+        }
+    }
+
     // ------ session CRUD ------
 
     fun list(dir: String): SessionListDto {
@@ -117,11 +151,19 @@ class KiloBackendSessionManager(
         return SessionListDto(mapped, relevant)
     }
 
+    /**
+     * Recent root sessions for the worktree containing [dir].
+     *
+     * `worktrees=true` resolves the git worktree family (and applies `archived=false`, which plain
+     * `GET /session` does not); `current=true` then narrows that family to the one worktree [dir]
+     * lives in, so a chat opened on a worktree never lists the main checkout's sessions.
+     */
     fun recent(dir: String, limit: Int): SessionListDto {
         seed(dir)
         val raw = requireClient().experimentalSessionList(
             directory = dir,
             worktrees = true,
+            current = DefaultApi.CurrentExperimentalSessionList.TRUE,
             roots = JsonPrimitive(true),
             limit = limit.toDouble(),
             archived = JsonPrimitive(false),
@@ -158,6 +200,41 @@ class KiloBackendSessionManager(
             val dto = KiloCliDataParser.parseSession(raw!!)
             val meta = if (log.isDebugEnabled) ChatLogSummary.dir(dir) else "kind=session"
             log.info("${ChatLogSummary.sid(dto.id)} kind=session $meta created=true code=${response.code}")
+            owned[dto.id] = dto.directory
+            return dto
+        }
+    }
+
+    /**
+     * Fork session [id] into [dir] via `POST /session/{id}/fork?directory={dir}` with an empty body.
+     *
+     * Uses raw HTTP for the same reason as [create]: the generated client sends a malformed empty
+     * body. The CLI accepts a bodyless fork and `?directory=` overrides the source session directory
+     * (see packages/opencode/src/kilocode/server/httpapi/session-fork.ts and fork-routing.ts).
+     */
+    fun fork(id: String, dir: String): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addPathSegment("fork")
+            .addQueryParameter("directory", dir)
+            .build()
+        log.info("Forking session: POST $target")
+        val request = Request.Builder()
+            .url(target)
+            .post(ByteArray(0).toRequestBody(null))
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session fork failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session fork failed: HTTP ${response.code} — $raw")
+            }
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            log.info("${ChatLogSummary.sid(dto.id)} kind=session forkedFrom=${ChatLogSummary.sid(id)} code=${response.code}")
             owned[dto.id] = dto.directory
             return dto
         }

@@ -426,6 +426,7 @@ interface PRStatusOutMessage {
 
 interface PRErrorOutMessage {
   type: "agentManager.prError"
+  projectId?: string
   error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
@@ -575,6 +576,13 @@ interface AddSessionToWorktreeIn {
   sessionId?: string
 }
 
+/** Move a session back to the project root and open it in the local tabs. */
+interface OpenSessionLocallyIn {
+  type: "agentManager.openSessionLocally"
+  projectId?: string
+  sessionId: string
+}
+
 interface CloseSessionIn {
   type: "agentManager.closeSession"
   sessionId: string
@@ -671,6 +679,12 @@ interface RenameWorktreeIn {
   projectId?: string
   worktreeId: string
   label: string
+}
+
+interface OpenSettingsPanelIn {
+  type: "openSettingsPanel"
+  tab?: string
+  projectId?: string
 }
 
 interface RequestStateIn {
@@ -1075,6 +1089,7 @@ export type AgentManagerInMessage =
   | RemoveStaleWorktreeIn
   | PromoteSessionIn
   | OpenLocallyIn
+  | OpenSessionLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | PersistSessionIn
@@ -1093,6 +1108,7 @@ export type AgentManagerInMessage =
   | RequestRepoInfoIn
   | CreateMultiVersionIn
   | RenameWorktreeIn
+  | OpenSettingsPanelIn
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn

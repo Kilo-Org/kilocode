@@ -667,6 +667,20 @@ describe("GitOps", () => {
       })
     })
 
+    it("kills an in-flight exec when its request signal aborts", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined, binary: async () => process.execPath })
+        const ctl = new AbortController()
+        const pending = git.execGit(["-e", "setTimeout(() => {}, 5000)"], cwd, { signal: ctl.signal })
+        await sleep(25)
+        ctl.abort()
+
+        const result = await pending
+        expect(result.code).not.toBe(0)
+        git.dispose()
+      })
+    })
+
     it("is safe to call multiple times", () => {
       const git = ops(async () => "ok")
       git.dispose()

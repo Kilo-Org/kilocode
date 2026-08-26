@@ -49,6 +49,24 @@ class SessionSidePanelManager(
     private var panel: JComponent? = null
     private var historyBack: (() -> Unit)? = null
 
+    /** Wired by the tool window to open the Agent Manager's New Worktree flow from the chat dock. */
+    var onNewWorktree: (() -> Unit)? = null
+
+    /** Wired by the tool window to move the current chat into an Agent Manager worktree row. */
+    var onMoveToWorktree: ((String?, String) -> Unit)? = null
+
+    override val supportsNewWorktree: Boolean get() = onNewWorktree != null
+
+    override val supportsMoveToWorktree: Boolean get() = onMoveToWorktree != null
+
+    override fun newWorktree() {
+        onNewWorktree?.invoke()
+    }
+
+    override fun moveToWorktree(sessionId: String?, directory: String) {
+        onMoveToWorktree?.invoke(sessionId, directory)
+    }
+
     val defaultFocusedComponent: JComponent? get() = currentUi()?.defaultFocusedComponent ?: (panel as? HistoryPanel)?.defaultFocusedComponent
 
     @RequiresEdt

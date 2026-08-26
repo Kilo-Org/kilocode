@@ -38,7 +38,9 @@ function dateGroupKey(iso: string): (typeof DATE_GROUP_KEYS)[number] {
 
 interface SessionListProps {
   onSelectSession: (id: string) => void
-  sessionIds?: Accessor<ReadonlySet<string>>
+  sessionIds?: Accessor<ReadonlySet<string> | undefined>
+  /** Extra per-row actions rendered after rename/delete (e.g. Agent Manager menus). */
+  rowActions?: (session: SessionInfo) => JSX.Element
 }
 
 const SessionList: Component<SessionListProps> = (props) => {
@@ -159,6 +161,7 @@ const SessionList: Component<SessionListProps> = (props) => {
                   aria-label={label(language.t("session.delete.title"), item)}
                   onClick={(event) => confirmDelete(item, event.currentTarget)}
                 />
+                <Show when={props.rowActions}>{props.rowActions?.(item)}</Show>
               </>
             }
           >

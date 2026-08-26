@@ -115,6 +115,9 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         val root = find<SessionRootPanel>(ui)
         root.doLayout()
         root.content.doLayout()
+        // The prompt sits inside an Align inside the bottom Stack container (which also holds the
+        // branch dock). Lay out the Stack before the Align so the prompt receives its full width.
+        find<PromptPanel>(ui).parent.parent.doLayout()
         find<PromptPanel>(ui).parent.doLayout()
         scrollComponent().doLayout()
         (scrollView() as? Container)?.doLayout()
