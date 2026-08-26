@@ -539,6 +539,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.showExistingLocalTerminal",
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
+      "agentManager.requestWorktreeDiffFiles",
       "agentManager.setTabOrder",
       "agentManager.setDefaultBaseBranch",
       "agentManager.terminal.create",

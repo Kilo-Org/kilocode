@@ -51,6 +51,11 @@ export interface DiffImage {
   after?: DiffImageSide
 }
 
+export interface DiffBatch<T> {
+  entries: ReadonlyMap<string, T | null>
+  deferred: ReadonlySet<string>
+}
+
 /** Mirrors `WorktreeFileDiff` in webview-ui/src/types/messages/agent-manager.ts. */
 export interface DiffFile {
   file: string

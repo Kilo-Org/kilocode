@@ -1049,6 +1049,16 @@ export interface RequestWorktreeDiffFileMessage {
   sessionId: string
   file: string
   scope?: string
+  diffSessionId?: string
+}
+
+export interface RequestWorktreeDiffFilesMessage {
+  type: "agentManager.requestWorktreeDiffFiles"
+  projectId?: string
+  sessionId: string
+  files: string[]
+  scope?: string
+  diffSessionId?: string
 }
 
 // Agent Manager: Start polling for live diff updates (webview → extension)
@@ -1057,6 +1067,7 @@ export interface StartDiffWatchMessage {
   projectId?: string
   sessionId: string
   scope?: string
+  diffSessionId?: string
 }
 
 // Agent Manager: Stop polling for diff updates (webview → extension)
@@ -1651,6 +1662,7 @@ export type WebviewMessage =
   | ImportFromPRRequest
   | RequestWorktreeDiffMessage
   | RequestWorktreeDiffFileMessage
+  | RequestWorktreeDiffFilesMessage
   | StartDiffWatchMessage
   | StopDiffWatchMessage
   | RequestDiffBranchesMessage
