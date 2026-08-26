@@ -21,6 +21,7 @@ class SessionOutcomeView(
     selection: SessionSelection? = null,
     focus: (() -> Unit)? = null,
     private val retry: (() -> Unit)? = null,
+    private val retryable: (() -> Boolean)? = null,
 ) : DialogView(selection, focus), SessionView {
 
     override val sessionViewKind = SessionView.Kind.Default
@@ -74,11 +75,16 @@ class SessionOutcomeView(
         refresh()
     }
 
-    /** Retry belongs to failures only; a user-initiated stop stays a plain note with no controls. */
+    /**
+     * Retry belongs to failures only; a user-initiated stop stays a plain note with no controls.
+     *
+     * [retryable] is asked on every show because the answer depends on the transcript tail, not on the
+     * outcome alone: a session-level error that arrived after a completed turn has nothing to replay.
+     */
     @RequiresEdt
     private fun syncRetry(show: Boolean) {
         val run = retry
-        if (run == null || !show) {
+        if (run == null || !show || retryable?.invoke() == false) {
             setActions(emptyList())
             return
         }

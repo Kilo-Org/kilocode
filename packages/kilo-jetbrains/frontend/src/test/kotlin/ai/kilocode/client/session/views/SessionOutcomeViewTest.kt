@@ -173,6 +173,39 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test error card hides retry when the transcript has nothing to replay`() {
+        edt {
+            val view = SessionOutcomeView(retry = {}, retryable = { false })
+            view.showError("invalid kilo.json", "UnknownError")
+
+            assertNull("A dead Retry must not be painted", retryButton(view))
+        }
+    }
+
+    fun `test failed outcome hides retry when the transcript has nothing to replay`() {
+        edt {
+            val view = SessionOutcomeView(retry = {}, retryable = { false })
+            view.showOutcome(Outcome.FAILED)
+
+            assertNull(retryButton(view))
+        }
+    }
+
+    fun `test retry appears once the transcript becomes replayable`() {
+        edt {
+            var replayable = false
+            val view = SessionOutcomeView(retry = {}, retryable = { replayable })
+            view.showError("Provider balance is too low", "APIError")
+            assertNull(retryButton(view))
+
+            replayable = true
+            view.showError("Provider balance is too low", "APIError")
+
+            val buttons = findAll<JButton>(view).filter { it.text == KiloBundle.message("session.outcome.retry") }
+            assertEquals("Exactly one live Retry button", 1, buttons.size)
+        }
+    }
+
     fun `test toggling outcomes does not accumulate retry buttons`() {
         edt {
             var clicked = 0

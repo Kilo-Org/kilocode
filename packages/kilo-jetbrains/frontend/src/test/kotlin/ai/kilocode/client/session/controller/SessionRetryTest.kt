@@ -1,10 +1,12 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.ProviderDto
@@ -61,6 +63,27 @@ class SessionRetryTest : SessionControllerTestBase() {
             ),
         )
         projectRpc.state.value = workspaceReady(providers = providers(), connected = listOf("kilo", "anthropic"))
+    }
+
+    /**
+     * A turn that never reached the model has no assistant message at all: the CLI resolves the model
+     * (and its credentials) before writing one, so the transcript tail is the user message.
+     */
+    private fun unanswered() {
+        rpc.history.add(
+            MessageWithPartsDto(
+                msg("msg_user", "ses_test", "user").copy(providerID = "snowflake", modelID = "cortex", agent = "code"),
+                emptyList(),
+            ),
+        )
+        projectRpc.state.value = workspaceReady(
+            providers = providers() + ProviderDto(
+                id = "snowflake",
+                name = "Snowflake",
+                models = mapOf("cortex" to ModelDto(id = "cortex", name = "Cortex")),
+            ),
+            connected = listOf("kilo", "anthropic", "snowflake"),
+        )
     }
 
     fun `test retry reverts the failed turn then replays the user message`() {
@@ -256,17 +279,125 @@ class SessionRetryTest : SessionControllerTestBase() {
         assertTrue(rpc.prompts.isEmpty())
     }
 
-    fun `test retry is unavailable when the tail is not an assistant turn`() {
+    fun `test retry is unavailable when nothing failed`() {
         rpc.history.add(MessageWithPartsDto(msg("msg_user", "ses_test", "user"), emptyList()))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
 
+        edt { assertFalse(m.canRetry()) }
         edt { m.retry() }
         flush()
 
         assertTrue(rpc.reverts.isEmpty())
         assertTrue(rpc.prompts.isEmpty())
+    }
+
+    /**
+     * Missing provider credentials fail during model resolution, before the assistant message exists, so
+     * the failure only surfaces as a session error over a user-message tail. There is nothing to roll
+     * back — Retry must still replay, otherwise the card's only action is dead.
+     */
+    fun `test retry replays a turn that failed before the assistant message existed`() {
+        unanswered()
+        val m = controller("ses_test")
+        flush()
+        emit(
+            ChatEventDto.Error(
+                "ses_test",
+                MessageErrorDto(type = "UnknownError", message = "Snowflake Cortex: missing credentials"),
+            ),
+        )
+
+        edt { assertTrue(m.canRetry()) }
+        edt { m.selectModel("anthropic", "claude-opus-5") }
+        flush()
+        edt { m.retry() }
+        flush()
+
+        assertTrue("Nothing was produced, so there is no message to roll back", rpc.reverts.isEmpty())
+        val prompt = rpc.prompts.single().third
+        assertEquals("Replays the existing user message, no synthetic one", "msg_user", prompt.messageID)
+        assertTrue(prompt.parts.isEmpty())
+        assertEquals("anthropic", prompt.providerID)
+        assertEquals("claude-opus-5", prompt.modelID)
+        assertTrue("Retry must hand off to the running turn", m.model.state is SessionState.Busy)
+    }
+
+    /** The same failure also arrives as a turn close with reason "error" when no session error follows. */
+    fun `test retry replays an unanswered turn reported only by turn close`() {
+        unanswered()
+        val m = controller("ses_test")
+        flush()
+        emit(ChatEventDto.TurnClose("ses_test", "error"))
+
+        // Switch off the model that could not authenticate, then raise its effort.
+        edt { m.selectModel("kilo", "gpt-5") }
+        flush()
+        edt { m.selectVariant("high") }
+        flush()
+        edt { m.retry() }
+        flush()
+
+        assertTrue(rpc.reverts.isEmpty())
+        val prompt = rpc.prompts.single().third
+        assertEquals("msg_user", prompt.messageID)
+        assertEquals("kilo", prompt.providerID)
+        assertEquals("gpt-5", prompt.modelID)
+        assertEquals("Effort switched after the failure has to reach the replay", "high", prompt.variant)
+    }
+
+    /**
+     * A session-level error (a bad config, a plugin failure) can land after a turn that delivered its
+     * answer. Retrying then would revert real work, so the card must not offer it.
+     */
+    fun `test retry is unavailable when the last turn completed`() {
+        rpc.history.add(MessageWithPartsDto(msg("msg_user", "ses_test", "user"), emptyList()))
+        rpc.history.add(
+            MessageWithPartsDto(
+                msg("msg_ok", "ses_test", "assistant").copy(
+                    parentID = "msg_user",
+                    time = MessageTimeDto(created = 0.0, completed = 1.0),
+                ),
+                emptyList(),
+            ),
+        )
+        projectRpc.state.value = workspaceReady(providers = providers(), connected = listOf("kilo", "anthropic"))
+        val m = controller("ses_test")
+        flush()
+        emit(ChatEventDto.Error(null, MessageErrorDto(type = "UnknownError", message = "invalid kilo.json")))
+
+        edt { assertFalse(m.canRetry()) }
+        edt { m.retry() }
+        flush()
+
+        assertTrue("A completed turn must not be rolled back", rpc.reverts.isEmpty())
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test retry is unavailable when the session has no user message`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+        emit(ChatEventDto.Error(null, MessageErrorDto(type = "UnknownError", message = "invalid kilo.json")))
+
+        edt { assertFalse("Nothing to replay, so the card must not offer Retry", m.canRetry()) }
+    }
+
+    fun `test retry is offered for a failed assistant turn`() {
+        failed()
+        val m = controller("ses_test")
+        flush()
+
+        edt { assertTrue(m.canRetry()) }
+    }
+
+    fun `test retry is not offered after a user stop`() {
+        failed(MessageErrorDto(type = MessageErrorDto.ABORTED, message = "aborted"))
+        val m = controller("ses_test")
+        flush()
+
+        edt { assertFalse(m.canRetry()) }
     }
 
     fun `test retry surfaces an error when the revert fails`() {

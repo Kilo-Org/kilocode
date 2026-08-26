@@ -494,12 +494,15 @@ class SessionController(
      * files (a no-op server-side when it edited nothing), and the prompt that follows is what actually
      * removes the message: `SessionRevert.cleanup` drops everything at or after the revert target on the
      * next prompt. The replay reuses the original user message id, so no synthetic message is appended.
+     *
+     * A turn that failed before the assistant message existed (model resolution, missing provider
+     * credentials) has nothing to roll back, so that path skips the revert and only replays.
      */
     fun retry() {
         assertEdt()
         val id = sid ?: return
         val target = retryTarget() ?: return
-        LOG.info("${ChatLogSummary.sid(id)} kind=retry clicked=true message=${target.assistant}")
+        LOG.info("${ChatLogSummary.sid(id)} kind=retry clicked=true message=${target.assistant ?: "none"}")
         val op = beginReverting(
             KiloBundle.message("session.status.retrying"),
             // No rollback marker: the transcript should not paint the failed turn as a revert target,
@@ -509,9 +512,11 @@ class SessionController(
         ) ?: return
         revertJob = cs.launch {
             try {
-                sessions.revert(id, directory, target.assistant, null)
-                capture("Session Retry", sessionProps(id))
-                synchronizeFromDisk(id, "retry")
+                target.assistant?.let {
+                    sessions.revert(id, directory, it, null)
+                    synchronizeFromDisk(id, "retry")
+                }
+                capture("Session Retry", sessionProps(id) + mapOf("rolledBack" to (target.assistant != null).toString()))
                 edt {
                     if (disposed) return@edt
                     clearReverting(op)
@@ -535,35 +540,44 @@ class SessionController(
         }
     }
 
+    /** Whether the error card should offer Retry. Gates the action so it is never painted as a no-op. */
+    @RequiresEdt
+    fun canRetry(): Boolean = retryTarget() != null
+
     /**
      * The failed tail turn to replay, or null when retry does not apply: no session, an operation already
-     * in flight, a busy session, or a tail that is not an assistant turn that failed off the last user
-     * message.
+     * in flight, a busy session, a turn that did not fail, or a tail that is neither the last user message
+     * nor the assistant that failed answering it.
      */
     private fun retryTarget(): RetryTarget? {
         assertEdt()
         if (sid == null) return null
         if (revertOp != null) return null
         if (model.state.isBusy()) return null
-        val msgs = model.messages().toList()
-        val tail = msgs.lastOrNull() ?: return null
-        if (tail.info.role != "assistant") return null
-        // A user stop also lands an errored tail (MessageAbortedError), and it is not a failure.
+        val tail = model.messages().lastOrNull() ?: return null
+        val err = tail.info.error
         val state = model.state
-        val failed = tail.info.error?.aborted == false ||
-            (tail.info.error == null &&
-                (state is SessionState.Error ||
-                    (state is SessionState.TurnEnded && state.outcome == Outcome.FAILED)))
+        val failed = when {
+            // A user stop also lands an errored tail (MessageAbortedError), and it is not a failure.
+            err != null -> !err.aborted
+            // A turn that completed cleanly is not retryable even when a session-level error arrives
+            // afterwards: replaying it would revert work the model actually delivered.
+            tail.info.role == "assistant" && tail.info.time.completed != null -> false
+            else -> state is SessionState.Error ||
+                (state is SessionState.TurnEnded && state.outcome == Outcome.FAILED)
+        }
         if (!failed) return null
-        val user = msgs.getOrNull(msgs.size - 2)?.info ?: return null
-        if (user.role != "user") return null
-        if (tail.info.parentID != user.id) return null
         val prompt = retryPromptCurrent() ?: return null
-        if (prompt.messageID != user.id) return null
+        // The failure hit before the assistant message existed — model resolution and provider
+        // credentials are checked ahead of it — so the user turn is the tail and nothing needs rolling
+        // back.
+        if (tail.info.id == prompt.messageID) return RetryTarget(null, prompt)
+        if (tail.info.role != "assistant") return null
+        if (tail.info.parentID != prompt.messageID) return null
         return RetryTarget(tail.info.id, prompt)
     }
 
-    private data class RetryTarget(val assistant: String, val prompt: PromptDto)
+    private data class RetryTarget(val assistant: String?, val prompt: PromptDto)
 
     fun deleteQueuedMessage(message: String) {
         assertEdt()
