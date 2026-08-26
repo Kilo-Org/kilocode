@@ -265,6 +265,8 @@ describe("WorktreeStateManager.updateWorktreeLabel", () => {
 describe("WorktreeManager.createWorktree", () => {
   it("uses a configured Git executable for worktree creation", async () => {
     const root = await createTempRepo()
+    gitExec(["git", "-C", root, "config", "core.autocrlf", "false"])
+    gitExec(["git", "-C", root, "config", "core.eol", "lf"])
     const real = Bun.which("git")
     if (!real) throw new Error("Git is required for this test")
 
