@@ -6,6 +6,12 @@ export interface WorkStyleConfig {
   permission?: PermissionConfig
   terminal_command_display?: "expanded" | "collapsed"
   reasoning_display?: "collapsed" | "shortened" | "full" | "full_persist"
+  /**
+   * @deprecated Superseded by reasoning_display. Still read here so applying a work style
+   * to a legacy config (auto_collapse_reasoning set, reasoning_display unset) does not
+   * overwrite the user's reasoning preference.
+   */
+  auto_collapse_reasoning?: boolean
 }
 
 export type WorkStyle = "human-in-the-loop" | "autonomous"
@@ -146,7 +152,9 @@ export function buildWorkStyleApplyPlan(input: {
   if (input.config.terminal_command_display === undefined) {
     next.terminal_command_display = preset.config.terminal_command_display
   }
-  if (input.config.reasoning_display === undefined) {
+  // Treat reasoning as already configured when either the current or the deprecated key is set,
+  // so applying a work style never clobbers a legacy auto_collapse_reasoning preference.
+  if (input.config.reasoning_display === undefined && input.config.auto_collapse_reasoning === undefined) {
     next.reasoning_display = preset.config.reasoning_display
   }
 

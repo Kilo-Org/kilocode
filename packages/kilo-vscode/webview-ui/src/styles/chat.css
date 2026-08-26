@@ -29,6 +29,12 @@
 @import "./provider-usage.css";
 @import "./high-contrast.css";
 
+/* kilocode_change: inline-code color override, applied independently of the background chip.
+   Unset falls back to the theme color, so the default appearance is unchanged. */
+[data-component="markdown"] :not(pre) > code {
+  color: var(--kilo-inline-code-color, var(--syntax-string));
+}
+
 html[data-kilo-inline-code-background] [data-component="markdown"] :not(pre) > code {
   color: var(--kilo-inline-code-color, var(--text-strong));
   padding: 1px 4px;

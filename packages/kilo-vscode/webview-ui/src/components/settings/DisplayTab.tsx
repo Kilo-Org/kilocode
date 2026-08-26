@@ -143,6 +143,7 @@ const DisplayTab: Component = () => {
           <Switch
             checked={Boolean(config().diff_line_backgrounds)}
             onChange={(checked: boolean) => updateConfig({ diff_line_backgrounds: checked || undefined })}
+            hideLabel
           >
             {language.t("settings.display.diffLineBackgrounds.title")}
           </Switch>

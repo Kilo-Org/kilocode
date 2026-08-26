@@ -107,6 +107,18 @@ Inline code keeps its current text-only appearance by default. Enable **Highligh
 
 Omit either setting to keep its current theme-controlled behavior.
 
+### Diff Line Backgrounds
+
+Diffs in the VS Code chat UI tint only the line numbers by default. Enable **Diff Line Backgrounds** in the Display tab, or set `diff_line_backgrounds` to `true`, to fill added and removed lines with a background color that matches the editor diff view:
+
+```json
+{
+  "diff_line_backgrounds": true
+}
+```
+
+Omit the setting to keep only the line numbers tinted.
+
 ### Terminal Command Blocks
 
 Terminal command blocks stay expanded by default in the VS Code chat UI. Choose **Collapsed** for **Terminal Command Blocks** in the Display tab, or set `terminal_command_display` in `kilo.jsonc`, to start them collapsed:

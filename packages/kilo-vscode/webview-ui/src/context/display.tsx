@@ -72,13 +72,20 @@ export const DisplayProvider: ParentComponent = (props) => {
     onCleanup(() => root.removeAttribute(attribute))
   })
 
-  // Inline-code color override → CSS var read by markdown.css :not(pre) > code.
-  // Blank/unset removes the property so inline code falls back to the theme color.
+  // Inline-code color override → CSS var read by chat.css [data-component="markdown"] :not(pre) > code.
+  // Only accept the #hex the color picker emits; any other value would make the
+  // `color: var(--kilo-inline-code-color, var(--syntax-string))` declaration invalid at
+  // computed-value time and drop the theme fallback. Unset/invalid removes the property.
   createEffect(() => {
     const root = document.documentElement
-    const color = inlineCodeColor()
-    if (color && color.trim()) root.style.setProperty("--kilo-inline-code-color", color)
-    else root.style.removeProperty("--kilo-inline-code-color")
+    const property = "--kilo-inline-code-color"
+    const color = inlineCodeColor()?.trim()
+    if (color && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(color)) {
+      root.style.setProperty(property, color)
+    } else {
+      root.style.removeProperty(property)
+    }
+    onCleanup(() => root.style.removeProperty(property))
   })
 
   // Pierre renders diff rows inside a shadow root. Publish inherited colors here;
