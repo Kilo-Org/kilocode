@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.views.base.GenericView
 import ai.kilocode.client.session.views.base.PartView
@@ -39,10 +40,19 @@ object ViewFactory {
     fun create(
         content: Content,
         openFile: SessionFileOpener,
+        openUrl: (String) -> Unit,
+    ): PartView = create(content, openFile, openUrl = openUrl, selection = null, repo = null)
+
+    fun create(
+        content: Content,
+        openFile: SessionFileOpener,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
         repo: String? = null,
         openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
+        openDiff: SessionDiffOpener = { _, _, _ -> },
+        sessionId: String? = null,
+        onOpenSubagent: ((String, String) -> Unit)? = null,
     ): PartView = when (content) {
         is Text -> TextView(content, openFile = openFile, openUrl = openUrl, selection = selection)
         is Reasoning -> ReasoningView(content, openFile = openFile, openUrl = openUrl, selection = selection)
@@ -55,8 +65,8 @@ object ViewFactory {
             GlobToolView.canRender(content) -> GlobToolView(content, selection = selection, repo = repo)
             SearchToolView.canRender(content) -> SearchToolView(content, selection = selection, repo = repo)
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
-            EditToolView.canRender(content) -> EditToolView(content, openFile, selection = selection)
-            TaskToolView.canRender(content) -> TaskToolView(content, selection = selection)
+            EditToolView.canRender(content) -> EditToolView(content, openFile, selection, openDiff, sessionId)
+            TaskToolView.canRender(content) -> TaskToolView(content, selection = selection, onOpenSubagent = onOpenSubagent)
             else -> ToolView(content, selection = selection)
         }
         is Compaction -> CompactionView(content)
@@ -72,14 +82,23 @@ object ViewFactory {
     fun createUser(
         content: Content,
         openFile: SessionFileOpener,
+        openUrl: (String) -> Unit,
+    ): PartView = createUser(content, openFile, openUrl = openUrl, selection = null, repo = null)
+
+    fun createUser(
+        content: Content,
+        openFile: SessionFileOpener,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
         repo: String? = null,
         mentions: List<PromptMention> = emptyList(),
         openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
+        openDiff: SessionDiffOpener = { _, _, _ -> },
+        sessionId: String? = null,
+        onOpenSubagent: ((String, String) -> Unit)? = null,
     ): PartView = when (content) {
         is Text -> PromptView(content, openFile = openFile, openAttachment = openAttachment, openUrl = openUrl, selection = selection, mentions = mentions)
-        else -> create(content, openFile, openUrl, selection, repo, openAttachment)
+        else -> create(content, openFile, openUrl, selection, repo, openAttachment, openDiff, sessionId, onOpenSubagent)
     }
 
     /**

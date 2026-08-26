@@ -163,7 +163,6 @@ export const GetMessageResultOutputSchema = z
     }
   })
 
-export type RepositoryInput = z.infer<typeof RepositoryInputSchema>
 export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>
 export type AgentSendRequest = z.infer<typeof AgentSendRequestSchema>
 export type GetMessageResultInput = z.infer<typeof GetMessageResultInputSchema>

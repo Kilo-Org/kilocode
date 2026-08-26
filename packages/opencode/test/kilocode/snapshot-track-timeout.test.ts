@@ -7,9 +7,11 @@
 import { describe, expect, test } from "bun:test"
 import { Deferred, Duration, Effect, Fiber } from "effect"
 import * as TestClock from "effect/testing/TestClock"
+import path from "path"
 import { PartID, type MessageID, type SessionID } from "../../src/session/schema"
 import { KiloSnapshotTrack } from "../../src/kilocode/snapshot/track"
 import { KiloPartLifecycle } from "../../src/kilocode/session/part-lifecycle"
+import { TestInstance } from "../fixture/fixture"
 import { awaitWithTimeout, it } from "../lib/effect"
 
 const SESSION = "ses_test" as SessionID
@@ -946,6 +948,46 @@ describe("KiloSnapshotTrack progress indicator", () => {
     }
     // At least two different frames should have been rendered during the run.
     expect(frames.size).toBeGreaterThanOrEqual(2)
+  })
+})
+
+describe("KiloSnapshotTrack persistDisable", () => {
+  it.instance(
+    "disable writes snapshot:false to the project config",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const state = KiloSnapshotTrack.makeState()
+        const hooks: KiloSnapshotTrack.Hooks = {
+          ...KiloSnapshotTrack.defaultHooks,
+          async ask() {
+            return "disable"
+          },
+          async startProgress() {},
+          async updateProgress() {},
+          async endProgress() {},
+        }
+
+        yield* KiloSnapshotTrack.wrap({
+          inner: hangInner(),
+          state,
+          sessionID: SESSION,
+          messageID: MESSAGE,
+          hooks,
+          timeoutMs: 10,
+          progressDelayMs: 2,
+        })
+
+        const file = path.join(test.directory, ".kilo", "kilo.jsonc")
+        const text = yield* Effect.tryPromise(() => Bun.file(file).text())
+        expect(JSON.parse(text).snapshot).toBe(false)
+        expect(state.disabledForSession).toBe(true)
+      }),
+    { git: true },
+  )
+
+  test("persistDisable without instance context does not throw", async () => {
+    await KiloSnapshotTrack.defaultHooks.persistDisable()
   })
 })
 

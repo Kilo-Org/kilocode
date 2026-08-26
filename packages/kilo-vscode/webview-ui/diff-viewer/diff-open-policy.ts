@@ -30,6 +30,18 @@ export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
   return diffs.filter((diff) => diff.kind !== "image" && isDiffExpandable(diff)).map((diff) => diff.file)
 }
 
+export function reconcileOpenFiles(
+  diffs: WorktreeFileDiff[],
+  manual: string[] | undefined,
+  known: string[] = [],
+): { open: string[] | undefined; known: string[] } {
+  const files = expandableOpenFiles(diffs)
+  if (!manual) return { open: undefined, known: files }
+  const previous = new Set(known)
+  const added = files.filter((file) => !previous.has(file))
+  return { open: sanitizeOpenFiles(diffs, [...manual, ...added]), known: files }
+}
+
 export function allOpenFiles(diffs: WorktreeFileDiff[], open: string[]): boolean {
   const targets = expandableOpenFiles(diffs)
   if (targets.length === 0) return false

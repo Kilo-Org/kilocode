@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings.agents
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.settings.rules.RulesConfigurable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.SearchableConfigurable
@@ -20,6 +21,7 @@ class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.agents", AgentsConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.mcp", McpConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.skills", SkillsConfigurable.ID)
+        assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.workflows", WorkflowsConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.rules", RulesConfigurable.ID)
     }
 
@@ -29,7 +31,7 @@ class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
         edt {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
-            assertEquals(listOf("Agents", "MCP Servers", "Skills", "Rules"), labels)
+            assertEquals(listOf("Agents", "MCP Servers", "Skills", "Workflows", "Rules"), labels)
         }
     }
 
@@ -42,12 +44,7 @@ class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
         assertFalse(cfg.isModified)
     }
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun links(root: Container): List<ActionLink> = buildList {
         for (comp in root.components) {

@@ -10,7 +10,7 @@ import {
 } from "@opentui/core"
 import type { CommandContext } from "@opentui/keymap"
 import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match } from "solid-js"
-import "opentui-spinner/solid"
+import { registerOpencodeSpinner } from "../register-spinner"
 import path from "path"
 import { fileURLToPath } from "url"
 import { useLocal } from "../../context/local"
@@ -33,7 +33,7 @@ import { promptOffsetWidth } from "../../prompt/display"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { usePromptHistory, type PromptInfo } from "../../prompt/history"
 import { computePromptTraits } from "../../prompt/traits"
-import { expandPastedTextPlaceholders, expandTrackedPastedText } from "../../prompt/part"
+import { expandPastedPlaceholder, expandPastedTextPlaceholders, expandTrackedPastedText } from "../../prompt/part"
 import { usePromptStash } from "../../prompt/stash"
 import { DialogStash } from "../dialog-stash"
 import { type AutocompleteRef, Autocomplete } from "./autocomplete"
@@ -55,7 +55,6 @@ import { useArgs } from "../../context/args"
 // kilocode_change start
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
-import * as AgentRequirements from "@/kilocode/cli/agent-requirements"
 import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
 import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
 // kilocode_change end
@@ -67,6 +66,8 @@ import { useVim, VimModeIndicator, vimToggleCommand } from "@/kilocode/cli/cmd/t
 import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
+
+registerOpencodeSpinner()
 
 export type PromptProps = {
   sessionID?: string
@@ -622,6 +623,7 @@ export function Prompt(props: PromptProps) {
       "prompt.stash.pop",
       "prompt.stash.list",
       "prompt.vim.toggle", // kilocode_change
+      "prompt.skills", // kilocode_change
       "session.interrupt",
       "workspace.set",
       "session.move",
@@ -1084,29 +1086,6 @@ export function Prompt(props: PromptProps) {
       return false
     }
 
-    // kilocode_change start - gate TUI sends on declared agent requirements
-    const requirements = await AgentRequirements.check({
-      client: sdk.client,
-      agent: agent.name,
-      directory: project.instance.directory() || sdk.directory || process.cwd(),
-    }).catch((error) => {
-      toast.show({
-        message: errorMessage(error),
-        variant: "error",
-      })
-      return undefined
-    })
-    if (!requirements) return false
-    if (!requirements.ok) {
-      toast.show({
-        title: "Agent requirements",
-        message: requirements.error.data.message,
-        variant: "error",
-      })
-      return false
-    }
-    // kilocode_change end
-
     const workspaceSession = props.sessionID ? sync.session.get(props.sessionID) : undefined
     const workspaceID = workspaceSession?.workspaceID
     const workspaceStatus = workspaceID ? (project.workspace.status(workspaceID) ?? "error") : undefined
@@ -1320,6 +1299,15 @@ export function Prompt(props: PromptProps) {
   async function pasteInputText(text: string) {
     const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
     const pastedContent = normalizedText.trim()
+    // kilocode_change start - a second identical paste expands the collapsed placeholder
+    if (expandPastedPlaceholder(input, promptPartTypeId, store.extmarkToPartIndex, store.prompt.parts, pastedContent)) {
+      const value = input.plainText
+      setStore("prompt", "input", value)
+      auto()?.onInput(value)
+      syncExtmarksWithPromptParts()
+      return
+    }
+    // kilocode_change end
     const filepath = pastedFilepath(pastedContent, terminalEnvironment.platform)
     const isUrl = /^(https?):\/\//.test(filepath)
     if (!isUrl) {
@@ -1627,26 +1615,29 @@ export function Prompt(props: PromptProps) {
                         alpha={agentMetaAlpha}
                       />
                       {/* kilocode_change end */}
-                      <Show when={store.mode === "normal"}>
-                        <box flexDirection="row" gap={1}>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
-                          <text
-                            flexShrink={0}
-                            fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
-                          >
-                            {local.model.parsed().model}
-                          </text>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
-                          <Show when={showVariant()}>
-                            <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
-                            <text>
-                              <span style={{ fg: fadeColor(theme.warning, variantMetaAlpha()), bold: true }}>
-                                {local.model.variant.current()}
-                              </span>
-                            </text>
-                          </Show>
-                        </box>
+                      <Show when={store.mode === "normal" && local.permission.mode === "auto"}>
+                        <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>auto</text>
                       </Show>
+                      <Show when={store.mode === "normal"}>
+                      <box flexDirection="row" gap={1}>
+                        <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                        <text
+                          flexShrink={0}
+                          fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
+                        >
+                          {local.model.parsed().model}
+                        </text>
+                        <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
+                        <Show when={showVariant()}>
+                          <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
+                          <text>
+                            <span style={{ fg: fadeColor(theme.warning, variantMetaAlpha()), bold: true }}>
+                              {local.model.variant.current()}
+                            </span>
+                          </text>
+                        </Show>
+                      </box>
+                    </Show>
                     </>
                   )}
                 </Show>
@@ -1818,7 +1809,9 @@ export function Prompt(props: PromptProps) {
                 <text fg={theme.accent}>(new working copy)</text>
               </box>
             </Match>
+            {/* kilocode_change start - Kilo already shows the working directory in its sidebar */}
             <Match when={true}>{props.hint ?? <text />}</Match>
+            {/* kilocode_change end */}
           </Switch>
           <Show when={status().type !== "retry"}>
             <box gap={2} flexDirection="row">

@@ -105,7 +105,28 @@ export const StopRequest = Schema.Struct({
   targetSessionID: SessionID,
 }).annotate({ identifier: "AgentManagerStopRequest" })
 
-export const Request = Schema.Union([OverviewRequest, PromptRequest, StopRequest]).annotate({
+export const MoveRequest = Schema.Struct({
+  ...Base,
+  operation: Schema.Literal("move"),
+  targetSessionID: SessionID,
+  sectionID: Schema.NullOr(ID),
+}).annotate({ identifier: "AgentManagerMoveRequest" })
+
+const AnswerLabels = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200))
+const AnswerArray = Schema.Array(AnswerLabels).check(Schema.isMaxLength(20))
+export const Answers = Schema.Array(AnswerArray)
+  .check(Schema.isMinLength(1), Schema.isMaxLength(20))
+  .annotate({ identifier: "AgentManagerAnswers" })
+
+export const AnswerRequest = Schema.Struct({
+  ...Base,
+  operation: Schema.Literal("answer"),
+  targetSessionID: SessionID,
+  questionID: Schema.optional(ID),
+  answers: Answers,
+}).annotate({ identifier: "AgentManagerAnswerRequest" })
+
+export const Request = Schema.Union([OverviewRequest, PromptRequest, StopRequest, MoveRequest, AnswerRequest]).annotate({
   identifier: "AgentManagerRequest",
 })
 export type Request = Schema.Schema.Type<typeof Request>
@@ -127,7 +148,21 @@ export const StopResult = Schema.Struct({
   stopped: Schema.Literal(true),
 }).annotate({ identifier: "AgentManagerStopResult" })
 
-export const Result = Schema.Union([OverviewResult, PromptResult, StopResult]).annotate({
+export const MoveResult = Schema.Struct({
+  operation: Schema.Literal("move"),
+  sessionID: SessionID,
+  sectionID: Schema.NullOr(ID),
+  moved: Schema.Literal(true),
+}).annotate({ identifier: "AgentManagerMoveResult" })
+
+export const AnswerResult = Schema.Struct({
+  operation: Schema.Literal("answer"),
+  sessionID: SessionID,
+  questionID: ID,
+  resolved: Schema.Literal(true),
+}).annotate({ identifier: "AgentManagerAnswerResult" })
+
+export const Result = Schema.Union([OverviewResult, PromptResult, StopResult, MoveResult, AnswerResult]).annotate({
   identifier: "AgentManagerResult",
 })
 export type Result = Schema.Schema.Type<typeof Result>
@@ -140,6 +175,7 @@ export const ErrorCode = Schema.Literals([
   "stale_session",
   "timeout",
   "unavailable_session",
+  "unknown_section",
   "unknown_session",
   "workspace_unavailable",
 ])

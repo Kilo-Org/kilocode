@@ -41,6 +41,71 @@ async function withRepo(run: (cwd: string) => Promise<void>): Promise<void> {
 }
 
 describe("GitOps", () => {
+  it("uses the configured Git executable for raw commands", async () => {
+    await withRepo(async (cwd) => {
+      let calls = 0
+      const git = new GitOps({
+        log: () => undefined,
+        binary: async () => {
+          calls++
+          return "git"
+        },
+      })
+
+      expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      expect(calls).toBe(1)
+    })
+  })
+
+  it("does not hold a semaphore slot while resolving Git", async () => {
+    const semaphore = new Semaphore(1)
+    let resolve!: (value: string) => void
+    const binary = new Promise<string>((done) => {
+      resolve = done
+    })
+    const git = new GitOps({ log: () => undefined, semaphore, binary: () => binary })
+    const pending = git.currentBranch("/repo")
+    let entered = false
+
+    await semaphore.run(async () => {
+      entered = true
+    })
+    resolve("git")
+    await pending
+
+    expect(entered).toBe(true)
+  })
+
+  it("stops waiting for Git resolution when disposed", async () => {
+    const git = new GitOps({
+      log: () => undefined,
+      binary: () => new Promise(() => undefined),
+    })
+    const pending = git.currentBranch("/repo")
+
+    git.dispose()
+
+    expect(await pending).toBe("")
+  })
+
+  it("retries executable resolution after a transient failure", async () => {
+    await withRepo(async (cwd) => {
+      let calls = 0
+      const git = new GitOps({
+        log: () => undefined,
+        binary: async () => {
+          calls++
+          if (calls === 1) throw new Error("transient resolution failure")
+          return "git"
+        },
+      })
+
+      expect(await git.root(cwd)).toBeUndefined()
+      expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      expect(calls).toBe(2)
+    })
+  })
+
   describe("currentBranch", () => {
     it("returns the current branch name", async () => {
       const git = ops(async (args) => {
@@ -55,6 +120,23 @@ describe("GitOps", () => {
         throw new Error("not a git repo")
       })
       expect(await git.currentBranch("/repo")).toBe("")
+    })
+  })
+
+  describe("root", () => {
+    it("resolves the nearest enclosing repository", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--show-toplevel") return "/workspace/frontend"
+        return ""
+      })
+      expect(await git.root("/workspace/frontend/src")).toBe("/workspace/frontend")
+    })
+
+    it("returns undefined outside a repository", async () => {
+      const git = ops(async () => {
+        throw new Error("not a git repo")
+      })
+      expect(await git.root("/workspace")).toBeUndefined()
     })
   })
 
@@ -146,26 +228,60 @@ describe("GitOps", () => {
   })
 
   describe("resolveDefaultBranch", () => {
-    it("returns <remote>/HEAD symbolic ref", async () => {
+    it("uses the remote's advertised HEAD instead of stale local metadata", async () => {
+      const commands: string[][] = []
       const git = ops(async (args) => {
+        commands.push(args)
         // resolveRemote: upstream is configured
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "upstream/main"
-        // symbolic-ref for upstream/HEAD
-        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/upstream/HEAD") return "upstream/develop"
+        if (args[0] === "ls-remote") return "ref: refs/heads/develop\tHEAD\nabc123\tHEAD"
+        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/upstream/HEAD") return "upstream/master"
         return ""
       })
       expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("upstream/develop")
+      expect(commands.some((args) => args[0] === "symbolic-ref")).toBe(false)
     })
 
-    it("falls back to origin/HEAD when remote is origin", async () => {
+    it("falls back to local origin/HEAD when the remote is unavailable", async () => {
       const git = ops(async (args) => {
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
         if (args[0] === "config") throw new Error("no config")
         if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") throw new Error("offline")
         if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/origin/HEAD") return "origin/main"
         return ""
       })
       expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+    })
+
+    it("keeps master when the remote still advertises master", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") return "ref: refs/heads/master\tHEAD\nabc123\tHEAD"
+        return ""
+      })
+
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/master")
+    })
+
+    it("caches the advertised remote HEAD", async () => {
+      let calls = 0
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") {
+          calls++
+          return "ref: refs/heads/main\tHEAD\nabc123\tHEAD"
+        }
+        return ""
+      })
+
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+      expect(calls).toBe(1)
     })
 
     it("returns undefined when <remote>/HEAD is not set", async () => {
@@ -173,6 +289,7 @@ describe("GitOps", () => {
         if (args[0] === "rev-parse") throw new Error("no upstream")
         if (args[0] === "config") throw new Error("no config")
         if (args[0] === "branch") return ""
+        if (args[0] === "ls-remote") throw new Error("no remote")
         if (args[0] === "symbolic-ref") throw new Error("no symbolic ref")
         return ""
       })
@@ -547,6 +664,20 @@ describe("GitOps", () => {
           // expected — aborted
         }
         expect(git.disposed).toBe(true)
+      })
+    })
+
+    it("kills an in-flight exec when its request signal aborts", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined, binary: async () => process.execPath })
+        const ctl = new AbortController()
+        const pending = git.execGit(["-e", "setTimeout(() => {}, 5000)"], cwd, { signal: ctl.signal })
+        await sleep(25)
+        ctl.abort()
+
+        const result = await pending
+        expect(result.code).not.toBe(0)
+        git.dispose()
       })
     })
 

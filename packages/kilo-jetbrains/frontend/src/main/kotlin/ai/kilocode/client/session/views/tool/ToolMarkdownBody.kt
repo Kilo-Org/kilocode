@@ -1,8 +1,11 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.diff.DiffLineNumbers
+import ai.kilocode.client.diff.installDiffGutter
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
 import ai.kilocode.client.ui.md.MdView
@@ -31,22 +34,30 @@ class ToolMarkdownBody(
     private val opts: MdCodeBlockOptions,
     private val selection: SessionSelection?,
     private val render: (Tool) -> String,
+    private val gutter: ((Tool) -> List<DiffLineNumbers.Row>?)? = null,
     private val font: (SessionEditorStyle) -> Font = SessionEditorStyle::editorFont,
     private val chrome: (MdView) -> Unit = {},
 ) : EditBody {
     override var parent: Disposable? = null
+
+    // Single-file diffs over the cap are routed to OverflowBody by EditToolView, and non-diff bodies
+    // (shell/read) are never capped, so this body itself never renders the overflow placeholder.
+    override var overflow: (() -> Unit)? = null
     private var view: MdView? = null
+    private var item: Tool? = null
 
     /** Builds the body on first call, wiring it into [parent]'s disposable tree, then returns it. */
     @RequiresEdt
     override fun mount(tool: Tool): JComponent {
         view?.let { return it.component }
+        item = tool
         val owner = parent ?: error("Tool markdown body has no parent")
         val md = MdViewFactory.create(SessionEditorStyle.current(), selection, MdCodeBlockFactory.default(opts))
         Disposer.register(owner, md)
         view = md
         applyStyle(SessionEditorStyle.current())
         update(tool)
+        syncGutter(tool)
         return md.component
     }
 
@@ -61,11 +72,13 @@ class ToolMarkdownBody(
 
     @RequiresEdt
     override fun update(tool: Tool): Boolean {
+        item = tool
         val md = view ?: return false
         val value = render(tool)
         if (md.markdown() == value) return false
         md.set(value)
         chrome(md)
+        syncGutter(tool)
         return true
     }
 
@@ -76,12 +89,24 @@ class ToolMarkdownBody(
         md.applyStyle(style)
         md.font = font(style)
         md.foreground = style.editorForeground
-        md.background = style.editorBackground
-        md.preBg = style.editorBackground
+        // The body itself stays transparent (session backdrop); only the code/output panes are the
+        // raised editor-background surface, so the fill tracks the content and its insets exactly.
+        md.opaque = false
+        md.preBg = SessionUiStyle.Colors.codeBlockBackground()
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
         chrome(md)
+        // EditorTextField drops its editor in removeNotify, so collapse/re-expand yields a fresh
+        // editor with no annotation provider. Re-install the gutter here (as PatchBody.applyMd does)
+        // so the old/new line-number gutter survives a re-expansion, not just the first mount.
+        item?.let(::syncGutter)
         return before != md.font
+    }
+
+    @RequiresEdt
+    private fun syncGutter(tool: Tool) {
+        val rows = gutter?.invoke(tool) ?: return
+        codeEditors().forEach { installDiffGutter(it, rows) }
     }
 
     @RequiresEdt

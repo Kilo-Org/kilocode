@@ -7,7 +7,9 @@ import {
   Usage,
   type CacheHint,
   type FinishReason,
+  type JsonSchema,
   type LLMRequest,
+  type ModelToolSchemaCompatibility,
   type ProviderMetadata,
   type ReasoningPart,
   type ToolCallPart,
@@ -21,6 +23,7 @@ import { BedrockAuth } from "./utils/bedrock-auth"
 import { BedrockCache } from "./utils/bedrock-cache"
 import { BedrockMedia } from "./utils/bedrock-media"
 import { Lifecycle } from "./utils/lifecycle"
+import { ToolSchemaProjection } from "./utils/tool-schema"
 import { ToolStream } from "./utils/tool-stream"
 
 const ADAPTER = "bedrock-converse"
@@ -205,18 +208,22 @@ type BedrockEvent = Schema.Schema.Type<typeof BedrockEvent>
 // =============================================================================
 // Request Lowering
 // =============================================================================
-const lowerToolSpec = (tool: ToolDefinition): BedrockToolSpec => ({
+const lowerToolSpec = (tool: ToolDefinition, inputSchema: JsonSchema): BedrockToolSpec => ({
   toolSpec: {
     name: tool.name,
     description: tool.description,
-    inputSchema: { json: tool.inputSchema },
+    inputSchema: { json: inputSchema },
   },
 })
 
-const lowerTools = (breakpoints: BedrockCache.Breakpoints, tools: ReadonlyArray<ToolDefinition>): BedrockTool[] => {
+const lowerTools = (
+  compatibility: ModelToolSchemaCompatibility | undefined,
+  breakpoints: BedrockCache.Breakpoints,
+  tools: ReadonlyArray<ToolDefinition>,
+): BedrockTool[] => {
   const result: BedrockTool[] = []
   for (const tool of tools) {
-    result.push(lowerToolSpec(tool))
+    result.push(lowerToolSpec(tool, ToolSchemaProjection.modelCompatibility(tool.inputSchema, compatibility)))
     const cachePoint = BedrockCache.block(breakpoints, tool.cache)
     if (cachePoint) result.push(cachePoint)
   }
@@ -302,10 +309,7 @@ const lowerMessages = Effect.fn("BedrockConverse.lowerMessages")(function* (
     if (message.role === "system") {
       const part = yield* ProviderShared.wrappedSystemUpdate("Bedrock Converse", message)
       const content = textWithCache(breakpoints, part.text, part.cache)
-      const previous = messages.at(-1)
-      if (previous?.role === "user")
-        messages[messages.length - 1] = { role: "user", content: [...previous.content, ...content] }
-      else messages.push({ role: "user", content })
+      ProviderShared.appendUserMessage(messages, { role: "user", content }, "content") // kilocode_change
       continue
     }
 
@@ -323,7 +327,7 @@ const lowerMessages = Effect.fn("BedrockConverse.lowerMessages")(function* (
           continue
         }
       }
-      messages.push({ role: "user", content })
+      ProviderShared.appendUserMessage(messages, { role: "user", content }, "content") // kilocode_change
       continue
     }
 
@@ -365,7 +369,7 @@ const lowerMessages = Effect.fn("BedrockConverse.lowerMessages")(function* (
       const cachePoint = BedrockCache.block(breakpoints, part.cache)
       if (cachePoint) content.push(cachePoint)
     }
-    messages.push({ role: "user", content })
+    ProviderShared.appendUserMessage(messages, { role: "user", content }, "content") // kilocode_change
   }
 
   return messages
@@ -386,7 +390,7 @@ const fromRequest = Effect.fn("BedrockConverse.fromRequest")(function* (request:
   const breakpoints = BedrockCache.breakpoints()
   const toolConfig =
     request.tools.length > 0 && request.toolChoice?.type !== "none"
-      ? { tools: lowerTools(breakpoints, request.tools), toolChoice }
+      ? { tools: lowerTools(request.model.compatibility?.toolSchema, breakpoints, request.tools), toolChoice }
       : undefined
   const system = request.system.length === 0 ? undefined : lowerSystem(breakpoints, request.system)
   const messages = yield* lowerMessages(request, breakpoints)

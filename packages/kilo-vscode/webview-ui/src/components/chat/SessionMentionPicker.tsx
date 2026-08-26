@@ -42,7 +42,7 @@ export function SessionMentionPicker(props: Props) {
       <List<SessionSearchItem>
         items={props.sessions}
         key={(item) => item.id}
-        filterKeys={["title"]}
+        filterKeys={["title", "worktreeName"]}
         search={{ placeholder: "Search sessions", autofocus: true }}
         onSelect={(item) => {
           if (item) props.onSelect(item)
@@ -52,6 +52,7 @@ export function SessionMentionPicker(props: Props) {
           <span class="session-mention-item">
             <Icon name="history" class="file-mention-icon" />
             <span class="session-mention-title">{item.title}</span>
+            {item.worktreeName && <span class="session-mention-worktree">{item.worktreeName}</span>}
             <span class="session-mention-time">{formatRelativeDate(new Date(item.updated).toISOString())}</span>
           </span>
         )}

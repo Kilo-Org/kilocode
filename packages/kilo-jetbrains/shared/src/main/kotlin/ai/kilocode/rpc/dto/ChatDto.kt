@@ -18,6 +18,12 @@ data class MessageDto(
     val cost: Double? = null,
     val tokens: TokensDto? = null,
     val error: MessageErrorDto? = null,
+    val summary: MessageSummaryDto? = null,
+)
+
+@Serializable
+data class MessageSummaryDto(
+    val diffs: List<DiffFileDto> = emptyList(),
 )
 
 @Serializable
@@ -66,6 +72,7 @@ data class PartDto(
     val title: String? = null,
     val input: Map<String, String> = emptyMap(),
     val metadata: Map<String, String> = emptyMap(),
+    val approval: ToolApprovalDto? = null,
     val output: String? = null,
     val error: String? = null,
     val time: PartTimeDto? = null,
@@ -79,6 +86,17 @@ data class PartDto(
     val filename: String? = null,
     val synthetic: Boolean? = null,
     val source: PartSourceDto? = null,
+)
+
+@Serializable
+data class ToolApprovalDto(
+    val source: String,
+    val agent: String? = null,
+    val rulePermission: String? = null,
+    val rulePattern: String? = null,
+    val ruleAction: String? = null,
+    val outsideWorkspace: Boolean = false,
+    val outsideWorkspacePath: String? = null,
 )
 
 @Serializable
@@ -116,6 +134,17 @@ data class PromptDto(
     val agent: String? = null,
     val variant: String? = null,
     val noReply: Boolean? = null,
+    val editorContext: EditorContextDto? = null,
+)
+
+@Serializable
+data class EditorContextDto(
+    val directory: String? = null,
+    val worktree: String? = null,
+    val visibleFiles: List<String>? = null,
+    val openTabs: List<String>? = null,
+    val activeFile: String? = null,
+    val shell: String? = null,
 )
 
 @Serializable
@@ -309,6 +338,8 @@ data class PermissionRequestDto(
     val ruleDecisions: List<PermissionRuleDecisionDto> = emptyList(),
     val filePath: String? = null,
     val fileDiffs: List<PermissionFileDiffDto> = emptyList(),
+    // Verbatim skill-shell commands (metadata.commands) the prompt must display; empty for non-skill requests.
+    val skillCommands: List<String> = emptyList(),
 )
 
 @Serializable
@@ -328,6 +359,8 @@ data class ToolRefDto(
 data class PermissionReplyDto(
     val reply: String,
     val message: String? = null,
+    // Set when a human answered the prompt; the CLI ignores machine approvals of skill-shell batches.
+    val interactive: Boolean = false,
 )
 
 @Serializable
@@ -399,6 +432,9 @@ data class DiffFileDto(
     val additions: Int,
     val deletions: Int,
     val patch: String? = null,
+    val status: String? = null,
+    val before: String? = null,
+    val after: String? = null,
 )
 
 // --- Config Update ---

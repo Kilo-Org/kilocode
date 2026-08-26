@@ -130,6 +130,17 @@ describe("sandbox policy", () => {
     expect(actual).not.toContain(dirs.b)
   })
 
+  test("drops inherited writable ancestors for a managed worktree", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const policy = profile(context(dirs.a, dirs.main, dirs), "deny", [dirs.main, dirs.approved])
+    const paths = policy.filesystem.allowWrite.map((rule) => rule.path)
+
+    expect(paths).not.toContain(dirs.main)
+    expect(paths).toContain(dirs.approved)
+    expect(paths).toContain(dirs.a)
+  })
+
   posix("fails closed when a worktree marker cannot be resolved", async () => {
     await using tmp = await fixture()
     const dirs = tmp.extra

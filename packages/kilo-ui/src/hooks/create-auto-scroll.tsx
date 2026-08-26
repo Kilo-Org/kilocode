@@ -4,7 +4,6 @@ import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { canScroll, distanceFromBottom } from "./auto-scroll"
 import { createUserActivity } from "./scroll-user-activity"
 
-const DEBOUNCE_MS = 100
 // Grace window after a real pointer/key/touch interaction during which a
 // ResizeObserver or non-user scroll event must not snap the view back to the
 // bottom. Upward wheel intent pauses immediately in its capture handler.
@@ -14,6 +13,7 @@ export interface AutoScrollOptions {
   working: () => boolean
   onUserInteracted?: () => void
   bottomThreshold?: number
+  overflowAnchor?: "none" | "auto" | "dynamic"
 }
 
 export function createAutoScroll(options: AutoScrollOptions) {
@@ -24,8 +24,8 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let scroll: HTMLElement | undefined
   let settling = false
   let settleTimer: ReturnType<typeof setTimeout> | undefined
-  let stopTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
+  let watcher: MutationObserver | undefined
 
   const [store, setStore] = createStore({
     contentRef: undefined as HTMLElement | undefined,
@@ -67,6 +67,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   }
 
   const resume = () => {
+    userActivity.reset()
     if (store.userScrolled) setStore("userScrolled", false)
     force()
   }
@@ -110,52 +111,49 @@ export function createAutoScroll(options: AutoScrollOptions) {
       return
     }
 
-    if (!store.userScrolled && !input) {
-      // Only explicit user input can pause following. Treat unclassified
-      // scroll events from virtualization or layout changes as programmatic.
-      if (userActivity.isRecent()) {
-        stop()
-      } else {
-        bottom()
-      }
+    // Virtualizer and layout corrections can move the viewport without
+    // changing content height. Only an input event should pause auto-follow.
+    if (!store.userScrolled && !input && !userActivity.isRecent()) {
+      // A tool card that swaps views shrinks the transcript and recovers inside
+      // the same frame. The shrink makes the browser clamp the pin away, and
+      // because the final content size is unchanged no resize entry follows, so
+      // the correction has to happen here or the transcript stays parked below
+      // its bottom until the next content update.
+      if (active()) bottom()
       return
     }
 
-    // Debounce to avoid layout-induced scroll shifts (e.g. images loading,
-    // virtual-list reflows) from incorrectly breaking auto-follow.
-    if (stopTimer) clearTimeout(stopTimer)
-    stopTimer = setTimeout(() => {
-      stopTimer = undefined
-      if (!scroll) return
-      if (distanceFromBottom(scroll) < threshold()) return
-      stop()
-    }, DEBOUNCE_MS)
+    stop()
   }
 
   const onContentResize = () => {
-    if (scroll && !canScroll(scroll)) return
-    if (!active()) {
-      if (!store.userScrolled && scroll && distanceFromBottom(scroll) > threshold()) {
-        bottom()
-        return
-      }
-      return
-    }
-    if (store.userScrolled) {
-      return
-    }
-    // Virtualized lists (virtua) re-measure items during user scroll, firing
-    // resize events that race ahead of handleScroll's DEBOUNCE_MS window.
-    // If the user just interacted with the scroller and is no longer near
-    // the bottom, treat the resize as a layout reflow on top of their
-    // scroll — pause auto-follow instead of snapping back to the bottom.
-    if (scroll && userActivity.isRecent() && distanceFromBottom(scroll) > threshold()) {
+    if (!scroll || !canScroll(scroll)) return
+    if (store.userScrolled) return
+
+    if (userActivity.isRecent() && distanceFromBottom(scroll) > threshold()) {
       stop()
       return
     }
-    // ResizeObserver fires after layout, before paint.
-    // Keep the bottom locked in the same frame to avoid visible
-    // "jump up then catch up" artifacts while streaming content.
+
+    if (!active()) {
+      if (!userActivity.isRecent() && distanceFromBottom(scroll) > threshold()) {
+        bottom()
+      }
+      return
+    }
+
+    follow()
+  }
+
+  // Content mutations are pinned while they are still queued, before the frame
+  // lays out and paints. A ResizeObserver entry arrives after that layout, so
+  // waiting for it lets the browser paint one frame with the new content hanging
+  // below the viewport, which reads as the transcript twitching as it streams.
+  const onContentMutate = () => {
+    if (!scroll) return
+    if (store.userScrolled || userActivity.isRecent()) return
+    if (!canScroll(scroll)) return
+
     follow()
   }
 
@@ -172,6 +170,15 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   createResizeObserver(() => store.contentRef, onContentResize)
   createResizeObserver(() => store.scrollRef, onViewportResize)
+
+  createEffect(
+    on(
+      () => store.userScrolled,
+      () => {
+        if (scroll) updateOverflowAnchor(scroll)
+      },
+    ),
+  )
 
   createEffect(
     on(options.working, (working: boolean) => {
@@ -195,6 +202,31 @@ export function createAutoScroll(options: AutoScrollOptions) {
   // Lifecycle
   // ---------------------------------------------------------------------------
 
+  const updateOverflowAnchor = (el: HTMLElement) => {
+    const mode = options.overflowAnchor ?? "none"
+    if (mode === "none") {
+      el.style.overflowAnchor = "none"
+      return
+    }
+    if (mode === "auto") {
+      el.style.overflowAnchor = "auto"
+      return
+    }
+    el.style.overflowAnchor = store.userScrolled ? "auto" : "none"
+  }
+
+  const setContent = (el: HTMLElement | undefined) => {
+    watcher?.disconnect()
+    watcher = undefined
+
+    setStore("contentRef", el)
+
+    if (!el || typeof MutationObserver !== "function") return
+
+    watcher = new MutationObserver(onContentMutate)
+    watcher.observe(el, { childList: true, subtree: true, characterData: true })
+  }
+
   const setScroll = (el: HTMLElement | undefined) => {
     if (cleanup) {
       cleanup()
@@ -206,13 +238,14 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     if (!el) return
 
-    el.style.overflowAnchor = "auto"
+    updateOverflowAnchor(el)
     cleanup = userActivity.listen(el)
   }
 
   onCleanup(() => {
     if (settleTimer) clearTimeout(settleTimer)
-    if (stopTimer) clearTimeout(stopTimer)
+    watcher?.disconnect()
+    watcher = undefined
     if (cleanup) cleanup()
   })
 
@@ -222,7 +255,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   return {
     scrollRef: setScroll,
-    contentRef: (el: HTMLElement | undefined) => setStore("contentRef", el),
+    contentRef: setContent,
     handleScroll,
     pause,
     resume,

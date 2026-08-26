@@ -8,6 +8,8 @@ import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.LogConfigDto
+import ai.kilocode.rpc.dto.LogFileDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
@@ -16,7 +18,9 @@ import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
+import ai.kilocode.client.settings.KiloLogSettingsService
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +63,18 @@ class KiloAppService internal constructor(
     val version: String? get() = info?.version
 
     /**
+     * Whether the running Core is bundled in the plugin (true) or downloaded (false).
+     * Null until fetched. This is a static property of the plugin build, so it is
+     * fetched once via RPC independently of the download-progress state.
+     */
+    @Volatile
+    private var bundledFlag: Boolean? = null
+    private val bundledLock = Any()
+    private var bundledJob: Job? = null
+
+    val bundled: Boolean? get() = bundledFlag
+
+    /**
      * App-lifetime scope for fire-and-forget work that must outlive transient UIs such as the
      * settings dialog (whose own scope is cancelled the moment it closes on OK).
      */
@@ -95,7 +111,18 @@ class KiloAppService internal constructor(
         val platform = state.downloadPlatform
         if (version != null && platform != null) info = CoreInfo(version, platform)
         _state.value = state
-        if (state.status == KiloAppStatusDto.READY) refreshModelFavoritesAsync()
+        if (state.status == KiloAppStatusDto.READY) {
+            refreshModelFavoritesAsync()
+            service<KiloLogSettingsService>().apply(this)
+        }
+    }
+
+    /** Read the backend diagnostic log file for download in split mode. Null when absent or on failure. */
+    suspend fun backendLog(): LogFileDto? = try {
+        call { backendLogFile() }
+    } catch (e: Exception) {
+        LOG.warn("backend log fetch failed", e)
+        null
     }
 
     /** One-shot health check. Returns null on failure. */
@@ -152,6 +179,7 @@ class KiloAppService internal constructor(
             platform = call { cliPlatform() },
         )
         info = next
+        bundledFlag = call { cliBundled() }
         next
     } catch (e: Exception) {
         LOG.warn("core info failed", e)
@@ -198,6 +226,26 @@ class KiloAppService internal constructor(
     /** Fetch the pinned Core version and cache it. */
     fun fetchVersionAsync(done: (String?) -> Unit = {}) {
         fetchCoreInfoAsync { done(it?.version) }
+    }
+
+    /** Fetch whether the running Core is bundled and cache it. Deduped and fetched once. */
+    fun fetchBundledAsync() {
+        if (bundledFlag != null) return
+        synchronized(bundledLock) {
+            if (bundledFlag != null || bundledJob != null) return
+            bundledJob = cs.launch {
+                val value = try {
+                    call { cliBundled() }
+                } catch (e: Exception) {
+                    LOG.warn("core bundled check failed", e)
+                    null
+                }
+                synchronized(bundledLock) {
+                    if (value != null) bundledFlag = value
+                    bundledJob = null
+                }
+            }
+        }
     }
 
     fun refreshModelFavoritesAsync() {
@@ -287,6 +335,14 @@ class KiloAppService internal constructor(
     ): Job = cs.launch {
         val state = updateConfig(patch)
         done(state)
+    }
+
+    fun applyLogConfigAsync(config: LogConfigDto): Job = cs.launch {
+        try {
+            call { applyLogConfig(config) }
+        } catch (e: Exception) {
+            LOG.warn("log config apply failed", e)
+        }
     }
 
     private fun setModelState(state: ModelStateDto) {

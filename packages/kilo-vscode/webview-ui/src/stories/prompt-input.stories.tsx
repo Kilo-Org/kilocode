@@ -27,9 +27,7 @@ const agents = [
   { name: "architect", description: "Plan and design before implementation", mode: "primary" as const },
 ]
 
-const noop = () => {}
-
-const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boolean }> = (props) => {
+const PromptProviders: ParentComponent<{ variants?: boolean; training?: boolean }> = (props) => {
   const base = mockSessionValue({ status: "idle" })
   const session = {
     ...base,
@@ -37,12 +35,10 @@ const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boo
     selectedAgent: () => "code",
     variantList: () => (props.variants ? ["low", "medium", "high"] : []),
     currentVariant: () => (props.variants ? ("medium" as string | undefined) : undefined),
-    hasModelOverride: () => props.modelOverride ?? false,
-    clearModelOverride: noop,
   }
 
   return (
-    <StoryProviders noPadding>
+    <StoryProviders noPadding training={props.training}>
       {/* overflow:hidden prevents margin-collapse so top/bottom borders are captured in screenshots */}
       <div style={{ overflow: "hidden" }}>
         <SessionContext.Provider value={session as any}>{props.children}</SessionContext.Provider>
@@ -79,6 +75,28 @@ export const Default200: Story = {
   name: "Default — 200px",
   render: () => (
     <PromptProviders>
+      <PromptInput />
+    </PromptProviders>
+  ),
+}
+
+// ---------------------------------------------------------------------------
+// Stories — model whose prompts may be used for training
+// ---------------------------------------------------------------------------
+
+export const WithPromptTraining420: Story = {
+  name: "With prompt training indicator — 420px",
+  render: () => (
+    <PromptProviders training>
+      <PromptInput />
+    </PromptProviders>
+  ),
+}
+
+export const WithPromptTraining200: Story = {
+  name: "With prompt training indicator — 200px",
+  render: () => (
+    <PromptProviders training>
       <PromptInput />
     </PromptProviders>
   ),
@@ -141,28 +159,6 @@ export const WithThinking200: Story = {
   name: "With thinking selector — 200px",
   render: () => (
     <PromptProviders variants>
-      <PromptInput />
-    </PromptProviders>
-  ),
-}
-
-// ---------------------------------------------------------------------------
-// Stories — model override active (reset button visible)
-// ---------------------------------------------------------------------------
-
-export const WithModelOverride420: Story = {
-  name: "With model override — 420px",
-  render: () => (
-    <PromptProviders modelOverride>
-      <PromptInput />
-    </PromptProviders>
-  ),
-}
-
-export const WithModelOverride200: Story = {
-  name: "With model override — 200px",
-  render: () => (
-    <PromptProviders modelOverride>
       <PromptInput />
     </PromptProviders>
   ),

@@ -99,7 +99,7 @@ describe("model network boundaries", () => {
         run(
           profile("deny"),
           Network.tool(
-            Network.builtin({ id: "codebase_search" }),
+            Network.builtin({ id: "semantic_search" }),
             Effect.sync(() => {
               called = true
             }),

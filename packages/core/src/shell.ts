@@ -99,7 +99,8 @@ function resolve(file: string) {
 function win() {
   return Array.from(
     new Set(
-      [which("pwsh"), which("powershell"), gitbash(), process.env.COMSPEC || "cmd.exe"]
+      // kilocode_change - probe known PowerShell 7 install locations so legacy 5.1 is not picked when pwsh is off PATH
+      [PowerShell.pwsh(), which("powershell"), gitbash(), process.env.COMSPEC || "cmd.exe"] // kilocode_change
         .filter((item): item is string => Boolean(item))
         .map(full),
     ),

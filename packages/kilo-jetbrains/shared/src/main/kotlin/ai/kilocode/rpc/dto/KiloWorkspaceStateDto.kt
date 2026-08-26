@@ -7,6 +7,8 @@ enum class KiloWorkspaceStatusDto {
     PENDING,
     LOADING,
     READY,
+    UNSUPPORTED,
+    MISSING,
     ERROR,
 }
 

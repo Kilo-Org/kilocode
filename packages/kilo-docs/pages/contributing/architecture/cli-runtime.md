@@ -32,6 +32,10 @@ One `kilo serve` process can host several local runtime instances. Directory-key
 
 ## Command entry points
 
+{% callout type="warning" title="Kilo Console is deprecated" %}
+The `kilo console` command and the browser interface described on this page are deprecated and will be removed in an upcoming release.
+{% /callout %}
+
 | Entry point | Command or caller | Runtime model |
 |---|---|---|
 | Interactive TUI | `kilo` | Attaches to local daemon when available; otherwise starts Bun worker and sends SDK-shaped requests over RPC |
@@ -278,6 +282,8 @@ Runtime config loading is separate from editor-facing JSON Schema publication. C
 Both streams send initial `server.connected` event and heartbeat every 10 seconds. VS Code and JetBrains consume `/global/event` so one server connection can route events for multiple directories.
 
 ## Kilo Console
+
+**Deprecated.** The Kilo Console browser interface and its `kilo console` launcher will be removed in a future release.
 
 `kilo console` starts or reuses daemon, opens `/console`, and prints Console launch URL. Browser launch URL embeds daemon Basic credentials so initial request authenticates.
 

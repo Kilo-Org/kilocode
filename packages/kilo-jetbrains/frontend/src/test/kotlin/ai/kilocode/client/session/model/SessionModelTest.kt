@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.model
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -375,6 +376,7 @@ class SessionModelTest : BasePlatformTestCase() {
         )
 
         val p = model.message("m1")!!.parts["p1"] as Tool
+        assertEquals("m1", p.messageID)
         assertEquals("git log", p.input["command"])
         assertEquals("Show history", p.input["description"])
         assertEquals("state", p.metadata["source"])
@@ -1197,10 +1199,5 @@ class SessionModelTest : BasePlatformTestCase() {
         assertEquals(expected.trimIndent().trim(), model.toString().trim())
     }
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 }

@@ -1,3 +1,11 @@
+/**
+ * Legacy integrated terminal Run adapter.
+ *
+ * Kept while the Agent Manager terminal dropdown offers the "VS Code
+ * terminal" option so both execution paths can be compared. Remove this
+ * file together with that dropdown option and the integrated `pickRunStart`
+ * branch.
+ */
 import * as vscode from "vscode"
 import type { RunHandle } from "./manager"
 

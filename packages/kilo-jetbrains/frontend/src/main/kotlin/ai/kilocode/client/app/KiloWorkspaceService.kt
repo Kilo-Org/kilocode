@@ -4,6 +4,7 @@ package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -159,19 +160,38 @@ class KiloWorkspaceService internal constructor(
         }
     }
 
-    suspend fun openPath(directory: String, path: String, line: Int? = null, column: Int? = null): Boolean {
+    /**
+     * Committed branch changes vs the default-branch merge-base. Errors propagate so the diff editor
+     * can surface a retry (a swallowed failure is indistinguishable from "no changes"); pass
+     * [patches] = false on the badge path to fetch stats only and skip materializing patch text.
+     */
+    suspend fun branchDiff(directory: String, patches: Boolean = true): List<DiffFileDto> =
+        call { branchDiff(directory, patches) }
+
+    suspend fun branchName(directory: String): String? {
+        return try {
+            call { branchName(directory) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("branch name lookup failed for directory=$directory", e)
+            null
+        }
+    }
+
+    suspend fun openPath(directory: String, path: String, line: Int? = null, column: Int? = null, endLine: Int? = null): Boolean {
         val match = files(directory, path).firstOrNull() ?: return false
         return try {
-            call { openFile(match.path, line, column) }
+            call { openFile(match.path, line, column, endLine) }
         } catch (e: Exception) {
             LOG.warn("workspace file open failed for path=${match.path}", e)
             false
         }
     }
 
-    suspend fun openFile(path: String, line: Int? = null, column: Int? = null): Boolean {
+    suspend fun openFile(path: String, line: Int? = null, column: Int? = null, endLine: Int? = null): Boolean {
         return try {
-            call { openFile(path, line, column) }
+            call { openFile(path, line, column, endLine) }
         } catch (e: Exception) {
             LOG.warn("workspace file open failed for path=$path", e)
             false

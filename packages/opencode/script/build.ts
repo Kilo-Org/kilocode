@@ -24,6 +24,7 @@ import { stageBubblewrap } from "./kilocode/bubblewrap"
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
+import { KiloCliSmoke } from "./kilocode/cli-smoke"
 // kilocode_change end
 
 const singleFlag = process.argv.includes("--single")
@@ -51,9 +52,46 @@ async function copyTreeSitterWasms(outputDir: string) {
   console.log(`copied ${languageWasmFiles.length + 1} tree-sitter wasm files to ${targetDir}`)
 }
 
+// kilocode_change start
+async function isKiloConsoleUpToDate(app: string, out: string) {
+  const indexHtml = path.join(out, "index.html")
+  if (!fs.existsSync(indexHtml)) return false
+  const outStat = await fs.promises.stat(indexHtml)
+  const inputs = [
+    path.join(app, "src"),
+    path.join(app, "package.json"),
+    path.join(app, "vite.config.ts"),
+    path.join(app, "index.html"),
+    path.resolve(dir, "../kilo-web-ui/src"),
+    path.resolve(dir, "../kilo-indexing/src"),
+    path.resolve(dir, "../kilo-ui/src"),
+    path.resolve(dir, "../ui/src"),
+    path.resolve(dir, "../sdk/js/src"),
+    path.resolve(dir, "../../bun.lock"),
+  ]
+  for (const p of inputs) {
+    if (!fs.existsSync(p)) continue
+    const st = await fs.promises.stat(p)
+    if (st.isDirectory()) {
+      const glob = new Bun.Glob("**/*")
+      for await (const file of glob.scan({ cwd: p })) {
+        const fileStat = await fs.promises.stat(path.join(p, file))
+        if (fileStat.mtimeMs > outStat.mtimeMs) return false
+      }
+    } else if (st.mtimeMs > outStat.mtimeMs) {
+      return false
+    }
+  }
+  return true
+}
+
 async function buildKiloConsole() {
   const app = path.resolve(dir, "../kilo-console")
   const out = path.join(app, "dist")
+  if (await isKiloConsoleUpToDate(app, out)) {
+    console.log(`reusing existing Kilo Console build at ${out}`)
+    return out
+  }
   console.log("building Kilo Console")
   const proc = Bun.spawn([process.execPath, "run", "build"], {
     cwd: app,
@@ -66,6 +104,7 @@ async function buildKiloConsole() {
   if (code !== 0) throw new Error(`Kilo Console build failed with exit code ${code}`)
   return out
 }
+// kilocode_change end
 
 async function copyKiloConsole(input: string, outputDir: string) {
   const target = path.join(outputDir, "console")
@@ -132,6 +171,8 @@ async function smokeModels(binaryPath: string) {
 //   ].join("\n")
 // }
 // kilocode_change end
+
+const treeSitterWorker = await Bun.file(fileURLToPath(import.meta.resolve("@opentui/core/parser.worker"))).text()
 
 const allTargets: {
   os: string
@@ -217,11 +258,13 @@ const targets = singleFlag
     })
   : allTargets
 
-await $`rm -rf dist`
 // kilocode_change start
-const kiloConsoleDist = await buildKiloConsole()
-const kiloSandboxWorker = await KiloSandboxWorker.bundle()
-const kiloSandboxNetwork = await KiloSandboxNetwork.bundle()
+await $`rm -rf dist`
+const [kiloConsoleDist, kiloSandboxWorker, kiloSandboxNetwork] = await Promise.all([
+  buildKiloConsole(),
+  KiloSandboxWorker.bundle(),
+  KiloSandboxNetwork.bundle(),
+])
 // kilocode_change end
 
 const binaries: Record<string, string> = {}
@@ -251,18 +294,14 @@ for (const item of targets) {
       : undefined
   // kilocode_change end
 
-  const localPath = path.resolve(dir, "node_modules/@opentui/core/parser.worker.js")
-  const rootPath = path.resolve(dir, "../../node_modules/@opentui/core/parser.worker.js")
-  const parserWorker = fs.realpathSync(fs.existsSync(localPath) ? localPath : rootPath)
   const workerPath = "./src/cli/tui/worker.ts"
+  const treeSitterWorkerPath = "opentui-tree-sitter-worker.js"
   // kilocode_change start
   const sessionExportWorkerPath = "./src/kilocode/session-export/worker.ts"
   const indexingWorkerPath = "./src/kilocode/indexing-worker.ts"
   // kilocode_change end
 
-  // Use platform-specific bunfs root path based on target OS
   const bunfsRoot = item.os === "win32" ? "B:/~BUN/root/" : "/$bunfs/root/"
-  const workerRelativePath = path.relative(dir, parserWorker).replaceAll("\\", "/")
 
   await Bun.build({
     conditions: ["bun", "node"], // kilocode_change - port anomalyco/opencode#30873; current form from #31566
@@ -274,13 +313,7 @@ for (const item of targets) {
     // kilocode_change end
     format: "esm",
     minify: true,
-    // kilocode_change start - disable code-splitting to avoid a Bun 1.3.14 codegen bug.
-    // With splitting:true Bun emits cross-chunk re-exports like `import{vn as G9}` whose
-    // binding isn't top-level, so the compiled binary crashes at startup on the baseline
-    // target: "SyntaxError: Exported binding 'G9' needs to refer to a top-level declared
-    // variable." (Bun oven-sh/bun#25621, #5344, #7265; also opencode#23349). Fixed upstream
-    // in Bun#26089, post-1.3.14. Splitting only deduped shared code between the entrypoints;
-    // turning it off inlines per entrypoint and produces a valid binary.
+    // kilocode_change start - keep the compiled OpenTUI/Solid graph in one chunk to avoid blank startup frames.
     splitting: false,
     // kilocode_change end
     compile: {
@@ -296,14 +329,14 @@ for (const item of targets) {
       windows: {},
     },
     // kilocode_change start - packages/app was removed; no embedded web UI
-    files: {},
-    entrypoints: ["./src/index.ts", parserWorker, workerPath, sessionExportWorkerPath, indexingWorkerPath],
+    files: { [treeSitterWorkerPath]: treeSitterWorker },
+    entrypoints: ["./src/index.ts", workerPath, treeSitterWorkerPath, sessionExportWorkerPath, indexingWorkerPath],
     // kilocode_change end
     define: {
       FFF_LIBC: JSON.stringify(item.abi === "musl" ? "musl" : "gnu"),
       KILO_VERSION: `'${Script.version}'`,
       KILO_MODELS_DEV: generated.modelsData,
-      OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
+      OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + treeSitterWorkerPath,
       KILO_WORKER_PATH: workerPath,
       // kilocode_change start
       KILO_SESSION_EXPORT_WORKER_PATH: sessionExportWorkerPath,
@@ -363,6 +396,9 @@ for (const item of targets) {
       console.log("Models snapshot smoke test passed")
       await KiloSandboxWorker.smoke(binaryPath)
       console.log("Kilo sandbox mutation worker smoke test passed")
+      console.log(`Running smoke test: ${binaryPath} --pure __pty-smoke`)
+      await KiloCliSmoke.pty(binaryPath)
+      console.log("Packaged TUI smoke test passed")
       // kilocode_change end
       // kilocode_change start
     } catch (e) {

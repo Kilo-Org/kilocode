@@ -4,14 +4,16 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
 import ai.kilocode.client.session.views.tool.ToolView
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
@@ -34,9 +36,7 @@ class SearchToolViewTest : BasePlatformTestCase() {
         val view = SearchToolView(tool().also {
             it.input = mapOf("pattern" to "class SearchToolView", "include" to "*.{kt,kts}")
         })
-        val base: Any = view
 
-        assertTrue(base is SecondarySessionPartView)
         assertTrue(view.labelText().contains("Search"))
         assertEquals(listOf("pattern=class SearchToolView", "include=*.{kt,kts}"), view.targetTexts())
         assertTrue(view.targetVisible(0))
@@ -111,12 +111,15 @@ class SearchToolViewTest : BasePlatformTestCase() {
         assertEquals(style.regularFont, view.targetFont(1))
     }
 
-    fun `test search header title target gap uses standard medium gap`() {
+    fun `test search header uses standard layout gap between regions`() {
         val view = SearchToolView(tool().also {
             it.input = mapOf("pattern" to "TODO", "include" to "*.kt")
         })
 
-        assertEquals(UiStyle.Gap.md(), (view.centerComponent().layout as BorderLayout).hgap)
+        assertEquals(
+            JBUI.scale(SessionUiStyle.View.Layout.GAP),
+            (view.headerComponent().layout as BorderLayout).hgap,
+        )
     }
 
     fun `test completed search starts collapsed and expands output`() {
@@ -199,6 +202,41 @@ class SearchToolViewTest : BasePlatformTestCase() {
         assertTrue(ViewFactory.shouldReplace(SearchToolView(search), read))
         assertTrue(ViewFactory.shouldReplace(GlobToolView(glob, selection = null), search))
         assertFalse(ViewFactory.shouldReplace(SearchToolView(search), search))
+    }
+
+    fun `test search header popup previews results when collapsed`() {
+        val view = track(SearchToolView(tool().also {
+            it.input = mapOf("pattern" to "foo")
+            it.output = "a.kt:1: foo\nb.kt:2: foo"
+        }))
+        val body = view.headerPopup()!!.build()
+        try {
+            val editors = popupEditors(body.component)
+            editors.forEach { it.getEditor(true) }
+            assertEquals(listOf("a.kt:1: foo\nb.kt:2: foo"), editors.map { it.text })
+            assertTrue(body.component.preferredSize.height in 1..JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test search header popup is absent when expanded`() {
+        val view = track(SearchToolView(tool().also { it.output = "hit" }))
+        assertNotNull(view.headerPopup())
+        view.toggle()
+        assertNull(view.headerPopup())
+    }
+
+    fun `test search header popup leaks no editors after churn`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        val view = track(SearchToolView(tool().also { it.output = "hit" }))
+        repeat(20) {
+            val body = view.headerPopup()!!.build()
+            popupEditors(body.component).forEach { it.getEditor(true) }
+            Disposer.dispose(body.disposable)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
     }
 
     private fun layout(root: Container) {

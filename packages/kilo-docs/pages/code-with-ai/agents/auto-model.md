@@ -10,7 +10,6 @@ Auto Model is a smart routing system that selects an underlying model for each r
 | Tier | Best For | Pricing |
 |---|---|---|
 | `kilo-auto/frontier` | Maximum capability with the best available models | Paid |
-| `kilo-auto/balanced` | Strong performance at a lower cost | Paid |
 | `kilo-auto/efficient` | Lowest cost per task, with capability matched to difficulty | Paid |
 | `kilo-auto/free` | The best free models available | Free |
 
@@ -31,8 +30,7 @@ The underlying models behind each Auto Model tier are updated server-side as bet
 ## Tiers
 
 - **Frontier** — Routes to the latest and most capable paid models. Uses different models for reasoning-heavy tasks (planning, architecture, debugging) versus implementation tasks (coding, building, exploring), pairing the right capability to each type of work.
-- **Balanced** — Routes to a cost-effective model for all modes. The specific model is selected based on the API interface in use, but does not vary by mode. A good default for most developers who want strong AI assistance without paying frontier prices.
-- **Efficient** — Session-aware routing that classifies the difficulty of each request in real time and routes it to the cheapest model proven accurate enough for that task, based on Kilo's continuously-run benchmarks. Routine work stays lean while harder tasks get a more capable model. Because it watches your session in context, it keeps using a model across related turns and only switches when a cheaper option is clearly worth it. If a routing decision can't be made, it falls back to the Balanced tier, so quality never drops below Balanced.
+- **Efficient** — Session-aware routing that classifies the difficulty of each request in real time and routes it to the cheapest model proven accurate enough for that task, based on Kilo's continuously-run benchmarks. Routine work stays lean while harder tasks get a more capable model. Because it watches your session in context, it keeps using a model across related turns and only switches when a cheaper option is clearly worth it. If a routing decision can't be made, it falls back to a fixed, cost-effective baseline model, so quality never drops below that baseline. A good default for most developers who want strong AI assistance without paying frontier prices.
 - **Free** — Routes to the best available free models on OpenRouter, splitting traffic across them. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the models may change over time.
 
 ### How Auto Efficient routing works
@@ -42,6 +40,30 @@ The underlying models behind each Auto Model tier are updated server-side as bet
 3. It routes to the benchmark-proven best model for that task automatically
 
 You get lean costs on routine work and stronger models when the work demands it — with no manual switching.
+
+### Custom Efficient pools
+
+You can constrain `kilo-auto/efficient` to the exact models you trust by configuring an **Efficient model pool** on the **Auto routing** card:
+
+- **Personal** — your [profile page](https://app.kilo.ai/profile)
+- **Organization** — your organization's **Providers & Models** page. Owners and billing managers can edit; members see a read-only view.
+
+A pool holds 1–10 exact model and thinking-variant pairs. Variants stay distinct, so the same model with different thinking variants (for example `max` and `xhigh`) counts as separate entries. Leave the pool empty to inherit: an organization without a pool uses each member's personal pool, and a member without a personal pool uses the platform pool.
+
+New entries are benchmarked on demand before they can serve traffic. Each entry shows a status:
+
+| Status | Meaning |
+|---|---|
+| Benchmarking | The pair is being measured and is not used for routing yet |
+| Ready | Proven accurate enough and eligible for routing |
+| Failed | Benchmarking failed — retry the entry |
+| Unavailable | The model or variant is no longer in your catalog — remove the entry |
+
+Routing decides only among ready entries. If no pool entry can serve a request, the request falls back to a fixed, cost-effective baseline model, so quality never drops below that baseline.
+
+{% callout type="note" %}
+You can benchmark up to 10 new or retried pairs per owner per rolling 24 hours. Entries that are already ready or benchmarking don't count against this limit.
+{% /callout %}
 
 {% callout type="warning" title="Data handling for Auto Free" %}
 Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. Do not submit personal or confidential data when using Auto Free. In particular, it may route to NVIDIA's free endpoints.
@@ -61,7 +83,7 @@ No need to manually switch models when changing modes. Auto Model handles routin
 
 ### Flexible Cost Control
 
-Pick the tier that fits your budget. Frontier gives you the best models for demanding work; Balanced offers capable models at a fraction of the cost; Efficient minimizes cost per task by matching model capability to task difficulty; Free costs nothing.
+Pick the tier that fits your budget. Frontier gives you the best models for demanding work; Efficient minimizes cost per task by matching model capability to task difficulty, at a fraction of Frontier's cost; Free costs nothing.
 
 ## Requirements
 
@@ -77,7 +99,7 @@ Select an Auto Model tier from the model dropdown in the Kilo Code chat interfac
 
 1. Open Kilo Code in VS Code or JetBrains
 2. Click the model selector dropdown
-3. Choose an Auto Model such as `kilo-auto/frontier` or `kilo-auto/balanced`
+3. Choose an Auto Model such as `kilo-auto/frontier` or `kilo-auto/efficient`
 4. Start chatting - the right model is selected automatically based on your current mode
 
 ## When to Use Auto Model

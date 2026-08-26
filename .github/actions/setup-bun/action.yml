@@ -8,6 +8,13 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # node-gyp@latest (invoked via bunx for native install scripts) requires Node >=22;
+    # some runner images ship an older system Node on PATH
+    - name: Setup Node
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: "24"
+
     - name: Get baseline download URL
       id: bun-url
       shell: bash
@@ -33,8 +40,8 @@ runs:
       shell: bash
       run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
 
-    # Restoring and extracting the ~1 GB cache took 2m23s on Windows, while a # kilocode_change
-    # fresh install took 1m27s. Keep Windows off this cache until that reverses. # kilocode_change
+    # Restoring the ~1 GB cache buys nothing on Windows even with Defender exclusions # kilocode_change
+    # (measured 83-102s Setup Bun with cache vs ~86s fresh install); keep Windows off it. # kilocode_change
     - name: Restore Bun dependencies
       if: runner.os != 'Windows' # kilocode_change
       id: bun-cache
@@ -46,13 +53,6 @@ runs:
           ${{ runner.os }}-bun-
 
     # kilocode_change start
-    - name: Setup Node for native dependency builds
-      if: runner.os != 'Windows'
-      uses: actions/setup-node@v6
-      with:
-        node-version: "24"
-        package-manager-cache: false
-
     - name: Configure node-gyp Node headers
       if: runner.os != 'Windows'
       id: node-gyp

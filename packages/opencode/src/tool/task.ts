@@ -16,6 +16,7 @@ import { KiloTaskBackgroundProcess } from "../kilocode/tool/task-background-proc
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
 import { KiloSession } from "../kilocode/session" // kilocode_change
+import { resumeHint } from "../kilocode/task-resume" // kilocode_change
 import { errorMessage } from "@/util/error" // kilocode_change
 import { Effect, Exit, Schema, Scope } from "effect"
 import { EffectBridge } from "@/effect/bridge"
@@ -32,8 +33,7 @@ export interface TaskPromptOps {
 const id = "task"
 const BACKGROUND_DESCRIPTION = [
   "Background mode: background=true launches the subagent asynchronously and returns immediately.",
-  "Foreground is the default; use it when you need the result before continuing.",
-  "Use background only for independent work that can run while you continue elsewhere.",
+  "Use foreground when you need the result before proceeding; otherwise use background for non-overlapping work, but do not give the final answer until all required background results have arrived.", // kilocode_change
   "You will be notified automatically when it finishes.",
 ].join(" ")
 const BACKGROUND_STARTED = [
@@ -90,15 +90,6 @@ function renderOutput(input: {
   ].join("\n")
 }
 
-// kilocode_change start - tell the parent agent how to resume a stopped/failed subagent (#11620)
-function resumeHint(sessionID: SessionID) {
-  return [
-    `This subagent session can be resumed: call the task tool again with task_id="${sessionID}"`,
-    `and a prompt describing how to continue or recover. Its prior context is preserved.`,
-  ].join(" ")
-}
-// kilocode_change end
-
 export const TaskTool = Tool.define(
   id,
   Effect.gen(function* () {
@@ -121,6 +112,27 @@ export const TaskTool = Tool.define(
         return yield* Effect.fail(new Error("Background subagents require KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true"))
       }
 
+      const parent = yield* sessions.get(ctx.sessionID)
+      let current = parent
+      let depth = 0
+      while (current.parentID) {
+        // kilocode_change start - tolerate pruned or corrupt ancestor rows
+        const next = yield* sessions
+          .get(current.parentID)
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
+        if (!next) break
+        // kilocode_change end
+        depth++
+        current = next // kilocode_change
+      }
+      if (depth >= (cfg.subagent_depth ?? 1)) {
+        return yield* Effect.fail(
+          new Error(
+            `Subagent depth limit reached (${cfg.subagent_depth ?? 1}). Increase "subagent_depth" to allow nested subagents.`,
+          ),
+        )
+      }
+
       if (!ctx.extra?.bypassAgentCheck) {
         yield* ctx.ask({
           permission: id,
@@ -141,7 +153,7 @@ export const TaskTool = Tool.define(
       KiloTask.validate(next, params.subagent_type)
       // kilocode_change end
 
-      const canTask = KiloTask.nestedTask() // kilocode_change - Kilo disallows subagents spawning subagents
+      const canTask = depth + 1 < (cfg.subagent_depth ?? 1) // kilocode_change - honor upstream's opt-in depth limit
       const canTodo = next.permission.some((rule) => rule.permission === "todowrite")
 
       const session = params.task_id
@@ -152,7 +164,6 @@ export const TaskTool = Tool.define(
           new Error(`Cannot resume session ${params.task_id}: not a child of the current session`),
         ) // kilocode_change - prevent cross-session task resume
       }
-      const parent = yield* sessions.get(ctx.sessionID)
       // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
       const caller = yield* agent.get(ctx.agent)
       const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
@@ -166,7 +177,7 @@ export const TaskTool = Tool.define(
           pattern: "*",
           action: "deny" as const,
         })) ?? [],
-        KiloTask.permissions(rules),
+        KiloTask.permissions(rules, canTask),
       )
       // kilocode_change end
       // kilocode_change start - refresh current parent restrictions when resuming an existing task session
@@ -213,6 +224,7 @@ export const TaskTool = Tool.define(
           providerID: msg.info.providerID,
         },
         variant: msg.info.variant,
+        workflow: KiloTask.workflow(ctx.extra), // kilocode_change
         provider,
       })
       const model = selected.model

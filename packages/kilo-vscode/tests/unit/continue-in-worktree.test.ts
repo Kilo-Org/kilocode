@@ -96,31 +96,28 @@ describe("continue-in-worktree steps", () => {
       await abortSession(c, "session-1")
     })
 
-    it("does not throw when abort rejects", async () => {
+    it("logs backend failures without interrupting the transfer", async () => {
+      const log = mock(() => {})
       const c = ctx({
         getClient: () =>
           ({
             session: { abort: () => Promise.reject(new Error("fail")) },
           }) as never,
+        log,
       })
+
       await abortSession(c, "session-1")
+
+      expect(log).toHaveBeenCalledWith("Session abort failed (may already be idle):", "fail")
     })
 
-    it("calls abort on the client", async () => {
-      let called = false
-      const c = ctx({
-        getClient: () =>
-          ({
-            session: {
-              abort: () => {
-                called = true
-                return Promise.resolve()
-              },
-            },
-          }) as never,
-      })
+    it("requests thrown backend errors when aborting", async () => {
+      const abort = mock(async () => undefined)
+      const c = ctx({ getClient: () => ({ session: { abort } }) as never })
+
       await abortSession(c, "session-1")
-      expect(called).toBe(true)
+
+      expect(abort).toHaveBeenCalledWith({ sessionID: "session-1" }, { throwOnError: true })
     })
   })
 

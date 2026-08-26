@@ -47,16 +47,17 @@ function tokens(count: number): MessageV2.Assistant["tokens"] {
   return { input: count, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
 }
 
-describe("Kilo auto-compaction threshold", () => {
-  test("triggers at the configured context percentage", () => {
+describe("Kilo post-step compaction safety", () => {
+  test("ignores the configured threshold after a provider step", () => {
     const conf = cfg({ threshold_percent: 75 })
     const mdl = model({ context: 200_000, output: 32_000 })
 
     expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(149_999) })).toBe(false)
-    expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(150_000) })).toBe(true)
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(167_999) })).toBe(false)
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(168_000) })).toBe(true)
   })
 
-  test("keeps the reserved safety trigger when it is lower", () => {
+  test("uses the usable context limit when the threshold is high", () => {
     const conf = cfg({ threshold_percent: 95 })
     const mdl = model({ context: 200_000, output: 32_000 })
 
@@ -68,8 +69,8 @@ describe("Kilo auto-compaction threshold", () => {
     const conf = cfg({ threshold_percent: 75 })
     const mdl = model({ context: 400_000, input: 200_000, output: 32_000 })
 
-    expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(149_999) })).toBe(false)
-    expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(150_000) })).toBe(true)
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(179_999) })).toBe(false)
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: tokens(180_000) })).toBe(true)
   })
 
   test("ignores a cleared threshold", () => {
@@ -114,14 +115,14 @@ describe("Kilo auto-compaction threshold", () => {
     const conf = cfg({ threshold_percent: 75 })
     const mdl = model({ context: 200_000, output: 32_000 })
 
-    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(149_999), reasoning: 1 } })).toBe(true)
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(167_999), reasoning: 1 } })).toBe(true)
   })
 
   test("falls back to provider total when normalized usage is unavailable", () => {
     const conf = cfg({ threshold_percent: 75 })
     const mdl = model({ context: 200_000, output: 32_000 })
 
-    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(0), total: 150_000 } })).toBe(true)
+    expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(0), total: 168_000 } })).toBe(true)
   })
 
   test("uses the output cap as the reserve for single-window gateway models", () => {
@@ -160,6 +161,53 @@ describe("Kilo request estimation", () => {
 
     expect(usage.raw).toBeGreaterThan(usage.normalized)
     expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured: 32_000, usage })).toBe(32_000)
+  })
+
+  test.each(["providerMetadata", "providerOptions"] as const)(
+    "does not reduce output for encrypted reasoning in %s",
+    (field) => {
+      const mdl = model({ context: 1_050_000, output: 128_000 })
+      const reasoning = {
+        type: "reasoning" as const,
+        text: "Checked the previous tool results.",
+        [field]: {
+          openai: {
+            itemId: "rs_1",
+            reasoningEncryptedContent: "x".repeat(3_200_000),
+          },
+        },
+      }
+      const messages = [
+        { role: "assistant", content: [reasoning] },
+        { role: "user", content: "Continue." },
+      ] satisfies ModelMessage[]
+      const usage = KiloSessionOverflow.measure({ messages, tools: {} })
+
+      expect(usage.raw).toBeGreaterThan(1_000_000)
+      expect(usage.normalized).toBeLessThan(1_000)
+      expect(
+        KiloLLM.capOutputTokens({
+          model: mdl,
+          messages,
+          tools: {},
+          configured: 32_000,
+          usage,
+          reported: 624_205,
+        }),
+      ).toBe(32_000)
+    },
+  )
+
+  test("still counts visible reasoning text", () => {
+    const mdl = model({ context: 200_000, output: 32_000 })
+    const messages = [
+      {
+        role: "assistant",
+        content: [{ type: "reasoning", text: "x".repeat(600_000) }],
+      },
+    ] satisfies ModelMessage[]
+
+    expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured: 32_000 })).toBeLessThan(32_000)
   })
 
   test("still reduces output for oversized text", () => {

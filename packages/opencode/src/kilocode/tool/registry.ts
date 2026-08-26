@@ -1,14 +1,15 @@
-import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
 import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { ChartTool } from "./chart"
 import { GenerateImageTool } from "./generate-image"
 import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
 import { NotifyUserTool } from "./notify-user"
+import { SendFileTool } from "./send-file"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
@@ -66,13 +67,13 @@ export namespace KiloToolRegistry {
 
   export function infos(host?: AgentManager.Interface, notebook?: Notebook.Interface) {
     return Effect.gen(function* () {
-      const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
       const managerModels = yield* AgentManagerModelsTool
       const memory = yield* MemoryRecallTool
       const save = yield* MemorySaveTool
       const manager = yield* AgentManagerTool.pipe(Effect.provideService(AgentManager.Service, host ?? unavailable))
       const process = yield* BackgroundProcessTool
+      const chart = yield* ChartTool
       const image = yield* GenerateImageTool
       const terminal = yield* InteractiveTerminalTool
       // The notify_user tool depends on KiloSessions.Service, which the tool-registry layer provides
@@ -80,14 +81,15 @@ export namespace KiloToolRegistry {
       // context here and injects it into the tool's init Effect.
       const sessions = yield* KiloSessions.Service
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
+      const send = yield* SendFileTool
       if (!notebook)
-        return { codebase, recall, managerModels, memory, save, manager, process, image, terminal, notify }
+        return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, managerModels, memory, save, manager, process, image, terminal, notify, ...tools }
+      return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, ...tools }
     })
   }
 
@@ -95,16 +97,17 @@ export namespace KiloToolRegistry {
    * it has no Service deps beyond what Tool.init itself needs. */
   export function build(
     tools: {
-      codebase: Tool.Info
       recall: Tool.Info
       managerModels: Tool.Info
       memory: Tool.Info
       save: Tool.Info
       manager: Tool.Info
       process: Tool.Info
+      chart: Tool.Info
       image: Tool.Info
       terminal?: Tool.Info
       notify: Tool.Info
+      send: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
       notebookExecute?: Tool.Info
@@ -114,15 +117,16 @@ export namespace KiloToolRegistry {
   ) {
     return Effect.gen(function* () {
       const base = yield* Effect.all({
-        codebase: Tool.init(tools.codebase),
         recall: Tool.init(tools.recall),
         managerModels: Tool.init(tools.managerModels),
         memory: Tool.init(tools.memory),
         save: Tool.init(tools.save),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
+        chart: Tool.init(tools.chart),
         image: Tool.init(tools.image),
         notify: Tool.init(tools.notify),
+        send: Tool.init(tools.send),
       })
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
       const notebooks =
@@ -134,7 +138,7 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, terminal, ...notebooks, semantic, notify: base.notify }
+      return { ...base, terminal, ...notebooks, semantic, notify: base.notify, send: base.send }
     })
   }
 
@@ -178,6 +182,7 @@ export namespace KiloToolRegistry {
   /** Hide human-driven tools from agents that cannot interact with the user directly. */
   export function available(tool: Tool.Def, agent: Agent.Info) {
     if (tool.id === "notify_user") return KiloSessions.remoteStatus().enabled
+    if (tool.id === "send_file") return KiloSessions.remoteStatus().connected
     if (tool.id !== "interactive_terminal") return true
     return agent.mode === "primary"
   }
@@ -185,7 +190,6 @@ export namespace KiloToolRegistry {
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
     tools: {
-      codebase: Tool.Def
       semantic?: Tool.Def
       recall: Tool.Def
       managerModels: Tool.Def
@@ -193,25 +197,26 @@ export namespace KiloToolRegistry {
       save: Tool.Def
       manager: Tool.Def
       process: Tool.Def
+      chart: Tool.Def
       image: Tool.Def
       terminal?: Tool.Def
       notify: Tool.Def
+      send: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
     },
-    cfg: { experimental?: { codebase_search?: boolean; image_generation?: boolean; native_notebook_tools?: boolean } },
+    cfg: { experimental?: { image_generation?: boolean; native_notebook_tools?: boolean } },
   ): Tool.Def[] {
     return [
-      ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.memory,
       tools.save,
       tools.recall,
+      ...(Flag.KILO_CLIENT === "vscode" ? [tools.chart] : []),
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       ...(Flag.KILO_CLIENT === "cli" && tools.terminal ? [tools.terminal] : []),
-      // Agent Manager tools are useful only when the extension can create and display their sessions.
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.managerModels, tools.manager] : []),
       ...(Flag.KILO_CLIENT === "vscode" &&
       cfg.experimental?.native_notebook_tools === true &&
@@ -221,6 +226,7 @@ export namespace KiloToolRegistry {
         ? [tools.notebookRead, tools.notebookEdit, tools.notebookExecute]
         : []),
       tools.notify,
+      tools.send,
     ]
   }
 

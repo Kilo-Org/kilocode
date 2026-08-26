@@ -39,6 +39,11 @@ describe("formatKeybinding", () => {
     it("formats plain key", () => {
       expect(formatKeybinding("cmd+/", true)).toBe("⌘/")
     })
+
+    it("formats bracket keys", () => {
+      expect(formatKeybinding("cmd+shift+[", true)).toBe("⌘⇧[")
+      expect(formatKeybinding("cmd+shift+]", true)).toBe("⌘⇧]")
+    })
   })
 
   describe("windows/linux", () => {
@@ -76,5 +81,37 @@ describe("buildKeybindingMap", () => {
     const bindings = [{ command: "kilo-code.new.agentManager.search", key: "ctrl+f", mac: "cmd+f" }]
     expect(buildKeybindingMap(bindings, true).search).toBe("⌘F")
     expect(buildKeybindingMap(bindings, false).search).toBe("Ctrl+F")
+  })
+
+  it("provides terminal navigation fallbacks", () => {
+    expect(buildKeybindingMap([], true).previousTerminal).toBe("⌘⇧[")
+    expect(buildKeybindingMap([], true).nextTerminal).toBe("⌘⇧]")
+    expect(buildKeybindingMap([], false).previousTerminal).toBe("Ctrl+Shift+[")
+    expect(buildKeybindingMap([], false).nextTerminal).toBe("Ctrl+Shift+]")
+  })
+
+  it("keeps prompt and side-terminal shortcuts separate", () => {
+    const bindings = [
+      {
+        command: "kilo-code.new.agentManager.newTerminalTab",
+        key: "ctrl+shift+t",
+        mac: "cmd+shift+t",
+        when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && kilo-code.new.agentManagerPromptFocused",
+      },
+      {
+        command: "kilo-code.new.agentManager.newSideTerminal",
+        key: "ctrl+t",
+        mac: "cmd+t",
+        when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && kilo-code.new.agentManagerSideTerminalFocused",
+      },
+    ]
+    expect(buildKeybindingMap(bindings, true)).toMatchObject({
+      newTerminalCenter: "⌘⇧T",
+      newTerminalTerminal: "⌘T",
+    })
+    expect(buildKeybindingMap(bindings, false)).toMatchObject({
+      newTerminalCenter: "Ctrl+Shift+T",
+      newTerminalTerminal: "Ctrl+T",
+    })
   })
 })

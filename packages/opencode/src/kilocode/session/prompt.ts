@@ -1,7 +1,6 @@
 // kilocode_change - new file
 import path from "path"
 import fs from "fs/promises"
-import { StringDecoder } from "string_decoder"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
@@ -27,7 +26,8 @@ import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
-import CODE_SWITCH from "@/session/prompt/code-switch.txt"
+import ASK_CODE_SWITCH from "./ask-code-switch.txt"
+import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
 
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
@@ -71,6 +71,28 @@ export namespace KiloSessionPrompt {
 
   export function titleID(sessionID: SessionID) {
     return `title-${sessionID}`
+  }
+
+  /**
+   * Auto-title write gate for ensureTitle: re-check default title and mark
+   * before setTitle. Returns true when the caller should call setTitle (mark
+   * already recorded). On setTitle failure call `clearAutoTitleMark`.
+   * K1: mark BEFORE write; consume on fail.
+   */
+  export function prepareAutoTitle(input: {
+    sessionID: string
+    title: string
+    fresh: { title: string } | null | undefined
+    isDefaultTitle: (title: string) => boolean
+  }): boolean {
+    if (!input.fresh || !input.isDefaultTitle(input.fresh.title)) return false
+    markAutoTitle(input.sessionID, input.title)
+    return true
+  }
+
+  /** Clear auto-title mark after a failed setTitle (pair with prepareAutoTitle). */
+  export function clearAutoTitleMark(sessionID: string, title: string) {
+    consumeAutoTitle(sessionID, title)
   }
 
   function mode(name: string) {
@@ -248,7 +270,10 @@ export namespace KiloSessionPrompt {
     const taggedSession = PermissionProvenance.tagSession(session.permission ?? [])
     const ruleset = Permission.merge(
       taggedAgent,
-      guardPermissions({ agent: { name: agent.name, permission: taggedAgent }, session: { permission: taggedSession } }),
+      guardPermissions({
+        agent: { name: agent.name, permission: taggedAgent },
+        session: { permission: taggedSession },
+      }),
     )
     const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset: hardPermissions({ agent }) })
     if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
@@ -256,13 +281,9 @@ export namespace KiloSessionPrompt {
     // kilocode_change end
   })
 
-  /**
-   * Mutable cache for environment details, keyed by user message ID
-   * so it recomputes when a new user message arrives.
-   */
+  /** Mutable per-turn cache for deterministic environment detail blocks. */
   export interface EnvCache {
-    block?: string
-    user?: string
+    blocks?: Map<string, string>
   }
 
   export function memoryToolEnabled(input: { ctx: MemoryPaths.Ctx }) {
@@ -334,65 +355,54 @@ export namespace KiloSessionPrompt {
   }
 
   /**
-   * Ephemerally injects dynamic editor context (visible files, open tabs, etc.)
-   * into the last user message. Caches the result per user message ID so repeated
-   * loop iterations produce byte-identical messages (prompt caching).
+   * Reconstructs dynamic editor context on every user message without
+   * persisting synthetic prompt scaffolding. Using each message's creation
+   * time keeps historical blocks byte-identical, so later turns only append
+   * instead of moving the block and discarding the provider prompt cache.
    */
   export function injectEditorContext(input: {
     msgs: MessageV2.WithParts[]
-    lastUser: MessageV2.User
+    session: Pick<Session.Info, "directory" | "path">
     sessionID: SessionID
     cache: EnvCache
   }) {
-    if (input.cache.user !== input.lastUser.id) {
-      const ctx = (() => {
-        try {
-          return Instance.current
-        } catch {
-          return undefined
-        }
-      })()
-      input.cache.block = environmentDetails({
-        ...input.lastUser.editorContext,
-        ...(ctx ? { directory: ctx.directory, worktree: ctx.worktree } : {}),
-      })
-      input.cache.user = input.lastUser.id
+    const route = {
+      directory: input.session.directory,
+      worktree: path.resolve(
+        input.session.directory,
+        ...(input.session.path
+          ?.split("/")
+          .filter(Boolean)
+          .map(() => "..") ?? []),
+      ),
     }
-    if (!input.cache.block) return
-    const idx = input.msgs.findLastIndex((m) => m.info.role === "user")
-    if (idx === -1) return
-    input.msgs[idx] = {
-      ...input.msgs[idx],
-      parts: [
-        ...input.msgs[idx].parts,
-        {
-          id: PartID.make(Identifier.ascending("part")),
-          sessionID: input.sessionID,
-          messageID: input.msgs[idx].info.id,
-          type: "text",
-          text: input.cache.block,
-          synthetic: true,
-        } satisfies MessageV2.TextPart,
-      ],
-    }
-  }
-
-  /**
-   * Creates StringDecoder-based helpers for shell stdout/stderr that correctly
-   * handle multi-byte UTF-8 characters split across chunks.
-   */
-  export function createShellDecoders() {
-    const stdout = new StringDecoder("utf8")
-    const stderr = new StringDecoder("utf8")
-    return {
-      /** Decode a chunk from the given stream. */
-      write(stream: "stdout" | "stderr", chunk: Buffer) {
-        return stream === "stdout" ? stdout.write(chunk) : stderr.write(chunk)
-      },
-      /** Flush any trailing buffered bytes from both decoders. */
-      flush() {
-        return stdout.end() + stderr.end()
-      },
+    input.cache.blocks ??= new Map()
+    for (const msg of input.msgs) {
+      if (msg.info.role !== "user") continue
+      if (
+        msg.parts.some(
+          (part) => part.type === "text" && part.synthetic && part.text.startsWith("<environment_details>"),
+        )
+      )
+        continue
+      const block =
+        input.cache.blocks.get(msg.info.id) ??
+        environmentDetails(
+          {
+            ...route,
+            ...msg.info.editorContext,
+          },
+          new Date(msg.info.time.created),
+        )
+      input.cache.blocks.set(msg.info.id, block)
+      msg.parts.push({
+        id: PartID.make(Identifier.ascending("part")),
+        sessionID: input.sessionID,
+        messageID: msg.info.id,
+        type: "text",
+        text: block,
+        synthetic: true,
+      } satisfies MessageV2.TextPart)
     }
   }
 
@@ -448,6 +458,7 @@ export namespace KiloSessionPrompt {
       info,
       "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
       "Project/user instructions about plan location (for example plans/ or .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
+      "In the visible final response, cite the saved plan path as an inline code span so the client can open it as a document. Cite other user-facing files you create the same way instead of pasting the full file into chat.",
       supportsPlanFollowup()
         ? "When the plan is implementation-ready, write the main plan file and call plan_exit. Do not ask the user to choose between finalizing and refining in chat; the client follow-up after plan_exit asks whether to implement the saved plan or keep refining."
         : 'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
@@ -455,11 +466,24 @@ export namespace KiloSessionPrompt {
     add(`<system-reminder>\n${body}\n</system-reminder>`)
   }
 
-  /**
-   * Returns the CODE_SWITCH prompt text (plan-to-code transition).
-   * Used when switching from plan agent to code agent.
-   */
-  export const CODE_SWITCH_TEXT = CODE_SWITCH
+  export function insertAgentSwitchReminder(input: {
+    agent: { name: string }
+    userMessage: MessageV2.WithParts
+    messages: MessageV2.WithParts[]
+  }) {
+    if (mode(input.agent.name) !== "code") return
+    const prior = input.messages.findLast((msg) => msg.info.id !== input.userMessage.info.id)
+    if (!prior || mode(prior.info.agent) !== "ask") return
+    if (input.userMessage.parts.some((part) => part.type === "text" && part.text === ASK_CODE_SWITCH)) return
+    return {
+      id: PartID.ascending(),
+      messageID: input.userMessage.info.id,
+      sessionID: input.userMessage.info.sessionID,
+      type: "text" as const,
+      text: ASK_CODE_SWITCH,
+      synthetic: true,
+    }
+  }
 
   /**
    * Determines the close reason for a session turn.

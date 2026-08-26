@@ -30,6 +30,10 @@ const BIG = "x".repeat(200_000) // 200 KB — typical file content size
 const DIAG = [
   { range: { start: { line: 1, character: 0 }, end: { line: 1, character: 5 } }, message: "err", severity: 1 },
 ]
+// Regression for #13001: slimmers used to rebuild `metadata` from an explicit allowlist that
+// didn't include `approval`, silently dropping the auto-approval reason (and the
+// outside-workspace note) before it ever reached the webview.
+const APPROVAL = { source: "agent", agent: "code", outsideWorkspace: true, outsideWorkspacePath: "/tmp/a.ts" }
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -96,6 +100,7 @@ describe("slimPart", () => {
         diff: BIG,
         filediff: { file: "/a.ts", patch: PATCH, before: BIG, after: BIG, additions: 3, deletions: 1 },
         diagnostics: { "/a.ts": DIAG },
+        approval: APPROVAL,
       },
     })
 
@@ -103,7 +108,7 @@ describe("slimPart", () => {
       expect(bytes(slimPart(heavy))).toBeLessThan(MAX_SLIM_BYTES)
     })
 
-    it("keeps filediff counts and diagnostics", () => {
+    it("keeps filediff counts, diagnostics, and approval", () => {
       const slim = slimPart(heavy) as Record<string, any>
       const meta = slim.state.metadata
       expect(meta.filediff.file).toBe("/a.ts")
@@ -111,6 +116,7 @@ describe("slimPart", () => {
       expect(meta.filediff.additions).toBe(3)
       expect(meta.filediff.deletions).toBe(1)
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
+      expect(meta.approval).toEqual(APPROVAL)
     })
 
     it("keeps output and input intact", () => {
@@ -176,6 +182,7 @@ describe("slimPart", () => {
           },
         ],
         diagnostics: { "/a.ts": DIAG },
+        approval: APPROVAL,
       },
     })
 
@@ -183,7 +190,7 @@ describe("slimPart", () => {
       expect(bytes(slimPart(heavy))).toBeLessThan(MAX_SLIM_BYTES)
     })
 
-    it("keeps file summary fields and diagnostics", () => {
+    it("keeps file summary fields, diagnostics, and approval", () => {
       const slim = slimPart(heavy) as Record<string, any>
       const meta = slim.state.metadata
       expect(meta.files[0].filePath).toBe("/a.ts")
@@ -193,6 +200,7 @@ describe("slimPart", () => {
       expect(meta.files[0].additions).toBe(5)
       expect(meta.files[1].type).toBe("add")
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
+      expect(meta.approval).toEqual(APPROVAL)
     })
 
     it("drops unknown heavy metadata fields", () => {
@@ -266,6 +274,7 @@ describe("slimPart", () => {
           },
           { filediff: { file: "/b.ts", before: BIG, after: BIG, additions: 2, deletions: 0 }, diagnostics: {} },
         ],
+        approval: APPROVAL,
       },
     })
 
@@ -273,7 +282,7 @@ describe("slimPart", () => {
       expect(bytes(slimPart(heavy))).toBeLessThan(MAX_SLIM_BYTES)
     })
 
-    it("keeps filediff counts and per-result diagnostics", () => {
+    it("keeps filediff counts, per-result diagnostics, and approval", () => {
       const slim = slimPart(heavy) as Record<string, any>
       const meta = slim.state.metadata
       expect(meta.results[0].filediff.file).toBe("/a.ts")
@@ -282,6 +291,7 @@ describe("slimPart", () => {
       expect(meta.results[0].diagnostics).toEqual({ "/a.ts": DIAG })
       expect(meta.results[1].filediff.file).toBe("/b.ts")
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
+      expect(meta.approval).toEqual(APPROVAL)
     })
 
     it("drops unknown heavy metadata fields", () => {
@@ -318,6 +328,7 @@ describe("slimPart", () => {
         diff: BIG,
         filediff: { file: "/a.ts", patch: PATCH, before: BIG, after: BIG, additions: 100, deletions: 0 },
         diagnostics: { "/a.ts": DIAG },
+        approval: APPROVAL,
       },
     })
 
@@ -325,7 +336,7 @@ describe("slimPart", () => {
       expect(bytes(slimPart(heavy))).toBeLessThan(MAX_SLIM_BYTES)
     })
 
-    it("keeps filepath, exists, filediff counts, diagnostics", () => {
+    it("keeps filepath, exists, filediff counts, diagnostics, and approval", () => {
       const slim = slimPart(heavy) as Record<string, any>
       const meta = slim.state.metadata
       expect(meta.filepath).toBe("/a.ts")
@@ -335,6 +346,7 @@ describe("slimPart", () => {
       expect(meta.filediff.additions).toBe(100)
       expect(meta.filediff.deletions).toBe(0)
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
+      expect(meta.approval).toEqual(APPROVAL)
     })
 
     it("drops unknown heavy metadata fields", () => {

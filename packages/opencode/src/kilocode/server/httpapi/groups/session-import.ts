@@ -219,13 +219,6 @@ export const SessionImportPaths = {
   part: `${root}/part`,
 } as const
 
-export const SessionImportPayloads = {
-  Project: ProjectSchema,
-  Session: SessionSchema,
-  Message: MessageSchema,
-  Part: PartSchema,
-} as const
-
 export const SessionImportApi = HttpApi.make("session-import")
   .add(
     HttpApiGroup.make("session-import")

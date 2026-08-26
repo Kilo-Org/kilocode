@@ -3,6 +3,7 @@ import { HttpRouter } from "effect/unstable/http"
 import { parse } from "./assertions"
 import { runtime, type Runtime } from "./runtime"
 import type { ActiveScenario, BackendApp, CallResult, CaptureMode, SeededContext } from "./types"
+import type { Method, RequestSpec } from "./types" // kilocode_change
 
 type CallOptions = {
   auth?: {
@@ -16,6 +17,23 @@ export function call(scenario: ActiveScenario, ctx: SeededContext<unknown>, opti
     capture(await app(await runtime(), options).request(toRequest(scenario, ctx)), scenario.capture),
   )
 }
+
+// kilocode_change start
+export function request(method: Method, spec: RequestSpec) {
+  return Effect.promise(async () =>
+    capture(
+      await app(await runtime(), {}).request(
+        new Request(new URL(spec.path, "http://localhost"), {
+          method,
+          headers: spec.body === undefined ? spec.headers : { "content-type": "application/json", ...spec.headers },
+          body: spec.body === undefined ? undefined : JSON.stringify(spec.body),
+        }),
+      ),
+      "full",
+    ),
+  )
+}
+// kilocode_change end
 
 export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" | "valid" = "missing") {
   return Effect.promise(async () => {
@@ -45,9 +63,25 @@ type CachedApp = BackendApp & { readonly dispose: () => Promise<void> }
 const appCache: Partial<Record<string, CachedApp>> = {}
 
 export async function disposeApps() {
-  const apps = Object.values(appCache)
+  // kilocode_change start - an in-flight SSE fiber can leave the in-process router scope unable
+  // to close; bound disposal so a completed scenario run cannot wedge the exerciser or CI
+  const apps = Object.entries(appCache)
   for (const key of Object.keys(appCache)) delete appCache[key]
-  await Promise.all(apps.flatMap((app) => (app === undefined ? [] : [app.dispose()])))
+  await Promise.all(
+    apps.flatMap(([key, app]) =>
+      app === undefined
+        ? []
+        : [
+            Promise.race([
+              app.dispose(),
+              Bun.sleep(3_000).then(() => {
+                console.error(`httpapi-exercise: router dispose did not settle for ${JSON.stringify(key)} after 3s`)
+              }),
+            ]),
+          ],
+    ),
+  )
+  // kilocode_change end
 }
 
 function app(modules: Runtime, options: CallOptions) {
@@ -59,9 +93,15 @@ function app(modules: Runtime, options: CallOptions) {
   const web = HttpRouter.toWebHandler(
     modules.HttpApiApp.routes.pipe(
       Layer.provide(
+        // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
-          ConfigProvider.fromUnknown({ KILO_SERVER_PASSWORD: password, KILO_SERVER_USERNAME: username }),
+          ConfigProvider.fromUnknown({
+            KILO_SERVER_PASSWORD: password,
+            KILO_SERVER_USERNAME: username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
+          }),
         ),
+        // kilocode_change end
       ),
     ),
     { disableLogger: true, memoMap: modules.memoMap },

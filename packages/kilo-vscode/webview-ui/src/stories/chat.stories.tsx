@@ -9,6 +9,7 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
+import { batch, createSignal } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
@@ -18,17 +19,18 @@ import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
 import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
+import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import type {
-  AgentRequirementResult,
   Message,
   Part,
   QuestionRequest,
   ReviewComment,
+  ReviewCommentEntry,
   SessionModelUsage,
   SuggestionRequest,
   TodoItem,
@@ -37,68 +39,6 @@ import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
-
-const missingToolsRequirements: AgentRequirementResult = {
-  agent: "code-review",
-  directory: "/project",
-  enabled: true,
-  state: "blocked",
-  skills: [
-    { name: "review-checklist", status: "ready" },
-    { name: "security-audit", status: "missing" },
-  ],
-  mcps: [
-    { name: "github", status: "missing" },
-    { name: "filesystem", status: "ready" },
-  ],
-  vscode_extensions: [],
-}
-
-const missingExtensionRequirements: AgentRequirementResult = {
-  agent: "release-review",
-  directory: "/project",
-  enabled: true,
-  state: "blocked",
-  skills: [],
-  mcps: [],
-  vscode_extensions: [
-    {
-      name: "GitHub Pull Requests",
-      id: "github.vscode-pull-request-github",
-      status: "missing",
-    },
-  ],
-}
-
-const malformedRequirements: AgentRequirementResult = {
-  agent: "malformed-agent",
-  directory: "/project",
-  enabled: true,
-  state: "error",
-  skills: [],
-  mcps: [],
-  vscode_extensions: [],
-  error: {
-    code: "malformed_declaration",
-    message: "Invalid requirements declaration.",
-  },
-}
-
-const readyRequirements: AgentRequirementResult = {
-  agent: "ready-agent",
-  directory: "/project",
-  enabled: true,
-  state: "ready",
-  skills: [{ name: "review-checklist", status: "ready" }],
-  mcps: [{ name: "filesystem", status: "ready" }],
-  vscode_extensions: [
-    {
-      name: "GitHub Pull Requests",
-      id: "github.vscode-pull-request-github",
-      status: "ready",
-    },
-  ],
-}
 
 // ---------------------------------------------------------------------------
 // Question fixtures
@@ -226,71 +166,6 @@ export const ChatViewWithMessages: Story = {
   },
 }
 
-export const ChatViewRequirementsChecking: Story = {
-  name: "ChatView — agent requirements checking",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirementsChecking agentRequirementsBlocked>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
-export const ChatViewRequirementsMissingTools: Story = {
-  name: "ChatView — missing skills and MCPs",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={missingToolsRequirements}>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
-export const ChatViewRequirementsMissingExtension: Story = {
-  name: "ChatView — missing VS Code extension",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={missingExtensionRequirements}>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
-export const ChatViewRequirementsMalformed: Story = {
-  name: "ChatView — malformed agent requirements",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={malformedRequirements}>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
-export const ChatViewRequirementsReady: Story = {
-  name: "ChatView — requirements ready (no card)",
-  render: () => (
-    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={readyRequirements}>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
-          <ChatView />
-        </div>
-      </ServerContext.Provider>
-    </StoryProviders>
-  ),
-}
-
 export const ChatViewAgentManagerCompleted: Story = {
   name: "ChatView — completed Agent Manager session actions",
   render: () => {
@@ -315,6 +190,76 @@ export const ChatViewAgentManagerCompleted: Story = {
   },
 }
 
+/**
+ * The session dock swaps the working indicator for the session actions when a
+ * turn finishes. Toggling `busy` here drives that swap inside one mounted view
+ * so a test can assert the transcript viewport keeps its exact height.
+ */
+export const ChatViewSessionDockStability: Story = {
+  name: "ChatView — session dock keeps its height",
+  render: () => {
+    const [busy, setBusy] = createSignal(false)
+    // Statuses of deliberately different widths: the label swap is what used to
+    // shove the centered spinner sideways.
+    const labels = ["Thinking…", "Searching the codebase", "Making edits"]
+    const [step, setStep] = createSignal(0)
+    const status = () => (busy() ? "busy" : "idle")
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
+      status,
+      statusInfo: () => ({ type: status() }),
+      statusText: () => (busy() ? labels[step() % labels.length] : undefined),
+      busySince: () => (busy() ? Date.now() - 2000 : undefined),
+      submitting: () => busy(),
+      isSubmitting: () => busy(),
+      messages: () => [{ id: "msg-001" }] as any[],
+      worktreeStats: () => ({ files: 2, additions: 164, deletions: 111 }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <ServerContext.Provider value={mockServer as any}>
+          <SessionContext.Provider value={session as any}>
+            <WorktreeModeProvider>
+              <div style={{ height: "320px", display: "flex", "flex-direction": "column" }}>
+                <button data-testid="toggle-busy" onClick={() => setBusy(!busy())}>
+                  toggle busy
+                </button>
+                <button data-testid="next-status" onClick={() => setStep(step() + 1)}>
+                  next status
+                </button>
+                <ChatView onForkSession={() => undefined} continueInWorktree />
+              </div>
+            </WorktreeModeProvider>
+          </SessionContext.Provider>
+        </ServerContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+/** Builds the user message a review-comment send produces: markdown prefix + review metadata. */
+function reviewMessage(comments: ReviewCommentEntry[]) {
+  const prefix = formatReviewCommentsMarkdown(comments)
+  const message: Message = {
+    id: "review-user-message",
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: "review-user-part",
+      sessionID: SESSION_ID,
+      messageID: message.id,
+      type: "text",
+      text: `${prefix}\n\nPlease address these review comments.`,
+      metadata: reviewMetadata({ version: 1, comments }),
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
 export const UserMessageReviewComments: Story = {
   name: "User message — interactive review comments",
   render: () => {
@@ -332,36 +277,38 @@ export const UserMessageReviewComments: Story = {
         file: "resources/messages/KiloBundle_bs.properties",
         side: "deletions",
         line: 235,
-        comment: "Translate the modified setting description.",
+        comment:
+          "Translate the modified setting description. The Bosnian bundle still ships the English sentence, so the settings panel shows mixed languages for anyone running a localized IDE.",
         selectedText: "settings.models.smallModel.description=The lightweight model used for quick tasks.",
-      },
-    ]
-    const prefix = formatReviewCommentsMarkdown(comments)
-    const text = `${prefix}\n\nPlease address these review comments.`
-    const review = { version: 1 as const, comments }
-    const message: Message = {
-      id: "review-user-message",
-      sessionID: SESSION_ID,
-      role: "user",
-      createdAt: new Date(0).toISOString(),
-      time: { created: 0 },
-    }
-    const parts: Part[] = [
-      {
-        id: "review-user-part",
-        sessionID: SESSION_ID,
-        messageID: message.id,
-        type: "text",
-        text,
-        metadata: reviewMetadata(review),
       },
     ]
 
     return (
       <StoryProviders sessionID={SESSION_ID} status="idle">
-        <div style={{ "max-height": "400px", padding: "12px" }}>
-          <VscodeUserMessage message={message} parts={parts} />
-        </div>
+        <div style={{ "max-height": "400px", padding: "12px" }}>{reviewMessage(comments)}</div>
+      </StoryProviders>
+    )
+  },
+}
+
+/**
+ * Many local review comments at once. Locks in the collapsed preview + "show
+ * more" behavior so a large paste cannot take over the transcript.
+ */
+export const UserMessageManyReviewComments: Story = {
+  name: "User message — many review comments",
+  render: () => {
+    const local: ReviewCommentEntry[] = Array.from({ length: 8 }, (_, index) => ({
+      id: `local-${index}`,
+      file: `src/agent-manager/handlers/worktree-${index}.ts`,
+      side: index % 2 === 0 ? "additions" : "deletions",
+      line: 40 + index * 17,
+      comment: `Guard the ${index % 2 === 0 ? "apply" : "discard"} path against a missing worktree before touching git.`,
+      selectedText: `const worktree = state.worktrees[${index}]`,
+    }))
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle">
+        <div style={{ "max-height": "620px", padding: "12px" }}>{reviewMessage(local)}</div>
       </StoryProviders>
     )
   },
@@ -615,6 +562,230 @@ export const ChatViewReadable1280: Story = {
 export const ChatViewReadable420: Story = {
   name: "ChatView - readable busy sidebar",
   render: () => renderReadableChat("busy"),
+}
+
+// ---------------------------------------------------------------------------
+// PromptRail — the left-edge tick rail and its hover card
+// Several turns so the rail and card are populated: a long prompt, a short
+// low-signal follow-up, a tool-only answer (empty preview), and a queued one.
+// ---------------------------------------------------------------------------
+
+const railNow = 1_700_000_200_000
+const railTurn = (i: number, prompt: string, answer: string | undefined, queued = false) => {
+  const userID = `rail-user-${i}`
+  const assistantID = `rail-asst-${i}`
+  const messages: any[] = [{ id: userID, sessionID: SESSION_ID, role: "user", time: { created: railNow + i * 100 } }]
+  if (!queued) {
+    messages.push({
+      id: assistantID,
+      sessionID: SESSION_ID,
+      role: "assistant",
+      parentID: userID,
+      time: { created: railNow + i * 100 + 50 },
+      modelID: "claude-sonnet-4-20250514",
+      providerID: "anthropic",
+      mode: "default",
+      agent: "default",
+      path: { cwd: "/project", root: "/project" },
+    })
+  }
+  const parts: Record<string, any[]> = {
+    [userID]: [{ id: `rail-part-user-${i}`, sessionID: SESSION_ID, messageID: userID, type: "text", text: prompt }],
+  }
+  if (!queued) {
+    parts[assistantID] = answer
+      ? [{ id: `rail-part-asst-${i}`, sessionID: SESSION_ID, messageID: assistantID, type: "text", text: answer }]
+      : [
+          {
+            id: `rail-part-asst-${i}`,
+            sessionID: SESSION_ID,
+            messageID: assistantID,
+            type: "tool",
+            callID: `rail-call-${i}`,
+            tool: "bash",
+            state: {
+              status: "completed",
+              input: { command: "ls", description: "List files" },
+              output: "a.ts b.ts",
+              title: "ls",
+              metadata: {},
+              time: { start: railNow + i * 100 + 50, end: railNow + i * 100 + 80 },
+            },
+          },
+        ]
+  }
+  return { messages, parts }
+}
+
+const railTurns = [
+  railTurn(
+    1,
+    "Add a prompt navigator rail to the left edge of the chat that expands into a card of prompt and answer previews when I hover it, without shrinking the readable lane",
+    "Added PromptRail with a tick per prompt and a hover card; the lane width is untouched.",
+  ),
+  railTurn(2, "yes", "Confirmed — wiring it into MessageList next."),
+  railTurn(3, "run the tests", undefined),
+  railTurn(
+    4,
+    "now do the same in the Agent Manager chat",
+    "ChatView → MessageList is shared, so the rail appears there automatically; no Agent Manager specific code needed.",
+  ),
+  railTurn(5, "looks good, ship it", "", true),
+]
+const railMessages = railTurns.flatMap((turn) => turn.messages)
+const railParts = Object.assign({}, ...railTurns.map((turn) => turn.parts))
+const railData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: railMessages },
+  part: railParts,
+}
+
+const renderRailChat = (status: "idle" | "busy" = "idle") => {
+  const session = {
+    ...mockSessionValue({ id: SESSION_ID, status }),
+    messages: () => railMessages,
+    userMessages: () => railMessages.filter((msg) => msg.role === "user"),
+    getParts: (id: string) => railParts[id] ?? [],
+  }
+  return (
+    <StoryProviders data={railData} sessionID={SESSION_ID} status={status} noPadding>
+      <SessionContext.Provider value={session as any}>
+        <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </SessionContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const PromptRailWide: Story = {
+  name: "PromptRail - wide editor tab",
+  render: () => renderRailChat(),
+}
+
+export const PromptRailSidebar: Story = {
+  name: "PromptRail - narrow sidebar",
+  render: () => renderRailChat("busy"),
+}
+
+// Long session: more prompts than fit the transcript height, so the rail and
+// the card both cap to the newest ones that fit.
+const manyTurns = Array.from({ length: 80 }, (_, i) =>
+  railTurn(100 + i, `Prompt number ${i + 1} in a long running session`, `Answer number ${i + 1}.`),
+)
+const manyMessages = manyTurns.flatMap((turn) => turn.messages)
+const recentMessages = manyTurns.slice(-40).flatMap((turn) => turn.messages)
+const manyData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: manyMessages },
+  part: Object.assign({}, ...manyTurns.map((turn) => turn.parts)),
+}
+
+export const PromptRailManyPrompts: Story = {
+  name: "PromptRail - long session caps to what fits",
+  render: () => {
+    const [messages, setMessages] = createSignal(recentMessages)
+    const [older, setOlder] = createSignal(true)
+    const [loading, setLoading] = createSignal(false)
+    const [mutation, setMutation] = createSignal<"prepend">()
+    const load = () => {
+      if (!older() || loading()) return false
+      setLoading(true)
+      // Paging is a backend round trip, so the story keeps a short delay: the
+      // navigator's loading row is part of the behavior being shown.
+      setTimeout(() => {
+        batch(() => {
+          setMessages(manyMessages)
+          setOlder(false)
+          setMutation("prepend")
+          setLoading(false)
+        })
+      }, 300)
+      return true
+    }
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      messages,
+      userMessages: () => messages().filter((msg) => msg.role === "user"),
+      getParts: (id: string) => manyData.part[id] ?? [],
+      hasOlderMessages: older,
+      loadingOlderMessages: loading,
+      messageMutation: mutation,
+      loadOlderMessages: load,
+    }
+    return (
+      <StoryProviders data={manyData} sessionID={SESSION_ID} status="idle" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+const correctionTurns = Array.from({ length: 30 }, (_, i) =>
+  railTurn(300 + i, `Virtualized prompt ${i + 1}`, `Virtualized answer ${i + 1}.`),
+)
+const correctionActive = railTurn(400, "Continue streaming", "Initial streamed response.")
+const correctionMessages = [...correctionTurns.flatMap((turn) => turn.messages), ...correctionActive.messages]
+const correctionAssistant = correctionActive.messages[1]!
+correctionAssistant.finish = "tool-calls"
+const correctionParts = Object.assign(
+  {},
+  ...correctionTurns.map((turn) => turn.parts),
+  correctionActive.parts,
+) as Record<string, any[]>
+const correctionData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: correctionMessages },
+  part: correctionParts,
+}
+
+export const MessageListLayoutCorrection: Story = {
+  name: "MessageList - follow after layout correction",
+  render: () => {
+    const [output, setOutput] = createSignal("Initial streamed response.")
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      messages: () => correctionMessages,
+      userMessages: () => correctionMessages.filter((msg) => msg.role === "user"),
+      getParts: (id: string) => {
+        if (id !== correctionAssistant.id) return correctionParts[id] ?? []
+        const part = correctionParts[id]![0]!
+        return [{ ...part, text: output() }]
+      },
+    }
+    return (
+      <StoryProviders data={correctionData} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div
+            class="auto-scroll-correction-fixture"
+            style={{ height: "100vh", display: "flex", "flex-direction": "column" }}
+          >
+            <style>{`
+              .auto-scroll-correction-controls {
+                position: fixed;
+                inset: 8px 8px auto auto;
+                z-index: 10;
+              }
+            `}</style>
+            <div class="auto-scroll-correction-controls">
+              <button
+                type="button"
+                data-testid="append-stream"
+                onClick={() => setOutput((value) => `${value}\n\n${"More streamed output. ".repeat(30)}`)}
+              >
+                Append stream
+              </button>
+            </div>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
 }
 
 export const MessageListToolToQueuedUserSpacing: Story = {
@@ -1101,6 +1272,21 @@ const mockServer = {
   languageOverride: () => undefined,
   workspaceDirectory: () => "/project",
   gitInstalled: () => true,
+}
+
+// ---------------------------------------------------------------------------
+// SidebarTopBar — in-webview replacement for the native view/title toolbar
+// ---------------------------------------------------------------------------
+
+export const SidebarTopBarDefault: Story = {
+  name: "SidebarTopBar — default actions",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+      <div style={{ width: "340px" }}>
+        <SidebarTopBar onNewTask={() => undefined} onHistory={() => undefined} surface="sidebar_title" />
+      </div>
+    </StoryProviders>
+  ),
 }
 
 export const WelcomeWithSwitcherAndNotification: Story = {

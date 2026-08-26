@@ -8,8 +8,6 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useImageModels } from "../../context/image-models"
 import type { ExtensionMessage } from "../../types/messages"
-import { parseModelString } from "../../../../src/shared/provider-model"
-import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
 
 interface ShareOption {
@@ -24,7 +22,7 @@ const SHARE_OPTIONS: ShareOption[] = [
 ]
 
 const ExperimentalTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, settings, updateConfig, applySetting } = useConfig()
   const language = useLanguage()
   const imageModels = useImageModels()
   const vscode = useVSCode()
@@ -146,19 +144,6 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.codebaseSearch.title")}
-          description={language.t("settings.experimental.codebaseSearch.description")}
-        >
-          <Switch
-            checked={experimental().codebase_search ?? false}
-            onChange={(checked) => updateExperimental("codebase_search", checked)}
-            hideLabel
-          >
-            {language.t("settings.experimental.codebaseSearch.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.experimental.imageGeneration.title")}
           description={language.t("settings.experimental.imageGeneration.description")}
         >
@@ -220,36 +205,17 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.swePruner.title")}
-          description={language.t("settings.experimental.swePruner.description")}
+          title={language.t("settings.experimental.multiProject.title")}
+          description={language.t("settings.experimental.multiProject.description")}
         >
           <Switch
-            checked={experimental().swe_pruner ?? false}
-            onChange={(checked) => updateExperimental("swe_pruner", checked)}
+            checked={settings().multiProject === true}
+            onChange={(checked) => applySetting("multiProject", checked, "experimental.multiProject")}
             hideLabel
           >
-            {language.t("settings.experimental.swePruner.title")}
+            {language.t("settings.experimental.multiProject.title")}
           </Switch>
         </SettingsRow>
-
-        <Show when={experimental().swe_pruner}>
-          <SettingsRow
-            title={language.t("settings.experimental.swePrunerModel.title")}
-            description={language.t("settings.experimental.swePrunerModel.description")}
-          >
-            <ModelSelectorBase
-              value={parseModelString(experimental().swe_pruner_model ?? undefined)}
-              onSelect={(providerID, modelID) =>
-                updateExperimental("swe_pruner_model", providerID && modelID ? `${providerID}/${modelID}` : null)
-              }
-              placement="bottom-start"
-              allowClear
-              clearLabel={language.t("settings.providers.notSet")}
-              label={language.t("settings.experimental.swePrunerModel.title")}
-              description={language.t("settings.experimental.swePrunerModel.description")}
-            />
-          </SettingsRow>
-        </Show>
 
         {/* MCP timeout */}
         <SettingsRow

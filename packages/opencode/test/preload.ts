@@ -96,3 +96,22 @@ const { installMemoryRuntime } = await import("../src/kilocode/memory/runtime") 
 
 initProjectors()
 installMemoryRuntime() // kilocode_change
+
+// kilocode_change start - fail closed: unit tests must never open a disk database. Both DB
+// path resolvers (core Database.path and the v1 client in src/storage/db.ts) honor KILO_DB
+// verbatim when it is ":memory:", so asserting the resolved core path after all preload
+// imports catches env mutations, import-order regressions, and channel/absolute fallbacks
+// that would silently point tests at the real database under ~/.local/share/kilo.
+// (Do not name the database file here: database-reset-safety.test.ts scans test sources
+// for the file name next to removal calls, and this file legitimately contains fs.rm.)
+if (process.env["KILO_DB"] !== ":memory:") {
+  throw new Error(`unit test preload: KILO_DB must be ":memory:", got "${process.env["KILO_DB"]}"`)
+}
+{
+  const { Database } = await import("@opencode-ai/core/database/database")
+  const resolved = Database.path()
+  if (resolved !== ":memory:") {
+    throw new Error(`unit test preload: database path must resolve to ":memory:", got "${resolved}"`)
+  }
+}
+// kilocode_change end

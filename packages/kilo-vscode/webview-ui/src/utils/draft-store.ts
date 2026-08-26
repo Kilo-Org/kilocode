@@ -1,9 +1,9 @@
-import type { ReviewComment } from "../types/messages"
+import type { ReviewCommentEntry } from "../types/messages"
 import type { ImageAttachment } from "../hooks/useImageAttachments"
 import { pendingDraftKey, sessionDraftKey } from "./prompt-drafts"
 
 export const drafts = new Map<string, string>()
-export const reviewDrafts = new Map<string, ReviewComment[]>()
+export const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
 export const imageDrafts = new Map<string, ImageAttachment[]>()
 export const scrollDrafts = new Map<string, number>()
 const discarded = new Set<string>()
@@ -13,7 +13,7 @@ const sending = new Set<string>()
 export function savePromptDraft(
   key: string,
   text: string,
-  comments: ReviewComment[],
+  comments: ReviewCommentEntry[],
   images: ImageAttachment[],
   scroll = 0,
 ) {

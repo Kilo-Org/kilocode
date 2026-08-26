@@ -25,7 +25,7 @@ export async function load(
   warnings?: Warning[],
   trusted = false,
   fileScope?: ConfigVariable.FileScope,
-  sourceScope?: ConfigVariable.FileScope,
+  sourceScope?: ConfigVariable.FileScope | readonly ConfigVariable.FileScope[],
 ) {
   // kilocode_change end
   const result: Record<string, ConfigCommandV1.Info> = {}

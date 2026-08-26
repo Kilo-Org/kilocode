@@ -1,21 +1,27 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.diff.DiffLineNumbers
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
-import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.PartHeader
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
+import ai.kilocode.client.session.views.base.HeaderOpenAction
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
+import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.util.Disposer
@@ -23,8 +29,8 @@ import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBFont
-import com.intellij.util.ui.JBUI
 import java.awt.Dimension
+import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
 
 /**
@@ -38,33 +44,70 @@ class EditToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, openFile),
     private var body: EditBody = editBody(tool, selection, openFile),
-) : SecondarySessionPartView(parts.header, { body.mount(tool) }), UiDataProvider {
+    private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, SessionCopyTarget, ApprovalReasonTarget {
 
     override val contentId: String = tool.id
 
     private var item = tool
     private var style = SessionEditorStyle.current()
-    private var multi = editFiles(tool).size > 1
+    private var kind = bodyKind(tool)
+    private var opener: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
+    private var canDiff = false
     private val badge = DiffStatBadge(0, 0)
+    private val open = HeaderOpenAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff"), ::openDiffViewer)
     private val filesTag = JBLabel().apply {
-        foreground = UiStyle.Colors.weak()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
         font = JBFont.small()
-        border = JBUI.Borders.emptyRight(SessionUiStyle.View.Layout.HORIZONTAL_PADDING)
         isVisible = false
     }
 
     init {
         body.parent = this
-        parts.controls.add(filesTag)
-        parts.controls.add(badge)
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot, filesTag, badge)
+        body.overflow = ::openDiffViewer
+        // Left-aligned header: icon, title, file name (single) or file count (multi), change badge, open-in-diff.
+        parts.left.next(parts.link)
+        parts.left.next(filesTag)
+        parts.left.next(PartHeader.centered(badge))
+        parts.left.next(open.anchor)
+        // The base binds click-to-toggle across the whole header subtree, skipping controls that own
+        // a mouse listener. parts.link (FileLinkLabel) installs its own click handler that opens the
+        // file, so it is skipped automatically and does not also toggle the card.
         applyStyle(style)
         sync()
+    }
+
+    override val copyEligible: Boolean get() = canDiff
+    override val copyAnchor: JComponent get() = open.anchor
+    override val copyToolbar: JComponent get() = open.button
+
+    constructor(
+        tool: Tool,
+        openFile: SessionFileOpener,
+        selection: SessionSelection?,
+        openDiff: SessionDiffOpener,
+        sessionId: String?,
+    ) : this(tool, openFile, selection) {
+        opener = openDiff
+        this.sessionId = sessionId
+    }
+
+    /**
+     * Late-bind the diff opener. The transcript builds this view before the session-level opener is
+     * known, so [ai.kilocode.client.session.views.MessageView] rebinds it once the opener is wired.
+     */
+    @RequiresEdt
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        opener = openDiff
+        this.sessionId = sessionId
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
         selection?.provideCopy(sink) { body.markdown() ?: diffMarkdown(item) }
     }
+
+    override fun copyText(): String? = null
 
     @RequiresEdt
     override fun expand(): Boolean {
@@ -79,7 +122,7 @@ class EditToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + (body.panel()?.preferredSize?.height ?: 0)
+        val height = row.preferredSize.height + expandedGap() + (body.panel()?.preferredSize?.height ?: 0) + footerHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -91,19 +134,23 @@ class EditToolView(
         changed = swapBody() || changed
         changed = sync() || changed
         changed = syncBody() || changed
+        changed = syncApprovalReason(approvalReasonsVisible()) || changed
         if (changed) refresh()
     }
 
-    /** Rebuild the body delegate when a streaming tool crosses the single/multi-file boundary. */
+    /** Rebuild the body delegate when a streaming tool crosses a single/multi/overflow boundary. */
     @RequiresEdt
     private fun swapBody(): Boolean {
-        val next = editFiles(item).size > 1
-        if (next == multi) return false
-        multi = next
+        val next = bodyKind(item)
+        if (next == kind) return false
+        kind = next
         val expanded = isExpanded()
         discardBody()
         body.disposeBody()
-        body = editBody(item, selection, openFile).also { it.parent = this }
+        body = editBody(item, selection, openFile).also {
+            it.parent = this
+            it.overflow = ::openDiffViewer
+        }
         if (expanded) expand()
         return true
     }
@@ -145,13 +192,8 @@ class EditToolView(
     internal fun codeEditors(): List<EditorTextField> = body.codeEditors()
 
     @RequiresEdt
-    override fun headerPopup(): HeaderPopupRequest? {
-        if (isExpanded()) return null
-        if (editDiff(item).isBlank()) return null
-        return HeaderPopupRequest(row, build = { buildPopupBody() }) {
-            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "edit"))
-        }
-    }
+    override fun headerPopup(): HeaderPopupRequest? =
+        popup("tool", "edit", editDiff(item).isNotBlank()) { buildPopupBody() }
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
@@ -162,7 +204,15 @@ class EditToolView(
         changed = setFont(parts.link, style.transcriptFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
         changed = body.applyStyle(style) || changed
+        changed = footer.applyStyle(style) || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun syncApprovalReason(visible: Boolean): Boolean {
+        val changed = footer.update(item, visible)
+        if (changed) refresh()
+        return changed
     }
 
     private fun expandable(): Boolean =
@@ -181,12 +231,31 @@ class EditToolView(
         val path = if (count > 1) null else editPath(item)
         changed = setFileTarget(parts, path, if (path == null) "" else tail(path)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
+        changed = setForeground(parts.link, SessionUiStyle.Colors.foreground()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
+        syncDiffAction(count)
         changed = syncFilesTag(count) || changed
         changed = syncBadge() || changed
+        changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
+    }
+
+    private fun syncDiffAction(count: Int) {
+        // Mirrors toDiffFiles(item).isNotEmpty() without re-parsing the metadata JSON or allocating a
+        // DiffFileDto per file on every streaming delta: files present, else a single-file patch.
+        val show = count > 0 || editDiff(item).isNotBlank()
+        if (canDiff == show && open.enabled == show) return
+        canDiff = show
+        open.enabled = show
+    }
+
+    private fun openDiffViewer() {
+        val files = toDiffFiles(item)
+        if (files.isEmpty()) return
+        // The CLI scopes the authoritative snapshot diff by message id, so carry the owning message id
+        // (not the tool part id) in the token; otherwise the per-message lookup never matches.
+        opener(files, diffTitle(item), "tool:${sessionId ?: "pending"}:${item.messageID ?: item.id}")
     }
 
     private fun syncFilesTag(count: Int): Boolean {
@@ -209,12 +278,15 @@ class EditToolView(
     @RequiresEdt
     private fun buildPopupBody(): HeaderPopupBody {
         val owner = Disposer.newDisposable("Edit popup body")
-        val popup = popupBody(item, selection, openFile).also { it.parent = owner }
+        val popup = popupBody(item, selection, openFile).also {
+            it.parent = owner
+            it.overflow = ::openDiffViewer
+        }
         // mount() already renders the current item (ToolMarkdownBody.mount calls update; PatchBody.mount
         // calls rebuild and sets its signature), so a follow-up update() here would be a no-op.
         val panel = popup.mount(item)
         popup.applyStyle(style)
-        return HeaderPopupBody(panel, owner, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
+        return HeaderPopupBody(panel, owner, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
 
     override fun dumpLabel() = "EditToolView#$contentId(${labelText()})"
@@ -224,34 +296,76 @@ class EditToolView(
     }
 }
 
-/** Picks the multi-file patch body for apply_patch spanning several files, else the single diff. */
+private fun toDiffFiles(tool: Tool): List<DiffFileDto> {
+    val files = editFiles(tool).map { DiffFileDto(it.path, it.additions, it.deletions, it.patch, it.type.ifBlank { null }) }
+    if (files.isNotEmpty()) return files
+    val patch = editDiff(tool)
+    if (patch.isBlank()) return emptyList()
+    val stat = diffStat(tool)
+    return listOf(DiffFileDto(editPath(tool), stat.first, stat.second, patch))
+}
+
+private fun diffTitle(tool: Tool): String =
+    // Keep the file name for a single-file edit so each per-tool diff tab is identifiable
+    // (SessionUi decorates it into "<name> (branch)"); reserve the generic label for multi-file patches.
+    if (editFiles(tool).size > 1) KiloBundle.message("session.part.tool.patch") else tail(editPath(tool))
+
+/**
+ * Which body to build for the current diff. [PatchBody] renders (and self-caps) multi-file patches;
+ * [OverflowBody] shows the "open in a diff tab" placeholder for a single-file diff too large to
+ * preview; [ToolMarkdownBody] renders a normal single-file diff. Multi-file overflow stays [PATCH]
+ * because [PatchBody] caps itself internally.
+ */
+private enum class BodyKind { SINGLE, PATCH, OVERFLOW }
+
+private fun bodyKind(tool: Tool): BodyKind {
+    if (editFiles(tool).size > 1) return BodyKind.PATCH
+    if (patchLineCount(editDiff(tool)) > SessionUiStyle.View.Tool.DIFF_MAX_LINES) return BodyKind.OVERFLOW
+    return BodyKind.SINGLE
+}
+
+/** Picks the multi-file patch body, the large-diff placeholder, or the single-file diff. */
 private fun editBody(tool: Tool, selection: SessionSelection?, openFile: SessionFileOpener): EditBody =
-    if (editFiles(tool).size > 1) PatchBody(selection, openFile) else diffBody(selection)
+    when (bodyKind(tool)) {
+        BodyKind.PATCH -> PatchBody(selection, openFile)
+        BodyKind.OVERFLOW -> OverflowBody()
+        BodyKind.SINGLE -> diffBody(selection)
+    }
 
 private fun popupBody(tool: Tool, selection: SessionSelection?, openFile: SessionFileOpener): EditBody =
-    if (editFiles(tool).size > 1) PatchBody(selection, openFile, POPUP_OPTS) else popupDiffBody(selection)
+    when (bodyKind(tool)) {
+        BodyKind.PATCH -> PatchBody(selection, openFile, POPUP_OPTS)
+        BodyKind.OVERFLOW -> OverflowBody()
+        BodyKind.SINGLE -> popupDiffBody(selection)
+    }
 
 private fun diffBody(selection: SessionSelection?) = ToolMarkdownBody(
     MdCodeBlockOptions(
-        border = MdCodeBlockBorder.Bottom,
+        border = MdCodeBlockBorder.None,
         maxLines = SessionUiStyle.View.Tool.DIFF_LINES,
         verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
         editorOnly = true,
+        horizontalPadding = 0,
+        overlapScrollbar = true,
     ),
     selection,
     render = ::diffMarkdown,
+    gutter = { editDiff(it).takeIf { patch -> patch.isNotBlank() }?.let(DiffLineNumbers::rows) },
 )
 
 private fun popupDiffBody(selection: SessionSelection?) = ToolMarkdownBody(
     POPUP_OPTS,
     selection,
     render = ::diffMarkdown,
+    gutter = { editDiff(it).takeIf { patch -> patch.isNotBlank() }?.let(DiffLineNumbers::rows) },
 )
 
-private val POPUP_OPTS = MdCodeBlockOptions(
+internal val POPUP_OPTS = MdCodeBlockOptions(
     border = MdCodeBlockBorder.None,
     verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
     editorOnly = true,
+    horizontalPadding = 0,
+    overlapScrollbar = true,
 )
 
 /**

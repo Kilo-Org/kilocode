@@ -141,4 +141,10 @@ describe("environmentDetails", () => {
     expect(result).toContain("Workspace root folder: /repo/.kilo/worktrees/feature")
     expect(result).toContain("Active file: src/app.ts")
   })
+
+  test("formats the supplied message time", () => {
+    const result = environmentDetails({}, new Date("2026-08-24T12:34:56.123Z"))
+
+    expect(result).toContain("Message time: 2026-08-24T12:34:56Z")
+  })
 })

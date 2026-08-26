@@ -7,6 +7,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Switch } from "@kilocode/kilo-ui/switch"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
@@ -17,7 +18,7 @@ import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
 import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
-import { selectedDefaultAgentValue } from "./agent-behaviour-patches"
+import { mcpConfigScope, mcpEnabledPatch, removable, selectedDefaultAgentValue } from "./agent-behaviour-patches"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
@@ -50,7 +51,7 @@ type AgentView = "list" | "create" | "edit"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
-  const { config, updateConfig } = useConfig()
+  const { config, collections, updateConfig, updateGlobalConfig, updateProjectConfig } = useConfig()
   const session = useSession()
   const dialog = useDialog()
   const vscode = useVSCode()
@@ -367,6 +368,7 @@ const AgentBehaviourTab: Component = () => {
               {(name, index) => {
                 const agent = () => session.allAgents().find((a) => a.name === name)
                 const isCustom = () => !agent()?.native
+                const allowed = () => removable(agent())
                 const agentCfg = () => config().agent?.[name] ?? {}
                 const disabled = () => agentCfg().disable ?? false
                 const hidden = () => agentCfg().hidden ?? false
@@ -476,7 +478,7 @@ const AgentBehaviourTab: Component = () => {
                       </Show>
                     </div>
                     <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
-                      <Show when={isCustom()}>
+                      <Show when={allowed()}>
                         <IconButton
                           size="small"
                           variant="ghost"
@@ -675,12 +677,17 @@ const AgentBehaviourTab: Component = () => {
                           <Switch
                             checked={isConnected(name)}
                             disabled={session.mcpLoading() === name}
-                            onChange={() => {
-                              if (isConnected(name)) {
-                                session.disconnectMcp(name)
-                              } else {
-                                session.connectMcp(name)
+                            onChange={(enabled: boolean) => {
+                              const scope = mcpConfigScope(name, collections())
+                              if (scope) {
+                                const update = scope === "project" ? updateProjectConfig : updateGlobalConfig
+                                update(mcpEnabledPatch(name, enabled))
                               }
+                              if (!enabled) {
+                                session.disconnectMcp(name)
+                                return
+                              }
+                              session.connectMcp(name)
                             }}
                             hideLabel
                           >
@@ -872,7 +879,7 @@ const AgentBehaviourTab: Component = () => {
             "border-bottom": skillPaths().length > 0 ? "1px solid var(--border-weak-base)" : "none",
           }}
         >
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, "min-width": 0 }}>
             <TextField
               value={newSkillPath()}
               placeholder="e.g. ./skills"
@@ -897,14 +904,20 @@ const AgentBehaviourTab: Component = () => {
                 "border-bottom": index() < skillPaths().length - 1 ? "1px solid var(--border-weak-base)" : "none",
               }}
             >
-              <span
-                style={{
-                  "font-family": "var(--vscode-editor-font-family, monospace)",
-                  "font-size": "var(--kilo-font-size-12)",
-                }}
-              >
-                {path}
-              </span>
+              <Tooltip value={path} class="settings-skills-row-trigger" contentClass="settings-skills-tooltip-content">
+                <span
+                  style={{
+                    width: "100%",
+                    "font-family": "var(--vscode-editor-font-family, monospace)",
+                    "font-size": "var(--kilo-font-size-12)",
+                    overflow: "hidden",
+                    "text-overflow": "ellipsis",
+                    "white-space": "nowrap",
+                  }}
+                >
+                  {path}
+                </span>
+              </Tooltip>
               <IconButton size="small" variant="ghost" icon="close" onClick={() => removeSkillPath(index())} />
             </div>
           )}
@@ -923,7 +936,7 @@ const AgentBehaviourTab: Component = () => {
             "border-bottom": skillUrls().length > 0 ? "1px solid var(--border-weak-base)" : "none",
           }}
         >
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, "min-width": 0 }}>
             <TextField
               value={newSkillUrl()}
               placeholder="e.g. https://example.com/skills"
@@ -948,14 +961,20 @@ const AgentBehaviourTab: Component = () => {
                 "border-bottom": index() < skillUrls().length - 1 ? "1px solid var(--border-weak-base)" : "none",
               }}
             >
-              <span
-                style={{
-                  "font-family": "var(--vscode-editor-font-family, monospace)",
-                  "font-size": "var(--kilo-font-size-12)",
-                }}
-              >
-                {url}
-              </span>
+              <Tooltip value={url} class="settings-skills-row-trigger" contentClass="settings-skills-tooltip-content">
+                <span
+                  style={{
+                    width: "100%",
+                    "font-family": "var(--vscode-editor-font-family, monospace)",
+                    "font-size": "var(--kilo-font-size-12)",
+                    overflow: "hidden",
+                    "text-overflow": "ellipsis",
+                    "white-space": "nowrap",
+                  }}
+                >
+                  {url}
+                </span>
+              </Tooltip>
               <IconButton size="small" variant="ghost" icon="close" onClick={() => removeSkillUrl(index())} />
             </div>
           )}

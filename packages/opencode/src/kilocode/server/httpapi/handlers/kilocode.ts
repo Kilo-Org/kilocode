@@ -1,9 +1,12 @@
 import { Effect } from "effect"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as KiloAgent from "@/kilocode/agent"
+import { CommandFiles } from "@/kilocode/command-files"
 import * as KiloSkill from "@/kilocode/skill-remove"
 import { Agent } from "@/agent/agent"
+import { Command } from "@/command"
 import { Config } from "@/config/config"
+import { WorkspaceRef } from "@/effect/instance-ref"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
 import type { RequestID as AgentManagerRequestID } from "@/kilocode/agent-manager/protocol"
@@ -11,36 +14,88 @@ import { AgentManager } from "@/kilocode/agent-manager/service"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
 import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
+import { ProviderUsage } from "@opencode-ai/core/kilocode/provider-usage"
+import { Location } from "@opencode-ai/core/location"
+import { LocationServiceMap } from "@opencode-ai/core/location-services"
+import { AbsolutePath } from "@opencode-ai/core/schema"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
+import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import { Skill } from "@/skill"
-import type { SessionID } from "@/session/schema"
+import { BackgroundJob } from "@/background/job"
+import { SessionRunState } from "@/session/run-state"
+import { SessionID } from "@/session/schema"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import {
   AgentManagerRejectPayload,
   AgentManagerReplyPayload,
   NotebookRejectPayload,
   NotebookReplyPayload,
   RemoveAgentPayload,
+  RemoveCommandPayload,
   RemoveSkillPayload,
+  BackgroundJobInfo,
+  BackgroundJobsQuery,
 } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
   Effect.gen(function* () {
     const agents = yield* Agent.Service
+    const commands = yield* Command.Service
     const skills = yield* Skill.Service
     const config = yield* Config.Service
     const store = yield* InstanceStore.Service
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
+    const background = yield* BackgroundJob.Service
+    const runState = yield* SessionRunState.Service
+    const flags = yield* RuntimeFlags.Service
+    const locations = yield* LocationServiceMap.Service
+
+    // Location-scoped services, keyed by the request's directory and workspace.
+    const located = Effect.fnUntraced(function* <A, E, R>(effect: Effect.Effect<A, E, R>) {
+      return yield* effect.pipe(
+        Effect.provide(
+          locations.get(
+            Location.Ref.make({
+              directory: AbsolutePath.make((yield* InstanceState.context).directory),
+              workspaceID: yield* WorkspaceRef,
+            }),
+          ),
+        ),
+      )
+    })
 
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
     })
 
-    const agentRequirements = Effect.fn("KilocodeHttpApi.agentRequirements")(function* (ctx: {
-      query: { agent: string }
+    const commandFiles = Effect.fn("KilocodeHttpApi.commandFiles")(function* () {
+      const instance = yield* InstanceState.context
+      const dirs = yield* config.directories()
+      const items = yield* commands.list()
+      return yield* Effect.tryPromise({
+        try: () => CommandFiles.discover({ commands: items, directories: dirs, directory: instance.directory }),
+        catch: (err) => err,
+      }).pipe(Effect.catch((err) => Effect.die(err)))
+    })
+
+    const removeCommand = Effect.fn("KilocodeHttpApi.removeCommand")(function* (ctx: {
+      payload: typeof RemoveCommandPayload.Type
     }) {
-      return yield* agents.requirementStatus(ctx.query.agent)
+      const instance = yield* InstanceState.context
+      const dirs = yield* config.directories()
+      const items = yield* commands.list()
+      const entries = yield* Effect.tryPromise({
+        try: () => CommandFiles.discover({ commands: items, directories: dirs, directory: instance.directory }),
+        catch: (err) => err,
+      }).pipe(Effect.catch((err) => Effect.die(err)))
+      yield* Effect.tryPromise({
+        try: () => CommandFiles.remove(ctx.payload.location, entries),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+      yield* store.dispose(instance)
+      return true
     })
 
     const removeSkill = Effect.fn("KilocodeHttpApi.removeSkill")(function* (ctx: {
@@ -63,16 +118,37 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       const agent = yield* agents.get(ctx.payload.name)
       const dirs = yield* config.directories()
       yield* Effect.tryPromise({
-        try: () => KiloAgent.remove({ name: ctx.payload.name, agent, dirs, directory: instance.directory }),
+        try: () =>
+          KiloAgent.remove({
+            name: ctx.payload.name,
+            agent,
+            dirs,
+            directory: instance.directory,
+            worktree: instance.worktree,
+            scope: ctx.payload.scope,
+          }),
         catch: (err) => err,
       }).pipe(
         Effect.catch((err) => {
-          if (KiloAgent.RemoveError.isInstance(err)) return Effect.fail(new HttpApiError.BadRequest({}))
+          if (KiloAgent.RemoveError.isInstance(err))
+            return Effect.fail(new InvalidRequestError({ message: err.data.message }))
           return Effect.die(err)
         }),
       )
       yield* store.dispose(instance)
       return true
+    })
+
+    const providerUsage = Effect.fn("KilocodeHttpApi.providerUsage")(function* () {
+      return yield* located(ProviderUsage.Service.use((usage) => usage.get())).pipe(
+        Effect.mapError(() => new HttpApiError.ServiceUnavailable({})),
+      )
+    })
+
+    const providerUsageRefresh = Effect.fn("KilocodeHttpApi.providerUsageRefresh")(function* () {
+      return yield* located(ProviderUsage.Service.use((usage) => usage.refresh())).pipe(
+        Effect.mapError(() => new HttpApiError.ServiceUnavailable({})),
+      )
     })
 
     const notebookList = Effect.fn("KilocodeHttpApi.notebookList")(function* () {
@@ -133,11 +209,51 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return usage
     })
 
+    const backgroundJobs = Effect.fn("KilocodeHttpApi.backgroundJobs")(function* (ctx: {
+      query: typeof BackgroundJobsQuery.Type
+    }) {
+      return (yield* background.list())
+        .filter((job) => job.metadata?.parentSessionId === ctx.query.sessionID)
+        .map((job) => ({
+          id: job.id,
+          type: job.type,
+          title: job.title,
+          status: job.status,
+          started_at: job.started_at,
+          completed_at: job.completed_at,
+          error: job.error,
+          metadata: job.metadata,
+        })) satisfies (typeof BackgroundJobInfo.Type)[]
+    })
+
+    const backgroundJobCancel = Effect.fn("KilocodeHttpApi.backgroundJobCancel")(function* (ctx: {
+      params: { jobID: string }
+    }) {
+      const job = yield* background.get(ctx.params.jobID)
+      if (!job) return yield* new HttpApiError.NotFound({})
+      const sessionID = SessionID.make(typeof job.metadata?.sessionId === "string" ? job.metadata.sessionId : job.id)
+      yield* runState.cancel(sessionID)
+      return true
+    })
+
+    const backgroundJobPromote = Effect.fn("KilocodeHttpApi.backgroundJobPromote")(function* (ctx: {
+      params: { jobID: string }
+    }) {
+      if (!flags.experimentalBackgroundSubagents) return false
+      const job = yield* background.get(ctx.params.jobID)
+      if (!job) return yield* new HttpApiError.NotFound({})
+      const promoted = yield* background.promote(ctx.params.jobID)
+      return promoted !== undefined
+    })
+
     return handlers
       .handle("heapSnapshot", heapSnapshot)
-      .handle("agentRequirements", agentRequirements)
+      .handle("commandFiles", commandFiles)
+      .handle("removeCommand", removeCommand)
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
+      .handle("providerUsage", providerUsage)
+      .handle("providerUsageRefresh", providerUsageRefresh)
       .handle("notebookList", notebookList)
       .handle("notebookReply", notebookReply)
       .handle("notebookReject", notebookReject)
@@ -145,5 +261,8 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("agentManagerReply", agentManagerReply)
       .handle("agentManagerReject", agentManagerReject)
       .handle("sessionModelUsage", sessionModelUsage)
+      .handle("backgroundJobs", backgroundJobs)
+      .handle("backgroundJobCancel", backgroundJobCancel)
+      .handle("backgroundJobPromote", backgroundJobPromote)
   }),
 )

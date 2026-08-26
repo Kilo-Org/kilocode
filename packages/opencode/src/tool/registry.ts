@@ -1,4 +1,5 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
@@ -36,6 +37,7 @@ import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_cha
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { Auth } from "@/auth" // kilocode_change
+import { Env } from "@/env" // kilocode_change - websearch resolves its config via Env.Service
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
@@ -43,6 +45,8 @@ import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Effect, Layer, Context, Option } from "effect" // kilocode_change
+import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import { HttpClient } from "effect/unstable/http" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Format } from "../format"
 import { InstanceState } from "@/effect/instance-state"
@@ -69,6 +73,10 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { RipgrepBinary } from "@opencode-ai/core/ripgrep/binary" // kilocode_change
 import { AppProcess } from "@opencode-ai/core/process" // kilocode_change
+import { MCP } from "@/mcp"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { McpCatalog } from "@/mcp/catalog"
+import { InstanceRef } from "@/effect/instance-ref" // kilocode_change
 
 export function webSearchEnabled(
   providerID: ProviderV2.ID,
@@ -97,21 +105,24 @@ export interface Interface {
     modelID: ModelV2.ID
     family?: string
     agent: Agent.Info
+    permission?: PermissionV1.Ruleset
+    networkRestricted?: boolean // kilocode_change - hide network-backed code-mode catalogs in restricted sessions
   }) => Effect.Effect<Tool.Def[]>
   // kilocode_change end
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ToolRegistry") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const config = yield* Config.Service
     const plugin = yield* Plugin.Service
     const agents = yield* Agent.Service
-    const skill = yield* Skill.Service // kilocode_change - keep the available skill summary in model-facing tool context
     const truncate = yield* Truncate.Service
     const flags = yield* RuntimeFlags.Service
+    const mcp = yield* MCP.Service
+    const sessions = yield* Session.Service
 
     const invalid = yield* InvalidTool
     const task = yield* TaskTool
@@ -138,9 +149,20 @@ export const layer = Layer.effect(
     const notebook = Option.getOrUndefined(yield* Effect.serviceOption(Notebook.Service))
     const kiloToolInfos = yield* KiloToolRegistry.infos(manager, notebook).pipe(Effect.provide(MemoryService.layer))
     // kilocode_change end
+    const codeMode = flags.experimentalCodeMode ? yield* Effect.promise(() => import("./code-mode")) : undefined
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
+        const codeModeTool = codeMode
+          ? yield* codeMode.CodeModeTool.pipe(
+              Effect.provideService(MCP.Service, mcp),
+              Effect.provideService(Agent.Service, agents),
+              Effect.provideService(Session.Service, sessions),
+              Effect.provideService(Plugin.Service, plugin),
+              Effect.provideService(Truncate.Service, truncate),
+              Effect.provideService(InstanceRef, ctx),
+            )
+          : undefined // kilocode_change - initialize code mode with the active instance context
         const custom: Tool.Def[] = []
 
         function fromPlugin(id: string, def: ToolDefinition): Tool.Def {
@@ -250,7 +272,8 @@ export const layer = Layer.effect(
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
-          suggest: Tool.init(suggesttool), // kilocode_change
+          suggest: Tool.init(suggesttool),
+          ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}), // kilocode_change
         })
 
         // kilocode_change start
@@ -284,6 +307,7 @@ export const layer = Layer.effect(
               tool.plan,
               ...(["cli", "vscode"].includes(flags.client) ? [tool.suggest] : []),
               ...KiloToolRegistry.extra(kilo, cfg),
+              ...(tool.execute ? [tool.execute] : []),
               ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ],
             kilo,
@@ -319,24 +343,25 @@ export const layer = Layer.effect(
       return ["Available agent types and the tools they have access to:", description].join("\n")
     })
 
-    // kilocode_change start - retain the concise skill inventory added to the skill tool description
-    const describeSkill = Effect.fn("ToolRegistry.describeSkill")(function* (agent: Agent.Info) {
-      const list = yield* skill.available(agent)
-      if (list.length === 0) return "No skills are currently available."
-      return [
-        "Load a specialized skill that provides domain-specific instructions and workflows.",
-        "",
-        "When a task matches one of the available skills below, load its full instructions with this tool.",
-        "",
-        Skill.fmt(list, { verbose: false }),
-      ].join("\n")
+    const describeCodeMode = Effect.fn("ToolRegistry.describeCodeMode")(function* (input: {
+      agent: Agent.Info
+      permission?: PermissionV1.Ruleset
+      networkRestricted?: boolean // kilocode_change
+    }) {
+      if (!codeMode) return
+      if (input.networkRestricted) return // kilocode_change
+      const ruleset = Permission.merge(input.agent.permission, input.permission ?? [])
+      const tools = Permission.visibleTools(yield* mcp.tools(), ruleset)
+      if (Object.keys(tools).length === 0) return
+      return codeMode.describeCatalog(tools, Object.keys(yield* mcp.clients()).map(McpCatalog.sanitize))
     })
-    // kilocode_change end
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
+      const cfg = yield* config.get() // kilocode_change
       const filtered = (yield* all()).filter((tool) => {
         if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
+          if (cfg.web_search === true) return true // kilocode_change
           return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
         }
 
@@ -348,8 +373,13 @@ export const layer = Layer.effect(
       })
       const kiloFiltered = yield* KiloToolRegistry.applyVisibility(filtered) // kilocode_change
 
+      const codeModeDescription = filtered.some((tool) => tool.id === "execute")
+        ? yield* describeCodeMode(input)
+        : undefined
+      const visible = kiloFiltered.filter((tool) => tool.id !== "execute" || codeModeDescription) // kilocode_change
+
       return yield* Effect.forEach(
-        kiloFiltered, // kilocode_change
+        visible,
         Effect.fnUntraced(function* (tool: Tool.Def) {
           const output = {
             description: tool.description,
@@ -367,7 +397,7 @@ export const layer = Layer.effect(
             description: [
               output.description,
               tool.id === TaskTool.id ? yield* describeTask(input.agent) : undefined,
-              tool.id === SkillTool.id ? yield* describeSkill(input.agent) : undefined,
+              tool.id === "execute" ? codeModeDescription : undefined,
             ]
               .filter(Boolean)
               .join("\n"),
@@ -392,56 +422,7 @@ export const layer = Layer.effect(
   }),
 )
 
-// kilocode_change start - keep Kilo registry requirements type-checked
-export const defaultLayer: Layer.Layer<Service> = Layer.suspend(
-  // kilocode_change end
-  () =>
-    layer
-      .pipe(
-        Layer.provide(Config.defaultLayer),
-        Layer.provide(Plugin.defaultLayer),
-        Layer.provide(Question.defaultLayer),
-        Layer.provide(Todo.defaultLayer),
-        Layer.provide(Skill.defaultLayer),
-        Layer.provide(Agent.defaultLayer),
-        Layer.provide(Session.defaultLayer),
-        Layer.provide(BackgroundJob.defaultLayer),
-        Layer.provide(Provider.defaultLayer),
-        Layer.provide(Git.defaultLayer), // kilocode_change
-        Layer.provide(LSP.defaultLayer),
-        Layer.provide(Instruction.defaultLayer),
-        Layer.provide(FSUtil.defaultLayer),
-        Layer.provide(Bus.layer),
-        Layer.provide(EventV2Bridge.defaultLayer),
-        Layer.provide(ToolNetwork.httpLayer), // kilocode_change
-        Layer.provide(Format.defaultLayer),
-        Layer.provide(CrossSpawnSpawner.defaultLayer),
-        // kilocode_change start
-        Layer.provide(
-          Ripgrep.layer.pipe(
-            Layer.provide(RipgrepBinary.layer),
-            Layer.provide(AppProcess.defaultLayer),
-            Layer.provide(ToolNetwork.httpLayer),
-            Layer.provide(FSUtil.defaultLayer),
-            Layer.provide(CrossSpawnSpawner.defaultLayer),
-          ),
-        ),
-        // kilocode_change end
-      )
-      // kilocode_change start - provide Kilo-owned registry dependencies
-      .pipe(
-        Layer.provide(Command.defaultLayer),
-        Layer.provide(AgentManager.defaultLayer),
-        Layer.provide(Notebook.defaultLayer),
-        Layer.provide(Database.defaultLayer),
-        Layer.provide(RuntimeFlags.defaultLayer),
-        Layer.provide(SessionStatus.defaultLayer),
-        Layer.provide(RepositoryCache.defaultLayer),
-        Layer.provide(Truncate.defaultLayer), // kilocode_change - split the pipe to stay within Effect's overload limit
-      )
-      .pipe(Layer.provide(Auth.defaultLayer))
-      .pipe(Layer.provide(KiloSessions.defaultLayer)), // kilocode_change - satisfy the notify_user tool's KiloSessions dependency in the tool-registry graph
-)
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBuilder.build(node)) // kilocode_change - build from the LayerNode graph
 
 function isZodType(value: unknown): value is z.ZodType {
   return typeof value === "object" && value !== null && "_zod" in value
@@ -520,41 +501,46 @@ function isJsonSchemaObject(value: unknown): value is Record<string, unknown> {
 }
 
 // kilocode_change start - preserve Kilo registry dependencies and sandbox-aware HTTP in the upstream node graph
-const networkNode = LayerNode.make(ToolNetwork.httpLayer, [])
-const busNode = LayerNode.make(Bus.layer, [])
-const notebookNode = LayerNode.make(Notebook.defaultLayer, [])
-const repositoryCacheNode = LayerNode.make(RepositoryCache.defaultLayer, [])
+const network = LayerNode.make({ service: HttpClient.HttpClient, layer: ToolNetwork.httpLayer, deps: [] })
 
 export const node = LayerNode.suspend(() =>
-  LayerNode.make(layer.pipe(Layer.provide(Ripgrep.defaultLayer)), [
-    Config.node,
-    Plugin.node,
-    Question.node,
-    Todo.node,
-    Agent.node,
-    Skill.node,
-    Session.node,
-    BackgroundJob.node,
-    Provider.node,
-    LSP.node,
-    Instruction.node,
-    FSUtil.node,
-    EventV2Bridge.node,
-    networkNode,
-    CrossSpawnSpawner.node,
-    Format.node,
-    Truncate.node,
-    RuntimeFlags.node,
-    Database.node,
-    Command.node,
-    Git.node,
-    busNode,
-    Auth.node,
-    SessionStatus.node,
-    notebookNode,
-    repositoryCacheNode,
-    KiloSessions.node, // kilocode_change - satisfy the notify_user tool's KiloSessions dependency in the runtime node graph
-  ]),
+  LayerNode.make({
+    service: Service,
+    layer,
+    deps: [
+      Config.node,
+      Plugin.node,
+      Question.node,
+      Todo.node,
+      Agent.node,
+      Skill.node,
+      Session.node,
+      BackgroundJob.node,
+      Provider.node,
+      LSP.node,
+      Instruction.node,
+      FSUtil.node,
+      EventV2Bridge.node,
+      network,
+      CrossSpawnSpawner.node,
+      Format.node,
+      Truncate.node,
+      RuntimeFlags.node,
+      MCP.node,
+      Database.node,
+      Ripgrep.node,
+      Command.node,
+      Git.node,
+      Bus.node,
+      Auth.node,
+      Env.node, // kilocode_change - websearch resolves its config via Env.Service
+      SessionStatus.node,
+      AgentManager.node,
+      Notebook.node,
+      RepositoryCache.node,
+      KiloSessions.node,
+    ],
+  }),
 )
 // kilocode_change end
 

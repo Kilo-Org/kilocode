@@ -28,6 +28,14 @@ export function effectiveRuleLevel(rules: PermissionRuleItem[] | undefined, tool
   return "ask"
 }
 
+export function effectiveConfigLevel(
+  config: PermissionConfig,
+  tool: string,
+  defaults: PermissionRuleItem[] = DEFAULT_RULES,
+): PermissionLevel {
+  return effectiveRuleLevel([...defaults, ...ruleset(config)], tool)
+}
+
 export function ruleset(config: PermissionConfig): PermissionRuleItem[] {
   const result: PermissionRuleItem[] = []
   for (const [permission, rule] of Object.entries(config)) {

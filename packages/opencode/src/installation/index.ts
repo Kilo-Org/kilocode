@@ -1,14 +1,14 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { httpClient } from "@opencode-ai/core/effect/layer-node-platform"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { Effect, Layer, Schema, Context, Stream } from "effect"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
-import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
+import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { errorMessage } from "@/util/error"
 import { ChildProcess } from "effect/unstable/process"
 import { AppProcess } from "@opencode-ai/core/process"
 import path from "path"
-import { EventV2 } from "@opencode-ai/core/event"
 import { makeRuntime } from "@opencode-ai/core/effect/runtime"
 import semver from "semver"
 import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -21,26 +21,15 @@ import {
   Release as KiloRelease,
   Scoop as KiloScoop,
 } from "@/kilocode/installation"
+import { latest as kiloLatest } from "@/kilocode/installation/latest"
 // kilocode_change end
+import { InstallationEvent } from "@opencode-ai/schema/installation-event"
 
 export type Method = "curl" | "npm" | "yarn" | "pnpm" | "bun" | "brew" | "scoop" | "choco" | "unknown"
 
 export type ReleaseType = "patch" | "minor" | "major"
 
-export const Event = {
-  Updated: EventV2.define({
-    type: "installation.updated",
-    schema: {
-      version: Schema.String,
-    },
-  }),
-  UpdateAvailable: EventV2.define({
-    type: "installation.update-available",
-    schema: {
-      version: Schema.String,
-    },
-  }),
-}
+export const Event = InstallationEvent
 
 export function getReleaseType(current: string, latest: string): ReleaseType {
   const currMajor = semver.major(current)
@@ -82,7 +71,6 @@ export class UpgradeFailedError extends Schema.TaggedErrorClass<UpgradeFailedErr
 }
 
 // Response schemas for external version APIs
-const GitHubRelease = Schema.Struct({ tag_name: Schema.String })
 const NpmPackage = Schema.Struct({ version: Schema.String })
 const BrewFormula = Schema.Struct({
   versions: Schema.Struct({ stable: Schema.String }),
@@ -108,7 +96,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/In
 
 export const use = serviceUse(Service)
 
-export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Service> = Layer.effect(
+const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Service> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const http = yield* HttpClient.HttpClient
@@ -314,19 +302,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
           return data.version
         }
 
-        // kilocode_change start - curl/unknown fallback: resolve from the public npm
-        // dist-tag instead of GitHub /releases/latest, which is polluted by non-CLI
-        // (e.g. JetBrains) releases and returns a tag like "jetbrains/v7.0.4" that
-        // breaks version resolution. Use the public registry directly: a curl-
-        // installed binary is not tied to any project's npm config.
-        const response = yield* httpOk.execute(
-          HttpClientRequest.get(`https://registry.npmjs.org/${KiloNpm.path}/${InstallationChannel}`).pipe(
-            HttpClientRequest.acceptJson,
-          ),
-        )
-        const data = yield* HttpClientResponse.schemaBodyJson(NpmPackage)(response)
-        return data.version
-        // kilocode_change end
+        return yield* kiloLatest(httpOk, KiloNpm.path, InstallationChannel) // kilocode_change
       }, Effect.orDie),
       upgrade: Effect.fn("Installation.upgrade")(function* (m: Method, target: string) {
         let upgradeResult: { code: number; stdout: string; stderr: string } | undefined
@@ -403,14 +379,12 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(FetchHttpClient.layer), Layer.provide(AppProcess.defaultLayer))
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [httpClient, AppProcess.node] })
 
-const { runPromise } = makeRuntime(Service, defaultLayer)
+const { runPromise } = makeRuntime(Service, AppNodeBuilder.build(node))
 
 export const latest = (...args: Parameters<Interface["latest"]>) => runPromise((s) => s.latest(...args))
 export const method = () => runPromise((s) => s.method())
 export const upgrade = (...args: Parameters<Interface["upgrade"]>) => runPromise((s) => s.upgrade(...args))
-
-export const node = LayerNode.make(layer, [httpClient, AppProcess.node])
 
 export * as Installation from "."

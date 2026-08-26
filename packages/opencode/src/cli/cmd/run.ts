@@ -1,13 +1,14 @@
 import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 // kilocode_change start - use Kilo CLI branding
-// CLI entry point for `kilo run`.
+// CLI entry point for `kilo run` and `kilo --mini`.
 //
 // Handles three modes:
 //   1. Non-interactive (default): sends a single prompt, streams events to
 //      stdout, and exits when the session goes idle.
-//   2. Interactive local (`--interactive`): boots the split-footer direct mode
+//   2. Interactive local (`kilo --mini`): boots the split-footer direct mode
 //      with an in-process server (no external HTTP).
-//   3. Interactive attach (`--interactive --attach`): connects to a running
+//   3. Interactive attach (`kilo --mini --attach`): connects to a running
 //      kilo server and runs interactive mode against it.
 // kilocode_change end
 //
@@ -17,21 +18,19 @@ import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import type { Argv } from "yargs"
 import path from "path"
 import { pathToFileURL } from "url"
+import { open } from "node:fs/promises"
 import { Effect } from "effect"
 import { UI } from "../ui"
 import { effectCmd } from "../effect-cmd"
-import { buildRunMessage } from "@/kilocode/cli/cmd/run-message" // kilocode_change
 import { EOL } from "os"
 import { Filesystem } from "@/util/filesystem"
-import { createKiloClient, type KiloClient, type Session, type ToolPart } from "@kilocode/sdk/v2"
-import { Agent } from "@/agent/agent"
-import { RuntimeFlags } from "@/effect/runtime-flags"
+import type { KiloClient, Session, ToolPart } from "@kilocode/sdk/v2"
 import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
-import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
-import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
-import { KiloRun, KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
+// kilocode_change start - Kilo implementations (createKiloClient, run-message,
+// cloud-session, run-auto, headless, KiloRun) are dynamically imported inside the
+// handler so other CLI commands don't pay their module cost at startup.
+// kilocode_change end
 
 type ModelInput = Parameters<KiloClient["session"]["prompt"]>[0]["model"]
 
@@ -62,6 +61,8 @@ type FilePart = {
   filename: string
   mime: string
 }
+
+const ATTACH_FILE_MAX_BYTES = 10 * 1024 * 1024
 
 type Inline = {
   icon: string
@@ -229,13 +230,20 @@ export const RunCommand = effectCmd({
         type: "boolean",
         describe: "show thinking blocks",
       })
+      .option("mini", {
+        type: "boolean",
+        hidden: true,
+        default: false,
+      })
       .option("replay", {
         type: "boolean",
         default: true,
+        hidden: true,
         describe: "replay interactive session history on resume and after resize (use --no-replay to disable)",
       })
       .option("replay-limit", {
         type: "number",
+        hidden: true,
         describe: "cap visible interactive replay to the newest N messages",
       })
       .option("interactive", {
@@ -244,21 +252,25 @@ export const RunCommand = effectCmd({
         describe: "run in direct interactive split-footer mode",
         default: false,
       })
-      .option("dangerously-skip-permissions", {
+      .option("auto", {
         type: "boolean",
         describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
         default: false,
       })
-      // kilocode_change start - auto approve tracked task sessions
-      .option("auto", {
+      .option("yolo", {
         type: "boolean",
-        describe: "auto-approve all permissions (for autonomous/pipeline usage)",
+        hidden: true,
         default: false,
       })
-      // kilocode_change end
+      .option("dangerously-skip-permissions", {
+        type: "boolean",
+        hidden: true,
+        default: false,
+      })
       .option("demo", {
         type: "boolean",
         default: false,
+        hidden: true,
         describe: "enable direct interactive demo slash commands; pass one as the message to run it immediately",
       }),
   handler: Effect.fn("Cli.run")(function* (args) {
@@ -266,12 +278,24 @@ export const RunCommand = effectCmd({
     const { RuntimeFlags } = yield* Effect.promise(() => import("@/effect/runtime-flags"))
     const { InstanceRef } = yield* Effect.promise(() => import("@/effect/instance-ref"))
     const { ServerAuth } = yield* Effect.promise(() => import("@/server/auth"))
+    // kilocode_change start - lazy Kilo implementations (see top-of-file note)
+    const { createKiloClient } = yield* Effect.promise(() => import("@kilocode/sdk/v2"))
+    const { buildRunMessage } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run-message"))
+    const { importCloudSession, validateCloudFork, reportCloudImportError } = yield* Effect.promise(
+      () => import("@/kilocode/cloud-session"),
+    )
+    const { KiloRunAuto } = yield* Effect.promise(() => import("@/kilocode/cli/run-auto"))
+    const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
+    const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
+    // kilocode_change end
     const agentSvc = yield* Agent.Service
     const flags = yield* RuntimeFlags.Service
     const localInstance = yield* InstanceRef
     yield* Effect.promise(async () => {
       const rawMessage = [...args.message, ...(args["--"] || [])].join(" ")
-      const thinking = args.interactive ? (args.thinking ?? true) : (args.thinking ?? false)
+      const interactive = args.mini || args.interactive // kilocode_change - retain `kilo run --interactive`
+      const skipPermissions = args.yolo || args["dangerously-skip-permissions"] // kilocode_change - --auto is answered by the tracked-session block below
+      const thinking = interactive ? (args.thinking ?? true) : (args.thinking ?? false)
       const die = (message: string): never => {
         UI.error(message)
         process.exit(1)
@@ -286,20 +310,24 @@ export const RunCommand = effectCmd({
 
       let message = buildRunMessage(args.message, args["--"]) // kilocode_change
 
-      if (args.interactive && args.command) {
-        die("--interactive cannot be used with --command")
+      if (interactive && args.command) {
+        die("--mini cannot be used with --command")
       }
 
-      if (args.demo && !args.interactive) {
-        die("--demo requires --interactive")
+      if (args.mini && args._?.[0] !== "mini") {
+        die("--mini must be used without the run subcommand")
       }
 
-      if (args.interactive && args.format === "json") {
-        die("--interactive cannot be used with --format json")
+      if (args.demo && !interactive) {
+        die("--demo requires --mini")
       }
 
-      if (args["replay-limit"] !== undefined && !args.interactive) {
-        die("--replay-limit requires --interactive")
+      if (interactive && args.format === "json") {
+        die("--mini cannot be used with --format json")
+      }
+
+      if (args["replay-limit"] !== undefined && !interactive) {
+        die("--replay-limit requires --mini")
       }
 
       if (
@@ -309,11 +337,11 @@ export const RunCommand = effectCmd({
         die("--replay-limit must be a positive integer")
       }
 
-      if (args.interactive && !process.stdout.isTTY) {
-        die("--interactive requires a TTY stdout")
+      if (interactive && !process.stdout.isTTY) {
+        die("--mini requires a TTY stdout")
       }
 
-      if (args.interactive) {
+      if (interactive) {
         try {
           resolveInteractiveStdin().cleanup?.()
         } catch (error) {
@@ -321,7 +349,7 @@ export const RunCommand = effectCmd({
         }
       }
 
-      const replay = args.replay || args["replay-limit"] !== undefined
+      const replay = args.replay === false ? false : args.replay || args["replay-limit"] !== undefined
 
       const root = Filesystem.resolve(process.env.PWD ?? process.cwd())
       const directory = (() => {
@@ -358,11 +386,48 @@ export const RunCommand = effectCmd({
             process.exit(1)
           }
 
-          const mime = (await Filesystem.isDir(resolvedPath)) ? "application/x-directory" : "text/plain"
+          const stat = Filesystem.stat(resolvedPath)
+          const isDirectory = stat?.isDirectory() ?? false
+          if (args.attach && isDirectory) {
+            UI.error(`Cannot attach local directory without a shared filesystem: ${filePath}`)
+            process.exit(1)
+          }
+
+          const content = await (async () => {
+            if (!args.attach) return
+            const handle = await open(resolvedPath, "r")
+            try {
+              const opened = await handle.stat()
+              if (!opened.isFile() || Number(opened.size) > ATTACH_FILE_MAX_BYTES) {
+                UI.error(`Cannot attach local file larger than 10 MiB or a special file: ${filePath}`)
+                process.exit(1)
+              }
+              if (opened.size === 0) return Buffer.alloc(0)
+              const buffer = Buffer.alloc(Number(opened.size))
+              let offset = 0
+              while (offset < buffer.length) {
+                const read = await handle.read(buffer, offset, buffer.length - offset, offset)
+                if (read.bytesRead === 0) break
+                offset += read.bytesRead
+              }
+              return buffer.subarray(0, offset)
+            } finally {
+              await handle.close()
+            }
+          })()
+          const detected = FSUtil.mimeType(resolvedPath)
+          const text = content?.toString("utf8")
+          const mime = !args.attach
+            ? isDirectory
+              ? "application/x-directory"
+              : "text/plain"
+            : content && text !== undefined && Buffer.from(text, "utf8").equals(content)
+              ? "text/plain"
+              : detected
 
           files.push({
             type: "file",
-            url: pathToFileURL(resolvedPath).href,
+            url: content ? `data:${mime};base64,${content.toString("base64")}` : pathToFileURL(resolvedPath).href,
             filename: path.basename(resolvedPath),
             mime,
           })
@@ -377,7 +442,7 @@ export const RunCommand = effectCmd({
         message = resolveRunInput(message, piped) ?? ""
         input.initial = resolveRunInput(rawMessage, piped)
         input.loaded = true
-        if (message.trim().length > 0 || args.command || args.interactive) return
+        if (message.trim().length > 0 || args.command || interactive) return
         UI.error("You must provide a message or a command")
         process.exit(1)
       }
@@ -401,7 +466,7 @@ export const RunCommand = effectCmd({
       }
       // kilocode_change end
 
-      const rules: PermissionV1.Ruleset = args.interactive
+      const rules: PermissionV1.Ruleset = interactive
         ? []
         : [
             {
@@ -409,7 +474,12 @@ export const RunCommand = effectCmd({
               action: "deny",
               pattern: "*",
             },
-            // kilocode_change start - non-interactive runs cannot take over a terminal
+            // kilocode_change start - non-interactive runs cannot answer suggestions or take over a terminal
+            {
+              permission: "suggest",
+              action: "deny",
+              pattern: "*",
+            },
             {
               permission: "interactive_terminal",
               action: "deny",
@@ -437,28 +507,28 @@ export const RunCommand = effectCmd({
       async function session(sdk: KiloClient): Promise<SessionInfo | undefined> {
         // kilocode_change start - import cloud session before local lookup
         if (args.session && args["cloud-fork"]) {
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-          if (!id) {
-            UI.error("Failed to import session from cloud")
+          try {
+            const id = await importCloudSession(sdk, args.session)
+            const current = await sdk.session
+              .get({
+                sessionID: id,
+              })
+              .catch(() => undefined)
+
+            if (!current?.data) {
+              UI.error("Session not found")
+              process.exit(1)
+            }
+
+            return {
+              id: current.data.id,
+              title: current.data.title,
+              directory: current.data.directory,
+              model: current.data.model,
+            }
+          } catch (err) {
+            reportCloudImportError(err)
             process.exit(1)
-          }
-
-          const current = await sdk.session
-            .get({
-              sessionID: id,
-            })
-            .catch(() => undefined)
-
-          if (!current?.data) {
-            UI.error("Session not found")
-            process.exit(1)
-          }
-
-          return {
-            id: current.data.id,
-            title: current.data.title,
-            directory: current.data.directory,
-            model: current.data.model,
           }
         }
         // kilocode_change end
@@ -698,8 +768,8 @@ export const RunCommand = effectCmd({
         }
         const sessionID = sess.id
         // kilocode_change start - track Task children; plain headless runs deny subagent asks instead of hanging (#11903)
-        const auto = KiloRunAuto.create(sessionID)
-        if (!args.attach && !args.auto && !args["dangerously-skip-permissions"]) KiloHeadless.mark(sessionID)
+        const tracked = KiloRunAuto.create(sessionID) // kilocode_change - named to avoid shadowing the `auto` flag
+        if (!args.attach && !args.auto && !skipPermissions) KiloHeadless.mark(sessionID) // kilocode_change - --yolo skips too
         // kilocode_change end
 
         function emit(type: string, data: Record<string, unknown>) {
@@ -726,6 +796,7 @@ export const RunCommand = effectCmd({
           const MAX_RETRIES = 3 // kilocode_change
           let retries = 0 // kilocode_change
           let error: string | undefined
+          let autoRejected = false // kilocode_change - plain headless auto-reject must fail the run
 
           // kilocode_change start - revert to upstream: consume native events without normalizing sync copies
           for await (const event of events.stream) {
@@ -747,7 +818,7 @@ export const RunCommand = effectCmd({
             if (event.type === "message.part.updated") {
               const part = event.properties.part
               // kilocode_change start - track Task child sessions so permission replies can target them
-              KiloRunAuto.track(auto, part)
+              KiloRunAuto.track(tracked, part)
               // kilocode_change end
               if (part.sessionID !== sessionID) continue
 
@@ -816,8 +887,10 @@ export const RunCommand = effectCmd({
                 err = String(props.error.data.message)
               }
               error = error ? error + EOL + err : err
-              if (emit("error", { error: props.error })) continue
+              // kilocode_change start - stderr first so --format json still surfaces the diagnostic
               UI.error(err)
+              emit("error", { error: props.error })
+              // kilocode_change end
             }
 
             // kilocode_change start - reset retry budget only after resumed work becomes busy
@@ -838,11 +911,28 @@ export const RunCommand = effectCmd({
               break
             }
 
+            // kilocode_change start - non-interactive runs dismiss suggestions so they don't block
+            if (event.type === "suggestion.shown") {
+              const suggestion = event.properties
+              if (suggestion.sessionID === sessionID || KiloRunAuto.allowed(tracked, suggestion.sessionID)) {
+                await client.suggestion.dismiss({ requestID: suggestion.id }).catch(() => {})
+              }
+              continue
+            }
+            // kilocode_change end
+
             if (event.type === "permission.asked") {
               const permission = event.properties
+              // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
+              // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
+              if (permission.metadata?.["skillShell"] === true || permission.metadata?.["sandboxEscalation"] === true) {
+                await client.permission.reply({ requestID: permission.id, reply: "reject" })
+                continue
+              }
+              // kilocode_change end
               // kilocode_change start - approve root and tracked Task child permissions in auto mode
               if (args.auto) {
-                if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
+                if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "once",
@@ -855,8 +945,8 @@ export const RunCommand = effectCmd({
               // Covers daemon/attach modes where the server evaluates permissions in another
               // process and the in-process KiloHeadless deny cannot apply.
               if (permission.sessionID !== sessionID) {
-                if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
-                if (args["dangerously-skip-permissions"]) {
+                if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue
+                if (skipPermissions) {
                   await client.permission.reply({
                     requestID: permission.id,
                     reply: "once",
@@ -868,6 +958,7 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `subagent permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "reject",
@@ -878,7 +969,7 @@ export const RunCommand = effectCmd({
 
               if (permission.sessionID !== sessionID) continue
 
-              if (args["dangerously-skip-permissions"]) {
+              if (skipPermissions) {
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "once",
@@ -889,6 +980,7 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "reject",
@@ -915,6 +1007,14 @@ export const RunCommand = effectCmd({
             }
             // kilocode_change end
           }
+          // kilocode_change start - idle must not clear an auto-rejected headless run
+          if (autoRejected) {
+            const msg = "run ended with an auto-rejected permission; pass --auto for autonomous use"
+            error = error ? error + EOL + msg : msg
+            UI.error(msg)
+            emit("error", { error: msg })
+          }
+          // kilocode_change end
           return error
         }
         const cwd = args.attach ? (directory ?? sess.directory ?? (await current(sdk))) : (directory ?? root)
@@ -932,7 +1032,7 @@ export const RunCommand = effectCmd({
 
         await share(client, sessionID)
 
-        if (!args.interactive) {
+        if (!interactive) {
           const events = await client.event.subscribe()
           const completed = loop(client, events).catch((e) => {
             console.error(e)
@@ -1017,7 +1117,7 @@ export const RunCommand = effectCmd({
         return
       }
 
-      if (args.interactive && !args.attach && !args.session && !args.continue) {
+      if (interactive && !args.attach && !args.session && !args.continue) {
         await loadInput() // kilocode_change - interactive local mode still consumes its initial input
         const model = pick(args.model)
         const { runInteractiveLocalMode } = await import("./run/runtime")
@@ -1078,3 +1178,57 @@ export const RunCommand = effectCmd({
     })
   }),
 })
+
+type MiniCommandInput = {
+  directory?: string
+  attach?: string
+  password?: string
+  username?: string
+  continue?: boolean
+  session?: string
+  fork?: boolean
+  model?: string
+  agent?: string
+  prompt?: string
+  replay?: boolean
+  replayLimit?: number
+  demo?: boolean
+}
+
+export async function runMini(input: MiniCommandInput) {
+  if (!RunCommand.handler) throw new Error("Mini command handler is unavailable")
+  await RunCommand.handler({
+    $0: "opencode",
+    _: ["mini"],
+    message: input.prompt ? [input.prompt] : [],
+    command: undefined,
+    continue: input.continue,
+    session: input.session,
+    fork: input.fork,
+    "cloud-fork": undefined, // kilocode_change
+    cloudFork: undefined, // kilocode_change
+    share: undefined,
+    model: input.model,
+    agent: input.agent,
+    format: "default",
+    file: undefined,
+    title: undefined,
+    attach: input.attach,
+    password: input.password,
+    username: input.username,
+    dir: input.directory,
+    port: undefined,
+    variant: undefined,
+    thinking: undefined,
+    mini: true,
+    interactive: false,
+    replay: input.replay ?? true,
+    "replay-limit": input.replayLimit,
+    replayLimit: input.replayLimit,
+    auto: false,
+    yolo: false,
+    "dangerously-skip-permissions": false,
+    dangerouslySkipPermissions: false,
+    demo: input.demo ?? false,
+  })
+}

@@ -148,6 +148,7 @@ function shouldPreserveLine(line: string): boolean {
 export function transformI18nContent(
   content: string,
   verbose = false,
+  markers = false,
 ): { result: string; replacements: number; preserved: number } {
   const lines = content.split("\n")
   const transformedLines: string[] = []
@@ -200,7 +201,8 @@ export function transformI18nContent(
       }
     }
 
-    transformedLines.push(transformedLine)
+    // Kilo branding produced by this transform remains a Kilo-owned delta in shared locale files.
+    transformedLines.push(markers && lineReplacements > 0 ? `${transformedLine} // kilocode_change` : transformedLine)
     totalReplacements += lineReplacements
   }
 
@@ -221,7 +223,7 @@ export async function transformI18nFile(
   const file = Bun.file(filePath)
   const content = await file.text()
 
-  const { result, replacements, preserved } = transformI18nContent(content, options.verbose)
+  const { result, replacements, preserved } = transformI18nContent(content, options.verbose, true)
 
   if (replacements > 0 && !options.dryRun) {
     await Bun.write(filePath, result)

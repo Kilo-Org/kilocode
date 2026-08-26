@@ -86,7 +86,7 @@ describe("RunScriptManager", () => {
     let stopped = 0
     await ctx.manager.start("wt-1", async () => ({ stop: () => stopped++ }))
 
-    ctx.manager.remove("wt-1")
+    await ctx.manager.remove("wt-1")
 
     expect(stopped).toBe(1)
     expect(ctx.manager.all()).toEqual([])
@@ -123,9 +123,25 @@ describe("RunScriptManager", () => {
   it("finish after remove does not resurrect stale state", async () => {
     const ctx = createManager()
     await ctx.manager.start("wt-1", async () => ({ stop: () => {} }))
-    ctx.manager.remove("wt-1")
+    await ctx.manager.remove("wt-1")
     ctx.manager.finish("wt-1", { exitCode: 0 })
 
+    expect(ctx.manager.all()).toEqual([])
+  })
+
+  it("stops and disposes once when removal races startup", async () => {
+    const ctx = createManager()
+    const gate = deferred<RunHandle>()
+    let stopped = 0
+    let disposed = 0
+    const started = ctx.manager.start("wt-1", () => gate.promise)
+    const removed = ctx.manager.remove("wt-1")
+
+    gate.resolve({ stop: () => stopped++, dispose: () => disposed++ })
+    await Promise.all([started, removed])
+
+    expect(stopped).toBe(1)
+    expect(disposed).toBe(1)
     expect(ctx.manager.all()).toEqual([])
   })
 

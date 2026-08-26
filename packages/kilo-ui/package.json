@@ -1,11 +1,12 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.4.16",
+  "version": "7.5.0",
   "type": "module",
   "license": "MIT",
   "exports": {
     "./font": "./src/components/font.tsx",
     "./button": "./src/components/button.tsx",
+    "./chart": "./src/components/chart.tsx",
     "./code": "./src/components/code.tsx",
     "./diff": "./src/components/diff.tsx",
     "./diff-ssr": "./src/components/diff-ssr.tsx",
@@ -31,6 +32,7 @@
     "./app-icon": "./src/components/app-icon.tsx",
     "./markdown": "./src/components/markdown.tsx",
     "./keybind": "./src/components/keybind.tsx",
+    "./kilo-pass-meter": "./src/components/kilo-pass-meter.tsx",
     "./popover": "./src/components/popover.tsx",
     "./hover-card": "./src/components/hover-card.tsx",
     "./dropdown-menu": "./src/components/dropdown-menu.tsx",
@@ -128,6 +130,7 @@
     "motion": "12.34.5",
     "motion-dom": "12.34.3",
     "motion-utils": "12.29.2",
-    "strip-ansi": "7.1.2"
+    "strip-ansi": "7.1.2",
+    "chart.js": "4.5.1"
   }
 }

@@ -2,14 +2,15 @@
 // the same parent assistant message. Without the internal lock, parallel
 // subagent completions race on read-modify-write and lose deltas (#6321).
 
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { afterEach, describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import { Bus } from "../../src/bus"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { KiloCostPropagation } from "../../src/kilocode/session/cost-propagation"
-import { Instance } from "../../src/kilocode/instance"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID } from "../../src/session/schema"
@@ -30,7 +31,16 @@ const ref = {
 }
 
 const it = testEffect(
-  Layer.mergeAll(Session.defaultLayer, Bus.layer, Database.defaultLayer, CrossSpawnSpawner.defaultLayer),
+  LayerNode.compile(
+    LayerNode.group([
+      Session.node,
+      SessionProjector.node,
+      MessageV2.node,
+      Bus.node,
+      Database.node,
+      CrossSpawnSpawner.node,
+    ]),
+  ),
 )
 
 const seed = Effect.fn("CostPropagationTest.seed")(function* () {

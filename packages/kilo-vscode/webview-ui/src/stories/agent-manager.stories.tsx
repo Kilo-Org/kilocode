@@ -5,7 +5,7 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
+import { StoryProviders, defaultMockData, mockSessionValue, t } from "./StoryProviders"
 import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
@@ -26,11 +26,22 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
+import { DeferredPopover } from "../components/shared/DeferredPopover"
+import { ProjectSelect } from "../../agent-manager/ProjectSelect"
+import { PRComments } from "../../agent-manager/pr/PRComments"
 import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
-import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
+import type {
+  AgentProjectSnapshot,
+  WorktreeFileDiff,
+  WorktreeState,
+  WorktreeGitStats,
+  PRStatus,
+} from "../types/messages"
 import type { ReviewComment } from "../../diff-viewer/review-comments"
+import { createModeRouter } from "../../agent-manager/mode-router"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
+import "../../agent-manager/pr/pr-panel.css"
 
 registerVscodeToolOverrides()
 
@@ -78,13 +89,13 @@ const foldedDiffs: WorktreeFileDiff[] = [
 ]
 
 const ROWS = 140
-function edited(seed: string): WorktreeFileDiff {
+function edited(seed: string, file = "src/agent-edit.ts"): WorktreeFileDiff {
   const before = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-old-${i}"\n`).join("")
   const after = Array.from({ length: ROWS }, (_, i) => `const row${i} = "${seed}-new-${i}"\n`).join("")
   const patch = [
-    "diff --git a/src/agent-edit.ts b/src/agent-edit.ts",
-    "--- a/src/agent-edit.ts",
-    "+++ b/src/agent-edit.ts",
+    `diff --git a/${file} b/${file}`,
+    `--- a/${file}`,
+    `+++ b/${file}`,
     `@@ -1,${ROWS} +1,${ROWS} @@`,
     ...before
       .trimEnd()
@@ -98,7 +109,7 @@ function edited(seed: string): WorktreeFileDiff {
   ].join("\n")
 
   return {
-    file: "src/agent-edit.ts",
+    file,
     status: "modified",
     additions: ROWS,
     deletions: ROWS,
@@ -218,6 +229,11 @@ const chatServer = {
   errorDetails: () => undefined,
   isConnected: () => true,
   profileData: () => null,
+  providerUsage: () => undefined,
+  providerUsageLoading: () => false,
+  providerUsageError: () => undefined,
+  requestProviderUsage: () => undefined,
+  refreshProviderUsage: () => undefined,
   deviceAuth: () => ({ status: "idle" as const }),
   startLogin: () => undefined,
   goToLogin: () => undefined,
@@ -311,6 +327,29 @@ export const DiffPanelWithDiffs: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+export const DiffPanelScrollUp: Story = {
+  name: "DiffPanel - scroll upward through large diffs",
+  render: () => {
+    const diffs = Array.from({ length: 5 }, (_, i) => edited(`review-${i}`, `src/review-${i}.ts`))
+    return (
+      <StoryProviders noPadding>
+        <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+          <DiffPanel
+            diffs={diffs}
+            loading={false}
+            sessionKey="inline-scroll-up"
+            diffStyle="unified"
+            onDiffStyleChange={() => {}}
+            comments={[]}
+            onCommentsChange={() => {}}
+            onClose={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    )
+  },
 }
 
 const buttonFixtureStyle: JSX.CSSProperties = {
@@ -603,7 +642,8 @@ const basePR: PRStatus = {
   url: "https://github.com/org/repo/pull/8594",
   state: "open",
   review: null,
-  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
+  reviewers: [],
   additions: 978,
   deletions: 202,
   files: 12,
@@ -932,10 +972,75 @@ export const TabBarSingleTab: Story = {
   ),
 }
 
+const MockFullContextActions = () => (
+  <div class="am-tab-actions">
+    <span class="am-split-button am-run-group">
+      <TooltipKeybind title="Run" keybind="⌘R" placement="bottom">
+        <Button size="small" variant="ghost" icon="play">
+          Run
+        </Button>
+      </TooltipKeybind>
+      <button class="am-split-arrow" aria-label="Run options">
+        <Icon name="chevron-down" size="small" />
+      </button>
+    </span>
+    <TooltipKeybind title="Pull request" keybind="" placement="bottom">
+      <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Documents" keybind="" placement="bottom">
+      <IconButton icon="book-open-check" size="small" variant="ghost" label="Documents" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Subagents" keybind="" placement="bottom">
+      <IconButton icon="task" size="small" variant="ghost" label="Subagents" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Toggle diff" keybind="" placement="bottom">
+      <button class="am-diff-toggle-btn am-diff-toggle-has-changes" title="Toggle diff">
+        <Icon name="layers" size="small" />
+        <span class="am-diff-toggle-stats">
+          <span class="am-stat-files">4f</span>
+          <span class="am-stat-additions">+32</span>
+          <span class="am-stat-deletions">−8</span>
+        </span>
+      </button>
+    </TooltipKeybind>
+    <TooltipKeybind title="Toggle review" keybind="" placement="bottom">
+      <IconButton icon="expand" size="small" variant="ghost" label="Toggle review" />
+    </TooltipKeybind>
+    <div class="am-split-button">
+      <TooltipKeybind title="Open Terminal" keybind="" placement="bottom">
+        <IconButton icon="console" size="small" variant="ghost" label="Open Terminal" />
+      </TooltipKeybind>
+      <button class="am-split-arrow" aria-label="Choose terminal destination">
+        <Icon name="chevron-down" size="small" />
+      </button>
+    </div>
+  </div>
+)
+
+export const TabBarFullContext: Story = {
+  name: "TabBar — all optional context actions",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <MockTabLeading />
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "1" } as JSX.CSSProperties}>
+              <MockTab title="Full context" active />
+            </div>
+          </div>
+        </div>
+        <MockTabAdd />
+        <MockFullContextActions />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 // Side terminal panel inside the real inspector host chain, empty state —
-// no live PTY, so the start affordance renders. The header reuses the
-// .am-diff-header metrics so the a11y/screenshot baseline also guards the
-// alignment against the diff panel chrome.
+// no live PTY, so the start affordance renders. The tab strip header keeps
+// the .am-diff-header height so the a11y/screenshot baseline also guards
+// the alignment against the diff panel chrome.
 export const SideTerminalPanelEmpty: Story = {
   name: "Side terminal panel — empty",
   render: () => {
@@ -953,8 +1058,59 @@ export const SideTerminalPanelEmpty: Story = {
                   state={state}
                   contextKey={() => LOCAL}
                   visible={() => true}
+                  nextKeybind="⌘⇧]"
+                  closeKeybind="⌘W"
+                  onFocusPrompt={() => undefined}
+                  onSelect={() => undefined}
                   onClose={() => undefined}
+                  onCloseOthers={() => undefined}
                   onStart={() => undefined}
+                  onStop={() => undefined}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+// Tab strip with several side terminals: the active one shows the X close
+// button, the others reveal it on hover. Terminals point at a dead port —
+// xterm renders its connection-error notice inside the panel, which keeps
+// the story self-contained without a live PTY.
+export const SideTerminalPanelTabs: Story = {
+  name: "Side terminal panel — tabs",
+  render: () => {
+    const state = createTerminalState(() => LOCAL)
+    const font = { fontFamily: "monospace", fontSize: 12 }
+    state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://127.0.0.1:1/a", font, placement: "side" })
+    state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://127.0.0.1:1/b", font, placement: "side" })
+    state.add(null, { id: "terminal:three", title: "Terminal 3", wsUrl: "ws://127.0.0.1:1/c", font, placement: "side" })
+    state.setSideActive(LOCAL, "terminal:two")
+    state.setTitle("terminal:two", "npm run dev")
+    return (
+      <StoryProviders noPadding>
+        <div class="am-detail-stack" style={{ height: "420px" }}>
+          <div class="am-detail-content am-detail-split">
+            <div class="am-main-pane" style={{ padding: "24px", color: "var(--text-weak)" }}>
+              Agent session stays visible beside the terminal.
+            </div>
+            <div class="am-diff-resize" style={{ width: "360px" }}>
+              <div class="am-diff-panel-wrapper">
+                <SideTerminalPanel
+                  state={state}
+                  contextKey={() => LOCAL}
+                  visible={() => true}
+                  nextKeybind="⌘⇧]"
+                  closeKeybind="⌘W"
+                  onFocusPrompt={() => undefined}
+                  onSelect={(id) => state.setSideActive(LOCAL, id)}
+                  onClose={() => undefined}
+                  onCloseOthers={() => undefined}
+                  onStart={() => undefined}
+                  onStop={() => undefined}
                 />
               </div>
             </div>
@@ -1025,6 +1181,99 @@ export const NewWorktreeVariantDropdown1280: Story = {
         </div>
       </div>
       <VariantPickerOpener />
+    </StoryProviders>
+  ),
+}
+
+const projectPickerProjects: AgentProjectSnapshot[] = [
+  {
+    id: "project-main",
+    root: "/workspace/kilocode",
+    label: "kilocode",
+    pinned: true,
+    active: true,
+    expanded: true,
+    initialized: true,
+    missing: false,
+  },
+  {
+    id: "project-cloud",
+    root: "/workspace/cloud",
+    label: "cloud",
+    pinned: false,
+    active: false,
+    expanded: false,
+    initialized: true,
+    missing: false,
+  },
+]
+
+export const NewWorktreeProjectDropdown: Story = {
+  name: "NewWorktreeDialog — project dropdown open",
+  parameters: { layout: "fullscreen" },
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+        <div data-component="dialog" data-fit="true">
+          <div data-slot="dialog-container">
+            <div data-slot="dialog-content">
+              <div data-slot="dialog-header">
+                <div data-slot="dialog-title">New Worktree</div>
+              </div>
+              <div data-slot="dialog-body">
+                <div class="am-tab-switcher">
+                  <button class="am-tab-switcher-pill am-tab-switcher-pill-active" type="button">
+                    New
+                  </button>
+                  <button class="am-tab-switcher-pill" type="button">
+                    Import
+                  </button>
+                  <div class="am-nv-project-inline">
+                    <div class="am-selector-wrapper">
+                      <DeferredPopover
+                        open
+                        onOpenChange={() => undefined}
+                        placement="bottom-start"
+                        flip={false}
+                        sameWidth
+                        portal={false}
+                        deferDismiss
+                        class="am-dropdown"
+                        trigger={
+                          <button class="am-selector-trigger" type="button" aria-label="Select project">
+                            <span class="am-selector-left">
+                              <Icon name="folder" size="small" />
+                              <span class="am-selector-value">kilocode</span>
+                            </span>
+                            <span class="am-selector-right">
+                              <Icon name="selector" size="small" />
+                            </span>
+                          </button>
+                        }
+                      >
+                        <ProjectSelect
+                          projects={projectPickerProjects}
+                          selected="project-main"
+                          onSelect={() => undefined}
+                          labels={{ missing: "Repository not found" }}
+                        />
+                      </DeferredPopover>
+                    </div>
+                  </div>
+                </div>
+                <div class="am-nv-dialog" style={{ "max-height": "520px" }}>
+                  <div class="am-nv-dialog-content">
+                    <div style={{ height: "420px", "flex-shrink": 0 }} />
+                    <div class="am-nv-version-bar">
+                      <span class="am-nv-config-label">VERSIONS</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </StoryProviders>
   ),
 }
@@ -1145,4 +1394,247 @@ export const SidebarSearchOpen: Story = {
       </StoryProviders>
     )
   },
+}
+
+// ---------------------------------------------------------------------------
+// Multi-project sidebar
+// ---------------------------------------------------------------------------
+
+import { ProjectList } from "../../agent-manager/ProjectList"
+import type { AgentManagerStateMessage, LocalGitStats, ProjectSessionInfo } from "../types/messages"
+
+const projectA: AgentProjectSnapshot = {
+  id: "prj-aaaa1111aaaa",
+  root: "/repos/kilocode",
+  label: "kilocode",
+  pinned: true,
+  active: true,
+  expanded: true,
+  initialized: true,
+  missing: false,
+}
+const projectB: AgentProjectSnapshot = {
+  id: "prj-bbbb2222bbbb",
+  root: "/repos/kilo-gateway",
+  label: "kilo-gateway",
+  pinned: false,
+  active: false,
+  expanded: true,
+  initialized: true,
+  missing: false,
+}
+
+const wt = (id: string, branch: string, label?: string, opts: Partial<WorktreeState> = {}): WorktreeState => ({
+  id,
+  branch,
+  path: `/repos/x/.kilo/worktrees/${id}`,
+  parentBranch: "main",
+  createdAt: "2026-07-20T10:00:00Z",
+  label,
+  ...opts,
+})
+
+const projectState = (
+  projectId: string,
+  worktrees: WorktreeState[],
+  sessions: { id: string; worktreeId: string | null }[],
+  sections: NonNullable<AgentManagerStateMessage["sections"]> = [],
+  baseBranch = "main",
+  worktreeOrder?: string[],
+): AgentManagerStateMessage => ({
+  type: "agentManager.state",
+  projectId,
+  worktrees,
+  sessions: sessions.map((s) => ({ id: s.id, worktreeId: s.worktreeId, createdAt: "2026-07-20T10:00:00Z" })),
+  sections,
+  worktreeOrder: worktreeOrder ?? [
+    ...worktrees.filter((item) => !item.sectionId).map((item) => item.id),
+    ...sections.map((item) => item.id),
+    ...worktrees.filter((item) => item.sectionId).map((item) => item.id),
+  ],
+  staleWorktreeIds: [],
+  isGitRepo: true,
+  defaultBaseBranch: baseBranch,
+  sessionsCollapsed: false,
+})
+
+const projectSession = (
+  id: string,
+  worktreeId: string | null,
+  title: string,
+  updatedAt: string,
+): ProjectSessionInfo => ({
+  id,
+  worktreeId,
+  parentID: null,
+  title,
+  createdAt: "2026-07-19T09:00:00Z",
+  updatedAt,
+})
+
+const storyStats = (worktreeId: string, additions: number, deletions: number, ahead = 0): WorktreeGitStats => ({
+  worktreeId,
+  files: 3,
+  additions,
+  deletions,
+  ahead,
+  behind: 0,
+})
+
+const storyLocal = (branch: string, additions: number, deletions: number, ahead = 0, behind = 0): LocalGitStats => ({
+  branch,
+  files: 2,
+  additions,
+  deletions,
+  ahead,
+  behind,
+})
+
+export const MultiProjectSidebar: Story = {
+  name: "Project List — two expanded projects with restored controls",
+  render: () => {
+    return (
+      <StoryProviders noPadding>
+        <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
+          <ProjectList
+            mode={createModeRouter()}
+            projects={[projectA, projectB]}
+            states={{
+              [projectA.id]: projectState(
+                projectA.id,
+                [
+                  wt("wt-a1", "feature/project-list", "Project list UI", { sectionId: "sec-a1" }),
+                  wt("wt-a2", "fix/session-routing"),
+                  wt("wt-a3", "feat/project-list-v2", undefined, { groupId: "grp-a1" }),
+                  wt("wt-a4", "feat/project-list-v3", undefined, { groupId: "grp-a1" }),
+                ],
+                [
+                  { id: "ses-a1", worktreeId: null },
+                  { id: "ses-a2", worktreeId: "wt-a1" },
+                ],
+                [{ id: "sec-a1", name: "Agent Manager", color: "Blue", order: 0, collapsed: false }],
+                "main",
+                ["wt-a2", "sec-a1", "wt-a1", "wt-a3", "wt-a4"],
+              ),
+              [projectB.id]: projectState(
+                projectB.id,
+                [
+                  wt("wt-b1", "feat/gateway-routing", "Gateway routing", { sectionId: "sec-b1" }),
+                  wt("wt-b2", "fix/api"),
+                ],
+                [{ id: "ses-b1", worktreeId: null }],
+                [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
+                "master",
+                ["wt-b2", "sec-b1", "wt-b1"],
+              ),
+            }}
+            stats={{
+              [projectA.id]: { "wt-a1": storyStats("wt-a1", 342, 87, 2), "wt-a2": storyStats("wt-a2", 18, 4) },
+              [projectB.id]: { "wt-b1": storyStats("wt-b1", 96, 12, 1) },
+            }}
+            local={{
+              [projectA.id]: storyLocal("main", 124, 33, 1),
+              [projectB.id]: storyLocal("master", 0, 0, 0, 2),
+            }}
+            prs={{ [projectA.id]: {}, [projectB.id]: {} }}
+            sessions={{
+              [projectA.id]: [
+                projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
+                projectSession("ses-a2", "wt-a1", "Add per-project actions", "2026-07-23T16:10:00Z"),
+              ],
+              [projectB.id]: [projectSession("ses-b1", null, "Route stats per project", "2026-07-24T07:45:00Z")],
+            }}
+            selectedProject={projectA.id}
+            selection="local"
+            bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
+            t={t}
+            onSearchRef={() => {}}
+            onShortcuts={() => {}}
+            onHistory={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// PR panel — review comments
+// ---------------------------------------------------------------------------
+
+const prComments: NonNullable<PRStatus["comments"]> = {
+  total: 4,
+  unresolved: 2,
+  comments: [
+    {
+      id: "PRRC_1",
+      threadId: "PRRT_1",
+      author: "octocat",
+      body: "This throws when `gh` is missing. Can we guard it and fall back to the cached status?",
+      file: "packages/kilo-vscode/src/agent-manager/gh.ts",
+      line: 42,
+      url: "https://github.com/org/repo/pull/8594#discussion_r1",
+      resolved: false,
+      outdated: false,
+      diffHunk:
+        '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
+      after: ["  return result", "}", ""],
+      replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
+    },
+    {
+      id: "PRRC_2",
+      threadId: "PRRT_2",
+      author: "hubot",
+      body: "The timeout should be a constant so the poller and the mutation cannot drift apart.",
+      file: "packages/kilo-vscode/src/agent-manager/pr/PRActions.ts",
+      line: 8,
+      url: "https://github.com/org/repo/pull/8594#discussion_r2",
+      resolved: false,
+      outdated: true,
+    },
+    {
+      id: "PRRC_3",
+      threadId: "PRRT_3",
+      author: "octocat",
+      body: "nit: rename this variable to `threads`.\n\nIt reads better next to the loop below.",
+      file: "packages/kilo-vscode/src/agent-manager/pr/am-pr-utils.ts",
+      line: 71,
+      url: "https://github.com/org/repo/pull/8594#discussion_r3",
+      resolved: true,
+      outdated: false,
+    },
+    {
+      id: "PRRC_4",
+      threadId: "PRRT_4",
+      author: "hubot",
+      body: "Good catch, fixed in a9f21c3.",
+      file: "packages/kilo-vscode/webview-ui/agent-manager/pr/PRComments.tsx",
+      line: 118,
+      url: "https://github.com/org/repo/pull/8594#discussion_r4",
+      resolved: true,
+      outdated: false,
+    },
+  ],
+}
+
+export const PRPanelComments: Story = {
+  name: "PR panel — review comments",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)" }}>
+        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRPanelComments200: Story = {
+  name: "PR panel — review comments (narrow)",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ background: "var(--vscode-editor-background)" }}>
+        <PRComments comments={prComments} worktreeId="wt-a1" onOpenFile={() => {}} onOpenUrl={() => {}} />
+      </div>
+    </StoryProviders>
+  ),
 }

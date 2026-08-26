@@ -5,7 +5,9 @@ import { makeRuntime } from "@/effect/run-service"
 import { Identifier } from "@/id/id"
 import { Instance, type InstanceContext } from "@/kilocode/instance"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
+import { model as modelEnv } from "@/kilocode/process/env"
 import { SessionID } from "@/session/schema"
+import { PowerShell } from "@/kilocode/shell/shell"
 import { Shell } from "@opencode-ai/core/shell"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { Process } from "@/util/process"
@@ -31,6 +33,7 @@ import * as Ports from "./ports"
 
 export namespace BackgroundProcess {
   const log = Log.create({ service: "background-process" })
+  const pwsh = PowerShell.pwsh() ?? "powershell.exe"
   const MAX = 200 * 1024
   const KILL_MS = 3_000
   const READY_MS = 30_000
@@ -574,14 +577,11 @@ export namespace BackgroundProcess {
   }
 
   function env(id?: ID, token?: string) {
-    const result: NodeJS.ProcessEnv = {
-      ...process.env,
+    const result: NodeJS.ProcessEnv = modelEnv({
       TERM: "dumb",
       ...(id ? { KILO_BACKGROUND_PROCESS_ID: id } : {}),
       ...(token ? { KILO_BACKGROUND_PROCESS_TOKEN: token } : {}),
-    }
-    delete result.KILO_SERVER_PASSWORD
-    delete result.KILO_SERVER_USERNAME
+    })
     delete result.KILO_BACKGROUND_PROCESS_PORTS
     return result
   }
@@ -671,7 +671,7 @@ export namespace BackgroundProcess {
     const token = active.token
     if (!pid || !token) return "unknown"
     const query = `$p=Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}"; if ($p) { [Console]::Out.Write($p.CommandLine) }`
-    const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
+    const out = await Process.text([pwsh, "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
       abort: AbortSignal.timeout(2_000),
       timeout: 2_000,

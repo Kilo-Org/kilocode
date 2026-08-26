@@ -3,6 +3,8 @@ import { describe, expect, it, mock } from "bun:test"
 const { AgentManagerProvider } = await import("../../src/agent-manager/AgentManagerProvider")
 
 type Manager = {
+  projectScope: { current: () => unknown; run: (ctx: unknown, fn: () => unknown) => unknown }
+  contexts: { active: () => unknown }
   connectionService: { getClient: () => unknown }
   panel: {
     postMessage: (message: unknown) => void
@@ -61,6 +63,14 @@ function createManager(options?: { dir?: string; panelDir?: string; state?: bool
   manager.getRoot = () => "/repo"
   manager.pushState = mock(() => undefined)
   manager.log = mock(() => undefined)
+  const ctx = {
+    peekState: () => (options?.state === false ? undefined : state),
+    root: "/repo",
+    stale: new Set<string>(),
+    worktreeManager: () => ({}),
+  }
+  manager.projectScope = { current: () => ctx, run: (_: unknown, fn: () => unknown) => fn() }
+  manager.contexts = { active: () => ctx }
 
   return { manager, stopped, aborted, cleared, removed, messages, events }
 }

@@ -49,10 +49,15 @@ function Item(props: { label: string; onSelect: () => void }) {
 export function MermaidActions(props: Props) {
   const [copied, setCopied] = createSignal(false)
   const copy = (run: () => Promise<void>) => {
-    void run().then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
+    void run()
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      })
+      .catch((err) => {
+        // Avoid unhandledrejection; Copy PNG used to fail silently under webview CSP.
+        console.warn("Mermaid copy failed", err)
+      })
   }
 
   return (

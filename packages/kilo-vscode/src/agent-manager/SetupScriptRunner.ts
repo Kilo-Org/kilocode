@@ -5,6 +5,7 @@
  * actual execution to an injected RunTask callback (provided by the caller).
  */
 
+import { powershellCommand } from "../util/powershell"
 import { SetupScriptService, type SetupScriptInfo } from "./SetupScriptService"
 
 interface SetupScriptEnvironment {
@@ -31,7 +32,7 @@ function quoteCmdArg(value: string): string {
 export function buildSetupTaskCommand(script: SetupScriptInfo): { command: string; args: string[] } {
   if (script.kind === "powershell") {
     return {
-      command: "powershell.exe",
+      command: powershellCommand(),
       args: ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script.path],
     }
   }
@@ -52,6 +53,7 @@ export class SetupScriptRunner {
     private readonly log: (msg: string) => void,
     private readonly service: SetupScriptService,
     private readonly run: RunTask,
+    private readonly failed: (message: string) => void = () => undefined,
   ) {}
 
   /**
@@ -92,6 +94,7 @@ export class SetupScriptRunner {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       this.log(`Setup script execution failed: ${msg}`)
+      this.failed(msg)
       return true // Script was attempted
     }
   }

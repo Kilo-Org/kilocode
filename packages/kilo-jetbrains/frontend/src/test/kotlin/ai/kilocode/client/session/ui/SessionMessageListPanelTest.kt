@@ -3,6 +3,8 @@ package ai.kilocode.client.session.ui
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
+import ai.kilocode.client.session.model.Outcome
+import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
@@ -14,13 +16,16 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.PlanExitView
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.SessionOutcomeView
+import ai.kilocode.client.session.views.base.DialogView
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.views.MessageToolbar
 import ai.kilocode.client.session.views.MessageView
+import ai.kilocode.client.session.views.PromptAttachmentView
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
@@ -29,13 +34,17 @@ import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.views.todo.TodoWriteView
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
@@ -46,6 +55,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
@@ -59,8 +69,18 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.RepaintManager
+import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
-import javax.swing.border.Border
+
+private val PATCH = """
+    diff --git a/src/A.kt b/src/A.kt
+    --- a/src/A.kt
+    +++ b/src/A.kt
+    @@ -1,1 +1,2 @@
+    -old
+    +new
+    +more
+""".trimIndent()
 
 /**
  * Tests for [SessionMessageListPanel] — structural and index integrity.
@@ -99,6 +119,28 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals("", panel.dump())
     }
 
+    fun `test modified files card follows turn anchor summary`() {
+        model.upsertMessage(msg("u1", "user").copy(summary = summary("src/A.kt")))
+
+        val turn = panel.findTurn("u1")!!
+        val card = components(turn).filterIsInstance<ModifiedFilesView>().single()
+
+        assertSame(card, turn.components.last())
+        assertTrue(card.isVisible)
+        assertEquals("1 file", card.countText())
+    }
+
+    fun `test message updated summary updates modified files card`() {
+        model.upsertMessage(msg("u1", "user"))
+        assertTrue(components(panel.findTurn("u1")!!).filterIsInstance<ModifiedFilesView>().isEmpty())
+
+        model.upsertMessage(msg("u1", "user").copy(summary = summary("src/A.kt")))
+
+        val card = components(panel.findTurn("u1")!!).filterIsInstance<ModifiedFilesView>().single()
+        assertTrue(card.isVisible)
+        assertEquals("1 file", card.countText())
+    }
+
     fun `test transcript content has symmetric side padding`() {
         model.upsertMessage(msg("a1", "assistant"))
 
@@ -109,6 +151,136 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         val right = panel.width - turn.x - turn.width
 
         assertEquals(right, left)
+    }
+
+    fun `test reflow drops cached panel measurements`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        panel.setSize(600, 400)
+        layout(panel)
+        child.markValid()
+        child.size = 80
+
+        panel.reflow()
+
+        assertEquals(80, child.height)
+    }
+
+    fun `test reflow is skipped until the panel has a width`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        panel.setSize(0, 400)
+        layout(panel)
+        child.markValid()
+        child.size = 80
+
+        // At zero width an HTML pane collapses to a one-char column, so reflow must report no
+        // change instead of locking the transcript height in against that bogus measurement.
+        assertFalse(panel.reflow())
+
+        // Once the panel is laid out with a real width the child measures to its true height.
+        panel.setSize(600, 400)
+        layout(panel)
+        assertEquals(80, child.height)
+    }
+
+    fun `test deferred reflow re-arms on first real width layout`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        // A real turn makes turnViews non-empty, so a zero-width reflow latches pendingReflow instead
+        // of no-opping the way the turnless zero-width test above does.
+        model.upsertMessage(msg("u1", "user"))
+        panel.setSize(0, 400)
+        layout(panel)
+        assertFalse(panel.reflow())
+
+        // The first layout at a real width consumes the parked reflow and schedules a pass.
+        panel.setSize(600, 400)
+        panel.doLayout()
+
+        // Simulate an HTML pane that only reports its settled height after the first layout: the child
+        // stays valid at the same width, so a plain layout keeps the cached height and only the
+        // re-armed forgetAll() reflow re-measures it.
+        child.markValid()
+        child.size = 80
+
+        // Draining the EDT runs the scheduled reflow. Without the doLayout re-arm nothing is queued
+        // and the child would stay at its stale cached height.
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(80, child.height)
+    }
+
+    fun `test reflow budget terminates when height never settles`() {
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+        // loadHistory rebuilds the transcript (and schedules the reflow chain) after wiping existing
+        // children, so add the ever-growing child afterwards — it grows on every measurement, so the
+        // idle chain restarts its settle window on every pass. Without the hard budget the invokeLater
+        // chain would repost forever and this drain would spin; the budget bounds it.
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        panel.add(EverGrowing(), 0)
+        panel.setSize(600, 400)
+
+        UIUtil.dispatchAllInvocationEvents()
+
+        // Reaching this line proves the chain terminated. The pass count is bounded by the hard
+        // budget (REFLOW_PASSES * 4), so a regression that reset it alongside `remaining` would
+        // either hang here or blow past this bound.
+        assertTrue("reflow passes must be bounded by the budget, was $reflows", reflows in 1..30)
+    }
+
+    fun `test streaming session settles reflow within the pass window`() {
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+        // Same ever-growing child, but a streaming (Busy) session: a moving height is incoming
+        // content, not the layout still settling, so the chain must count its passes down and stop
+        // after REFLOW_PASSES instead of restarting the settle window and draining the full budget
+        // the idle case relies on. recoverPending()'s non-Busy states (awaiting-permission, retry,
+        // offline) intentionally keep the idle settle behavior and are not gated here.
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        model.setState(SessionState.Busy("thinking"))
+        panel.add(EverGrowing(), 0)
+        panel.setSize(600, 400)
+
+        UIUtil.dispatchAllInvocationEvents()
+
+        // A handful of passes (~REFLOW_PASSES), well short of the idle budget (~25). Dropping or
+        // inverting the Busy term restarts the window every pass and blows past this bound.
+        assertTrue("streaming reflow must settle in the pass window, was $reflows", reflows in 1..10)
+    }
+
+    fun `test non-streaming active state keeps the reflow settle window`() {
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+        // Retry is isBusy() == true but not SessionState.Busy: no deltas arrive, so a moving height
+        // means the panes are still settling and the window must keep restarting toward the idle
+        // budget rather than collapsing to REFLOW_PASSES. recoverPending() can seed this right after
+        // load, and it is the only case that tells `is SessionState.Busy` apart from `isBusy()`.
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        model.setState(SessionState.Retry("retrying", 1, 0L))
+        panel.add(EverGrowing(), 0)
+        panel.setSize(600, 400)
+
+        UIUtil.dispatchAllInvocationEvents()
+
+        // Reaches the idle budget region (~25), not the streaming window (~7). Reverting the gate to
+        // isBusy() would collapse this to REFLOW_PASSES and fail here.
+        assertTrue("non-streaming state must keep re-measuring, was $reflows", reflows in 11..30)
+    }
+
+    fun `test apply style drops cached panel measurements`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        panel.setSize(600, 400)
+        layout(panel)
+        child.markValid()
+        child.size = 80
+
+        panel.applyStyle(SessionEditorStyle.current())
+        layout(panel)
+
+        assertEquals(80, child.height)
     }
 
     fun `test top level user turns use prompt gap after previous turn`() {
@@ -192,10 +364,13 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test turn view hides when all messages are reverted`() {
-        model.upsertMessage(msg("u1", "user"))
-        model.upsertMessage(msg("a1", "assistant"))
-        model.upsertMessage(msg("u2", "user"))
-        model.upsertMessage(msg("a2", "assistant"))
+        // Messages carry content so their visibility reflects revert state rather than emptiness.
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), listOf(part("u1p", "u1", "text", "hi"))),
+            MessageWithPartsDto(msg("a1", "assistant"), listOf(part("a1p", "a1", "text", "ok"))),
+            MessageWithPartsDto(msg("u2", "user"), listOf(part("u2p", "u2", "text", "more"))),
+            MessageWithPartsDto(msg("a2", "assistant"), listOf(part("a2p", "a2", "text", "done"))),
+        ))
 
         model.setRevert(SessionRevertDto("u2"))
 
@@ -207,14 +382,29 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test turn view shows again when revert clears`() {
-        model.upsertMessage(msg("u1", "user"))
-        model.upsertMessage(msg("u2", "user"))
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), listOf(part("u1p", "u1", "text", "hi"))),
+            MessageWithPartsDto(msg("u2", "user"), listOf(part("u2p", "u2", "text", "more"))),
+        ))
         model.setRevert(SessionRevertDto("u2"))
 
         model.setRevert(null)
 
         assertTrue(panel.findTurn("u2")!!.isVisible)
         assertTrue(panel.findMessage("u2")!!.isVisible)
+    }
+
+    fun `test empty user anchor is hidden while its turn and assistant content stay visible`() {
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), emptyList()),
+            MessageWithPartsDto(msg("a1", "assistant"), listOf(part("a1p", "a1", "text", "hi"))),
+        ))
+
+        // The bare user anchor renders nothing, so it is hidden...
+        assertFalse(panel.findMessage("u1")!!.isVisible)
+        // ...but the turn and its assistant content remain visible.
+        assertTrue(panel.findMessage("a1")!!.isVisible)
+        assertTrue(panel.findTurn("u1")!!.isVisible)
     }
 
     // ------ TurnRemoved ------
@@ -641,16 +831,21 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         layout(message)
         val box = promptBox(message)
         val point = SwingUtilities.convertPoint(box, Point(), message)
-        assertTrue("prompt box should be below attachment", point.y > 0)
+        val attachment = components(message).filterIsInstance<PromptAttachmentView>().single()
+        val attachmentPoint = SwingUtilities.convertPoint(attachment, Point(), box)
+        assertTrue("attachment should be inside prompt box below prompt text", attachmentPoint.y > 0)
 
         val image = BufferedImage(message.width, message.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = image.createGraphics()
         message.paint(graphics)
         graphics.dispose()
 
-        val line = SessionUiStyle.View.Outline.color().rgb
-        assertEquals(line, Color(image.getRGB(point.x + box.width / 2, point.y), true).rgb)
-        assertFalse(line == Color(image.getRGB(point.x + box.width / 2, 0), true).rgb)
+        // The borderless bubble fills its surface; probing the box edges and center verifies it
+        // paints the fill at the wrapped coordinates.
+        val fill = SessionUiStyle.View.Prompt.bgColor(SessionEditorStyle.current()).rgb
+        assertEquals(fill, Color(image.getRGB(point.x + box.width / 2, point.y), true).rgb)
+        assertEquals(fill, Color(image.getRGB(point.x + box.width / 2, point.y + box.height - 1), true).rgb)
+        assertEquals(fill, Color(image.getRGB(point.x + box.width / 2, point.y + box.height / 2), true).rgb)
     }
 
     fun `test created ContentDelta is not double applied`() {
@@ -883,6 +1078,47 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertSame(item.progress, item.components.last())
     }
 
+    fun `test error state makes outcome view visible and hides others`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.Error("OpenRouter balance is too low", "APIError"))
+
+        val ov = find<SessionOutcomeView>(item)!!
+        val qv = find<QuestionView>(item)!!
+        val pv = find<PermissionView>(item)!!
+        val lv = find<LoginRequiredView>(item)!!
+
+        assertTrue(ov.isVisible)
+        assertFalse(qv.isVisible)
+        assertFalse(pv.isVisible)
+        assertFalse(lv.isVisible)
+        assertNotNull(text(item, "OpenRouter balance is too low"))
+        assertSame(item.progress, item.components.last())
+    }
+
+    fun `test turn ended state makes outcome view visible`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED, OutcomeTone.WARNING))
+
+        val ov = find<SessionOutcomeView>(item)!!
+        val comps = item.components.toList()
+
+        assertTrue(ov.isVisible)
+        assertNotNull(text(item, KiloBundle.message("session.outcome.interrupted.description")))
+        assertTrue(comps.indexOf(ov) < comps.indexOf(item.progress))
+        assertSame(item.progress, comps.last())
+    }
+
+    fun `test returning to idle hides outcome view`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.TurnEnded(Outcome.FAILED, OutcomeTone.CRITICAL))
+        model.setState(SessionState.Idle)
+
+        val ov = find<SessionOutcomeView>(item)!!
+
+        assertFalse(ov.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
     fun `test login required button invokes openProfile callback`() {
         var called = false
         val lv = LoginRequiredView(openProfile = { called = true }, dismiss = {})
@@ -916,9 +1152,10 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.setRevert(SessionRevertDto("u1"))
         banner.update()
 
-        assertNotNull(find<BaseQuestionView>(banner))
+        assertNotNull(find<DialogView>(banner))
+        assertNotNull(components(banner).filterIsInstance<PartHeader>().singleOrNull())
 
-        val buttons = components(banner).filterIsInstance<JButton>()
+        val buttons = components(banner).filterIsInstance<JButton>().filter { it.text.isNotEmpty() }
         assertEquals(
             listOf(KiloBundle.message("revert.banner.redo"), KiloBundle.message("revert.banner.redo.all")),
             buttons.map { it.text },
@@ -935,7 +1172,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     fun `test rollback banner reuses file rows across updates`() {
         val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))
-        model.setRevert(SessionRevertDto("u1"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
         model.setDiff(listOf(DiffFileDto("src/A.kt", 1, 0), DiffFileDto("src/B.kt", 2, 1)))
         banner.update()
         val rows = components(banner).filterIsInstance<Stack>().filter { stack ->
@@ -957,6 +1194,127 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals("-2", badges[0].removedLabelForTest().text)
         assertEquals("+3", badges[1].addedLabelForTest().text)
         assertEquals("-2", badges[1].removedLabelForTest().text)
+    }
+
+    fun `test rollback banner caps file list with scroll pane`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        model.setDiff((1..80).map { DiffFileDto("src/file-$it.kt", it, 0) })
+
+        banner.update()
+
+        val scroll = components(banner).filterIsInstance<JBScrollPane>().single()
+        assertTrue(scroll.verticalScrollBarPolicy == ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED)
+        assertTrue(scroll.horizontalScrollBarPolicy == ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED)
+        val rows = rowLabels(banner).mapNotNull { it.parent }
+        val rowHeight = rows.first().preferredSize.height
+        val cap = rowHeight * RevertBanner.MAX_FILE_ROWS + UiStyle.Gap.xs() * (RevertBanner.MAX_FILE_ROWS - 1)
+        assertEquals(cap, scroll.preferredSize.height)
+    }
+
+    fun `test rollback banner shortens duplicate file names with parents`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        model.setDiff(listOf(
+            DiffFileDto("apps/main/src/App.kt", 1, 0),
+            DiffFileDto("packages/ui/src/App.kt", 2, 1),
+            DiffFileDto("packages/ui/src/Button.kt", 3, 0),
+        ))
+
+        banner.update()
+
+        val labels = rowLabels(banner).map { it.text to it.toolTipText }
+        assertTrue(labels.contains("main/src/App.kt" to "apps/main/src/App.kt"))
+        assertTrue(labels.contains("ui/src/App.kt" to "packages/ui/src/App.kt"))
+        assertTrue(labels.contains("Button.kt" to "packages/ui/src/Button.kt"))
+    }
+
+    fun `test rollback banner uses full path tooltip for entire file row`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.setSession(SessionDto(
+            id = "ses",
+            projectID = "proj",
+            directory = "/workspace/root",
+            title = "Session",
+            version = "1",
+            time = SessionTimeDto(0.0, 0.0),
+        ))
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        model.setDiff(listOf(
+            DiffFileDto("project/dir1/shared-alpha.txt", 0, 4),
+            DiffFileDto("project/dir2/shared-alpha.txt", 0, 4),
+        ))
+
+        banner.update()
+
+        val label = rowLabels(banner).first { it.text == "dir1/shared-alpha.txt" }
+        val row = label.parent as JComponent
+        assertEquals("/workspace/root/project/dir1/shared-alpha.txt", row.toolTipText)
+        assertTrue(components(row).filterIsInstance<JComponent>().all { it.toolTipText == "/workspace/root/project/dir1/shared-alpha.txt" })
+    }
+
+    fun `test rollback banner opens rolled back diff`() {
+        val diff = DiffFileDto("src/A.kt", 1, 0, PATCH, "modified")
+        val opened = mutableListOf<List<DiffFileDto>>()
+        val titles = mutableListOf<String>()
+        val keys = mutableListOf<String>()
+        val banner = RevertBanner(model, {}, {}, {})
+        banner.setDiffOpener({ files, title, key ->
+            opened.add(files)
+            titles.add(title)
+            keys.add(key)
+        }, "ses_1")
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1", diffs = listOf(diff)))
+
+        banner.update()
+
+        val button = components(banner).filterIsInstance<HoverIcon>()
+            .first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
+        assertTrue(button.isVisible)
+        assertTrue(button.isEnabled)
+        button.doClick()
+
+        assertEquals(listOf(diff), opened.single())
+        assertEquals(KiloBundle.message("revert.banner.openDiff.title"), titles.single())
+        assertEquals("revert:ses_1:u1", keys.single())
+    }
+
+    fun `test rollback banner hides open diff without a snapshot`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = null))
+        model.setDiff(listOf(DiffFileDto("src/A.kt", 1, 0, PATCH)))
+
+        banner.update()
+
+        val button = components(banner).filterIsInstance<HoverIcon>()
+            .first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
+        assertFalse(button.isVisible)
+        assertFalse(button.isEnabled)
+    }
+
+    fun `test rollback banner opens session diff when revert diff is absent`() {
+        val diff = DiffFileDto("src/A.kt", 1, 0, PATCH, "modified")
+        val opened = mutableListOf<List<DiffFileDto>>()
+        val banner = RevertBanner(model, {}, {}, {})
+        banner.setDiffOpener({ files, _, _ -> opened.add(files) }, "ses_1")
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        model.setDiff(listOf(diff))
+
+        banner.update()
+
+        val button = components(banner).filterIsInstance<HoverIcon>()
+            .first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
+        assertTrue(button.isVisible)
+        assertTrue(button.isEnabled)
+        button.doClick()
+
+        assertEquals(listOf(diff), opened.single())
     }
 
     fun `test rollback banner shows redo all only for multiple reverted messages`() {
@@ -1005,7 +1363,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         banner.setReverting(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
 
-        val buttons = components(banner).filterIsInstance<JButton>()
+        val buttons = components(banner).filterIsInstance<JButton>().filter { it.text.isNotEmpty() }
         assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo") }.all { !it.isEnabled })
         assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo.all") }.all { !it.isEnabled })
         val progress = components(banner).filterIsInstance<RevertProgress>().single()
@@ -1186,22 +1544,17 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         )
         val first = panel.findMessage("a1")!!.part("tp1") as QuestionResultView
         val second = panel.findMessage("a1")!!.part("tp2") as QuestionResultView
-        val firstRoot = root(first)
-        val secondRoot = root(second)
 
         first.toggle()
         second.toggle()
 
         enter(header(first))
         assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, header(first).background.rgb)
-        assertLine(firstRoot.border)
 
         enter(header(second))
 
         assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, header(first).background.rgb)
         assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, header(second).background.rgb)
-        assertLine(firstRoot.border)
-        assertLine(secondRoot.border)
     }
 
     // ------ helpers ------
@@ -1216,10 +1569,13 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             reply = { _, _, _ -> },
         )
         val l = LoginRequiredView(openProfile = {}, dismiss = {})
-        return SessionMessageListPanel(model, parent, q, p, l, openFile)
+        val o = SessionOutcomeView()
+        return SessionMessageListPanel(model, parent, q, p, l, openFile).also { it.outcome = o }
     }
 
     private inline fun <reified T> find(root: Container): T? = findCls(root, T::class.java)
+
+    private fun text(root: Container, value: String) = components(root).filterIsInstance<JBTextArea>().firstOrNull { it.text == value }
 
     private fun <T> findCls(root: Container, cls: Class<T>): T? {
         if (cls.isInstance(root)) return cls.cast(root)
@@ -1260,6 +1616,10 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0),
     )
 
+    private fun summary(path: String) = MessageSummaryDto(
+        diffs = listOf(DiffFileDto(path, 2, 1, PATCH)),
+    )
+
     private fun part(id: String, mid: String, type: String, text: String? = null) = PartDto(
         id = id, sessionID = "ses", messageID = mid, type = type, text = text,
     )
@@ -1288,9 +1648,8 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         input = mapOf("filePath" to "src/Main.kt", "pattern" to "query"),
     )
 
-    private fun root(view: QuestionResultView) = view.components[0] as JPanel
-
-    private fun header(view: QuestionResultView) = root(view).components[0] as JPanel
+    // The hover surface is the base header row (child 0) of the card.
+    private fun header(view: QuestionResultView) = view.components[0] as JPanel
 
     private fun enter(component: Component) {
         component.dispatchEvent(MouseEvent(
@@ -1303,19 +1662,6 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             0,
             false,
         ))
-    }
-
-    private fun assertLine(border: Border) {
-        val image = BufferedImage(5, 5, BufferedImage.TYPE_INT_ARGB)
-        val item = JPanel()
-        val graphics = image.createGraphics()
-        border.paintBorder(item, graphics, 0, 0, image.width, image.height)
-        graphics.dispose()
-        val rgb = SessionUiStyle.View.Outline.brightColor().rgb
-        assertEquals(rgb, Color(image.getRGB(2, 0), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
     }
 
     private fun count(root: Component): Int {
@@ -1341,7 +1687,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     private fun promptBox(root: MessageView): Component {
-        return components(root).first { it.parent != root && it is JPanel && it.componentCount == 1 && it.components.single() is TextView }
+        return components(root).first { it.parent != root && it is JPanel && it.components.any { child -> child is TextView } }
     }
 
     private fun components(root: Component): List<Component> {
@@ -1353,6 +1699,11 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         visit(root)
         return out
     }
+
+    private fun rowLabels(root: Component): List<JBLabel> = components(root)
+        .filterIsInstance<Stack>()
+        .filter { stack -> stack.components.any { it is DiffStatBadge } }
+        .mapNotNull { stack -> components(stack).filterIsInstance<JBLabel>().firstOrNull() }
 
     private fun taskText(view: TaskToolView): List<String> {
         val scroll = components(view).filterIsInstance<JBScrollPane>().single()
@@ -1376,6 +1727,33 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         override fun addInvalidComponent(invalidComponent: JComponent) {
             if (invalidComponent in watched) invalid.add(invalidComponent)
             super.addInvalidComponent(invalidComponent)
+        }
+    }
+
+    private class Growing(var size: Int) : JPanel() {
+        private var valid = false
+
+        override fun isValid() = valid
+
+        override fun invalidate() {
+            valid = false
+            super.invalidate()
+        }
+
+        fun markValid() {
+            valid = true
+        }
+
+        override fun getPreferredSize() = java.awt.Dimension(0, size)
+    }
+
+    /** Reports a taller preferred height on every measurement, so a reflow chain never stabilizes. */
+    private class EverGrowing : JPanel() {
+        private var size = 10
+
+        override fun getPreferredSize(): java.awt.Dimension {
+            size += 10
+            return java.awt.Dimension(0, size)
         }
     }
 }

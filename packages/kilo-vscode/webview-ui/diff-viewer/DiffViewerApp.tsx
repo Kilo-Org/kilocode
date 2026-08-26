@@ -24,6 +24,7 @@ import type { DiffViewerNotice } from "../src/types/messages/extension-messages"
 import { DiffPickerHeader } from "./DiffPickerHeader"
 import { BaseBranchPicker } from "./BaseBranchPicker"
 import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
+import { SpeechToTextModelsProvider } from "../src/context/speech-to-text-models"
 
 const NOTICE_KEYS: Record<DiffViewerNotice, string> = {
   "snapshots-disabled": "diffViewer.notice.snapshotsDisabled",
@@ -45,6 +46,7 @@ const DiffViewerContent: Component = () => {
   const [loadingFiles, setLoadingFiles] = createSignal<Set<string>>(new Set())
   const [availableSources, setAvailableSources] = createSignal<DiffSourceDescriptor[]>([])
   const [currentSourceId, setCurrentSourceId] = createSignal<string | undefined>(undefined)
+  const [initialFile, setInitialFile] = createSignal<string | undefined>(undefined)
   const [capabilities, setCapabilities] = createSignal<DiffSourceCapabilities | undefined>(undefined)
   const [notice, setNotice] = createSignal<DiffViewerNotice | undefined>(undefined)
   const [branches, setBranches] = createSignal<BranchInfo[]>([])
@@ -133,6 +135,14 @@ const DiffViewerContent: Component = () => {
 
     if (msg.type === "diffViewer.markdownRender") {
       setMarkdown(msg.render)
+      return
+    }
+    if ((msg as { type: string; file?: string }).type === "diffViewer.initialFile") {
+      setInitialFile((msg as { file?: string }).file)
+      return
+    }
+    if ((msg as { type: string; render?: boolean }).type === "diffViewer.initialMarkdown") {
+      setMarkdown((msg as { render?: boolean }).render === true)
       return
     }
     if (msg.type === "setAvailableSources") {
@@ -265,6 +275,7 @@ const DiffViewerContent: Component = () => {
         onOpenFile={(relativePath) => {
           post({ type: "openFile", filePath: relativePath })
         }}
+        initialFile={initialFile()}
         onRevertFile={(file) => {
           markReverting(file, true)
           post({ type: "diffViewer.revertFile", file })
@@ -306,8 +317,10 @@ export const DiffViewerApp: Component = () => {
           <ServerProvider>
             <ProviderProvider>
               <ConfigProvider>
-                <SpeechToTextPrewarm />
-                <DiffViewerShell />
+                <SpeechToTextModelsProvider>
+                  <SpeechToTextPrewarm />
+                  <DiffViewerShell />
+                </SpeechToTextModelsProvider>
               </ConfigProvider>
             </ProviderProvider>
           </ServerProvider>

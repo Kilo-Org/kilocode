@@ -12,37 +12,54 @@ interface Toast {
 }
 
 export function createRevertFile(
-  currentDiffSessionId: Accessor<string | undefined>,
+  diffScopeId: Accessor<string | undefined>,
+  ctx: Accessor<string | undefined>,
+  scope: Accessor<string>,
   vscode: VsCode,
   showToast: (t: Toast) => void,
   t: (key: string) => string,
+  projectId?: Accessor<string | undefined>,
 ) {
   const [files, setFiles] = createSignal<Record<string, Set<string>>>({})
+  const key = (project: string | undefined, scope: string) => `${project ?? "single"}\0${scope}`
 
   const reverting = createMemo(() => {
-    const sessionId = currentDiffSessionId()
-    if (!sessionId) return new Set<string>()
-    return files()[sessionId] ?? new Set<string>()
+    const id = diffScopeId()
+    if (!id) return new Set<string>()
+    return files()[key(projectId?.(), id)] ?? new Set<string>()
   })
 
-  function revert(file: string) {
-    const sessionId = currentDiffSessionId()
-    if (!sessionId) return
+  const revertingFor = (id: string) => files()[key(projectId?.(), id)] ?? new Set<string>()
+
+  function revertFor(id: string | undefined, context: string | undefined, source: string, file: string) {
+    if (!id || !context) return
+    const data = key(projectId?.(), id)
     setFiles((prev) => {
-      const set = new Set(prev[sessionId] ?? [])
+      const set = new Set(prev[data] ?? [])
       set.add(file)
-      return { ...prev, [sessionId]: set }
+      return { ...prev, [data]: set }
     })
-    vscode.postMessage({ type: "agentManager.revertWorktreeFile", sessionId, file })
+    vscode.postMessage({
+      type: "agentManager.revertWorktreeFile",
+      projectId: projectId?.(),
+      sessionId: context,
+      file,
+      scope: source,
+    })
+  }
+
+  function revert(file: string) {
+    revertFor(diffScopeId(), ctx(), scope(), file)
   }
 
   function onResult(ev: AgentManagerRevertWorktreeFileResultMessage) {
+    const data = key(ev.projectId, ev.sessionId)
     setFiles((prev) => {
-      const set = new Set(prev[ev.sessionId] ?? [])
+      const set = new Set(prev[data] ?? [])
       set.delete(ev.file)
       const next = { ...prev }
-      if (set.size === 0) delete next[ev.sessionId]
-      else next[ev.sessionId] = set
+      if (set.size === 0) delete next[data]
+      else next[data] = set
       return next
     })
     if (ev.status === "success") {
@@ -52,5 +69,5 @@ export function createRevertFile(
     }
   }
 
-  return { reverting, revert, onResult }
+  return { reverting, revertingFor, revert, revertFor, onResult }
 }

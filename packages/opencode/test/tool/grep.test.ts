@@ -3,6 +3,7 @@ import { describe, expect } from "bun:test"
 import fs from "fs/promises"
 import os from "os"
 import path from "path"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect, Layer } from "effect"
 import { GrepTool } from "../../src/tool/grep"
 import { provideInstance, testInstanceStoreLayer, TestInstance, tmpdirScoped } from "../fixture/fixture"
@@ -22,13 +23,8 @@ import { Git } from "@/git"
 import { Filesystem } from "@/util/filesystem"
 
 const toolLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
-  Layer.mergeAll(
-    CrossSpawnSpawner.defaultLayer,
-    FSUtil.defaultLayer,
-    Ripgrep.defaultLayer,
-    Truncate.defaultLayer,
-    Agent.defaultLayer,
-    Git.defaultLayer,
+  LayerNode.compile(
+    LayerNode.group([CrossSpawnSpawner.node, FSUtil.node, Ripgrep.node, Truncate.node, Agent.node, Git.node]),
   )
 
 const it = testEffect(toolLayer())
@@ -149,7 +145,7 @@ describe("tool.grep", () => {
       const grep = yield* info.init()
       const result = yield* grep.execute({ pattern: "needle", path: test.directory, include: "*.txt" }, ctx)
 
-      expect(result.output).toContain("(Results truncated. Consider using a more specific path or pattern.)")
+      expect(result.output).toContain("100 matches limit reached. Use limit=200 for more, or refine pattern.") // kilocode_change
       expect(result.output).not.toMatch(/showing \d+ of \d+ matches/)
     }),
   )
@@ -240,6 +236,8 @@ describe("tool.grep", () => {
       )
 
       expect(result.metadata.matches).toBe(1)
+      expect(result.output).toContain(path.join(alias, "test.txt"))
+      expect(result.output).not.toContain(path.join(real, "test.txt"))
       expect(requests.find((req) => req.permission === "external_directory")).toBeUndefined()
     }),
   )

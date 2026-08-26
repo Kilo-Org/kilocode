@@ -6,8 +6,8 @@ import {
 } from "../../src/speech-to-text/models"
 
 describe("speech-to-text model catalog", () => {
-  it("uses Whisper Large V3 Turbo as the fallback default", () => {
-    expect(DEFAULT_SPEECH_TO_TEXT_MODEL.id).toBe("openai/whisper-large-v3-turbo")
+  it("uses NVIDIA Parakeet TDT 0.6B v3 as the fallback default", () => {
+    expect(DEFAULT_SPEECH_TO_TEXT_MODEL.id).toBe("nvidia/parakeet-tdt-0.6b-v3")
     expect(DEFAULT_SPEECH_TO_TEXT_MODEL.id).toBe(SPEECH_TO_TEXT_MODELS[0]?.id)
   })
 
