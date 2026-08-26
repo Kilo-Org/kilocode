@@ -197,6 +197,16 @@ export class WorktreeDiffController {
     await this.controller.requestFile(file)
   }
 
+  public async requestFiles(project: string | undefined, id: string, files: readonly string[]): Promise<void> {
+    if (this.controller.currentId !== id || this.owner !== project || this.ctx.projectId?.() !== project) {
+      for (const file of files) {
+        this.ctx.post({ type: "agentManager.worktreeDiffFile", projectId: project, sessionId: id, file, diff: null })
+      }
+      return
+    }
+    await this.controller.requestFiles(files)
+  }
+
   /** Resolve the base-branch choices for a context and push them to the webview. */
   public async postBranches(id: string): Promise<void> {
     const result = await this.branches(id).catch((err) => {
