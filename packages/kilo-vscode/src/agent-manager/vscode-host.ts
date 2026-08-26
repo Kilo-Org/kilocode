@@ -110,6 +110,7 @@ export class VscodeHost implements Host {
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
       rootDirectory: opts.workspaceRoot,
       disableViewedRegistration: true,
+      disableStatsPolling: true,
       focusTargetContext: {
         prompt: "kilo-code.new.agentManagerPromptFocused",
         mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",

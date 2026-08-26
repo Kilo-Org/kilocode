@@ -72,11 +72,8 @@ function result(path: string): CreateWorktreeResult {
 function ctx(overrides: Partial<ContinueContext> = {}): ContinueContext {
   return {
     root: "/tmp/test",
-    connection: {
-      getClient: () => {
-        throw new Error("no client")
-      },
-      runExplicitAbort: async (_sessionId, _directory, action) => action(),
+    getClient: () => {
+      throw new Error("no client")
     },
     createWorktreeOnDisk: async () => null,
     runSetupScript: async () => {},
@@ -99,35 +96,28 @@ describe("continue-in-worktree steps", () => {
       await abortSession(c, "session-1")
     })
 
-    it("does not throw when abort rejects", async () => {
+    it("logs backend failures without interrupting the transfer", async () => {
+      const log = mock(() => {})
       const c = ctx({
-        connection: {
-          getClient: () => ({ session: { abort: async () => undefined } }) as never,
-          runExplicitAbort: async () => {
-            throw new Error("fail")
-          },
-        },
+        getClient: () =>
+          ({
+            session: { abort: () => Promise.reject(new Error("fail")) },
+          }) as never,
+        log,
       })
+
       await abortSession(c, "session-1")
+
+      expect(log).toHaveBeenCalledWith("Session abort failed (may already be idle):", "fail")
     })
 
-    it("calls abort on the client", async () => {
-      let called = false
-      const c = ctx({
-        connection: {
-          getClient: () =>
-            ({
-              session: {
-                abort: async () => {
-                  called = true
-                },
-              },
-            }) as never,
-          runExplicitAbort: async (_sessionId, _directory, action) => action(),
-        },
-      })
+    it("requests thrown backend errors when aborting", async () => {
+      const abort = mock(async () => undefined)
+      const c = ctx({ getClient: () => ({ session: { abort } }) as never })
+
       await abortSession(c, "session-1")
-      expect(called).toBe(true)
+
+      expect(abort).toHaveBeenCalledWith({ sessionID: "session-1" }, { throwOnError: true })
     })
   })
 
@@ -141,13 +131,10 @@ describe("continue-in-worktree steps", () => {
 
     it("returns error when fork rejects", async () => {
       const c = ctx({
-        connection: {
-          getClient: () =>
-            ({
-              session: { fork: () => Promise.reject(new Error("fork failed")) },
-            }) as never,
-          runExplicitAbort: async (_s, _d, action) => action(),
-        },
+        getClient: () =>
+          ({
+            session: { fork: () => Promise.reject(new Error("fork failed")) },
+          }) as never,
       })
       const res = await forkSession(c, "session-1", "/tmp/wt")
       expect(res.ok).toBe(false)
@@ -158,13 +145,10 @@ describe("continue-in-worktree steps", () => {
       const forked = session("forked-1")
       const promptAsync = mock(async () => ({}))
       const c = ctx({
-        connection: {
-          getClient: () =>
-            ({
-              session: { fork: () => Promise.resolve({ data: forked }), promptAsync },
-            }) as never,
-          runExplicitAbort: async (_s, _d, action) => action(),
-        },
+        getClient: () =>
+          ({
+            session: { fork: () => Promise.resolve({ data: forked }), promptAsync },
+          }) as never,
       })
       const res = await forkSession(c, "session-1", "/tmp/wt")
       expect(res.ok).toBe(true)
@@ -228,7 +212,7 @@ describe("continueInWorktree", () => {
     let created: CreateWorktreeResult | undefined
     const c = ctx({
       root,
-      connection: { getClient: () => api, runExplicitAbort: async (_s, _d, action) => action() },
+      getClient: () => api,
       createWorktreeOnDisk: async (opts) => {
         const value = await manager.createWorktree(opts)
         created = value
@@ -259,7 +243,7 @@ describe("continueInWorktree", () => {
     let created: CreateWorktreeResult | undefined
     const c = ctx({
       root,
-      connection: { getClient: () => client(), runExplicitAbort: async (_s, _d, action) => action() },
+      getClient: () => client(),
       createWorktreeOnDisk: async (opts) => {
         const value = await manager.createWorktree(opts)
         created = value
