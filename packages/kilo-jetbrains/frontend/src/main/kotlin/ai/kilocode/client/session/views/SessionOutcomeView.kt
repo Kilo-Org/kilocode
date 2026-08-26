@@ -2,7 +2,6 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Outcome
-import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -35,8 +34,9 @@ class SessionOutcomeView(
 
     @RequiresEdt
     fun showError(message: String, kind: String?) {
+        setOutlined(true)
         setHeaderIcon(AllIcons.General.Error, kind ?: KiloBundle.message("session.error.title"))
-        setHeader(KiloBundle.message("session.error.title"))
+        setHeader(KiloBundle.message("session.error.title"), kind)
         error.text = message
         setContentPadding(left = false, right = false)
         setContent(error.scroll)
@@ -44,22 +44,26 @@ class SessionOutcomeView(
         refresh()
     }
 
+    /**
+     * A user-initiated stop is not a failure: it renders as one muted line with no icon and no card
+     * outline. Only a model/provider failure gets the error card treatment.
+     */
     @RequiresEdt
-    fun showOutcome(outcome: Outcome, tone: OutcomeTone) {
-        val title = when (outcome) {
-            Outcome.INTERRUPTED -> KiloBundle.message("session.outcome.interrupted.title")
-            Outcome.FAILED -> KiloBundle.message("session.outcome.failed.title")
+    fun showOutcome(outcome: Outcome) {
+        when (outcome) {
+            Outcome.INTERRUPTED -> {
+                setOutlined(false)
+                setHeaderIcon(null)
+                setHeader("", KiloBundle.message("session.outcome.interrupted.note"))
+            }
+
+            Outcome.FAILED -> {
+                val title = KiloBundle.message("session.outcome.failed.title")
+                setOutlined(true)
+                setHeaderIcon(AllIcons.General.Error, title)
+                setHeader(title, KiloBundle.message("session.outcome.failed.description"))
+            }
         }
-        val desc = when (outcome) {
-            Outcome.INTERRUPTED -> KiloBundle.message("session.outcome.interrupted.description")
-            Outcome.FAILED -> KiloBundle.message("session.outcome.failed.description")
-        }
-        val icon = when (tone) {
-            OutcomeTone.WARNING -> AllIcons.General.Warning
-            OutcomeTone.CRITICAL -> AllIcons.General.Error
-        }
-        setHeaderIcon(icon, title)
-        setHeader(title, desc)
         setContentPadding()
         setContent(null)
         isVisible = true

@@ -2,7 +2,6 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Outcome
-import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.ui.SessionLayout
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -86,27 +85,26 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test showOutcome renders interrupted copy and warning icon`() {
+    fun `test showOutcome renders interrupted note without icon`() {
         edt {
             val view = SessionOutcomeView()
-            view.showOutcome(Outcome.INTERRUPTED, OutcomeTone.WARNING)
+            view.showOutcome(Outcome.INTERRUPTED)
 
             assertTrue(view.isVisible)
-            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.title")))
-            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.description")))
-            assertIcons(view, AllIcons.General.Warning)
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.note")))
+            assertTrue(findAll<JBLabel>(view).none { it.icon != null && it.isVisible })
         }
     }
 
     fun `test showOutcome updates without stale text`() {
         edt {
             val view = SessionOutcomeView()
-            view.showOutcome(Outcome.INTERRUPTED, OutcomeTone.WARNING)
-            view.showOutcome(Outcome.FAILED, OutcomeTone.CRITICAL)
+            view.showOutcome(Outcome.INTERRUPTED)
+            view.showOutcome(Outcome.FAILED)
 
             assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.title")))
             assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.description")))
-            assertNull(findText(view, KiloBundle.message("session.outcome.interrupted.description")))
+            assertNull(findText(view, KiloBundle.message("session.outcome.interrupted.note")))
             assertIcons(view, AllIcons.General.Error)
         }
     }
@@ -115,11 +113,20 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
         edt {
             val view = SessionOutcomeView()
             view.showError("Provider balance is too low", "APIError")
-            view.showOutcome(Outcome.INTERRUPTED, OutcomeTone.WARNING)
+            view.showOutcome(Outcome.INTERRUPTED)
 
             assertNull(findText(view, "Provider balance is too low"))
             assertNull(findErrorScroll(view, "Provider balance is too low"))
-            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.description")))
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.note")))
+        }
+    }
+
+    fun `test showError surfaces error kind`() {
+        edt {
+            val view = SessionOutcomeView()
+            view.showError("Provider balance is too low", "APIError")
+
+            assertNotNull(findText(view, "APIError"))
         }
     }
 

@@ -24,7 +24,6 @@ import ai.kilocode.client.session.ui.mode.agentTitle
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Outcome
-import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
@@ -126,7 +125,6 @@ class SessionController(
 
     companion object {
         private val LOG = KiloLog.create(SessionController::class.java)
-        private const val ABORT_ERROR = "MessageAbortedError"
         internal const val RECENT_LIMIT = 5
         internal const val DISPLAY_DELAY_MS = 1_000L
         internal const val REVERT_TIMEOUT_MS = 30_000L
@@ -1422,8 +1420,8 @@ class SessionController(
 
     private fun seedOutcome() {
         val err = model.messages().lastOrNull { it.info.role == "assistant" }?.info?.error ?: return
-        if (err.type == ABORT_ERROR) {
-            model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED, OutcomeTone.WARNING))
+        if (err.aborted) {
+            model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED))
             return
         }
         model.setState(SessionState.Error(err.message ?: err.type, err.type))
@@ -1510,7 +1508,7 @@ class SessionController(
                 if (current is SessionState.Error && event.reason != "completed") return
                 val ended = TurnOutcome.classify(event.reason)
                 when {
-                    ended != null -> model.setState(SessionState.TurnEnded(ended.first, ended.second))
+                    ended != null -> model.setState(SessionState.TurnEnded(ended))
                     event.reason == "completed" -> {
                         capture("Task Completed", sessionProps(event.sessionID))
                         model.setState(SessionState.Idle)
@@ -1522,7 +1520,7 @@ class SessionController(
             is ChatEventDto.SessionCreated -> adoptFollowup(event.info)
 
             is ChatEventDto.Error -> {
-                if (event.error?.type != ABORT_ERROR) {
+                if (event.error?.aborted != true) {
                     capture("Session Error", sessionProps(event.sessionID) + mapOf("context" to "event", "errorClass" to (event.error?.type ?: "unknown")))
                 }
                 error(event, true)
@@ -1645,7 +1643,7 @@ class SessionController(
             model.setState(SessionState.LoginRequired(KiloBundle.message("session.login.required.description")))
             return
         }
-        if (event.error?.type == ABORT_ERROR) return
+        if (event.error?.aborted == true) return
         val msg = event.error?.message ?: event.error?.type ?: KiloBundle.message("session.error.unknown")
         model.setState(SessionState.Error(msg, event.error?.type))
     }
