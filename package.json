@@ -153,7 +153,6 @@
     "vite": "7.3.5",
     "diff": "8.0.4",
     "dompurify": "3.4.2",
-    "nanoid": ">=3.3.18",
     "happy-dom": ">=20.8.9",
     "@opentui/core": "catalog:",
     "@opentui/solid": "catalog:",
