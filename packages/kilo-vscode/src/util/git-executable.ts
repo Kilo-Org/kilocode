@@ -11,6 +11,7 @@ interface GitExecutableOptions {
   run?: (cmd: string, args: string[]) => Promise<{ stdout: string }>
   access?: (file: string, mode: number) => Promise<void>
   realpath?: (file: string) => Promise<string>
+  preferred?: () => Promise<string | undefined>
   log?: (message: string) => void
 }
 
@@ -29,6 +30,14 @@ export function createGitExecutable(options: GitExecutableOptions = {}): GitExec
 
   return (): Promise<string> => {
     cached ??= (async () => {
+      if (platform === "win32") {
+        try {
+          return (await options.preferred?.()) ?? "git"
+        } catch (err) {
+          log(`Unable to resolve the preferred Git executable, using PATH: ${err}`)
+          return "git"
+        }
+      }
       if (platform !== "darwin") return "git"
 
       try {

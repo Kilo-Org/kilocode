@@ -53,3 +53,31 @@ jobs:
       - name: Check for kilocode_change markers
         working-directory: packages/kilo-vscode
         run: bun run check-kilocode-change
+
+  configured-git:
+    name: configured Git executable
+    runs-on: blacksmith-4vcpu-windows-2025
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Run Windows Git executable resolution regression
+        working-directory: packages/kilo-vscode
+        run: bun test tests/unit/git-executable.test.ts --test-name-pattern "configured Git executable" --timeout 120000
+
+      - name: Run Windows worktree creation regression
+        working-directory: packages/kilo-vscode
+        run: bun test tests/unit/worktree-manager.test.ts --test-name-pattern "configured Git executable" --timeout 120000
+
+      - name: Run Windows Git operations regression
+        working-directory: packages/kilo-vscode
+        run: bun test tests/unit/git-ops.test.ts --test-name-pattern "explicit Git executable path" --timeout 120000
+
+      - name: Run Windows project discovery regression
+        working-directory: packages/kilo-vscode
+        run: bun test tests/unit/agent-project-messages.test.ts --test-name-pattern "configured Git executable" --timeout 120000

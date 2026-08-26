@@ -2,6 +2,56 @@ import { describe, expect, it } from "bun:test"
 import { createGitExecutable } from "../../src/util/git-executable"
 
 describe("createGitExecutable", () => {
+  it("uses the configured Git executable on Windows", async () => {
+    const git = createGitExecutable({
+      platform: "win32",
+      preferred: async () => "C:\\Program Files\\Git\\cmd\\git.exe",
+    })
+
+    expect(await git()).toBe("C:\\Program Files\\Git\\cmd\\git.exe")
+  })
+
+  it("falls back to PATH when the preferred Windows executable is missing", async () => {
+    const git = createGitExecutable({
+      platform: "win32",
+      preferred: async () => undefined,
+    })
+
+    expect(await git()).toBe("git")
+  })
+
+  it("logs and falls back to PATH when preferred Windows resolution fails", async () => {
+    const messages: string[] = []
+    const git = createGitExecutable({
+      platform: "win32",
+      preferred: async () => {
+        throw new Error("Git API unavailable")
+      },
+      log: (message) => messages.push(message),
+    })
+
+    expect(await git()).toBe("git")
+    expect(messages).toEqual(["Unable to resolve the preferred Git executable, using PATH: Error: Git API unavailable"])
+  })
+
+  it("caches the preferred Windows executable", async () => {
+    let calls = 0
+    const git = createGitExecutable({
+      platform: "win32",
+      preferred: async () => {
+        calls++
+        return "C:\\Git\\git.exe"
+      },
+    })
+
+    expect(await Promise.all([git(), git(), git()])).toEqual([
+      "C:\\Git\\git.exe",
+      "C:\\Git\\git.exe",
+      "C:\\Git\\git.exe",
+    ])
+    expect(calls).toBe(1)
+  })
+
   it("preserves PATH lookup on other platforms", async () => {
     const git = createGitExecutable({
       platform: "linux",
