@@ -6,6 +6,8 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import kotlinx.coroutines.CompletableDeferred
 
@@ -23,6 +25,27 @@ class SessionRetryTest : SessionControllerTestBase() {
         appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
     }
 
+    /** Two connected models so a test can switch selection after the failure. */
+    private fun providers() = listOf(
+        ProviderDto(
+            id = "kilo",
+            name = "Kilo",
+            models = mapOf(
+                "gpt-5" to ModelDto(
+                    id = "gpt-5",
+                    name = "GPT-5",
+                    reasoning = true,
+                    variants = listOf("low", "high"),
+                ),
+            ),
+        ),
+        ProviderDto(
+            id = "anthropic",
+            name = "Anthropic",
+            models = mapOf("claude-opus-5" to ModelDto(id = "claude-opus-5", name = "Claude Opus 5")),
+        ),
+    )
+
     private fun failed(error: MessageErrorDto? = MessageErrorDto(type = "APIError", message = "provider overloaded")) {
         // The model/agent a turn ran with live on the user message, which is what the replay reuses.
         rpc.history.add(
@@ -37,7 +60,7 @@ class SessionRetryTest : SessionControllerTestBase() {
                 emptyList(),
             ),
         )
-        projectRpc.state.value = workspaceReady()
+        projectRpc.state.value = workspaceReady(providers = providers(), connected = listOf("kilo", "anthropic"))
     }
 
     fun `test retry reverts the failed turn then replays the user message`() {
@@ -61,6 +84,71 @@ class SessionRetryTest : SessionControllerTestBase() {
         assertEquals("kilo", prompt.providerID)
         assertEquals("gpt-5", prompt.modelID)
         assertEquals("code", prompt.agent)
+    }
+
+    fun `test retry uses the model selected after the failure`() {
+        failed()
+        val m = controller("ses_test")
+        flush()
+
+        // The usual reason a turn fails is the model it ran with, so switching model and hitting Retry
+        // has to pick the new one up rather than replaying the one that just failed.
+        edt { m.selectModel("anthropic", "claude-opus-5") }
+        flush()
+        edt { m.retry() }
+        flush()
+
+        val prompt = rpc.prompts.single().third
+        assertEquals("anthropic", prompt.providerID)
+        assertEquals("claude-opus-5", prompt.modelID)
+        assertEquals("Still replays the original user message", "msg_user", prompt.messageID)
+    }
+
+    fun `test retry uses the effort selected after the failure`() {
+        failed()
+        val m = controller("ses_test")
+        flush()
+
+        edt { m.selectVariant("high") }
+        flush()
+        edt { m.retry() }
+        flush()
+
+        assertEquals("high", rpc.prompts.single().third.variant)
+    }
+
+    /**
+     * Guards the distinction from login resume, which must keep the model recorded on the failed turn —
+     * the user authenticated for that model. Only Retry follows the live selection.
+     */
+    fun `test retry follows the live selection even when it differs from the failed turn`() {
+        rpc.history.add(
+            MessageWithPartsDto(
+                msg("msg_user", "ses_test", "user").copy(providerID = "kilo", modelID = "gpt-5", agent = "code"),
+                emptyList(),
+            ),
+        )
+        rpc.history.add(
+            MessageWithPartsDto(
+                msg("msg_fail", "ses_test", "assistant").copy(
+                    parentID = "msg_user",
+                    error = MessageErrorDto(type = "APIError", message = "missing credentials"),
+                ),
+                emptyList(),
+            ),
+        )
+        projectRpc.state.value = workspaceReady(providers = providers(), connected = listOf("kilo", "anthropic"))
+        val m = controller("ses_test")
+        flush()
+
+        edt { m.selectModel("anthropic", "claude-opus-5") }
+        flush()
+        edt { m.retry() }
+        flush()
+
+        val prompt = rpc.prompts.single().third
+        assertEquals("anthropic", prompt.providerID)
+        assertEquals("claude-opus-5", prompt.modelID)
     }
 
     fun `test retry does not prompt until the revert completes`() {

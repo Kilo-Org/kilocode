@@ -558,7 +558,7 @@ class SessionController(
         val user = msgs.getOrNull(msgs.size - 2)?.info ?: return null
         if (user.role != "user") return null
         if (tail.info.parentID != user.id) return null
-        val prompt = retryPrompt() ?: return null
+        val prompt = retryPromptCurrent() ?: return null
         if (prompt.messageID != user.id) return null
         return RetryTarget(tail.info.id, prompt)
     }
@@ -1953,6 +1953,12 @@ class SessionController(
         }
     }
 
+    /**
+     * Replays the last user message with the agent/model recorded on it.
+     *
+     * Login resume needs exactly this: the user authenticated for the model that demanded it, so
+     * resuming must use that model rather than whatever is selected now.
+     */
     private fun retryPrompt(): PromptDto? {
         val msg = model.messages().lastOrNull { it.info.role == "user" } ?: return null
         return PromptDto(
@@ -1963,6 +1969,24 @@ class SessionController(
             agent = msg.info.agent,
             variant = model.variant?.takeIf { it in model.variants },
             noReply = false,
+        )
+    }
+
+    /**
+     * Like [retryPrompt], but honours the *current* model/agent/effort selection.
+     *
+     * A turn usually fails because of the model it ran with — missing credentials, provider overload,
+     * context limit — so switching model or effort and pressing Retry has to pick that change up.
+     * Resolution mirrors [promptDto]; the recorded values are only a fallback for when no selection has
+     * resolved yet.
+     */
+    private fun retryPromptCurrent(): PromptDto? {
+        val base = retryPrompt() ?: return null
+        val sel = model.model?.let(::parseModel)
+        return base.copy(
+            providerID = sel?.first ?: base.providerID,
+            modelID = sel?.second ?: base.modelID,
+            agent = model.agent ?: base.agent,
         )
     }
 
