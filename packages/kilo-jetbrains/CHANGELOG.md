@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.4.24
+
+### Patch Changes
+
+- [#13470](https://github.com/Kilo-Org/kilocode/pull/13470) [`17bef75`](https://github.com/Kilo-Org/kilocode/commit/17bef75509e6fc0b8199fb19bba0ebdafb21c223) - Stop showing a running badge for a session that was just deleted.
+
 ## 7.5.0
 
 ### Minor Changes
