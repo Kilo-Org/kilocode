@@ -12,9 +12,11 @@ import ai.kilocode.client.ui.layout.align
 import com.intellij.icons.AllIcons
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
+import com.intellij.ui.RelativeFont
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.IconUtil
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -197,14 +199,7 @@ internal class ActiveListRenderer(
         background = list.background
         top.background = list.background
         wrap.update(list, selected, active)
-        sep.caption = section
-        sep.setHideLine(index == 0)
-        top.isVisible = section != null
-        top.setPreferredSize(section?.let {
-            val height = sep.preferredSize.height
-                .coerceAtLeast(sep.getFontMetrics(sep.font).height + insets.top + insets.bottom)
-            Dimension(0, height + JBUI.scale(2))
-        })
+        syncHeader(section, index)
 
         if (value is ActiveListGap) {
             gap = true
@@ -213,21 +208,25 @@ internal class ActiveListRenderer(
             glyph.isVisible = false
             wrap.update(list, false, false)
             wrap.setPreferredSize(Dimension(0, bodyHeight ?: value.height))
-            top.invalidate()
+            activeListInvalidate(this)
             return this
         }
         gap = false
         layers.isVisible = true
 
         title.clear()
-        // Bold carries the row: the description under it and the icon beside it both render in the
-        // muted secondary color, so weight is what separates the two lines rather than color alone.
-        title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, titleFg))
+        // Bold carries most rows by default: the description under it and the icon beside it both
+        // render in the muted secondary color, so cfg.title separates the two lines when enabled.
+        val style = if (cfg.title == ActiveListWeight.BOLD) SimpleTextAttributes.STYLE_BOLD else SimpleTextAttributes.STYLE_PLAIN
+        title.append(value.title, SimpleTextAttributes(style, titleFg))
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
         syncBadges(value)
-        icon.icon = value.icon
+        // A selected row paints its title in the selection foreground; recolor a tinted glyph to
+        // match so it reads as part of the highlighted text. Colored status icons opt out and keep
+        // their own hue.
+        icon.icon = value.icon?.let { if (active && value.tinted) IconUtil.colorize(it, fg, keepBrightness = false) else it }
         mark.isVisible = value.icon != null
         val note = if (cfg.description) value.description.orEmpty() else ""
         desc.text = note
@@ -263,8 +262,28 @@ internal class ActiveListRenderer(
         pill.background = if (selected && list.isEnabled) UIUtil.getListBackground(true, active) else list.background
         val height = bodyHeight
         wrap.setPreferredSize(height?.let { Dimension(0, it) })
-        top.invalidate()
+        // Neither the content mutations above nor setPreferredSize invalidate reliably: a same-size
+        // icon swap, an equal label text, or an explicit preferred size leave the tree valid, and a
+        // valid subtree keeps the sizes it was measured with for another row.
+        activeListInvalidate(this)
         return this
+    }
+
+    private fun syncHeader(section: String?, index: Int) {
+        sep.caption = section
+        sep.setHideLine(!cfg.divider || index == 0)
+        val font = if (cfg.header == ActiveListWeight.BOLD) {
+            RelativeFont.BOLD.derive(sep.font)
+        } else {
+            RelativeFont.PLAIN.derive(sep.font)
+        }
+        if (sep.font != font) sep.font = font
+        top.isVisible = section != null
+        top.setPreferredSize(section?.let {
+            val height = sep.preferredSize.height
+                .coerceAtLeast(sep.getFontMetrics(sep.font).height + insets.top + insets.bottom)
+            Dimension(0, height + JBUI.scale(2))
+        })
     }
 
     override fun paintChildren(g: Graphics) {

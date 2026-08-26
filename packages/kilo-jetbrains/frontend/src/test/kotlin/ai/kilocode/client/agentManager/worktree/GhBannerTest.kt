@@ -5,6 +5,7 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
+import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
 import com.intellij.openapi.application.ApplicationManager
@@ -23,6 +24,7 @@ class GhBannerTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
+        installBrowser()
         coroutines = TestCoroutines()
         rpc = FakeWorktreeRpcApi()
         timers = TestUiTimers()

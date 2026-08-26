@@ -240,6 +240,25 @@
 
 ## [Unreleased]
 
+## [7.1.0-rc.4] - 2026-08-25
+
+### Added
+- Let Agent Manager tasks choose both provider and model so similarly named models across providers can be selected reliably.
+- Show clearer missing-folder states for deleted or moved JetBrains worktrees.
+
+### Fixed
+- Keep JetBrains Agent Manager worktrees anchored to the main repository's managed storage, preventing nested worktree data loss when the IDE is opened inside a linked worktree.
+- Harden JetBrains worktree cleanup by pruning stale git metadata, hiding dead managed worktrees, refusing unmanaged paths, and blocking parent removal while nested worktrees are live.
+- Surface failed JetBrains sessions consistently in worktree and session lists, and keep the Agents attention dot active until the problem is resolved.
+- Restore running indicators when resuming sessions instead of leaving stale stopped or error state visible.
+- Keep JetBrains session hover popups attached to the correct card, within the visible session area, and hidden behind blocking overlays.
+- Keep worktree PR badges clickable after row reuse and layout changes.
+
+### Changed
+- Improve Kilo Core startup speed for JetBrains and other clients, especially default TUI launch and short-lived commands.
+- Put new, imported, or moved JetBrains Agent Manager worktrees at the top of the list and keep that ordering across reloads unless manually reordered.
+- Make JetBrains Agent Manager rows visually quieter with regular-weight labels, subdued idle icons, and pruning of stale deleted-session status.
+
 ## [7.1.0-rc.3] - 2026-08-24
 
 ### Added
