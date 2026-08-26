@@ -2308,6 +2308,9 @@ class SessionController(
     private fun setControllerViewState(event: SessionControllerEvent.ViewChanged) {
         assertEdt()
         if (disposed) return
+        // A late empty history load must not re-show the empty screen after a prompt opened the
+        // transcript.
+        if (event is SessionControllerEvent.ViewChanged.ShowEmpty && model.showSession) return
         if (event is SessionControllerEvent.ViewChanged.ShowSession) openLocal()
         if (viewState == event) return
         fire(event) {
@@ -2407,6 +2410,14 @@ class SessionController(
             return SessionControllerEvent.ConnectionChanged.ShowError(
                 KiloBundle.message("session.connection.unsupported"),
                 unsupported(workspace.error, directory),
+                "workspace",
+            )
+        }
+
+        if (workspace.status == KiloWorkspaceStatusDto.MISSING) {
+            return SessionControllerEvent.ConnectionChanged.ShowError(
+                KiloBundle.message("session.connection.missing"),
+                KiloBundle.message("session.connection.missing.detail", workspace.error ?: directory),
                 "workspace",
             )
         }

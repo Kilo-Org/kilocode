@@ -9,6 +9,7 @@ export const STATE_GATED = new Set<string>([
   "agentManager.deleteWorktree",
   "agentManager.removeStaleWorktree",
   "agentManager.openLocally",
+  "agentManager.openSessionLocally",
   "agentManager.addSessionToWorktree",
   "agentManager.closeSession",
   "agentManager.persistSession",

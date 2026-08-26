@@ -186,7 +186,6 @@ export const dict = {
     "Automatisk godkendelse er aktiveret. Tilladelsesanmodninger godkendes automatisk.",
   "prompt.action.autoApprove.disabled":
     "Automatisk godkendelse er deaktiveret. Klik for at godkende tilladelsesanmodninger automatisk.",
-  "prompt.action.resetModel": "Nulstil model til standard",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
   "prompt.action.sandbox.enable": "Aktivér sandbox",
@@ -1250,7 +1249,6 @@ export const dict = {
   "task.backgroundAgents.open": "Åbn baggrundsagent",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Fortsæt i baggrunden",
-  "task.backgroundAgents.foreground": "Forgrundsagenten kører",
   "task.backgroundAgents.waiting": "En baggrundsagent har brug for dit input",
   "task.backgroundAgents.needsInput": "Input kræves",
   "task.backgroundAgents.dismiss": "Afvis",

@@ -192,7 +192,6 @@ export const dict = {
     "Automatische Genehmigung ist aktiviert. Berechtigungsanfragen werden automatisch genehmigt.",
   "prompt.action.autoApprove.disabled":
     "Automatische Genehmigung ist deaktiviert. Klicken, um Berechtigungsanfragen automatisch zu genehmigen.",
-  "prompt.action.resetModel": "Modell auf Standard zurücksetzen",
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
   "prompt.action.sandbox.enable": "Sandbox aktivieren",
@@ -1279,7 +1278,6 @@ export const dict = {
   "task.backgroundAgents.open": "Hintergrund-Agent öffnen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Im Hintergrund fortsetzen",
-  "task.backgroundAgents.foreground": "Vordergrund-Agent läuft",
   "task.backgroundAgents.waiting": "Ein Hintergrund-Agent benötigt deine Eingabe",
   "task.backgroundAgents.needsInput": "Eingabe erforderlich",
   "task.backgroundAgents.dismiss": "Ausblenden",

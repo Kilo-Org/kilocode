@@ -1,38 +1,25 @@
 import type { Argv } from "yargs"
+import type { Auth } from "@/auth"
 import * as Log from "@opencode-ai/core/util/log"
 import { InstallationBuildKind, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { createHelpCommand } from "@/kilocode/help-command"
-import { KiloConsoleCommand } from "@/kilocode/cli/cmd/console"
-import { CloudCommand } from "@/kilocode/cli/cmd/cloud"
-import { RollCallCommand } from "@/kilocode/cli/cmd/roll-call"
-import { ProfileCommand } from "@/kilocode/cli/cmd/profile"
-import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
-import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
-import { RemoteCommand } from "@/cli/cmd/remote"
-import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
-import { WorktreeCommand } from "@/kilocode/cli/cmd/worktree"
-import { PtySmokeCommand } from "@/kilocode/cli/cmd/pty-smoke"
+import { hasLazyCommandSelection } from "@/kilocode/cli/lazy-commands"
+import {
+  CloudCommand,
+  ConfigCLICommand,
+  DaemonCommand,
+  DevAliasCommand,
+  DevSetupCommand,
+  KiloConsoleCommand,
+  ProfileCommand,
+  PtySmokeCommand,
+  RemoteCommand,
+  RollCallCommand,
+  WorktreeCommand,
+} from "@/kilocode/cli/lazy-kilo-commands"
 
 const log = Log.create({ service: "kilocode.cli" })
-
-// Process-level ingest drain for non-TUI commands (`kilo run`, etc.).
-// KiloCli.shutdown() runs KiloShutdown before disposeAllInstances — preserve that order.
-// Registered at setup load time (not inside shutdown()) so the task is always present.
-// Dynamic import keeps setup.ts's own static import graph unchanged: consumers that load
-// setup.ts under partial module mocks (e.g. cli-shutdown tests whose @/auth mock omits
-// OAUTH_DUMMY_KEY) would otherwise fail to link the provider/plugin chain. Dynamic import
-// returns the same in-process module singleton, so the drained queue is the one that
-// received events. Task try/catch covers dynamic-import failure outside the shared drain
-// guard; the drain itself never rejects.
-KiloShutdown.register(async () => {
-  try {
-    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-    await KiloSessions.drainIngestForShutdown()
-  } catch (err) {
-    log.warn("ingest drain failed", { err })
-  }
-})
 
 // All Kilo-specific CLI customization lives here so the shared upstream entrypoint
 // (src/index.ts) only needs a handful of thin call-sites behind kilocode_change markers.
@@ -46,6 +33,11 @@ KiloShutdown.register(async () => {
 // top level, with implementation imports inside their handlers.
 export namespace KiloCli {
   let info = false
+  let narrow = false
+
+  export function workerTui(opts: { [key: string]: unknown }) {
+    return !hasLazyCommandSelection() && opts.mini !== true && !opts.worktree
+  }
 
   // Register only the Kilo-specific commands. Upstream commands stay in index.ts's chain so
   // upstream merges that add or remove commands keep working without touching this file.
@@ -78,6 +70,7 @@ export namespace KiloCli {
   export async function bootstrap(opts: { [key: string]: unknown }): Promise<void> {
     info = opts.help === true || opts.version === true
     if (info) return
+    narrow = workerTui(opts)
 
     const { KiloLog } = await import("@/kilocode/log")
     await KiloLog.init()
@@ -93,9 +86,11 @@ export namespace KiloCli {
     const { JsonMigration } = await import("@/kilocode/storage/json-migration")
     await JsonMigration.bootstrap()
 
-    const { AppRuntime } = await import("@/effect/app-runtime")
-    const { Config } = await import("@/config/config")
-    const cfg = await AppRuntime.runPromise(Config.Service.use((c) => c.getGlobal()))
+    const runtime = narrow ? await import("@/kilocode/cli/bootstrap-runtime") : undefined
+    const app = narrow ? undefined : await import("@/effect/app-runtime")
+    const cfg = runtime
+      ? await runtime.KiloCliBootstrapRuntime.getGlobal()
+      : await app!.AppRuntime.runPromise((await import("@/config/config")).Config.Service.use((c) => c.getGlobal()))
 
     const { Global } = await import("@opencode-ai/core/global")
     const { Telemetry } = await import("@kilocode/kilo-telemetry")
@@ -105,16 +100,25 @@ export namespace KiloCli {
       enabled: cfg.experimental?.openTelemetry !== false,
     })
 
-    const { Auth } = await import("@/auth")
     const { migrateLegacyKiloAuth } = gateway
+    const getAuth = async () => {
+      if (runtime) return runtime.KiloCliBootstrapRuntime.getAuth()
+      const { Auth } = await import("@/auth")
+      return app!.AppRuntime.runPromise(Auth.Service.use((s) => s.get("kilo")))
+    }
+    const setAuth = async (auth: Auth.Info) => {
+      if (runtime) return runtime.KiloCliBootstrapRuntime.setAuth(auth)
+      const { Auth } = await import("@/auth")
+      return app!.AppRuntime.runPromise(Auth.Service.use((s) => s.set("kilo", auth)))
+    }
 
     // Migrate legacy Kilo CLI auth (~/.kilocode/cli/config.json) into auth.json if present.
     await migrateLegacyKiloAuth(
-      async () => (await AppRuntime.runPromise(Auth.Service.use((s) => s.get("kilo")))) !== undefined,
-      async (auth) => AppRuntime.runPromise(Auth.Service.use((s) => s.set("kilo", auth))),
+      async () => (await getAuth()) !== undefined,
+      setAuth,
     )
 
-    const auth = await AppRuntime.runPromise(Auth.Service.use((s) => s.get("kilo")))
+    const auth = await getAuth()
     if (auth) {
       const token = auth.type === "oauth" ? auth.access : auth.key
       const account = auth.type === "oauth" ? auth.accountId : undefined
@@ -146,6 +150,11 @@ export namespace KiloCli {
       }
     } finally {
       await KiloShutdown.run()
+      if (narrow) {
+        const { KiloCliBootstrapRuntime } = await import("@/kilocode/cli/bootstrap-runtime")
+        await KiloCliBootstrapRuntime.dispose()
+        return
+      }
       const { InstanceRuntime } = await import("@/project/instance-runtime")
       await InstanceRuntime.disposeAllInstances() // safety net (no-op if already disposed)
     }

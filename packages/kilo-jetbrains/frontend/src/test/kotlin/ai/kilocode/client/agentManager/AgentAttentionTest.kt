@@ -15,13 +15,29 @@ class AgentAttentionTest {
             SessionActivityKindDto.PERMISSION,
             SessionActivityKindDto.ERROR,
         )) {
-            assertTrue(sessionAttentionNeeded(mapOf("ses" to SessionActivityDto("/repo/wt", kind))), kind.name)
+            assertTrue(sessionAttentionNeeded(activity(kind)), kind.name)
         }
     }
 
     @Test
     fun `running and empty do not light up the dot`() {
         assertFalse(sessionAttentionNeeded(emptyMap()))
-        assertFalse(sessionAttentionNeeded(mapOf("ses" to SessionActivityDto("/repo/wt", SessionActivityKindDto.RUNNING))))
+        assertFalse(sessionAttentionNeeded(activity(SessionActivityKindDto.RUNNING)))
     }
+
+    @Test
+    fun `one session needing attention lights the dot for the whole snapshot`() {
+        val mixed = mapOf(
+            "ses_running" to SessionActivityDto("/repo/a", SessionActivityKindDto.RUNNING),
+            "ses_failed" to SessionActivityDto("/repo/b", SessionActivityKindDto.ERROR),
+        )
+
+        assertTrue(sessionAttentionNeeded(mixed))
+        // Only resolving it clears the dot, however often the state is re-evaluated.
+        assertTrue(sessionAttentionNeeded(mixed))
+        assertFalse(sessionAttentionNeeded(mixed - "ses_failed"))
+    }
+
+    private fun activity(kind: SessionActivityKindDto) =
+        mapOf("ses_1" to SessionActivityDto("/repo/wt", kind))
 }

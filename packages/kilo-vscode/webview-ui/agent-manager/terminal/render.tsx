@@ -70,22 +70,27 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
  *
  * ## Invariant
  *
- * **Once an xterm instance is mounted, its DOM subtree must never leave
- * the browser's paint tree.** `display: none` on any ancestor detaches
- * the subtree: xterm's internal `requestAnimationFrame` render loop
- * stops, the canvas goes stale, and no amount of `term.refresh()` can
- * reliably restart the loop fast enough on reattachment — that's the
- * "press Enter to see content" bug users hit when switching worktrees.
+ * **Once an xterm instance is mounted, its DOM subtree is only ever
+ * hidden, never unmounted.** Inactive slots keep their layout box but
+ * are translated one viewport off-screen; xterm 6's render service
+ * observes the screen element and pauses the render loop (rAF and model
+ * updates) for non-intersecting terminals, then replays a
+ * full refresh when the slot slides back in. Keeping the box (unlike
+ * `display: none`) also lets FitAddon measure the real panel size while
+ * hidden, so background-created terminals such as setup scripts wrap
+ * output at the panel's width from the start. Hiding via opacity instead
+ * — the historical workaround for the "press Enter to see content" bug,
+ * where reattachment left a stale canvas — kept the render loop running
+ * at full rate for output no one sees. `TerminalTab`'s activation
+ * repaint (fit + refresh) remains as insurance on top of xterm's own
+ * resume.
  *
  * ## Design
  *
  * Both the outer layer and each individual terminal slot are
  * `position: absolute; inset: 0` — stacked on top of the chat area and
- * on top of each other. Visibility is controlled purely via CSS classes
- * that toggle `opacity`, `pointer-events`, and `z-index`. Elements with
- * `opacity: 0` stay in the paint tree (unlike `display: none`), so
- * xterm's render loop keeps firing and every canvas stays composed and
- * ready for instant reveal.
+ * on top of each other. The layer controls whether a terminal is visible
+ * at all; slots control which terminal of a context is shown.
  *
  * The layer is mounted under `<Show>` only when at least one terminal
  * exists; that boundary never flips under a live xterm, since removing
@@ -134,12 +139,13 @@ export function renderTerminalLayer(props: {
 /**
  * Render the side-panel terminal layer inside the right-hand inspector.
  *
- * Same paint-tree invariant as `renderTerminalLayer`: every side
- * terminal stays mounted, visibility is toggled via `opacity` /
- * `pointer-events` / `inert` only. The layer is scoped to
- * `contextKey` — side terminals from other contexts stay composed in
- * the background and never refit — and within a context only the
- * active strip tab's terminal is shown.
+ * Same invariant as `renderTerminalLayer`: every side terminal stays
+ * mounted, inactive slots are translated off-screen so xterm's render
+ * observer pauses them while FitAddon keeps measuring, and only the
+ * visible tab's slot is shown. The layer is scoped to `contextKey` —
+ * side terminals from other
+ * contexts stay paused in the background and never refit — and within a
+ * context only the active strip tab's terminal is shown.
  */
 export function renderSideTerminalLayer(props: {
   state: TerminalStateControls
