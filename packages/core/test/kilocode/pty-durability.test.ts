@@ -183,13 +183,7 @@ describe("durable PTY registry", () => {
       const info = yield* Effect.scoped(
         Effect.gen(function* () {
           const pty = yield* Pty.Service
-          return yield* pty.create({ command: "/bin/sh", cwd: dir.path })
-        }).pipe(Effect.provide(locations.get(target))),
-      )
-      yield* Effect.scoped(
-        Effect.gen(function* () {
-          const pty = yield* Pty.Service
-          yield* pty.write(info.id, "exit 7\r")
+          return yield* pty.create({ command: "/bin/sh", args: ["-c", "exit 7"], cwd: dir.path })
         }).pipe(Effect.provide(locations.get(target))),
       )
       const exited = yield* Queue.take(queue).pipe(Effect.timeout("5 seconds"))
