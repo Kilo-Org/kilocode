@@ -24,6 +24,7 @@ const pr: PRStatus = {
 function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
   const sent: AgentManagerOutMessage[] = []
   const opened: string[] = []
+  const reads: (string | undefined)[] = []
   const worktrees: { id: string; path: string; branch: string; prUrl?: string }[] = [
     { id: "wt1", path: "/repo/wt1", branch: "feature" },
   ]
@@ -35,10 +36,13 @@ function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
     hasPersistedPR: () => opts.hasPersisted ?? false,
     openExternal: (url) => opened.push(url),
     log: () => {},
-    projectId: () => opts.projectId,
+    projectId: () => {
+      reads.push(opts.projectId)
+      return opts.projectId
+    },
   })
   const onStatus = (bridge.poller as unknown as { options: { onStatus: (...a: unknown[]) => void } }).options.onStatus
-  return { bridge, sent, opened, onStatus, worktrees }
+  return { bridge, sent, opened, onStatus, worktrees, reads }
 }
 
 describe("PRStatusBridge.handleMessage openPR", () => {
@@ -73,6 +77,13 @@ describe("PRStatusBridge.notifyError", () => {
     bridge.notifyError("gh_missing")
     expect(sent).toHaveLength(1)
     expect(sent[0]).toEqual(expect.objectContaining({ type: "agentManager.prError", error: "gh_missing" }))
+  })
+
+  it("tags errors with their owning project", () => {
+    const { bridge, sent, reads } = harness({ projectId: "project-a" })
+    bridge.notifyError("gh_missing")
+    expect(sent).toEqual([{ type: "agentManager.prError", projectId: "project-a", error: "gh_missing" }])
+    expect(reads).toEqual(["project-a"])
   })
 
   it("deduplicates the same error type", () => {
@@ -198,6 +209,16 @@ describe("PRStatusBridge.replay", () => {
     expect(
       sent.some((m) => m.type === "agentManager.prError" && (m as never as { error: string }).error === "gh_auth"),
     ).toBe(true)
+  })
+
+  it("preserves project ownership when replaying an error", () => {
+    const { bridge, sent, onStatus, reads } = harness({ projectId: "project-a" })
+    onStatus("wt1", null, "gh_missing")
+    sent.length = 0
+    reads.length = 0
+    bridge.replay()
+    expect(sent).toEqual([{ type: "agentManager.prError", projectId: "project-a", error: "gh_missing" }])
+    expect(reads).toEqual(["project-a"])
   })
 
   it("does not replay fetch_failed errors", () => {

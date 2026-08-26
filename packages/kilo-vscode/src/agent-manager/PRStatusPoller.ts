@@ -1,4 +1,5 @@
 import type { ExecFileOptionsWithStringEncoding } from "child_process"
+import { existsSync } from "fs"
 import type { Worktree } from "./WorktreeStateManager"
 import type { PRStatus, PRCheck, PRComment, PRReviewer, AggregateCheckStatus } from "./types"
 import { execWithShellEnv } from "./shell-env"
@@ -287,14 +288,15 @@ export class PRStatusPoller {
 
       this.options.onStatus(worktreeId, status)
     } catch (err) {
-      this.handleError(worktreeId, wt.branch, err)
+      if (this.stale(generation)) return
+      this.handleError(worktreeId, wt.branch, wt.path, err)
       throw err // propagate so fetchAll can track failures for backoff
     }
   }
 
-  private handleError(worktreeId: string, branch: string, err: unknown): void {
+  private handleError(worktreeId: string, branch: string, cwd: string, err: unknown): void {
     const msg = err instanceof Error ? err.message : String(err)
-    const kind = classifyPRError(msg)
+    const kind = existsSync(cwd) ? classifyPRError(msg) : "unknown"
     this.options.log(`PR fetch failed for ${branch}:`, msg)
     const key = kind === "gh_missing" ? "gh_missing" : kind === "gh_auth" ? "gh_auth" : "fetch_failed"
     if (kind === "gh_missing") this.ghAvailable = false
@@ -306,7 +308,9 @@ export class PRStatusPoller {
 
   private target(worktreeId: string): Worktree | undefined {
     if (!this.options.getWorkspaceRoot()) return
-    return this.options.getWorktrees().find((worktree) => worktree.id === worktreeId)
+    const worktree = this.options.getWorktrees().find((item) => item.id === worktreeId)
+    if (!worktree || !existsSync(worktree.path)) return
+    return worktree
   }
 
   private static readonly PR_JSON_FIELDS =

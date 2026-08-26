@@ -1583,6 +1583,7 @@ const AgentManagerContent: Component = () => {
       })
 
       if (msg.type === "agentManager.prError") {
+        if (!isCurrent(msg, currentProjectId())) return
         const ev = msg as AgentManagerPRErrorMessage
         showToast({
           variant: "error",
