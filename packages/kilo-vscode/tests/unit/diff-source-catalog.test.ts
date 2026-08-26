@@ -78,7 +78,6 @@ describe("DiffSourceCatalog.build", () => {
     expect(src.descriptor.type).toBe("workspace")
     expect(src.revert).toBeDefined()
     expect(src.fetchFile).toBeDefined()
-    expect(src.fetchFiles).toBeUndefined()
     src.dispose?.()
   })
 

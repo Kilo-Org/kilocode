@@ -101,26 +101,6 @@ const SCRIPT = `
     fail("did not request after existing loading state cleared " + JSON.stringify(blocked))
   }
   disposeBlocked()
-
-  const batches = []
-  const singles = []
-  const many = Array.from({ length: 18 }, (_, index) => ({ ...summary, file: "file-" + index + ".ts" }))
-  const disposeMany = createRoot((dispose) => {
-    createDiffRequests({
-      key: () => "review-many",
-      diffs: () => many,
-      open: () => many.map((item) => item.file),
-      loading: () => undefined,
-      send: () => (file) => singles.push(file),
-      batch: () => (files) => batches.push(files),
-    })
-    return dispose
-  })
-  await new Promise((resolve) => setTimeout(resolve, 0))
-  if (batches.length !== 2 || batches[0].length !== 16 || batches[1].length !== 2 || singles.length !== 0) {
-    fail("initial summarized diffs were not bounded and batched " + JSON.stringify({ batches, singles }))
-  }
-  disposeMany()
   console.log("${PASS}")
 `
 

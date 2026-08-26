@@ -1,7 +1,8 @@
 import { hashFileDiffs } from "./shared/hash"
 import { DIFF_POLL_INTERVAL_MS } from "./polling"
 import type { DiffSource, DiffSourceCapabilities, DiffSourceDescriptor, DiffSourceNotice } from "./sources/types"
-import type { DiffBatch, DiffFile, PanelContext } from "./types"
+import type { DiffFile } from "./types"
+import type { PanelContext } from "./types"
 
 type Messages = {
   available?: (descriptors: DiffSourceDescriptor[], id: string) => unknown
@@ -196,43 +197,6 @@ export class SourceController {
       return
     }
     this.send(this.messages.diffFile(source, file, diff))
-  }
-
-  async requestFiles(files: readonly string[]): Promise<void> {
-    const values = [...new Set(files.filter(Boolean))]
-    if (values.length === 0) return
-    const source = this.active
-    const epoch = this.epoch
-    if (!source || (!source.fetchFiles && !source.fetchFile)) {
-      for (const file of values) this.send(this.messages.diffFile(source, file, null))
-      return
-    }
-    await new Promise<void>((resolve) => setTimeout(resolve, 0))
-    if (this.epoch !== epoch || this.active !== source) {
-      for (const file of values) this.send(this.messages.diffFile(source, file, null))
-      return
-    }
-    const result: DiffBatch<DiffFile> = source.fetchFiles
-      ? await source.fetchFiles(values).catch(() => ({ entries: new Map(), deferred: new Set(values) }))
-      : {
-          entries: new Map(
-            await Promise.all(
-              values.map(async (file) => [file, await source.fetchFile!(file).catch(() => null)] as const),
-            ),
-          ),
-          deferred: new Set(),
-        }
-    for (const file of values) {
-      if (this.epoch !== epoch || this.active !== source) {
-        this.send(this.messages.diffFile(source, file, null))
-        continue
-      }
-      const diff = result.deferred.has(file)
-        ? await source.fetchFile?.(file).catch(() => null)
-        : result.entries.get(file)
-      const stale = this.epoch !== epoch || this.active !== source
-      this.send(this.messages.diffFile(source, file, stale ? null : (diff ?? null)))
-    }
   }
 
   dispose(): void {

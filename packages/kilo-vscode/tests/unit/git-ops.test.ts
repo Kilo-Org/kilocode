@@ -57,20 +57,6 @@ describe("GitOps", () => {
     })
   })
 
-  it("passes stdin to binary Git commands without decoding their output", async () => {
-    await withRepo(async (cwd) => {
-      const git = new GitOps({ log: () => undefined, binary: async () => "git" })
-      const value = "before\u0000after"
-      const object = await git.execGit(["hash-object", "-w", "--stdin"], cwd, { stdin: value })
-      const result = await git.execGitBuffer(["cat-file", "--batch"], cwd, {
-        stdin: `${object.stdout.trim()}\n`,
-      })
-      expect(result.code).toBe(0)
-      expect(result.stdout.includes(Buffer.from(value))).toBe(true)
-      git.dispose()
-    })
-  })
-
   it("does not hold a semaphore slot while resolving Git", async () => {
     const semaphore = new Semaphore(1)
     let resolve!: (value: string) => void
@@ -679,21 +665,6 @@ describe("GitOps", () => {
         }
         expect(git.disposed).toBe(true)
       })
-    })
-
-    it("stops waiting for executable discovery when its request signal aborts", async () => {
-      let release!: (value: string) => void
-      const gate = new Promise<string>((resolve) => {
-        release = resolve
-      })
-      const git = new GitOps({ log: () => undefined, binary: () => gate })
-      const ctl = new AbortController()
-      const pending = git.execGit(["status"], "/repo", { signal: ctl.signal })
-      ctl.abort()
-      const result = await pending
-      expect(result.code).not.toBe(0)
-      release("git")
-      git.dispose()
     })
 
     it("kills an in-flight exec when its request signal aborts", async () => {

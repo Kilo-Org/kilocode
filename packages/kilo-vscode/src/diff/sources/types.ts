@@ -1,4 +1,4 @@
-import type { DiffBatch, DiffFile } from "../types"
+import type { DiffFile } from "../types"
 
 export interface DiffSourceCapabilities {
   revert: boolean
@@ -58,7 +58,6 @@ export interface DiffSource {
    * content on demand.
    */
   fetchFile?(file: string): Promise<DiffFile | null>
-  fetchFiles?(files: readonly string[]): Promise<DiffBatch<DiffFile>>
 
   revert?(file: string): Promise<{ ok: boolean; message: string }>
 

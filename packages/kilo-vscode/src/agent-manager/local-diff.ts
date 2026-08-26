@@ -1,10 +1,8 @@
 import * as fs from "fs/promises"
 import { binaryFile } from "../diff/shared/binary"
 import { imageMime, loadImage, readImageFile } from "../diff/shared/image"
-import type { DiffBatch } from "../diff/types"
 import { resolveInside } from "../diff/shared/path"
 import type { GitOps } from "./GitOps"
-import { blobs, check, inspect, patches } from "./local-diff-batch"
 import type { WorktreeDiffEntry } from "./types"
 
 type Status = "added" | "deleted" | "modified"
@@ -33,7 +31,6 @@ const MAX_UNTRACKED_BYTES = 1_000_000
  *  metadata preserved) so the webview can render counts without
  *  materializing the content. */
 export const MAX_DETAIL_BYTES = 20_000_000
-const MAX_BATCH_BYTES = 32 * 1024 * 1024
 
 /**
  * Local, Node.js-side replacement for the server's `WorktreeDiff.summary()` and
@@ -98,30 +95,21 @@ export function generatedLike(file: string): boolean {
 
 const BASE_CANDIDATES = ["main", "master", "dev", "develop"]
 
-export async function resolveBase(git: GitOps, dir: string, base: string, signal?: AbortSignal): Promise<string> {
+export async function resolveBase(git: GitOps, dir: string, base: string): Promise<string> {
   // If the caller gave an explicit base, honor it. Return it as-is so merge-base
   // fails loudly on a stale/misspelled ref instead of silently diffing against
   // an unrelated candidate branch.
   if (base && base !== "HEAD") return base
   for (const name of BASE_CANDIDATES) {
-    const ok = await git.execGit(["rev-parse", "--verify", "--quiet", `refs/heads/${name}`], dir, { signal })
-    check(signal)
+    const ok = await git.execGit(["rev-parse", "--verify", "--quiet", `refs/heads/${name}`], dir)
     if (ok.code === 0) return name
   }
   return "HEAD"
 }
 
-async function ancestor(
-  git: GitOps,
-  dir: string,
-  base: string,
-  log?: Log,
-  signal?: AbortSignal,
-): Promise<string | undefined> {
-  const resolvedBase = await resolveBase(git, dir, base, signal)
-  check(signal)
-  const result = await git.execGit(["merge-base", "HEAD", resolvedBase], dir, { signal })
-  check(signal)
+async function ancestor(git: GitOps, dir: string, base: string, log?: Log): Promise<string | undefined> {
+  const resolvedBase = await resolveBase(git, dir, base)
+  const result = await git.execGit(["merge-base", "HEAD", resolvedBase], dir)
   if (result.code !== 0) {
     log?.("git merge-base failed", { code: result.code, stderr: result.stderr.trim(), dir, base, resolvedBase })
     return undefined
@@ -147,11 +135,10 @@ function counts(value: string) {
   return result
 }
 
-async function numstat(git: GitOps, dir: string, base: string, file?: string, signal?: AbortSignal) {
+async function numstat(git: GitOps, dir: string, base: string, file?: string) {
   const args = ["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", base]
   if (file) args.push("--", file)
-  const result = await git.execGit(args, dir, { signal })
-  check(signal)
+  const result = await git.execGit(args, dir)
   return counts(result.code === 0 ? result.stdout : "")
 }
 
@@ -293,82 +280,6 @@ export async function diffSummary(git: GitOps, dir: string, base: string, log?: 
   return items.map(summarize)
 }
 
-function complete(
-  result: Map<string, WorktreeDiffEntry | null>,
-  metas: Meta[],
-  before: Map<string, Buffer>,
-  diffs: Map<string, string>,
-  after: Map<string, string>,
-) {
-  for (const meta of metas) {
-    const value = after.get(meta.file)
-    const patch = meta.tracked ? diffs.get(meta.file) : buildUntrackedPatch(meta.file, value ?? "")
-    if (value === undefined || patch === undefined || (meta.status !== "added" && !before.has(meta.file))) {
-      result.set(meta.file, null)
-      continue
-    }
-    result.set(meta.file, {
-      ...summarize(meta),
-      before: before.get(meta.file)?.toString("utf8") ?? "",
-      after: value,
-      patch,
-      additions: meta.status === "added" && meta.additions === 0 && !meta.tracked ? linesOf(value) : meta.additions,
-      summarized: false,
-    })
-  }
-  return result
-}
-
-async function collect(
-  git: GitOps,
-  dir: string,
-  anc: string,
-  metas: Meta[],
-  log?: Log,
-  signal?: AbortSignal,
-): Promise<DiffBatch<WorktreeDiffEntry>> {
-  const entries = new Map<string, WorktreeDiffEntry | null>()
-  const deferred = new Set<string>()
-  if (metas.length === 0) return { entries, deferred }
-  const [base, sizes] = await Promise.all([
-    inspect(git, dir, anc, metas, signal),
-    Promise.all(
-      metas.map(async (meta) => [meta.file, meta.status === "deleted" ? 0 : await fileSize(dir, meta.file)] as const),
-    ),
-  ])
-  check(signal)
-  const working = new Map(sizes)
-  const active: Meta[] = []
-  let total = 0
-  for (const meta of metas) {
-    const before = base.get(meta.file)?.bytes ?? 0
-    const after = working.get(meta.file) ?? 0
-    if (before > MAX_DETAIL_BYTES || after > MAX_DETAIL_BYTES) {
-      log?.("diffFile: file too large for detail view, returning summarized entry", {
-        file: meta.file,
-        beforeBytes: before,
-        afterBytes: after,
-        cap: MAX_DETAIL_BYTES,
-      })
-      entries.set(meta.file, summarize(meta))
-      continue
-    }
-    if (total + before + after > MAX_BATCH_BYTES) {
-      deferred.add(meta.file)
-      continue
-    }
-    total += before + after
-    active.push(meta)
-  }
-  const [before, diffs, after] = await Promise.all([
-    blobs(git, dir, active, base, signal),
-    patches(git, dir, anc, active, signal),
-    Promise.all(active.map(async (meta) => [meta.file, await readAfter(dir, meta.file, meta.status)] as const)),
-  ])
-  check(signal)
-  return { entries: complete(entries, active, before, diffs, new Map(after)), deferred }
-}
-
 export function createLocalDiff(git: GitOps, log?: Log) {
   const states = new Map<string, { anc: string; metas: Map<string, Meta> }>()
   const generations = new Map<string, number>()
@@ -400,152 +311,6 @@ export function createLocalDiff(git: GitOps, log?: Log) {
     }
   }
 
-  const identity = (dir: string, base: string, anc: string, meta: Meta) =>
-    `${dir}\0${base}\0${anc}\0${meta.file}\0${meta.tracked}\0${meta.status}\0${meta.additions}\0${meta.deletions}\0${meta.binary}\0${meta.stamp}`
-
-  const track = (id: string, meta: Meta, work: Promise<WorktreeDiffEntry>, signal?: AbortSignal) => {
-    pending.set(id, { signal, work })
-    work.then(
-      (value) => {
-        if (pending.get(id)?.work !== work) return
-        pending.delete(id)
-        if (
-          signal?.aborted ||
-          value.image?.before?.error === "unreadable" ||
-          value.image?.after?.error === "unreadable"
-        ) {
-          return
-        }
-        remember(id, value, meta.stamp)
-      },
-      () => {
-        if (pending.get(id)?.work === work) pending.delete(id)
-      },
-    )
-    return work
-  }
-
-  const file = async (
-    dir: string,
-    base: string,
-    path: string,
-    signal?: AbortSignal,
-  ): Promise<WorktreeDiffEntry | null> => {
-    const state = states.get(`${dir}\0${base}`)
-    if (!state) return diffFile(git, dir, base, path, log, signal)
-    const meta = state.metas.get(path)
-    if (!meta) return null
-    const id = identity(dir, base, state.anc, meta)
-    const cached = details.get(id)
-    if (cached) {
-      if (cached.stamp === meta.stamp) {
-        remember(id, cached.value, meta.stamp)
-        return cached.value
-      }
-      forget(id)
-    }
-    const current = pending.get(id)
-    if (current && current.signal === signal && !current.signal?.aborted) return current.work
-    return track(id, meta, materialize(git, dir, state.anc, meta, log, signal), signal)
-  }
-
-  const files = async (
-    dir: string,
-    base: string,
-    paths: readonly string[],
-    signal?: AbortSignal,
-  ): Promise<DiffBatch<WorktreeDiffEntry>> => {
-    const result = new Map<string, WorktreeDiffEntry | null>()
-    const deferred = new Set<string>()
-    const key = `${dir}\0${base}`
-    const state = states.get(key)
-    if (!state) {
-      check(signal)
-      await Promise.all(paths.map(async (path) => result.set(path, await file(dir, base, path, signal))))
-      check(signal)
-      return { entries: result, deferred }
-    }
-    const waiting: Promise<void>[] = []
-    const fresh: Array<{ id: string; meta: Meta }> = []
-    const add = (path: string, work: Promise<WorktreeDiffEntry | null>) => {
-      waiting.push(
-        work.then(
-          (value) => void result.set(path, value),
-          () => {
-            check(signal)
-            if (!deferred.has(path)) result.set(path, null)
-          },
-        ),
-      )
-    }
-    for (const path of new Set(paths)) {
-      const meta = state.metas.get(path)
-      if (!meta) {
-        result.set(path, null)
-        continue
-      }
-      const id = identity(dir, base, state.anc, meta)
-      const cached = details.get(id)
-      if (cached?.stamp === meta.stamp) {
-        remember(id, cached.value, meta.stamp)
-        result.set(path, cached.value)
-        continue
-      }
-      const current = pending.get(id)
-      if (current && current.signal === signal && !current.signal?.aborted) {
-        add(path, current.work)
-        continue
-      }
-      if (meta.binary || imageMime(path) || /[\r\n\t"\\]/.test(path)) {
-        add(path, file(dir, base, path, signal))
-        continue
-      }
-      fresh.push({ id, meta })
-    }
-    if (fresh.length > 0) {
-      const batch = collect(
-        git,
-        dir,
-        state.anc,
-        fresh.map((item) => item.meta),
-        log,
-        signal,
-      )
-        .then((values) => {
-          const current = states.get(key)
-          if (
-            !current ||
-            current.anc !== state.anc ||
-            fresh.some((item) => {
-              const meta = current.metas.get(item.meta.file)
-              return !meta || identity(dir, base, current.anc, meta) !== item.id
-            })
-          ) {
-            throw new Error("Diff summary changed")
-          }
-          for (const path of values.deferred) deferred.add(path)
-          return values
-        })
-        .catch((err): DiffBatch<WorktreeDiffEntry> => {
-          check(signal)
-          log?.("Bulk diff detail failed, falling back to single-file requests", err)
-          for (const item of fresh) deferred.add(item.meta.file)
-          return { entries: new Map(), deferred }
-        })
-      for (const item of fresh) {
-        const work = batch.then((values) => {
-          const value = values.entries.get(item.meta.file)
-          if (!value) throw new Error(`Could not load diff for ${item.meta.file}`)
-          return value
-        })
-        add(item.meta.file, track(item.id, item.meta, work, signal))
-      }
-    }
-    await Promise.all(waiting)
-    check(signal)
-    return { entries: result, deferred }
-  }
-
   return {
     summary: async (dir: string, base: string): Promise<WorktreeDiffEntry[]> => {
       const id = `${dir}\0${base}`
@@ -564,25 +329,46 @@ export function createLocalDiff(git: GitOps, log?: Log) {
       if (states.size > 8) states.delete(states.keys().next().value!)
       return items.map(summarize)
     },
-    file,
-    files,
+    file: async (dir: string, base: string, file: string, signal?: AbortSignal): Promise<WorktreeDiffEntry | null> => {
+      const state = states.get(`${dir}\0${base}`)
+      if (!state) return diffFile(git, dir, base, file, log)
+      const meta = state.metas.get(file)
+      if (!meta) return null
+      const id = `${dir}\0${base}\0${state.anc}\0${file}\0${meta.tracked}\0${meta.status}\0${meta.additions}\0${meta.deletions}\0${meta.binary}\0${meta.stamp}`
+      const cached = details.get(id)
+      if (cached) {
+        if (cached.stamp === meta.stamp) {
+          remember(id, cached.value, meta.stamp)
+          return cached.value
+        }
+        forget(id)
+      }
+      const current = pending.get(id)
+      if (current && !current.signal?.aborted) return current.work
+      const work = materialize(git, dir, state.anc, meta, log, signal)
+      pending.set(id, { signal, work })
+      work.then(
+        (value) => {
+          if (pending.get(id)?.work !== work) return
+          pending.delete(id)
+          if (value.image?.before?.error === "unreadable" || value.image?.after?.error === "unreadable") return
+          remember(id, value, meta.stamp)
+        },
+        () => {
+          if (pending.get(id)?.work === work) pending.delete(id)
+        },
+      )
+      return work
+    },
   }
 }
 
-async function detailMeta(
-  git: GitOps,
-  dir: string,
-  anc: string,
-  file: string,
-  signal?: AbortSignal,
-): Promise<Meta | undefined> {
+async function detailMeta(git: GitOps, dir: string, anc: string, file: string): Promise<Meta | undefined> {
   const full = resolveInside(dir, file)
   if (!full) return undefined
-  const tracked = await git.execGit(["ls-files", "--error-unmatch", "--", file], dir, { signal })
-  check(signal)
+  const tracked = await git.execGit(["ls-files", "--error-unmatch", "--", file], dir)
   if (tracked.code !== 0) {
-    const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard", "--", file], dir, { signal })
-    check(signal)
+    const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard", "--", file], dir)
     if (untracked.code !== 0 || !untracked.stdout.split("\n").includes(file)) return undefined
     const exists = await fs.lstat(full).catch(() => undefined)
     if (!exists) return undefined
@@ -602,9 +388,7 @@ async function detailMeta(
   const nameStatus = await git.execGit(
     ["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames", anc, "--", file],
     dir,
-    { signal },
   )
-  check(signal)
   if (nameStatus.code !== 0) return undefined
   const line = nameStatus.stdout.trim().split("\n")[0]
   if (!line) return undefined
@@ -613,7 +397,7 @@ async function detailMeta(
   const pathPart = parts.slice(1).join("\t") || file
   if (!code) return undefined
 
-  const counts = await numstat(git, dir, anc, file, signal)
+  const counts = await numstat(git, dir, anc, file)
   const stat = counts.get(file) ?? counts.get(pathPart) ?? { additions: 0, deletions: 0, binary: false }
   const status = statusFromCode(code)
   return {
@@ -722,15 +506,12 @@ export async function diffFile(
   base: string,
   file: string,
   log?: Log,
-  signal?: AbortSignal,
 ): Promise<WorktreeDiffEntry | null> {
-  check(signal)
-  const anc = await ancestor(git, dir, base, log, signal)
+  const anc = await ancestor(git, dir, base, log)
   if (!anc) return null
-  const meta = await detailMeta(git, dir, anc, file, signal)
-  check(signal)
+  const meta = await detailMeta(git, dir, anc, file)
   if (!meta) return null
-  return materialize(git, dir, anc, meta, log, signal)
+  return materialize(git, dir, anc, meta, log)
 }
 
 async function materialize(

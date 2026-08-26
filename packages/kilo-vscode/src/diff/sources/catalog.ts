@@ -4,7 +4,7 @@ import { GitOps } from "../../agent-manager/GitOps"
 import { resolveLocalDiffTarget } from "../shared/target"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { BranchListItem } from "../../agent-manager/git-import"
-import type { DiffBatch, PanelContext } from "../types"
+import type { PanelContext } from "../types"
 import type { DiffSource, DiffSourceDescriptor } from "./types"
 import { createWorktreeDiffSource, WORKSPACE_DESCRIPTOR, WORKSPACE_SOURCE_ID } from "./worktree"
 import {
@@ -23,12 +23,6 @@ import type { WorktreeDiffEntry } from "../../agent-manager/types"
 export interface LocalDiffSource {
   summary: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
   file: (dir: string, base: string, file: string, signal?: AbortSignal) => Promise<WorktreeDiffEntry | null>
-  files: (
-    dir: string,
-    base: string,
-    files: readonly string[],
-    signal?: AbortSignal,
-  ) => Promise<DiffBatch<WorktreeDiffEntry>>
 }
 
 export interface WorkspaceBranchesResult {
@@ -113,7 +107,6 @@ export class DiffSourceCatalog implements vscode.Disposable {
         baseBranch: ctx.baseBranch,
         summary: this.local?.summary,
         file: this.local?.file,
-        files: this.local?.files,
       })
     }
 

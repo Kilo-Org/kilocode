@@ -468,6 +468,9 @@ export class AgentManagerProvider implements Disposable {
       return
     }
 
+    // When the .kilocode → .kilo migration rewrote git worktree refs, nudge
+    // VS Code's git extension to re-discover them. Without this, worktrees
+    // won't appear in Source Control until the next VS Code restart.
     if (init.refsFixed > 0) {
       this.log(`Migration fixed ${init.refsFixed} git worktree ref(s), refreshing git`)
       this.host.refreshGit()
@@ -478,6 +481,10 @@ export class AgentManagerProvider implements Disposable {
     for (const s of state.getSessions()) this.panel?.sessions.trackSession(s.id)
     this.pushState()
 
+    // Always list sessions, even when the state tracks none: the backend may
+    // still hold sessions for this project, and without the listing the
+    // sessionsLoaded message never reaches the webview, leaving the sidebar
+    // on skeletons forever.
     this.panel?.sessions.refreshSessions()
 
     // Recover any pending permission/question prompts that were missed during
@@ -832,11 +839,6 @@ export class AgentManagerProvider implements Disposable {
     }
     if (m.type === "agentManager.requestWorktreeDiffFile") {
       void this.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId), m.file)
-      return null
-    }
-    if (m.type === "agentManager.requestWorktreeDiffFiles") {
-      const id = composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId)
-      void this.diffs.requestFiles(m.projectId, id, m.files)
       return null
     }
     if (m.type === "agentManager.applyWorktreeDiff") {
