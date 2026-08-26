@@ -1,16 +1,12 @@
-import path from "node:path"
 import {
   GatewayError,
-  SessionImportValidationError,
   fetchCloudSession,
-  fetchCloudSessionForImport,
   fetchKiloImageModels,
   fetchKiloTranscriptionModels,
   getCloudSessions,
   getOrganizationId,
   getToken,
   normalizeClawStatus,
-  prepareSessionImport,
 } from "@kilocode/kilo-gateway"
 import {
   HEADER_FEATURE,
@@ -29,30 +25,19 @@ import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/k
 import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
 import { buildMercuryEditPrompt } from "@kilocode/kilo-gateway/edit-prompt"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
-import { Cause, Effect, Result, Schema } from "effect"
+import { Effect, Schema } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { Database } from "@opencode-ai/core/database/database"
-import type { DeepMutable } from "@opencode-ai/core/schema"
-import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import { Auth } from "@/auth"
-import { WorkspaceRef } from "@/effect/instance-ref"
-import { EventV2Bridge } from "@/event-v2-bridge"
-import { Identifier } from "@/id/id"
 import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import { MessageTable, PartTable } from "@opencode-ai/core/session/sql"
-import { Session } from "@/session/session"
-import { Storage } from "@/storage/storage"
 import { AudioTranscriptionsBody, ClawStatus, CloudSessionImportError, EditBody, FimBody } from "../groups/kilo-gateway"
-import { baseKey } from "../../../session-portability/cumulative-diff"
-import { extractSessionDiffs, restoreSessionDiffs } from "../../../session-portability/session-diff-restore"
 
 const FIM_TIMEOUT_MS = 30_000
 const log = Log.create({ service: "kilo-gateway" })
@@ -70,9 +55,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     const auth = yield* Auth.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
-    const events = yield* EventV2Bridge.Service
-    const database = yield* Database.Service
-    const storage = yield* Storage.Service
 
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
@@ -458,138 +440,31 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const cloudSessionImport = Effect.fn("KiloGatewayHttpApi.cloudSessionImport")(function* (ctx) {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-      const token = getToken(info)
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-
-      const fetched = yield* Effect.tryPromise({
-        try: () => fetchCloudSessionForImport(token, ctx.payload.sessionId),
-        catch: (err) => err,
-      }).pipe(
-        Effect.catch((err) =>
-          Effect.sync(() => {
-            logError("cloud/session/import", err)
-            return undefined
-          }),
-        ),
+      // Load the helper lazily: a static top-level import pulls the HTTP
+      // handler graph into the remote-sender module graph and breaks the
+      // create_session test's module init. Run the helper's Effect on the
+      // request Effect (yield*) so the request-scoped InstanceRef/WorkspaceRef
+      // reach the persistence path instead of the AppRuntime default context.
+      const { CloudSessionImportInProcess } = yield* Effect.promise(() =>
+        import("@/kilocode/server/import-cloud-session-in-process"),
       )
-      if (!fetched) return yield* Effect.fail(new CloudSessionImportError({ error: "Internal error" }))
-      if (!fetched.ok) return jsonError(fetched.error, fetched.status)
-      if (!fetched.data?.info?.id) return yield* Effect.fail(new HttpApiError.BadRequest({}))
-
-      const diffs = extractSessionDiffs(fetched.data)
-      const workspaceID = yield* WorkspaceRef
-      const subdir = path.relative(path.resolve(Instance.worktree), Instance.directory).replaceAll("\\", "/")
-      const prepared = yield* Effect.try({
-        try: () => prepareSessionImport(fetched.data, { Instance, Identifier, workspaceID, path: subdir }),
-        catch: (err) => {
-          if (err instanceof SessionImportValidationError) return new HttpApiError.BadRequest({})
-          const name =
-            err instanceof Error
-              ? err.name
-              : typeof err === "object" && err !== null && "_tag" in err && typeof err._tag === "string"
-                ? err._tag
-                : "UnknownError"
-          log.error("cloud session import failed", {
-            route: "cloud/session/import",
-            stage: "prepare",
-            error: name,
-          })
-          return new CloudSessionImportError({ error: "Internal error" })
-        },
-      })
-      const session = yield* Effect.try({
-        try: () => Schema.decodeUnknownSync(Session.Info)(prepared.info),
-        catch: () => new HttpApiError.BadRequest({}),
-      })
-      const messages = yield* Effect.try({
-        try: () =>
-          prepared.messages.map((row) => {
-            const info = Schema.decodeUnknownSync(SessionV1.Info)(row.data)
-            const { id, sessionID, ...data } = info
-            // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- decoding validates the shape; the database type only removes readonly modifiers
-            return { id, session_id: sessionID, time_created: row.time_created, data: data as DeepMutable<typeof data> }
-          }),
-        catch: () => new HttpApiError.BadRequest({}),
-      })
-      const parts = yield* Effect.try({
-        try: () =>
-          prepared.parts.map((row) => {
-            const part = Schema.decodeUnknownSync(SessionV1.Part)(row.data)
-            const { id, messageID, sessionID, ...data } = part
-            return {
-              id,
-              message_id: messageID,
-              session_id: sessionID,
-              // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- decoding validates the shape; the database type only removes readonly modifiers
-              data: data as DeepMutable<typeof data>,
+      return yield* CloudSessionImportInProcess.importSession(ctx.payload.sessionId).pipe(
+        Effect.matchEffect({
+          onFailure: (err) => {
+            if (err instanceof CloudSessionImportInProcess.Unauthorized) {
+              return Effect.fail(new HttpApiError.Unauthorized({}))
             }
-          }),
-        catch: () => new HttpApiError.BadRequest({}),
-      })
-      const imported = yield* Effect.gen(function* () {
-        yield* events.publish(
-          Session.Event.Created,
-          { sessionID: session.id, info: session },
-          {
-            commit: () =>
-              Effect.gen(function* () {
-                for (const row of messages) {
-                  yield* database.db.insert(MessageTable).values([row]).run().pipe(Effect.orDie)
-                }
-                for (const row of parts) {
-                  yield* database.db.insert(PartTable).values([row]).run().pipe(Effect.orDie)
-                }
-              }),
+            if (err instanceof CloudSessionImportInProcess.Upstream) {
+              return Effect.succeed(jsonError(err.error, err.status))
+            }
+            if (err instanceof CloudSessionImportInProcess.BadRequest) {
+              return Effect.fail(new HttpApiError.BadRequest({}))
+            }
+            return Effect.fail(new CloudSessionImportError({ error: "Internal error" }))
           },
-        )
-        return session
-      }).pipe(
-        Effect.catchCause((cause) =>
-          Effect.sync(() => {
-            const err = Result.getOrUndefined(Cause.findDefect(cause)) ?? Result.getOrUndefined(Cause.findError(cause))
-            const name =
-              err instanceof Error
-                ? err.name
-                : typeof err === "object" && err !== null && "_tag" in err && typeof err._tag === "string"
-                  ? err._tag
-                  : "UnknownError"
-            log.error("cloud session import failed", {
-              route: "cloud/session/import",
-              stage: "write",
-              error: name,
-              sessionID: session.id,
-              messages: messages.length,
-              parts: parts.length,
-            })
-          }).pipe(Effect.andThen(Effect.fail(new CloudSessionImportError({ error: "Internal error" })))),
-        ),
+          onSuccess: (session) => Effect.succeed(session),
+        }),
       )
-
-      if (diffs.length > 0) {
-        yield* Effect.try({
-          try: () => restoreSessionDiffs({ directory: Instance.directory, diffs }),
-          catch: (err) => err,
-        }).pipe(
-          Effect.catch((err) =>
-            Effect.sync(() => {
-              logError("cloud/session/import/restore", err)
-            }),
-          ),
-        )
-        yield* Effect.all([
-          storage.write(baseKey(imported.id), diffs),
-          storage.write(["session_diff", imported.id], diffs),
-        ]).pipe(
-          Effect.catch((err) =>
-            Effect.sync(() => {
-              logError("cloud/session/import/diff", err)
-            }),
-          ),
-        )
-      }
-
-      return imported
     })
 
     const imageModels = Effect.fn("KiloGatewayHttpApi.imageModels")(function* () {
