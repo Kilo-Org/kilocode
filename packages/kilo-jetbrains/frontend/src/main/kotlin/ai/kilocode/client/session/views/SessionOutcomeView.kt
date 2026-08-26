@@ -20,6 +20,7 @@ import javax.swing.ScrollPaneConstants
 class SessionOutcomeView(
     selection: SessionSelection? = null,
     focus: (() -> Unit)? = null,
+    private val retry: (() -> Unit)? = null,
 ) : DialogView(selection, focus), SessionView {
 
     override val sessionViewKind = SessionView.Kind.Default
@@ -40,6 +41,7 @@ class SessionOutcomeView(
         error.text = message
         setContentPadding(left = false, right = false)
         setContent(error.scroll)
+        syncRetry(true)
         isVisible = true
         refresh()
     }
@@ -55,6 +57,7 @@ class SessionOutcomeView(
                 setOutlined(false)
                 setHeaderIcon(null)
                 setHeader("", KiloBundle.message("session.outcome.interrupted.note"))
+                syncRetry(false)
             }
 
             Outcome.FAILED -> {
@@ -62,12 +65,33 @@ class SessionOutcomeView(
                 setOutlined(true)
                 setHeaderIcon(AllIcons.General.Error, title)
                 setHeader(title, KiloBundle.message("session.outcome.failed.description"))
+                syncRetry(true)
             }
         }
         setContentPadding()
         setContent(null)
         isVisible = true
         refresh()
+    }
+
+    /** Retry belongs to failures only; a user-initiated stop stays a plain note with no controls. */
+    @RequiresEdt
+    private fun syncRetry(show: Boolean) {
+        val run = retry
+        if (run == null || !show) {
+            setActions(emptyList())
+            return
+        }
+        setActions(
+            listOf(
+                Action(
+                    id = RETRY_ACTION,
+                    text = KiloBundle.message("session.outcome.retry"),
+                    primary = true,
+                    handler = run,
+                ),
+            ),
+        )
     }
 
     @RequiresEdt
@@ -81,6 +105,10 @@ class SessionOutcomeView(
     override fun applyStyle(style: SessionEditorStyle) {
         super.applyStyle(style)
         error.applyStyle(style)
+    }
+
+    private companion object {
+        const val RETRY_ACTION = "retry"
     }
 }
 

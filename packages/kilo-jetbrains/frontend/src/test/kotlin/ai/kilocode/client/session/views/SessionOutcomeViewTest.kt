@@ -17,6 +17,7 @@ import java.awt.Dimension
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.Icon
+import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
@@ -129,6 +130,69 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
             assertNotNull(findText(view, "APIError"))
         }
     }
+
+    // ------ retry action ------
+
+    fun `test error card offers retry`() {
+        edt {
+            var clicked = 0
+            val view = SessionOutcomeView(retry = { clicked++ })
+            view.showError("Provider balance is too low", "APIError")
+
+            val button = retryButton(view)
+            assertNotNull("Error card should offer Retry", button)
+            button!!.doClick()
+            assertEquals(1, clicked)
+        }
+    }
+
+    fun `test failed outcome offers retry`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showOutcome(Outcome.FAILED)
+
+            assertNotNull("Failed outcome should offer Retry", retryButton(view))
+        }
+    }
+
+    fun `test interrupted note offers no retry`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showOutcome(Outcome.INTERRUPTED)
+
+            assertNull("A user stop is not a failure and must not offer Retry", retryButton(view))
+        }
+    }
+
+    fun `test readonly outcome view offers no retry`() {
+        edt {
+            val view = SessionOutcomeView(retry = null)
+            view.showError("Provider balance is too low", "APIError")
+
+            assertNull("Readonly sessions cannot retry", retryButton(view))
+        }
+    }
+
+    fun `test toggling outcomes does not accumulate retry buttons`() {
+        edt {
+            var clicked = 0
+            val view = SessionOutcomeView(retry = { clicked++ })
+            repeat(3) {
+                view.showOutcome(Outcome.FAILED)
+                view.showOutcome(Outcome.INTERRUPTED)
+            }
+            assertNull("The note detaches the footer entirely", retryButton(view))
+            view.showOutcome(Outcome.FAILED)
+
+            val buttons = findAll<JButton>(view).filter { it.text == KiloBundle.message("session.outcome.retry") }
+            assertEquals("Exactly one live Retry button", 1, buttons.size)
+            buttons.single().doClick()
+            assertEquals("The live button is wired to the current handler", 1, clicked)
+        }
+    }
+
+    private fun retryButton(root: Container) =
+        findAll<JButton>(root).firstOrNull { it.text == KiloBundle.message("session.outcome.retry") }
 
     fun `test hideView makes view invisible`() {
         edt {
@@ -301,8 +365,9 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
     private fun <T> findAllCls(root: Container, cls: Class<T>): List<T> {
         val result = mutableListOf<T>()
         if (cls.isInstance(root)) result.add(cls.cast(root))
+        // Only recurse. Matching a child here as well would double-count any hit that is itself a
+        // Container (every Swing component is), because the recursive call re-checks it as its own root.
         for (child in root.components) {
-            if (cls.isInstance(child)) result.add(cls.cast(child))
             if (child is Container) result.addAll(findAllCls(child, cls))
         }
         return result
