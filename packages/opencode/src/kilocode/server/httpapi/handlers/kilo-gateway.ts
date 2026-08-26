@@ -29,13 +29,15 @@ import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/k
 import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
 import { buildMercuryEditPrompt } from "@kilocode/kilo-gateway/edit-prompt"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
-import { Cause, Effect, Result, Schema } from "effect"
+import { Cause, Effect, Result, Schema, Semaphore } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Database } from "@opencode-ai/core/database/database"
+import { Credential } from "@opencode-ai/core/credential"
+import { Integration } from "@opencode-ai/core/integration"
 import type { DeepMutable } from "@opencode-ai/core/schema"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { KilocodeConfig } from "@/kilocode/config/config"
@@ -72,7 +74,9 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     const cache = yield* ModelCache.Service
     const events = yield* EventV2Bridge.Service
     const database = yield* Database.Service
+    const credentials = yield* Credential.Service
     const storage = yield* Storage.Service
+    const lock = yield* Semaphore.make(1)
 
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
@@ -346,22 +350,51 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const organization = Effect.fn("KiloGatewayHttpApi.organization")(function* (ctx) {
-      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-      if (!info || info.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      yield* lock
+        .withPermit(
+          Effect.gen(function* () {
+            const info = yield* auth.get("kilo")
+            if (!info || info.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
-      yield* auth
-        .set("kilo", {
-          type: "oauth",
-          refresh: info.refresh,
-          access: info.access,
-          expires: info.expires,
-          ...(ctx.payload.organizationId && { accountId: ctx.payload.organizationId }),
-        })
+            const existing = yield* credentials.list(Integration.ID.make("kilo"))
+            const active = existing.at(-1)
+            if (!active || active.value.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+
+            const rollback = <E>(cause: Cause.Cause<E>) =>
+              Effect.gen(function* () {
+                yield* credentials.update(active.id, { value: active.value })
+                yield* auth.set("kilo", info)
+              }).pipe(
+                Effect.matchCauseEffect({
+                  onFailure: (next) => Effect.failCause(Cause.combine(cause, next)),
+                  onSuccess: () => Effect.failCause(cause),
+                }),
+              )
+
+            const metadata = { ...active.value.metadata }
+            if (ctx.payload.organizationId) metadata.accountID = ctx.payload.organizationId
+            else delete metadata.accountID
+            yield* credentials
+              .update(active.id, { value: { ...active.value, metadata } })
+              .pipe(Effect.catchCause(rollback))
+
+            yield* auth
+              .set("kilo", {
+                type: "oauth",
+                refresh: info.refresh,
+                access: info.access,
+                expires: info.expires,
+                ...(info.enterpriseUrl !== undefined && { enterpriseUrl: info.enterpriseUrl }),
+                ...(ctx.payload.organizationId && { accountId: ctx.payload.organizationId }),
+              })
+              .pipe(Effect.catchCause(rollback))
+
+            yield* cache.clear("kilo")
+            clearModesCache()
+            yield* store.disposeAll()
+          }).pipe(Effect.uninterruptible),
+        )
         .pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-
-      yield* cache.clear("kilo")
-      clearModesCache()
-      yield* store.disposeAll().pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
       return true
     })
 
