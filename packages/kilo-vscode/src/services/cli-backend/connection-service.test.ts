@@ -53,8 +53,14 @@ describe("KiloConnectionService explicit aborts", () => {
     const first: SSEPayload[] = []
     const second: SSEPayload[] = []
     service.onEvent((event) => raw.push(event))
-    service.onEventFiltered(() => true, (event) => first.push(event))
-    service.onEventFiltered(() => true, (event) => second.push(event))
+    service.onEventFiltered(
+      () => true,
+      (event) => first.push(event),
+    )
+    service.onEventFiltered(
+      () => true,
+      (event) => second.push(event),
+    )
     return { service, raw, first, second }
   }
 
