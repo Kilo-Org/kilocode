@@ -66,7 +66,7 @@ class DialogViewTest : BasePlatformTestCase() {
             panel.setHeader("", "Stopped")
             val areas = findAll<JBTextArea>(panel)
 
-            assertTrue("Bold header text area should be hidden", areas.filter { it.font.isBold }.all { !it.isVisible })
+            assertTrue("Blank header text area should be hidden", areas.filter { it.text.isBlank() }.all { !it.isVisible })
             assertNotNull("Description should remain visible", areas.firstOrNull { it.text == "Stopped" && it.isVisible })
         }
     }
