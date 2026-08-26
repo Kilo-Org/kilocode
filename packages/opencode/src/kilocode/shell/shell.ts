@@ -1,1 +1,1 @@
-export { args, PowerShell, pwsh } from "@opencode-ai/core/kilocode/powershell"
+export { args, PowerShell } from "@opencode-ai/core/kilocode/powershell"
