@@ -1409,7 +1409,7 @@ const AgentManagerContent: Component = () => {
             worktreeId: ev.worktreeId,
             errorCode: ev.errorCode,
           })
-          globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
+          globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)
           if (!error && ev.sessionId) {
             session.selectSession(ev.sessionId)
             const ms = managedSessions().find((s) => s.id === ev.sessionId)
@@ -1585,6 +1585,7 @@ const AgentManagerContent: Component = () => {
       })
 
       if (msg.type === "agentManager.prError") {
+        if (!isCurrent(msg, currentProjectId())) return
         const ev = msg as AgentManagerPRErrorMessage
         showToast({
           variant: "error",
