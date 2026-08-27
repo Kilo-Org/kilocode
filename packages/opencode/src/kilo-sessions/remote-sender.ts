@@ -106,7 +106,15 @@ function resolveUnderLaunch(launchDir: string, relative: string | undefined): st
   const launchReal = Filesystem.resolve(launchDir)
   if (relative === undefined) return launchReal
   if (isAbsolute(relative)) throw new Error("absolute directory paths are not allowed")
-  const requestedReal = Filesystem.resolve(join(launchDir, relative))
+  // Require the target to exist and be a directory before canonicalizing:
+  // Filesystem.resolve falls back to the lexical path on ENOENT, so a
+  // symlinked ancestor with a missing final component would pass the
+  // containment test below. Both callers select an existing folder.
+  const requested = join(launchDir, relative)
+  if (!Filesystem.stat(requested)?.isDirectory()) {
+    throw new Error("directory does not exist")
+  }
+  const requestedReal = Filesystem.resolve(requested)
   if (!Filesystem.contains(launchReal, requestedReal)) {
     throw new Error("directory path escapes the launch directory")
   }

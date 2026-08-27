@@ -4382,7 +4382,12 @@ describe("RemoteSender slash commands", () => {
       subscribe: fakeBus().subscribe,
     })
 
-    sender.handle({ type: "command", id: "req_escape", command: "list_directories", data: { protocolVersion: 1, path: ".." } })
+    sender.handle({
+      type: "command",
+      id: "req_escape",
+      command: "list_directories",
+      data: { protocolVersion: 1, path: ".." },
+    })
 
     expect(sent).toEqual([{ type: "response", id: "req_escape", error: "invalid list_directories path" }])
   })
@@ -4601,8 +4606,18 @@ describe("RemoteSender slash commands", () => {
       },
     })
 
-    sender.handle({ type: "command", id: "req_escape", command: "create_session", data: { protocolVersion: 1, directory: ".." } })
-    sender.handle({ type: "command", id: "req_abs", command: "create_session", data: { protocolVersion: 1, directory: "/tmp" } })
+    sender.handle({
+      type: "command",
+      id: "req_escape",
+      command: "create_session",
+      data: { protocolVersion: 1, directory: ".." },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_abs",
+      command: "create_session",
+      data: { protocolVersion: 1, directory: "/tmp" },
+    })
 
     expect(sent).toEqual([
       { type: "response", id: "req_escape", error: "invalid create_session directory" },
@@ -4610,6 +4625,58 @@ describe("RemoteSender slash commands", () => {
     ])
     expect(createCalls).toEqual([])
     expect(attachCalls).toEqual([])
+  })
+
+  test("create_session rejects a missing target under a symlinked ancestor that escapes", async () => {
+    await using outside = await tmpdir()
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await symlink(outside.path, join(dir, "link"), "dir")
+      },
+    })
+    const { conn, sent } = fakeConn()
+    const provideCalls: unknown[] = []
+    const createCalls: unknown[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        provideCalls.push(input.directory)
+        return input.fn()
+      },
+      session: {
+        get: async () => {
+          throw new Error("session.get must not be called")
+        },
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_x"), directory: tmp.path } as any
+        },
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_missing",
+      command: "create_session",
+      data: { protocolVersion: 1, directory: "link/missing" },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_list_missing",
+      command: "list_directories",
+      data: { protocolVersion: 1, path: "link/missing" },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_missing", error: "invalid create_session directory" },
+      { type: "response", id: "req_list_missing", error: "invalid list_directories path" },
+    ])
+    expect(provideCalls).toEqual([])
+    expect(createCalls).toEqual([])
   })
 })
 // kilocode_change end
