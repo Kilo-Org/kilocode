@@ -58,7 +58,18 @@ export function createDiffCache(load: Loader) {
   }
 
   const identity = (dir: string, base: string, anc: string, meta: Meta) =>
-    `${dir}\0${base}\0${anc}\0${meta.file}\0${meta.tracked}\0${meta.status}\0${meta.additions}\0${meta.deletions}\0${meta.binary}\0${meta.stamp}`
+    [
+      dir,
+      base,
+      anc,
+      meta.file,
+      meta.tracked,
+      meta.status,
+      meta.additions,
+      meta.deletions,
+      meta.binary,
+      meta.stamp,
+    ].join("\0")
 
   const cached = (id: string) => {
     const value = details.get(id)
@@ -171,9 +182,10 @@ export function createDiffCache(load: Loader) {
 
   const run = async (items: Item[]) => {
     for (let index = 0; index < items.length; index += MAX_BATCH_FILES) {
-      const chunk = items.slice(index, index + MAX_BATCH_FILES).filter((item) => item.calls.size > 0)
+      const slice = items.slice(index, index + MAX_BATCH_FILES)
+      const chunk = slice.filter((item) => item.calls.size > 0)
       if (chunk.length === 0) {
-        for (const item of items.slice(index, index + MAX_BATCH_FILES)) item.resolve(null)
+        for (const item of slice) item.resolve(null)
         continue
       }
       for (const item of chunk) item.started = true
@@ -234,15 +246,23 @@ export function createDiffCache(load: Loader) {
     }
     let item = queue.get(id)
     if (!item) {
-      let resolve!: (value: Value) => void
-      let reject!: (error: unknown) => void
-      const work = new Promise<Value>((yes, no) => {
-        resolve = yes
-        reject = no
-      })
-      item = { id, scope, queue: key, dir, base, anc, meta, calls: new Set(), started: false, work, resolve, reject }
+      const task = Promise.withResolvers<Value>()
+      item = {
+        id,
+        scope,
+        queue: key,
+        dir,
+        base,
+        anc,
+        meta,
+        calls: new Set(),
+        started: false,
+        work: task.promise,
+        resolve: task.resolve,
+        reject: task.reject,
+      }
       queue.set(id, item)
-      watch(id, work, () => current(item!)?.id === id && (item!.started || item!.calls.size > 0))
+      watch(id, task.promise, () => current(item!)?.id === id && (item!.started || item!.calls.size > 0))
       pending.get(id)!.item = item
     }
     return join(item, signal)

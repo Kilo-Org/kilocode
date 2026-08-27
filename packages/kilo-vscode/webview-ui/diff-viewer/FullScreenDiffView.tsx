@@ -683,7 +683,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
                     createEffect(() => {
                       if (!viewport.visible() || !open().includes(diff.file)) return
-                      request(diff)
+                      request(diff, viewport.intersects)
                     })
 
                     return (

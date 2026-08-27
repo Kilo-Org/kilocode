@@ -392,6 +392,16 @@ export const DiffPanelCachedWorktreeSwitch: Story = {
     const [current, setCurrent] = createSignal(ids[0]!)
     const values = Object.fromEntries(ids.map((id) => [`single\0${id}#branch`, [edited(id, `src/${id}.ts`)]]))
     const composers = createReviewComposers(() => undefined)
+    const comments = [
+      {
+        id: "cached-comment",
+        file: "src/worktree-1.ts",
+        side: "additions" as const,
+        line: 2,
+        comment: "Keep the cached review annotation mounted",
+        selectedText: "line 2",
+      },
+    ]
 
     return (
       <StoryProviders noPadding>
@@ -414,7 +424,7 @@ export const DiffPanelCachedWorktreeSwitch: Story = {
               loading={() => false}
               loadingFiles={() => new Set()}
               notice={() => undefined}
-              comments={() => []}
+              comments={(key) => (key === "worktree-1#branch" ? comments : [])}
               setComments={() => {}}
               composer={composers.get}
               lead={() => <span>Branch</span>}
@@ -467,6 +477,7 @@ export const DiffPanelViewportLoading: Story = {
         if (rect.bottom < box.top - 201 || rect.top > box.bottom + 201) setOffscreen((prev) => [...prev, file])
       }
       setRequested((prev) => (prev.includes(file) ? prev : [...prev, file]))
+      // Simulate a host reply after the requesting Solid effect has completed.
       queueMicrotask(() => {
         setEntries((prev) =>
           prev.map((item) =>
@@ -523,6 +534,7 @@ export const DiffPanelInterruptedLoading: Story = {
       setCount((value) => value + 1)
       setLoading(new Set([file]))
       if (count() === 1) return
+      // Keep the resumed host reply asynchronous, as in the real request/response path.
       queueMicrotask(() => {
         setEntries([
           {

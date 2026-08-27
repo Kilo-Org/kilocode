@@ -240,8 +240,9 @@ test("keeps cached worktree reviews visible on every switch frame", async ({ pag
   }
 
   const result = await page.evaluate(async () => {
-    const frames: Array<{ id: string; immediate: boolean; painted: boolean; remounted: boolean }> = []
+    const frames: Array<{ id: string; immediate: boolean; painted: boolean; remounted: boolean; rebuilt: boolean }> = []
     const panels = new Map<string, Element>()
+    const lines = new Map<string, Element>()
     for (let cycle = 0; cycle < 3; cycle++) {
       for (let index = 1; index <= 12; index++) {
         const id = `worktree-${index}`
@@ -260,13 +261,18 @@ test("keeps cached worktree reviews visible on every switch frame", async ({ pag
         }
         const immediate = visible()
         await new Promise((resolve) => requestAnimationFrame(resolve))
-        frames.push({ id, immediate, painted: visible(), remounted })
+        const line = panel?.querySelector("diffs-container")?.shadowRoot?.querySelector("[data-line]")
+        const previous = lines.get(id)
+        const rebuilt = previous !== undefined && previous !== line
+        if (line) lines.set(id, line)
+        frames.push({ id, immediate, painted: visible(), remounted, rebuilt })
       }
     }
     return {
       frames,
       blank: frames.filter((frame) => !frame.immediate || !frame.painted),
       remounts: frames.filter((frame) => frame.remounted),
+      rebuilds: frames.filter((frame) => frame.rebuilt),
       panels: document.querySelectorAll(".am-diff-panel-cache").length,
       active: document.querySelectorAll(".am-diff-panel-cache-active").length,
       hidden: [...document.querySelectorAll(".am-diff-panel-cache:not(.am-diff-panel-cache-active)")].every(
@@ -277,6 +283,7 @@ test("keeps cached worktree reviews visible on every switch frame", async ({ pag
 
   expect(result.blank).toEqual([])
   expect(result.remounts).toEqual([])
+  expect(result.rebuilds).toEqual([])
   expect(result.panels).toBe(12)
   expect(result.active).toBe(1)
   expect(result.hidden).toBe(true)

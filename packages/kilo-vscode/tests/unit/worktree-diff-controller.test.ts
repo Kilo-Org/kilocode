@@ -67,12 +67,6 @@ async function waitFor(cond: () => boolean): Promise<void> {
   throw new Error("waitFor timed out")
 }
 
-function defer() {
-  let resolve: () => void = () => {}
-  const promise = new Promise<void>((done) => (resolve = done))
-  return { promise, resolve }
-}
-
 function byType(items: unknown[], type: string) {
   return items.filter((item): item is { type: string } => {
     return typeof item === "object" && item !== null && (item as { type?: unknown }).type === type
@@ -145,8 +139,8 @@ describe("WorktreeDiffController.setBase", () => {
   })
 
   it("uses the latest activation when resolve finishes out of order", async () => {
-    const a = defer()
-    const b = defer()
+    const a = Promise.withResolvers<void>()
+    const b = Promise.withResolvers<void>()
     let calls = 0
     const git = {
       currentBranch: async () => {
@@ -175,9 +169,9 @@ describe("WorktreeDiffController.setBase", () => {
   })
 
   it("uses the latest request in an A-to-B-to-A sequence", async () => {
-    const a1 = defer()
-    const b = defer()
-    const a2 = defer()
+    const a1 = Promise.withResolvers<void>()
+    const b = Promise.withResolvers<void>()
+    const a2 = Promise.withResolvers<void>()
     const waits = [a1, b, a2]
     let calls = 0
     const git = {
@@ -210,7 +204,7 @@ describe("WorktreeDiffController.setBase", () => {
   })
 
   it("does not activate after a pending request is stopped", async () => {
-    const ready = defer()
+    const ready = Promise.withResolvers<void>()
     const { controller, builds } = make({ ready: () => ready.promise })
 
     controller.start("w1#branch")
@@ -222,7 +216,7 @@ describe("WorktreeDiffController.setBase", () => {
   })
 
   it("drops source data and polling from a stopped initial fetch", async () => {
-    const fetch = defer()
+    const fetch = Promise.withResolvers<void>()
     const { controller, builds, posted } = make({
       fetch: async () => {
         await fetch.promise
@@ -244,7 +238,7 @@ describe("WorktreeDiffController.setBase", () => {
   })
 
   it("keeps synchronous repeated starts while the initial fetch is pending", async () => {
-    const fetch = defer()
+    const fetch = Promise.withResolvers<void>()
     const { controller, builds } = make({
       fetch: async (n) => {
         if (n === 1) await fetch.promise

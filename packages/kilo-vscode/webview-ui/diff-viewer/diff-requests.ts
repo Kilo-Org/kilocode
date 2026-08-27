@@ -15,6 +15,7 @@ interface DiffRequestOptions {
 type Watch = { observer: IntersectionObserver; entries: Map<Element, (visible: boolean) => void> }
 
 const watchers = new WeakMap<Element, Watch>()
+const MARGIN = 200
 
 function observeDiffRequest(node: Element, root: Element, run: (visible: boolean) => void): () => void {
   if (typeof IntersectionObserver === "undefined") {
@@ -29,7 +30,7 @@ function observeDiffRequest(node: Element, root: Element, run: (visible: boolean
       (items) => {
         for (const item of items) entries.get(item.target)?.(item.isIntersecting)
       },
-      { root, rootMargin: "200px 0px" },
+      { root, rootMargin: `${MARGIN}px 0px` },
     )
     state = { observer, entries }
     watchers.set(root, state)
@@ -55,7 +56,17 @@ export function createDiffViewport(root: Accessor<Element | undefined>) {
     if (!node || !viewport) return
     onCleanup(observeDiffRequest(node, viewport, setVisible))
   })
-  return { ref: (node: Element) => setElement(node), visible }
+  const intersects = () => {
+    const node = element()
+    const viewport = root()
+    if (!node || !viewport) return false
+    const bounds = node.getBoundingClientRect()
+    const box = viewport.getBoundingClientRect()
+    return (
+      bounds.width > 0 && bounds.height > 0 && bounds.bottom >= box.top - MARGIN && bounds.top <= box.bottom + MARGIN
+    )
+  }
+  return { ref: (node: Element) => setElement(node), visible, intersects }
 }
 
 export function createDiffRequests(opts: DiffRequestOptions) {
@@ -72,12 +83,12 @@ export function createDiffRequests(opts: DiffRequestOptions) {
     ),
   )
 
-  const request = (diff: WorktreeFileDiff) => {
+  const request = (diff: WorktreeFileDiff, visible?: () => boolean) => {
     const send = opts.send()
     if (!send || opts.loading()?.has(diff.file)) return
     if (!isDiffExpandable(diff) || diff.summarized !== true) return
     const value = diffToken(diff)
-    if (requested.get(diff.file) === value) return
+    if (requested.get(diff.file) === value || visible?.() === false) return
     requested.set(diff.file, value)
     send(diff.file)
   }

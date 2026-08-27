@@ -6,6 +6,7 @@ import {
   createEffect,
   createRenderEffect,
   on,
+  untrack,
   type JSXElement,
 } from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
@@ -419,7 +420,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
     editMeta = result.editMeta
-    if (props.active !== false) {
+    if (untrack(() => props.active) !== false) {
       composer().draft = draft() ? draftMeta : null
       composer().edit = editing() ? editMeta : null
     }
@@ -611,7 +612,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
                 createEffect(() => {
                   if (props.active === false || !viewport.visible() || !open().includes(diff.file)) return
-                  request(diff)
+                  request(diff, viewport.intersects)
                 })
 
                 return (

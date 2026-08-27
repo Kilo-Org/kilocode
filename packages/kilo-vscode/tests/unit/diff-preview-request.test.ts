@@ -124,7 +124,8 @@ const SCRIPT = `
   if (lazy.length !== 0) fail("offscreen diffs requested eagerly " + JSON.stringify(lazy))
   request(entries[0])
   request(entries[1])
-  request(entries[0])
+  request(entries[0], () => { throw new Error("Repeated requests must not measure layout") })
+  request(entries[80], () => false)
   if (lazy.length !== 2 || lazy[0] !== entries[0].file || lazy[1] !== entries[1].file) {
     fail("visible diff requests were not lazy and deduplicated " + JSON.stringify(lazy))
   }

@@ -68,14 +68,6 @@ async function withRepo(run: (dir: string, base: string) => Promise<void>): Prom
   }
 }
 
-function deferred<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void
-  const promise = new Promise<T>((done) => {
-    resolve = done
-  })
-  return { promise, resolve }
-}
-
 function turn(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve))
 }
@@ -689,8 +681,8 @@ describe("createLocalDiff concurrent details", () => {
       const ops = new RecordingGitOps()
       const local = createLocalDiff(ops)
       await local.summary(dir, base)
-      const gate = deferred<void>()
-      const ready = deferred<void>()
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
       ops.block(inspect, gate.promise, ready.resolve)
 
       const first = local.file(dir, base, "seed.txt")
@@ -738,8 +730,8 @@ describe("createLocalDiff concurrent details", () => {
       const ops = new RecordingGitOps()
       const local = createLocalDiff(ops)
       await local.summary(dir, base)
-      const gate = deferred<void>()
-      const ready = deferred<void>()
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
       ops.block(show, gate.promise, ready.resolve)
       const pending = local.file(dir, base, "seed.txt")
       await ready.promise
@@ -790,8 +782,8 @@ describe("createLocalDiff concurrent details", () => {
       const local = createLocalDiff(ops)
       await local.summary(dir, base)
       ops.calls.splice(0)
-      const gate = deferred<void>()
-      const ready = deferred<void>()
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
       ops.block(inspect, gate.promise, ready.resolve)
       const ctl = new AbortController()
       const first = local.file(dir, base, "seed.txt", ctl.signal)
@@ -818,8 +810,8 @@ describe("createLocalDiff concurrent details", () => {
       const local = createLocalDiff(ops)
       await local.summary(dir, base)
       ops.calls.splice(0)
-      const gate = deferred<void>()
-      const ready = deferred<void>()
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
       ops.block(inspect, gate.promise, ready.resolve)
       const one = new AbortController()
       const two = new AbortController()
@@ -870,8 +862,8 @@ describe("createLocalDiff concurrent details", () => {
       const local = createLocalDiff(ops)
       await local.summary(dir, base)
       ops.calls.splice(0)
-      const gate = deferred<void>()
-      const ready = deferred<void>()
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
       ops.block(size, gate.promise, ready.resolve)
       const controller = new AbortController()
       const first = local.file(dir, base, "seed.txt", controller.signal)
@@ -901,8 +893,8 @@ describe("createLocalDiff concurrent details", () => {
       const local = createLocalDiff(ops)
       await local.summary(dir, base)
       ops.calls.splice(0)
-      const gate = deferred<void>()
-      const ready = deferred<void>()
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
       ops.block(inspect, gate.promise, ready.resolve)
       const one = new AbortController()
       const two = new AbortController()
@@ -937,8 +929,8 @@ describe("createLocalDiff concurrent details", () => {
       const local = createLocalDiff(ops)
       await local.summary(dir, base)
       ops.calls.splice(0)
-      const gate = deferred<void>()
-      const ready = deferred<void>()
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
       ops.block(inspect, gate.promise, ready.resolve)
       const first = local.file(dir, base, "seed.txt")
       const second = local.file(dir, base, "third file.txt")
@@ -969,8 +961,8 @@ describe("createLocalDiff concurrent details", () => {
       const local = createLocalDiff(ops)
       await local.summary(dir, base)
       ops.calls.splice(0)
-      const gate = deferred<void>()
-      const ready = deferred<void>()
+      const gate = Promise.withResolvers<void>()
+      const ready = Promise.withResolvers<void>()
       ops.block(inspect, gate.promise, ready.resolve)
       const first = local.file(dir, base, "seed.txt")
       const second = local.file(dir, base, "third file.txt")
