@@ -170,6 +170,8 @@ export const dict = {
   "common.saving": "جارٍ الحفظ...",
   "common.default": "افتراضي",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "البحث في Worktrees",
   "prompt.thinking.tooltip": "جهد الاستدلال",
   "prompt.action.send": "إرسال",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",

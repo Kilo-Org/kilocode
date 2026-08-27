@@ -154,6 +154,8 @@ export const dict = {
   "common.save": "Salva",
   "common.saving": "Salvataggio...",
   "common.default": "Predefinito",
+  "prompt.worktrees.title": "Worktree",
+  "prompt.worktrees.search": "Cerca worktree",
   "prompt.thinking.tooltip": "Sforzo di ragionamento",
   "prompt.action.send": "Invia",
   "prompt.action.send.blocked": "Rispondi alla domanda in sospeso o ignorala prima di continuare",
