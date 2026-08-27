@@ -25,9 +25,10 @@
     "storybook-solidjs-vite": "^10.0.9",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "@opencode-ai/session-ui": "workspace:*"
+    "@opencode-ai/session-ui": "workspace:*",
+    "react-dom": "18.2.0"
   },
-  "version": "7.4.20",
+  "version": "7.5.5",
   "dependencies": {},
   "peerDependencies": {}
 }

@@ -5,6 +5,8 @@ description: "Connect a GitHub account to your KiloClaw agent for repository acc
 
 # GitHub Integration
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Connect a GitHub account to your KiloClaw agent so it can clone repositories, push commits, open pull requests, and leave code reviews — all autonomously.
 
 {% callout type="warning" title="Security" %}

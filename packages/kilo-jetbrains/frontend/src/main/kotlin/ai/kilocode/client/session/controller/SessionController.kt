@@ -20,17 +20,22 @@ import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.Reasoning
+import ai.kilocode.client.session.ui.mode.agentTitle
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.Outcome
+import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.client.util.edtLater as edt
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -66,6 +71,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.awt.Component
 import java.nio.file.Path
@@ -168,6 +174,7 @@ class SessionController(
     private val childParts: MutableMap<PartKey, String> = mutableMapOf()
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
     private var recentsState: RecentsState = RecentsState.Idle
+    private var recentsSnapshot: List<SessionDto> = emptyList()
     private var viewState: SessionControllerEvent.ViewChanged? = null
     private var connectionState: SessionControllerEvent.ConnectionChanged? = null
     private var connectionTargetState: SessionControllerEvent.ConnectionChanged? = null
@@ -182,6 +189,8 @@ class SessionController(
     private var agentTime: Double? = null
     private var prefModel: String? = null
     private var prefAgent: String? = null
+    private var prefVariantKey: String? = null
+    private var prefVariant: String? = null
     private var modelTime: Double? = null
     private val snapshots = mutableMapOf<PartKey, String>()
 
@@ -192,6 +201,7 @@ class SessionController(
     internal val sessionDirectory: String get() = model.session?.directory ?: (ref as? SessionRef.Local)?.session?.directory ?: directory
     internal val refKey: String? get() = ref?.key
     internal val refType: SessionRef.Type? get() = ref?.type
+    internal fun recents(): List<SessionDto> = recentsSnapshot
 
     fun openSession(session: SessionDto) {
         assertEdt()
@@ -261,11 +271,16 @@ class SessionController(
         }
     }
 
-    fun prompt(text: String, files: List<PromptPartDto> = emptyList()) {
+    fun prompt(
+        text: String,
+        files: List<PromptPartDto> = emptyList(),
+        editorContext: EditorContextDto? = null,
+        select: PromptSelection? = null,
+    ) {
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val dto = promptDto(text, files)
+        val dto = promptDto(text, files, editorContext, select)
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
         dispatch(Dispatch("prompt", "user", text, props, start, exists)) { id ->
@@ -472,6 +487,98 @@ class SessionController(
         }
     }
 
+    /**
+     * Re-runs the last user turn after it failed, discarding the failed assistant turn first.
+     *
+     * Reverting to the failed assistant message restores the workspace when that turn already edited
+     * files (a no-op server-side when it edited nothing), and the prompt that follows is what actually
+     * removes the message: `SessionRevert.cleanup` drops everything at or after the revert target on the
+     * next prompt. The replay reuses the original user message id, so no synthetic message is appended.
+     *
+     * A turn that failed before the assistant message existed (model resolution, missing provider
+     * credentials) has nothing to roll back, so that path skips the revert and only replays.
+     */
+    fun retry() {
+        assertEdt()
+        val id = sid ?: return
+        val target = retryTarget() ?: return
+        LOG.info("${ChatLogSummary.sid(id)} kind=retry clicked=true message=${target.assistant ?: "none"}")
+        val op = beginReverting(
+            KiloBundle.message("session.status.retrying"),
+            // No rollback marker: the transcript should not paint the failed turn as a revert target,
+            // it is about to be replaced. SessionMessageListPanel only marks when message != null.
+            SessionState.Reverting.Kind.ROLLBACK,
+            message = null,
+        ) ?: return
+        revertJob = cs.launch {
+            try {
+                target.assistant?.let {
+                    sessions.revert(id, directory, it, null)
+                    synchronizeFromDisk(id, "retry")
+                }
+                capture("Session Retry", sessionProps(id) + mapOf("rolledBack" to (target.assistant != null).toString()))
+                edt {
+                    if (disposed) return@edt
+                    clearReverting(op)
+                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+                }
+                sessions.prompt(id, directory, target.prompt)
+                LOG.info("${ChatLogSummary.sid(id)} kind=retry ok=true")
+            } catch (e: CancellationException) {
+                edt { cancelReverting(op) }
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "retry", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=retry dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt {
+                    if (disposed) return@edt
+                    // The revert may already have landed. Leave it applied and surface the failure so the
+                    // user can retry again or redo, rather than silently dropping back to idle.
+                    if (revertOp?.key == op.key) failReverting(op, e)
+                    else model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.prompt")))
+                }
+            }
+        }
+    }
+
+    /** Whether the error card should offer Retry. Gates the action so it is never painted as a no-op. */
+    @RequiresEdt
+    fun canRetry(): Boolean = retryTarget() != null
+
+    /**
+     * The failed tail turn to replay, or null when retry does not apply: no session, an operation already
+     * in flight, a busy session, a turn that did not fail, or a tail that is neither the last user message
+     * nor the assistant that failed answering it.
+     */
+    private fun retryTarget(): RetryTarget? {
+        assertEdt()
+        if (sid == null) return null
+        if (revertOp != null) return null
+        if (model.state.isBusy()) return null
+        val tail = model.messages().lastOrNull() ?: return null
+        val err = tail.info.error
+        val state = model.state
+        val failed = when {
+            // A user stop also lands an errored tail (MessageAbortedError), and it is not a failure.
+            err != null -> !err.aborted
+            // A turn that completed cleanly is not retryable even when a session-level error arrives
+            // afterwards: replaying it would revert work the model actually delivered.
+            tail.info.role == "assistant" && tail.info.time.completed != null -> false
+            else -> state is SessionState.Error ||
+                (state is SessionState.TurnEnded && state.outcome == Outcome.FAILED)
+        }
+        if (!failed) return null
+        val prompt = retryPromptCurrent() ?: return null
+        // The failure hit before the assistant message existed — model resolution and provider
+        // credentials are checked ahead of it — so the user turn is the tail and nothing needs rolling
+        // back.
+        if (tail.info.id == prompt.messageID) return RetryTarget(null, prompt)
+        if (tail.info.role != "assistant") return null
+        if (tail.info.parentID != prompt.messageID) return null
+        return RetryTarget(tail.info.id, prompt)
+    }
+
+    private data class RetryTarget(val assistant: String?, val prompt: PromptDto)
+
     fun deleteQueuedMessage(message: String) {
         assertEdt()
         val id = sid ?: return
@@ -630,6 +737,8 @@ class SessionController(
         modelTime = null
         prefModel = null
         prefAgent = null
+        prefVariantKey = null
+        prefVariant = null
         cs.launch {
             try {
                 sessions.updateConfig(directory, ConfigUpdateDto(agent = name))
@@ -653,6 +762,8 @@ class SessionController(
         modelTime = null
         prefModel = null
         prefAgent = null
+        prefVariantKey = null
+        prefVariant = null
         app.selectModel(agent, provider, id)
         selectResolvedModel(key)
         model.modelOverride = model.defaultModel != model.model
@@ -663,6 +774,8 @@ class SessionController(
         assertEdt()
         val agent = model.agent ?: return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model-reset agent=$agent" }
+        prefVariantKey = null
+        prefVariant = null
         app.clearModel(agent)
         val auto = configModel(agent) ?: providerModel(agent)
         selectResolvedModel(auto)
@@ -675,9 +788,43 @@ class SessionController(
         val key = model.model ?: return
         if (value !in model.variants) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
+        prefVariantKey = key
+        prefVariant = value
         app.selectVariant(key, value)
         model.variant = value
         capture("Reasoning Variant Selected", sessionProps() + mapOf("model" to key, "variant" to value))
+    }
+
+    /**
+     * Seeds this session's agent / model / reasoning from an initial [select] (New Worktree flow),
+     * mirroring VS Code's setSessionAgent + setSessionModel + variant seeding. Attaching the pick to
+     * the first prompt alone only affects that one turn; setting it as the session's preferred
+     * selection makes the pickers and every later turn use it too, and survives the later
+     * workspace-ready model resolution because [prefAgent] / [prefModel] / [prefVariant] win in
+     * [syncModelSelection].
+     */
+    fun applySelection(select: PromptSelection) {
+        assertEdt()
+        val agent = select.agent ?: return
+        fire(SessionControllerEvent.WorkspaceReady) {
+            model.agent = agent
+            val provider = select.provider
+            val id = select.model
+            if (provider != null && id != null) {
+                val key = "$provider/$id"
+                app.selectModel(agent, provider, id)
+                select.variant?.let { app.selectVariant(key, it) }
+                prefAgent = agent
+                prefModel = key
+                prefVariantKey = key
+                prefVariant = select.variant
+            } else {
+                prefVariantKey = null
+                prefVariant = null
+            }
+            syncModelSelection()
+            model.refreshHeader()
+        }
     }
 
     // ------ permission / question resolution ------
@@ -934,7 +1081,7 @@ class SessionController(
                     model.agents = state.agents?.agents?.map {
                         AgentItem(
                             it.name,
-                            it.displayName ?: title(it.name),
+                            agentTitle(it.name, it.displayName),
                             it.description,
                             it.deprecated == true,
                         )
@@ -988,6 +1135,18 @@ class SessionController(
                 }
             }
         }
+
+        // Sessions started elsewhere — another editor tab, or another project frame opened on this
+        // same directory — only reach the empty state through the CLI's event stream.
+        cs.launch {
+            sessions.changes
+                .filter { it.directory == directory }
+                .collect {
+                    edt {
+                        if (canUseRecents()) refreshRecents(force = true)
+                    }
+                }
+        }
     }
 
     private fun loadSession(token: SessionLoadState.Loading) {
@@ -1017,7 +1176,11 @@ class SessionController(
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
                     for (child in discovered.values.toSet()) trackChild(child)
-                    showSession()
+                    if (model.isEmpty() && model.state is SessionState.Idle) {
+                        setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    } else {
+                        showSession()
+                    }
                     loaded(!model.isEmpty())
                 }
             } catch (e: Exception) {
@@ -1069,7 +1232,11 @@ class SessionController(
                     childParts.clear()
                     childParts.putAll(discovered)
                     for (child in discovered.values.toSet()) trackChild(child)
-                    showSession()
+                    if (model.isEmpty() && model.state is SessionState.Idle) {
+                        setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    } else {
+                        showSession()
+                    }
                     loaded(!model.isEmpty())
                 }
             } catch (e: Exception) {
@@ -1309,6 +1476,8 @@ class SessionController(
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
                     } else if (status != null) {
                         seedStatus(status)
+                    } else {
+                        seedOutcome()
                     }
                 }
             }
@@ -1339,6 +1508,15 @@ class SessionController(
             else -> return  // idle or unknown — leave as Idle
         }
         model.setState(state)
+    }
+
+    private fun seedOutcome() {
+        val err = model.messages().lastOrNull { it.info.role == "assistant" }?.info?.error ?: return
+        if (err.aborted) {
+            model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED))
+            return
+        }
+        model.setState(SessionState.Error(err.message ?: err.type, err.type))
     }
 
     private fun handle(event: ChatEventDto) {
@@ -1418,20 +1596,25 @@ class SessionController(
                 val current = model.state
                 if (current is SessionState.AwaitingQuestion) return
                 if (current is SessionState.AwaitingPermission) return
-                val clobberOk = event.reason == "completed"
-                    || current is SessionState.Busy
-                    || current is SessionState.Retry
-                    || current is SessionState.Offline
-                if (clobberOk) {
-                    if (event.reason == "completed") capture("Task Completed", sessionProps(event.sessionID))
-                    model.setState(SessionState.Idle)
+                if (current is SessionState.LoginRequired) return
+                if (current is SessionState.Error && event.reason != "completed") return
+                val ended = TurnOutcome.classify(event.reason)
+                when {
+                    ended != null -> model.setState(SessionState.TurnEnded(ended))
+                    event.reason == "completed" -> {
+                        capture("Task Completed", sessionProps(event.sessionID))
+                        model.setState(SessionState.Idle)
+                    }
+                    current is SessionState.Busy || current is SessionState.Retry || current is SessionState.Offline -> model.setState(SessionState.Idle)
                 }
             }
 
             is ChatEventDto.SessionCreated -> adoptFollowup(event.info)
 
             is ChatEventDto.Error -> {
-                capture("Session Error", sessionProps(event.sessionID) + mapOf("context" to "event", "errorClass" to (event.error?.type ?: "unknown")))
+                if (event.error?.aborted != true) {
+                    capture("Session Error", sessionProps(event.sessionID) + mapOf("context" to "event", "errorClass" to (event.error?.type ?: "unknown")))
+                }
                 error(event, true)
             }
 
@@ -1552,6 +1735,7 @@ class SessionController(
             model.setState(SessionState.LoginRequired(KiloBundle.message("session.login.required.description")))
             return
         }
+        if (event.error?.aborted == true) return
         val msg = event.error?.message ?: event.error?.type ?: KiloBundle.message("session.error.unknown")
         model.setState(SessionState.Error(msg, event.error?.type))
     }
@@ -1656,7 +1840,11 @@ class SessionController(
         val state = when (dto.type) {
             "idle" -> {
                 val current = model.state
-                if (current is SessionState.LoginRequired || current is SessionState.Reverting) return
+                if (current is SessionState.Error
+                    || current is SessionState.TurnEnded
+                    || current is SessionState.LoginRequired
+                    || current is SessionState.Reverting
+                ) return
                 purgePending(sid)
                 // purgePending may promote a still-queued permission from another (unpurged) child
                 // session; mirror idle() and leave that card in place rather than clobbering it with Idle.
@@ -1665,7 +1853,7 @@ class SessionController(
             }
             "busy" -> {
                 val current = model.state
-                if (current is SessionState.Idle || current is SessionState.Error)
+                if (current is SessionState.Idle || current is SessionState.Error || current is SessionState.TurnEnded)
                     SessionState.Busy(KiloBundle.message("session.status.considering"))
                 else return // already in a more specific phase
             }
@@ -1769,6 +1957,7 @@ class SessionController(
         // Only apply if we're not in a more specific non-terminal state.
         val current = model.state
         if (current !is SessionState.Error
+            && current !is SessionState.TurnEnded
             && current !is SessionState.AwaitingPermission
             && current !is SessionState.AwaitingQuestion
             && current !is SessionState.LoginRequired
@@ -1778,6 +1967,12 @@ class SessionController(
         }
     }
 
+    /**
+     * Replays the last user message with the agent/model recorded on it.
+     *
+     * Login resume needs exactly this: the user authenticated for the model that demanded it, so
+     * resuming must use that model rather than whatever is selected now.
+     */
     private fun retryPrompt(): PromptDto? {
         val msg = model.messages().lastOrNull { it.info.role == "user" } ?: return null
         return PromptDto(
@@ -1788,6 +1983,24 @@ class SessionController(
             agent = msg.info.agent,
             variant = model.variant?.takeIf { it in model.variants },
             noReply = false,
+        )
+    }
+
+    /**
+     * Like [retryPrompt], but honours the *current* model/agent/effort selection.
+     *
+     * A turn usually fails because of the model it ran with — missing credentials, provider overload,
+     * context limit — so switching model or effort and pressing Retry has to pick that change up.
+     * Resolution mirrors [promptDto]; the recorded values are only a fallback for when no selection has
+     * resolved yet.
+     */
+    private fun retryPromptCurrent(): PromptDto? {
+        val base = retryPrompt() ?: return null
+        val sel = model.model?.let(::parseModel)
+        return base.copy(
+            providerID = sel?.first ?: base.providerID,
+            modelID = sel?.second ?: base.modelID,
+            agent = model.agent ?: base.agent,
         )
     }
 
@@ -1820,20 +2033,30 @@ class SessionController(
         }
     }
 
-    private fun promptDto(text: String, files: List<PromptPartDto> = emptyList()): PromptDto {
-        val full = model.model
-        val sel = full?.let(::parseModel)
-        val variant = model.variant?.takeIf { it in model.variants }
+    private fun promptDto(
+        text: String,
+        files: List<PromptPartDto> = emptyList(),
+        editorContext: EditorContextDto? = null,
+        select: PromptSelection? = null,
+    ): PromptDto {
+        val sel = model.model?.let(::parseModel)
+        val provider = select?.provider ?: sel?.first
+        val modelId = select?.model ?: sel?.second
+        val agent = select?.agent ?: model.agent
+        // An explicit variant comes from the dialog before the model catalog is loaded, so it can't
+        // be validated against model.variants yet; only the fallback is filtered.
+        val variant = select?.variant ?: model.variant?.takeIf { it in model.variants }
         val parts = buildList {
             text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
             addAll(files)
         }
         return PromptDto(
             parts = parts,
-            providerID = sel?.first,
-            modelID = sel?.second,
-            agent = model.agent,
+            providerID = provider,
+            modelID = modelId,
+            agent = agent,
             variant = variant,
+            editorContext = editorContext,
         )
     }
 
@@ -1886,8 +2109,11 @@ class SessionController(
         model.model = key
         val item = key?.let(::item)
         model.variants = item?.variants ?: emptyList()
+        val pref = prefVariant?.takeIf { prefVariantKey == key }
         val saved = key?.let { app.models.value.variant[it] }
-        model.variant = saved?.takeIf { it in model.variants } ?: model.variants.firstOrNull()
+        model.variant = pref?.takeIf { it in model.variants }
+            ?: saved?.takeIf { it in model.variants }
+            ?: model.variants.firstOrNull()
         model.refreshHeader()
     }
 
@@ -2153,7 +2379,7 @@ class SessionController(
         }
     }
 
-    fun refreshRecents(force: Boolean = false) {
+    private fun refreshRecents(force: Boolean = false) {
         assertEdt()
         if (!canUseRecents()) return
         if (recentsState is RecentsState.Loading) return
@@ -2168,7 +2394,8 @@ class SessionController(
                     if (recentsState != state) return@edt
                     setRecentSessionsState(RecentsState.Loaded)
                     if (!canUseRecents()) return@edt
-                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowRecents(items))
+                    recentsSnapshot = items
+                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
                 }
             } catch (e: Exception) {
                 LOG.warn("kind=session-recent dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
@@ -2177,7 +2404,8 @@ class SessionController(
                     if (recentsState != state) return@edt
                     setRecentSessionsState(RecentsState.Loaded)
                     if (!canUseRecents()) return@edt
-                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowRecents(emptyList()))
+                    recentsSnapshot = emptyList()
+                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
                 }
             }
         }
@@ -2194,6 +2422,9 @@ class SessionController(
     private fun setControllerViewState(event: SessionControllerEvent.ViewChanged) {
         assertEdt()
         if (disposed) return
+        // A late empty history load must not re-show the empty screen after a prompt opened the
+        // transcript.
+        if (event is SessionControllerEvent.ViewChanged.ShowEmpty && model.showSession) return
         if (event is SessionControllerEvent.ViewChanged.ShowSession) openLocal()
         if (viewState == event) return
         fire(event) {
@@ -2205,7 +2436,7 @@ class SessionController(
             }
         }
         when (event) {
-            is SessionControllerEvent.ViewChanged.ShowRecents -> showAccountOverlay()
+            is SessionControllerEvent.ViewChanged.ShowEmpty -> showAccountOverlay()
             is SessionControllerEvent.ViewChanged.ShowProgress -> hideAccountOverlay()
             is SessionControllerEvent.ViewChanged.ShowSession -> hideAccountOverlay()
         }
@@ -2289,6 +2520,22 @@ class SessionController(
             )
         }
 
+        if (workspace.status == KiloWorkspaceStatusDto.UNSUPPORTED) {
+            return SessionControllerEvent.ConnectionChanged.ShowError(
+                KiloBundle.message("session.connection.unsupported"),
+                unsupported(workspace.error, directory),
+                "workspace",
+            )
+        }
+
+        if (workspace.status == KiloWorkspaceStatusDto.MISSING) {
+            return SessionControllerEvent.ConnectionChanged.ShowError(
+                KiloBundle.message("session.connection.missing"),
+                KiloBundle.message("session.connection.missing.detail", workspace.error ?: directory),
+                "workspace",
+            )
+        }
+
         if (app.status == KiloAppStatusDto.READY && workspace.status == KiloWorkspaceStatusDto.READY && app.warnings.isNotEmpty()) {
             return SessionControllerEvent.ConnectionChanged.ShowWarning(
                 summary(app.warnings.size),
@@ -2342,10 +2589,6 @@ class SessionController(
 
     private fun assertEdt() {
         check(ApplicationManager.getApplication().isDispatchThread) { "SessionController state must be accessed on EDT" }
-    }
-
-    private fun edt(block: () -> Unit) {
-        ApplicationManager.getApplication().invokeLater(block)
     }
 
     private fun runEdt(block: () -> Unit) {
@@ -2424,6 +2667,7 @@ class SessionController(
                 out.add("[error]")
                 out.add("[${state.message}]")
             }
+            is SessionState.TurnEnded -> out.add("[${state.outcome.name.lowercase()}]")
             is SessionState.LoginRequired -> {
                 out.add("[login-required]")
                 out.add("[${state.message}]")
@@ -2490,11 +2734,17 @@ private fun summary(count: Int): String {
     return "$base ($count)"
 }
 
-private fun title(name: String): String = name
-    .split('-', '_')
-    .filter { it.isNotEmpty() }
-    .joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
-    .ifEmpty { name }
+private fun unsupported(reason: String?, directory: String): String {
+    val detail = when (reason) {
+        "devcontainer_virtual_filesystem" -> KiloBundle.message("session.connection.unsupported.devcontainer")
+        "wsl_virtual_filesystem" -> KiloBundle.message("session.connection.unsupported.wsl")
+        "invalid_virtual_path" -> KiloBundle.message("session.connection.unsupported.invalid")
+        else -> KiloBundle.message("session.connection.unsupported.unknown")
+    }
+    val path = KiloBundle.message("session.connection.unsupported.path", directory)
+    val options = KiloBundle.message("session.connection.unsupported.options")
+    return "$path\n\n$detail\n\n$options"
+}
 
 private const val KILO_PROVIDER = "kilo"
 private const val KILO_AUTO_MODEL = "kilo-auto/free"
@@ -2530,6 +2780,18 @@ private fun selection(value: String): ModelSelectionDto? {
     val parsed = parseModel(value) ?: return null
     return ModelSelectionDto(parsed.first, parsed.second)
 }
+
+/**
+ * An explicit agent / provider / model / reasoning selection to attach to a single prompt. Used by
+ * the New Worktree flow so the first turn runs with the mode and model picked in the dialog rather
+ * than whatever the freshly-opened session resolves as its default.
+ */
+data class PromptSelection(
+    val agent: String? = null,
+    val provider: String? = null,
+    val model: String? = null,
+    val variant: String? = null,
+)
 
 private fun parseModel(value: String): Pair<String, String>? {
     val slash = value.indexOf('/')

@@ -28,6 +28,10 @@ const Task = Schema.Struct({
     description:
       "Optional model override from agent_manager_models (e.g. 'Claude Opus 4.1'). Omit unless the user requests a different model. Agent Manager otherwise inherits the current turn's model. A qualified provider/model ID is also accepted to force a specific provider.",
   }),
+  provider: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "Optional provider ID to constrain model resolution (e.g. 'anthropic'). Use with model to select a model from a specific provider; omit to use the current-turn provider preference.",
+  }),
   variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "Optional reasoning variant override from agent_manager_models. Specify it without model to override the inherited model's variant. Omit both to inherit the current turn's selection.",
@@ -40,6 +44,9 @@ const Task = Schema.Struct({
   ),
   Schema.makeFilter((task) =>
     task.model?.trim() && !task.prompt?.trim() ? "A task model requires an initial prompt" : undefined,
+  ),
+  Schema.makeFilter((task) =>
+    task.provider?.trim() && !task.model?.trim() ? "A task provider requires a model" : undefined,
   ),
   Schema.makeFilter((task) =>
     task.variant?.trim() && !task.prompt?.trim() ? "A task variant requires an initial prompt" : undefined,
@@ -103,24 +110,64 @@ const MoveParams = Schema.Struct({
   }),
 })
 
-export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams])
-
-const WireParams = Schema.Struct({
-  mode: Schema.optional(StartParams.fields.mode),
-  versions: Schema.optional(StartParams.fields.versions),
-  tasks: Schema.optional(StartParams.fields.tasks),
-  action: Schema.optional(
-    Schema.Literals(["list", "prompt", "stop", "move"]).annotate({
+const AnswerParams = Schema.Struct({
+  action: Schema.Literal("answer").annotate({
+    description: "Resolve the pending question that blocks exactly one managed session.",
+  }),
+  sessionID: SessionID,
+  questionID: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "Pending question ID, learned from a failed prompt or an earlier answer error. Omit only when exactly one question is pending.",
+  }),
+  answers: Schema.Array(
+    Schema.Array(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200))).check(Schema.isMaxLength(20)),
+  )
+    .check(Schema.isMinLength(1), Schema.isMaxLength(20))
+    .annotate({
       description:
-        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations.",
+        "One array of selected option labels per question of the request, in order. Labels must match the advertised options.",
+    }),
+})
+
+export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams, AnswerParams])
+
+// Anthropic rejects a top-level anyOf/oneOf/allOf, so the advertised schema has to
+// stay one flat object while Params keeps the real per-operation validation. That
+// flattening means providers with strict structured outputs (the OpenAI Responses
+// API) must supply a value for every property, so every field is nullable: null is
+// how a model says "this field is not part of the operation I picked". Without it
+// the model is forced to invent a value, and an invented action wins over mode and
+// tasks, turning a start request into a list.
+const WireParams = Schema.Struct({
+  mode: Schema.optional(Schema.NullOr(StartParams.fields.mode)).annotate({
+    description:
+      "Start sessions only. Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions. Send null whenever action is set.",
+  }),
+  versions: Schema.optional(Schema.NullOr(Schema.Boolean)).annotate({
+    description:
+      "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
+  }),
+  tasks: Schema.optional(Schema.NullOr(StartParams.fields.tasks)).annotate({
+    description: "Start sessions only. Agent Manager sessions to start. Send null whenever action is set.",
+  }),
+  action: Schema.optional(
+    Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move", "answer"])).annotate({
+      description:
+        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
     }),
   ),
-  filter: Schema.optional(ListParams.fields.filter),
-  sessionID: Schema.optional(
-    Schema.String.annotate({ description: "For move, use a session ID returned by action=list (IDs start with ses_)." }),
-  ),
-  prompt: Schema.optional(PromptParams.fields.prompt),
+  filter: ListParams.fields.filter,
+  sessionID: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "For prompt, stop, move, and answer: a session ID returned by action=list (IDs start with ses_). Send null for every other operation.",
+  }),
+  prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "For prompt: the instruction to send to that session. Start requests use tasks[].prompt instead, so send null.",
+  }),
   sectionID: Schema.optional(MoveParams.fields.sectionID),
+  questionID: AnswerParams.fields.questionID,
+  answers: Schema.optional(Schema.NullOr(AnswerParams.fields.answers)),
 })
 
 type Input = Schema.Schema.Type<typeof Task>
@@ -205,6 +252,7 @@ function select(
     ...(task.branchName != null ? { branchName: task.branchName } : {}),
   }
   const value = task.model?.trim()
+  const provider = task.provider?.trim()
   const variant = task.variant?.trim()
   if (!value) {
     if (!variant) {
@@ -231,12 +279,21 @@ function select(
     return { task: { ...base, model: source.model, variant } }
   }
 
-  const { pool, names } = lookup(all, value)
+  const scope = provider ? all.filter((item) => item.providerID === provider) : all
+  if (provider && scope.length === 0) {
+    return {
+      error: `Task ${index + 1} provider is not available for model selection: ${provider}. Requested model: ${value}.`,
+    }
+  }
+
+  const { pool, names } = lookup(scope, value)
   if (pool.length === 0) {
-    const close = suggest(all, value)
+    const close = suggest(scope, value)
     const hint = close.length ? ` Closest matches: ${close.join(", ")}.` : ""
     return {
-      error: `Task ${index + 1} model is not available: ${value}.${hint} Use agent_manager_models to search models.`,
+      error: provider
+        ? `Task ${index + 1} model is not available from provider "${provider}": ${value}.${hint} Use agent_manager_models to search models.`
+        : `Task ${index + 1} model is not available: ${value}.${hint} Use agent_manager_models to search models.`,
     }
   }
   if (names.length > 1) {
@@ -272,7 +329,13 @@ function select(
 
 export const AgentManagerTool = Tool.define<
   typeof Params,
-  { action: "start" | "list" | "prompt" | "stop" | "move"; requestID?: string; count?: number; sessionID?: string },
+  {
+    action: "start" | "list" | "prompt" | "stop" | "move" | "answer"
+    requestID?: string
+    count?: number
+    sessionID?: string
+    questionID?: string
+  },
   AgentManager.Service | Bus.Service | Provider.Service,
   "agent_manager"
 >(
@@ -374,6 +437,31 @@ export const AgentManagerTool = Tool.define<
                 metadata: { action: "stop", sessionID: result.sessionID },
               }
             }
+            if (params.action === "answer") {
+              yield* ctx.ask({
+                permission: "agent_manager",
+                patterns: ["answer"],
+                always: ["answer"],
+                metadata: { action: "answer", sessionID: params.sessionID },
+              })
+              const result = yield* run(
+                host.request({
+                  operation: "answer",
+                  sessionID: ctx.sessionID,
+                  targetSessionID: params.sessionID,
+                  ...(params.questionID?.trim() ? { questionID: params.questionID.trim() } : {}),
+                  answers: params.answers,
+                }),
+                ctx.abort,
+              )
+              if (result.operation !== "answer")
+                return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+              return {
+                title: "Question answered",
+                output: `Answered Agent Manager question ${result.questionID} for session ${result.sessionID}. The session resumes with those answers.`,
+                metadata: { action: "answer", sessionID: result.sessionID, questionID: result.questionID },
+              }
+            }
             yield* ctx.ask({
               permission: "agent_manager",
               patterns: ["move"],
@@ -408,8 +496,9 @@ export const AgentManagerTool = Tool.define<
                 ...(msg.model.variant ? { variant: msg.model.variant } : {}),
               }
             : undefined
-          const need = params.tasks.some((task) => task.model?.trim() || task.variant?.trim())
-          const all = need ? candidates(yield* provider.list()) : []
+          const need = params.tasks.some((task) => task.model?.trim() || task.provider?.trim() || task.variant?.trim())
+          const providers = need ? yield* provider.list() : undefined
+          const all = providers ? candidates(providers) : []
           const preferred = need
             ? (source?.model.providerID ??
               (yield* provider.defaultModel().pipe(

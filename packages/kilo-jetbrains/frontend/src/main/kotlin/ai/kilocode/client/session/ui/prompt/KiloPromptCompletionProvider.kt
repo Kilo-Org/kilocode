@@ -20,12 +20,15 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.progress.runBlockingCancellable
-import com.intellij.psi.codeStyle.MinusculeMatcher
-import com.intellij.psi.codeStyle.NameUtil
 import com.intellij.util.textCompletion.TextCompletionProvider
-import com.intellij.util.text.matching.MatchingMode
 import java.util.Collections
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class KiloPromptCompletionProvider(
@@ -84,6 +87,18 @@ class KiloPromptCompletionProvider(
     }
 
     fun inside(text: String, caret: Int): Boolean = mentionSpans(text).any { span -> caret in span.start..span.end }
+
+    fun completing(text: String, caret: Int): Boolean = token(text, caret) != null
+
+    fun completingSlash(text: String, caret: Int): Boolean = token(text, caret)?.kind == Kind.SLASH
+
+    fun watchCommands(onChanged: () -> Unit): Job =
+        workspace.state
+            .map { it.commands }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach { onChanged() }
+            .launchIn(scope)
 
     private fun clientTokens(): Set<String> = actions.flatMapTo(mutableSetOf()) { action ->
         listOf(action.name) + action.hints
@@ -166,7 +181,7 @@ class KiloPromptCompletionProvider(
     private fun slash(prefix: String, result: CompletionResultSet) {
         result.restartCompletionOnAnyPrefixChange()
         val out = result.withPrefixMatcher(PlainPrefixMatcher.ALWAYS_TRUE)
-        val rank = Ranker(prefix)
+        val rank = PromptFuzzyRanker(prefix)
         val names = clientTokens()
         val clients = actions.mapNotNull { action ->
             rank.score(action.name, action.hints)?.let { Hit(client(action), it) }
@@ -187,7 +202,7 @@ class KiloPromptCompletionProvider(
         result.restartCompletionOnAnyPrefixChange()
         val out = result.withPrefixMatcher(PlainPrefixMatcher.ALWAYS_TRUE)
         val search = search(prefix)
-        val rank = Ranker(prefix)
+        val rank = PromptFuzzyRanker(prefix)
         val known = mentions.filter { action -> rank.matches(action.name, action.hints) && action.available(search) }
         known.forEach { action -> out.addElement(prioritize(resource(action))) }
         if (search.indexing) {
@@ -223,38 +238,6 @@ class KiloPromptCompletionProvider(
             ctx.editor.caretModel.moveToOffset(start + prefix.length)
         }
         .withAutoCompletionPolicy(AutoCompletionPolicy.NEVER_AUTOCOMPLETE)
-
-    private class Ranker(prefix: String) {
-        private val start = matcher(prefix)
-        private val middle = if (prefix.any { separator(it) }) null else matcher("*$prefix")
-
-        fun matches(name: String, hints: List<String>): Boolean = score(name, hints) != null
-
-        fun score(name: String, hints: List<String>): Int? = (listOf(name) + hints).maxOfOrNull { value ->
-            score(value) ?: Int.MIN_VALUE
-        }?.takeIf { it != Int.MIN_VALUE }
-
-        private fun score(value: String): Int? {
-            val exact = start.match(value)
-            if (exact != null) return START + start.matchingDegree(value, true, exact)
-            val fallback = middle ?: return null
-            val fuzzy = fallback.match(value) ?: return null
-            return fallback.matchingDegree(value, false, fuzzy)
-        }
-
-        private companion object {
-            const val START = 10_000
-
-            fun matcher(prefix: String): MinusculeMatcher = NameUtil.buildMatcher(prefix)
-                .withMatchingMode(MatchingMode.IGNORE_CASE)
-                .build()
-
-            fun separator(c: Char): Boolean = when (c) {
-                '_', '-', ':', '+', '.' -> true
-                else -> c.isWhitespace()
-            }
-        }
-    }
 
     private fun commandName(text: String): String? {
         val raw = text.trimStart()

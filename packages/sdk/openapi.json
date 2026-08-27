@@ -3921,6 +3921,220 @@
         ]
       }
     },
+    "/experimental/resource/read": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.readResource",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uri": {
+                      "type": "string"
+                    },
+                    "mimeType": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "blob": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["uri"],
+                  "additionalProperties": false,
+                  "description": "Resource content"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read a resource from a connected MCP server by URI. Used by MCP Apps to load UI resources.",
+        "summary": "Read MCP resource",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "uri": {
+                    "type": "string"
+                  },
+                  "server": {
+                    "type": "string"
+                  }
+                },
+                "required": ["uri", "server"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.readResource({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/mcp/call-tool": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.callTool",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool call result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "array"
+                    },
+                    "isError": {
+                      "type": "boolean"
+                    },
+                    "structuredContent": {
+                      "type": "object"
+                    }
+                  },
+                  "required": ["content"],
+                  "additionalProperties": false,
+                  "description": "Tool call result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.",
+        "summary": "Call MCP tool",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "server": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "arguments": {
+                    "type": "object"
+                  }
+                },
+                "required": ["server", "name"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.callTool({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/project": {
       "get": {
         "tags": ["project"],
@@ -4539,6 +4753,21 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "size": {
+                    "type": "object",
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "cols": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": ["rows", "cols"],
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -6585,6 +6814,23 @@
             "schema": {
               "type": "string",
               "pattern": "^msg"
+            },
+            "required": false
+          },
+          {
+            "name": "file",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "full",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
             },
             "required": false
           }
@@ -11389,11 +11635,18 @@
             }
           },
           "422": {
-            "description": "CommitMessageNoChangesError",
+            "description": "CommitMessageNoChangesError | CommitMessageFailedError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommitMessageNoChangesError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/CommitMessageNoChangesError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CommitMessageFailedError"
+                    }
+                  ]
                 }
               }
             }
@@ -14891,68 +15144,6 @@
         ]
       }
     },
-    "/kilocode/agent/requirements": {
-      "get": {
-        "tags": ["kilocode"],
-        "operationId": "kilocode.agentRequirements",
-        "parameters": [
-          {
-            "name": "directory",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "workspace",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": false
-          },
-          {
-            "name": "agent",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Agent requirement status",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AgentRequirementResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          }
-        },
-        "description": "Check whether the selected agent's requirements are available in the request directory.",
-        "summary": "Check agent requirements",
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.agentRequirements({\n  ...\n})"
-          }
-        ]
-      }
-    },
     "/kilocode/command/files": {
       "get": {
         "tags": ["kilocode"],
@@ -15219,7 +15410,7 @@
             }
           }
         },
-        "description": "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+        "description": "Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.",
         "summary": "Remove a custom agent",
         "requestBody": {
           "content": {
@@ -15229,6 +15420,10 @@
                 "properties": {
                   "name": {
                     "type": "string"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
                   }
                 },
                 "required": ["name"],
@@ -15241,6 +15436,212 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeAgent({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/snapshot/remove": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.removeSnapshot",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot repository removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Snapshot repository removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove the snapshot repository for an already deleted Agent Manager worktree.",
+        "summary": "Remove a snapshot repository",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "worktree": {
+                    "type": "string"
+                  }
+                },
+                "required": ["worktree"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeSnapshot({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/provider-usage": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.providerUsage.get",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current provider usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get cache-aware, secret-free provider plan usage and personal billing status.",
+        "summary": "Get provider usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.providerUsage.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/provider-usage/refresh": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.providerUsage.refresh",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refreshed provider usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Refresh provider plan usage while coalescing concurrent source requests.",
+        "summary": "Refresh provider usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.providerUsage.refresh({\n  ...\n})"
           }
         ]
       }
@@ -15917,6 +16318,215 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.sessionModelUsage({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/background-jobs": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.backgroundJobs",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "sessionID",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Background jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": ["running", "completed", "error", "cancelled"]
+                      },
+                      "started_at": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["NaN"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["-Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity", "-Infinity", "NaN"]
+                          }
+                        ]
+                      },
+                      "completed_at": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["NaN"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["-Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity", "-Infinity", "NaN"]
+                          }
+                        ]
+                      },
+                      "error": {
+                        "type": "string"
+                      },
+                      "metadata": {
+                        "type": "object"
+                      }
+                    },
+                    "required": ["id", "type", "status", "started_at"],
+                    "additionalProperties": false
+                  },
+                  "description": "Background jobs"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List background subagent jobs owned by one parent session.",
+        "summary": "List background jobs",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.backgroundJobs({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/background-jobs/{jobID}/cancel": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.backgroundJob.cancel",
+        "parameters": [
+          {
+            "name": "jobID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Background job cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Background job cancelled"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Cancel one background subagent job and its session tree.",
+        "summary": "Cancel background job",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.backgroundJob.cancel({\n  ...\n})"
           }
         ]
       }
@@ -24318,6 +24928,21 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "size": {
+                    "type": "object",
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "cols": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": ["rows", "cols"],
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -24847,6 +25472,7 @@
         },
         "description": "Establish a WebSocket connection streaming PTY output and accepting terminal input.",
         "summary": "Connect to PTY session",
+        "x-websocket": true,
         "x-codeSamples": [
           {
             "lang": "js",
@@ -25857,6 +26483,9 @@
             "$ref": "#/components/schemas/EventWorktreeFailed1"
           },
           {
+            "$ref": "#/components/schemas/EventWorktreeSetupReady1"
+          },
+          {
             "$ref": "#/components/schemas/EventServerConnected1"
           },
           {
@@ -26209,6 +26838,9 @@
           },
           {
             "$ref": "#/components/schemas/EventWorktreeFailed"
+          },
+          {
+            "$ref": "#/components/schemas/EventWorktreeSetupReady"
           },
           {
             "$ref": "#/components/schemas/EventServerConnected"
@@ -26775,6 +27407,50 @@
         "required": ["id", "sessionID", "operation", "targetSessionID", "sectionID"],
         "additionalProperties": false
       },
+      "AgentManagerAnswers": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "maxItems": 20
+        },
+        "minItems": 1,
+        "maxItems": 20
+      },
+      "AgentManagerAnswerRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/AgentManagerRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "targetSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "answers": {
+            "$ref": "#/components/schemas/AgentManagerAnswers"
+          }
+        },
+        "required": ["id", "sessionID", "operation", "targetSessionID", "answers"],
+        "additionalProperties": false
+      },
       "AgentManagerRequest": {
         "anyOf": [
           {
@@ -26788,6 +27464,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveRequest"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerRequest"
           }
         ]
       },
@@ -27026,6 +27705,12 @@
           "patch": {
             "type": "string"
           },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
           "additions": {
             "type": "number"
           },
@@ -27226,6 +27911,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -29346,6 +30035,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventWorktreeFailed"
+              },
+              {
+                "$ref": "#/components/schemas/EventWorktreeSetupReady"
               },
               {
                 "$ref": "#/components/schemas/EventServerConnected"
@@ -32335,6 +33027,34 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["worktree.setup.ready"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "branch": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["name"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["server.connected"]
                   },
                   "properties": {
@@ -32892,58 +33612,6 @@
           },
           "permission": {
             "$ref": "#/components/schemas/PermissionConfig"
-          },
-          "requirements": {
-            "type": "object",
-            "properties": {
-              "skills": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "\\S"
-                },
-                "minItems": 1,
-                "maxItems": 20
-              },
-              "mcps": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "\\S"
-                },
-                "minItems": 1,
-                "maxItems": 20
-              },
-              "vscode_extensions": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 128,
-                      "pattern": "\\S"
-                    },
-                    "id": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 128,
-                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
-                    }
-                  },
-                  "required": ["name", "id"],
-                  "additionalProperties": false
-                },
-                "minItems": 1,
-                "maxItems": 20
-              }
-            },
-            "additionalProperties": false
           }
         },
         "additionalProperties": {}
@@ -33061,7 +33729,7 @@
                 },
                 "ai_sdk_provider": {
                   "type": "string",
-                  "enum": ["alibaba", "anthropic", "mistral", "openai", "openai-compatible", "openrouter"]
+                  "enum": ["anthropic", "openai", "openai-compatible", "openrouter"]
                 },
                 "release_date": {
                   "type": "string"
@@ -33081,15 +33749,28 @@
                 "interleaved": {
                   "anyOf": [
                     {
-                      "type": "boolean",
-                      "enum": [true]
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["reasoning", "reasoning_content", "reasoning_text"]
+                    },
+                    {
+                      "type": "string"
                     },
                     {
                       "type": "object",
                       "properties": {
                         "field": {
-                          "type": "string",
-                          "enum": ["reasoning", "reasoning_content", "reasoning_details"]
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": ["reasoning", "reasoning_content", "reasoning_text"]
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
                         }
                       },
                       "required": ["field"],
@@ -33548,6 +34229,10 @@
             "type": "string",
             "enum": ["expanded", "collapsed"]
           },
+          "mcp_tool_display": {
+            "type": "string",
+            "enum": ["expanded", "collapsed"]
+          },
           "hide_prompt_training_models": {
             "type": "boolean"
           },
@@ -33604,6 +34289,10 @@
           },
           "default_agent": {
             "type": "string"
+          },
+          "subagent_depth": {
+            "type": "integer",
+            "minimum": 0
           },
           "username": {
             "type": "string"
@@ -33907,17 +34596,11 @@
               "batch_tool": {
                 "type": "boolean"
               },
-              "codebase_search": {
-                "type": "boolean"
-              },
               "image_generation": {
                 "type": "boolean"
               },
               "image_generation_model": {
                 "type": "string"
-              },
-              "agent_requirements": {
-                "type": "boolean"
               },
               "native_notebook_tools": {
                 "type": "boolean"
@@ -33948,12 +34631,6 @@
                 "items": {
                   "type": "string"
                 }
-              },
-              "swe_pruner": {
-                "type": "boolean"
-              },
-              "swe_pruner_model": {
-                "type": "string"
               },
               "mcp_timeout": {
                 "type": "integer",
@@ -34070,8 +34747,15 @@
                     "type": "object",
                     "properties": {
                       "field": {
-                        "type": "string",
-                        "enum": ["reasoning", "reasoning_content", "reasoning_details"]
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": ["reasoning", "reasoning_content", "reasoning_text"]
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
                       }
                     },
                     "required": ["field"],
@@ -34260,7 +34944,7 @@
           },
           "ai_sdk_provider": {
             "type": "string",
-            "enum": ["alibaba", "anthropic", "mistral", "openai", "openai-compatible", "openrouter"]
+            "enum": ["anthropic", "openai", "openai-compatible", "openrouter"]
           }
         },
         "required": [
@@ -34498,6 +35182,12 @@
           "patch": {
             "type": "string"
           },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
           "additions": {
             "type": "number"
           },
@@ -34507,12 +35197,6 @@
           "status": {
             "type": "string",
             "enum": ["added", "deleted", "modified"]
-          },
-          "before": {
-            "type": "string"
-          },
-          "after": {
-            "type": "string"
           },
           "tracked": {
             "type": "boolean"
@@ -34527,7 +35211,7 @@
             "type": "string"
           }
         },
-        "required": ["additions", "deletions", "before", "after", "tracked", "generatedLike", "summarized", "stamp"],
+        "required": ["before", "after", "additions", "deletions", "tracked", "generatedLike", "summarized", "stamp"],
         "additionalProperties": false
       },
       "SnapshotSummaryFileDiff": {
@@ -35128,58 +35812,6 @@
           },
           "options": {
             "type": "object"
-          },
-          "requirements": {
-            "type": "object",
-            "properties": {
-              "skills": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "\\S"
-                },
-                "minItems": 1,
-                "maxItems": 20
-              },
-              "mcps": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "\\S"
-                },
-                "minItems": 1,
-                "maxItems": 20
-              },
-              "vscode_extensions": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 128,
-                      "pattern": "\\S"
-                    },
-                    "id": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 128,
-                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
-                    }
-                  },
-                  "required": ["name", "id"],
-                  "additionalProperties": false
-                },
-                "minItems": 1,
-                "maxItems": 20
-              }
-            },
-            "additionalProperties": false
           },
           "steps": {
             "type": "number"
@@ -37690,6 +38322,16 @@
         "required": ["message"],
         "additionalProperties": false
       },
+      "CommitMessageFailedError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      },
       "ConfigOverlayResponse": {
         "type": "object",
         "properties": {
@@ -38435,102 +39077,6 @@
         "required": ["error"],
         "additionalProperties": false
       },
-      "AgentRequirementResult": {
-        "type": "object",
-        "properties": {
-          "agent": {
-            "type": "string"
-          },
-          "directory": {
-            "type": "string"
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "state": {
-            "type": "string",
-            "enum": ["disabled", "ready", "blocked", "error"]
-          },
-          "skills": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["ready", "missing", "error"]
-                },
-                "message": {
-                  "type": "string"
-                }
-              },
-              "required": ["name", "status"],
-              "additionalProperties": false
-            }
-          },
-          "mcps": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["ready", "missing", "error"]
-                },
-                "message": {
-                  "type": "string"
-                }
-              },
-              "required": ["name", "status"],
-              "additionalProperties": false
-            }
-          },
-          "vscode_extensions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "\\S"
-                },
-                "id": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 128,
-                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
-                }
-              },
-              "required": ["name", "id"],
-              "additionalProperties": false
-            }
-          },
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": ["unknown_agent", "malformed_declaration", "discovery_failed", "mcp_status_failed"]
-              },
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["code", "message"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["agent", "directory", "enabled", "state", "skills", "mcps", "vscode_extensions"],
-        "additionalProperties": false
-      },
       "CommandFile": {
         "type": "object",
         "properties": {
@@ -38575,6 +39121,158 @@
           }
         },
         "required": ["name", "builtin", "location", "editable", "hints"],
+        "additionalProperties": false
+      },
+      "ProviderUsagePeriod": {
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "enum": ["hour", "day", "week", "month"]
+          },
+          "value": {
+            "type": "integer"
+          }
+        },
+        "required": ["unit", "value"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "orientation": {
+            "type": "string",
+            "enum": ["used_percent", "remaining_percent", "amount", "count"]
+          },
+          "used": {
+            "type": "number"
+          },
+          "remaining": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "period": {
+            "$ref": "#/components/schemas/ProviderUsagePeriod"
+          },
+          "durationMs": {
+            "type": "number"
+          },
+          "resetAt": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["active", "exhausted", "unlimited", "not_in_plan", "unknown"]
+          }
+        },
+        "required": ["id", "resource", "unit", "orientation", "state"],
+        "additionalProperties": false
+      },
+      "ProviderUsageError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "retryable"],
+        "additionalProperties": false
+      },
+      "ProviderUsageSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "providerID": {
+            "type": "string"
+          },
+          "sourceKind": {
+            "type": "string",
+            "enum": ["kilo_managed", "direct"]
+          },
+          "providerLabel": {
+            "type": "string"
+          },
+          "planLabel": {
+            "type": "string"
+          },
+          "sourceLabel": {
+            "type": "string"
+          },
+          "fetchState": {
+            "type": "string",
+            "enum": ["ready", "stale", "unavailable", "error"]
+          },
+          "planState": {
+            "type": "string",
+            "enum": ["active", "past_due", "canceling", "unknown"]
+          },
+          "routingState": {
+            "type": "string",
+            "enum": ["active", "disabled", "missing", "replaced", "not_applicable", "unknown"]
+          },
+          "fetchedAt": {
+            "type": "string"
+          },
+          "managementUrl": {
+            "type": "string"
+          },
+          "windows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageWindow"
+            }
+          },
+          "error": {
+            "$ref": "#/components/schemas/ProviderUsageError"
+          }
+        },
+        "required": [
+          "id",
+          "providerID",
+          "sourceKind",
+          "providerLabel",
+          "planLabel",
+          "sourceLabel",
+          "fetchState",
+          "planState",
+          "routingState",
+          "windows"
+        ],
+        "additionalProperties": false
+      },
+      "ProviderUsage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageSnapshot"
+            }
+          },
+          "generatedAt": {
+            "type": "string"
+          }
+        },
+        "required": ["items", "generatedAt"],
         "additionalProperties": false
       },
       "NotebookOutput": {
@@ -39118,6 +39816,30 @@
         "required": ["operation", "sessionID", "sectionID", "moved"],
         "additionalProperties": false
       },
+      "AgentManagerAnswerResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "resolved": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["operation", "sessionID", "questionID", "resolved"],
+        "additionalProperties": false
+      },
       "AgentManagerResult": {
         "anyOf": [
           {
@@ -39131,6 +39853,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveResult"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerResult"
           }
         ]
       },
@@ -40204,6 +40929,9 @@
           },
           {
             "$ref": "#/components/schemas/WorktreeFailed"
+          },
+          {
+            "$ref": "#/components/schemas/WorktreeSetupReady"
           },
           {
             "$ref": "#/components/schemas/ServerConnected"
@@ -43907,6 +44635,10 @@
             "items": {
               "$ref": "#/components/schemas/FileDiff"
             }
+          },
+          "workspace": {
+            "type": "string",
+            "enum": ["restored", "snapshots-disabled", "unavailable"]
           }
         },
         "required": ["messageID"],
@@ -45314,6 +46046,33 @@
               }
             },
             "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventWorktreeSetupReady": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["worktree.setup.ready"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              }
+            },
+            "required": ["name"],
             "additionalProperties": false
           }
         },
@@ -54156,6 +54915,56 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "WorktreeSetupReady": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["worktree.setup.ready"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "ServerConnected": {
         "type": "object",
         "properties": {
@@ -57359,6 +58168,34 @@
               }
             },
             "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventWorktreeSetupReady1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["worktree.setup.ready"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              }
+            },
+            "required": ["name"],
             "additionalProperties": false
           }
         },

@@ -139,6 +139,22 @@ describe("run permission shared", () => {
     expect(permissionOptions("permission", true)).toEqual(["once", "reject"])
     expect(permissionOptions("permission")).toEqual(["once", "always", "reject"])
   })
+
+  test("sandbox escalation shows the command and offers only one-shot approval", () => {
+    expect(
+      permissionInfo(
+        req({
+          permission: "sandbox_escalation",
+          metadata: { command: "git add file.txt && git commit -m test", sandboxEscalation: true },
+        }),
+      ),
+    ).toEqual({
+      icon: "!",
+      title: "Allow Git operation outside the sandbox",
+      lines: ["$ git add file.txt && git commit -m test", "This approval applies to this command only."],
+    })
+    expect(permissionOptions("permission", true)).toEqual(["once", "reject"])
+  })
   // kilocode_change end
 
   test("formats always-allow copy for wildcard and explicit patterns", () => {

@@ -24,6 +24,7 @@ export function Diff<T>(props: SSRDiffProps<T>) {
     "selectedLines",
     "commentedLines",
     "virtualized",
+    "sizeKey",
   ])
   const workerPool = useWorkerPool(props.diffStyle)
 

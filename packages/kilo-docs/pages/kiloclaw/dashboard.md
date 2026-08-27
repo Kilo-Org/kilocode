@@ -5,6 +5,8 @@ description: "Managing your KiloClaw instance from the dashboard"
 
 # KiloClaw Dashboard
 
+{% partial file="kiloclaw-eol.md" /%}
+
 This page covers everything you can do from the KiloClaw dashboard. For getting started, see [KiloClaw Overview](/docs/kiloclaw/overview).
 
 {% image src="/docs/img/kiloclaw/dashboard.png" alt="Connect account screen" width="800" caption="The KiloClaw Dashboard" /%}

@@ -61,6 +61,10 @@ const CreateSessionRequest = z
     agent: z.string().min(1).optional(),
     model: CreateSessionModel.optional(),
     orgId: z.string().uuid().optional(),
+    // kilocode_change - cloneFromKiloSessionId: optional cloud-session import.
+    // The old wire form omits this field and performs a fresh sessionCreate;
+    // remove the fresh-create branch when every shipped CLI advertises sessionClone.
+    cloneFromKiloSessionId: z.string().min(1).optional(),
   })
   .strict()
 
@@ -89,6 +93,20 @@ function errorName(error: unknown): string {
   return typeof error
 }
 // kilocode_change end
+
+// kilocode_change - create_session cloud-import error mapping. The import seam
+// rejects with a tagged error carrying the upstream `status` (or a
+// "CloudSessionImportUnauthorized" tag for missing credentials). Map those to
+// the exact wire literals; never surface the upstream message (it may embed
+// credentials) and never fall back to a fresh sessionCreate.
+function importErrorText(error: unknown): string {
+  const value = error as { status?: unknown; _tag?: unknown } | null | undefined
+  if (value?._tag === "CloudSessionImportUnauthorized") return "cloud session import unauthorized"
+  if (value?.status === 404) return "cloud session not found"
+  if (value?.status === 401) return "cloud session import unauthorized"
+  if (value?.status === 403) return "cloud session import access denied"
+  return "cloud session import failed"
+}
 
 // kilocode_change start — lazy init to avoid circular dependency
 // (Server → RemoteRoutes → RemoteSender → SessionPrompt at module load time)
@@ -173,6 +191,14 @@ export namespace RemoteSender {
     hasSession?: (sessionID: SessionID) => boolean
     ownedCount?: () => number
     cancelPrompt?: (sessionID: SessionID) => Promise<void>
+    // kilocode_change - injectable cloud-session import seam for create_session
+    // clone requests. Takes the cloud session id and returns the imported
+    // local Session.Info plus a `finalize` closure that restores workspace
+    // files and writes session_diff storage keys; the caller must run
+    // `finalize` only after a successful attach. Production wires this to the
+    // in-process import helper (dynamic import + AppRuntime.runPromise); a
+    // missing seam is a wiring bug, never a fallback to sessionCreate.
+    importFromCloud?: (cloneId: string) => Promise<{ session: Session.Info; finalize: () => Promise<void> }>
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
@@ -345,9 +371,7 @@ export namespace RemoteSender {
     // bus listener count from inflating for senders that never handle
     // attachments (the count would otherwise show up in unrelated tests
     // that assert it stays at 0).
-    const attachments =
-      options.attachments ??
-      ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
+    const attachments = options.attachments ?? ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
     const attachmentCache = new Map<SessionID, RemoteAttachments.Result>()
     const pending = new Map<SessionID, number>()
     const retired = new Map<SessionID, RemoteAttachments.Result>()
@@ -801,6 +825,10 @@ export namespace RemoteSender {
         // (a) accepts an absent `sessionId` (instance-picker path), (b)
         // resolves the target directory from that session or options.directory,
         // (c) attaches in-process; attach failures roll back via sessionRemove.
+        // kilocode_change - clone: an optional cloneFromKiloSessionId imports a
+        // cloud session in-process (importFromCloud) instead of a fresh
+        // sessionCreate; a missing importFromCloud seam is a wiring bug, never
+        // a fallback to sessionCreate.
         const parsed = CreateSessionRequest.safeParse(msg.data)
         if (!parsed.success) {
           options.conn.send({
@@ -812,6 +840,16 @@ export namespace RemoteSender {
         }
         const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
         if (msg.sessionId && Option.isNone(current)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid create_session command",
+          })
+          return
+        }
+        const cloneId = parsed.data.cloneFromKiloSessionId
+        const importFromCloud = options.importFromCloud
+        if (cloneId && !importFromCloud) {
           options.conn.send({
             type: "response",
             id: msg.id,
@@ -844,6 +882,52 @@ export namespace RemoteSender {
               Option.map((p) => p.then((info) => info.directory)),
               Option.getOrElse(() => Promise.resolve(options.directory)),
             )
+            if (cloneId) {
+              // Clone path: import in-process, then attach. Import failures
+              // map to the exact literals and never fall back to a fresh
+              // sessionCreate; attach failures roll back the imported session.
+              const outcome = await run({
+                directory: targetDirectory,
+                fn: async (): Promise<{ id: string } | { error: string }> => {
+                  let imported: { session: Session.Info; finalize: () => Promise<void> }
+                  try {
+                    imported = await importFromCloud!(cloneId)
+                  } catch (importError) {
+                    return { error: importErrorText(importError) }
+                  }
+                  try {
+                    await attachSession(imported.session.id)
+                  } catch (attachError) {
+                    // Roll back the imported root session so the DB does not
+                    // keep an orphan the relay never learned about. Swallow
+                    // the cleanup error; re-throw the original attach error.
+                    try {
+                      await sessionRemove(imported.session.id)
+                    } catch (cleanupError) {
+                      options.log.error("create session cleanup failed", {
+                        id: msg.id,
+                        error: errorName(cleanupError),
+                      })
+                    }
+                    throw attachError
+                  }
+                  // Restore workspace files and write storage keys only after
+                  // the attach succeeded. finalize never rejects.
+                  await imported.finalize()
+                  return { id: imported.session.id }
+                },
+              })
+              if ("error" in outcome) {
+                options.conn.send({ type: "response", id: msg.id, error: outcome.error })
+                return
+              }
+              options.conn.send({
+                type: "response",
+                id: msg.id,
+                result: { protocolVersion: 1, sessionID: outcome.id },
+              })
+              return
+            }
             const result = await run({
               directory: targetDirectory,
               fn: async () => {
@@ -886,27 +970,27 @@ export namespace RemoteSender {
         return
       }
       // kilocode_change end
+      // kilocode_change start - sessionless list_models for the pre-session instance picker
       if (msg.command === "list_models") {
         const parsed = RemoteModelCatalog.Request.safeParse(msg.data)
-        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
-        if (!parsed.success || Option.isNone(session)) {
-          options.conn.send({
-            type: "response",
-            id: msg.id,
-            error: "invalid list_models command",
-          })
+        // Accept an absent sessionId (the mobile instance-picker path asks for the
+        // instance's catalog before a session exists). A present but undecodable
+        // sessionId is still invalid.
+        const target = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || (msg.sessionId && Option.isNone(target))) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid list_models command" })
           return
         }
         const run = options.provide ?? provide
         void (async () => {
           try {
-            const info = await catalog.get(session.value)
+            const info = Option.isSome(target) ? await catalog.get(target.value) : undefined
             const result = await run({
-              directory: info.directory,
+              directory: info?.directory ?? options.directory,
               fn: async () => {
                 const [providers, messages, fallback] = await Promise.all([
                   catalog.providers(),
-                  catalog.messages(info.id),
+                  info ? catalog.messages(info.id) : Promise.resolve([]),
                   catalog.default().catch((err) => {
                     options.log.warn("default model lookup failed", { error: String(err) })
                     return undefined
@@ -914,7 +998,7 @@ export namespace RemoteSender {
                 ])
                 return RemoteModelCatalog.build({
                   providers,
-                  session: info,
+                  session: info ?? {},
                   messages,
                   defaultModel: fallback,
                 })
@@ -928,6 +1012,7 @@ export namespace RemoteSender {
         })()
         return
       }
+      // kilocode_change end
       if (msg.command === "send_message") {
         const parsed = getRemotePromptInput().safeParse(msg.data)
         if (!parsed.success) {

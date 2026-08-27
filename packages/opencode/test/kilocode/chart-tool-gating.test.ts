@@ -6,7 +6,6 @@ import type * as Tool from "@/tool/tool"
 const stub = (id: string) => ({ id }) as unknown as Tool.Def
 
 const tools = {
-  codebase: stub("codebase"),
   recall: stub("recall"),
   managerModels: stub("managerModels"),
   memory: stub("memory"),

@@ -1,12 +1,18 @@
-const disposers = new Set<(directory: string) => Promise<void>>()
+import type { WorkspaceV2 } from "@opencode-ai/core/workspace" // kilocode_change
 
-export function registerDisposer(disposer: (directory: string) => Promise<void>) {
+const disposers = new Set<(directory: string, workspaceID?: WorkspaceV2.ID) => Promise<void>>() // kilocode_change
+
+// kilocode_change start
+export function registerDisposer(
+  disposer: (directory: string, workspaceID?: WorkspaceV2.ID) => Promise<void>, // kilocode_change
+) {
   disposers.add(disposer)
   return () => {
     disposers.delete(disposer)
   }
 }
 
-export async function disposeInstance(directory: string) {
-  await Promise.allSettled([...disposers].map((disposer) => disposer(directory)))
+export async function disposeInstance(directory: string, workspaceID?: WorkspaceV2.ID) {
+  await Promise.allSettled([...disposers].map((disposer) => disposer(directory, workspaceID)))
 }
+// kilocode_change end

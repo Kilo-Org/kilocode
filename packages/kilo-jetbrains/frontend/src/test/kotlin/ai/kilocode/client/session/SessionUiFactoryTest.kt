@@ -123,7 +123,7 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
         override fun newSession() {
         }
 
-        override fun showHistory() {
+        override fun showHistory(back: (() -> Unit)?) {
             history++
         }
 

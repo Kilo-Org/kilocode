@@ -261,6 +261,7 @@ export type SessionsListOutput = {
         readonly deletions: number
         readonly patch: string
       }>
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
     }
   }>
   readonly cursor: { readonly previous?: string | null; readonly next?: string | null }
@@ -323,6 +324,7 @@ export type SessionsCreateOutput = {
         readonly deletions: number
         readonly patch: string
       }>
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
     }
   }
 }["data"]
@@ -361,6 +363,7 @@ export type SessionsGetOutput = {
         readonly deletions: number
         readonly patch: string
       }>
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
     }
   }
 }["data"]
@@ -509,6 +512,7 @@ export type SessionsStageOutput = {
       readonly deletions: number
       readonly patch: string
     }>
+    readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }["data"]
 
@@ -1114,6 +1118,7 @@ export type SessionsHistoryOutput = {
               readonly deletions: number
               readonly patch: string
             }>
+            readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
           }
         }
       }
@@ -1600,6 +1605,7 @@ export type SessionsEventsOutput =
             readonly deletions: number
             readonly patch: string
           }>
+          readonly workspace?: "restored" | "snapshots-disabled" | "unavailable"
         }
       }
     }
@@ -2632,6 +2638,7 @@ export type PtysCreateInput = {
     readonly cwd?: string
     readonly title?: string
     readonly env?: { readonly [x: string]: string }
+    readonly size?: { readonly rows: number; readonly cols: number }
   }["command"]
   readonly args?: {
     readonly command?: string
@@ -2639,6 +2646,7 @@ export type PtysCreateInput = {
     readonly cwd?: string
     readonly title?: string
     readonly env?: { readonly [x: string]: string }
+    readonly size?: { readonly rows: number; readonly cols: number }
   }["args"]
   readonly cwd?: {
     readonly command?: string
@@ -2646,6 +2654,7 @@ export type PtysCreateInput = {
     readonly cwd?: string
     readonly title?: string
     readonly env?: { readonly [x: string]: string }
+    readonly size?: { readonly rows: number; readonly cols: number }
   }["cwd"]
   readonly title?: {
     readonly command?: string
@@ -2653,6 +2662,7 @@ export type PtysCreateInput = {
     readonly cwd?: string
     readonly title?: string
     readonly env?: { readonly [x: string]: string }
+    readonly size?: { readonly rows: number; readonly cols: number }
   }["title"]
   readonly env?: {
     readonly command?: string
@@ -2660,7 +2670,16 @@ export type PtysCreateInput = {
     readonly cwd?: string
     readonly title?: string
     readonly env?: { readonly [x: string]: string }
+    readonly size?: { readonly rows: number; readonly cols: number }
   }["env"]
+  readonly size?: {
+    readonly command?: string
+    readonly args?: ReadonlyArray<string>
+    readonly cwd?: string
+    readonly title?: string
+    readonly env?: { readonly [x: string]: string }
+    readonly size?: { readonly rows: number; readonly cols: number }
+  }["size"]
 }
 
 export type PtysCreateOutput = {

@@ -5,7 +5,7 @@ import { Show } from "solid-js"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { LanguageContextValue } from "../src/context/language"
 import { parseBindingTokens } from "./keybind-tokens"
 import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -25,8 +25,8 @@ interface WorktreeSectionActionsProps {
   onNew: () => void
   onSection: () => void
   onShortcuts: () => void
-  onSetup: () => void
-  onBranch: () => void
+  onSettings: () => void
+  onHistory: () => void
 }
 
 export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (props) => (
@@ -108,28 +108,22 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
           onClick={props.onShortcuts}
         />
       </TooltipKeybind>
-      <DropdownMenu gutter={4} placement="bottom-end">
-        <DropdownMenu.Trigger
-          as={IconButton}
-          icon="settings-gear"
+      <Tooltip value={props.t("session.showHistory")} placement="bottom">
+        <IconButton
+          icon="history"
           size="small"
           variant="ghost"
-          label={props.t("agentManager.worktree.settings")}
+          aria-label={props.t("session.showHistory")}
+          onClick={props.onHistory}
         />
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content class="am-split-menu">
-            <DropdownMenu.Item onSelect={props.onSetup}>
-              <DropdownMenu.ItemLabel>{props.t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
-            </DropdownMenu.Item>
-            <DropdownMenu.Separator />
-            <DropdownMenu.Item onSelect={props.onBranch}>
-              <DropdownMenu.ItemLabel>
-                {props.t("agentManager.worktree.defaultBaseBranch")}: {props.branch}
-              </DropdownMenu.ItemLabel>
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu>
+      </Tooltip>
+      <IconButton
+        icon="settings-gear"
+        size="small"
+        variant="ghost"
+        label={props.t("agentManager.worktree.settings")}
+        onClick={props.onSettings}
+      />
     </Show>
   </div>
 )

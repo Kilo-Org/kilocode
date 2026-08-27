@@ -1,5 +1,6 @@
 import { test, expect, describe, afterEach, beforeEach, spyOn } from "bun:test"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent" // kilocode_change
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { Cause, Effect, Exit, Layer, Option } from "effect"
@@ -1130,6 +1131,31 @@ it.effect("does not try to install dependencies in read-only KILO_CONFIG_DIR", (
   }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
 )
 
+it.effect("ignores an inaccessible KILO_CONFIG_DIR", () =>
+  Effect.gen(function* () {
+    if (process.platform === "win32") return
+
+    const dir = yield* tmpdirScoped()
+    const configDir = path.join(dir, "inaccessible")
+    yield* FSUtil.use.ensureDir(configDir)
+    yield* FSUtil.use.chmod(configDir, 0o000)
+    yield* Effect.addFinalizer(() => FSUtil.use.chmod(configDir, 0o755).pipe(Effect.ignore))
+
+    yield* withProcessEnv("KILO_CONFIG_DIR", configDir, Config.use.get().pipe(provideInstanceEffect(dir)))
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+)
+
+it.effect("creates a missing KILO_CONFIG_DIR", () =>
+  Effect.gen(function* () {
+    const dir = yield* tmpdirScoped()
+    const configDir = path.join(dir, "configdir")
+
+    yield* withProcessEnv("KILO_CONFIG_DIR", configDir, Config.use.get().pipe(provideInstanceEffect(dir)))
+
+    expect(yield* FSUtil.use.readFileString(path.join(configDir, ".gitignore"))).toContain("node_modules")
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+)
+
 it.effect("installs dependencies in writable KILO_CONFIG_DIR", () =>
   Effect.gen(function* () {
     const dir = yield* tmpdirScoped()
@@ -1559,6 +1585,23 @@ test("config parser preserves permission order while rejecting unknown top-level
     expect(error.data?.issues?.[0]).toMatchObject({ code: "unrecognized_keys", keys: ["invalid_field"], path: [] })
   }
 })
+
+// kilocode_change start - preserve legacy agent requirement declarations without forwarding them
+test("config parser ignores legacy agent requirements", () => {
+  const config = ConfigParse.schema(
+    ConfigAgentV1.Info,
+    {
+      name: "demo",
+      requirements: { skills: ["needed"] },
+      custom: true,
+    },
+    "agent/demo.md",
+  )
+
+  expect(config.options).toEqual({ custom: true })
+  expect(config.options).not.toHaveProperty("requirements")
+})
+// kilocode_change end
 
 // MCP config merging tests
 

@@ -1,13 +1,14 @@
 package ai.kilocode.client.settings.agents
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.settings.base.SettingsListItem
-import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -25,11 +26,6 @@ import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.Point
@@ -39,6 +35,11 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JTextField
 import javax.swing.SwingUtilities
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 class McpSettingsUiTest : BasePlatformTestCase() {
     private var scope: CoroutineScope? = null
@@ -167,6 +168,31 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         assertEquals("filesystem", save.first)
         assertEquals("global", save.second)
         assertNull(save.third)
+    }
+
+    fun `test remove selects the server that took the deleted slot`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcps = agentRpc.mcps.filterNot { it.name == "filesystem" }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(panel, "filesystem", "remove")
+
+        flushUntil { rows(panel).none { it.key == "filesystem" } }
+        assertEquals("github", edt { list(panel).selectedValue?.key })
+    }
+
+    fun `test edit keeps the edited server selected when the reload reorders rows`() {
+        val next = McpConfigDto(type = "local", command = listOf("bun", "new-server"))
+        val panel = panel { name, cfg -> FakeEditDialog(name, cfg, next) }
+        flushUntil { rows(panel).size == 3 }
+        // Sorts above the edited server, so the reload shifts every row down one slot.
+        agentRpc.mcps = agentRpc.mcps + McpStatusDto("alpha", "failed")
+
+        click(panel, "filesystem", "edit")
+
+        flushUntil { rows(panel).size == 4 }
+        assertEquals("filesystem", edt { list(panel).selectedValue?.key })
     }
 
     fun `test remove action requires confirmation`() {
@@ -350,7 +376,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
             list.doLayout()
             val idx = rows(panel).indexOfFirst { it.key == key }
             list.selectedIndex = idx
-            val area = settingsListCellBounds(list, idx, selected = true).getValue(id)
+            val area = activeListCellBounds(list, idx, selected = true).getValue(id)
             click(list, center(area))
             true
         }
@@ -370,12 +396,12 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: McpSettingsUi): List<SettingsListItem> {
+    private fun rows(panel: McpSettingsUi): List<ActiveListItem> {
         val model = list(panel).model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<SettingsListItem>>().single()
+    private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()
@@ -413,12 +439,12 @@ class McpSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<SettingsListItem>, point: Point) {
+    private fun click(list: JBList<ActiveListItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<SettingsListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),
@@ -430,12 +456,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         MouseEvent.BUTTON1,
     )
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
         repeat(300) {

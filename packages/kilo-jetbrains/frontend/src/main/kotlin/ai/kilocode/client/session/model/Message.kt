@@ -73,6 +73,8 @@ class FileAttachment(id: String) : Content(id) {
     var url: String = ""
     var filename: String? = null
     var source: PartSourceDto? = null
+    var startLine: Int? = null
+    var endLine: Int? = null
 }
 
 /** Tool invocation with lifecycle state. */
@@ -84,6 +86,7 @@ class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var title: String? = null
     var input: Map<String, String> = emptyMap()
     var metadata: Map<String, String> = emptyMap()
+    var approval: ToolApproval? = null
     var childSessionId: String? = null
     var childTools: List<Tool> = emptyList()
     var output: String? = null
@@ -92,6 +95,16 @@ class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var todos: List<TodoDto> = emptyList()
     var todoView: TodoViewDto? = null
 }
+
+data class ToolApproval(
+    val source: String,
+    val agent: String? = null,
+    val rulePermission: String? = null,
+    val rulePattern: String? = null,
+    val ruleAction: String? = null,
+    val outsideWorkspace: Boolean = false,
+    val outsideWorkspacePath: String? = null,
+)
 
 /** Context compaction marker. */
 class Compaction(id: String) : Content(id)
@@ -113,7 +126,7 @@ enum class ToolExecState { PENDING, RUNNING, COMPLETED, ERROR }
 
 enum class ToolKind { READ, WRITE, GENERIC }
 
-private val READ_TOOLS = setOf("read", "glob", "grep", "find", "ls", "diagnostics", "warpgrep")
+private val READ_TOOLS = setOf("read", "glob", "grep", "find", "ls", "diagnostics")
 private val WRITE_TOOLS = setOf("edit", "write", "patch", "multi_edit", "multiedit", "apply_patch")
 
 fun toolKind(name: String?): ToolKind = when (name?.lowercase()) {

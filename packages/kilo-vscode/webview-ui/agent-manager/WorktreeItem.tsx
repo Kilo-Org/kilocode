@@ -10,7 +10,8 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { HoverCard } from "@kilocode/kilo-ui/hover-card"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Button } from "@kilocode/kilo-ui/button"
-import type { WorktreeState, WorktreeGitStats, PRStatus, SectionState, RunStatus } from "../src/types/messages"
+import type { WorktreeState, WorktreeGitStats, SectionState, RunStatus } from "../src/types/messages"
+import type { PRStatus } from "../src/types/messages"
 import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -32,6 +33,7 @@ interface WorktreeItemProps {
   busy: boolean
   /** Whether an agent session on this worktree is actively working (shows spinner instead of branch icon). */
   working: boolean
+  blocked?: boolean
   stale: boolean
   /** 1-indexed shortcut number shown as ⌘2, ⌘3, etc. Pass 0, >9, or undefined to hide. */
   shortcut?: number
@@ -57,7 +59,7 @@ interface WorktreeItemProps {
   /** Keybinding string for the open-in-vscode action. */
   openKeybind: string
   /** PR status for this worktree's branch, or null if no PR. */
-  pr?: PRStatus | null
+  pr?: PRStatus
   runStatus?: RunStatus
   /** Callback when the PR badge is clicked. */
   onOpenPR?: () => void
@@ -94,14 +96,6 @@ const hasStats = (s: WorktreeGitStats | undefined): s is WorktreeGitStats =>
  * and review results are conveyed by a separate status icon (see prBadgeIndicator)
  * so a failing check is not mistaken for a closed PR.
  */
-export function prAccentColor(pr: PRStatus): string {
-  if (pr.state === "draft") return "var(--text-weaker)"
-  if (pr.state === "merged") return "#a78bfa"
-  if (pr.state === "closed") return "#f87171"
-  if (pr.checks.status === "pending") return "#fbbf24"
-  return "#34d399"
-}
-
 /** True while an open PR's checks are still running — drives the pulsing amber badge. */
 export function prChecksRunning(pr: PRStatus): boolean {
   return pr.state === "open" && pr.checks.status === "pending"
@@ -310,7 +304,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             {props.shortcut}
                           </span>
                         </Show>
-                        <Show when={!props.busy && !props.pendingDelete}>
+                        <Show when={!props.busy && !props.working && !props.blocked && !props.pendingDelete}>
                           <div
                             class="am-worktree-close"
                             onMouseEnter={() => setOverClose(true)}
@@ -349,18 +343,30 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                       }
                     >
                       {(pr) => {
-                        const accent = () => prAccentColor(pr())
                         const indicator = () => prBadgeIndicator(pr())
                         return (
                           <span
                             class="am-pr-badge"
-                            style={{ "--pr-accent": accent() }}
-                            data-pending={prChecksRunning(pr()) ? "" : undefined}
+                            classList={{
+                              "am-pr-accent-draft": pr().state === "draft",
+                              "am-pr-accent-merged": pr().state === "merged",
+                              "am-pr-accent-closed": pr().state === "closed",
+                              "am-pr-accent-pending": pr().state === "open" && pr().checks.status === "pending",
+                              "am-pr-accent-open": pr().state === "open" && pr().checks.status !== "pending",
+                              "am-pr-badge-pending": prChecksRunning(pr()),
+                            }}
                             onClick={handleOpenPR}
                           >
-                            <Switch fallback={<Icon name="branch" size="small" />}>
+                            <Icon name="pull-request" size="small" />
+                            <span class="am-pr-badge-number">#{pr().number}</span>
+                            <Switch>
                               <Match when={indicator() === "failure"}>
-                                <Icon name="circle-x" size="small" class="am-pr-badge-status" data-status="failure" />
+                                <Icon
+                                  name="circle-x-outline"
+                                  size="small"
+                                  class="am-pr-badge-status"
+                                  data-status="failure"
+                                />
                               </Match>
                               <Match when={indicator() === "changes"}>
                                 <Icon name="warning" size="small" class="am-pr-badge-status" data-status="changes" />
@@ -374,7 +380,6 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                                 />
                               </Match>
                             </Switch>
-                            <span class="am-pr-badge-number">#{pr().number}</span>
                           </span>
                         )
                       }}
@@ -516,17 +521,19 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Icon name="edit" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.rename")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
-            <ContextMenu.Item onSelect={() => props.onDelete(new MouseEvent("click"))}>
-              <Icon name="trash" size="small" />
-              <ContextMenu.ItemLabel>{t("agentManager.worktree.delete")}</ContextMenu.ItemLabel>
-              <Show when={props.closeKeybind}>
-                <span class="am-menu-shortcut">
-                  {parseBindingTokens(props.closeKeybind).map((token) => (
-                    <kbd class="am-menu-key">{token}</kbd>
-                  ))}
-                </span>
-              </Show>
-            </ContextMenu.Item>
+            <Show when={!props.busy && !props.working && !props.blocked}>
+              <ContextMenu.Item onSelect={() => props.onDelete(new MouseEvent("click"))}>
+                <Icon name="trash" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.worktree.delete")}</ContextMenu.ItemLabel>
+                <Show when={props.closeKeybind}>
+                  <span class="am-menu-shortcut">
+                    {parseBindingTokens(props.closeKeybind).map((token) => (
+                      <kbd class="am-menu-key">{token}</kbd>
+                    ))}
+                  </span>
+                </Show>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Separator />
             <ContextMenu.Item onSelect={() => props.onOpen()}>
               <Icon name="open-file" size="small" />

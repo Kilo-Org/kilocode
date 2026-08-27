@@ -15,7 +15,6 @@ import type {
   PRStatus,
   RunStatus,
   SectionState,
-  SessionInfo,
   WorktreeGitStats,
   WorktreeState,
 } from "../src/types/messages"
@@ -31,7 +30,7 @@ import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
-import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
+import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -39,6 +38,7 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 /** Everything the legacy single-project sidebar body reads from the app. */
 export interface SidebarBodyProps {
   t: LanguageContextValue["t"]
+  projectId?: string
   selection: () => string | null
   currentSessionID: () => string | undefined
   selectLocal: () => void
@@ -46,8 +46,6 @@ export interface SidebarBodyProps {
   isLocalBusy: () => boolean
   repoBranch: () => string | undefined
   localStats: () => LocalGitStats | undefined
-  sessionsCollapsed: () => boolean
-  toggleSessions: () => void
   search: { items: () => SidebarSearchItem[]; current: () => SidebarSearchItem | undefined }
   bindings: () => Record<string, string>
   defaultBranch: () => string
@@ -61,8 +59,7 @@ export interface SidebarBodyProps {
   onNewWorktree: () => void
   onNewSection: () => void
   onShortcuts: () => void
-  onSetup: () => void
-  onBranch: () => void
+  onHistory: () => void
   sections: () => SectionState[]
   sortedWorktrees: () => WorktreeState[]
   worktrees: () => WorktreeState[]
@@ -83,7 +80,7 @@ export interface SidebarBodyProps {
   worktreeSubtitle: (wt: WorktreeState) => string | undefined
   pendingDelete: () => string | null
   busy: (id: string) => boolean
-  isAgentBusy: (id: string) => boolean
+  isAgentBusy: (id: string, waiting?: boolean) => boolean
   isStaleWorktree: (id: string) => boolean
   shortcutMap: () => Map<string, number>
   worktreeStats: () => Record<string, WorktreeGitStats>
@@ -92,10 +89,6 @@ export interface SidebarBodyProps {
   confirmDeleteWorktree: (id: string) => void
   handleDeleteWorktree: (id: string, e: MouseEvent) => void
   confirmRemoveStaleWorktree: (id: string) => void
-  unassignedSessions: () => SessionInfo[]
-  selectUnassigned: (id: string) => void
-  promoteSession: (id: string) => void
-  openUnassigned: (id: string) => void
   track: (event: string, source: string, action: () => void) => () => void
 }
 
@@ -126,10 +119,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
         </div>
         <div class="am-wt-actions-cell">
           <Show when={props.localStats() === undefined}>
-            <div class="am-worktree-stats-skeleton">
-              <div class="am-worktree-stats-skeleton-row" />
-              <div class="am-worktree-stats-skeleton-row" style={{ width: "70%" }} />
-            </div>
+            <StatsSkeleton />
           </Show>
           <Show
             when={
@@ -187,7 +177,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
       </button>
 
       {/* WORKTREES section */}
-      <div class={`am-section ${props.sessionsCollapsed() ? "am-section-grow" : ""}`}>
+      <div class="am-section am-section-grow">
         <SidebarSectionHeader
           class="am-section-header"
           label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
@@ -206,23 +196,15 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
               onNew={props.onNewWorktree}
               onSection={props.onNewSection}
               onShortcuts={props.onShortcuts}
-              onSetup={props.onSetup}
-              onBranch={props.onBranch}
+              onHistory={props.onHistory}
+              onSettings={() =>
+                vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId: props.projectId })
+              }
             />
           }
         />
         <div class="am-worktree-list">
-          <Show
-            when={props.worktreesLoaded() && props.sessionsLoaded()}
-            fallback={
-              <div class="am-skeleton-list">
-                <div class="am-skeleton-wt">
-                  <div class="am-skeleton-wt-icon" />
-                  <div class="am-skeleton-wt-text" style={{ width: "60%" }} />
-                </div>
-              </div>
-            }
-          >
+          <Show when={props.worktreesLoaded() && props.sessionsLoaded()} fallback={<WorktreeSkeleton />}>
             <Show when={!props.isGitRepo()}>
               <div class="am-not-git-notice">
                 <Icon name="warning" size="small" />
@@ -333,6 +315,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 pendingDelete={props.pendingDelete() === wt.id}
                                 busy={props.busy(wt.id)}
                                 working={props.isAgentBusy(wt.id)}
+                                blocked={props.isAgentBusy(wt.id, true)}
                                 stale={props.isStaleWorktree(wt.id)}
                                 shortcut={props.shortcutMap().get(wt.id)}
                                 stats={props.worktreeStats()[wt.id]}
@@ -352,9 +335,15 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                     : undefined
                                 }
                                 runStatus={props.runStatuses()[wt.id]}
-                                onOpenPR={props.track("open_pull_request", "worktree_menu", () =>
-                                  vscode.postMessage({ type: "agentManager.openPR", worktreeId: wt.id }),
-                                )}
+                                onOpenPR={props.track("open_pull_request", "worktree_menu", () => {
+                                  const url = props.prStatuses()[wt.id]?.url
+                                  vscode.postMessage({
+                                    type: "agentManager.openPR",
+                                    projectId: props.projectId,
+                                    worktreeId: wt.id,
+                                    ...(url ? { url } : {}),
+                                  })
+                                })}
                                 sections={props.sections()}
                                 currentSectionId={wt.sectionId}
                                 onMoveToSection={(secId) => props.moveToSection([wt.id], secId)}
@@ -454,17 +443,6 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
           </Show>
         </div>
       </div>
-
-      <UnassignedSessionsSection
-        sessions={props.unassignedSessions}
-        loaded={props.sessionsLoaded}
-        collapsed={props.sessionsCollapsed}
-        active={() => (props.selection() === null ? props.currentSessionID() : undefined)}
-        onToggle={props.toggleSessions}
-        onSelect={props.selectUnassigned}
-        onPromote={props.promoteSession}
-        onOpen={props.openUnassigned}
-      />
     </>
   )
 }

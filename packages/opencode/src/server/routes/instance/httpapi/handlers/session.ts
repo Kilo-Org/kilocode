@@ -1,7 +1,6 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
 import { busyMessage, isBusy } from "@/kilocode/database/sqlite-error" // kilocode_change
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
-import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
@@ -24,6 +23,7 @@ import { MessageID, PartID, SessionID } from "@/session/schema"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Cause, Effect, Option, Schema, Scope } from "effect"
 import * as Stream from "effect/Stream"
+import { InstanceState } from "@/effect/instance-state"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError, HttpApiSchema } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
@@ -69,8 +69,9 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const scope = yield* Scope.Scope
 
     const list = Effect.fn("SessionHttpApi.list")(function* (ctx: { query: typeof ListQuery.Type }) {
+      const directory = ctx.query.directory ? yield* InstanceState.directory : undefined
       return yield* session.list({
-        directory: ctx.query.scope === "project" ? undefined : ctx.query.directory,
+        directory: ctx.query.scope === "project" ? undefined : directory,
         scope: ctx.query.scope,
         path: ctx.query.path,
         roots: ctx.query.roots,
@@ -340,9 +341,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
               // kilocode_change end
               yield* events.publish(Session.Event.Error, {
                 sessionID: ctx.params.sessionID,
-                error: AgentRequirementError.isInstance(error)
-                  ? error.toObject()
-                  : busy // kilocode_change
+                error: busy // kilocode_change
                     ? new NamedError.Unknown({ message: busyMessage }).toObject() // kilocode_change
                     : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(), // kilocode_change
               })

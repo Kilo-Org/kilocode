@@ -1,4 +1,13 @@
-import { type Component, createSignal, createMemo, Show, createEffect, on, type JSXElement } from "solid-js"
+import {
+  type Component,
+  createSignal,
+  createMemo,
+  Show,
+  createEffect,
+  createRenderEffect,
+  on,
+  type JSXElement,
+} from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
@@ -8,7 +17,6 @@ import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
@@ -51,6 +59,7 @@ import {
   initialOpenFiles,
   isDiffExpandable,
   isLargeDiffFile,
+  reconcileOpenFiles,
   sanitizeOpenFiles,
   shouldVirtualizeDiff,
   toggleOpenFiles,
@@ -60,7 +69,7 @@ import { VirtualDiffList } from "../diff-viewer/VirtualDiffList"
 import { treeOrder } from "../diff-viewer/file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
 import { ImageDiffView } from "../diff-viewer/ImageDiffView"
-import { createDiffRows } from "../diff-viewer/diff-state"
+import { createDiffRows, diffSizeKey } from "../diff-viewer/diff-state"
 import { createDiffRequests } from "../diff-viewer/diff-requests"
 
 // --- Data model ---
@@ -73,6 +82,7 @@ const DIFF_NOTICE_KEYS: Record<string, string> = {
 interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
+  active?: boolean
   loadingFiles?: Set<string>
   sessionId?: string
   sessionKey?: string
@@ -91,6 +101,7 @@ interface DiffPanelProps {
   onExpand?: () => void
   onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string, line?: number) => void
+  onOpenDocument?: (relativePath: string) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
   activeTerminalId?: string
@@ -132,7 +143,38 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   })
   const localComposer = createReviewComposer()
   const composer = () => props.composer ?? localComposer
-  const [open, setOpen] = createSignal<string[]>([])
+  const [manualOpen, setManualOpen] = createSignal<Record<string, string[]>>({})
+  const [knownFiles, setKnownFiles] = createSignal<Record<string, string[]>>({})
+  const open = createMemo(() => {
+    const key = props.sessionKey ?? ""
+    const diffs = props.diffs
+    if (diffs.length === 0) return []
+    const manual = manualOpen()[key]
+    if (manual) return sanitizeOpenFiles(diffs, manual)
+    return initialOpenFiles(diffs)
+  })
+  createEffect(
+    on(
+      () => [props.sessionKey, props.diffs] as const,
+      ([key, diffs]) => {
+        if (diffs.length === 0) return
+        const id = key ?? ""
+        const manual = manualOpen()[id]
+        const result = reconcileOpenFiles(diffs, manual, knownFiles()[id] ?? [])
+        setKnownFiles((prev) => ({ ...prev, [id]: result.known }))
+        if (!manual || !result.open) return
+        if (result.open.length === manual.length && result.open.every((file, index) => file === manual[index])) return
+        setManualOpen((prev) => ({ ...prev, [id]: result.open! }))
+      },
+    ),
+  )
+
+  const setOpen = (files: string[] | ((prev: string[]) => string[])) => {
+    const key = props.sessionKey ?? ""
+    const current = open()
+    const next = typeof files === "function" ? files(current) : files
+    setManualOpen((prev) => ({ ...prev, [key]: sanitizeOpenFiles(props.diffs, next) }))
+  }
   const [draft, setDraft] = createSignal<ReviewDraft | null>(reviewComposerDraft(composer()))
   const [editing, setEditing] = createSignal<string | null>(reviewComposerEdit(composer()))
   const speechKeys = createMemo(() => {
@@ -151,10 +193,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     keys: speechKeys,
   })
   let nextId = 0
-  // Initialize each worktree with every file expanded, then preserve manual
-  // collapse state while adding and removing files from live summaries.
-  let initializedKey: string | undefined
-  let known = new Set<string>()
 
   // Reorder diffs to match the file-tree's depth-first visual order so
   // scrolling through the accordion matches the tree grouping.
@@ -169,6 +207,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // so pierre's annotation cache doesn't invalidate and destroy the textarea.
   let draftMeta: AnnotationMeta | null = composer().draft
   let editMeta: AnnotationMeta | null = composer().edit
+  createRenderEffect(
+    on(
+      () => props.active,
+      (active) => {
+        if (!active) return
+        const value = reviewComposerDraft(composer())
+        const edit = reviewComposerEdit(composer())
+        setDraft(value)
+        setEditing(edit)
+        draftMeta = composer().draft
+        editMeta = composer().edit
+      },
+    ),
+  )
 
   // Ref to the scrollable container — used to preserve scroll position when
   // annotation changes cause pierre to fully re-render diffs
@@ -217,47 +269,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     focusRoot()
   }
 
-  // Unified open-state effect: tracks both sessionKey and diffs in a single effect
-  // to eliminate the race condition between the old separate sessionKey-reset and
-  // diffs-watch effects. Uses the session key to decide when initialization is needed
-  // vs when we just prune stale entries from the open list.
-  createEffect(
-    on(
-      () => [props.sessionKey, props.diffs] as const,
-      ([key, diffs]) => {
-        // No diffs yet (async fetch in progress) — don't mark as initialized
-        // so auto-open runs when data arrives.
-        // Important: do not prune on empty, otherwise transient empty updates
-        // collapse all files and they stay collapsed for the same key.
-        if (diffs.length === 0) return
-
-        const fileSet = new Set(diffs.map((diff) => diff.file))
-
-        // New context: initialize open state from the diff policy.
-        if (key !== initializedKey) {
-          initializedKey = key
-          known = fileSet
-          setOpen(initialOpenFiles(diffs))
-          return
-        }
-
-        // Preserve manual collapse state for known files, while keeping newly
-        // arriving files expanded when a live summary grows.
-        const added = diffs.filter((diff) => !known.has(diff.file)).map((diff) => diff.file)
-        known = fileSet
-        setOpen((prev) => {
-          const next = sanitizeOpenFiles(diffs, [...prev.filter((file) => fileSet.has(file)), ...added])
-          if (next.length === prev.length && next.every((file, index) => file === prev[index])) return prev
-          return next
-        })
-      },
-    ),
-  )
-
   createEffect(
     on(
       () => props.sessionKey,
       () => {
+        if (props.active === false) return
         setDraft(null)
         draftMeta = null
         setEditing(null)
@@ -273,7 +289,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     diffs: () => props.diffs,
     open,
     loading: () => props.loadingFiles,
-    send: () => props.onRequestDiff,
+    send: () => (props.active === false ? undefined : props.onRequestDiff),
   })
 
   // --- CRUD ---
@@ -336,6 +352,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     on(
       () => [props.diffs, comments()] as const,
       ([diffs, current]) => {
+        if (props.active === false) return
         const valid = sanitizeReviewComments(current, diffs)
         if (valid.length !== current.length) {
           setComments(valid)
@@ -401,8 +418,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
     editMeta = result.editMeta
-    composer().draft = draft() ? draftMeta : null
-    composer().edit = editing() ? editMeta : null
+    if (props.active !== false) {
+      composer().draft = draft() ? draftMeta : null
+      composer().edit = editing() ? editMeta : null
+    }
     return result.annotations
   }
 
@@ -562,7 +581,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
       <Show when={props.loading && props.diffs.length === 0}>
         <div class="am-diff-loading">
-          <Spinner />
           <span>{t("session.review.loadingChanges")}</span>
         </div>
       </Show>
@@ -660,6 +678,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                 />
                               </Tooltip>
                             </Show>
+                            <Show when={isMarkdownFile(diff.file) && props.onOpenDocument && !isDeleted()}>
+                              <Tooltip value={t("agentManager.documents.preview")} placement="top">
+                                <IconButton
+                                  icon="book-open-check"
+                                  size="small"
+                                  variant="ghost"
+                                  label={t("agentManager.documents.preview")}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    props.onOpenDocument?.(diff.file)
+                                  }}
+                                />
+                              </Tooltip>
+                            </Show>
                             <Show when={props.onRevertFile && props.canRevert !== false}>
                               <Tooltip value={t("agentManager.diff.revertFile")} placement="top">
                                 <IconButton
@@ -709,10 +741,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                           fallback={
                             <div class="am-diff-summary-state">
                               <Show when={isLoadingDetail()} fallback={<span>Diff preview loads on demand.</span>}>
-                                <>
-                                  <Spinner />
-                                  <span>Loading diff...</span>
-                                </>
+                                <span>Loading diff...</span>
                               </Show>
                             </div>
                           }
@@ -728,6 +757,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                     after={{ name: diff.file, contents: diff.after }}
                                     patch={diff.patch}
                                     diffStyle={props.diffStyle ?? "unified"}
+                                    sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle ?? "unified")}
                                     virtualized={shouldVirtualizeDiff(diff)}
                                     annotations={annotationsForFile(diff.file)}
                                     renderAnnotation={buildAnnotation}

@@ -10,7 +10,7 @@ import {
 } from "@opentui/core"
 import type { CommandContext } from "@opentui/keymap"
 import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match } from "solid-js"
-import "opentui-spinner/solid"
+import { registerOpencodeSpinner } from "../register-spinner"
 import path from "path"
 import { fileURLToPath } from "url"
 import { useLocal } from "../../context/local"
@@ -55,7 +55,6 @@ import { useArgs } from "../../context/args"
 // kilocode_change start
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
-import * as AgentRequirements from "@/kilocode/cli/agent-requirements"
 import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
 import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
 // kilocode_change end
@@ -67,6 +66,8 @@ import { useVim, VimModeIndicator, vimToggleCommand } from "@/kilocode/cli/cmd/t
 import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
+
+registerOpencodeSpinner()
 
 export type PromptProps = {
   sessionID?: string
@@ -1085,29 +1086,6 @@ export function Prompt(props: PromptProps) {
       return false
     }
 
-    // kilocode_change start - gate TUI sends on declared agent requirements
-    const requirements = await AgentRequirements.check({
-      client: sdk.client,
-      agent: agent.name,
-      directory: project.instance.directory() || sdk.directory || process.cwd(),
-    }).catch((error) => {
-      toast.show({
-        message: errorMessage(error),
-        variant: "error",
-      })
-      return undefined
-    })
-    if (!requirements) return false
-    if (!requirements.ok) {
-      toast.show({
-        title: "Agent requirements",
-        message: requirements.error.data.message,
-        variant: "error",
-      })
-      return false
-    }
-    // kilocode_change end
-
     const workspaceSession = props.sessionID ? sync.session.get(props.sessionID) : undefined
     const workspaceID = workspaceSession?.workspaceID
     const workspaceStatus = workspaceID ? (project.workspace.status(workspaceID) ?? "error") : undefined
@@ -1831,7 +1809,9 @@ export function Prompt(props: PromptProps) {
                 <text fg={theme.accent}>(new working copy)</text>
               </box>
             </Match>
+            {/* kilocode_change start - Kilo already shows the working directory in its sidebar */}
             <Match when={true}>{props.hint ?? <text />}</Match>
+            {/* kilocode_change end */}
           </Switch>
           <Show when={status().type !== "retry"}>
             <box gap={2} flexDirection="row">

@@ -29,10 +29,33 @@ Key features include:
 - **[Workflows](/docs/customize/workflows)** — Repeatable prompt templates as `.md` files
 - **[Skills](/docs/customize/skills)** — Load specialized domain knowledge from SKILL.md files
 - **[Custom Subagents](/docs/customize/custom-subagents)** — Define specialized sub-agents for the `task` tool
+- **Charts** — Ask for a chart or plot and get an inline data visualization in the chat
 - **Open in Tab** — Pop the chat out into a full editor tab
 - **Transcript export:** Save complete local session transcripts as Markdown files
 - **Sub-Agent Viewer** — Read-only panels for viewing child agent sessions
 - **Legacy Migration** — Automatic migration wizard for VSCode extension settings
+
+## Background agents
+
+When Kilo starts an agent in the background, a collapsible status strip appears in the chat header. The strip stays visible while the transcript scrolls, so you can check background work without searching the conversation. Click the strip to expand it and see each agent.
+
+Each agent shows one of these states:
+
+| State | Meaning |
+|---|---|
+| **Running** | The agent is still working. |
+| **Done** | The agent completed successfully. |
+| **Cancelled** | The agent was stopped before it completed. |
+| **Error** | The agent stopped because it encountered an error. |
+
+An agent can also show **Needs input** when it is waiting for a permission decision or an answer to a question. Open the agent row to inspect its read-only transcript and handle the request in the child-agent view. In the sidebar and Kilo tab, the transcript opens in a read-only editor tab. In Agent Manager, it opens in the right-hand inspector.
+
+Use these controls in the expanded strip:
+
+- **Stop** cancels a running agent and its child session.
+- **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
+- **Clear finished** hides all agents that are no longer running.
+- **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
 
 ## Shared Settings
 

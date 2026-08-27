@@ -15,6 +15,17 @@ export namespace RemoteProtocol {
     //   KiloSession.resolvePlatform(id) || process.env["KILO_PLATFORM"] || "cli"
     // Optional so legacy CLIs (no field) remain wire-compatible.
     platform: z.string().max(32).optional(),
+    // kilocode_change - PR link: the pull request linked to the worktree this
+    // session is advertised from. Optional so legacy CLIs (no field) remain
+    // wire-compatible. `platform` here is the PR host (e.g. "github"), distinct
+    // from the session's `platform` (client OS) above.
+    prLink: z
+      .object({
+        platform: z.string().min(1).max(32),
+        prUrl: z.string().max(2048),
+        prNumber: z.number().int().positive(),
+      })
+      .optional(),
   })
   export type SessionInfo = z.infer<typeof SessionInfo>
 
@@ -37,6 +48,11 @@ export namespace RemoteProtocol {
   export const Capabilities = z
     .object({
       attachments: z.boolean().optional(),
+      // kilocode_change - sessionClone: present only when the CLI accepts a
+      // cloud-session clone (create_session.cloneFromKiloSessionId). The old
+      // wire form omits sessionClone; remove the mobile fail-closed check
+      // when every shipped CLI advertises it.
+      sessionClone: z.boolean().optional(),
     })
     .optional()
   export const Heartbeat = z.object({

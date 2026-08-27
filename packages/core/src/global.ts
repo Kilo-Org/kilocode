@@ -5,7 +5,7 @@ import os from "os"
 import { Context, Effect, Layer } from "effect"
 import { Flock } from "./util/flock"
 import { markNoIndex } from "./kilocode/spotlight" // kilocode_change
-import { ensureRealDir } from "./kilocode/global" // kilocode_change
+import { ensureRealDir, resolveState } from "./kilocode/global" // kilocode_change
 import { Flag } from "./flag/flag"
 import { makeGlobalNode } from "./effect/app-node"
 
@@ -22,7 +22,8 @@ const clean = (p: string | undefined) => p?.replace(/[\r\n]+/g, "")
 const data = path.join(clean(xdgData)!, app)
 const cache = path.join(clean(xdgCache)!, app)
 const config = path.join(clean(xdgConfig)!, app)
-const state = path.join(clean(xdgState)!, app)
+const preferred = path.join(clean(xdgState)!, app)
+const state = await resolveState(preferred, process.env.XDG_STATE_HOME ? undefined : path.join(data, "state"))
 // kilocode_change end
 const tmp = path.join(os.tmpdir(), app)
 
@@ -47,7 +48,6 @@ Flock.setGlobal({ state })
 await Promise.all([
   ensureRealDir(Path.data), // kilocode_change
   ensureRealDir(Path.config), // kilocode_change
-  ensureRealDir(Path.state), // kilocode_change
   ensureRealDir(Path.tmp), // kilocode_change
   ensureRealDir(Path.log), // kilocode_change
   ensureRealDir(Path.bin), // kilocode_change

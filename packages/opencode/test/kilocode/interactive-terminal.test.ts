@@ -3,6 +3,7 @@ import { Bus } from "@/bus"
 import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { InstanceStore } from "@/project/instance-store"
 import { VtScreen } from "@/kilocode/cli/cmd/tui/vt/vt-screen"
 import { InteractiveTerminal } from "@/kilocode/interactive-terminal"
 import { Instance, capture, type InstanceContext } from "@/kilocode/instance"
@@ -19,7 +20,7 @@ import { describe, expect } from "bun:test"
 import { Cause, Effect, Exit, Layer } from "effect"
 import path from "path"
 import { TestInstance, tmpdirScoped } from "../fixture/fixture"
-import { it, testEffect } from "../lib/effect"
+import { it, pollWithTimeout, testEffect } from "../lib/effect"
 
 const toolLayer = Layer.mergeAll(
   AppNodeBuilder.build(CrossSpawnSpawner.node),
@@ -47,20 +48,22 @@ async function script(dir: string, name: string, source: string) {
   return `${bin} ${arg}`
 }
 
-function started(sessionID: SessionID) {
+function started(sessionID: SessionID, cwd?: string, ctx?: InstanceContext) {
   const state: { off?: () => void; timer?: ReturnType<typeof setTimeout> } = {}
   const promise = new Promise<InteractiveTerminal.Info>((resolve, reject) => {
     state.timer = setTimeout(() => {
       state.off?.()
       reject(new Error("timed out waiting for interactive terminal"))
     }, 5_000)
-    state.off = Bus.subscribe(InteractiveTerminal.Event.Updated, (event) => {
-      const info = event.properties.info
-      if (info.sessionID !== sessionID || info.status !== "running") return
-      state.off?.()
-      if (state.timer) clearTimeout(state.timer)
-      resolve(info)
-    })
+    state.off = Instance.restore(ctx ?? capture()!, () =>
+      Bus.subscribe(InteractiveTerminal.Event.Updated, (event) => {
+        const info = event.properties.info
+        if (info.sessionID !== sessionID || info.status !== "running" || (cwd && info.cwd !== cwd)) return
+        state.off?.()
+        if (state.timer) clearTimeout(state.timer)
+        resolve(info)
+      }),
+    )
   })
   return {
     promise,
@@ -163,8 +166,7 @@ describe("InteractiveTerminal", () => {
       ).toMatchObject({ message: err.message })
       const ext = requests.find((item) => item.permission === "external_directory")
       const bash = requests.find((item) => item.permission === "bash")
-      const want =
-        process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(tmp, "*")) : path.join(tmp, "*")
+      const want = process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(tmp, "*")) : path.join(tmp, "*")
       expect(ext?.patterns).toContain(want)
       expect(bash?.patterns).toContain(`cat ${quote(file)}`)
     }),
@@ -318,6 +320,90 @@ process.stdin.once("data", () => process.exit(0))
       } finally {
         ready.dispose()
         yield* Effect.promise(() => InteractiveTerminal.stopSession(sessionID))
+      }
+    }),
+  )
+
+  it.instance("coalesces concurrent first state initialization", () =>
+    Effect.gen(function* () {
+      const first = SessionID.descending()
+      const second = SessionID.descending()
+      const command = `setInterval(() => {}, 1_000)`
+      const pending = [
+        run({ sessionID: first, command, cwd: capture()!.directory }),
+        run({ sessionID: second, command, cwd: capture()!.directory }),
+      ]
+      const list = yield* pollWithTimeout(
+        Effect.promise(() => InteractiveTerminal.list()).pipe(
+          Effect.map((items) => (items.length === 2 ? items : undefined)),
+        ),
+        "timed out waiting for concurrent terminals",
+      )
+      expect(list.map((item) => item.sessionID).sort()).toEqual([first, second].sort())
+      yield* Effect.promise(() => Promise.all(list.map((item) => InteractiveTerminal.close(item.id))))
+      expect((yield* Effect.promise(() => Promise.all(pending))).map((item) => item.closedBy)).toEqual(["user", "user"])
+    }),
+  )
+
+  toolIt.instance("isolates terminals by directory even for the same session", () =>
+    Effect.gen(function* () {
+      const store = yield* InstanceStore.Service
+      const one = yield* tmpdirScoped()
+      const two = yield* tmpdirScoped()
+      const first = yield* store.load({ directory: one })
+      const second = yield* store.load({ directory: two })
+      const sessionID = SessionID.descending()
+      const command = `setInterval(() => {}, 1_000)`
+      const pendingOne = Instance.restore(first, () => run({ sessionID, command, cwd: one }))
+      const pendingTwo = Instance.restore(second, () => run({ sessionID, command, cwd: two }))
+      try {
+        const [infoOne, infoTwo] = yield* Effect.all(
+          [first, second].map((ctx) =>
+            pollWithTimeout(
+              Effect.promise(() => Instance.restore(ctx, () => InteractiveTerminal.list({ sessionID }))).pipe(
+                Effect.map((items) => items[0]),
+              ),
+              "timed out waiting for isolated terminal",
+            ),
+          ),
+          { concurrency: "unbounded" },
+        )
+        if (!infoOne || !infoTwo) throw new Error("isolated terminals did not start")
+        expect(infoOne.id).not.toBe(infoTwo.id)
+        yield* Effect.promise(() =>
+          Promise.all([
+            Instance.restore(first, () => InteractiveTerminal.close(infoOne.id)),
+            Instance.restore(second, () => InteractiveTerminal.close(infoTwo.id)),
+          ]),
+        )
+        expect(
+          (yield* Effect.promise(() => Promise.all([pendingOne, pendingTwo]))).map((item) => item.closedBy),
+        ).toEqual(["user", "user"])
+      } finally {
+        yield* store.dispose(first)
+        yield* store.dispose(second)
+      }
+    }),
+  )
+
+  toolIt.instance("closes all terminals when the instance scope is disposed", () =>
+    Effect.gen(function* () {
+      const store = yield* InstanceStore.Service
+      const ctx = capture()!
+      const sessionID = SessionID.descending()
+      const command = `setInterval(() => {}, 1_000)`
+      const ready = started(sessionID)
+      const pending = run({ sessionID, command, cwd: ctx.directory })
+      try {
+        yield* Effect.promise(() => ready.promise)
+        yield* store.dispose(ctx)
+        expect((yield* Effect.promise(() => pending)).closedBy).toBe("abort")
+        expect(
+          yield* Effect.promise(() => Instance.restore(ctx, () => InteractiveTerminal.list({ sessionID }))),
+        ).toEqual([])
+      } finally {
+        ready.dispose()
+        yield* store.dispose(ctx)
       }
     }),
   )

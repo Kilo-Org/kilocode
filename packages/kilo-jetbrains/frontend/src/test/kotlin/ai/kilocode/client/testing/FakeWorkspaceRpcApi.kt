@@ -111,10 +111,10 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         return branchName
     }
 
-    override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {
+    override suspend fun openFile(path: String, line: Int?, column: Int?, endLine: Int?): Boolean {
         assertNotEdt("openFile")
         opened.add(path)
-        openedFiles.add(Opened(path, line, column))
+        openedFiles.add(Opened(path, line, column, endLine))
         return openResult
     }
 
@@ -150,5 +150,5 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         return openResult
     }
 
-    data class Opened(val path: String, val line: Int?, val column: Int?)
+    data class Opened(val path: String, val line: Int?, val column: Int?, val endLine: Int? = null)
 }

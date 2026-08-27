@@ -73,6 +73,7 @@ import type {
   ConfigWarningsResponses,
   EnhancePromptEnhanceErrors,
   EnhancePromptEnhanceResponses,
+  EventSubscribeResponse,
   EventSubscribeResponses,
   EventTuiCommandExecute2,
   EventTuiPromptAppend2,
@@ -132,6 +133,7 @@ import type {
   GlobalDisposeErrors,
   GlobalDisposeResponses,
   GlobalEventErrors,
+  GlobalEventResponse,
   GlobalEventResponses,
   GlobalHealthErrors,
   GlobalHealthResponses,
@@ -181,8 +183,12 @@ import type {
   KilocodeAgentManagerRejectResponses,
   KilocodeAgentManagerReplyErrors,
   KilocodeAgentManagerReplyResponses,
-  KilocodeAgentRequirementsErrors,
-  KilocodeAgentRequirementsResponses,
+  KilocodeBackgroundJobCancelErrors,
+  KilocodeBackgroundJobCancelResponses,
+  KilocodeBackgroundJobPromoteErrors,
+  KilocodeBackgroundJobPromoteResponses,
+  KilocodeBackgroundJobsErrors,
+  KilocodeBackgroundJobsResponses,
   KilocodeCommandFilesErrors,
   KilocodeCommandFilesResponses,
   KilocodeHeapSnapshotErrors,
@@ -193,12 +199,18 @@ import type {
   KilocodeNotebookRejectResponses,
   KilocodeNotebookReplyErrors,
   KilocodeNotebookReplyResponses,
+  KilocodeProviderUsageGetErrors,
+  KilocodeProviderUsageGetResponses,
+  KilocodeProviderUsageRefreshErrors,
+  KilocodeProviderUsageRefreshResponses,
   KilocodeRemoveAgentErrors,
   KilocodeRemoveAgentResponses,
   KilocodeRemoveCommandErrors,
   KilocodeRemoveCommandResponses,
   KilocodeRemoveSkillErrors,
   KilocodeRemoveSkillResponses,
+  KilocodeRemoveSnapshotErrors,
+  KilocodeRemoveSnapshotResponses,
   KilocodeSessionImportMessageErrors,
   KilocodeSessionImportMessageResponses,
   KilocodeSessionImportPartErrors,
@@ -212,6 +224,7 @@ import type {
   KiloEditErrors,
   KiloEditResponses,
   KiloFimErrors,
+  KiloFimResponse,
   KiloFimResponses,
   KiloModelsImagesErrors,
   KiloModelsImagesResponses,
@@ -238,11 +251,15 @@ import type {
   McpAuthRemoveResponses,
   McpAuthStartErrors,
   McpAuthStartResponses,
+  McpCallToolErrors,
+  McpCallToolResponses,
   McpConnectErrors,
   McpConnectResponses,
   McpDisconnectErrors,
   McpDisconnectResponses,
   McpLocalConfig,
+  McpReadResourceErrors,
+  McpReadResourceResponses,
   McpRemoteConfig,
   McpStatusErrors,
   McpStatusResponses,
@@ -470,6 +487,7 @@ import type {
   V2CredentialUpdateErrors,
   V2CredentialUpdateResponses,
   V2EventSubscribeErrors,
+  V2EventSubscribeResponse,
   V2EventSubscribeResponses,
   V2FsFindErrors,
   V2FsFindResponses,
@@ -540,6 +558,7 @@ import type {
   V2SessionCreateErrors,
   V2SessionCreateResponses,
   V2SessionEventsErrors,
+  V2SessionEventsResponse,
   V2SessionEventsResponses,
   V2SessionGetErrors,
   V2SessionGetResponses,
@@ -612,10 +631,11 @@ import type {
   WorktreeResetResponses,
 } from "./types.gen.js"
 
-export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<
-  TData,
-  ThrowOnError
-> & {
+export type Options<
+  TData extends TDataShape = TDataShape,
+  ThrowOnError extends boolean = boolean,
+  TResponse = unknown,
+> = Options2<TData, ThrowOnError, TResponse> & {
   /**
    * You can provide a client instance returned by `createClient()` instead of
    * individual options. This might be also useful if you want to implement a
@@ -718,12 +738,12 @@ export class App extends HeyApiClient {
    * Write a log entry to the server logs with specified level and metadata.
    */
   public log<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      service?: string
-      level?: "debug" | "info" | "error" | "warn"
-      message?: string
+      service: string
+      level: "debug" | "info" | "error" | "warn"
+      message: string
       extra?: {
         [key: string]: unknown
       }
@@ -825,9 +845,9 @@ export class ControlPlane extends HeyApiClient {
    * Move a session to another project directory, optionally transferring local changes.
    */
   public moveSession<ThrowOnError extends boolean = false>(
-    parameters?: {
-      sessionID?: string
-      destination?: MoveSessionDestination
+    parameters: {
+      sessionID: string
+      destination: MoveSessionDestination
       moveChanges?: boolean
     },
     options?: Options<never, ThrowOnError>,
@@ -972,11 +992,11 @@ export class Console extends HeyApiClient {
    * Persist a new active Console account/org selection for the current local Kilo state.
    */
   public switchOrg<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      accountID?: string
-      orgID?: string
+      accountID: string
+      orgID: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1254,11 +1274,11 @@ export class Workspace extends HeyApiClient {
    * Create a workspace for the current project.
    */
   public create<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
       id?: string
-      type?: string
+      type: string
       branch?: string | null
       extra?: unknown | null
     },
@@ -1405,11 +1425,11 @@ export class Workspace extends HeyApiClient {
    * Move a session's sync history into the target workspace, or detach it to the local project.
    */
   public warp<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      id?: string | null
-      sessionID?: string
+      id: string | null
+      sessionID: string
       copyChanges?: boolean
     },
     options?: Options<never, ThrowOnError>,
@@ -1543,7 +1563,7 @@ export class Global extends HeyApiClient {
    *
    * Subscribe to global events from the Kilo system using server-sent events.
    */
-  public event<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+  public event<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError, GlobalEventResponse>) {
     return (options?.client ?? this.client).sse.get<GlobalEventResponses, GlobalEventErrors, ThrowOnError>({
       url: "/global/event",
       ...options,
@@ -1592,7 +1612,7 @@ export class Global extends HeyApiClient {
   }
 }
 
-export class Event extends HeyApiClient {
+export class Event_ extends HeyApiClient {
   /**
    * Subscribe to events
    *
@@ -1603,7 +1623,7 @@ export class Event extends HeyApiClient {
       directory?: string
       workspace?: string
     },
-    options?: Options<never, ThrowOnError>,
+    options?: Options<never, ThrowOnError, EventSubscribeResponse>,
   ) {
     const params = buildClientParams(
       [parameters],
@@ -1790,10 +1810,10 @@ export class Config2 extends HeyApiClient {
    * Apply a minimal global or project config patch, including unset paths for reverting local overrides.
    */
   public overlayUpdate<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      scope?: "global" | "project"
+      scope: "global" | "project"
       set?: {
         [key: string]: unknown
       }
@@ -1934,11 +1954,11 @@ export class Config2 extends HeyApiClient {
    * Create or update the project AGENTS.md rules file.
    */
   public rulesUpdate<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
       scope?: "project"
-      content?: string
+      content: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -2453,7 +2473,7 @@ export class Find extends HeyApiClient {
   }
 }
 
-export class File extends HeyApiClient {
+export class File_ extends HeyApiClient {
   /**
    * List files
    *
@@ -2776,10 +2796,10 @@ export class Vcs extends HeyApiClient {
    * Apply a raw patch to the current working tree.
    */
   public apply<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      patch?: string
+      patch: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -2984,7 +3004,7 @@ export class Auth2 extends HeyApiClient {
       name: string
       directory?: string
       workspace?: string
-      code?: string
+      code: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3085,11 +3105,11 @@ export class Mcp extends HeyApiClient {
    * Dynamically add a new Model Context Protocol (MCP) server to the system.
    */
   public add<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      name?: string
-      config?: McpLocalConfig | McpRemoteConfig
+      name: string
+      config: McpLocalConfig | McpRemoteConfig
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3175,6 +3195,88 @@ export class Mcp extends HeyApiClient {
       url: "/mcp/{name}/disconnect",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Read MCP resource
+   *
+   * Read a resource from a connected MCP server by URI. Used by MCP Apps to load UI resources.
+   */
+  public readResource<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      uri: string
+      server: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "uri" },
+            { in: "body", key: "server" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<McpReadResourceResponses, McpReadResourceErrors, ThrowOnError>({
+      url: "/experimental/resource/read",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Call MCP tool
+   *
+   * Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.
+   */
+  public callTool<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      server: string
+      name: string
+      arguments?: {
+        [key: string]: unknown
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "server" },
+            { in: "body", key: "name" },
+            { in: "body", key: "arguments" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<McpCallToolResponses, McpCallToolErrors, ThrowOnError>({
+      url: "/experimental/mcp/call-tool",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 
@@ -3428,6 +3530,10 @@ export class Pty extends HeyApiClient {
       env?: {
         [key: string]: string
       }
+      size?: {
+        rows: number
+        cols: number
+      }
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3443,6 +3549,7 @@ export class Pty extends HeyApiClient {
             { in: "body", key: "cwd" },
             { in: "body", key: "title" },
             { in: "body", key: "env" },
+            { in: "body", key: "size" },
           ],
         },
       ],
@@ -3679,7 +3786,7 @@ export class Question extends HeyApiClient {
       requestID: string
       directory?: string
       workspace?: string
-      answers?: Array<QuestionAnswer>
+      answers: Array<QuestionAnswer>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3782,7 +3889,7 @@ export class Permission extends HeyApiClient {
       requestID: string
       directory?: string
       workspace?: string
-      reply?: "once" | "always" | "reject"
+      reply: "once" | "always" | "reject"
       message?: string
       interactive?: boolean
     },
@@ -3866,10 +3973,10 @@ export class Permission extends HeyApiClient {
    * Enable or disable allowing all permissions without prompts.
    */
   public allowEverything<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      enable?: boolean
+      enable: boolean
       requestID?: string
       sessionID?: string
     },
@@ -3918,7 +4025,7 @@ export class Permission extends HeyApiClient {
       permissionID: string
       directory?: string
       workspace?: string
-      response?: "once" | "always" | "reject"
+      response: "once" | "always" | "reject"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3960,7 +4067,7 @@ export class Oauth extends HeyApiClient {
       providerID: string
       directory?: string
       workspace?: string
-      method?: number
+      method: number
       inputs?: {
         [key: string]: string
       }
@@ -4007,7 +4114,7 @@ export class Oauth extends HeyApiClient {
       providerID: string
       directory?: string
       workspace?: string
-      method?: number
+      method: number
       code?: string
     },
     options?: Options<never, ThrowOnError>,
@@ -4430,6 +4537,8 @@ export class Session2 extends HeyApiClient {
       directory?: string
       workspace?: string
       messageID?: string
+      file?: string
+      full?: "true" | "false"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4442,6 +4551,8 @@ export class Session2 extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "query", key: "messageID" },
+            { in: "query", key: "file" },
+            { in: "query", key: "full" },
           ],
         },
       ],
@@ -4521,7 +4632,7 @@ export class Session2 extends HeyApiClient {
         activeFile?: string
         shell?: string
       }
-      parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
+      parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4713,9 +4824,9 @@ export class Session2 extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
-      modelID?: string
-      providerID?: string
-      messageID?: string
+      modelID: string
+      providerID: string
+      messageID: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4820,8 +4931,8 @@ export class Session2 extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
-      providerID?: string
-      modelID?: string
+      providerID: string
+      modelID: string
       auto?: boolean
     },
     options?: Options<never, ThrowOnError>,
@@ -4885,7 +4996,7 @@ export class Session2 extends HeyApiClient {
         activeFile?: string
         shell?: string
       }
-      parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
+      parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4937,8 +5048,8 @@ export class Session2 extends HeyApiClient {
       messageID?: string
       agent?: string
       model?: string
-      arguments?: string
-      command?: string
+      arguments: string
+      command: string
       variant?: string
       snapshotInitialization?: "wait"
       parts?: Array<{
@@ -4995,12 +5106,12 @@ export class Session2 extends HeyApiClient {
       directory?: string
       workspace?: string
       messageID?: string
-      agent?: string
+      agent: string
       model?: {
         providerID: string
         modelID: string
       }
-      command?: string
+      command: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5042,7 +5153,7 @@ export class Session2 extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
-      messageID?: string
+      messageID: string
       partID?: string
     },
     options?: Options<never, ThrowOnError>,
@@ -5111,15 +5222,15 @@ export class Session2 extends HeyApiClient {
    * Notify the server which sessions the user is currently viewing, or clear all.
    */
   public viewed<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      viewer?: {
+      viewer: {
         id: string
         active: boolean
       }
-      attached?: Array<string>
-      visible?: Array<string>
+      attached: Array<string>
+      visible: Array<string>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5305,11 +5416,11 @@ export class Sync extends HeyApiClient {
    * Validate and replay a complete sync event history.
    */
   public replay<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       query_directory?: string
       workspace?: string
-      body_directory?: string
-      events?: Array<{
+      body_directory: string
+      events: Array<{
         id: string
         aggregateID: string
         seq: number
@@ -5360,10 +5471,10 @@ export class Sync extends HeyApiClient {
    * Update a session to belong to the current workspace through the sync event system.
    */
   public steal<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      sessionID?: string
+      sessionID: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5615,10 +5726,10 @@ export class Tui extends HeyApiClient {
    * Append prompt to the TUI.
    */
   public appendPrompt<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      text?: string
+      text: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5832,10 +5943,10 @@ export class Tui extends HeyApiClient {
    * Execute a TUI command.
    */
   public executeCommand<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      command?: string
+      command: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5869,12 +5980,12 @@ export class Tui extends HeyApiClient {
    * Show a toast notification in the TUI.
    */
   public showToast<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
       title?: string
-      message?: string
-      variant?: "info" | "success" | "warning" | "error"
+      message: string
+      variant: "info" | "success" | "warning" | "error"
       duration?: number
     },
     options?: Options<never, ThrowOnError>,
@@ -5949,10 +6060,10 @@ export class Tui extends HeyApiClient {
    * Navigate the TUI to display the specified session.
    */
   public selectSession<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      sessionID?: string
+      sessionID: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -6003,10 +6114,10 @@ export class AgentBuilder extends HeyApiClient {
    * Validate an agent builder payload and return the canonical agent markdown without writing it.
    */
   public preview<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      id?: string
+      id: string
       scope?: "global" | "project"
       description?: string
       mode?: "primary" | "subagent" | "all"
@@ -6017,7 +6128,7 @@ export class AgentBuilder extends HeyApiClient {
       permission?: {
         [key: string]: unknown
       }
-      prompt?: string
+      prompt: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -6077,7 +6188,7 @@ export class AgentBuilder extends HeyApiClient {
       permission?: {
         [key: string]: unknown
       }
-      prompt?: string
+      prompt: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -6351,7 +6462,7 @@ export class BranchName extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
-      prompt?: string
+      prompt: string
       providerID?: string
       modelID?: string
     },
@@ -6392,10 +6503,10 @@ export class CommitMessage extends HeyApiClient {
    * Generate a commit message using AI based on the current git diff.
    */
   public generate<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      path?: string
+      path: string
       selectedFiles?: Array<string>
       previousMessage?: string
       language?: string
@@ -6441,10 +6552,10 @@ export class EnhancePrompt extends HeyApiClient {
    * Rewrite a user's draft prompt into a clearer, more specific, and more effective prompt.
    */
   public enhance<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      text?: string
+      text: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -6574,10 +6685,10 @@ export class Indexing extends HeyApiClient {
    * Set machine-local code indexing consent for the active project.
    */
   public consent<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      enabled?: boolean
+      enabled: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -6807,11 +6918,11 @@ export class Audio extends HeyApiClient {
    * Proxy an audio transcription request to the Kilo Gateway
    */
   public transcriptions<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      model?: string
-      input_audio?: {
+      model: string
+      input_audio: {
         data: string
         format: string
       }
@@ -6927,10 +7038,10 @@ export class Organization extends HeyApiClient {
    * Switch to a different Kilo Gateway organization
    */
   public set<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      organizationId?: string | null
+      organizationId: string | null
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -7066,10 +7177,10 @@ export class Session3 extends HeyApiClient {
    * Download a cloud-synced session and write it to local storage with fresh IDs.
    */
   public import<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      sessionId?: string
+      sessionId: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -7206,17 +7317,17 @@ export class Kilo extends HeyApiClient {
    * Proxy a Fill-in-the-Middle completion request to the Kilo Gateway
    */
   public fim<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      prefix?: string
-      suffix?: string
+      prefix: string
+      suffix: string
       provider?: string
       model?: string
       maxTokens?: number
       temperature?: number
     },
-    options?: Options<never, ThrowOnError>,
+    options?: Options<never, ThrowOnError, KiloFimResponse>,
   ) {
     const params = buildClientParams(
       [parameters],
@@ -7253,23 +7364,23 @@ export class Kilo extends HeyApiClient {
    * Proxy a Mercury-style Next Edit request. The client supplies structured editor context; the gateway assembles the sentinel-tagged prompt and forwards to the upstream edit endpoint.
    */
   public edit<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
       provider?: string
       model?: string
       maxTokens?: number
-      currentFilePath?: string
-      currentFileContent?: string
-      cursorLine?: number
-      cursorCharacter?: number
-      editableRegionStartLine?: number
-      editableRegionEndLine?: number
-      recentlyViewedSnippets?: Array<{
+      currentFilePath: string
+      currentFileContent: string
+      cursorLine: number
+      cursorCharacter: number
+      editableRegionStartLine: number
+      editableRegionEndLine: number
+      recentlyViewedSnippets: Array<{
         filepath: string
         content: string
       }>
-      editDiffHistory?: Array<string>
+      editDiffHistory: Array<string>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -7435,6 +7546,76 @@ export class Heap extends HeyApiClient {
   }
 }
 
+export class ProviderUsage extends HeyApiClient {
+  /**
+   * Get provider usage
+   *
+   * Get cache-aware, secret-free provider plan usage and personal billing status.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeProviderUsageGetResponses,
+      KilocodeProviderUsageGetErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/provider-usage",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh provider usage
+   *
+   * Refresh provider plan usage while coalescing concurrent source requests.
+   */
+  public refresh<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeProviderUsageRefreshResponses,
+      KilocodeProviderUsageRefreshErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/provider-usage/refresh",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Notebook extends HeyApiClient {
   /**
    * List pending notebook requests
@@ -7480,7 +7661,7 @@ export class Notebook extends HeyApiClient {
       requestID: NotebookRequestId
       directory?: string
       workspace?: string
-      result?: NotebookResult
+      result: NotebookResult
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -7523,7 +7704,7 @@ export class Notebook extends HeyApiClient {
       requestID: NotebookRequestId
       directory?: string
       workspace?: string
-      error?: NotebookFailure
+      error: NotebookFailure
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -7602,7 +7783,7 @@ export class AgentManager extends HeyApiClient {
       requestID: AgentManagerRequestId
       directory?: string
       workspace?: string
-      result?: AgentManagerResult
+      result: AgentManagerResult
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -7645,7 +7826,7 @@ export class AgentManager extends HeyApiClient {
       requestID: AgentManagerRequestId
       directory?: string
       workspace?: string
-      error?: AgentManagerFailure
+      error: AgentManagerFailure
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -7679,6 +7860,80 @@ export class AgentManager extends HeyApiClient {
   }
 }
 
+export class BackgroundJob extends HeyApiClient {
+  /**
+   * Cancel background job
+   *
+   * Cancel one background subagent job and its session tree.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters: {
+      jobID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "jobID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeBackgroundJobCancelResponses,
+      KilocodeBackgroundJobCancelErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs/{jobID}/cancel",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Promote background job
+   *
+   * Continue one foreground subagent in the background.
+   */
+  public promote<ThrowOnError extends boolean = false>(
+    parameters: {
+      jobID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "jobID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeBackgroundJobPromoteResponses,
+      KilocodeBackgroundJobPromoteErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs/{jobID}/promote",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
@@ -7686,19 +7941,19 @@ export class SessionImport extends HeyApiClient {
    * Insert or update a project row used by legacy session import.
    */
   public project<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      id?: string
-      worktree?: string
+      id: string
+      worktree: string
       vcs?: string
       name?: string
       iconUrl?: string
       iconColor?: string
-      timeCreated?: number
-      timeUpdated?: number
+      timeCreated: number
+      timeUpdated: number
       timeInitialized?: number
-      sandboxes?: Array<string>
+      sandboxes: Array<string>
       commands?: {
         start?: string
       }
@@ -7749,18 +8004,18 @@ export class SessionImport extends HeyApiClient {
    * Insert or update a session row used by legacy session import.
    */
   public session<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       query_directory?: string
       workspace?: string
-      id?: string
-      projectID?: string
+      id: string
+      projectID: string
       force?: boolean
       workspaceID?: string
       parentID?: string
-      slug?: string
-      body_directory?: string
-      title?: string
-      version?: string
+      slug: string
+      body_directory: string
+      title: string
+      version: string
       shareURL?: string
       summary?: {
         additions: number
@@ -7780,8 +8035,8 @@ export class SessionImport extends HeyApiClient {
       permission?: {
         [key: string]: unknown
       }
-      timeCreated?: number
-      timeUpdated?: number
+      timeCreated: number
+      timeUpdated: number
       timeCompacting?: number
       timeArchived?: number
     },
@@ -7845,13 +8100,13 @@ export class SessionImport extends HeyApiClient {
    * Insert or update a message row used by legacy session import.
    */
   public message<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      id?: string
-      sessionID?: string
-      timeCreated?: number
-      data?:
+      id: string
+      sessionID: string
+      timeCreated: number
+      data:
         | {
             role: "user"
             time: {
@@ -7937,14 +8192,14 @@ export class SessionImport extends HeyApiClient {
    * Insert or update a part row used by legacy session import.
    */
   public part<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      id?: string
-      messageID?: string
-      sessionID?: string
+      id: string
+      messageID: string
+      sessionID: string
       timeCreated?: number
-      data?:
+      data:
         | {
             type: "text"
             text: string
@@ -8066,42 +8321,6 @@ export class SessionImport extends HeyApiClient {
 
 export class Kilocode extends HeyApiClient {
   /**
-   * Check agent requirements
-   *
-   * Check whether the selected agent's requirements are available in the request directory.
-   */
-  public agentRequirements<ThrowOnError extends boolean = false>(
-    parameters: {
-      directory?: string
-      workspace?: string
-      agent: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "agent" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KilocodeAgentRequirementsResponses,
-      KilocodeAgentRequirementsErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/agent/requirements",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
    * List command files
    *
    * List commands with editable file locations for settings clients.
@@ -8141,10 +8360,10 @@ export class Kilocode extends HeyApiClient {
    * Remove a command by deleting its markdown file from disk and clearing it from cache.
    */
   public removeCommand<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      location?: string
+      location: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -8182,10 +8401,10 @@ export class Kilocode extends HeyApiClient {
    * Remove a skill by deleting its manifest from disk and clearing it from cache.
    */
   public removeSkill<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      location?: string
+      location: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -8218,13 +8437,14 @@ export class Kilocode extends HeyApiClient {
   /**
    * Remove a custom agent
    *
-   * Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.
+   * Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.
    */
   public removeAgent<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      name?: string
+      name: string
+      scope?: "global" | "project"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -8236,6 +8456,7 @@ export class Kilocode extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "name" },
+            { in: "body", key: "scope" },
           ],
         },
       ],
@@ -8252,6 +8473,47 @@ export class Kilocode extends HeyApiClient {
         },
       },
     )
+  }
+
+  /**
+   * Remove a snapshot repository
+   *
+   * Remove the snapshot repository for an already deleted Agent Manager worktree.
+   */
+  public removeSnapshot<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      worktree?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "worktree" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRemoveSnapshotResponses,
+      KilocodeRemoveSnapshotErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/snapshot/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
   }
 
   /**
@@ -8290,9 +8552,50 @@ export class Kilocode extends HeyApiClient {
     })
   }
 
+  /**
+   * List background jobs
+   *
+   * List background subagent jobs owned by one parent session.
+   */
+  public backgroundJobs<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeBackgroundJobsResponses,
+      KilocodeBackgroundJobsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs",
+      ...options,
+      ...params,
+    })
+  }
+
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
+  }
+
+  private _providerUsage?: ProviderUsage
+  get providerUsage(): ProviderUsage {
+    return (this._providerUsage ??= new ProviderUsage({ client: this.client }))
   }
 
   private _notebook?: Notebook
@@ -8303,6 +8606,11 @@ export class Kilocode extends HeyApiClient {
   private _agentManager?: AgentManager
   get agentManager(): AgentManager {
     return (this._agentManager ??= new AgentManager({ client: this.client }))
+  }
+
+  private _backgroundJob?: BackgroundJob
+  get backgroundJob(): BackgroundJob {
+    return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport
@@ -8743,7 +9051,7 @@ export class Suggestion extends HeyApiClient {
       requestID: string
       directory?: string
       workspace?: string
-      index?: number
+      index: number
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -8812,10 +9120,10 @@ export class Telemetry extends HeyApiClient {
    * Forward a telemetry event to PostHog via kilo-telemetry.
    */
   public capture<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      event?: string
+      event: string
       properties?: {
         [key: string]: unknown
       }
@@ -8853,10 +9161,10 @@ export class Telemetry extends HeyApiClient {
    * Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.
    */
   public setEnabled<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      enabled?: boolean
+      enabled: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -9083,10 +9391,10 @@ export class Memory extends HeyApiClient {
    * Persist explicit user-provided memory text through the deterministic operation pipeline.
    */
   public remember<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      text?: string
+      text: string
       key?: string
       file?: "project.md" | "environment.md" | "corrections.md"
       section?: string
@@ -9128,10 +9436,10 @@ export class Memory extends HeyApiClient {
    * Persist explicit corrective memory under corrections.md.
    */
   public correct<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      text?: string
+      text: string
       key?: string
       sessionID?: string
     },
@@ -9169,10 +9477,10 @@ export class Memory extends HeyApiClient {
    * Remove memory lines by exact key, id, or normalized key text and rebuild the index.
    */
   public forget<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      query?: string
+      query: string
       sessionID?: string
     },
     options?: Options<never, ThrowOnError>,
@@ -9208,10 +9516,10 @@ export class Memory extends HeyApiClient {
    * Delete all project memory files for the active workspace.
    */
   public purge<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      confirm?: true
+      confirm: true
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -9311,7 +9619,7 @@ export class Revert extends HeyApiClient {
   public stage<ThrowOnError extends boolean = false>(
     parameters: {
       sessionID: string
-      messageID?: string
+      messageID: string
       files?: boolean
     },
     options?: Options<never, ThrowOnError>,
@@ -9420,8 +9728,8 @@ export class Permission2 extends HeyApiClient {
     parameters: {
       sessionID: string
       id?: string
-      action?: string
-      resources?: Array<string>
+      action: string
+      resources: Array<string>
       save?: Array<string>
       metadata?: {
         [key: string]: unknown
@@ -9507,7 +9815,7 @@ export class Permission2 extends HeyApiClient {
     parameters: {
       sessionID: string
       requestID: string
-      reply?: PermissionV2Reply
+      reply: PermissionV2Reply
       message?: string
     },
     options?: Options<never, ThrowOnError>,
@@ -9763,7 +10071,7 @@ export class Session4 extends HeyApiClient {
   public switchAgent<ThrowOnError extends boolean = false>(
     parameters: {
       sessionID: string
-      agent?: string
+      agent: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -9802,7 +10110,7 @@ export class Session4 extends HeyApiClient {
   public switchModel<ThrowOnError extends boolean = false>(
     parameters: {
       sessionID: string
-      model?: ModelRef
+      model: ModelRef
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -9842,7 +10150,7 @@ export class Session4 extends HeyApiClient {
     parameters: {
       sessionID: string
       id?: string
-      prompt?: PromptInput
+      prompt: PromptInput
       delivery?: "steer" | "queue"
       resume?: boolean
     },
@@ -9973,7 +10281,7 @@ export class Session4 extends HeyApiClient {
       sessionID: string
       after?: string
     },
-    options?: Options<never, ThrowOnError>,
+    options?: Options<never, ThrowOnError, V2SessionEventsResponse>,
   ) {
     const params = buildClientParams(
       [parameters],
@@ -10186,7 +10494,7 @@ export class Connect extends HeyApiClient {
         directory?: string
         workspace?: string
       }
-      key?: string
+      key: string
       label?: string
     },
     options?: Options<never, ThrowOnError>,
@@ -10232,8 +10540,8 @@ export class Connect extends HeyApiClient {
         directory?: string
         workspace?: string
       }
-      methodID?: string
-      inputs?: {
+      methodID: string
+      inputs: {
         [key: string]: string
       }
       label?: string
@@ -10506,7 +10814,7 @@ export class Credential extends HeyApiClient {
         directory?: string
         workspace?: string
       }
-      label?: string
+      label: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -10535,7 +10843,7 @@ export class Credential extends HeyApiClient {
   }
 }
 
-export class Request extends HeyApiClient {
+export class Request_ extends HeyApiClient {
   /**
    * List pending permission requests
    *
@@ -10612,9 +10920,9 @@ export class Saved extends HeyApiClient {
 }
 
 export class Permission3 extends HeyApiClient {
-  private _request?: Request
-  get request(): Request {
-    return (this._request ??= new Request({ client: this.client }))
+  private _request?: Request_
+  get request(): Request_ {
+    return (this._request ??= new Request_({ client: this.client }))
   }
 
   private _saved?: Saved
@@ -10782,7 +11090,9 @@ export class Event2 extends HeyApiClient {
    *
    * Subscribe to native event payloads for the server.
    */
-  public subscribe<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+  public subscribe<ThrowOnError extends boolean = false>(
+    options?: Options<never, ThrowOnError, V2EventSubscribeResponse>,
+  ) {
     return (options?.client ?? this.client).sse.get<V2EventSubscribeResponses, V2EventSubscribeErrors, ThrowOnError>({
       url: "/api/event",
       ...options,
@@ -10831,6 +11141,10 @@ export class Pty2 extends HeyApiClient {
       env?: {
         [key: string]: string
       }
+      size?: {
+        rows: number
+        cols: number
+      }
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -10845,6 +11159,7 @@ export class Pty2 extends HeyApiClient {
             { in: "body", key: "cwd" },
             { in: "body", key: "title" },
             { in: "body", key: "env" },
+            { in: "body", key: "size" },
           ],
         },
       ],
@@ -11111,8 +11426,8 @@ export class ProjectCopy2 extends HeyApiClient {
         directory?: string
         workspace?: string
       }
-      directory?: string
-      force?: boolean
+      directory: string
+      force: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -11152,8 +11467,8 @@ export class ProjectCopy2 extends HeyApiClient {
         directory?: string
         workspace?: string
       }
-      strategy?: string
-      directory?: string
+      strategy: string
+      directory: string
       name?: string
     },
     options?: Options<never, ThrowOnError>,
@@ -11334,9 +11649,9 @@ export class KiloClient extends HeyApiClient {
     return (this._global ??= new Global({ client: this.client }))
   }
 
-  private _event?: Event
-  get event(): Event {
-    return (this._event ??= new Event({ client: this.client }))
+  private _event?: Event_
+  get event(): Event_ {
+    return (this._event ??= new Event_({ client: this.client }))
   }
 
   private _config?: Config2
@@ -11359,9 +11674,9 @@ export class KiloClient extends HeyApiClient {
     return (this._find ??= new Find({ client: this.client }))
   }
 
-  private _file?: File
-  get file(): File {
-    return (this._file ??= new File({ client: this.client }))
+  private _file?: File_
+  get file(): File_ {
+    return (this._file ??= new File_({ client: this.client }))
   }
 
   private _instance?: Instance
