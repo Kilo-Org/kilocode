@@ -1248,6 +1248,28 @@ export interface AgentManagerVisibleSessionMessage {
   sessionID: string | null
 }
 
+export interface AgentManagerBrowserRequestMessage {
+  type:
+    | "agentManager.browser.open"
+    | "agentManager.browser.refresh"
+    | "agentManager.browser.close"
+    | "agentManager.browser.state"
+    | "agentManager.browser.inspect"
+    | "agentManager.browser.input"
+    | "agentManager.browser.devtools"
+  sessionId: string
+  projectId?: string
+  url?: string
+  requestId?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  hover?: boolean
+  click?: boolean
+  theme?: "dark" | "light"
+}
+
 export interface RequestAutoApproveStateMessage {
   type: "requestAutoApproveState"
 }
@@ -1684,6 +1706,7 @@ export type WebviewMessage =
   | AgentManagerOpenSessionsMessage
   | SidebarOpenSessionsMessage
   | AgentManagerVisibleSessionMessage
+  | AgentManagerBrowserRequestMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage

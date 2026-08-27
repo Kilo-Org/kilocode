@@ -1,6 +1,12 @@
 import { beforeEach, describe, it, expect } from "bun:test"
 import { createEffect, createRoot, createSignal, on } from "solid-js"
-import { deleteDraftsForSession, drafts, imageDrafts, reviewDrafts } from "../../webview-ui/src/utils/draft-store"
+import {
+  browserDrafts,
+  deleteDraftsForSession,
+  drafts,
+  imageDrafts,
+  reviewDrafts,
+} from "../../webview-ui/src/utils/draft-store"
 import {
   createdDraftKey,
   movePromptDraft,
@@ -11,6 +17,7 @@ import {
 
 beforeEach(() => {
   drafts.clear()
+  browserDrafts.clear()
   reviewDrafts.clear()
   imageDrafts.clear()
 })
@@ -20,6 +27,12 @@ describe("deleteDraftsForSession", () => {
     drafts.set("prompt:default:session:a", "draft a")
     drafts.set("prompt:default:pending:a", "pending a")
     drafts.set("prompt:default:session:b", "draft b")
+    browserDrafts.set("prompt:default:session:a", [
+      { id: "element", sessionId: "a", selector: "#feature-card", content: "Browser feedback" },
+    ])
+    browserDrafts.set("prompt:default:session:b", [
+      { id: "other", sessionId: "b", selector: "#other", content: "Other browser feedback" },
+    ])
     reviewDrafts.set("prompt:default:session:a", [])
     imageDrafts.set("prompt:default:session:a", [])
 
@@ -28,6 +41,8 @@ describe("deleteDraftsForSession", () => {
     expect(drafts.has("prompt:default:session:a")).toBe(false)
     expect(drafts.has("prompt:default:pending:a")).toBe(false)
     expect(drafts.get("prompt:default:session:b")).toBe("draft b")
+    expect(browserDrafts.has("prompt:default:session:a")).toBe(false)
+    expect(browserDrafts.get("prompt:default:session:b")?.[0]?.selector).toBe("#other")
     expect(reviewDrafts.has("prompt:default:session:a")).toBe(false)
     expect(imageDrafts.has("prompt:default:session:a")).toBe(false)
   })

@@ -1,8 +1,9 @@
-import type { ReviewCommentEntry } from "../types/messages"
+import type { BrowserReference, ReviewCommentEntry } from "../types/messages"
 import type { ImageAttachment } from "../hooks/useImageAttachments"
 import { pendingDraftKey, sessionDraftKey } from "./prompt-drafts"
 
 export const drafts = new Map<string, string>()
+export const browserDrafts = new Map<string, BrowserReference[]>()
 export const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
 export const imageDrafts = new Map<string, ImageAttachment[]>()
 export const scrollDrafts = new Map<string, number>()
@@ -30,7 +31,7 @@ export function savePromptDraft(
 function remove(raw: string | undefined) {
   if (!raw) return
   const suffix = `:${raw}`
-  for (const map of [drafts, reviewDrafts, imageDrafts, scrollDrafts]) {
+  for (const map of [drafts, browserDrafts, reviewDrafts, imageDrafts, scrollDrafts]) {
     for (const key of map.keys()) {
       if (typeof key === "string" && key.endsWith(suffix)) map.delete(key)
     }

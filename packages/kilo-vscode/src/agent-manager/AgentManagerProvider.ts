@@ -2,8 +2,7 @@ import * as fs from "fs"
 import * as path from "path"
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
-import { getErrorMessage, sessionToWebview } from "../kilo-provider-utils"
-import { samePath } from "./project/paths"
+import { getErrorMessage } from "../kilo-provider-utils"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
 import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
@@ -80,6 +79,9 @@ import { ProjectScope } from "./project/scope"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
+import type { BrowserBroker } from "../services/browser-automation"
+import { createBrowserLifecycle } from "./browser-lifecycle"
+import { handleSessionLifecycle } from "./session-lifecycle"
 export class AgentManagerProvider implements Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
   private panel: PanelContext | undefined
@@ -121,6 +123,7 @@ export class AgentManagerProvider implements Disposable {
   readonly settings: ProjectWiring["settings"]
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
+  private readonly browserLifecycle: ReturnType<typeof createBrowserLifecycle>
   private visiblePresence = new AgentManagerVisiblePresence(
     (ids) => this.connectionService.registerVisible("agent-manager", ids),
     () => this.panel?.visible ?? false,
@@ -130,7 +133,16 @@ export class AgentManagerProvider implements Disposable {
     private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
     binary: GitExecutable = () => Promise.resolve("git"),
+    browser?: BrowserBroker,
   ) {
+    this.browserLifecycle = createBrowserLifecycle({
+      browser,
+      host: this.host,
+      contexts: () => this.contexts,
+      post: (message) => this.postToWebview(message),
+      openPanel: () => this.openPanel(true),
+      log: (...args) => this.log(...args),
+    })
     this.outputChannel = host.createOutput("Kilo Agent Manager")
     this.terminalManager = new SessionTerminalManager(
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
@@ -196,6 +208,7 @@ export class AgentManagerProvider implements Disposable {
       push: () => this.pushProjects(),
       pushState: (ctx) => this.pushState(ctx),
       changed: () => this.onWorkspaceChanged(),
+      removed: (id) => this.browserLifecycle.closeProject(id),
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
     })
     this.registry = wiring.registry
@@ -306,38 +319,12 @@ export class AgentManagerProvider implements Disposable {
    * window, the CLI, the API) appear without waiting for a full re-list.
    */
   private onSessionLifecycle(event: unknown): void {
-    const ev = event as { type?: string; properties?: { info?: Session; sessionID?: string } }
-    if (ev.type === "session.error") {
-      if (ev.properties?.sessionID) this.busySessions.delete(ev.properties.sessionID)
-      return
-    }
-    if (ev.type === "session.deleted") {
-      const id = ev.properties?.sessionID
-      if (!id) return
-      this.busySessions.delete(id)
-      const ctx = this.contexts.byLiveSession(id)
-      if (!ctx) return
-      ctx.removeLiveSession(id)
-      this.postToWebview({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...ctx.sessions()] })
-      return
-    }
-    const info = ev.properties?.info
-    const dir = info?.directory
-    // Session events from sync or older backends can lack time/directory; a
-    // throw here would escape into the SSE dispatch loop and starve the other
-    // listeners (there is no per-listener error isolation).
-    if (!info?.time || !dir || (info.parentID !== undefined && info.parentID !== null)) return
-    const ctx = this.contexts.byDirectory(dir)
-    if (!ctx || ctx.lifecycle !== "ready") return
-    const state = ctx.peekState()
-    const managed = state?.getSession(info.id)
-    const worktreeId =
-      managed?.worktreeId ?? state?.getWorktrees().find((wt) => wt.path && samePath(wt.path, dir))?.id ?? null
-    ctx.upsertSession({ ...sessionToWebview(info), worktreeId })
-    // The next regular push re-lists from the backend to reconcile the
-    // optimistic entry (position, subtrees, deletions elsewhere).
-    ctx.invalidateSessions()
-    this.postToWebview({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...ctx.sessions()] })
+    handleSessionLifecycle(event, {
+      busy: this.busySessions,
+      contexts: this.contexts,
+      closeBrowser: (id) => this.browserLifecycle.close(id),
+      post: (message) => this.postToWebview(message),
+    })
   }
 
   private onSessionStatus(event: unknown): void {
@@ -410,6 +397,7 @@ export class AgentManagerProvider implements Disposable {
       panel.dispose()
     }
     this.panel = ctx
+    this.browserLifecycle.replay()
 
     this.statsPoller.setVisible(ctx.visible)
     this.projectPollers.setVisible(ctx.visible)
@@ -428,6 +416,7 @@ export class AgentManagerProvider implements Disposable {
     this.pushProjects()
     void this.sendRepoInfo()
     this.sendKeybindings()
+    void ctx.waitForReady().then(() => this.browserLifecycle.replay())
     this.prBridge.attachPanel(ctx)
     ctx.onDidDispose(() => {
       // Only clear if this is still the active panel — a newer panel may
@@ -506,8 +495,6 @@ export class AgentManagerProvider implements Disposable {
       .catch((err) => this.log("Failed to initialize expanded project:", err))
   }
 
-  // Message interceptor
-
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
     if (this.prBridge.handleMessage(msg)) return null
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
@@ -542,6 +529,7 @@ export class AgentManagerProvider implements Disposable {
     if (worktree !== undefined) return worktree
     const session = this.onSessionMessage(m, msg)
     if (session !== undefined) return session
+    if (this.browserLifecycle.handle(m)) return null
     const ui = this.onUiMessage(m, msg)
     if (ui !== undefined) return ui
     const state = this.onStateMessage(m)
@@ -612,6 +600,7 @@ export class AgentManagerProvider implements Disposable {
     msg: Record<string, unknown>,
   ): Record<string, unknown> | null | undefined {
     if (m.type === "agentManager.openLocally") {
+      this.browserLifecycle.close(m.sessionId)
       this.panel?.sessions.clearSessionDirectory(m.sessionId)
       const state = this.getStateManager()
       if (state?.getSession(m.sessionId)) {
@@ -642,6 +631,7 @@ export class AgentManagerProvider implements Disposable {
           if (!state.getSession(m.sessionId)) state.addSession(m.sessionId, null)
           return
         }
+        this.browserLifecycle.close(m.sessionId)
         state.removeSession(m.sessionId)
       })
       return null
@@ -1423,6 +1413,7 @@ export class AgentManagerProvider implements Disposable {
       reviewMarkdownRender: getDiffMarkdownRender(),
       terminalDestination: this.destination.value(),
       terminalFont: readTerminalFont(),
+      browserAutomation: this.host.browserAutomation(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
       activeTarget: state.getActiveTarget(),
@@ -1454,11 +1445,10 @@ export class AgentManagerProvider implements Disposable {
       isGitRepo: false,
       runStatuses: [],
       runScriptConfigured: false,
+      browserAutomation: this.host.browserAutomation(),
     })
   }
 
-  // Manager accessors — repository-bound services are owned by the active ProjectContext (immutable per root).
-  /** Provider capabilities for the worktree lifecycle handlers (state stays in ProjectContext). */
   private get lifecycleHost(): LifecycleHost {
     return {
       createOnDisk: (opts) => this.createWorktreeOnDisk(opts),
@@ -1467,7 +1457,7 @@ export class AgentManagerProvider implements Disposable {
       notifyReady: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
       sessions: {
         register: (session) => this.panel?.sessions.registerSession(session),
-        clearDirectory: (sid) => this.panel?.sessions.clearSessionDirectory(sid),
+        clearDirectory: (sid) => (this.browserLifecycle?.close(sid), this.panel?.sessions.clearSessionDirectory(sid)),
         directories: () => this.panel?.sessions.getSessionDirectories(),
         abort: (ids) => this.panel?.sessions.abortSessions(ids) ?? Promise.resolve(),
         forget: (sid) => void this.panelSessions.delete(sid),
@@ -1612,6 +1602,7 @@ export class AgentManagerProvider implements Disposable {
   }
   private onWorkspaceChanged(): void {
     if (this.contexts.syncPinned()) {
+      void this.browserLifecycle.closeAll()
       this.activeSessionId = undefined
       this.stateReady = this.initializeState()
       void this.sendRepoInfo()
@@ -1868,9 +1859,18 @@ export class AgentManagerProvider implements Disposable {
     void this.shutdown()
   }
 
+  public refreshBrowserAutomation(): void {
+    if (!this.host.browserAutomation()) void this.browserLifecycle.closeAll()
+    if (!this.context) {
+      return this.pushEmptyState()
+    }
+    this.pushState()
+  }
+
   private async disposeAsync(): Promise<void> {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.contexts.dispose()
+    await this.browserLifecycle.dispose()
     this.unsubTool?.()
     this.unsubStatus?.()
     this.unsubSessions?.()

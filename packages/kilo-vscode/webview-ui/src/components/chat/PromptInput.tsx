@@ -56,7 +56,13 @@ import {
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
-import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
+import type {
+  BrowserReference,
+  ExtensionMessage,
+  ReviewCommentEntry,
+  SendMessageFailedMessage,
+  TextPart,
+} from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
@@ -67,6 +73,7 @@ import {
 } from "../../utils/prompt-drafts"
 import {
   beginPendingSend,
+  browserDrafts as references,
   clearPendingDraftDiscarded,
   clearSessionDraftDiscarded,
   drafts,
@@ -245,6 +252,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
+  const [browsers, setBrowsers] = createSignal<BrowserReference[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
@@ -369,6 +377,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const clearReviewComments = () => replaceReviewComments([])
 
+  const replace = (next: BrowserReference[]) => {
+    setBrowsers(next)
+    if (next.length === 0) {
+      references.delete(draftKey())
+      return
+    }
+    references.set(draftKey(), next)
+  }
+
+  const remove = (id: string) => replace(browsers().filter((item) => item.id !== id))
+  const clear = () => replace([])
+
   const removeReviewComment = (id: string) => {
     replaceReviewComments(reviewComments().filter((item) => item.id !== id))
   }
@@ -390,6 +410,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const scroll = scrollDrafts.get(key) ?? 0
       setText(draft)
       setReviewComments(pending)
+      setBrowsers(references.get(key) ?? [])
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
       preEnhanceText = null
@@ -533,7 +554,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const isDisabled = () => !server.isConnected()
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
-  const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const hasInput = () =>
+    text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0 || browsers().length > 0
   const canSend = () =>
     !isDisabled() &&
     !terminal.pending() &&
@@ -739,6 +761,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "appendChatBoxMessage") {
+      const reference = message.browser
+      if (reference && reference.sessionId === sid()) {
+        replace([...browsers().filter((item) => item.id !== reference.id), reference])
+        textareaRef?.focus()
+        return
+      }
       const current = text()
       const separator = current && !current.endsWith("\n") ? "\n\n" : ""
       const next = current + separator + message.text
@@ -753,7 +781,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "appendReviewComments") {
-      const empty = !text().trim() && reviewComments().length === 0 && imageAttach.images().length === 0
+      const empty =
+        !text().trim() && reviewComments().length === 0 && imageAttach.images().length === 0 && browsers().length === 0
       const merged = mergeReviewComments(reviewComments(), message.comments)
       replaceReviewComments(merged)
       if (message.autoSend && empty && !isDisabled() && !props.blocked?.()) {
@@ -1167,6 +1196,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       history.append(draft)
       setMemoryText(memory)
       clearReviewComments()
+      clear()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
@@ -1192,6 +1222,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (matched.enabled && !matched.enabled()) return
       setText("")
       clearReviewComments()
+      clear()
       imageAttach.clear()
       mention.closeMention()
       slash.close()
@@ -1207,7 +1238,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const imgs = imageAttach.images()
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
-    const message = draft && review ? `${review}\n\n${draft}` : draft || review
+    const browser = browsers()
+      .map((item) => item.content)
+      .join("\n\n")
+    const message = [review, browser, draft].filter(Boolean).join("\n\n")
     const data = review ? { version: 1 as const, comments: pending } : undefined
     if (
       (!message && imgs.length === 0) ||
@@ -1286,6 +1320,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     drafts.delete(key)
     reviewDrafts.delete(key)
+    references.delete(key)
     imageDrafts.delete(key)
     scrollDrafts.delete(key)
     history.append(draft)
@@ -1294,6 +1329,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     history.reset()
     setText("")
     clearReviewComments()
+    setBrowsers([])
     imageAttach.clear()
     mention.closeMention()
     slash.close()
@@ -1316,6 +1352,45 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           onRemove={removeReviewComment}
           onClear={clearReviewComments}
         />
+      </Show>
+      <Show when={browsers().length > 0}>
+        <div class="prompt-review-comments" data-component="browser-references">
+          <div class="prompt-review-comments-header">
+            <span class="prompt-review-comments-title">{language.t("agentManager.browser.title")}</span>
+            <Button variant="ghost" size="small" onClick={clear}>
+              {language.t("agentManager.review.clearAll")}
+            </Button>
+          </div>
+          <div class="prompt-review-list">
+            <For each={browsers()}>
+              {(item) => (
+                <div class="prompt-review-row">
+                  <div class="prompt-review-row-top">
+                    <span class="prompt-review-row-icon">
+                      <Icon name="globe" size="small" />
+                    </span>
+                    <div class="prompt-review-row-main">
+                      <span class="prompt-review-row-head">
+                        <span class="prompt-review-row-label">{item.selector}</span>
+                      </span>
+                      <Show when={item.text || item.url}>
+                        {(value) => <span class="prompt-review-row-preview">{value()}</span>}
+                      </Show>
+                    </div>
+                    <button
+                      type="button"
+                      class="prompt-review-row-remove"
+                      onClick={() => remove(item.id)}
+                      aria-label={language.t("common.delete")}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+            </For>
+          </div>
+        </div>
       </Show>
       <Show when={mention.showMention()}>
         <div class="file-mention-dropdown" ref={dropdownRef}>

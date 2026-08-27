@@ -635,6 +635,27 @@ describe("Optimistic parts preservation and smooth status contract", () => {
   })
 })
 
+describe("browser element reference contract", () => {
+  const source = readFile(PROMPT_FILE)
+
+  it("keeps selected browser elements as visible attachments instead of inserting them into the draft", () => {
+    expect(source).toContain('data-component="browser-references"')
+    expect(source).toMatch(/const reference = message\.browser[\s\S]*?textareaRef\?\.focus\(\)[\s\S]*?return/)
+  })
+
+  it("includes browser reference content only when the user sends the prompt", () => {
+    expect(source).toMatch(/const browser = browsers\(\)[\s\S]*?\.map\(\(item\) => item\.content\)/)
+    expect(source).toContain('const message = [review, browser, draft].filter(Boolean).join("\\n\\n")')
+    expect(source).toContain("references.delete(key)")
+  })
+
+  it("restores browser attachments for the correct session and allows attachment-only sends", () => {
+    expect(source).toContain("setBrowsers(references.get(key) ?? [])")
+    expect(source).toContain("reference.sessionId === sid()")
+    expect(source).toContain("browsers().length > 0")
+  })
+})
+
 describe("KiloConnectionService pruneSession contract", () => {
   const source = readFile(CONNECTION_SERVICE_FILE)
 

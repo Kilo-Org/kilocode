@@ -212,6 +212,7 @@ import { tracker } from "./telemetry"
 import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus, hasQuestionOption } from "./focus"
 import { usePendingCreate } from "./pending-create"
 import { defaultBase as projectDefaultBase } from "./project/default-base"
+import { BrowserPanel } from "./BrowserPanel"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
@@ -259,6 +260,9 @@ const AgentManagerContent: Component = () => {
   const [repoDetectedBranch, setRepoDetectedBranch] = createSignal<string | undefined>()
   const [projectList, setProjectList] = createSignal<AgentProjectSnapshot[]>([])
   const [multiProject, setMultiProject] = createSignal(false)
+  const [browserAutomation, setBrowserAutomation] = createSignal(
+    (globalThis as typeof globalThis & { KILO_BROWSER_AUTOMATION?: boolean }).KILO_BROWSER_AUTOMATION === true,
+  )
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
@@ -1105,9 +1109,15 @@ const AgentManagerContent: Component = () => {
     setPending: (value) => (pendingNewSection = value),
     rename: setRenamingSection,
     font: (font) => font && setTerminalFont(font),
+    browser: setBrowserAutomation,
+    current: session.currentSessionID,
+    closeBrowser: () => setSidePanel(null),
+    openBrowser: () => {
+      setHistory(false)
+      setReviewActive(false)
+      setSidePanel(SidePanel.Browser)
+    },
   })
-
-  /** Apply the active-transition effects of a state payload (data already landed in the store). */
   const applyActiveState = (state: AgentManagerStateMessage) => {
     const switched = applyProjectSwitch(state)
     if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
@@ -1475,11 +1485,10 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.focusContextRequested") focusCtl.report()
-
       if (msg.type === "agentManager.state" && msg.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
       if (msg.type === "agentManager.state") stateHandlers.state(msg)
+      stateHandlers.browser(msg)
 
-      // When a multi-version progress update arrives, mark newly created worktrees as loading
       if ((msg as { type: string }).type === "agentManager.multiVersionProgress") {
         const ev = msg as unknown as AgentManagerMultiVersionProgressMessage
         if (ev.status === "done") creation.abandon(ev.projectId)
@@ -1490,8 +1499,6 @@ const AgentManagerContent: Component = () => {
         }
       }
 
-      // When state updates arrive, mark new grouped worktrees as loading
-      // (they were just created and haven't received their prompt yet)
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
         if (ev.status === "ready" && ev.sessionId) {
@@ -2417,6 +2424,14 @@ const AgentManagerContent: Component = () => {
           diffOpen={diffOpen}
           reviewActive={reviewActive}
           onToggleDiff={toggleDiffPanel}
+          browserOpen={() => sidePanel() === SidePanel.Browser}
+          browserAutomation={browserAutomation}
+          onToggleBrowser={() => {
+            if (!browserAutomation()) return
+            setHistory(false)
+            setReviewActive(false)
+            setSidePanel((prev) => (prev === SidePanel.Browser ? null : SidePanel.Browser))
+          }}
           onToggleReview={metrics.click("fullscreen_review", "tab_toolbar", toggleReviewTab)}
           prStatus={() => activePR()?.pr}
           prOpen={prOpen}
@@ -2667,6 +2682,13 @@ const AgentManagerContent: Component = () => {
                         onClose={() => setSidePanel(null)}
                       />
                     </Show>
+                    <Show when={browserAutomation() && sidePanel() === SidePanel.Browser}>
+                      <BrowserPanel
+                        sessionId={session.currentSessionID}
+                        projectId={activeProjectId}
+                        onClose={() => setSidePanel(null)}
+                      />
+                    </Show>
                     <Show when={subagents.tabs().length > 0}>
                       <SubagentPanel
                         tabs={subagents.tabs}
@@ -2761,20 +2783,18 @@ const AgentManagerContent: Component = () => {
     </div>
   )
 }
-export const AgentManagerApp: Component = () => {
-  return (
-    <ProviderShell.Root>
-      <ProviderShell.Session>
-        <ProviderShell.Chat>
-          <WorktreeModeProvider>
-            <DiffStyleProvider>
-              <DataBridge>
-                <AgentManagerContent />
-              </DataBridge>
-            </DiffStyleProvider>
-          </WorktreeModeProvider>
-        </ProviderShell.Chat>
-      </ProviderShell.Session>
-    </ProviderShell.Root>
-  )
-}
+export const AgentManagerApp: Component = () => (
+  <ProviderShell.Root>
+    <ProviderShell.Session>
+      <ProviderShell.Chat>
+        <WorktreeModeProvider>
+          <DiffStyleProvider>
+            <DataBridge>
+              <AgentManagerContent />
+            </DataBridge>
+          </DiffStyleProvider>
+        </WorktreeModeProvider>
+      </ProviderShell.Chat>
+    </ProviderShell.Session>
+  </ProviderShell.Root>
+)

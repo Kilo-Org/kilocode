@@ -337,9 +337,19 @@ export interface SetChatBoxMessage {
   images?: RestoredImage[]
 }
 
+export interface BrowserReference {
+  id: string
+  sessionId: string
+  selector: string
+  text?: string
+  url?: string
+  content: string
+}
+
 export interface AppendChatBoxMessage {
   type: "appendChatBoxMessage"
   text: string
+  browser?: BrowserReference
 }
 
 export interface AppendReviewCommentsMessage {
@@ -838,6 +848,7 @@ export interface AgentManagerStateMessage {
   activeTarget?: AgentManagerSidebarTarget
   terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
+  browserAutomation?: boolean
 }
 
 // A registered Agent Manager project as shown in the sidebar
@@ -1408,10 +1419,56 @@ export interface AgentManagerFocusContextRequestedMessage {
   type: "agentManager.focusContextRequested"
 }
 
+export interface AgentManagerBrowserStateMessage {
+  type: "agentManager.browserState"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  navigation?: number
+  status: "starting" | "ready" | "loading" | "error" | "closed"
+  inspecting?: boolean
+  url?: string
+  title?: string
+  errors: number
+  logs?: string[]
+  error?: string
+  frameError?: string
+}
+
+export interface AgentManagerBrowserInspectionMessage {
+  type: "agentManager.browserInspection"
+  requestId: string
+  projectId?: string
+  sessionId: string
+  url?: string
+  title?: string
+  element?: {
+    tag: string
+    id?: string
+    classes?: string
+    text?: string
+    selector?: string
+    rect?: { x: number; y: number; width: number; height: number }
+  }
+  logs: string[]
+  hover?: boolean
+}
+
+export interface AgentManagerBrowserDevtoolsMessage {
+  type: "agentManager.browserDevtools"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  url: string
+}
+
 export type ExtensionMessage =
   | DocumentResultMessage
   | DocumentOpenMessage
   | AgentManagerFocusContextRequestedMessage
+  | AgentManagerBrowserStateMessage
+  | AgentManagerBrowserInspectionMessage
+  | AgentManagerBrowserDevtoolsMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage
