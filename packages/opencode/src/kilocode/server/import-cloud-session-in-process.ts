@@ -54,11 +54,14 @@ export namespace CloudSessionImportInProcess {
     return "UnknownError"
   }
 
-  export const importSession = Effect.fn("CloudSessionImportInProcess.importSession")(function* (sessionId: string) {
+  // Persist the imported session (events, messages, parts) and decode the
+  // diffs, but do NOT touch the workspace or session_diff storage keys. Those
+  // side effects are deferred to `finalizeSessionImport` so the clone path can
+  // run them only after a successful attach.
+  const importSessionCore = Effect.fn("CloudSessionImportInProcess.importSessionCore")(function* (sessionId: string) {
     const auth = yield* Auth.Service
     const events = yield* EventV2Bridge.Service
     const database = yield* Database.Service
-    const storage = yield* Storage.Service
     const workspaceID = yield* WorkspaceRef
 
     const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new Unauthorized()))
@@ -150,31 +153,56 @@ export namespace CloudSessionImportInProcess {
       }),
     )
 
-    if (diffs.length > 0) {
-      yield* Effect.try({
-        try: () => restoreSessionDiffs({ directory: Instance.directory, diffs }),
-        catch: (err) => {
-          log.error("cloud session import restore failed", { route: "cloud/session/import/restore", error: name(err) })
-        },
-      }).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
-      yield* Effect.all([
-        storage.write(baseKey(imported.id), diffs),
-        storage.write(["session_diff", imported.id], diffs),
-      ]).pipe(
-        Effect.catchCause((cause) => {
-          log.error("cloud session import diff failed", {
-            route: "cloud/session/import/diff",
-            error: name(Cause.squash(cause)),
-          })
-          return Effect.succeed(undefined)
-        }),
-      )
-    }
-
     // The canonical Session.Info contract is the mutable DeepMutable type, not
     // the readonly Schema.decodeUnknownSync output. Cast so the remote
     // create_session clone seam (Promise<Session.Info>) and the HTTP handler
     // both receive the same shape.
-    return imported as DeepMutable<typeof imported>
+    return { session: imported as DeepMutable<typeof imported>, diffs, directory: Instance.directory }
   })
+
+  // Workspace restore + session_diff storage writes, deferred to run after a
+  // successful attach. Uses `Effect.catch` (Fail-only) so defects and fiber
+  // interrupts propagate instead of being swallowed by `catchCause`.
+  export const finalizeSessionImport = Effect.fn("CloudSessionImportInProcess.finalizeSessionImport")(
+    function* (input: { sessionId: string; diffs: ReturnType<typeof extractSessionDiffs>; directory: string }) {
+      if (input.diffs.length > 0) {
+        yield* Effect.try({
+          try: () => restoreSessionDiffs({ directory: input.directory, diffs: input.diffs }),
+          catch: (err) => {
+            log.error("cloud session import restore failed", {
+              route: "cloud/session/import/restore",
+              error: name(err),
+            })
+            return err
+          },
+        }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+        const storage = yield* Storage.Service
+        yield* Effect.all([
+          storage.write(baseKey(input.sessionId), input.diffs),
+          storage.write(["session_diff", input.sessionId], input.diffs),
+        ]).pipe(
+          Effect.catch((err) => {
+            log.error("cloud session import diff failed", {
+              route: "cloud/session/import/diff",
+              error: name(err),
+            })
+            return Effect.succeed(undefined)
+          }),
+        )
+      }
+    },
+  )
+
+  export const importSession = Effect.fn("CloudSessionImportInProcess.importSession")(function* (sessionId: string) {
+    const { session, diffs, directory } = yield* importSessionCore(sessionId)
+    yield* finalizeSessionImport({ sessionId: session.id, diffs, directory })
+    return session
+  })
+
+  // Persist only: no workspace restore and no session_diff storage writes.
+  export const importSessionWithoutRestore = Effect.fn("CloudSessionImportInProcess.importSessionWithoutRestore")(
+    function* (sessionId: string) {
+      return yield* importSessionCore(sessionId)
+    },
+  )
 }

@@ -193,10 +193,12 @@ export namespace RemoteSender {
     cancelPrompt?: (sessionID: SessionID) => Promise<void>
     // kilocode_change - injectable cloud-session import seam for create_session
     // clone requests. Takes the cloud session id and returns the imported
-    // local Session.Info. Production wires this to the in-process import
-    // helper (dynamic import + AppRuntime.runPromise); a missing seam is a
-    // wiring bug, never a fallback to sessionCreate.
-    importFromCloud?: (cloneId: string) => Promise<Session.Info>
+    // local Session.Info plus a `finalize` closure that restores workspace
+    // files and writes session_diff storage keys; the caller must run
+    // `finalize` only after a successful attach. Production wires this to the
+    // in-process import helper (dynamic import + AppRuntime.runPromise); a
+    // missing seam is a wiring bug, never a fallback to sessionCreate.
+    importFromCloud?: (cloneId: string) => Promise<{ session: Session.Info; finalize: () => Promise<void> }>
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
@@ -887,20 +889,20 @@ export namespace RemoteSender {
               const outcome = await run({
                 directory: targetDirectory,
                 fn: async (): Promise<{ id: string } | { error: string }> => {
-                  let imported: Session.Info
+                  let imported: { session: Session.Info; finalize: () => Promise<void> }
                   try {
                     imported = await importFromCloud!(cloneId)
                   } catch (importError) {
                     return { error: importErrorText(importError) }
                   }
                   try {
-                    await attachSession(imported.id)
+                    await attachSession(imported.session.id)
                   } catch (attachError) {
                     // Roll back the imported root session so the DB does not
                     // keep an orphan the relay never learned about. Swallow
                     // the cleanup error; re-throw the original attach error.
                     try {
-                      await sessionRemove(imported.id)
+                      await sessionRemove(imported.session.id)
                     } catch (cleanupError) {
                       options.log.error("create session cleanup failed", {
                         id: msg.id,
@@ -909,7 +911,10 @@ export namespace RemoteSender {
                     }
                     throw attachError
                   }
-                  return { id: imported.id }
+                  // Restore workspace files and write storage keys only after
+                  // the attach succeeded. finalize never rejects.
+                  await imported.finalize()
+                  return { id: imported.session.id }
                 },
               })
               if ("error" in outcome) {

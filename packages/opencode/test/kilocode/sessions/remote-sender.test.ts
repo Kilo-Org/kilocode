@@ -3921,6 +3921,7 @@ describe("RemoteSender slash commands", () => {
     const importCalls: string[] = []
     const createCalls: unknown[] = []
     const attachCalls: SessionID[] = []
+    const order: string[] = []
     const importedId = SessionID.make("ses_imported")
     const sender = RemoteSender.create({
       conn,
@@ -3941,10 +3942,16 @@ describe("RemoteSender slash commands", () => {
       },
       attachSession: async (input) => {
         attachCalls.push(input)
+        order.push("attach")
       },
       importFromCloud: async (cloneId) => {
         importCalls.push(cloneId)
-        return { id: importedId, directory: "/workspace/project-a" } as any
+        return {
+          session: { id: importedId, directory: "/workspace/project-a" } as any,
+          finalize: async () => {
+            order.push("finalize")
+          },
+        }
       },
     })
 
@@ -3963,6 +3970,7 @@ describe("RemoteSender slash commands", () => {
     expect(importCalls).toEqual(["ses_cloud"])
     expect(createCalls).toHaveLength(0)
     expect(attachCalls).toEqual([importedId])
+    expect(order).toEqual(["attach", "finalize"])
     expect(sent).toEqual([{ type: "response", id: "req_clone", result: { protocolVersion: 1, sessionID: importedId } }])
   })
 
@@ -4066,6 +4074,7 @@ describe("RemoteSender slash commands", () => {
     const removeCalls: string[] = []
     const importedId = SessionID.make("ses_imported")
     const createCalls: unknown[] = []
+    const finalizeCalls: string[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",
@@ -4086,7 +4095,12 @@ describe("RemoteSender slash commands", () => {
       attachSession: async () => {
         throw new Error("attach failed")
       },
-      importFromCloud: async () => ({ id: importedId, directory: "/workspace/project-a" }) as any,
+      importFromCloud: async () => ({
+        session: { id: importedId, directory: "/workspace/project-a" } as any,
+        finalize: async () => {
+          finalizeCalls.push("finalize")
+        },
+      }),
     })
 
     const response = expectResponse(conn, sent, "req_clone_attach_fail")
@@ -4102,6 +4116,7 @@ describe("RemoteSender slash commands", () => {
 
     expect(createCalls).toHaveLength(0)
     expect(removeCalls).toEqual([importedId])
+    expect(finalizeCalls).toHaveLength(0)
     expect(sent).toEqual([{ type: "response", id: "req_clone_attach_fail", error: "failed to create session" }])
   })
 
@@ -4122,7 +4137,10 @@ describe("RemoteSender slash commands", () => {
         },
       },
       attachSession: async () => {},
-      importFromCloud: async () => ({ id: SessionID.make("ses_imported"), directory: "/tmp" }) as any,
+      importFromCloud: async () => ({
+        session: { id: SessionID.make("ses_imported"), directory: "/tmp" } as any,
+        finalize: async () => {},
+      }),
     })
     sender.handle({
       type: "command",
@@ -4243,8 +4261,9 @@ describe("RemoteSender slash commands", () => {
   test("system session.renamed clears adoption mark when setTitle fails", async () => {
     const { conn } = fakeConn()
     const sid = SessionID.make("ses_rename_fail")
-    const { clear, consumeRenameAdoption, markRenameAdopted } =
-      await import("../../../src/kilo-sessions/rename-adoptions")
+    const { clear, consumeRenameAdoption, markRenameAdopted } = await import(
+      "../../../src/kilo-sessions/rename-adoptions"
+    )
     clear(sid)
 
     let sawMarkInsideSetTitle = false

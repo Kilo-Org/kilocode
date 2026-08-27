@@ -837,7 +837,16 @@ export namespace KiloSessions {
             import("@/kilocode/server/import-cloud-session-in-process"),
             import("@/effect/app-runtime"),
           ])
-          return AppRuntime.runPromise(CloudSessionImportInProcess.importSession(cloneId))
+          const { session, diffs, directory } = await AppRuntime.runPromise(
+            CloudSessionImportInProcess.importSessionWithoutRestore(cloneId),
+          )
+          return {
+            session,
+            finalize: () =>
+              AppRuntime.runPromise(
+                CloudSessionImportInProcess.finalizeSessionImport({ sessionId: session.id, diffs, directory }),
+              ),
+          }
         },
       })
 
