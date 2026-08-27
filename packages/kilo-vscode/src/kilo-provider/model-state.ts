@@ -72,13 +72,6 @@ export async function handleMessage(
     await write(client, "model", model)
     return true
   }
-  if (type === "clearModelSelection") {
-    const data = await read(client)
-    const model = validateModelSelections(data.model)
-    delete model[message.agent as string]
-    await write(client, "model", model)
-    return true
-  }
   if (type === "requestModelSelections") {
     const data = await read(client)
     const selections = validateModelSelections(data.model)

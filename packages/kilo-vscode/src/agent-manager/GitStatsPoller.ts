@@ -201,7 +201,7 @@ export class GitStatsPoller {
     const worktrees = this.options.getWorktrees()
     if (worktrees.length === 0) return
 
-    const presence = await this.probeWorktreePresence(worktrees)
+    const presence = await this.probeWorktreePresence(worktrees, refs)
     if (generation !== this.generation) return
     this.options.onWorktreePresence?.(presence)
 
@@ -313,10 +313,16 @@ export class GitStatsPoller {
       .join("|")
   }
 
-  private async probeWorktreePresence(worktrees: Worktree[]): Promise<WorktreePresenceResult> {
+  private async probeWorktreePresence(worktrees: Worktree[], refs?: RefSnapshot): Promise<WorktreePresenceResult> {
     const root = this.options.getWorkspaceRoot()
     if (!root) {
       return { worktrees: [], degraded: true }
+    }
+
+    const paths = refs?.worktreePaths
+    if (paths) {
+      const items = await Promise.all(worktrees.map((wt) => this.presence(wt, root, paths)))
+      if (items.every((item) => !item.missing)) return { worktrees: items, degraded: false }
     }
 
     const tracked = await this.git.listWorktreePaths(root).catch((err) => {
@@ -341,6 +347,16 @@ export class GitStatsPoller {
     )
 
     return { worktrees: worktreeStatuses, degraded: false }
+  }
+
+  private async presence(wt: Worktree, root: string, paths: Map<string, string>): Promise<WorktreePresence> {
+    const abs = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
+    const exists = await fs.promises.access(abs).then(
+      () => true,
+      () => false,
+    )
+    const branch = exists ? findTrackedBranch(paths, abs) : undefined
+    return { worktreeId: wt.id, missing: !exists || branch === undefined, branch }
   }
 
   private async fetchLocalStats(generation = this.generation, refs?: RefSnapshot, refresh = false): Promise<void> {

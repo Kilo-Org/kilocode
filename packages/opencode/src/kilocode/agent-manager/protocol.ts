@@ -112,7 +112,21 @@ export const MoveRequest = Schema.Struct({
   sectionID: Schema.NullOr(ID),
 }).annotate({ identifier: "AgentManagerMoveRequest" })
 
-export const Request = Schema.Union([OverviewRequest, PromptRequest, StopRequest, MoveRequest]).annotate({
+const AnswerLabels = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200))
+const AnswerArray = Schema.Array(AnswerLabels).check(Schema.isMaxLength(20))
+export const Answers = Schema.Array(AnswerArray)
+  .check(Schema.isMinLength(1), Schema.isMaxLength(20))
+  .annotate({ identifier: "AgentManagerAnswers" })
+
+export const AnswerRequest = Schema.Struct({
+  ...Base,
+  operation: Schema.Literal("answer"),
+  targetSessionID: SessionID,
+  questionID: Schema.optional(ID),
+  answers: Answers,
+}).annotate({ identifier: "AgentManagerAnswerRequest" })
+
+export const Request = Schema.Union([OverviewRequest, PromptRequest, StopRequest, MoveRequest, AnswerRequest]).annotate({
   identifier: "AgentManagerRequest",
 })
 export type Request = Schema.Schema.Type<typeof Request>
@@ -141,7 +155,14 @@ export const MoveResult = Schema.Struct({
   moved: Schema.Literal(true),
 }).annotate({ identifier: "AgentManagerMoveResult" })
 
-export const Result = Schema.Union([OverviewResult, PromptResult, StopResult, MoveResult]).annotate({
+export const AnswerResult = Schema.Struct({
+  operation: Schema.Literal("answer"),
+  sessionID: SessionID,
+  questionID: ID,
+  resolved: Schema.Literal(true),
+}).annotate({ identifier: "AgentManagerAnswerResult" })
+
+export const Result = Schema.Union([OverviewResult, PromptResult, StopResult, MoveResult, AnswerResult]).annotate({
   identifier: "AgentManagerResult",
 })
 export type Result = Schema.Schema.Type<typeof Result>

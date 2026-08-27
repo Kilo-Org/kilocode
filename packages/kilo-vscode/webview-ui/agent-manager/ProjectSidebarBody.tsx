@@ -23,7 +23,6 @@ import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
-import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
 import { ProjectActions } from "./ProjectActions"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
@@ -55,9 +54,7 @@ interface Props {
   t: LanguageContextValue["t"]
   onSelectLocal: (projectId: string) => void
   onSelectWorktree: (projectId: string, worktreeId: string) => void
-  onSelectSession: (projectId: string, sessionId: string) => void
   onNewWorktree: (projectId: string) => void
-  onDefaultBranch: (projectId: string, selected?: string, detected?: string) => void
   shortcutMap?: () => Map<string, number>
 }
 
@@ -101,14 +98,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const sections = () => store.sections()
   const worktrees = () => store.worktrees()
   const order = () => store.worktreeOrder()
-  const localSessions = () => sessions(null)
   const sorted = createMemo(() => sortWorktrees(worktrees(), order()))
   const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId)
   const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId))
   const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
-  const sidebarOrder = createMemo(() =>
-    projectSidebarOrder(top(), sorted(), sections(), members, state()?.sessionsCollapsed ? [] : localSessions()),
-  )
+  const sidebarOrder = createMemo(() => projectSidebarOrder(top(), sorted(), sections(), members))
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
 
@@ -366,8 +360,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
               onCreate={() => post({ type: "agentManager.createWorktree" })}
               onNew={() => props.onNewWorktree(props.project.id)}
               onSection={() => createSection()}
-              onSetup={() => post({ type: "agentManager.configureSetupScript" })}
-              onBranch={() => props.onDefaultBranch(props.project.id, state()?.defaultBaseBranch, props.local?.branch)}
+              onSettings={() =>
+                vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId: props.project.id })
+              }
             />
           }
         />
@@ -438,23 +433,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           </Show>
         </div>
       </div>
-
-      <UnassignedSessionsSection
-        sessions={localSessions}
-        loaded={() => props.sessions !== undefined && state() !== undefined}
-        collapsed={() => state()?.sessionsCollapsed === true}
-        disabled={state() === undefined}
-        active={() => undefined}
-        onToggle={() => {
-          const current = state()
-          if (!current) return
-          post({ type: "agentManager.setSessionsCollapsed", collapsed: !current.sessionsCollapsed })
-        }}
-        onSelect={(sessionId) => props.onSelectSession(props.project.id, sessionId)}
-        onPromote={(sessionId) => post({ type: "agentManager.promoteSession", sessionId })}
-        onOpen={(sessionId) => post({ type: "agentManager.openLocally", sessionId })}
-        sidebarId={(sessionId) => `${props.project.id}:sess:${sessionId}`}
-      />
     </div>
   )
 }

@@ -1,11 +1,12 @@
 import * as InstanceState from "@/effect/instance-state"
+import { WorkspaceRef } from "@/effect/instance-ref" // kilocode_change - preserve the shared location key shape
 import { FileSystem } from "@opencode-ai/core/filesystem"
-import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
+import { LocationServiceMap } from "@opencode-ai/core/location-services" // kilocode_change - reuse the server location map
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Location } from "@opencode-ai/core/location"
 import { AbsolutePath, RelativePath } from "@opencode-ai/core/schema"
-import { Effect, Layer, Option } from "effect"
+import { Effect, Option } from "effect" // kilocode_change - location map is provided by the server
 import ignore from "ignore"
 import path from "path"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
@@ -17,11 +18,19 @@ export const fileHandlers = HttpApiBuilder.group(InstanceHttpApi, "file", (handl
     const locations = yield* LocationServiceMap.Service
 
     const filesystem = Effect.fnUntraced(function* <A, E, R>(effect: Effect.Effect<A, E, R>) {
+      // kilocode_change start - preserve the shared location key shape
+      const workspaceID = yield* WorkspaceRef
       return yield* effect.pipe(
         Effect.provide(
-          locations.get(Location.Ref.make({ directory: AbsolutePath.make((yield* InstanceState.context).directory) })),
+          locations.get(
+            Location.Ref.make({
+              directory: AbsolutePath.make((yield* InstanceState.context).directory),
+              workspaceID,
+            }),
+          ),
         ),
       )
+      // kilocode_change end
     })
 
     const findText = Effect.fn("FileHttpApi.findText")(function* (ctx: { query: { pattern: string } }) {
@@ -138,4 +147,4 @@ export const fileHandlers = HttpApiBuilder.group(InstanceHttpApi, "file", (handl
       .handle("content", content)
       .handle("status", status)
   }),
-).pipe(Layer.provide(locationServiceMapLayer))
+) // kilocode_change - reuse the server location map

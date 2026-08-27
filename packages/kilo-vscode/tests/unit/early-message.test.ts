@@ -76,4 +76,16 @@ describe("routeEarlyMessage background jobs", () => {
     ).toBe(true)
     expect(calls).toEqual([["ses_child", "ses_parent", "request-2"]])
   })
+
+  it("forwards promotion for one child through its owning parent session", async () => {
+    const calls: unknown[] = []
+    const ctx = {
+      promoteBackgroundJob: async (jobID: string, sessionID: string) => calls.push([jobID, sessionID]),
+    } as Ctx
+
+    expect(
+      await routeEarlyMessage({ type: "promoteBackgroundJob", jobID: "ses_child_a", sessionID: "ses_parent" }, ctx),
+    ).toBe(true)
+    expect(calls).toEqual([["ses_child_a", "ses_parent"]])
+  })
 })

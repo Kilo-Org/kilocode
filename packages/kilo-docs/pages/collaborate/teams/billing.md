@@ -5,13 +5,15 @@ description: "Manage billing and subscriptions for your team"
 
 # Billing
 
-Kilo seats uses a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go Kilo credits with zero markup.
+Kilo seats use a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go Kilo credits. Model inference is charged at provider rates with no markup. A separate 5% payment-processing fee applies when you purchase credits.
 
 {% callout type="note" %}
 
 Kilo Code seats purchases of Teams or Enterprise are separate from Kilo credits.
 
 No Kilo credits are included with a Teams or Enterprise purchase.
+
+$1 of purchased credits funds $1 of usage. The 5% processing fee is charged separately and does not increase the organization's credit balance.
 
 {% /callout %}
 

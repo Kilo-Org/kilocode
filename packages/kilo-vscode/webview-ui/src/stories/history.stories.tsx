@@ -75,8 +75,6 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
     scopedQuestions: () => [] as any[],
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
-    hasModelOverride: () => false,
-    clearModelOverride: noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],

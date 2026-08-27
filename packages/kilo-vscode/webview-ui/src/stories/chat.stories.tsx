@@ -30,6 +30,7 @@ import type {
   Part,
   QuestionRequest,
   ReviewComment,
+  ReviewCommentEntry,
   SessionModelUsage,
   SuggestionRequest,
   TodoItem,
@@ -236,6 +237,29 @@ export const ChatViewSessionDockStability: Story = {
   },
 }
 
+/** Builds the user message a review-comment send produces: markdown prefix + review metadata. */
+function reviewMessage(comments: ReviewCommentEntry[]) {
+  const prefix = formatReviewCommentsMarkdown(comments)
+  const message: Message = {
+    id: "review-user-message",
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: "review-user-part",
+      sessionID: SESSION_ID,
+      messageID: message.id,
+      type: "text",
+      text: `${prefix}\n\nPlease address these review comments.`,
+      metadata: reviewMetadata({ version: 1, comments }),
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
 export const UserMessageReviewComments: Story = {
   name: "User message — interactive review comments",
   render: () => {
@@ -253,36 +277,38 @@ export const UserMessageReviewComments: Story = {
         file: "resources/messages/KiloBundle_bs.properties",
         side: "deletions",
         line: 235,
-        comment: "Translate the modified setting description.",
+        comment:
+          "Translate the modified setting description. The Bosnian bundle still ships the English sentence, so the settings panel shows mixed languages for anyone running a localized IDE.",
         selectedText: "settings.models.smallModel.description=The lightweight model used for quick tasks.",
-      },
-    ]
-    const prefix = formatReviewCommentsMarkdown(comments)
-    const text = `${prefix}\n\nPlease address these review comments.`
-    const review = { version: 1 as const, comments }
-    const message: Message = {
-      id: "review-user-message",
-      sessionID: SESSION_ID,
-      role: "user",
-      createdAt: new Date(0).toISOString(),
-      time: { created: 0 },
-    }
-    const parts: Part[] = [
-      {
-        id: "review-user-part",
-        sessionID: SESSION_ID,
-        messageID: message.id,
-        type: "text",
-        text,
-        metadata: reviewMetadata(review),
       },
     ]
 
     return (
       <StoryProviders sessionID={SESSION_ID} status="idle">
-        <div style={{ "max-height": "400px", padding: "12px" }}>
-          <VscodeUserMessage message={message} parts={parts} />
-        </div>
+        <div style={{ "max-height": "400px", padding: "12px" }}>{reviewMessage(comments)}</div>
+      </StoryProviders>
+    )
+  },
+}
+
+/**
+ * Many local review comments at once. Locks in the collapsed preview + "show
+ * more" behavior so a large paste cannot take over the transcript.
+ */
+export const UserMessageManyReviewComments: Story = {
+  name: "User message — many review comments",
+  render: () => {
+    const local: ReviewCommentEntry[] = Array.from({ length: 8 }, (_, index) => ({
+      id: `local-${index}`,
+      file: `src/agent-manager/handlers/worktree-${index}.ts`,
+      side: index % 2 === 0 ? "additions" : "deletions",
+      line: 40 + index * 17,
+      comment: `Guard the ${index % 2 === 0 ? "apply" : "discard"} path against a missing worktree before touching git.`,
+      selectedText: `const worktree = state.worktrees[${index}]`,
+    }))
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle">
+        <div style={{ "max-height": "620px", padding: "12px" }}>{reviewMessage(local)}</div>
       </StoryProviders>
     )
   },
