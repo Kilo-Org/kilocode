@@ -54,6 +54,7 @@ jobs:
         working-directory: packages/kilo-vscode
         run: bun run check-kilocode-change
 
+  # kilocode_change start
   configured-git:
     name: configured Git executable
     runs-on: blacksmith-4vcpu-windows-2025
@@ -81,3 +82,4 @@ jobs:
       - name: Run Windows project discovery regression
         working-directory: packages/kilo-vscode
         run: bun test tests/unit/agent-project-messages.test.ts --test-name-pattern "configured Git executable" --timeout 120000
+  # kilocode_change end
