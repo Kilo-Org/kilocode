@@ -8,6 +8,8 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders, defaultMockData, mockSessionValue, t } from "./StoryProviders"
 import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
+import { DiffPanelCache } from "../../agent-manager/DiffPanelCache"
+import { createReviewComposers } from "../../agent-manager/review-composers"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
 import { ChatView } from "../components/chat/ChatView"
@@ -305,6 +307,37 @@ export const FileTreeEmpty: Story = {
   ),
 }
 
+export const FileTreeVirtualizedLarge: Story = {
+  name: "FileTree - virtualized large review",
+  render: () => {
+    const diffs = Array.from({ length: 600 }, (_, index): WorktreeFileDiff => {
+      const group = String(Math.floor(index / 30)).padStart(2, "0")
+      const file = String(index).padStart(4, "0")
+      return {
+        file: `src/group-${group}/file-${file}.ts`,
+        before: "",
+        after: "",
+        patch: "",
+        additions: 1,
+        deletions: 0,
+        status: "modified",
+        tracked: true,
+        generatedLike: false,
+        summarized: true,
+      }
+    })
+    const [selected, setSelected] = createSignal(diffs[0]!.file)
+
+    return (
+      <StoryProviders>
+        <div data-testid="large-file-tree" data-selected={selected()} style={{ width: "420px", height: "520px" }}>
+          <FileTree diffs={diffs} activeFile={selected()} onFileSelect={setSelected} />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
 // ---------------------------------------------------------------------------
 // DiffPanel
 // ---------------------------------------------------------------------------
@@ -346,6 +379,197 @@ export const DiffPanelScrollUp: Story = {
             onCommentsChange={() => {}}
             onClose={() => {}}
           />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+export const DiffPanelCachedWorktreeSwitch: Story = {
+  name: "DiffPanel - switch cached worktrees without blank frames",
+  render: () => {
+    const ids = Array.from({ length: 12 }, (_, index) => `worktree-${index + 1}`)
+    const [current, setCurrent] = createSignal(ids[0]!)
+    const values = Object.fromEntries(ids.map((id) => [`single\0${id}#branch`, [edited(id, `src/${id}.ts`)]]))
+    const composers = createReviewComposers(() => undefined)
+
+    return (
+      <StoryProviders noPadding>
+        <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+          <div data-testid="cached-worktree-tabs">
+            {ids.map((id) => (
+              <button type="button" data-testid={`select-${id}`} onClick={() => setCurrent(id)}>
+                {id}
+              </button>
+            ))}
+          </div>
+          <div class="am-diff-panel-wrapper" style={{ flex: 1 }}>
+            <DiffPanelCache
+              current={() => `${current()}#branch`}
+              context={current}
+              project={() => undefined}
+              active={() => true}
+              contexts={() => new Set(ids)}
+              data={() => values}
+              loading={() => false}
+              loadingFiles={() => new Set()}
+              notice={() => undefined}
+              comments={() => []}
+              setComments={() => {}}
+              composer={composers.get}
+              lead={() => <span>Branch</span>}
+              canRevert={false}
+              diffStyle="unified"
+              onDiffStyleChange={() => {}}
+              markdownRender={false}
+              onMarkdownRenderChange={() => {}}
+              onSendClick={() => {}}
+              onClose={() => {}}
+              onRequestDiff={() => {}}
+              onOpenFile={() => {}}
+              onOpenDocument={() => {}}
+              onRevertFile={() => {}}
+              revertingFiles={() => new Set()}
+            />
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+export const DiffPanelViewportLoading: Story = {
+  name: "DiffPanel - load only visible file details",
+  render: () => {
+    const [entries, setEntries] = createSignal<WorktreeFileDiff[]>(
+      Array.from({ length: 120 }, (_, index) => ({
+        file: `src/file-${String(index).padStart(3, "0")}.ts`,
+        before: "",
+        after: "",
+        patch: "",
+        additions: 1,
+        deletions: 1,
+        status: "modified",
+        tracked: true,
+        generatedLike: false,
+        summarized: true,
+        stamp: "1:1",
+      })),
+    )
+    const [requested, setRequested] = createSignal<string[]>([])
+    const [offscreen, setOffscreen] = createSignal<string[]>([])
+    const load = (file: string) => {
+      const root = document.querySelector("[data-testid=viewport-diff-review] .am-diff-content")
+      const row = root?.querySelector(`[data-file-path="${CSS.escape(file)}"]`)
+      if (root && row) {
+        const box = root.getBoundingClientRect()
+        const rect = row.getBoundingClientRect()
+        if (rect.bottom < box.top - 201 || rect.top > box.bottom + 201) setOffscreen((prev) => [...prev, file])
+      }
+      setRequested((prev) => (prev.includes(file) ? prev : [...prev, file]))
+      queueMicrotask(() => {
+        setEntries((prev) =>
+          prev.map((item) =>
+            item.file === file
+              ? {
+                  ...item,
+                  before: "before\n",
+                  after: "after\n",
+                  patch: `--- a/${file}\n+++ b/${file}\n@@ -1 +1 @@\n-before\n+after\n`,
+                  summarized: false,
+                }
+              : item,
+          ),
+        )
+      })
+    }
+
+    return (
+      <StoryProviders noPadding>
+        <div
+          data-testid="viewport-diff-review"
+          data-request-count={requested().length}
+          data-requested={requested().join("|")}
+          data-offscreen={offscreen().join("|")}
+          style={{ height: "700px", display: "flex", "flex-direction": "column" }}
+        >
+          <DiffPanel
+            diffs={entries()}
+            loading={false}
+            sessionKey="viewport-diff-review"
+            diffStyle="unified"
+            onDiffStyleChange={() => {}}
+            comments={[]}
+            onCommentsChange={() => {}}
+            onClose={() => {}}
+            onRequestDiff={load}
+          />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+export const DiffPanelInterruptedLoading: Story = {
+  name: "DiffPanel - resume interrupted visible file",
+  render: () => {
+    const [active, setActive] = createSignal(true)
+    const [count, setCount] = createSignal(0)
+    const [loading, setLoading] = createSignal(new Set<string>())
+    const [entries, setEntries] = createSignal<WorktreeFileDiff[]>([
+      { file: "src/resume.ts", before: "", after: "", patch: "", additions: 1, deletions: 1, summarized: true },
+    ])
+    const request = (file: string) => {
+      setCount((value) => value + 1)
+      setLoading(new Set([file]))
+      if (count() === 1) return
+      queueMicrotask(() => {
+        setEntries([
+          {
+            ...entries()[0]!,
+            before: "before\n",
+            after: "after\n",
+            patch: "--- a/src/resume.ts\n+++ b/src/resume.ts\n@@ -1 +1 @@\n-before\n+after\n",
+            summarized: false,
+          },
+        ])
+        setLoading(new Set<string>())
+      })
+    }
+    return (
+      <StoryProviders noPadding>
+        <div
+          data-testid="interrupted-review"
+          data-requests={count()}
+          style={{ height: "700px", display: "flex", "flex-direction": "column" }}
+        >
+          <button
+            data-testid="interrupt-review"
+            onClick={() => {
+              setActive(false)
+              setLoading(new Set<string>())
+            }}
+          >
+            Interrupt
+          </button>
+          <button data-testid="resume-review" onClick={() => setActive(true)}>
+            Resume
+          </button>
+          <div style={{ flex: 1, "min-height": 0, display: "flex", "flex-direction": "column" }}>
+            <DiffPanel
+              diffs={entries()}
+              loading={false}
+              active={active()}
+              loadingFiles={loading()}
+              sessionKey="interrupted-review"
+              diffStyle="unified"
+              onDiffStyleChange={() => {}}
+              comments={[]}
+              onCommentsChange={() => {}}
+              onClose={() => {}}
+              onRequestDiff={request}
+            />
+          </div>
         </div>
       </StoryProviders>
     )

@@ -63,7 +63,7 @@ import { VirtualDiffList } from "./VirtualDiffList"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
 import { ImageDiffView } from "./ImageDiffView"
 import { createDiffRows, diffSizeKey } from "./diff-state"
-import { createDiffRequests } from "./diff-requests"
+import { createDiffRequests, createDiffViewport } from "./diff-requests"
 
 type DiffStyle = "unified" | "split"
 
@@ -289,6 +289,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     open,
     loading: () => props.loadingFiles,
     send: () => props.onRequestDiff,
+    eager: false,
   })
 
   // --- CRUD ---
@@ -489,8 +490,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }
 
   const handleFileSelect = (path: string) => {
-    setActiveFile(path)
     const diff = props.diffs.find((item) => item.file === path)
+    if (diff) request(diff)
+    setActiveFile(path)
     if (diff && isDiffExpandable(diff) && !open().includes(path)) setOpen((prev) => [...prev, path])
     requestAnimationFrame(() => {
       const index = rows().findIndex((diff) => diff.file === path)
@@ -677,13 +679,15 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                     const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                     const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                     const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
+                    const viewport = createDiffViewport(scroller)
 
                     createEffect(() => {
-                      if (diff.kind === "image" && open().includes(diff.file)) request(diff)
+                      if (!viewport.visible() || !open().includes(diff.file)) return
+                      request(diff)
                     })
 
                     return (
-                      <Accordion.Item value={diff.file} data-file-path={diff.file}>
+                      <Accordion.Item ref={viewport.ref} value={diff.file} data-file-path={diff.file}>
                         <StickyAccordionHeader>
                           <Accordion.Trigger>
                             <div data-slot="session-review-trigger-content">
@@ -815,6 +819,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                         diffStyle={props.diffStyle}
                                         sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle)}
                                         virtualized={shouldVirtualizeDiff(diff)}
+                                        visible={viewport.visible()}
                                         annotations={annotationsForFile(diff.file)}
                                         renderAnnotation={buildAnnotation}
                                         enableGutterUtility={props.canComment !== false}

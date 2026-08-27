@@ -38,6 +38,68 @@ describe("createWorktreeDiffs", () => {
     })
   })
 
+  it("retains completed details beyond the mounted review-panel limit", () => {
+    withDiffs((diffs) => {
+      const entry = { ...diff("a.ts"), before: "before", after: "after", patch: "+after", summarized: false }
+      diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s1", diffs: [diff("a.ts")] })
+      diffs.onWorktreeDiffFile({
+        type: "agentManager.worktreeDiffFile",
+        sessionId: "s1",
+        file: "a.ts",
+        diff: entry,
+      })
+      for (let index = 2; index <= 5; index++) {
+        diffs.onWorktreeDiff({
+          type: "agentManager.worktreeDiff",
+          sessionId: `s${index}`,
+          diffs: [diff(`${index}.ts`)],
+        })
+      }
+
+      diffs.retain("s1")
+      expect(diffs.diffDatas()["single\0s1"]?.[0]).toBe(entry)
+      expect(Object.keys(diffs.diffDatas())).toHaveLength(5)
+    })
+  })
+
+  it("evicts the least recently used retained worktree data", () => {
+    withDiffs((diffs) => {
+      for (let index = 1; index <= 16; index++) {
+        diffs.onWorktreeDiff({
+          type: "agentManager.worktreeDiff",
+          sessionId: `s${index}`,
+          diffs: [diff(`${index}.ts`)],
+        })
+      }
+      diffs.retain("s1")
+      diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s17", diffs: [diff("17.ts")] })
+
+      expect(diffs.diffDatas()["single\0s1"]).toHaveLength(1)
+      expect(diffs.diffDatas()["single\0s2"]).toBeUndefined()
+      expect(diffs.diffDatas()["single\0s17"]).toHaveLength(1)
+      expect(Object.keys(diffs.diffDatas())).toHaveLength(16)
+    })
+  })
+
+  it("bounds retained worktree content without evicting the active context", () => {
+    withDiffs((diffs) => {
+      const content = "x".repeat(17 * 1024 * 1024)
+      diffs.onWorktreeDiff({
+        type: "agentManager.worktreeDiff",
+        sessionId: "s1",
+        diffs: [{ ...diff("first.ts"), before: content }],
+      })
+      diffs.onWorktreeDiff({
+        type: "agentManager.worktreeDiff",
+        sessionId: "s2",
+        diffs: [{ ...diff("second.ts"), before: content }],
+      })
+
+      expect(diffs.diffDatas()["single\0s1"]).toBeUndefined()
+      expect(diffs.diffDatas()["single\0s2"]).toHaveLength(1)
+    })
+  })
+
   it("does not replace state when an update produces an identical diff list", () => {
     withDiffs((diffs) => {
       diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s1", diffs: [diff("a.ts")] })
