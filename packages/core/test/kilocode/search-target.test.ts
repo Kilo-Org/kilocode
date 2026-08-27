@@ -29,11 +29,11 @@ describe("search target confinement", () => {
         yield* Effect.promise(() => fs.mkdir(target))
         yield* Effect.promise(() => fs.writeFile(path.join(target, "secret.txt"), "secret"))
 
-        const result = yield* (yield* Ripgrep.Service)
-          .grep({ cwd: target, pattern: "secret", limit: 10, validate: SearchTarget.validate(fsys, approved) })
-          .pipe(Effect.exit)
-
-        expect(Exit.isFailure(result)).toBe(true)
+        const ripgrep = yield* Ripgrep.Service
+        const input = { cwd: target, pattern: "secret", limit: 10, validate: SearchTarget.validate(fsys, approved) }
+        expect(Exit.isFailure(yield* ripgrep.find(input).pipe(Effect.exit))).toBe(true)
+        expect(Exit.isFailure(yield* ripgrep.glob(input).pipe(Effect.exit))).toBe(true)
+        expect(Exit.isFailure(yield* ripgrep.grep(input).pipe(Effect.exit))).toBe(true)
       }),
     ),
   )

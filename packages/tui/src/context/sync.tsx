@@ -614,10 +614,15 @@ export const {
         }
 
         case "vcs.branch.updated": {
-          if (workspace === project.workspace.current()) {
-            vcsVersion += 1 // kilocode_change
+          // kilocode_change start
+          if (
+            workspace === project.workspace.current() &&
+            (workspace !== undefined || directory === project.instance.directory())
+          ) {
+            vcsVersion += 1
             setStore("vcs", { branch: event.properties.branch })
           }
+          // kilocode_change end
           break
         }
         // kilocode_change start

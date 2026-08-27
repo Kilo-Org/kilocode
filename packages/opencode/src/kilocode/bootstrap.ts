@@ -19,8 +19,11 @@ import { MemoryEvents } from "@/kilocode/memory/events"
 import { installMemoryRuntime } from "@/kilocode/memory/runtime"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { KilocodeWatcher } from "@/kilocode/watcher"
-import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
+import { Location } from "@opencode-ai/core/location"
+import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
+import { AbsolutePath } from "@opencode-ai/core/schema"
+import { registerDisposer } from "@/effect/instance-registry"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 
 const log = Log.create({ service: "kilocode-bootstrap" })
 
@@ -42,10 +45,21 @@ export namespace KilocodeBootstrap {
       const summary = yield* SessionSummary.Service
       const provider = yield* Provider.Service
       const memory = yield* MemoryService.Service
-      const watcher = yield* KilocodeWatcher.Service
+      const locations = yield* LocationServiceMap.Service
+      const off = registerDisposer((directory) =>
+        Effect.runPromise(
+          locations
+            .invalidate(Location.Ref.make({ directory: AbsolutePath.make(directory) }))
+            .pipe(
+              Effect.catchCause((cause) =>
+                Effect.sync(() => log.warn("location cleanup failed", { directory, err: Cause.squash(cause) })),
+              ),
+            ),
+        ),
+      )
+      yield* Effect.addFinalizer(() => Effect.sync(off))
 
       const init = Effect.fn("KilocodeBootstrap.init")(function* () {
-        yield* watcher.init()
         yield* kilo.init()
         yield* MemoryLifecycle.subscribe({ bus, sessions, summary, provider, memory })
         // Invalidate enabled cache on every memory state mutation (properties.directory holds the memory root).
@@ -80,16 +94,6 @@ export namespace KilocodeBootstrap {
             Effect.sync(() => log.warn("session export bootstrap failed", { err: Cause.squash(cause) })),
           ),
         )
-        if (process.env["KILO_PLATFORM"] !== "vscode") {
-          yield* EffectBridge.fromPromise(() =>
-            import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.init()),
-          ).pipe(
-            Effect.catchCause((cause) =>
-              Effect.sync(() => log.warn("indexing bootstrap failed", { err: Cause.squash(cause) })),
-            ),
-            Effect.forkDetach,
-          )
-        }
       })
 
       return Service.of({ init })
@@ -104,17 +108,17 @@ export namespace KilocodeBootstrap {
       AppNodeBuilder.build(Provider.node),
       MemoryService.layer,
       Bus.defaultLayer,
-      KilocodeWatcher.defaultLayer,
+      locationServiceMapLayer,
     ]),
   )
 
   const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
-  const watcher = LayerNode.make({ service: KilocodeWatcher.Service, layer: KilocodeWatcher.defaultLayer, deps: [] })
+  const locations = LayerNode.make({ service: LocationServiceMap.Service, layer: locationServiceMapLayer, deps: [] })
   export const node = LayerNode.suspend(() =>
     LayerNode.make({
       service: Service,
       layer,
-      deps: [KiloSessions.node, Session.node, SessionSummary.node, Provider.node, memory, Bus.node, watcher],
+      deps: [KiloSessions.node, Session.node, SessionSummary.node, Provider.node, memory, Bus.node, locations],
     }),
   )
 }

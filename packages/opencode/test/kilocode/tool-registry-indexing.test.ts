@@ -1,16 +1,18 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LocationServiceMap, type LocationServices } from "@opencode-ai/core/location-services"
+import type { Location } from "@opencode-ai/core/location"
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
-import { Effect, Layer, Schema, Stream } from "effect"
+import { Effect, Layer, LayerMap, Schema, Stream } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { KilocodeBootstrap } from "../../src/kilocode/bootstrap"
-import { KilocodeWatcher } from "../../src/kilocode/watcher"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { InstanceState } from "../../src/effect/instance-state"
+import { disposeInstance } from "../../src/effect/instance-registry"
 import { KiloToolRegistry } from "../../src/kilocode/tool/registry"
 import { Provider } from "../../src/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -19,7 +21,7 @@ import { Session } from "../../src/session/session"
 import { SessionSummary } from "../../src/session/summary"
 import { ToolRegistry } from "../../src/tool/registry"
 import type * as Tool from "../../src/tool/tool"
-import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
+import { disposeAllInstances, provideTmpdirInstance, tmpdir } from "../fixture/fixture"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
 
@@ -454,11 +456,10 @@ describe("kilocode tool registry indexing", () => {
     }
   })
 
-  test("logs indexing bootstrap failures without blocking session bootstrap", async () => {
+  test("bootstraps sessions without indexing and preserves location cleanup", async () => {
+    await using tmp = await tmpdir()
     const platform = process.env["KILO_PLATFORM"]
     process.env["KILO_PLATFORM"] = "cli"
-    const logger = Log.create({ service: "kilocode-bootstrap" })
-    const err = new Error("indexing init failed")
     const calls: string[] = []
     const sessions = Layer.succeed(
       KiloSessions.Service,
@@ -482,29 +483,42 @@ describe("kilocode tool registry indexing", () => {
     const session = Layer.succeed(Session.Service, {} as Session.Interface)
     const summary = Layer.succeed(SessionSummary.Service, {} as SessionSummary.Interface)
     const provider = Layer.succeed(Provider.Service, {} as Provider.Interface)
-    const watcher = Layer.succeed(KilocodeWatcher.Service, KilocodeWatcher.Service.of({ init: () => Effect.void }))
-    const indexing = spyOn(KiloIndexing, "init").mockRejectedValue(err)
-    const warn = spyOn(logger, "warn").mockImplementation(() => {})
+    const invalidated: string[] = []
+    const locations = Layer.effect(
+      LocationServiceMap.Service,
+      LayerMap.make(
+        (_: Location.Ref): Layer.Layer<LocationServices> =>
+          Layer.effectContext(Effect.die("Unexpected location warmup")),
+      ).pipe(
+        Effect.map((map) => ({
+          ...map,
+          invalidate: (ref: Location.Ref) => Effect.sync(() => void invalidated.push(String(ref.directory))),
+        })),
+      ),
+    )
+    const indexing = spyOn(KiloIndexing, "init").mockResolvedValue(undefined)
 
     try {
       await Effect.runPromise(
         KilocodeBootstrap.Service.use((svc) => svc.init()).pipe(
+          Effect.andThen(Effect.promise(() => disposeInstance(tmp.path))),
           Effect.provide(
-            KilocodeBootstrap.layer.pipe(Layer.provide([sessions, bus, memory, session, summary, provider, watcher])),
+            KilocodeBootstrap.layer.pipe(Layer.provide([sessions, bus, memory, session, summary, provider, locations])),
           ),
           Effect.scoped,
         ),
       )
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await new Promise<void>((resolve) => setImmediate(resolve))
 
       expect(calls).toEqual(["sessions"])
-      expect(indexing).toHaveBeenCalledTimes(1)
-      expect(warn).toHaveBeenCalledWith("indexing bootstrap failed", { err })
+      expect(indexing).not.toHaveBeenCalled()
+      expect(invalidated).toEqual([tmp.path])
+      await disposeInstance(tmp.path)
+      expect(invalidated).toEqual([tmp.path])
     } finally {
       if (platform === undefined) delete process.env["KILO_PLATFORM"]
       else process.env["KILO_PLATFORM"] = platform
       indexing.mockRestore()
-      warn.mockRestore()
     }
   })
 })

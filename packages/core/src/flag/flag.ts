@@ -74,7 +74,7 @@ export const Flag = {
   KILO_EXPERIMENTAL_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_FILEWATCHER").pipe(Config.withDefault(false)), // kilocode_change
 
   KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_DISABLE_FILEWATCHER").pipe(
-    Config.withDefault(false),
+    Config.withDefault(true), // kilocode_change
   ),
 
   KILO_EXPERIMENTAL_ICON_DISCOVERY: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_ICON_DISCOVERY"), // kilocode_change
@@ -126,7 +126,7 @@ export const Flag = {
 
   KILO_EXPERIMENTAL_SESSION_SWITCHER: enabledByExperimental("KILO_EXPERIMENTAL_SESSION_SWITCHER"), // kilocode_change
 
-  KILO_DISABLE_FFF: fff === undefined ? process.platform === "win32" : truthy("KILO_DISABLE_FFF"), // kilocode_change
+  KILO_DISABLE_FFF: fff === undefined ? true : truthy("KILO_DISABLE_FFF"), // kilocode_change
 
   get KILO_DISABLE_PROJECT_CONFIG() {
     return truthy("KILO_DISABLE_PROJECT_CONFIG")

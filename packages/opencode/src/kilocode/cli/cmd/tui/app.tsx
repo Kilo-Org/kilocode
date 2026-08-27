@@ -26,6 +26,9 @@ import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
 import { KiloTerminalTitle } from "./terminal-title"
 import type { KiloTitleIcon } from "./title-icon"
 import { Session as SessionApi } from "@/session/session"
+import { useProject } from "@tui/context/project"
+import * as Branch from "./branch-refresh"
+import * as Log from "@opencode-ai/core/util/log"
 
 // Re-export so upstream can render the route without importing directly
 export { KiloClawView } from "@/kilocode/claw/view"
@@ -80,14 +83,27 @@ export function useSessionEffects(deps: {
   const pty = process.env.KILO_PTY_ID
   const viewerId = crypto.randomUUID()
   const renderer = useRenderer()
+  const project = useProject()
   const session = createMemo(() => (deps.route.data.type === "session" ? deps.route.data.sessionID : undefined))
   let active = true
   const meta = { prev: "" }
+  const log = Log.create({ service: "tui-branch" })
+  const branch = Branch.create({
+    get: (input) => deps.sdk.client.vcs.get(input, { throwOnError: true }),
+    emit: deps.sdk.event.emit,
+    scope: () => ({
+      workspace: project.workspace.current(),
+      directory: project.instance.directory() || deps.sdk.directory,
+      project: project.project() ?? undefined,
+    }),
+    branch: () => deps.sync.data.vcs?.branch,
+  })
 
   function send() {
     const id = session()
     const ids = id ? [id] : []
     deps.sdk.client.session.viewed({ viewer: { id: viewerId, active }, attached: ids, visible: ids }).catch(() => {})
+    if (active) void branch.refresh().catch((err) => log.warn("branch refresh failed", { err }))
   }
 
   createEffect(() => send())
@@ -135,6 +151,7 @@ export function useSessionEffects(deps: {
   )
 
   onCleanup(() => {
+    branch.dispose()
     renderer.off("focus", onFocus)
     renderer.off("blur", onBlur)
     offConnected()

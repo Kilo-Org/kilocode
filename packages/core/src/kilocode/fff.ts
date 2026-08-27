@@ -1,4 +1,3 @@
-import os from "os"
 import path from "path"
 
 function root(directory: string, api: typeof path.posix) {
@@ -11,8 +10,4 @@ export function allowed(directory: string) {
   const prefix = "\\\\?\\UNC\\"
   const windows = value.toUpperCase().startsWith(prefix.toUpperCase()) ? `\\\\${value.slice(prefix.length)}` : value
   return !root(directory, path.posix) && !root(windows, path.win32)
-}
-
-export function scanning(directory: string) {
-  return { enableHomeDirScanning: directory === os.homedir() }
 }

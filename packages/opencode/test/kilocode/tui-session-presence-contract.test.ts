@@ -69,8 +69,23 @@ describe("TUI session presence contract", () => {
     expect(cleanup()).toContain("offConnected()")
   })
 
+  test("refreshes branch state from the existing session effect triggers", () => {
+    const body = flat(effects())
+    expect(body).toContain("const branch = Branch.create")
+    expect(body).toContain("if (active) void branch.refresh().catch")
+    expect(body).toContain("get: (input) => deps.sdk.client.vcs.get(input, { throwOnError: true })")
+  })
+
+  test("scopes branch events by directory when there is no workspace ID", () => {
+    const source = fs.readFileSync(path.resolve(import.meta.dir, "../../../tui/src/context/sync.tsx"), "utf8")
+    expect(flat(source)).toContain(
+      "workspace === project.workspace.current() && (workspace !== undefined || directory === project.instance.directory())",
+    )
+  })
+
   test("cleanup removes focus/blur listeners and sends a final inactive empty snapshot", () => {
     const tail = cleanup()
+    expect(tail).toContain("branch.dispose()")
     expect(tail).toContain('renderer.off("focus", onFocus)')
     expect(tail).toContain('renderer.off("blur", onBlur)')
     expect(flat(tail)).toContain(".viewed({ viewer: { id: viewerId, active: false }, attached: [], visible: [] })")
