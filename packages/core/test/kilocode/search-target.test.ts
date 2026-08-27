@@ -130,7 +130,9 @@ describe("search target confinement", () => {
         )
         const scope = yield* Scope.make()
         yield* Scope.provide(scope)(list(target))
-        const changed = yield* list({ ...target, ino: target.ino + 1 }).pipe(Effect.scoped, Effect.exit)
+        const replaced = { ...target, ino: target.ino === 0 ? 1 : 0 }
+        expect(replaced.ino).not.toBe(target.ino)
+        const changed = yield* list(replaced).pipe(Effect.scoped, Effect.exit)
         expect(Exit.isFailure(changed)).toBe(true)
         expect(calls).toBe(1)
         yield* Scope.close(scope, Exit.void)
