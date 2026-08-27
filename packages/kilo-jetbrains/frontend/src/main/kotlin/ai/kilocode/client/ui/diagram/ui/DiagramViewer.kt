@@ -11,7 +11,6 @@ import ai.kilocode.client.ui.toolbarButton
 import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBLayeredPane
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.util.IconUtil
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Color
@@ -43,7 +42,7 @@ internal class DiagramViewer(palette: Palette) : JBLayeredPane() {
     }
     private val copy = SessionCopyButton(
         tooltip = KiloBundle.message("diagram.copy"),
-        icon = big(AllIcons.Actions.Copy),
+        icon = AllIcons.Actions.Copy,
         image = { canvas.image() },
     ) { null }
     // Built by chaining rather than `apply`, so these lambdas cannot bind to Stack's own fit().
@@ -177,12 +176,8 @@ internal class DiagramViewer(palette: Palette) : JBLayeredPane() {
 
     private companion object {
         const val STEP = 1.25
-        const val SIZE = 2f
 
         fun control(icon: Icon, key: String, handler: () -> Unit) =
-            toolbarButton(ToolbarButtonAction(big(icon), KiloBundle.message(key), handler))
-
-        /** Overlay icons are drawn over the diagram, so they are sized up to stay readable. */
-        fun big(icon: Icon): Icon = IconUtil.scale(icon, null, SIZE)
+            toolbarButton(ToolbarButtonAction(icon, KiloBundle.message(key), handler))
     }
 }

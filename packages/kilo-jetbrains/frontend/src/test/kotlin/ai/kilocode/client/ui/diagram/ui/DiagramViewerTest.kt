@@ -177,14 +177,15 @@ class DiagramViewerTest : BasePlatformTestCase() {
         )
     }
 
-    fun `test overlay icons are twice the platform size and size their buttons`() = edtWait {
+    fun `test overlay icons keep the standard platform action size`() = edtWait {
         val viewer = viewer(400, 300)
 
         val zoom = buttons(viewer).first()
 
-        assertEquals(AllIcons.General.ZoomIn.iconWidth * 2, zoom.icon.iconWidth)
-        assertTrue("the hit target grows with the icon", zoom.preferredSize.width > zoom.icon.iconWidth)
+        assertEquals(AllIcons.General.ZoomIn.iconWidth, zoom.icon.iconWidth)
+        assertEquals(AllIcons.General.ZoomIn.iconHeight, zoom.icon.iconHeight)
         assertTrue("icon-only controls stay square", zoom.preferredSize.width == zoom.preferredSize.height)
+        assertTrue("the hit target is larger than the glyph", zoom.preferredSize.width > zoom.icon.iconWidth)
     }
 
     fun `test copy puts the whole diagram on the clipboard as a picture`() = edtWait {
