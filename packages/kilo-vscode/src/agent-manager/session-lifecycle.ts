@@ -6,6 +6,7 @@ import type { AgentManagerOutMessage } from "./types"
 
 type Deps = {
   busy: Set<string>
+  removed: Set<string>
   contexts: ProjectContexts
   closeBrowser: (sessionId: string) => void
   post: (message: AgentManagerOutMessage) => void
@@ -14,6 +15,7 @@ type Deps = {
 type Event = { type?: string; properties?: { info?: Session; sessionID?: string } }
 
 function remove(id: string, deps: Deps): void {
+  deps.removed.add(id)
   deps.busy.delete(id)
   deps.closeBrowser(id)
   const ctx = deps.contexts.byLiveSession(id)
@@ -23,6 +25,7 @@ function remove(id: string, deps: Deps): void {
 }
 
 function upsert(info: Session, deps: Deps): void {
+  if (deps.removed.has(info.id)) return
   const dir = info.directory
   if (!info.time || !dir || (info.parentID !== undefined && info.parentID !== null)) return
   const ctx = deps.contexts.byDirectory(dir)
@@ -43,9 +46,12 @@ export function handleSessionLifecycle(event: unknown, deps: Deps): void {
     return
   }
   if (ev.type === "session.deleted") {
-    const id = ev.properties?.sessionID
+    const id = ev.properties?.sessionID ?? ev.properties?.info?.id
     if (id) remove(id, deps)
     return
   }
-  if (ev.properties?.info) upsert(ev.properties.info, deps)
+  const info = ev.properties?.info
+  if (!info) return
+  if (ev.type === "session.created") deps.removed.delete(info.id)
+  upsert(info, deps)
 }

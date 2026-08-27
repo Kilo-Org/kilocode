@@ -329,6 +329,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
   const [submissionMap, setSubmissionMap] = createStore<Record<string, number>>({})
   const pendingSubmissions = new Map<string, string>()
+  const removedSessions = new Set<string>()
   const aborts = createAbortState()
 
   const idle: SessionStatusInfo = { type: "idle" }
@@ -1228,6 +1229,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Event handlers
   function handleSessionCreated(session: SessionInfo, draftID?: string) {
+    removedSessions.delete(session.id)
     freshSessions.add(session.id)
     if (draftID) aborts.move(draftID, session.id)
     batch(() => {
@@ -1656,6 +1658,7 @@ export const SessionProvider: ParentComponent = (props) => {
     message?: string,
     next?: number,
   ) {
+    if (removedSessions.has(sessionID)) return
     const shouldAbort = aborts.update(sessionID, newStatus)
     confirmSubmissions(sessionID)
     const prev = statusMap[sessionID] ?? { type: "idle" }
@@ -1688,6 +1691,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
+    if (removedSessions.has(permission.sessionID)) return
     setPermissions((prev) => upsertPermission(prev, permission))
   }
 
@@ -1719,6 +1723,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleQuestionRequest(question: QuestionRequest) {
+    if (removedSessions.has(question.sessionID)) return
     setQuestions((prev) => {
       const idx = prev.findIndex((q) => q.id === question.id)
       if (idx === -1) return [...prev, question]
@@ -1742,6 +1747,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSuggestionRequest(suggestion: SuggestionRequest) {
+    if (removedSessions.has(suggestion.sessionID)) return
     setSuggestions((prev) => {
       const idx = prev.findIndex((item) => item.id === suggestion.id)
       if (idx === -1) return [...prev, suggestion]
@@ -1960,6 +1966,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSessionDeleted(sessionID: string) {
+    removedSessions.add(sessionID)
     pendingOptimistic.delete(sessionID)
     freshSessions.delete(sessionID)
     aborts.clear(sessionID)

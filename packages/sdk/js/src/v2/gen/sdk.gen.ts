@@ -209,6 +209,8 @@ import type {
   KilocodeRemoveCommandResponses,
   KilocodeRemoveSkillErrors,
   KilocodeRemoveSkillResponses,
+  KilocodeRemoveSnapshotErrors,
+  KilocodeRemoveSnapshotResponses,
   KilocodeSessionImportMessageErrors,
   KilocodeSessionImportMessageResponses,
   KilocodeSessionImportPartErrors,
@@ -8471,6 +8473,47 @@ export class Kilocode extends HeyApiClient {
         },
       },
     )
+  }
+
+  /**
+   * Remove a snapshot repository
+   *
+   * Remove the snapshot repository for an already deleted Agent Manager worktree.
+   */
+  public removeSnapshot<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      worktree?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "worktree" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRemoveSnapshotResponses,
+      KilocodeRemoveSnapshotErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/snapshot/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
   }
 
   /**

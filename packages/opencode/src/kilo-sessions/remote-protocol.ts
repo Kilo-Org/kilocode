@@ -48,6 +48,11 @@ export namespace RemoteProtocol {
   export const Capabilities = z
     .object({
       attachments: z.boolean().optional(),
+      // kilocode_change - sessionClone: present only when the CLI accepts a
+      // cloud-session clone (create_session.cloneFromKiloSessionId). The old
+      // wire form omits sessionClone; remove the mobile fail-closed check
+      // when every shipped CLI advertises it.
+      sessionClone: z.boolean().optional(),
     })
     .optional()
   export const Heartbeat = z.object({

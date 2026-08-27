@@ -657,12 +657,26 @@ describe("Agent Manager Provider — onMessage routing", () => {
    * Regression: deletion must clean up both disk (manager) and state, then
    * push to webview. Missing any step leaves ghost worktrees or stale UI.
    */
-  it("onDeleteWorktree removes from disk, state, clears orphans, and pushes", () => {
+  it("does not restore running indicators after a session is deleted", () => {
+    const lifecycle = body("onSessionLifecycle")
+    const status = body("onSessionStatus")
+    const helper = fs.readFileSync(path.join(ROOT, "src/agent-manager/session-lifecycle.ts"), "utf-8")
+
+    expect(lifecycle).toContain("removed: this.removedSessions")
+    expect(lifecycle).toContain("busy: this.busySessions")
+    expect(helper).toContain("deps.removed.add(id)")
+    expect(helper).toContain("deps.busy.delete(id)")
+    expect(helper).toContain("if (deps.removed.has(info.id)) return")
+    expect(status).toContain("this.removedSessions.has(sid)")
+  })
+
+  it("limits snapshot cleanup to explicit worktree deletion without deleting sessions", () => {
     const text = body("onDeleteWorktree")
-    expect(text).toContain("worktreeManager().removeWorktree")
-    expect(text).toContain("state.removeWorktree")
-    expect(text).toContain("sessions.clearDirectory")
-    expect(text).toContain("host.push()")
+    expect(text).toContain(".kilocode.removeSnapshot")
+    expect(text).not.toContain("session.delete")
+    for (const name of ["onCreateWorktree", "onCreateMultiVersion", "onRemoveStaleWorktree"]) {
+      expect(body(name)).not.toContain("removeSnapshot")
+    }
   })
 
   // -- onCreateWorktree invariants -------------------------------------------

@@ -31,21 +31,19 @@ export function createBrowserPanel(
     review(false)
     panel(SidePanel.Browser)
   }
+  const toggle = () => {
+    if (!enabled()) return
+    if (visible()) return close()
+    open()
+  }
   return {
-    enabled,
-    visible,
-    close,
+    tabs: { browserOpen: visible, browserAutomation: enabled, onToggleBrowser: toggle },
     bind: (current: Accessor<string | undefined>) => ({
       browser: configure,
       current,
       closeBrowser: close,
       openBrowser: open,
     }),
-    toggle: () => {
-      if (!enabled()) return
-      if (visible()) return close()
-      open()
-    },
     render: (session: Accessor<string | undefined>, project: Accessor<string | undefined>) => (
       <Show when={enabled() && visible()}>
         <BrowserAdapter sessionId={session} projectId={project} onClose={close} />

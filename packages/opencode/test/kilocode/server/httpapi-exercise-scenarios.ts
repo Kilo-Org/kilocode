@@ -603,6 +603,24 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
+    .post("/kilocode/snapshot/remove", "kilocode.removeSnapshot")
+    .mutating()
+    .inProject({ git: true })
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const worktree = path.join(directory(ctx), ".kilo", "worktrees", "api-snapshot-remove")
+        yield* Effect.promise(() => mkdir(worktree, { recursive: true }))
+        yield* Effect.promise(() => rm(worktree, { recursive: true, force: true }))
+        return worktree
+      }),
+    )
+    .at((ctx) => ({
+      path: `/kilocode/snapshot/remove?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+      body: { worktree: ctx.state },
+    }))
+    .status(401),
+  http.protected
     .get("/kilocode/command/files", "kilocode.commandFiles")
     .inProject({ git: true, init: command })
     .json(200, (body, ctx) => {

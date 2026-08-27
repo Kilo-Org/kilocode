@@ -45,6 +45,7 @@ import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
+import { createWorktreeActivity } from "./worktree-activity"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
 import { WorktreeImporter } from "./worktree-importer"
 import {
@@ -108,8 +109,7 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
-  private unsubStatus: (() => void) | undefined
-  private unsubSessions: (() => void) | undefined
+  private activity: ReturnType<typeof createWorktreeActivity>
   private unsubFont: (() => void) | undefined
   private unsubProjects: (() => void) | undefined
   /** Scratch set returned when no active context exists; mutations are discarded. */
@@ -120,6 +120,7 @@ export class AgentManagerProvider implements Disposable {
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
+  private removedSessions = new Set<string>()
   readonly settings: ProjectWiring["settings"]
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
@@ -297,22 +298,15 @@ export class AgentManagerProvider implements Disposable {
       (event) => (event as { type?: string }).type === "kilocode.agent_manager.start",
       (event, directory) => this.onToolEvent(event, directory),
     )
-    this.unsubStatus = this.connectionService.onEventFiltered(
-      (event) => (event as { type?: string }).type === "session.status",
-      (event) => this.onSessionStatus(event),
-    )
-    this.unsubSessions = this.connectionService.onEventFiltered(
-      (event) => {
-        const type = (event as { type?: string }).type
-        return (
-          type === "session.created" ||
-          type === "session.updated" ||
-          type === "session.deleted" ||
-          type === "session.error"
-        )
-      },
-      (event) => this.onSessionLifecycle(event),
-    )
+    this.activity = createWorktreeActivity({
+      connection: this.connectionService,
+      paths: () =>
+        [...this.contexts.values()].flatMap((ctx) => ctx.peekState()?.getWorktrees() ?? []).map((wt) => wt.path),
+      post: (active) => this.postToWebview({ type: "agentManager.worktreeActivity", active }),
+      status: (event) => this.onSessionStatus(event),
+      lifecycle: (event) => this.onSessionLifecycle(event),
+      log: (err) => this.log("Failed to load worktree activity:", err),
+    })
   }
   /**
    * Keep each project's cached sidebar session list in sync with backend
@@ -322,6 +316,7 @@ export class AgentManagerProvider implements Disposable {
   private onSessionLifecycle(event: unknown): void {
     handleSessionLifecycle(event, {
       busy: this.busySessions,
+      removed: this.removedSessions,
       contexts: this.contexts,
       closeBrowser: (id) => this.browserLifecycle.close(id),
       post: (message) => this.postToWebview(message),
@@ -331,7 +326,7 @@ export class AgentManagerProvider implements Disposable {
     const props = (event as { properties?: { sessionID?: string; status?: { type?: string } } }).properties
     const sid = props?.sessionID
     const type = props?.status?.type
-    if (!sid || !type) return
+    if (!sid || !type || this.removedSessions.has(sid)) return
     if (type === "idle") {
       this.busySessions.delete(sid)
       this.naming.idle(sid)
@@ -340,12 +335,10 @@ export class AgentManagerProvider implements Disposable {
     this.busySessions.add(sid)
     this.naming.busy(sid)
   }
-
   private log(...args: unknown[]) {
     const msg = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ")
     this.outputChannel.appendLine(`${new Date().toISOString()} ${msg}`)
   }
-
   public openPanel(preserveFocus?: boolean): void {
     if (this.panel) {
       this.log("Panel already open, revealing")
@@ -896,6 +889,7 @@ export class AgentManagerProvider implements Disposable {
     // instance are reaped by the router's generation guard.
     void this.terminalRouter.dispose()
     this.scripts.manager.snapshot()
+    void this.activity.sync(true)
     this.log(
       `onRequestState: stateReady=${this.stateReady ? "pending" : "missing"}, state=${this.state ? "ok" : "missing"}`,
     )
@@ -1119,7 +1113,6 @@ export class AgentManagerProvider implements Disposable {
       req,
     )
   }
-
   // Worktree actions
 
   /** Create a new worktree with an auto-created first session. */
@@ -1419,6 +1412,7 @@ export class AgentManagerProvider implements Disposable {
       activeTarget: state.getActiveTarget(),
       ...(active ? this.runStateFor(target) : {}),
     })
+    void this.activity.sync()
     void pushProjectSessions(target, this.panel?.sessions, (message) => this.postToWebview(message))
     if (!active) return
 
@@ -1432,6 +1426,7 @@ export class AgentManagerProvider implements Disposable {
 
   /** Push empty state when the folder is not a git repo or has no folder open. */
   private pushEmptyState(): void {
+    void this.activity.sync()
     this.staleWorktreeIds.clear()
     this.postToWebview({
       type: "agentManager.state",
@@ -1448,7 +1443,6 @@ export class AgentManagerProvider implements Disposable {
       browserAutomation: this.host.browserAutomation(),
     })
   }
-
   private get lifecycleHost(): LifecycleHost {
     return {
       createOnDisk: (opts) => this.createWorktreeOnDisk(opts),
@@ -1458,6 +1452,11 @@ export class AgentManagerProvider implements Disposable {
       sessions: {
         register: (session) => this.panel?.sessions.registerSession(session),
         clearDirectory: (sid) => (this.browserLifecycle?.close(sid), this.panel?.sessions.clearSessionDirectory(sid)),
+        setSessionDirectory: (sid, dir) => (
+          this.browserLifecycle?.close(sid),
+          this.panel?.sessions.setSessionDirectory(sid, dir)
+        ),
+        registerSessionRoute: (ref, dir, gen) => this.panel?.sessions.registerSessionRoute?.(ref, dir, gen),
         directories: () => this.panel?.sessions.getSessionDirectories(),
         abort: (ids) => this.panel?.sessions.abortSessions(ids) ?? Promise.resolve(),
         forget: (sid) => void this.panelSessions.delete(sid),
@@ -1479,6 +1478,7 @@ export class AgentManagerProvider implements Disposable {
       acquirePtyCleanup: (directory) => this.acquirePtyCleanup(directory),
       metadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
       post: (msg) => this.postToWebview(msg),
+      notify: (message) => this.host.showError(message),
       log: (...args) => this.log(...args),
     }
   }
@@ -1612,6 +1612,7 @@ export class AgentManagerProvider implements Disposable {
 
   private pushProjects(): void {
     const projects = this.contexts.snapshots()
+    void this.activity.sync()
     this.postToWebview({
       type: "agentManager.projects",
       multiProject: this.host.multiProject(),
@@ -1872,8 +1873,7 @@ export class AgentManagerProvider implements Disposable {
     await this.contexts.dispose()
     await this.browserLifecycle.dispose()
     this.unsubTool?.()
-    this.unsubStatus?.()
-    this.unsubSessions?.()
+    this.activity.dispose()
     this.unsubFont?.()
     this.unsubProjects?.()
     this.unsubDestination?.()
