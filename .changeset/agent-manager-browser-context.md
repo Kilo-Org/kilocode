@@ -3,4 +3,4 @@
 "kilo-code": minor
 ---
 
-Open and interact with local applications in Agent Manager through a session-scoped browser.
+Inspect local applications in Agent Manager with embedded developer tools and review-style element feedback for precise frontend changes.

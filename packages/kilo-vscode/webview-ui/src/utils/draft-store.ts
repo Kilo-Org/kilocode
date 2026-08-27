@@ -17,6 +17,7 @@ export function savePromptDraft(
   comments: ReviewCommentEntry[],
   images: ImageAttachment[],
   scroll = 0,
+  browsers: BrowserReference[] = [],
 ) {
   if (text) drafts.set(key, text)
   else drafts.delete(key)
@@ -24,7 +25,9 @@ export function savePromptDraft(
   else reviewDrafts.delete(key)
   if (images.length > 0) imageDrafts.set(key, images)
   else imageDrafts.delete(key)
-  if (text || comments.length > 0 || images.length > 0) scrollDrafts.set(key, scroll)
+  if (browsers.length > 0) browserDrafts.set(key, browsers)
+  else browserDrafts.delete(key)
+  if (text || comments.length > 0 || images.length > 0 || browsers.length > 0) scrollDrafts.set(key, scroll)
   else scrollDrafts.delete(key)
 }
 

@@ -1,4 +1,5 @@
 import type { AgentManagerSendInitialMessage, SendMessageRequest } from "../src/types/messages"
+import { formatBrowserFeedback } from "../../src/shared/browser-feedback"
 
 interface VariantSession {
   getSessionAgent: (sessionID: string) => string
@@ -7,16 +8,18 @@ interface VariantSession {
 
 export function initialMessage(ev: AgentManagerSendInitialMessage): SendMessageRequest | undefined {
   if (!ev.text) return undefined
+  const text = ev.browserFeedback ? `${formatBrowserFeedback(ev.browserFeedback.references)}\n\n${ev.text}` : ev.text
   return {
     type: "sendMessage",
     ...(ev.projectId ? { projectId: ev.projectId } : {}),
-    text: ev.text,
+    text,
     sessionID: ev.sessionId,
     providerID: ev.providerID,
     modelID: ev.modelID,
     agent: ev.agent,
     variant: ev.variant,
     files: ev.files,
+    browserFeedback: ev.browserFeedback,
   }
 }
 

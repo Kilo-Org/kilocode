@@ -6,6 +6,7 @@ import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
+import type { BrowserFeedbackData } from "../../../../src/shared/browser-feedback"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
@@ -35,6 +36,7 @@ export interface SendMessageRequest {
   variant?: string
   files?: FileAttachment[]
   review?: ReviewMessageData
+  browserFeedback?: BrowserFeedbackData
   agentManagerContext?: string
   contextDirectory?: string
 }
@@ -144,6 +146,7 @@ export interface ImportAndSendMessage {
   variant?: string
   files?: FileAttachment[]
   review?: ReviewMessageData
+  browserFeedback?: BrowserFeedbackData
   command?: string
   commandArgs?: string
 }

@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { createServer, request } from "node:http"
+import { createServer, request, type IncomingMessage } from "node:http"
+import { connect } from "node:net"
+import { PassThrough } from "node:stream"
 import WebSocket, { WebSocketServer } from "ws"
 import { BrowserBroker, diagnostic } from "../../src/services/browser-automation/browser-broker"
+import { BrowserDevtools } from "../../src/services/browser-automation/browser-devtools"
 
 const brokers: BrowserBroker[] = []
 
@@ -146,6 +149,10 @@ describe("BrowserBroker", () => {
     })
     expect(result.status).toBe(401)
     expect(JSON.parse(result.body)).toEqual({ error: "Unauthorized" })
+    const malformed = await fetch(`${env.KILO_BROWSER_BROKER_URL}/browser/status`, {
+      headers: { authorization: `Bearer ${"é".repeat(64)}` },
+    })
+    expect(malformed.status).toBe(401)
   })
 
   test("reports experimental availability only to authenticated clients", async () => {
@@ -162,6 +169,33 @@ describe("BrowserBroker", () => {
     expect(await (await fetch(url, { headers })).json()).toEqual({ enabled: true })
     trusted = false
     expect(await (await fetch(url, { headers })).json()).toEqual({ enabled: false })
+  })
+
+  test("writes an explicit forbidden response before closing an untrusted upgrade", () => {
+    const server = createServer()
+    const tools = new BrowserDevtools(
+      server,
+      4567,
+      () => {},
+      () => {},
+    )
+    const url = new URL(tools.open("browser", "page", 1234, "dark"))
+    const endpoint = new URL(`ws://${url.searchParams.get("ws")}`)
+    const socket = new PassThrough()
+    const chunks: Buffer[] = []
+    socket.on("data", (chunk) => chunks.push(chunk))
+    server.emit(
+      "upgrade",
+      {
+        url: endpoint.pathname,
+        headers: { host: "127.0.0.1:4567", origin: "http://untrusted.invalid" },
+      } as IncomingMessage,
+      socket,
+      Buffer.alloc(0),
+    )
+    expect(Buffer.concat(chunks).toString()).toStartWith("HTTP/1.1 403 Forbidden\r\n")
+    expect(socket.destroyed).toBe(true)
+    tools.dispose()
   })
 
   test("proxies page-scoped developer tools and rejects invalid capabilities or origins", async () => {
@@ -270,11 +304,29 @@ describe("BrowserBroker", () => {
 
       const endpoint = `ws://${new URL(first.url).searchParams.get("ws")}`
       const forbidden = await new Promise<number>((resolve, reject) => {
-        const socket = new WebSocket(endpoint, { headers: { origin: "http://untrusted.invalid" } })
-        socket.once("unexpected-response", (_request, response) => resolve(response.statusCode ?? 0))
+        const url = new URL(endpoint)
+        const socket = connect({ host: url.hostname, port: Number(url.port) }, () => {
+          socket.write(
+            [
+              `GET ${url.pathname} HTTP/1.1`,
+              `Host: ${url.host}`,
+              "Connection: Upgrade",
+              "Upgrade: websocket",
+              "Sec-WebSocket-Version: 13",
+              `Sec-WebSocket-Key: ${Buffer.from("browser-test-key").toString("base64")}`,
+              "Origin: http://untrusted.invalid",
+              "\r\n",
+            ].join("\r\n"),
+          )
+        })
+        socket.once("data", (data) => {
+          resolve(Number(data.toString().match(/^HTTP\/1\.1 (\d+)/)?.[1] ?? 0))
+          socket.end()
+        })
+        socket.once("end", () => resolve(0))
         socket.once("error", reject)
       })
-      expect(forbidden).toBe(403)
+      expect([0, 403]).toContain(forbidden)
 
       const socket = new WebSocket(endpoint, { headers: { origin: new URL(first.url).origin } })
       await new Promise<void>((resolve, reject) => {

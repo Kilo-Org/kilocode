@@ -20,6 +20,7 @@ import type { ProjectSnapshot } from "./project/contexts"
 import type { SidebarTarget } from "./project/route"
 import type { TerminalDestination } from "./terminal-destination"
 import type { ScriptTerminalView } from "./ScriptTerminalManager"
+import type { BrowserFeedbackData } from "../shared/browser-feedback"
 
 export type { TerminalFont }
 export type { ProjectSnapshot }
@@ -314,6 +315,7 @@ interface SendInitialMessage {
   agent?: string
   variant?: string
   files?: Array<{ mime: string; url: string }>
+  browserFeedback?: BrowserFeedbackData
 }
 
 interface BranchesMessage {
@@ -469,7 +471,12 @@ interface BrowserInspectionMessage {
   sessionId: string
   url?: string
   title?: string
-  element?: BrowserElement
+  element?: BrowserElement & {
+    hierarchy?: string[]
+    html?: string
+    styles?: { color?: string; backgroundColor?: string }
+    source?: { file: string; line?: number; column?: number }
+  }
   logs: string[]
   hover?: boolean
 }
@@ -947,6 +954,7 @@ interface SendMessageIn {
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
   contextDirectory?: string
+  browserFeedback?: BrowserFeedbackData
 }
 
 interface SendCommandIn {

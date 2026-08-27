@@ -29,8 +29,20 @@ describe("Agent Manager diff toggle", () => {
     const source = fs.readFileSync(BROWSER_PANEL, "utf-8")
     expect(source).toContain("props.state?.navigation")
     expect(source).toContain("when={identity()}")
+    expect(source).toContain("frame?.contentWindow?.location.replace(props.url)")
     expect(source).toContain('type: "agentManager.browser.input"')
     expect(source).toContain("if (pointing()) input(value, false)")
+  })
+
+  it("keeps browser chrome compact with one close action and no duplicate footer", () => {
+    const source = fs.readFileSync(BROWSER_PANEL, "utf-8")
+    expect(source).toContain('class="am-browser-address"')
+    expect(source).toContain('icon="arrow-right"')
+    expect(source).toContain('icon="window-cursor"')
+    expect(source.match(/icon="close"/g)).toHaveLength(1)
+    expect(source).not.toContain("am-browser-footer")
+    expect(source).not.toContain("am-browser-selected")
+    expect(source).not.toContain("am-browser-devtools-toolbar")
   })
 
   it("renders live Git stats rather than pull-request stats", () => {

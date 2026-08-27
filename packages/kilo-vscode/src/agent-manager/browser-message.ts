@@ -114,7 +114,7 @@ function action(
       return true
     }
     void deps.browser
-      .inspect(m.sessionId, scope.project, point)
+      .inspect(m.sessionId, scope.project, point, m.hover !== true)
       .then((inspection) =>
         deps.post({
           type: "agentManager.browserInspection",

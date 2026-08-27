@@ -1,5 +1,5 @@
 import { randomBytes, timingSafeEqual } from "node:crypto"
-import type { IncomingMessage, Server, ServerResponse } from "node:http"
+import { request, type IncomingHttpHeaders, type IncomingMessage, type Server, type ServerResponse } from "node:http"
 import type { Duplex } from "node:stream"
 import { URL } from "node:url"
 import WebSocket, { WebSocketServer, type RawData } from "ws"
@@ -22,12 +22,38 @@ const LIFETIME = 15 * 60 * 1000
 const PAYLOAD = 16 * 1024 * 1024
 
 function equal(left: string, right: string): boolean {
-  return left.length === right.length && timingSafeEqual(Buffer.from(left), Buffer.from(right))
+  const actual = Buffer.from(left)
+  const expected = Buffer.from(right)
+  return actual.byteLength === expected.byteLength && timingSafeEqual(actual, expected)
 }
 
 function reject(socket: Duplex, status: number, reason: string): void {
   socket.write(`HTTP/1.1 ${status} ${reason}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`)
   socket.destroy()
+}
+
+function resource(port: number, path: string): Promise<{ status: number; headers: IncomingHttpHeaders; body: Buffer }> {
+  return new Promise((resolve, reject) => {
+    const req = request({ hostname: "127.0.0.1", port, path, method: "GET" }, (response) => {
+      const chunks: Buffer[] = []
+      let size = 0
+      response.on("data", (chunk: Buffer) => {
+        size += chunk.byteLength
+        if (size > PAYLOAD) {
+          response.destroy(new Error("Browser developer tools asset exceeds the size limit"))
+          return
+        }
+        chunks.push(chunk)
+      })
+      response.once("error", reject)
+      response.once("end", () =>
+        resolve({ status: response.statusCode ?? 502, headers: response.headers, body: Buffer.concat(chunks) }),
+      )
+    })
+    req.setTimeout(10_000, () => req.destroy(new Error("Browser developer tools asset request timed out")))
+    req.once("error", reject)
+    req.end()
+  })
 }
 
 function inspect(data: RawData): Message | undefined {
@@ -104,13 +130,11 @@ export class BrowserDevtools {
       res.end(script)
       return true
     }
-    const url = new URL(`/devtools/${scope.path}`, `http://127.0.0.1:${scope.target.port}`)
-    url.search = route.search
     try {
-      const response = await fetch(url, { redirect: "manual" })
-      const data = Buffer.from(await response.arrayBuffer())
+      const response = await resource(scope.target.port, `/devtools/${scope.path}${route.search}`)
+      const data = response.body
       const body =
-        scope.path === "inspector.html" && response.ok
+        scope.path === "inspector.html" && response.status === 200
           ? Buffer.from(
               data
                 .toString("utf8")
@@ -126,8 +150,8 @@ export class BrowserDevtools {
         "referrer-policy": "no-referrer",
       }
       for (const name of ["content-type", "content-security-policy"]) {
-        const value = response.headers.get(name)
-        if (value) headers[name] = value
+        const value = response.headers[name]
+        if (typeof value === "string") headers[name] = value
       }
       res.writeHead(response.status, headers)
       res.end(body)

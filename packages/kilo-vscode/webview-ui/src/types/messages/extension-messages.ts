@@ -17,6 +17,9 @@ import type {
 import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
+import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+
+export type { BrowserReference } from "../../../../src/shared/browser-feedback"
 
 export interface BackgroundJobsLoadedMessage {
   type: "backgroundJobsLoaded"
@@ -141,6 +144,7 @@ export interface SendMessageFailedMessage {
   messageID?: string
   files?: FileAttachment[]
   review?: import("../../../../src/shared/review-comments").ReviewMessageData
+  browserFeedback?: BrowserFeedbackData
 }
 
 export interface SessionCommandCompletedMessage {
@@ -335,15 +339,8 @@ export interface SetChatBoxMessage {
    * array clears them); absent leaves current attachments untouched.
    */
   images?: RestoredImage[]
-}
-
-export interface BrowserReference {
-  id: string
-  sessionId: string
-  selector: string
-  text?: string
-  url?: string
-  content: string
+  review?: import("../../../../src/shared/review-comments").ReviewCommentEntry[]
+  browser?: BrowserReference[]
 }
 
 export interface AppendChatBoxMessage {
@@ -1200,6 +1197,7 @@ export interface AgentManagerSendInitialMessage {
   agent?: string
   variant?: string
   files?: Array<{ mime: string; url: string }>
+  browserFeedback?: BrowserFeedbackData
 }
 
 // Enhance prompt result (extension → webview)
@@ -1450,6 +1448,10 @@ export interface AgentManagerBrowserInspectionMessage {
     text?: string
     selector?: string
     rect?: { x: number; y: number; width: number; height: number }
+    hierarchy?: string[]
+    html?: string
+    styles?: { color?: string; backgroundColor?: string }
+    source?: { file: string; line?: number; column?: number }
   }
   logs: string[]
   hover?: boolean

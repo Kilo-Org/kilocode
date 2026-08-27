@@ -1,11 +1,24 @@
-import { createEffect, createSignal, For, onCleanup, Show, type Accessor, type Component, type Setter } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
+import {
+  createEffect,
+  createSignal,
+  For,
+  on,
+  onCleanup,
+  Show,
+  type Accessor,
+  type Component,
+  type Setter,
+} from "solid-js"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
 import type { AgentManagerBrowserInspectionMessage, ExtensionMessage, WebviewMessage } from "../src/types/messages"
 import { SidePanel } from "./side-panel-layout"
+import { formatBrowserFeedback } from "../../src/shared/browser-feedback"
 
 export function createBrowserPanel(
   current: Accessor<SidePanel | null>,
@@ -52,30 +65,6 @@ type Inspection = AgentManagerBrowserInspectionMessage
 type Position = { x: number; y: number; width: number; height: number }
 type Pointer = MouseEvent & { currentTarget: HTMLButtonElement }
 
-function feedback(message: Inspection): string {
-  const element = message.element
-  const attrs = [
-    element?.id ? `id="${element.id}"` : undefined,
-    element?.classes ? `class="${element.classes}"` : undefined,
-  ]
-    .filter(Boolean)
-    .join(" ")
-  return [
-    "Browser feedback",
-    message.url ? `URL: ${message.url}` : undefined,
-    message.title ? `Page: ${message.title}` : undefined,
-    element ? `Selected element: <${element.tag}${attrs ? ` ${attrs}` : ""}>` : "Selected element: unavailable",
-    element?.selector ? `Selector: ${element.selector}` : undefined,
-    element?.rect
-      ? `Bounds: x=${element.rect.x.toFixed(3)}, y=${element.rect.y.toFixed(3)}, width=${element.rect.width.toFixed(3)}, height=${element.rect.height.toFixed(3)}`
-      : undefined,
-    element?.text ? `Visible text: ${element.text}` : undefined,
-    message.logs.length ? `Console diagnostics:\n${message.logs.map((line) => `- ${line}`).join("\n")}` : undefined,
-  ]
-    .filter(Boolean)
-    .join("\n")
-}
-
 function position(event: Pointer): Position {
   const bounds = event.currentTarget.getBoundingClientRect()
   return {
@@ -88,10 +77,13 @@ function position(event: Pointer): Position {
 
 const Toolbar: Component<{
   url: string
+  title?: string
   active: boolean
   selecting: boolean
   docked: boolean
   ready: boolean
+  loading: boolean
+  errors: number
   onUrl: (value: string) => void
   onOpen: () => void
   onSelect: () => void
@@ -100,55 +92,95 @@ const Toolbar: Component<{
   onClose: () => void
 }> = (props) => {
   const t = useLanguage().t
+  const diagnostics = () =>
+    props.errors
+      ? `${t("agentManager.browser.devtoolsTitle")}, ${t("agentManager.browser.errors", { count: props.errors })}`
+      : t("agentManager.browser.devtoolsTitle")
   return (
     <div class="am-browser-toolbar">
-      <TextField
-        class="am-browser-url"
-        value={props.url}
-        onChange={props.onUrl}
-        placeholder={t("agentManager.browser.urlPlaceholder")}
-        aria-label={t("agentManager.browser.url")}
-        onKeyDown={(event: KeyboardEvent) => {
-          if (event.key === "Enter") props.onOpen()
+      <Tooltip value={t("agentManager.browser.refresh")} placement="bottom">
+        <IconButton
+          icon="refresh"
+          size="small"
+          variant="ghost"
+          aria-label={t("agentManager.browser.refresh")}
+          onClick={props.onRefresh}
+          disabled={!props.ready || props.loading}
+        />
+      </Tooltip>
+      <form
+        class="am-browser-address"
+        title={props.title}
+        onSubmit={(event) => {
+          event.preventDefault()
+          if (props.active && props.url.trim() && !props.loading) props.onOpen()
         }}
-      />
-      <Button size="small" variant="primary" disabled={!props.url.trim() || !props.active} onClick={props.onOpen}>
-        {t("agentManager.browser.open")}
-      </Button>
-      <Button
-        size="small"
-        variant="secondary"
-        aria-pressed={props.selecting}
-        disabled={!props.ready}
-        onClick={props.onSelect}
       >
-        {t("agentManager.browser.inspect")}
-      </Button>
-      <IconButton
-        icon="console"
-        size="small"
-        variant="ghost"
-        aria-label={t("agentManager.browser.devtools")}
-        aria-pressed={props.docked}
-        onClick={props.onDevtools}
-        disabled={!props.ready}
-      />
-      <IconButton
-        icon="refresh"
-        size="small"
-        variant="ghost"
-        aria-label={t("agentManager.browser.refresh")}
-        onClick={props.onRefresh}
-        disabled={!props.ready}
-      />
-      <IconButton
-        icon="close"
-        size="small"
-        variant="ghost"
-        aria-label={t("agentManager.browser.close")}
-        onClick={props.onClose}
-        disabled={!props.ready}
-      />
+        <span class="am-browser-site" aria-hidden="true">
+          <Show when={props.loading} fallback={<Icon name="globe" size="small" />}>
+            <Spinner />
+          </Show>
+        </span>
+        <TextField
+          class="am-browser-url"
+          variant="ghost"
+          value={props.url}
+          onChange={props.onUrl}
+          placeholder={t("agentManager.browser.urlPlaceholder")}
+          aria-label={t("agentManager.browser.url")}
+          spellcheck={false}
+          autocomplete="off"
+          onFocus={(event: FocusEvent & { currentTarget: HTMLInputElement }) => event.currentTarget.select()}
+        />
+        <Tooltip value={t("agentManager.browser.open")} placement="bottom">
+          <IconButton
+            type="submit"
+            icon="arrow-right"
+            size="small"
+            variant="ghost"
+            aria-label={t("agentManager.browser.open")}
+            disabled={!props.url.trim() || !props.active || props.loading}
+          />
+        </Tooltip>
+      </form>
+      <Tooltip value={t("agentManager.browser.inspect")} placement="bottom">
+        <IconButton
+          icon="window-cursor"
+          size="small"
+          variant={props.selecting ? "secondary" : "ghost"}
+          aria-label={t("agentManager.browser.inspect")}
+          aria-pressed={props.selecting}
+          disabled={!props.ready || props.loading}
+          onClick={props.onSelect}
+        />
+      </Tooltip>
+      <div class="am-browser-tools-action">
+        <Tooltip value={diagnostics()} placement="bottom">
+          <IconButton
+            icon="console"
+            size="small"
+            variant={props.docked ? "secondary" : "ghost"}
+            aria-label={diagnostics()}
+            aria-pressed={props.docked}
+            onClick={props.onDevtools}
+            disabled={!props.ready || props.loading}
+          />
+        </Tooltip>
+        <Show when={props.errors > 0}>
+          <span class="am-browser-error-count" aria-hidden="true">
+            {props.errors > 99 ? "99+" : props.errors}
+          </span>
+        </Show>
+      </div>
+      <Tooltip value={t("agentManager.browser.close")} placement="bottom">
+        <IconButton
+          icon="close"
+          size="small"
+          variant="ghost"
+          aria-label={t("agentManager.browser.close")}
+          onClick={props.onClose}
+        />
+      </Tooltip>
     </div>
   )
 }
@@ -191,6 +223,30 @@ const Picker: Component<{
   )
 }
 
+const Preview: Component<{ url: string; navigation: number }> = (props) => {
+  const t = useLanguage().t
+  let frame: HTMLIFrameElement | undefined
+  createEffect(
+    on(
+      () => props.navigation,
+      (value, previous) => {
+        if (previous === undefined || value === previous) return
+        frame?.contentWindow?.location.replace(props.url)
+      },
+    ),
+  )
+  return (
+    <iframe
+      ref={frame}
+      class="am-browser-frame"
+      src={props.url}
+      title={t("agentManager.browser.screenshotAlt")}
+      sandbox="allow-scripts allow-forms allow-same-origin"
+      referrerpolicy="no-referrer"
+    />
+  )
+}
+
 const Viewport: Component<{
   state?: State
   session?: string
@@ -208,7 +264,7 @@ const Viewport: Component<{
     props.state.url
   const identity = () => {
     const url = page()
-    return url ? `${props.state?.browserId}:${props.state?.navigation ?? 0}:${url}` : undefined
+    return url ? `${props.state?.browserId}:${url}` : undefined
   }
   return (
     <div class="am-browser-viewport" aria-live="polite">
@@ -221,15 +277,7 @@ const Viewport: Component<{
           </div>
         }
       >
-        {(_key) => (
-          <iframe
-            class="am-browser-frame"
-            src={props.state?.url}
-            title={t("agentManager.browser.screenshotAlt")}
-            sandbox="allow-scripts allow-forms allow-same-origin"
-            referrerpolicy="no-referrer"
-          />
-        )}
+        {(_key) => <Preview url={props.state?.url ?? ""} navigation={props.state?.navigation ?? 0} />}
       </Show>
       <Picker
         active={props.selecting && !!props.state?.url}
@@ -248,14 +296,10 @@ const Viewport: Component<{
   )
 }
 
-const Tools: Component<{ url: string; onClose: () => void }> = (props) => {
+const Tools: Component<{ url: string }> = (props) => {
   const t = useLanguage().t
   return (
     <section class="am-browser-devtools" aria-label={t("agentManager.browser.devtoolsTitle")}>
-      <div class="am-browser-devtools-toolbar">
-        <span>{t("agentManager.browser.devtoolsTitle")}</span>
-        <IconButton icon="close" size="small" variant="ghost" aria-label={t("common.close")} onClick={props.onClose} />
-      </div>
       <iframe
         class="am-browser-devtools-frame"
         src={props.url}
@@ -281,24 +325,6 @@ const Diagnostics: Component<{ logs: string[] }> = (props) => (
   </Show>
 )
 
-const Footer: Component<{ state?: State; selected?: Inspection; onClose: () => void }> = (props) => {
-  const t = useLanguage().t
-  return (
-    <div class="am-browser-footer">
-      <span>{props.state?.url || t("agentManager.browser.localOnly")}</span>
-      <Show when={props.selected?.element?.selector}>
-        {(selector) => <span class="am-browser-selected">{selector()}</span>}
-      </Show>
-      <Show when={props.state?.errors}>
-        {(errors) => <span class="am-browser-errors">{t("agentManager.browser.errors", { count: errors() })}</span>}
-      </Show>
-      <Button size="small" variant="ghost" onClick={props.onClose}>
-        {t("agentManager.browser.hide")}
-      </Button>
-    </div>
-  )
-}
-
 interface Props {
   sessionId: Accessor<string | undefined>
   projectId: Accessor<string | undefined>
@@ -312,7 +338,6 @@ const BrowserPanel: Component<Props> = (props) => {
   const [selecting, setSelecting] = createSignal(false)
   const [pointing, setPointing] = createSignal(false)
   const [hovered, setHovered] = createSignal<Inspection>()
-  const [selected, setSelected] = createSignal<Inspection>()
   const [state, setState] = createSignal<State>()
   const [tools, setTools] = createSignal<Devtools>()
   let frame: number | undefined
@@ -343,7 +368,9 @@ const BrowserPanel: Component<Props> = (props) => {
       type,
       sessionId: session,
       projectId: props.projectId(),
-      ...(type.endsWith("open") ? { url: url().trim() } : {}),
+      ...(type.endsWith("open")
+        ? { url: /^https?:\/\//i.test(url().trim()) ? url().trim() : `http://${url().trim()}` }
+        : {}),
       ...(type.endsWith("devtools")
         ? {
             theme:
@@ -439,20 +466,22 @@ const BrowserPanel: Component<Props> = (props) => {
       schedule()
       return
     }
-    const content = feedback(message)
     const element = message.element
-    const browser = element?.selector
-      ? {
-          id: crypto.randomUUID(),
-          sessionId: session,
-          selector: element.selector,
-          text: element.text,
-          url: message.url,
-          content,
-        }
-      : undefined
+    if (!element?.selector) return
+    const browser = {
+      id: crypto.randomUUID(),
+      sessionId: session,
+      selector: element.selector,
+      text: element.text,
+      url: message.url,
+      title: message.title,
+      hierarchy: element.hierarchy,
+      html: element.html,
+      styles: element.styles,
+      source: element.source,
+    }
+    const content = formatBrowserFeedback([browser])
     window.postMessage({ type: "appendChatBoxMessage", text: content, browser }, "*")
-    setSelected(message)
     setSelecting(false)
     stop()
   }
@@ -463,7 +492,6 @@ const BrowserPanel: Component<Props> = (props) => {
     setUrl("")
     setSelecting(false)
     setPointing(false)
-    setSelected(undefined)
     setTools(undefined)
     stop()
     if (!session) return
@@ -493,27 +521,35 @@ const BrowserPanel: Component<Props> = (props) => {
     post({ type: "agentManager.browser.state", sessionId: session, projectId: props.projectId() })
   })
 
+  const loading = () => state()?.status === "loading" || state()?.status === "starting"
+  const close = () => {
+    request("agentManager.browser.close")
+    props.onClose()
+  }
+
   return (
-    <div class="am-browser-panel" aria-label={t("agentManager.browser.title")}>
+    <div
+      class="am-browser-panel"
+      aria-label={t("agentManager.browser.title")}
+      aria-busy={loading()}
+      data-status={state()?.status ?? "closed"}
+    >
       <Toolbar
         url={url()}
+        title={state()?.title}
         active={!!props.sessionId()}
         selecting={selecting()}
         docked={!!tools()}
         ready={!!state()?.url && state()?.status !== "closed"}
+        loading={loading()}
+        errors={state()?.errors ?? 0}
         onUrl={setUrl}
         onOpen={() => request("agentManager.browser.open")}
         onSelect={toggle}
         onDevtools={dock}
         onRefresh={() => request("agentManager.browser.refresh")}
-        onClose={() => request("agentManager.browser.close")}
+        onClose={close}
       />
-      <div class="am-browser-meta">
-        <span>{state()?.title || t("agentManager.browser.empty")}</span>
-        <span class="am-browser-status" role="status" aria-live="polite">
-          {state()?.status ?? t("agentManager.browser.notStarted")}
-        </span>
-      </div>
       <div class="am-browser-workspace" classList={{ "am-browser-workspace-docked": !!tools() }}>
         <Viewport
           state={state()}
@@ -524,13 +560,12 @@ const BrowserPanel: Component<Props> = (props) => {
           onSelect={choose}
         />
         <Show when={tools()} keyed>
-          {(entry) => <Tools url={entry.url} onClose={() => setTools(undefined)} />}
+          {(entry) => <Tools url={entry.url} />}
         </Show>
       </div>
       <Show when={!tools()}>
         <Diagnostics logs={state()?.logs ?? []} />
       </Show>
-      <Footer state={state()} selected={selected()} onClose={props.onClose} />
     </div>
   )
 }

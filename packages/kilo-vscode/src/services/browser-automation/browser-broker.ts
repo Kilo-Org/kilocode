@@ -1,9 +1,11 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto"
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
+import type { Socket } from "node:net"
 import { URL } from "node:url"
 import { stripVTControlCharacters } from "node:util"
 import { chromium, type BrowserContext, type Page } from "playwright-core"
 import { BrowserDevtools } from "./browser-devtools"
+import { capture as element, locate } from "./browser-element"
 
 export type BrowserStatus = "starting" | "ready" | "loading" | "error" | "closed"
 
@@ -37,6 +39,10 @@ export interface BrowserElement {
   text?: string
   selector?: string
   rect?: { x: number; y: number; width: number; height: number }
+  hierarchy?: string[]
+  html?: string
+  styles?: { color?: string; backgroundColor?: string }
+  source?: { file: string; line?: number; column?: number }
 }
 
 export interface BrowserInspection {
@@ -183,6 +189,7 @@ export class BrowserBroker {
   private readonly token = randomBytes(32).toString("hex")
   private owner: ((route: BrowserRoute) => BrowserRoute | undefined) | undefined
   private server: Server | undefined
+  private readonly sockets = new Set<Socket>()
   private port: number | undefined
   private debugging: number | undefined
   private tools: BrowserDevtools | undefined
@@ -200,6 +207,10 @@ export class BrowserBroker {
     this.starting = new Promise<void>((resolve, reject) => {
       this.server = createServer((req, res) => {
         void this.handle(req, res)
+      })
+      this.server.on("connection", (socket) => {
+        this.sockets.add(socket)
+        socket.once("close", () => this.sockets.delete(socket))
       })
       this.server.once("error", reject)
       this.server.listen(0, "127.0.0.1", () => {
@@ -359,47 +370,19 @@ export class BrowserBroker {
     sessionId: string,
     projectId: string | undefined,
     position: { x: number; y: number; width: number; height: number },
+    detail = true,
   ): Promise<BrowserInspection> {
     return this.serial(this.key(sessionId, projectId), async () => {
       this.available()
       const entry = this.require(sessionId, undefined, projectId)
       await this.point(entry, position)
-      const element = await entry.page.evaluate(({ x, y }) => {
-        const root = document.documentElement
-        if (root.scrollHeight > innerHeight && root.clientWidth === innerWidth) {
-          root.style.setProperty("scrollbar-gutter", "stable")
-        }
-        const node = document.elementFromPoint(x * innerWidth, y * innerHeight)
-        if (!(node instanceof Element)) return undefined
-        const tag = node.tagName.toLowerCase()
-        const id = node.id || undefined
-        const classes = node.getAttribute("class")?.trim().slice(0, 180) || undefined
-        const text = (node.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 400) || undefined
-        const selector = id ? `#${CSS.escape(id)}` : tag
-        const rect = node.getBoundingClientRect()
-        const left = Math.max(0, Math.min(innerWidth, rect.left))
-        const top = Math.max(0, Math.min(innerHeight, rect.top))
-        const right = Math.max(left, Math.min(innerWidth, rect.right))
-        const bottom = Math.max(top, Math.min(innerHeight, rect.bottom))
-        return {
-          tag,
-          id,
-          classes,
-          text,
-          selector,
-          rect: {
-            x: left / innerWidth,
-            y: top / innerHeight,
-            width: (right - left) / innerWidth,
-            height: (bottom - top) / innerHeight,
-          },
-        }
-      }, position)
+      const selected: BrowserElement | undefined = await entry.page.evaluate(element, { ...position, detail })
+      if (selected?.source) selected.source = await locate(entry.route.directory, selected.source)
       await this.update(entry)
       return {
         url: entry.state.url,
         title: entry.state.title,
-        element,
+        element: selected,
         logs: [...(entry.state.logs ?? [])],
       }
     })
@@ -469,6 +452,9 @@ export class BrowserBroker {
     await new Promise<void>((resolve) => {
       if (!this.server) return resolve()
       this.server.close(() => resolve())
+      for (const socket of this.sockets) socket.destroy()
+      this.sockets.clear()
+      if (!this.server.listening) resolve()
     })
     this.server = undefined
     this.port = undefined
@@ -749,9 +735,10 @@ export class BrowserBroker {
 
   private authorized(req: IncomingMessage): boolean {
     const value = req.headers.authorization
-    const expected = `Bearer ${this.token}`
-    if (typeof value !== "string" || value.length !== expected.length) return false
-    return timingSafeEqual(Buffer.from(value), Buffer.from(expected))
+    if (typeof value !== "string") return false
+    const actual = Buffer.from(value)
+    const expected = Buffer.from(`Bearer ${this.token}`)
+    return actual.byteLength === expected.byteLength && timingSafeEqual(actual, expected)
   }
 
   private status(req: IncomingMessage, res: ServerResponse, route: URL): boolean {

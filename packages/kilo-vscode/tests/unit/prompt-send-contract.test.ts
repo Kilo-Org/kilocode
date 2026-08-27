@@ -387,8 +387,9 @@ describe("PromptInput send origin contract", () => {
   })
 
   it("passes the captured origin to message and command sends", () => {
-    expect(source).toMatch(/session\.sendMessage\([\s\S]*origin \?\? null\)/)
-    expect(source).toMatch(/session\.sendCommand\([\s\S]*origin \?\? null\)/)
+    expect(source).toMatch(/session\.sendMessage\([\s\S]*origin \?\? null[\s\S]*browserData[\s\S]*\)/)
+    const command = source.slice(source.indexOf("session.sendCommand("))
+    expect(command).toMatch(/origin \?\? null[\s\S]*\{[\s\S]*agent: matched\.agent/)
   })
 
   it("records sent prompts before a pending session key change can return", () => {
@@ -665,15 +666,28 @@ describe("browser element reference contract", () => {
   })
 
   it("includes browser reference content only when the user sends the prompt", () => {
-    expect(source).toMatch(/const browser = browsers\(\)[\s\S]*?\.map\(\(item\) => item\.content\)/)
-    expect(source).toContain('const message = [review, browser, draft].filter(Boolean).join("\\n\\n")')
+    expect(source).toContain("browserFeedbackData(browsers())")
+    expect(source).toContain("formatBrowserFeedback(browserData.references)")
+    expect(source).toContain('const message = [review, browserText, draft].filter(Boolean).join("\\n\\n")')
     expect(source).toContain("references.delete(key)")
   })
 
   it("restores browser attachments for the correct session and allows attachment-only sends", () => {
     expect(source).toContain("setBrowsers(references.get(key) ?? [])")
-    expect(source).toContain("reference.sessionId === sid()")
+    expect(source).toContain("if (reference.sessionId !== sid()) return")
+    expect(source).toContain("mergeBrowserReferences(browsers(), reference)")
     expect(source).toContain("browsers().length > 0")
+  })
+})
+
+describe("sent browser feedback rendering contract", () => {
+  const message = readFile(path.join(ROOT, "webview-ui/src/components/chat/VscodeUserMessage.tsx"))
+
+  it("renders validated browser metadata as cards and exposes only the instruction body", () => {
+    expect(message).toContain("partFeedback")
+    expect(message).toContain("BrowserReferences")
+    expect(message).toContain("feedback()?.body")
+    expect(message).not.toContain("item.content")
   })
 })
 

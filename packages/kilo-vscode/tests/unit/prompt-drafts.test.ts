@@ -174,20 +174,25 @@ describe("movePromptDraft", () => {
     const comments = new Map([[source, [comment]]])
     const images = new Map([[source, [image]]])
     const scrolls = new Map([[source, 128]])
+    const browser = new Map([[source, [{ id: "browser-1", sessionId: "session-1", selector: "#save" }]]])
+    const expected = browser.get(source)
 
-    expect(movePromptDraft({ text, comments, images, scrolls }, source, target)).toEqual({
+    expect(movePromptDraft({ text, comments, images, scrolls, browsers: browser }, source, target)).toEqual({
       text: "Keep this prompt",
       comments: [comment],
       images: [image],
       scroll: 128,
+      browsers: expected,
     })
     expect(text.get(target)).toBe("Keep this prompt")
     expect(comments.get(target)).toEqual([comment])
     expect(images.get(target)).toEqual([image])
+    expect(browser.get(target)).toEqual([{ id: "browser-1", sessionId: "session-1", selector: "#save" }])
     expect(scrolls.get(target)).toBe(128)
     expect(text.has(source)).toBe(false)
     expect(comments.has(source)).toBe(false)
     expect(images.has(source)).toBe(false)
+    expect(browser.has(source)).toBe(false)
     expect(scrolls.has(source)).toBe(false)
   })
 })

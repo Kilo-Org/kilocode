@@ -26,6 +26,7 @@ import {
   revertPromptState,
 } from "../../webview-ui/src/context/session-utils"
 import type { Message, Part, ToolPart } from "../../webview-ui/src/types/messages"
+import { formatBrowserFeedback } from "../../src/shared/browser-feedback"
 
 const t = (key: string) => key
 
@@ -1030,6 +1031,24 @@ describe("revertPromptState", () => {
   it("returns empty collections for tool-only messages", () => {
     const part: Part = { type: "tool", id: "p1", tool: "bash", state: { status: "running", input: {} } }
     const state = revertPromptState([part])
-    expect(state).toEqual({ text: "", paths: [], sessions: [], images: [] })
+    expect(state).toEqual({ text: "", paths: [], sessions: [], images: [], review: [], browser: [] })
+  })
+
+  it("restores browser and review metadata without their formatted prefixes", () => {
+    const browser = {
+      version: 1 as const,
+      references: [{ id: "b", sessionId: "s1", selector: "#save", text: "Save" }],
+    }
+    const content = `${formatBrowserFeedback(browser.references)}\n\nPlease update it`
+    const part: Part = {
+      type: "text",
+      id: "t1",
+      text: content,
+      metadata: { kilo: { browserFeedback: browser } },
+    }
+    expect(revertPromptState([part])).toMatchObject({
+      text: "Please update it",
+      browser: browser.references,
+    })
   })
 })
