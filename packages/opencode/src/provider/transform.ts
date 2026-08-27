@@ -402,7 +402,7 @@ function supportsPromptCacheBreakpoint(model: Provider.Model, options: Record<st
 }
 // kilocode_change end
 
-function applyCaching(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown> = {}): ModelMessage[] {
+function applyCaching(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown> = {}): ModelMessage[] { // kilocode_change
   const system = msgs.filter((msg) => msg.role === "system").slice(0, 2)
   const final = msgs.filter((msg) => msg.role !== "system").slice(-2)
 
