@@ -22,6 +22,9 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import z from "zod"
 import { zodObject } from "@opencode-ai/core/effect-zod"
 import { Effect, Option, Schema } from "effect"
+import { readdir } from "node:fs/promises"
+import { isAbsolute, join, relative, sep } from "path"
+import { Filesystem } from "@/util/filesystem"
 
 type Provide = typeof import("@/kilocode/instance").provide
 
@@ -61,6 +64,7 @@ const CreateSessionRequest = z
     agent: z.string().min(1).optional(),
     model: CreateSessionModel.optional(),
     orgId: z.string().uuid().optional(),
+    directory: z.string().min(1).max(RemoteCommand.MAX_STRING_LENGTH).optional(),
   })
   .strict()
 
@@ -89,6 +93,21 @@ function errorName(error: unknown): string {
   return typeof error
 }
 // kilocode_change end
+
+// kilocode_change - k1: resolve a client-supplied directory path under the
+// launch directory. Reuses Filesystem.resolve (canonicalize) and
+// Filesystem.contains (lexical containment on canonical paths) so a symlink
+// that escapes the launch directory is rejected, not a bespoke check.
+function resolveUnderLaunch(launchDir: string, relative: string | undefined): string {
+  const launchReal = Filesystem.resolve(launchDir)
+  if (relative === undefined) return launchReal
+  if (isAbsolute(relative)) throw new Error("absolute directory paths are not allowed")
+  const requestedReal = Filesystem.resolve(join(launchDir, relative))
+  if (!Filesystem.contains(launchReal, requestedReal)) {
+    throw new Error("directory path escapes the launch directory")
+  }
+  return requestedReal
+}
 
 // kilocode_change start — lazy init to avoid circular dependency
 // (Server → RemoteRoutes → RemoteSender → SessionPrompt at module load time)
@@ -643,6 +662,67 @@ export namespace RemoteSender {
         })()
         return
       }
+      // kilocode_change - k1: connection-scoped directory listing for the
+      // instance-picker folder tree. Lists exactly one level, directories
+      // only, with symlink escapes skipped.
+      if (msg.command === "list_directories") {
+        const parsed = RemoteCommand.ListDirectoriesRequest.safeParse(msg.data)
+        if (!parsed.success) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid list_directories request",
+          })
+          return
+        }
+        const launchReal = Filesystem.resolve(options.directory)
+        let listed: string
+        try {
+          listed = resolveUnderLaunch(options.directory, parsed.data.path)
+        } catch {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid list_directories path",
+          })
+          return
+        }
+        void (async () => {
+          try {
+            const entries = await readdir(listed, { withFileTypes: true })
+            const directories: RemoteCommand.ListDirectoriesEntry[] = []
+            for (const entry of entries) {
+              if (directories.length >= RemoteCommand.MAX_DIRECTORIES) break
+              const childReal = Filesystem.resolve(join(listed, entry.name))
+              // A symlink whose canonical path equals the launch directory
+              // resolves to launchReal, so its relative path is "" and would
+              // violate ListDirectoriesEntry.path min(1). Never emit it.
+              const childPath = relative(launchReal, childReal).split(sep).join("/")
+              if (!childPath) continue
+              if (entry.isDirectory()) {
+                directories.push({ name: entry.name, path: childPath })
+                continue
+              }
+              if (entry.isSymbolicLink()) {
+                const realIsDir = Filesystem.stat(childReal)?.isDirectory() === true
+                if (realIsDir && Filesystem.contains(launchReal, childReal)) {
+                  directories.push({ name: entry.name, path: childPath })
+                }
+              }
+            }
+            const listedRelative = relative(launchReal, listed).split(sep).join("/")
+            options.conn.send({
+              type: "response",
+              id: msg.id,
+              result: { protocolVersion: 1, path: listedRelative, directories },
+            })
+          } catch (error) {
+            options.log.error("list directories failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to list directories" })
+          }
+        })()
+        return
+      }
       if (msg.command === "send_command") {
         const parsed = RemoteCommand.SendRequest.safeParse(msg.data)
         const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
@@ -830,18 +910,44 @@ export namespace RemoteSender {
             : {}),
           ...(parsed.data.orgId ? { metadata: { orgId: parsed.data.orgId } } : {}),
         }
+        // kilocode_change - k1: a present `directory` starts the session in a
+        // contained relative path under the launch directory. Resolve it before
+        // the create try/catch so a bad path is a request error ("invalid
+        // create_session directory"), not a create failure. Old clients omit
+        // `directory`; keep the sessionId/options.directory fallback below until
+        // every supported client sends it.
+        const targetOverride = (() => {
+          if (parsed.data.directory === undefined) return undefined
+          try {
+            return resolveUnderLaunch(options.directory, parsed.data.directory)
+          } catch {
+            return undefined
+          }
+        })()
+        if (parsed.data.directory !== undefined && targetOverride === undefined) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid create_session directory",
+          })
+          return
+        }
         const run = options.provide ?? provide
         void (async () => {
           try {
-            // Resolve the target directory: a present `sessionId` keeps the
-            // legacy mobile /new-inside-a-session behavior (target = that
-            // session's directory); an absent `sessionId` targets the
-            // instance's own launch directory (the new instance-picker path).
-            const targetDirectory = await current.pipe(
-              Option.map((sid) => session.get(sid)),
-              Option.map((p) => p.then((info) => info.directory)),
-              Option.getOrElse(() => Promise.resolve(options.directory)),
-            )
+            // Resolve the target directory: a present `directory` field wins
+            // (contained relative path under the launch directory); otherwise a
+            // present `sessionId` keeps the legacy mobile
+            // /new-inside-a-session behavior (target = that session's
+            // directory); an absent `sessionId` targets the instance's own
+            // launch directory (the new instance-picker path).
+            const targetDirectory =
+              targetOverride ??
+              (await current.pipe(
+                Option.map((sid) => session.get(sid)),
+                Option.map((p) => p.then((info) => info.directory)),
+                Option.getOrElse(() => Promise.resolve(options.directory)),
+              ))
             const result = await run({
               directory: targetDirectory,
               fn: async () => {
