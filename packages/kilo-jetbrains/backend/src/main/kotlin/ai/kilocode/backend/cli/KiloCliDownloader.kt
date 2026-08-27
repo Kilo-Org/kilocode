@@ -4,11 +4,10 @@ import ai.kilocode.log.KiloLog
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.EnvironmentUtil
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -23,6 +22,7 @@ import okhttp3.Response
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
@@ -38,15 +38,28 @@ import java.util.zip.ZipInputStream
 import kotlin.math.roundToInt
 
 class KiloCliDownloader(
-    private val http: OkHttpClient = KiloBackendHttpClients.cliDownload(),
+    private val http: OkHttpClient = HTTP,
     private val log: KiloLog = KiloLog.create(KiloCliDownloader::class.java),
     private val root: File = File(PathManager.getSystemPath(), "kilo/cli"),
     private val baseUrl: String = "https://github.com/Kilo-Org/kilocode/releases/download",
     private val api: String = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags",
     private val digests: Map<String, String> = KiloCliChecksums.load(),
     private val lockTimeoutMs: Long = LOCK_TIMEOUT_MS,
+    private val stallTimeoutMs: Long = STALL_TIMEOUT_MS,
 ) {
+    private val stallTimeoutNanos = TimeUnit.MILLISECONDS.toNanos(stallTimeoutMs)
+    private val stallPollMs = (stallTimeoutMs / 4).coerceIn(50L, STALL_POLL_MS)
+
     companion object {
+        /**
+         * Shared download client for the lifetime of this classloader, shut down by
+         * [KiloBackendHttpClients.shutdownAll] on plugin unload. A fresh [KiloCliDownloader] is
+         * built per resolve — including cache hits that never issue a request — so creating a
+         * client per instance would accumulate tracked [OkHttpClient]s (each with its own SSL
+         * socket factory, proxy selector and connection pool) that are only released on unload.
+         */
+        private val HTTP by lazy { KiloBackendHttpClients.cliDownload() }
+
         private const val LOCK_TIMEOUT_MS = 30_000L
         private const val LOCK_POLL_MS = 100L
 
@@ -54,7 +67,9 @@ class KiloCliDownloader(
          *  timeout (which would start the Okio watchdog and pin the plugin classloader). */
         private const val STALL_TIMEOUT_MS = 120_000L
         private const val STALL_POLL_MS = 1_000L
-        private val STALL_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(STALL_TIMEOUT_MS)
+
+        /** [DownloadGuard.abort] reason used when the surrounding coroutine was cancelled. */
+        private const val CANCELLED = "Kilo CLI download cancelled"
 
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
@@ -67,16 +82,27 @@ class KiloCliDownloader(
      * when the surrounding coroutine is cancelled — e.g. on plugin unload — and (b) runs a watchdog
      * that cancels it after [STALL_TIMEOUT_MS] of no progress. [exec] tracks the active call around a
      * blocking `execute()`; [tick] records download progress.
+     *
+     * Cancelling an OkHttp call makes the blocked read fail with an opaque `IOException: Canceled`
+     * or `SocketException: Socket closed`, so [abort] records *why* it aborted and [exec] replaces
+     * that error with the real reason — a [CancellationException] for coroutine cancellation (so
+     * structured-cancellation-aware callers still recognise it) or a descriptive
+     * [IllegalStateException] for a stall.
      */
     private class DownloadGuard {
         val active = AtomicReference<Call?>()
         val progress = AtomicLong(System.nanoTime())
+        private val reason = AtomicReference<String?>()
 
         fun <T> exec(http: OkHttpClient, request: Request, block: (Response) -> T): T {
             val call = http.newCall(request)
             active.set(call)
             return try {
                 call.execute().use(block)
+            } catch (e: IOException) {
+                val why = reason.get() ?: throw e
+                if (why == CANCELLED) throw CancellationException(why)
+                throw IllegalStateException(why, e)
             } finally {
                 active.compareAndSet(call, null)
             }
@@ -84,24 +110,42 @@ class KiloCliDownloader(
 
         fun tick() = progress.set(System.nanoTime())
 
-        fun abort() = active.getAndSet(null)?.cancel()
+        /**
+         * Record [why] before cancelling so the blocked read reports the cause, not a socket error.
+         * First abort wins, so a stall reason is never overwritten by the cleanup path's cancel.
+         */
+        fun abort(why: String) {
+            if (!reason.compareAndSet(null, why)) return
+            active.getAndSet(null)?.cancel()
+        }
     }
 
     suspend fun resolve(version: String, force: Boolean = false, onProgress: (CliDownload) -> Unit = {}): File =
         withContext(Dispatchers.IO) {
             coroutineScope {
                 val guard = DownloadGuard()
-                // Abort the in-flight download when the surrounding coroutine is cancelled (plugin
-                // unload, restart), since the blocking read inside locked{} cannot suspend.
-                val onCancel = coroutineContext.job.invokeOnCompletion { guard.abort() }
+                // The blocking read inside locked{} cannot suspend, so a child coroutine does two
+                // things for it: abort the in-flight call after STALL_TIMEOUT_MS of no progress, and
+                // abort it from its `finally` when the surrounding scope is cancelled (plugin unload,
+                // restart). The cancellation half must live here rather than in a Job completion
+                // handler: this scope's Job only completes after the blocking body returns, so a
+                // completion handler would never run while the read is stuck.
                 val watchdog = launch {
-                    while (isActive) {
-                        delay(STALL_POLL_MS)
-                        if (System.nanoTime() - guard.progress.get() > STALL_TIMEOUT_NANOS) {
-                            log.warn("Kilo CLI download stalled for >${STALL_TIMEOUT_MS}ms — aborting")
-                            guard.abort()
-                            break
+                    try {
+                        while (true) {
+                            delay(stallPollMs)
+                            if (System.nanoTime() - guard.progress.get() > stallTimeoutNanos) {
+                                val why = "Kilo CLI download stalled for >${stallTimeoutMs}ms with no bytes received"
+                                log.warn("$why — aborting")
+                                guard.abort(why)
+                                return@launch
+                            }
                         }
+                    } finally {
+                        // Reached on scope cancellation and on the normal watchdog.cancel() below.
+                        // In the latter case the download is already done, so abort is a no-op; a
+                        // stall reason set above also wins over this one.
+                        guard.abort(CANCELLED)
                     }
                 }
                 try {
@@ -161,7 +205,6 @@ class KiloCliDownloader(
                     }
                 } finally {
                     watchdog.cancel()
-                    onCancel.dispose()
                 }
             }
         }

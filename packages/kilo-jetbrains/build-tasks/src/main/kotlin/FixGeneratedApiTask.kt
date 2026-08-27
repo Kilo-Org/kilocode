@@ -215,14 +215,30 @@ abstract class FixGeneratedApiTask : DefaultTask() {
 
         // Fix 5: nullable body in ApiClient
         if (file.name == "ApiClient.kt") {
-            if (text.contains("import okhttp3.OkHttpClient") && !text.contains("import okhttp3.Protocol")) {
-                text = text.replace("import okhttp3.OkHttpClient", "import okhttp3.OkHttpClient\nimport okhttp3.Protocol")
-                changed = true
+            // `Protocol.HTTP_1_1` is the applied-marker: the rewrite below keeps the line it matched,
+            // so without this check every re-run would append another timeout chain (the task declares
+            // no inputs, so Gradle never treats it as up-to-date).
+            val chained = text.contains("Protocol.HTTP_1_1")
+            val origin = "val builder: OkHttpClient.Builder = OkHttpClient.Builder()"
+            if (!chained && !text.contains(origin)) {
+                // Failing silently would let the generated fallback client keep OkHttp's defaults
+                // (HTTP/2 + 10s read/write timeouts) and reintroduce the classloader-pinning Okio watchdog.
+                logger.warn(
+                    "FixGeneratedApiTask: ApiClient.kt has no recognizable OkHttpClient.Builder declaration — " +
+                        "openapi-generator templates likely changed. The generated defaultClient may start " +
+                        "Okio's watchdog and block plugin unload."
+                )
             }
-            if (text.contains("val builder: OkHttpClient.Builder = OkHttpClient.Builder()")) {
+            if (!chained && text.contains(origin)) {
+                if (text.contains("import okhttp3.OkHttpClient")) {
+                    text = text.replace(
+                        "import okhttp3.OkHttpClient",
+                        "import okhttp3.OkHttpClient\nimport okhttp3.Protocol"
+                    )
+                }
                 text = text.replace(
-                    "val builder: OkHttpClient.Builder = OkHttpClient.Builder()",
-                    """val builder: OkHttpClient.Builder = OkHttpClient.Builder()
+                    origin,
+                    """$origin
             .protocols(listOf(Protocol.HTTP_1_1))
             .callTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
             .readTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)

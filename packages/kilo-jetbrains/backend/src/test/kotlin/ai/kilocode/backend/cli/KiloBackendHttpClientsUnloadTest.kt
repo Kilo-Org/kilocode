@@ -1,5 +1,6 @@
 package ai.kilocode.backend.cli
 
+import ai.kilocode.jetbrains.api.infrastructure.ApiClient
 import com.sun.net.httpserver.HttpServer
 import okhttp3.Protocol
 import okhttp3.Request
@@ -108,6 +109,19 @@ class KiloBackendHttpClientsUnloadTest {
         client.dispatcher.executorService
         KiloBackendHttpClients.shutdown(client)
         assertTrue(client.dispatcher.executorService.isShutdown)
+    }
+
+    @Test
+    fun `generated ApiClient fallback client is unload-safe`() {
+        // ApiClient.defaultClient is the client the generated code falls back to when no Call.Factory
+        // is injected. FixGeneratedApiTask rewrites its builder, and both of its `contains` guards fail
+        // silently on openapi-generator template drift — this test is what catches that drift, since a
+        // regenerated default would restore HTTP/2 + 10s read/write timeouts and start Okio's watchdog.
+        val client = ApiClient.defaultClient
+        assertEquals(listOf(Protocol.HTTP_1_1), client.protocols)
+        assertEquals(0, client.callTimeoutMillis, "callTimeout must be 0")
+        assertEquals(0, client.readTimeoutMillis, "readTimeout must be 0")
+        assertEquals(0, client.writeTimeoutMillis, "writeTimeout must be 0")
     }
 
     @Test

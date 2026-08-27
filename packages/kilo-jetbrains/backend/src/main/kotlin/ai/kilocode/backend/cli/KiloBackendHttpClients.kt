@@ -64,7 +64,11 @@ object KiloBackendHttpClients {
     private val CLI_DOWNLOAD_CONNECT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(30)
     private val MODEL_FETCH_CONNECT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(15)
 
-    /** Independent external clients ([modelFetch], [cliDownload]) not owned by [KiloConnectionService], shut down on unload. */
+    /**
+     * Independent external clients ([modelFetch], [cliDownload]) not owned by [KiloConnectionService],
+     * shut down on unload. Entries are only removed in [shutdownAll], so callers must hold one client
+     * for the lifetime of the classloader instead of building one per operation.
+     */
     private val tracked = CopyOnWriteArrayList<OkHttpClient>()
 
     /**

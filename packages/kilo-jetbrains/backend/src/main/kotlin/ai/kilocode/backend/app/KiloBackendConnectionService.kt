@@ -174,8 +174,9 @@ class KiloConnectionService(
      * The app-load client has no socket read/write timeout (those would start the Okio watchdog),
      * so the deadline lives here. [block] runs on [Dispatchers.IO]; on timeout or plugin-unload
      * cancellation the app-load dispatcher is cancelled so the blocked `execute()` unblocks and its
-     * IO thread is released promptly. Throws [IllegalStateException] on timeout and rethrows
-     * [CancellationException] so structured cancellation propagates.
+     * IO thread is released promptly. Throws [java.net.SocketTimeoutException] on timeout (so
+     * callers map it to a "Timeout" load error) and rethrows [CancellationException] so structured
+     * cancellation propagates. [IllegalStateException] means the connection is not open.
      */
     suspend fun <T> appLoadCall(block: (DefaultApi) -> T): T {
         val client = appLoadApi ?: throw IllegalStateException("Not connected")
@@ -185,6 +186,9 @@ class KiloConnectionService(
             try {
                 withTimeout(appLoadTimeoutMs) { task.await() }
             } catch (e: TimeoutCancellationException) {
+                // The generated API hides the per-request Call, so this cancels every in-flight
+                // app-load call — a concurrent sibling fetch is aborted too and records a
+                // "Canceled" failure. Acceptable: any required app-load failure fails the whole load.
                 http.dispatcher.cancelAll()
                 task.cancel()
                 // Surface as a socket timeout so callers map it to a "Timeout" load error, matching
