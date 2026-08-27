@@ -59,7 +59,7 @@ Then declare the provider in `kilo.json`:
         },
         "deepseek-v4-pro": {
           "name": "DeepSeek V4 Pro",
-          "limit": { "context": 1000000, "output": 384000 },
+          "limit": { "context": 1000000, "output": 393216 },
         },
       },
       "options": {
@@ -69,6 +69,11 @@ Then declare the provider in `kilo.json`:
   },
 }
 ```
+
+Both models above are only examples. `limit.context` and `limit.output` for **any** model
+come from the catalog — `max_input_tokens` and `max_output_tokens` at
+[https://synthorai.io/api/models](https://synthorai.io/api/models), which is public and needs
+no key. Copy the values from there rather than from this page, in case they move.
 
 Then set the default model with the `provider-id/model-id` form:
 
