@@ -91,7 +91,7 @@ import { createProjectRegistry, type PersistedProjectTabs } from "./project/regi
 import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
-import { createSessionActivity } from "./project/session-busy"
+import { createWorktreeActivity } from "./project/session-busy"
 import { switchProject } from "./project/switch"
 import { createProjectStateHandlers } from "./project/state-handlers"
 import { ownsParent as ownsParentSession, isCurrent } from "./project/message-ownership"
@@ -124,7 +124,6 @@ import {
   adjacentHint,
   focusChatSearch,
   LOCAL,
-  remoteSessions,
 } from "./navigate"
 import { buildProjectNavEntries, createProjectNav } from "./project-nav"
 import {
@@ -899,13 +898,14 @@ const AgentManagerContent: Component = () => {
     const label = worktreeLabel(wt)
     return label !== wt.branch ? wt.branch : undefined
   }
-
-  const activity = createSessionActivity({
+  const activity = createWorktreeActivity({
     managed: managedSessions,
     local: localSessionIDs,
     projects: projectSessionsLive,
     active: activeProjectId,
     activityFor: session.activityFor,
+    worktrees: (id) => (id ? registry.ensure(id) : registry.active()).worktrees(),
+    subscribe: vscode.onMessage,
   })
   const sessionActivity = createMemo(() =>
     strongest(
@@ -916,7 +916,7 @@ const AgentManagerContent: Component = () => {
               activity.project(project.id, null),
               ...projectStates()[project.id]!.worktrees.map((worktree) => activity.project(project.id, worktree.id)),
             ])
-        : remoteSessions(localSessionIDs(), managedSessions(), isPending).map(session.activityFor),
+        : [activity.local(), ...worktrees().map((worktree) => activity.agent(worktree.id))],
     ),
   )
   createEffect(() => vscode.postMessage({ type: "sessionActivity", state: sessionActivity() }))

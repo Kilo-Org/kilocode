@@ -1944,7 +1944,9 @@ export const SessionProvider: ParentComponent = (props) => {
           parents: lineage().parents,
           statuses: statusMap,
           outcomes: closeMap,
-          blocked: [...permissions(), ...questions(), ...suggestions()].map((item) => item.sessionID),
+          blocked: [...permissions(), ...questions().filter((item) => item.blocking !== false), ...suggestions()].map(
+            (item) => item.sessionID,
+          ),
           submitting: Object.keys(submissionMap),
           disconnected: connection !== "connected",
         }),

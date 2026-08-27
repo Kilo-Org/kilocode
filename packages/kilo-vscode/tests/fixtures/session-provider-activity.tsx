@@ -249,6 +249,22 @@ try {
   await check("root", "idle")
   assert.equal(value.permissions().length, 0)
 
+  await emit({ type: "sessionStatus", sessionID: "task-child", status: "busy" })
+  await emit({
+    type: "questionRequest",
+    question: { id: "notice", sessionID: "task-child", blocking: false, questions: [] },
+  })
+  await check("root", "busy")
+  await check("task-child", "busy")
+  await emit({
+    type: "questionRequest",
+    question: { id: "notice", sessionID: "task-child", blocking: true, questions: [] },
+  })
+  await check("root", "waiting")
+  await emit({ type: "questionResolved", requestID: "notice" })
+  await check("root", "busy")
+  await emit({ type: "sessionStatus", sessionID: "task-child", status: "idle" })
+
   await emit({
     type: "questionRequest",
     question: {

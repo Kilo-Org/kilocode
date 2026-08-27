@@ -1,4 +1,5 @@
-import { createMemo } from "solid-js"
+import { createMemo, createSignal, onCleanup } from "solid-js"
+import type { ExtensionMessage } from "../../src/types/messages"
 import { strongest, type Activity } from "../../src/utils/session-activity"
 
 interface Item {
@@ -37,5 +38,28 @@ export function createSessionActivity(opts: {
       if (id === opts.active()) return worktree === null ? local() : (managed().get(worktree) ?? "idle")
       return projects().get(id)?.get(worktree) ?? "idle"
     },
+  }
+}
+
+export function createWorktreeActivity(
+  opts: Parameters<typeof createSessionActivity>[0] & {
+    worktrees: (project?: string) => { id: string; path: string }[]
+    subscribe: (callback: (message: ExtensionMessage) => void) => () => void
+  },
+) {
+  const activity = createSessionActivity(opts)
+  const [active, setActive] = createSignal(new Set<string>())
+  onCleanup(
+    opts.subscribe((message) => {
+      if (message.type === "agentManager.worktreeActivity") setActive(new Set(message.active))
+    }),
+  )
+  const working = (id: string, project?: string): Activity =>
+    active().has(opts.worktrees(project).find((worktree) => worktree.id === id)?.path ?? "") ? "busy" : "idle"
+  return {
+    ...activity,
+    agent: (id: string) => strongest([activity.agent(id), working(id)]),
+    project: (project: string, id: string | null) =>
+      strongest([activity.project(project, id), id === null ? "idle" : working(id, project)]),
   }
 }

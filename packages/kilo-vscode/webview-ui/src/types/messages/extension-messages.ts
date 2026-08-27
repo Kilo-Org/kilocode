@@ -809,6 +809,11 @@ export interface AgentManagerSessionForkedMessage {
   worktreeId?: string
 }
 
+export interface AgentManagerWorktreeActivityMessage {
+  type: "agentManager.worktreeActivity"
+  active: string[]
+}
+
 export interface AgentManagerSessionClosedMessage {
   type: "agentManager.sessionClosed"
   projectId?: string
@@ -1505,6 +1510,7 @@ export type ExtensionMessage =
   | AgentManagerSessionAddedMessage
   | AgentManagerSessionForkedMessage
   | AgentManagerSessionClosedMessage
+  | AgentManagerWorktreeActivityMessage
   | AgentManagerStateMessage
   | AgentManagerProjectsMessage
   | AgentManagerSelectionActivatedMessage
