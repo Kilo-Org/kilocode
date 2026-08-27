@@ -94,7 +94,7 @@ export function PromptRail(props: PromptRailProps) {
     const center = rect.top + rect.height / 2 - height / 2
     setAnchor({
       top: max < min ? min : Math.min(Math.max(center, min), max),
-      edge: props.side === "right" ? window.innerWidth - rect.left + GAP : rect.right + GAP,
+      edge: (props.side === "right" ? window.innerWidth - rect.left : rect.right) + GAP,
       height: limit,
     })
   }

@@ -5321,6 +5321,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private _getHtmlForWebview(webview: vscode.Webview, sidebar = false): string {
     return buildWebviewHtml(webview, {
+      // The rail follows the physical workbench edge. RTL text direction must not move it between chat and code.
       sidebar: sidebar
         ? vscode.workspace.getConfiguration("workbench").get("sideBar.location") === "right"
           ? "right"

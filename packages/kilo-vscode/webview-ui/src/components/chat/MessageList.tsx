@@ -1376,6 +1376,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       </div>
 
       <PromptRail
+        // Editor tabs and Agent Manager have no sidebar edge signal. Keep their rail on the physical right in RTL too.
         side={vscode.sidebarSide() ?? "right"}
         entries={entries}
         items={items}
