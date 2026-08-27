@@ -122,7 +122,7 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
                   data-session-id={item.kind === "session" ? item.sessionId : undefined}
                   data-worktree-id={item.kind === "worktree" ? item.worktreeId : undefined}
                 >
-                  <span class="search-menu-icon" data-activity={item.state}>
+                  <span class="search-menu-icon am-sidebar-search-icon" data-activity={item.state}>
                     <Show
                       when={item.busy}
                       fallback={
