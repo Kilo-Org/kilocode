@@ -316,6 +316,42 @@
 
 ## [Unreleased]
 
+## [7.1.0] - 2026-08-26
+
+### Added
+
+- Add the JetBrains Agent Manager beta for creating, opening, organizing, renaming, deleting, and tracking worktree-based tasks and their sessions from the IDE.
+- Show Agent Manager worktree activity, changes, ahead/behind, pull request, failure, and attention badges with clearer row actions, menus, tooltips, and drag-and-drop reordering.
+- Add New, From PR, and From Branch tabs to the New Worktree dialog for clearer worktree creation and import flows.
+- Add JetBrains logging settings with log reveal and backend log download actions for easier diagnostics.
+- Add JetBrains workflow settings so workflows can be reviewed and managed from the plugin.
+- Show permission-prompt diffs and approval reasons on JetBrains tool cards before acting on tool requests.
+- Open sub-agent sessions in JetBrains editor tabs with live collapsed task previews.
+- Add Retry to failed JetBrains chat turns so the original request can be rerun without retyping.
+
+### Fixed
+
+- Improve Agent Manager reliability by anchoring worktrees to the main repository storage, pruning stale metadata, hiding dead managed worktrees, refusing unmanaged paths, and preserving session history by worktree.
+- Keep failed, stopped, deleted, resumed, and recovered JetBrains sessions represented correctly in chat, session lists, worktree rows, activity badges, and Agents-tab attention dots.
+- Detect unsupported JetBrains remote workspaces and missing or moved worktree folders with clearer in-session states instead of ambiguous failures.
+- Keep slash completion open and responsive while typing quickly.
+- Stabilize JetBrains chat and Agent Manager layout, including header popups, PR badges, row spacing, hover popups, overlays, worktree tab painting, and dialog branch pickers.
+- Preserve project-level snapshot disabling across restarts after choosing to disable snapshots from the slow-repo prompt.
+- Keep Ask and Plan modes read-only even when broad permission rules are configured.
+- Improve Kilo Core reliability for JetBrains by preserving output budgets, recovering reasoning-only incomplete responses, preserving Cerebras completion limits, restoring terminal startup, and removing duplicate skill catalog content from prompts.
+- Fix Agent Manager session creation on strict providers and OpenAI Responses API models by allowing nullable tool fields and explicit provider selection.
+- Clear empty failed assistant responses when sending a normal follow-up after a provider failure.
+
+### Changed
+
+- Update the pinned Kilo Core CLI used by JetBrains from 7.4.22 to 7.4.23.
+- Improve Kilo Core cold and warm startup speed for JetBrains and other clients.
+- Show failed-turn details in a clearer error card with the error kind and retry action, while manually stopped turns render as a muted "Stopped" note.
+- Put new, imported, or moved Agent Manager worktrees at the top of the list unless manually reordered.
+- Make Agent Manager rows visually quieter with regular-weight labels, subdued idle icons, and less stale deleted-session status.
+- Remove the experimental agent requirements and task-aware output pruning features from the bundled Kilo Core runtime.
+- Remove an unused JetBrains Compose compiler plugin dependency.
+
 ## [7.1.0-rc.5] - 2026-08-26
 
 ### Added
