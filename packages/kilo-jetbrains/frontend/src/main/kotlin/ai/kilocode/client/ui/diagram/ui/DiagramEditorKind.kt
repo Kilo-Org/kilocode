@@ -1,12 +1,8 @@
 package ai.kilocode.client.ui.diagram.ui
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.CodeViewField
-import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.codeViewScroll
-import ai.kilocode.client.ui.diagram.Out
 import ai.kilocode.client.ui.md.hybrid.MdLanguage
 import ai.kilocode.client.vfs.KiloEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
@@ -16,12 +12,9 @@ import ai.kilocode.client.vfs.KiloVirtualFile
 import com.intellij.ide.DataManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.EditorFactory
-import com.intellij.openapi.editor.colors.EditorColorsListener
-import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -29,12 +22,9 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.Centerizer
-import com.intellij.util.ui.JBUI
-import java.awt.BorderLayout
 import java.security.MessageDigest
 import java.util.Collections
 import javax.swing.JComponent
-import javax.swing.JPanel
 
 private const val TOKEN = "token"
 
@@ -101,44 +91,7 @@ internal object DiagramEditorKind : KiloEditorKind {
     @RequiresEdt
     override fun createContent(project: Project, file: KiloVirtualFile, parent: Disposable): JComponent {
         val text = source(file.path.params) ?: return center(KiloBundle.message("diagram.missing"))
-        val root = JPanel(BorderLayout())
-        val label = JBLabel().apply {
-            border = JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.pad())
-            isVisible = false
-        }
-        val panel = DiagramPanel(diagramPalette(SessionEditorStyle.current()), fit = true)
-        root.add(panel, BorderLayout.CENTER)
-        root.add(label, BorderLayout.SOUTH)
-
-        fun render() {
-            val style = SessionEditorStyle.current()
-            panel.background = SessionUiStyle.Colors.codeBlockBackground()
-            panel.palette(diagramPalette(style))
-            label.text = KiloBundle.message("diagram.rendering")
-            label.foreground = SessionUiStyle.Text.Secondary.foreground()
-            label.isVisible = true
-            service<Diagrams>().render(text, diagramSpec(style), parent) { out ->
-                when (out) {
-                    is Out.Ok -> {
-                        panel.art(out.art)
-                        label.isVisible = false
-                    }
-
-                    is Out.Err -> {
-                        label.text = KiloBundle.message("diagram.error", out.message)
-                        label.foreground = UiStyle.Colors.errorLabelForeground()
-                        label.isVisible = true
-                    }
-                }
-                root.revalidate()
-                root.repaint()
-            }
-        }
-
-        render()
-        ApplicationManager.getApplication().messageBus.connect(parent)
-            .subscribe(EditorColorsManager.TOPIC, EditorColorsListener { ApplicationManager.getApplication().invokeLater(::render) })
-        return root
+        return diagramContent(text, parent)
     }
 }
 

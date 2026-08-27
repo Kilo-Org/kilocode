@@ -13,6 +13,7 @@ import ai.kilocode.client.ui.diagram.ui.DiagramPanel
 import ai.kilocode.client.ui.diagram.ui.Diagrams
 import ai.kilocode.client.ui.diagram.ui.diagramPalette
 import ai.kilocode.client.ui.diagram.ui.diagramSpec
+import ai.kilocode.client.ui.diagram.ui.openDiagramWindow
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
@@ -43,6 +44,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import java.awt.Color
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
 import java.awt.Graphics
@@ -50,6 +52,7 @@ import java.awt.Graphics2D
 import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.event.HierarchyEvent
+import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.Box
 import javax.swing.BoxLayout
@@ -972,10 +975,21 @@ internal open class MdViewHybrid(
         private var hash = 0
         private var gen = 0
         private var font = spec().font
+        private val click = object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.button != MouseEvent.BUTTON1 || e.clickCount != 1) return
+                if (!panel.isVisible) return
+                openDiagramWindow(panel, (this@DiagramView.desc as Desc.Code).text)
+            }
+        }
 
         init {
             panel.background = opts().preBg
             panel.isVisible = false
+            panel.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            panel.toolTipText = KiloBundle.message("diagram.viewer.hint")
+            panel.addMouseListener(click)
+            Disposer.register(disposable) { panel.removeMouseListener(click) }
             root.next(panel).next(codePane).next(label)
             root.text = { (this.desc as Desc.Code).text }
             kick()

@@ -33,17 +33,6 @@ class DiagramPanelTest {
     }
 
     @Test
-    fun `test fit mode scales to the component bounds instead of the transcript cap`() {
-        val panel = DiagramPanel(palette(), fit = true)
-        panel.setSize(1_000, 1_000)
-        panel.art(scene(100.0, 2_000.0))
-
-        // The transcript cap (480) no longer applies; the panel fills whatever the tab gives it.
-        assertEquals(0, panel.preferredSize.height)
-        assertTrue(panel.maximumSize.height > 520)
-    }
-
-    @Test
     fun `test block copies fence text and offers copy plus open in editor`() {
         val block = DiagramBlock()
         block.text = { "flowchart TD" }

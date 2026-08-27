@@ -1,0 +1,172 @@
+package ai.kilocode.client.ui.diagram.ui
+
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.diagram.Art
+import ai.kilocode.client.ui.diagram.Painters
+import ai.kilocode.client.ui.diagram.Palette
+import com.intellij.ui.components.Magnificator
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
+import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.Point
+import java.awt.Rectangle
+import java.awt.RenderingHints
+import javax.swing.JComponent
+import javax.swing.JViewport
+import javax.swing.Scrollable
+import kotlin.math.roundToInt
+
+/**
+ * Scrollable diagram surface for the diagram viewer.
+ *
+ * Two states: fit (no explicit factor) tracks the viewport on both axes so the whole diagram is
+ * visible without scrollbars, while an explicit factor reports the scaled art as its preferred size
+ * so the enclosing scroll pane can scroll it. The fit scale is derived from the **viewport** extent,
+ * never from this component's own bounds, so sizing cannot feed back into itself.
+ */
+internal class DiagramCanvas(private var palette: Palette) : JComponent(), Scrollable {
+    private var art: Art? = null
+    private var factor: Double? = null
+
+    init {
+        // Trackpad pinch: JBViewport reads this off its view and drives it through ZoomingDelegate,
+        // which does the scrolling itself from the returned point, so no anchoring here.
+        putClientProperty(
+            Magnificator.CLIENT_PROPERTY_KEY,
+            Magnificator { scale, at ->
+                zoom(this.scale() * scale)
+                Point((at.x * scale).roundToInt(), (at.y * scale).roundToInt())
+            },
+        )
+    }
+
+    @RequiresEdt
+    fun art(value: Art) {
+        art = value
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
+    fun palette(value: Palette) {
+        palette = value
+        repaint()
+    }
+
+    /**
+     * Sets an explicit scale, or restores fit when [value] is null.
+     *
+     * [at] is a point in **viewport** coordinates that should stay put across the zoom.
+     */
+    @RequiresEdt
+    fun zoom(value: Double?, at: Point? = null) {
+        val before = scale()
+        factor = value?.coerceIn(MIN, maxOf(MAX, fitScale() * FIT_ZOOM))
+        // Size the view up front so the viewport clamps the anchored position against the new bounds.
+        if (factor != null) size = preferredSize
+        revalidate()
+        repaint()
+        if (at != null) anchor(at, before, scale())
+    }
+
+    @RequiresEdt
+    fun fit() {
+        zoom(null)
+    }
+
+    @RequiresEdt
+    fun scale(): Double = factor ?: fitScale()
+
+    override fun getPreferredSize(): Dimension {
+        if (factor == null) return Dimension(0, 0)
+        val value = art ?: return Dimension(0, 0)
+        val size = Painters.of(value).size(value)
+        val scale = scale()
+        return Dimension(
+            (size.w * scale).roundToInt() + pad() * 2,
+            (size.h * scale).roundToInt() + pad() * 2,
+        )
+    }
+
+    override fun paintComponent(g: Graphics) {
+        background?.let {
+            g.color = it
+            g.fillRect(0, 0, width, height)
+        }
+        val value = art ?: return
+        val size = Painters.of(value).size(value)
+        val scale = scale()
+        val x = ((width - size.w * scale) / 2).roundToInt().coerceAtLeast(pad())
+        val y = ((height - size.h * scale) / 2).roundToInt().coerceAtLeast(pad())
+        paintDiagram(g, value, palette, scale, x, y)
+    }
+
+    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+
+    override fun getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) = step()
+
+    override fun getScrollableBlockIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) = step()
+
+    override fun getScrollableTracksViewportWidth(): Boolean = tracks { extent -> preferredSize.width <= extent.width }
+
+    override fun getScrollableTracksViewportHeight(): Boolean = tracks { extent -> preferredSize.height <= extent.height }
+
+    private fun tracks(fits: (Dimension) -> Boolean): Boolean {
+        if (factor == null) return true
+        val viewport = parent as? JViewport ?: return false
+        return fits(viewport.extentSize)
+    }
+
+    private fun anchor(at: Point, before: Double, after: Double) {
+        if (before <= 0.0) return
+        val viewport = parent as? JViewport ?: return
+        val ratio = after / before
+        val pos = viewport.viewPosition
+        val x = ((pos.x + at.x) * ratio - at.x).roundToInt()
+        val y = ((pos.y + at.y) * ratio - at.y).roundToInt()
+        viewport.viewPosition = clamped(viewport, Point(x, y))
+    }
+
+    private fun fitScale(): Double {
+        val value = art ?: return 1.0
+        val size = Painters.of(value).size(value)
+        if (size.w <= 0.0 || size.h <= 0.0) return 1.0
+        val extent = (parent as? JViewport)?.extentSize ?: Dimension(width, height)
+        val w = (extent.width - pad() * 2).coerceAtLeast(1)
+        val h = (extent.height - pad() * 2).coerceAtLeast(1)
+        return minOf(w / size.w, h / size.h).coerceAtLeast(MIN)
+    }
+
+    private fun pad() = JBUI.scale(SessionUiStyle.View.Diagram.PADDING)
+
+    private fun step() = JBUI.scale(SessionUiStyle.SessionLayout.SCROLL_INCREMENT)
+
+    private companion object {
+        const val MIN = 0.1
+        const val MAX = 4.0
+        const val FIT_ZOOM = 4.0
+    }
+}
+
+/** Keeps a viewport position inside the scrollable range of its view. */
+internal fun clamped(viewport: JViewport, at: Point): Point {
+    val view = viewport.view ?: return at
+    val x = (view.width - viewport.extentSize.width).coerceAtLeast(0)
+    val y = (view.height - viewport.extentSize.height).coerceAtLeast(0)
+    return Point(at.x.coerceIn(0, x), at.y.coerceIn(0, y))
+}
+
+/** Paints [art] scaled by [scale] with its top-left corner at ([x], [y]). */
+internal fun paintDiagram(g: Graphics, art: Art, palette: Palette, scale: Double, x: Int, y: Int) {
+    val g2 = g.create() as Graphics2D
+    try {
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g2.translate(x, y)
+        g2.scale(scale, scale)
+        Painters.of(art).paint(g2, art, palette)
+    } finally {
+        g2.dispose()
+    }
+}

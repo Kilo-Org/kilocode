@@ -13,15 +13,24 @@ import ai.kilocode.client.ui.diagram.Size
 import ai.kilocode.client.ui.diagram.Spec
 import ai.kilocode.client.ui.diagram.Type
 import ai.kilocode.client.ui.diagram.ui.DiagramBlock
+import ai.kilocode.client.ui.diagram.ui.DiagramHandle
 import ai.kilocode.client.ui.diagram.ui.DiagramPanel
+import ai.kilocode.client.ui.diagram.ui.DiagramWindows
 import ai.kilocode.client.ui.diagram.ui.Diagrams
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.util.ui.UIUtil
+import java.awt.Cursor
 import java.awt.Point
+import java.awt.event.MouseEvent
+import javax.swing.JComponent
 import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
@@ -81,6 +90,34 @@ class MdViewDiagramTest : BasePlatformTestCase() {
         assertSame(block().copyToolbar, (target as SessionCopyTarget).copyToolbar)
     }
 
+    fun `test clicking a rendered diagram opens the viewer window`() {
+        val opened = windows()
+        view.set("```mermaid\nflowchart TD\nA-->B\n```")
+        drain()
+        attach()
+
+        click(diagram())
+
+        assertEquals(listOf("flowchart TD\nA-->B\n"), opened)
+        assertEquals(Cursor.HAND_CURSOR, diagram().cursor.type)
+    }
+
+    fun `test the streaming source fallback is not a viewer trigger`() {
+        // Only the rendered diagram opens the window, so the source pane shown while a fence streams
+        // (and after an engine error) keeps its plain text behaviour.
+        val opened = windows()
+        view.append("```mermaid\nflowchart TD\n")
+        drain()
+        attach()
+
+        click(codePane() as JComponent)
+        click(diagram())
+
+        assertTrue(codePane().isVisible)
+        assertFalse(diagram().isVisible)
+        assertTrue(opened.isEmpty())
+    }
+
     fun `test engine error keeps source visible`() {
         engine.out = Out.Err(ai.kilocode.client.ui.diagram.Fault.Syntax, "bad syntax")
 
@@ -134,6 +171,38 @@ class MdViewDiagramTest : BasePlatformTestCase() {
 
     private fun drain() = coroutines.drain()
 
+    /** Records the sources the transcript hands to the viewer window instead of opening one. */
+    private fun windows(): List<String> {
+        val opened = mutableListOf<String>()
+        val service = DiagramWindows(project, { source -> opened.add(source); NoopHandle() }, { _, _ -> })
+        project.replaceService(DiagramWindows::class.java, service, testRootDisposable)
+        return opened
+    }
+
+    /** Puts the transcript under a project data provider so the click can resolve the project. */
+    private fun attach() {
+        val panel = DataPanel(project)
+        panel.add(root())
+        panel.setSize(400, 400)
+        panel.doLayout()
+    }
+
+    private fun click(target: JComponent) {
+        target.dispatchEvent(
+            MouseEvent(
+                target,
+                MouseEvent.MOUSE_CLICKED,
+                System.currentTimeMillis(),
+                0,
+                1,
+                1,
+                1,
+                false,
+                MouseEvent.BUTTON1,
+            ),
+        )
+    }
+
     private fun root() = view.component as JPanel
 
     private fun block() = descendants(root()).filterIsInstance<DiagramBlock>().single()
@@ -153,6 +222,20 @@ class MdViewDiagramTest : BasePlatformTestCase() {
             if (comp is java.awt.Container) out.addAll(descendants(comp))
         }
         return out
+    }
+
+    private class DataPanel(private val project: Project) : JPanel(), UiDataProvider {
+        override fun uiDataSnapshot(sink: DataSink) {
+            sink[CommonDataKeys.PROJECT] = project
+        }
+    }
+
+    private class NoopHandle : DiagramHandle {
+        override fun show() = Unit
+
+        override fun focus() = Unit
+
+        override fun dispose() = Unit
     }
 
     private class FakeEngine : Engine {

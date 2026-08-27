@@ -105,7 +105,8 @@ class DiagramEditorKindTest : BasePlatformTestCase() {
             try {
                 assertEquals(KiloBundle.message("diagram.title"), main.name)
                 assertEquals(KiloBundle.message("diagram.source"), source.name)
-                assertNotNull(main.component)
+                // The tab hosts the same zoomable viewer the diagram window uses.
+                assertEquals(1, descendants(main.component).filterIsInstance<DiagramViewer>().size)
 
                 val field = descendants(source.component).filterIsInstance<CodeViewField>().single()
                 assertEquals(flow.trim(), field.text.trim())
