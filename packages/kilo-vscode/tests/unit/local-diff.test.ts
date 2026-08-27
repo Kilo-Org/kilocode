@@ -732,6 +732,28 @@ describe("createLocalDiff concurrent details", () => {
     })
   })
 
+  it("does not return stale singleton details after a newer summary arrives", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nold\n")
+      const ops = new RecordingGitOps()
+      const local = createLocalDiff(ops)
+      await local.summary(dir, base)
+      const gate = deferred<void>()
+      const ready = deferred<void>()
+      ops.block(show, gate.promise, ready.resolve)
+      const pending = local.file(dir, base, "seed.txt")
+      await ready.promise
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nnewer contents\n")
+      const summary = await local.summary(dir, base)
+      gate.resolve()
+
+      const value = await pending
+      expect(value?.after).toBe("seed\nnewer contents\n")
+      expect(value?.stamp).toBe(summary.find((entry) => entry.file === "seed.txt")?.stamp)
+      expect(await local.file(dir, base, "seed.txt")).toBe(value)
+    })
+  })
+
   it("shares one result for duplicate concurrent callers in a batch", async () => {
     await withRepo(async (dir, base) => {
       await setup(dir, base)

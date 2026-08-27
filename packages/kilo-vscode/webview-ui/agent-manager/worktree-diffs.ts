@@ -78,6 +78,21 @@ export function createWorktreeDiffs(
     setDiffFileLoading(remove)
   }
 
+  const prune = (ids: Set<string>) => {
+    const prefix = `${project() ?? "single"}\0`
+    const keys = new Set([
+      ...Object.keys(diffDatas()),
+      ...Object.keys(diffLoadings()),
+      ...Object.keys(diffNotices()),
+      ...Object.keys(diffFileLoading()),
+    ])
+    for (const data of keys) {
+      if (!data.startsWith(prefix)) continue
+      const ctx = parseDiffId(data.slice(prefix.length)).ctx
+      if (ctx !== "local" && !ids.has(ctx)) drop(data)
+    }
+  }
+
   const retain = (id: string) => {
     const data = id.includes("\0") ? id : key(id)
     const entries = diffDatas()[data]
@@ -232,6 +247,7 @@ export function createWorktreeDiffs(
     diffDataKey,
     retain,
     drop,
+    prune,
     reset,
     onWorktreeDiff,
     onWorktreeDiffFile,

@@ -155,9 +155,18 @@ export function createDiffCache(load: Loader) {
     const existing = pending.get(latest.id)
     if (existing && existing.item !== item) return existing.work
     const result = await load.detail(item.dir, latest.state.anc, latest.meta)
+    if (current(item)?.id !== latest.id) return null
     if (result.image?.before?.error === "unreadable" || result.image?.after?.error === "unreadable") return result
     remember(latest.id, result)
     return result
+  }
+
+  const settle = async (item: Item, value: Value | undefined) => {
+    if (current(item)?.id === item.id && value) {
+      item.resolve(value)
+      return
+    }
+    item.resolve(item.calls.size > 0 ? await fallback(item) : null)
   }
 
   const run = async (items: Item[]) => {
@@ -171,7 +180,7 @@ export function createDiffCache(load: Loader) {
       if (chunk.length === 1) {
         const item = chunk[0]!
         try {
-          item.resolve(await load.detail(item.dir, item.anc, item.meta))
+          await settle(item, await load.detail(item.dir, item.anc, item.meta))
         } catch (error) {
           item.reject(error)
         }
@@ -190,13 +199,8 @@ export function createDiffCache(load: Loader) {
       await Promise.all(
         chunk.map(async (item) => {
           try {
-            const latest = current(item)
-            const entry = value?.entries.get(item.meta.file)
-            if (latest?.id === item.id && entry && !value?.deferred.has(item.meta.file)) {
-              item.resolve(entry)
-              return
-            }
-            item.resolve(item.calls.size > 0 ? await fallback(item) : null)
+            const entry = value?.deferred.has(item.meta.file) ? undefined : value?.entries.get(item.meta.file)
+            await settle(item, entry)
           } catch (error) {
             item.reject(error)
           }
