@@ -198,8 +198,8 @@ describe("on-demand file search", () => {
         const glob = await Effect.runPromise(service.glob({ pattern: "*.ts", path: RelativePath.make("src") }))
         const grep = await Effect.runPromise(service.grep({ pattern: "needle", path: RelativePath.make("src") }))
         expect(files.map((item) => String(item.path))).toEqual(["src/match.ts"])
-        expect(glob.map((item) => String(item.path))).toEqual(["src/match.ts"])
-        expect(grep.map((item) => String(item.entry.path))).toEqual(["src/match.ts"])
+        expect(glob.map((item) => String(item.path))).toEqual([path.join("src", "match.ts")])
+        expect(grep.map((item) => String(item.entry.path))).toEqual([path.join("src", "match.ts")])
       },
       { alias: true },
     )
@@ -212,9 +212,11 @@ describe("on-demand file search", () => {
       expect(await Effect.runPromise(service.glob(input))).toEqual([])
       await fs.writeFile(path.join(directory, "src", "match.ts"), "needle\n")
       await fs.writeFile(path.join(directory, "outside.ts"), "needle\n")
-      expect((await Effect.runPromise(service.glob(input))).map((item) => String(item.path))).toEqual(["src/match.ts"])
+      expect((await Effect.runPromise(service.glob(input))).map((item) => String(item.path))).toEqual([
+        path.join("src", "match.ts"),
+      ])
       const matches = await Effect.runPromise(service.grep({ pattern: "needle", path: RelativePath.make("src") }))
-      expect(matches.map((item) => String(item.entry.path))).toEqual(["src/match.ts"])
+      expect(matches.map((item) => String(item.entry.path))).toEqual([path.join("src", "match.ts")])
       await fs.writeFile(path.join(directory, "src", "match.ts"), "changed\n")
       expect(await Effect.runPromise(service.grep({ pattern: "needle", path: RelativePath.make("src") }))).toEqual([])
     })
