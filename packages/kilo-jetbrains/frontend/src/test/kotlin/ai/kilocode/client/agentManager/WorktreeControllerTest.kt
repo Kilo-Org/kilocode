@@ -1,6 +1,8 @@
 package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.CreateFailure
+import ai.kilocode.client.agentManager.worktree.CreateKind
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.PendingPrompt
@@ -102,10 +104,54 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("feature/y", selected.last())
     }
 
+    fun `test create prepends placeholder and created worktree`() {
+        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
+
+        assertEquals("feature/y", controller.model.getElementAt(0).branch)
+        assertTrue(controller.isPending(controller.model.getElementAt(0).id))
+        gate.complete(Unit)
+        flush()
+
+        assertEquals("feature/y", controller.model.getElementAt(0).branch)
+        assertFalse(controller.isPending(controller.model.getElementAt(0).id))
+    }
+
+    fun `test created worktrees are announced once they exist`() {
+        val controller = controller()
+        val created = mutableListOf<WorktreeDto>()
+        controller.onCreated = { created.add(it) }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
+        // Nothing exists on disk while the create is still pending.
+        assertEquals(emptyList<WorktreeDto>(), created)
+        flush()
+
+        assertEquals(listOf("feature/y"), created.map { it.branch })
+    }
+
+    fun `test a failed create announces nothing`() {
+        rpc.createResult = { CreateWorktreeResultDto(error = "boom") }
+        val controller = controller()
+        val created = mutableListOf<WorktreeDto>()
+        controller.onCreated = { created.add(it) }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
+        flush()
+
+        assertEquals(emptyList<WorktreeDto>(), created)
+    }
+
     fun `test create failure removes placeholder and reports the error`() {
         rpc.createResult = { CreateWorktreeResultDto(error = "boom") }
         val controller = controller()
-        val failures = mutableListOf<String?>()
+        val failures = mutableListOf<CreateFailure>()
         controller.onCreateFailure = { failures.add(it) }
 
         ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
@@ -115,7 +161,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
         assertEquals(0, controller.model.size)
         assertFalse(controller.isPending(id))
-        assertEquals(listOf("boom"), failures)
+        assertEquals(listOf(CreateFailure("boom", CreateKind.CREATE, "feature/y")), failures)
     }
 
     fun `test reload preserves pending worktrees`() {
@@ -129,7 +175,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         controller.reload()
         flush()
 
-        assertEquals(listOf("feature/x", "feature/y"), (0 until controller.model.size).map { controller.model.getElementAt(it).branch })
+        assertEquals(listOf("feature/y", "feature/x"), (0 until controller.model.size).map { controller.model.getElementAt(it).branch })
         assertTrue(controller.isPending(id))
         gate.complete(Unit)
         flush()
@@ -193,6 +239,25 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertNull(controller.progress(item.id))
         assertEquals(1, failures.size)
         assertTrue(failures.first().locked)
+    }
+
+    fun `test refused nested remove keeps the row and surfaces the error`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        rpc.removeResult = { _, _, _ -> RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") }
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        val failures = mutableListOf<RemoveWorktreeResultDto>()
+        controller.remove(controller.model.getElementAt(0), onFailure = { failures.add(it) })
+        flush()
+
+        assertEquals(1, controller.model.size)
+        assertEquals("feature/x", controller.model.getElementAt(0).branch)
+        assertNull(controller.progress(item.id))
+        assertEquals(listOf(false), rpc.removeForces.toList())
+        assertEquals("Delete nested worktrees first:\n/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested", failures.single().error)
     }
 
     fun `test force remove passes the force flag and drops the row on success`() {
@@ -474,7 +539,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test worktree row icons show only while running or waiting`() {
+    fun `test worktree row icons show while running, waiting or failed`() {
         assertSame(
             WorktreeIcons.spinner,
             WorktreeIcons.forRow(busy = true, kind = SessionActivityKind.RUNNING),
@@ -491,7 +556,10 @@ class WorktreeControllerTest : BasePlatformTestCase() {
             SessionActivityKind.PLAN.icon(),
             WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.PLAN),
         )
-        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR))
+        assertSame(
+            SessionActivityKind.ERROR.icon(),
+            WorktreeIcons.forRow(busy = false, kind = SessionActivityKind.ERROR),
+        )
         assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(busy = false, kind = null))
     }
 

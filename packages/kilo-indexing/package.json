@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-indexing",
-  "version": "7.4.23",
+  "version": "7.5.5",
   "type": "module",
   "license": "MIT",
   "description": "Standalone indexing engine and host helpers for Kilo Code",
@@ -47,7 +47,7 @@
     "hono": "catalog:",
     "hono-openapi": "catalog:",
     "ignore": "7.0.5",
-    "minimatch": "10.2.5",
+    "minimatch": "10.2.6",
     "openai": "6.27.0",
     "p-limit": "7.3.0",
     "tree-sitter-wasms": "0.1.13",

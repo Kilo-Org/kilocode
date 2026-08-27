@@ -23,7 +23,7 @@ type Ctx = {
   modelUsage: (message: ModelUsageMessage) => Promise<void>
   backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
   cancelBackgroundJob: (jobID: string, sessionID: string, requestID: string) => Promise<void>
-  backgroundSubagents: (sessionID: string) => Promise<void>
+  promoteBackgroundJob: (jobID: string, sessionID: string) => Promise<void>
 }
 
 async function routeBackgroundMessage(
@@ -46,8 +46,10 @@ async function routeBackgroundMessage(
     }
     return true
   }
-  if (message.type === "backgroundSubagents") {
-    if (typeof message.sessionID === "string") await ctx.backgroundSubagents(message.sessionID)
+  if (message.type === "promoteBackgroundJob") {
+    if (typeof message.jobID === "string" && typeof message.sessionID === "string") {
+      await ctx.promoteBackgroundJob(message.jobID, message.sessionID)
+    }
     return true
   }
   return undefined

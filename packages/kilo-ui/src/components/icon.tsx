@@ -70,6 +70,10 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     viewBox: "0 0 24 24",
     path: `<path d="M12 14L9 10M12 14L15 10M21 15C21 18.866 17.866 22 14 22H10C6.134 22 3 18.866 3 15V9C3 5.134 6.134 2 10 2H14C17.866 2 21 5.134 21 9V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
+  local: {
+    viewBox: "0 0 20 20",
+    path: `<rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor"/><path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square"/><path d="M10 13.5V16.5" stroke="currentColor"/>`,
+  },
 }
 
 type Name = keyof typeof icons

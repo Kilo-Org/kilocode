@@ -400,6 +400,8 @@ class SessionUi(
         outcome = SessionOutcomeView(
             selection = selection,
             focus = focus,
+            retry = if (readonly) null else controller::retry,
+            retryable = controller::canRetry,
         )
         messageBody = SessionMessageListPanel(
             controller.model,
@@ -461,7 +463,9 @@ class SessionUi(
             hostedInEditorTab = manager?.hostedInEditorTab == true,
         )
         connection = ConnectionPanel(this, controller)
-        root.addOverlay(connection) { pane, child ->
+        // The banner reports a broken session, so it owns the pointer where it sits: the transcript
+        // under it must not stay hovered and keep a popup open behind it.
+        root.addOverlay(connection, blocks = true) { pane, child ->
             val size = child.preferredSize
             if (readonly) {
                 val gap = SessionUiStyle.View.contentGap()

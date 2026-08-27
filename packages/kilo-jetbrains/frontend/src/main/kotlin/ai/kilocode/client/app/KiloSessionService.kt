@@ -5,6 +5,7 @@ package ai.kilocode.client.app
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.toKind
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -34,10 +35,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -68,13 +71,21 @@ class KiloSessionService internal constructor(
     private val _sessions = MutableStateFlow<List<SessionDto>>(emptyList())
     val sessions: StateFlow<List<SessionDto>> = _sessions.asStateFlow()
 
-    /** Live session status map from SSE events. */
-    val statuses: StateFlow<Map<String, SessionStatusDto>> =
-        stream { statuses() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
+    // Sessions deleted this run. The backend does not always emit a status/activity clear for a
+    // session left in a waiting or failed state, so a deleted question/error entry would otherwise
+    // linger and keep its badge on the session list, worktree list, and tab attention dot. Pruning
+    // it locally forces every derived status to re-evaluate the moment the delete resolves.
+    private val removed = MutableStateFlow<Set<String>>(emptySet())
 
-    /** Live session activity map from backend global events. */
+    /** Live session status map from SSE events, minus sessions deleted this run. */
+    val statuses: StateFlow<Map<String, SessionStatusDto>> =
+        combine(stream { statuses() }, removed) { map, gone -> map - gone }
+            .stateIn(cs, SharingStarted.Eagerly, emptyMap())
+
+    /** Live session activity map from backend global events, minus sessions deleted this run. */
     val activity: StateFlow<Map<String, SessionActivityDto>> =
-        stream { activity() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
+        combine(stream { activity() }, removed) { map, gone -> map - gone }
+            .stateIn(cs, SharingStarted.Eagerly, emptyMap())
 
     /**
      * Session create/update/delete across every directory the CLI serves, including sessions
@@ -109,10 +120,19 @@ class KiloSessionService internal constructor(
         }
     }
 
-    internal fun activitySnapshot(): Map<String, SessionActivityKind> =
-        statuses.value
-            .filterValues { it.type == "busy" }
-            .mapValues { SessionActivityKind.RUNNING }
+    /**
+     * Per-session activity for history and session lists. [activity] is the richer source — it also
+     * carries waiting and failed sessions, and it covers sessions that are not open — but it drops
+     * sessions whose directory the backend cannot resolve, so the busy statuses stay as a fallback.
+     *
+     * [statuses] and [activity] prune [removed] through separate collectors, so one can still carry
+     * a deleted session while the other has already dropped it. Subtracting [removed] here keeps the
+     * merged snapshot consistent instead of briefly badging a deleted session as running.
+     */
+    internal fun activitySnapshot(): Map<String, SessionActivityKind> {
+        val busy = statuses.value.filterValues { it.type == "busy" }.mapValues { SessionActivityKind.RUNNING }
+        return (busy + activity.value.mapValues { it.value.kind.toKind() }) - removed.value
+    }
 
     suspend fun list(dir: String): SessionListDto {
         val result = call { list(dir) }
@@ -159,6 +179,7 @@ class KiloSessionService internal constructor(
         log.info("${ChatLogSummary.sid(id)} kind=session delete=true dir=${ChatLogSummary.dir(dir)}")
         call { delete(id, dir) }
         log.info("${ChatLogSummary.sid(id)} kind=session delete=true ok=true dir=${ChatLogSummary.dir(dir)}")
+        removed.update { it + id }
         list(dir)
     }
 

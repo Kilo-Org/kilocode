@@ -14,6 +14,7 @@ interface ProjectsSectionProps {
   onSelect: (id: string) => void
   onRemove: (id: string) => void
   onExpand: (id: string, expanded: boolean) => void
+  onHistory: (id: string) => void
   count: (id: string) => number | undefined
   tools?: JSX.Element
   body: (project: AgentProjectSnapshot) => JSX.Element
@@ -69,18 +70,30 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                   </>
                 }
                 actions={
-                  <Show when={!project().pinned}>
+                  <div class="am-project-actions-row">
                     <IconButton
-                      icon="close-small"
+                      icon="history"
                       size="small"
                       variant="ghost"
-                      label={props.t("agentManager.project.remove")}
+                      aria-label={props.t("session.showHistory")}
                       onClick={(event) => {
                         event.stopPropagation()
-                        props.onRemove(project().id)
+                        props.onHistory(project().id)
                       }}
                     />
-                  </Show>
+                    <Show when={!project().pinned}>
+                      <IconButton
+                        icon="close-small"
+                        size="small"
+                        variant="ghost"
+                        label={props.t("agentManager.project.remove")}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          props.onRemove(project().id)
+                        }}
+                      />
+                    </Show>
+                  </div>
                 }
                 onToggle={() => {
                   if (project().missing) return
