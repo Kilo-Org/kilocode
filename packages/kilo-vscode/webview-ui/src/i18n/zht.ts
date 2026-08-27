@@ -169,6 +169,8 @@ export const dict = {
   "common.saving": "儲存中...",
   "common.default": "預設",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "搜尋 Worktree",
   "prompt.thinking.tooltip": "推理強度",
   "prompt.action.send": "傳送",
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",

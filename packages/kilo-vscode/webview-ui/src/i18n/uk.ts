@@ -175,6 +175,8 @@ export const dict = {
   "common.saving": "Збереження...",
   "common.default": "За замовчуванням",
 
+  "prompt.worktrees.title": "Робочі дерева",
+  "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
   "prompt.action.send": "Надіслати",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",

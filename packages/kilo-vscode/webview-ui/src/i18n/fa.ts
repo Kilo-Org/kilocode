@@ -175,6 +175,8 @@ export const dict = {
   "common.saving": "در حال ذخیره...",
   "common.default": "پیش‌فرض",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "جستجوی worktree‌ها",
   "prompt.thinking.tooltip": "میزان استدلال",
   "prompt.action.send": "ارسال",
   "prompt.action.send.blocked": "ابتدا به سؤال در انتظار پاسخ دهید یا آن را رد کنید",
