@@ -26,12 +26,14 @@ internal fun failureText(error: MessageErrorDto?): String? {
 }
 
 /**
- * The failure a turn ended with, rendered on the message that carries it.
+ * The failure the session is currently sitting on, rendered on the message that carries it.
  *
- * The footer outcome card is bound to live session state, so it is gone as soon as the next turn
- * starts and it never comes back for an older turn. This card is the durable record: a turn that died
- * mid-session still explains itself in scrollback and after a reload, which is what the TUI and the
- * VS Code webview already do.
+ * The reason belongs next to the work that failed rather than in a state-driven footer, and it has to
+ * survive a reload — reopening a session whose last turn failed must still explain itself. The footer
+ * keeps the Retry action instead of repeating this text.
+ *
+ * Only the live turn gets one; see `SessionMessageListPanel.syncFailures` for why a superseded failure
+ * renders nothing.
  *
  * An accented block rather than a full card: there is nothing to expand, and the text is the point.
  */

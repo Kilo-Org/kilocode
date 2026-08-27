@@ -188,37 +188,89 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(cards("a2").isEmpty())
     }
 
-    fun `test outcome card owns the active tail error while it shows the same text`() {
-        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
-        assertEquals("Missing credentials", cards("a1").single().text())
-
-        model.setState(SessionState.Error("Missing credentials"))
-
-        assertTrue("The footer already shows this message next to Retry", cards("a1").isEmpty())
-    }
-
-    fun `test tail failure card returns once the footer moves on`() {
+    /** The transcript keeps the reason; the footer drops its copy and keeps only the action. */
+    fun `test footer offers retry without repeating the message the card shows`() {
+        val item = panelWithRetry { true }
         model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
         model.setState(SessionState.Error("Missing credentials"))
-        assertTrue(cards("a1").isEmpty())
 
-        model.setState(SessionState.Busy("thinking"))
-
-        assertEquals("Missing credentials", cards("a1").single().text())
+        val ov = find<SessionOutcomeView>(item)!!
+        assertEquals("Missing credentials", cards(item, "a1").single().text())
+        assertTrue(ov.isVisible)
+        assertNull("The reason must not be printed twice", text(ov, "Missing credentials"))
+        assertNotNull(button(ov, KiloBundle.message("session.outcome.retry")))
     }
 
-    fun `test generic failed outcome keeps the provider error in the transcript`() {
+    /** Nothing left to offer: the card already says it, and the turn cannot be continued. */
+    fun `test footer hides when the card explains a failure that cannot be retried`() {
+        val item = panelWithRetry { false }
         model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
+        model.setState(SessionState.Error("Missing credentials"))
+
+        val ov = find<SessionOutcomeView>(item)!!
+        assertEquals("Missing credentials", cards(item, "a1").single().text())
+        assertFalse(ov.isVisible)
+    }
+
+    /** A failure with no errored message of its own has no card, so the footer still explains it. */
+    fun `test footer keeps the message when the transcript cannot explain it`() {
+        val item = panelWithRetry { true }
+        model.upsertMessage(msg("u1", "user"))
+        model.setState(SessionState.Error("Missing provider credentials", "ProviderAuthError"))
+
+        val ov = find<SessionOutcomeView>(item)!!
+        assertTrue(ov.isVisible)
+        assertNotNull(text(ov, "Missing provider credentials"))
+        assertNotNull(button(ov, KiloBundle.message("session.outcome.retry")))
+    }
+
+    fun `test generic failed close drops its description when the card explains the turn`() {
+        val item = panelWithRetry { true }
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Provider overloaded")))
         model.setState(SessionState.TurnEnded(Outcome.FAILED))
 
-        assertEquals("Missing credentials", cards("a1").single().text())
+        val ov = find<SessionOutcomeView>(item)!!
+        assertEquals("Provider overloaded", cards(item, "a1").single().text())
+        assertNull(text(ov, KiloBundle.message("session.outcome.failed.description")))
+        assertNotNull(button(ov, KiloBundle.message("session.outcome.retry")))
     }
 
-    fun `test unrelated footer error does not hide the message failure`() {
+    fun `test failure landing after the error state still collapses the footer`() {
+        val item = panelWithRetry { true }
+        model.upsertMessage(msg("a1", "assistant"))
+        model.setState(SessionState.Error("Missing credentials"))
+        val ov = find<SessionOutcomeView>(item)!!
+        assertNotNull("Precondition: no card yet, so the footer explains it", text(ov, "Missing credentials"))
+
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
+
+        assertEquals("Missing credentials", cards(item, "a1").single().text())
+        assertNull("The footer must drop its copy once the card has one", text(ov, "Missing credentials"))
+    }
+
+    /** The card is the durable record, so no session state may take it away. */
+    fun `test failure card survives every state the session moves through`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
+
+        for (state in listOf(
+            SessionState.Error("Missing credentials"),
+            SessionState.TurnEnded(Outcome.FAILED),
+            SessionState.Busy("thinking"),
+            SessionState.Idle,
+        )) {
+            model.setState(state)
+            assertEquals("card must stay in $state", "Missing credentials", cards("a1").single().text())
+        }
+    }
+
+    fun `test unrelated session error leaves the message failure alone`() {
+        val item = panelWithRetry { true }
         model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
         model.setState(SessionState.Error("Workspace failed"))
 
-        assertEquals("Missing credentials", cards("a1").single().text())
+        val ov = find<SessionOutcomeView>(item)!!
+        assertEquals("Missing credentials", cards(item, "a1").single().text())
+        assertNotNull("A different failure still needs its own text", text(ov, "Workspace failed"))
     }
 
     fun `test history load paints a failure that arrived before the panel existed`() {
@@ -234,14 +286,30 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals("Context window exceeded", cards("a1").single().text())
     }
 
-    /** The footer outcome card is state-bound and vanishes on the next turn; this record must not. */
-    fun `test failure card survives the following turn`() {
+    /**
+     * A superseded failure is history: the user cannot act on it, and a red card stranded between two
+     * later turns is noise. It also keeps the card in lockstep with the footer, which only ever
+     * describes the tail.
+     */
+    fun `test failure card is dropped once a later turn supersedes it`() {
         model.upsertMessage(msg("a1", "assistant").copy(error = failure("Provider overloaded")))
+        assertEquals("Provider overloaded", cards("a1").single().text())
+
         model.upsertMessage(msg("u2", "user"))
         model.upsertMessage(msg("a2", "assistant"))
 
-        assertEquals("Provider overloaded", cards("a1").single().text())
+        assertTrue("Nothing in the middle of the transcript", cards("a1").isEmpty())
         assertTrue(cards("a2").isEmpty())
+    }
+
+    fun `test only the newest failed turn shows its reason`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant").copy(parentID = "u1", error = failure("Missing credentials")))
+        model.upsertMessage(msg("u2", "user"))
+        model.upsertMessage(msg("a2", "assistant").copy(parentID = "u2", error = failure("Missing credentials")))
+
+        assertTrue(cards("a1").isEmpty())
+        assertEquals("Missing credentials", cards("a2").single().text())
     }
 
     fun `test clearing the failure removes its card`() {
@@ -1761,10 +1829,21 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     private fun failure(message: String) = MessageErrorDto("APIError", message)
 
-    private fun cards(msgId: String): List<MessageErrorView> {
-        val view = panel.findMessage(msgId) ?: return emptyList()
+    private fun cards(msgId: String): List<MessageErrorView> = cards(panel, msgId)
+
+    private fun cards(item: SessionMessageListPanel, msgId: String): List<MessageErrorView> {
+        val view = item.findMessage(msgId) ?: return emptyList()
         return components(view).filterIsInstance<MessageErrorView>()
     }
+
+    /** Panel whose footer can offer Retry, so the split between card text and footer action is testable. */
+    private fun panelWithRetry(retryable: () -> Boolean): SessionMessageListPanel {
+        val o = SessionOutcomeView(retry = {}, retryable = retryable)
+        return SessionMessageListPanel(model, parent, openFile = openFile).also { it.outcome = o }
+    }
+
+    private fun button(root: Container, label: String) =
+        components(root).filterIsInstance<JButton>().firstOrNull { it.text == label }
 
     private fun summary(path: String) = MessageSummaryDto(
         diffs = listOf(DiffFileDto(path, 2, 1, PATCH)),

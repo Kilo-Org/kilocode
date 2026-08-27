@@ -1452,11 +1452,15 @@ class SessionController(
             // After auto-approve only skill-shell permissions still need a human card; queue those.
             // Otherwise queue the whole pending set so each request is resolved in turn.
             val queue = if (autoApprove) permissions.filter { it.metadata["skillShell"] == "true" } else permissions
+            // An "idle" status is still a status. It means no live work, not "nothing to recover", so it
+            // must not shadow the transcript: a session reopened after a failed turn is idle on the
+            // server and would otherwise recover as if it had never failed.
+            val live = liveStatus(status)
             val branch = when {
                 permissions.isNotEmpty() -> "permission"
                 questions.isNotEmpty() -> "question"
-                status != null -> "status"
-                else -> "idle"
+                live != null -> "status"
+                else -> "outcome"
             }
             LOG.debug {
                 "${ChatLogSummary.sid(id)} kind=recovery permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
@@ -1471,8 +1475,8 @@ class SessionController(
                         promote()
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
-                    } else if (status != null) {
-                        seedStatus(status)
+                    } else if (live != null) {
+                        model.setState(live)
                     } else {
                         seedOutcome()
                     }
@@ -1484,14 +1488,16 @@ class SessionController(
     }
 
     /**
-     * Seed initial session state from a snapshot status value.
+     * The state a snapshot status implies, or null when it reports no live work.
      *
-     * Used only during recovery — does not apply the live-event clobbering guard
-     * for "busy" because no more-specific state has arrived yet.
+     * Used only during recovery — does not apply the live-event clobbering guard for "busy" because no
+     * more-specific state has arrived yet. Returning null for idle/unknown hands the decision to
+     * [seedOutcome], so a reopened session can still show how its last turn ended.
      */
-    private fun seedStatus(dto: SessionStatusDto) {
+    private fun liveStatus(dto: SessionStatusDto?): SessionState? {
+        if (dto == null) return null
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} evt=session.status ${ChatLogSummary.status(dto)}" }
-        val state = when (dto.type) {
+        return when (dto.type) {
             "busy" -> SessionState.Busy(KiloBundle.message("session.status.considering"))
             "retry" -> SessionState.Retry(
                 message = dto.message ?: "",
@@ -1502,9 +1508,8 @@ class SessionController(
                 message = dto.message ?: "",
                 requestId = dto.requestID ?: "",
             )
-            else -> return  // idle or unknown — leave as Idle
+            else -> null  // idle or unknown — the transcript decides
         }
-        model.setState(state)
     }
 
     private fun seedOutcome() {

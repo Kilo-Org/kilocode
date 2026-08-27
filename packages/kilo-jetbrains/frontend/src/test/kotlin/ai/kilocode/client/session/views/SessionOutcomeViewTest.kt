@@ -227,6 +227,55 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
     private fun retryButton(root: Container) =
         findAll<JButton>(root).firstOrNull { it.text == KiloBundle.message("session.outcome.retry") }
 
+    // ------ action-only failures (the transcript owns the reason) ------
+
+    fun `test showRetry offers the action with no message of its own`() {
+        edt {
+            var clicked = 0
+            val view = SessionOutcomeView(retry = { clicked++ })
+            view.showRetry()
+
+            assertTrue(view.isVisible)
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.title")))
+            assertNull(
+                "The transcript card carries the reason",
+                findText(view, KiloBundle.message("session.outcome.failed.description")),
+            )
+            retryButton(view)!!.doClick()
+            assertEquals(1, clicked)
+        }
+    }
+
+    fun `test showRetry hides when there is nothing to replay`() {
+        edt {
+            val view = SessionOutcomeView(retry = {}, retryable = { false })
+            view.showRetry()
+
+            assertFalse("A header with no reason and no action says nothing", view.isVisible)
+        }
+    }
+
+    fun `test showRetry hides in a readonly session`() {
+        edt {
+            val view = SessionOutcomeView(retry = null)
+            view.showRetry()
+
+            assertFalse(view.isVisible)
+        }
+    }
+
+    fun `test showRetry drops stale error content`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showError("Provider balance is too low", "APIError")
+            view.showRetry()
+
+            assertNull(findText(view, "Provider balance is too low"))
+            assertNull(findErrorScroll(view, "Provider balance is too low"))
+            assertNotNull(retryButton(view))
+        }
+    }
+
     fun `test hideView makes view invisible`() {
         edt {
             val view = SessionOutcomeView()

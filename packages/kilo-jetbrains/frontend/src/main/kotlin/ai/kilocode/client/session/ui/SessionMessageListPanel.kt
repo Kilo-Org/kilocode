@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
@@ -165,8 +166,6 @@ class SessionMessageListPanel(
                     syncReverted()
                     syncReverting(event.state)
                     anchorFooter()
-                    val turn = tail()?.let { msgToTurn[it] }
-                    if (turn?.let(::syncFailures) == true) (layout as? SessionLayout)?.forget(turn)
                     refresh()
                 }
 
@@ -198,6 +197,9 @@ class SessionMessageListPanel(
                     val turn = msgToTurn[id]
                     var changed = turn?.let(::syncFailures) == true
                     if (changed && turn != null) (layout as? SessionLayout)?.forget(turn)
+                    // A failure landing on the tail decides whether the footer prints the reason or only
+                    // offers Retry, so the footer has to be re-evaluated with it.
+                    if (changed && id == tail()) syncActive()
                     val view = turnViews[id]
                     if (view?.setDiffs(event.info.info.summary?.diffs.orEmpty()) == true) {
                         (layout as? SessionLayout)?.forget(view)
@@ -410,11 +412,8 @@ class SessionMessageListPanel(
     /** Last message in the transcript, which is the only message the outcome footer can describe. */
     private fun tail(): String? = turnViews.values.lastOrNull()?.messageIds()?.lastOrNull()
 
-    /** Failure text currently owned by the footer, if it is showing a concrete error. */
-    private fun presented(): String? {
-        val state = model.state as? SessionState.Error ?: return null
-        return state.message.takeIf { it.isNotBlank() }
-    }
+    /** Failure the transcript already explains for the tail message, or null when it explains nothing. */
+    private fun explained(): String? = tail()?.let { failureText(model.message(it)?.info?.error) }
 
     /** Apply failure visibility policy to every turn. */
     private fun syncFailures(): Boolean {
@@ -429,27 +428,28 @@ class SessionMessageListPanel(
     }
 
     /**
-     * Shows at most one failure per turn, and lets the footer own the active tail failure when it is
-     * already displaying the same text with the Retry affordance.
+     * Renders the failure the session is currently sitting on, and nothing else.
+     *
+     * Only the last turn can show one, and only on its final message:
+     * - a superseded turn shows nothing. Once the conversation moved past a failure it is history, and a
+     *   red card stranded between two later turns is noise the user cannot act on;
+     * - within the live turn, only the final attempt speaks. Retry continues a turn by appending another
+     *   assistant message, so each attempt keeps its own errored message and they would otherwise stack;
+     * - a turn whose final message succeeded says nothing, because a failure it recovered from is not
+     *   that turn's outcome.
+     *
+     * This keeps the card and the footer in lockstep: both describe the tail, so wherever the reason is
+     * visible the Retry action is offered too (when the tail can be continued).
      */
     private fun syncFailures(view: TurnView): Boolean {
+        val live = turnViews.values.lastOrNull() === view
         val ids = view.messageIds()
         val last = ids.lastOrNull()
-        val tail = tail()
-        val shown = presented()
         var changed = false
         for (id in ids) {
             val msg = msgToView[id] ?: continue
-            // Only the turn's final attempt speaks for the turn. Retry continues a turn by appending
-            // another assistant message, so every attempt keeps its own errored message and earlier
-            // ones would stack the same text; a turn that ended well says nothing at all.
-            val error = model.message(id)?.info?.error?.takeIf { id == last }
-            val text = failureText(error)
-            // The outcome footer owns the live failure while it is showing that exact text, because that
-            // is the card carrying Retry. A generic TurnEnded(FAILED) footer carries no message, so the
-            // card stays and remains the only place the reason is visible.
-            val duplicate = id == tail && text != null && text == shown
-            changed = msg.syncError(if (duplicate) null else error) || changed
+            val error = model.message(id)?.info?.error?.takeIf { live && id == last }
+            changed = msg.syncError(error) || changed
         }
         return changed
     }
@@ -522,14 +522,22 @@ class SessionMessageListPanel(
                 question?.hideView()
                 permission?.hideView()
                 login?.hideView()
-                outcome?.showError(state.message, state.kind)
+                // The transcript card owns the reason whenever the failed message carries it, so the
+                // footer keeps only the action. Session-level errors — bad config, or a failure that hit
+                // before an assistant message existed — have no card, so they still print in full.
+                // Trimmed: the state message is the raw error text, while the card normalizes it.
+                if (explained() == state.message.trim()) outcome?.showRetry()
+                else outcome?.showError(state.message, state.kind)
             }
             is SessionState.TurnEnded -> {
                 setHiddenQuestionTool(null)
                 question?.hideView()
                 permission?.hideView()
                 login?.hideView()
-                outcome?.showOutcome(state.outcome)
+                // A failed turn close carries no message of its own; when the tail message explains
+                // itself the generic "stopped with an error" line is noise next to that card.
+                if (state.outcome == Outcome.FAILED && explained() != null) outcome?.showRetry()
+                else outcome?.showOutcome(state.outcome)
             }
             else -> {
                 setHiddenQuestionTool(null)
