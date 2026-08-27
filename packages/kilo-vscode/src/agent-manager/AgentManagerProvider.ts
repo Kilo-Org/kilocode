@@ -1454,8 +1454,6 @@ export class AgentManagerProvider implements Disposable {
       runScriptConfigured: false,
     })
   }
-  // Manager accessors — repository-bound services are owned by the active ProjectContext (immutable per root).
-  /** Provider capabilities for the worktree lifecycle handlers (state stays in ProjectContext). */
   private get lifecycleHost(): LifecycleHost {
     return {
       createOnDisk: (opts) => this.createWorktreeOnDisk(opts),
