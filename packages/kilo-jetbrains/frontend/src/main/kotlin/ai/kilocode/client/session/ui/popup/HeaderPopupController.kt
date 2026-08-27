@@ -120,7 +120,7 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
         if (!onHeader && !onPopup) return hideAll()
         val req = view.headerPopup() ?: return hideAll()
         val built = req.build()
-        place(req.anchor, built)?.let { open(req, built, it) } ?: hideAll()
+        place(view, req.anchor, built)?.let { open(req, built, it) } ?: hideAll()
     }
 
     @RequiresEdt
@@ -131,6 +131,7 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
             .setBorderColor(UiStyle.Balloon.border())
             .setBorderInsets(UiStyle.Balloon.insets())
             .setPointerSize(UiStyle.Balloon.pointer())
+            .setCornerToPointerDistance(spot.distance)
             .setCornerRadius(UiStyle.Balloon.arc())
             .setHideOnClickOutside(true)
             .setHideOnKeyOutside(true)
@@ -160,14 +161,16 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
     }
 
     /**
-     * Resolves the pointer target beside the session chat, sizing the body to the space available on
-     * the chosen side. Anchoring on the chat rather than the hovered row is what keeps the popup off
-     * the transcript instead of covering the row the user is reading.
+     * Resolves the pointer target beside [card], the collapsible view the popup belongs to, sizing the
+     * body to the space available on the chosen side and to the visible height of the chat. Pointing at
+     * the card rather than the hovered row keeps the popup off the transcript instead of covering the
+     * row the user is reading, and pointing at the card rather than the session edge keeps the balloon
+     * attached to the thing it describes.
      *
      * Returns null when the chat is not on screen yet, in which case there is nothing to sit beside.
      */
     @RequiresEdt
-    private fun place(anchor: JComponent, built: HeaderPopupBody): Spot? {
+    private fun place(card: JComponent, anchor: JComponent, built: HeaderPopupBody): Spot? {
         val pane = SwingUtilities.getRootPane(anchor)?.layeredPane
         val chat = ComponentUtil.getParentOfType(SessionRootPanel::class.java, anchor)
         // A showing anchor implies every ancestor, including the chat, is showing and laid out.
@@ -175,14 +178,19 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
         val gap = UiStyle.Gap.pad()
         val insets = UiStyle.Balloon.insets()
         // The shadow is reserved on every side, so it counts twice on each axis.
-        val shadow = UiStyle.Balloon.shadow() * 2
-        val chromeHeight = insets.top + insets.bottom + shadow
-        val bounds = Rectangle(pane.size)
+        val shadow = UiStyle.Balloon.shadow()
+        val chromeHeight = insets.top + insets.bottom + shadow * 2
+        // The visible chat rect, not the whole panel: a session clipped by a short tool window or a
+        // scrolled editor tab must keep its popups inside the part the user can actually see.
+        val area = SwingUtilities.convertRectangle(chat, chat.visibleRect, pane)
+        if (area.isEmpty) return null
+        val rect = SwingUtilities.convertRectangle(card.parent, card.bounds, pane)
         val spot = HeaderPopupGeometry.beside(
-            pane = bounds,
-            chat = SwingUtilities.convertRectangle(chat.parent, chat.bounds, pane),
+            pane = Rectangle(pane.size),
+            card = rect,
+            view = area,
             fit = HeaderPopupFit(
-                chromeWidth = insets.left + insets.right + UiStyle.Balloon.pointer().height + shadow,
+                chromeWidth = insets.left + insets.right + UiStyle.Balloon.pointer().height + shadow * 2,
                 chromeHeight = chromeHeight,
                 gap = gap,
                 maxWidth = JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH),
@@ -191,11 +199,20 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
         )
         built.fitWithin(spot.maxWidth, spot.maxHeight)
         val row = SwingUtilities.convertPoint(anchor, Point(0, anchor.height / 2), pane)
-        val height = built.component.preferredSize.height + chromeHeight
-        return Spot(pane, Point(spot.x, HeaderPopupGeometry.centerY(bounds, row.y, height, gap)), spot.position)
+        val view = Rectangle(area.x, area.y + shadow, area.width, (area.height - shadow * 2).coerceAtLeast(0))
+        val height = built.component.preferredSize.height + insets.top + insets.bottom
+        val aim = HeaderPopupGeometry.aim(
+            view = view,
+            card = rect,
+            y = row.y,
+            height = height,
+            gap = gap,
+            indent = UiStyle.Balloon.arc() + UiStyle.Balloon.pointer().width / 2,
+        )
+        return Spot(pane, Point(spot.x, aim.y), spot.position, aim.distance)
     }
 
-    private class Spot(val pane: JComponent, val point: Point, val position: Balloon.Position)
+    private class Spot(val pane: JComponent, val point: Point, val position: Balloon.Position, val distance: Int)
 
     private companion object {
         const val SHOW_MS = 500

@@ -13,6 +13,7 @@ interface DiffRequestOptions {
 
 export function createDiffRequests(opts: DiffRequestOptions) {
   const requested = new Map<string, string>()
+  let active = false
 
   createEffect(
     on(
@@ -36,8 +37,17 @@ export function createDiffRequests(opts: DiffRequestOptions) {
 
   createEffect(
     on(
-      () => [opts.open(), opts.diffs(), opts.loading()] as const,
+      () => [opts.open(), opts.diffs(), opts.loading(), opts.send()] as const,
       ([open, diffs]) => {
+        if (!opts.send()) {
+          requested.clear()
+          active = false
+          return
+        }
+        if (!active) {
+          requested.clear()
+          active = true
+        }
         const files = new Set(open)
         for (const file of requested.keys()) {
           if (!files.has(file)) requested.delete(file)

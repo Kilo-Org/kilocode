@@ -932,6 +932,22 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertFalse(overlay.isVisible)
     }
 
+    fun `test account overlay stays hidden when prompt races empty history load`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email = "user@example.com"))
+        val gate = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+        ui = newUi(id = "ses_test")
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller().prompt("hello")
+        }
+        gate.complete(Unit)
+        settle()
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertFalse(overlay.isVisible)
+    }
+
     fun `test non-empty explicit session does not show overlay`() {
         rpc.history.add(MessageWithPartsDto(message("msg1"), emptyList()))
         ui = newUi(id = "ses_test")

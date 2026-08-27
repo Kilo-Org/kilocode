@@ -193,6 +193,30 @@ class ConnectionDelayTest : SessionControllerTestBase() {
         )
     }
 
+    fun `test missing workspace status shows missing folder message`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller(displayMs = 50)
+        val events = collect(m)
+        flush()
+        events.clear()
+
+        projectRpc.state.value = KiloWorkspaceStateDto(
+            status = KiloWorkspaceStatusDto.MISSING,
+            error = "/repo/.kilo/worktrees/deleted",
+        )
+        pause(80)
+
+        val event = events.filterIsInstance<SessionControllerEvent.ConnectionChanged.ShowError>().single()
+        assertEquals("Workspace folder missing", event.summary)
+        assertEquals(
+            "Kilo can't load this session because the workspace folder no longer exists: /repo/.kilo/worktrees/deleted",
+            event.detail,
+        )
+        assertEquals("workspace", event.source)
+        assertFalse(event.detail.orEmpty().contains("JetBrains Gateway"))
+    }
+
     fun `test ready hides visible delayed connection banner immediately`() {
         appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()

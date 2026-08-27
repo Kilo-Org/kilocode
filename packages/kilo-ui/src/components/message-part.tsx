@@ -163,6 +163,7 @@ export interface MessagePartProps {
   working?: boolean
   feedback?: MessageFeedbackControls
   throughput?: JSX.Element
+  readonly?: boolean
 }
 
 export type PartComponent = Component<MessagePartProps>
@@ -1044,6 +1045,7 @@ export function Part(props: MessagePartProps) {
         working={props.working}
         feedback={props.feedback}
         throughput={props.throughput}
+        readonly={props.readonly}
       />
     </Show>
   )
@@ -1068,6 +1070,7 @@ export interface ToolProps {
   locked?: boolean
   animate?: boolean
   reveal?: boolean
+  readonly?: boolean
 }
 
 export type ToolComponent = Component<ToolProps>
@@ -1267,6 +1270,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                     forceOpen={props.forceOpen}
                     animate
                     reveal={props.animate}
+                    readonly={props.readonly}
                   />
                 )
               }
@@ -1344,6 +1348,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 forceOpenFile={props.forceOpenFile}
                 animate
                 reveal={props.animate}
+                readonly={props.readonly}
               />
             </ToolApprovalProvider>
           </Match>

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import type { CheckStatus, PRComment, PRReviewer, PRStatus, ReviewerState } from "../types"
+import type { CheckStatus, PRCheck, PRComment, PRReviewer, PRStatus, ReviewerState } from "../types"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
 export function parsePRResult(json: string): PRResult | null {
@@ -15,7 +15,7 @@ export function parsePRResult(json: string): PRResult | null {
         : decision === "REVIEW_REQUIRED"
           ? "pending"
           : null
-  return {
+  const result: PRResult = {
     number: data.number,
     title: data.title ?? "",
     body: data.body ?? "",
@@ -26,6 +26,46 @@ export function parsePRResult(json: string): PRResult | null {
     deletions: data.deletions ?? 0,
     files: data.changedFiles ?? 0,
   }
+  if (Array.isArray(data.statusCheckRollup)) result.checks = checks(data.statusCheckRollup)
+  if (Array.isArray(data.reviewRequests) && Array.isArray(data.reviews)) {
+    result.reviewers = parseReviewers(data.reviewRequests as GhReviewRequest[], data.reviews as GhReview[])
+  }
+  return result
+}
+
+function checks(items: unknown[]): PRStatus["checks"] {
+  const values = items.map((item): PRCheck => {
+    const check = item as {
+      name?: string
+      context?: string
+      state?: string
+      status?: string
+      conclusion?: string | null
+      link?: string
+      detailsUrl?: string
+      targetUrl?: string
+      startedAt?: string
+      completedAt?: string
+    }
+    return {
+      name: check.name ?? check.context ?? "Unknown check",
+      status: checkStatus(check.conclusion ?? check.state ?? check.status ?? "PENDING"),
+      url: check.detailsUrl ?? check.targetUrl ?? check.link,
+      duration: formatCheckDuration(check.startedAt, check.completedAt),
+    }
+  })
+  return summarize(values)
+}
+
+export function summarize(checks: PRCheck[]): PRStatus["checks"] {
+  const total = checks.filter((item) => item.status !== "skipped").length
+  const passed = checks.filter((item) => item.status === "success").length
+  const failed = checks.filter((item) => item.status === "failure" || item.status === "cancelled").length
+  const pending = checks.filter((item) => item.status === "pending").length
+  const broken = checks.some((item) => item.status === "failure")
+  const status =
+    total === 0 ? "none" : broken ? "failure" : pending > 0 ? "pending" : failed > 0 ? "failure" : "success"
+  return { status, total, passed, failed, pending, checks }
 }
 
 export function checkStatus(state: string): CheckStatus {
@@ -100,14 +140,14 @@ export function parseComments(threads: GhThread[]): PRComment[] {
 export function parseReviewers(requests: GhReviewRequest[], reviews: GhReview[]): PRReviewer[] {
   const map = new Map<string, PRReviewer>()
   for (const node of requests) {
-    const user = node.requestedReviewer
+    const user = node.requestedReviewer ?? node
     if (!user?.login) continue
     map.set(user.login, { login: user.login, avatar: user.avatarUrl, state: "pending" })
   }
   for (const node of reviews) {
     const login = node.author?.login
-    if (!login) continue
-    const state = REVIEWER_STATE[node.state ?? ""] ?? "pending"
+    const state = REVIEWER_STATE[node.state ?? ""]
+    if (!login || !state) continue
     if (!map.has(login) || state !== "commented") {
       map.set(login, { login, avatar: node.author?.avatarUrl, state })
     }
