@@ -6,6 +6,7 @@
  */
 
 import { createEffect, createMemo, on, onCleanup } from "solid-js"
+import { reconcile } from "solid-js/store"
 import { useKeyboard, useRenderer } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
 import * as Clipboard from "@tui/clipboard"
@@ -90,13 +91,13 @@ export function useSessionEffects(deps: {
   const log = Log.create({ service: "tui-branch" })
   const branch = Branch.create({
     get: (input) => deps.sdk.client.vcs.get(input, { throwOnError: true }),
-    emit: deps.sdk.event.emit,
+    apply: (data) => deps.sync.set("vcs", reconcile(data)),
     scope: () => ({
       workspace: project.workspace.current(),
       directory: project.instance.directory() || deps.sdk.directory,
       project: project.project() ?? undefined,
     }),
-    branch: () => deps.sync.data.vcs?.branch,
+    ready: () => deps.sync.data.vcs !== undefined,
   })
 
   function send() {

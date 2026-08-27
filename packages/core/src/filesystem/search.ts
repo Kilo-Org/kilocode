@@ -41,6 +41,7 @@ export const ripgrepLayer = Layer.effect(
         return yield* Effect.die(new Error("Path escapes the location"))
       return { root, target }
     })
+    const list = yield* SearchTarget.listing(fs, ripgrep, location.vcs ? Number.MAX_SAFE_INTEGER : 100_000)
     // kilocode_change end
     return Service.of({
       glob: (input) =>
@@ -107,14 +108,7 @@ export const ripgrepLayer = Layer.effect(
           // kilocode_change start
           const { target } = yield* inspect()
           if (!allowed(target.path)) return []
-          const found = yield* ripgrep
-            .find({
-              cwd: target.path,
-              pattern: "*",
-              limit: location.vcs ? Number.MAX_SAFE_INTEGER : 100_000,
-              validate: SearchTarget.validate(fs, target),
-            })
-            .pipe(Effect.orDie)
+          const found = yield* list(target)
           const files = found.map((entry) => entry.path)
           const directories = new Set<string>()
           if (input.type !== "file") {
@@ -134,7 +128,7 @@ export const ripgrepLayer = Layer.effect(
               type,
             })
           })
-        }),
+        }).pipe(Effect.scoped), // kilocode_change
     })
   }),
 )

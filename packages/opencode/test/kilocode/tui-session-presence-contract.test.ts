@@ -74,6 +74,19 @@ describe("TUI session presence contract", () => {
     expect(body).toContain("const branch = Branch.create")
     expect(body).toContain("if (active) void branch.refresh().catch")
     expect(body).toContain("get: (input) => deps.sdk.client.vcs.get(input, { throwOnError: true })")
+    expect(body).toContain('apply: (data) => deps.sync.set("vcs", reconcile(data))')
+    expect(body).toContain("ready: () => deps.sync.data.vcs !== undefined")
+  })
+
+  test("file autocomplete cancels superseded and closed requests", () => {
+    const source = flat(
+      fs.readFileSync(path.resolve(import.meta.dir, "../../../tui/src/component/prompt/autocomplete.tsx"), "utf8"),
+    )
+    expect(source).toContain("visible: store.visible")
+    expect(source).toContain("onCleanup(() => request?.abort())")
+    expect(source).toContain("request?.abort()")
+    expect(source).toContain("{ signal: controller.signal }")
+    expect(source).toContain("if (controller.signal.aborted || !result) return []")
   })
 
   test("scopes branch events by directory when there is no workspace ID", () => {

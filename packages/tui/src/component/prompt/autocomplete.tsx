@@ -321,22 +321,40 @@ export function Autocomplete(props: {
     insertPart(filename, part)
   }
 
+  // kilocode_change start
+  let request: AbortController | undefined
+  onCleanup(() => request?.abort())
+  // kilocode_change end
+
   const [files] = createResource(
-    () => ({ query: search(), location: location() }),
+    () => ({ query: search(), location: location(), visible: store.visible }), // kilocode_change
     async (input) => {
-      if (!store.visible || store.visible === "/") return []
+      request?.abort() // kilocode_change
+      if (!input.visible || input.visible === "/") return [] // kilocode_change
       if (referenceMatch()) return []
       const { lineRange, baseQuery } = extractLineRange(input.query ?? "")
 
-      // Get files from SDK
-      const result = await sdk.client.v2.fs.find({
-        query: baseQuery,
-        limit: "20",
-        location: {
-          directory: input.location?.directory,
-          workspace: input.location?.workspaceID ?? project.workspace.current(),
-        },
-      })
+      // kilocode_change start
+      const controller = new AbortController()
+      request = controller
+      const result = await sdk.client.v2.fs
+        .find(
+          {
+            query: baseQuery,
+            limit: "20",
+            location: {
+              directory: input.location?.directory,
+              workspace: input.location?.workspaceID ?? project.workspace.current(),
+            },
+          },
+          { signal: controller.signal },
+        )
+        .catch((err) => {
+          if (controller.signal.aborted) return
+          throw err
+        })
+      if (controller.signal.aborted || !result) return []
+      // kilocode_change end
 
       const options: AutocompleteOption[] = []
 
