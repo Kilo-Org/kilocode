@@ -795,11 +795,15 @@ export const RunCommand = effectCmd({
           const toggles = new Map<string, boolean>()
           const MAX_RETRIES = 3 // kilocode_change
           let retries = 0 // kilocode_change
+          const sessions = new Set([sessionID])
           let error: string | undefined
           let autoRejected = false // kilocode_change - plain headless auto-reject must fail the run
 
           // kilocode_change start - revert to upstream: consume native events without normalizing sync copies
           for await (const event of events.stream) {
+            if (event.type === "session.created" && event.properties.info.parentID) {
+              if (sessions.has(event.properties.info.parentID)) sessions.add(event.properties.info.id)
+            }
             // kilocode_change end
 
             if (
@@ -914,7 +918,7 @@ export const RunCommand = effectCmd({
             // kilocode_change start - non-interactive runs dismiss suggestions so they don't block
             if (event.type === "suggestion.shown") {
               const suggestion = event.properties
-              if (suggestion.sessionID === sessionID || KiloRunAuto.allowed(tracked, suggestion.sessionID)) {
+              if (sessions.has(suggestion.sessionID) || KiloRunAuto.allowed(tracked, suggestion.sessionID)) {
                 await client.suggestion.dismiss({ requestID: suggestion.id }).catch(() => {})
               }
               continue
@@ -932,7 +936,7 @@ export const RunCommand = effectCmd({
               // kilocode_change end
               // kilocode_change start - approve root and tracked Task child permissions in auto mode
               if (args.auto) {
-                if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue
+                if (!sessions.has(permission.sessionID) && !KiloRunAuto.allowed(tracked, permission.sessionID)) continue
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "once",
@@ -945,7 +949,7 @@ export const RunCommand = effectCmd({
               // Covers daemon/attach modes where the server evaluates permissions in another
               // process and the in-process KiloHeadless deny cannot apply.
               if (permission.sessionID !== sessionID) {
-                if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue
+                if (!sessions.has(permission.sessionID) && !KiloRunAuto.allowed(tracked, permission.sessionID)) continue
                 if (skipPermissions) {
                   await client.permission.reply({
                     requestID: permission.id,
@@ -967,7 +971,7 @@ export const RunCommand = effectCmd({
               }
               // kilocode_change end
 
-              if (permission.sessionID !== sessionID) continue
+              if (!sessions.has(permission.sessionID)) continue
 
               if (skipPermissions) {
                 await client.permission.reply({
