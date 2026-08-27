@@ -182,7 +182,10 @@ describe("KiloSessionPrompt.injectEditorContext", () => {
     const messageID = "m-user"
     const msgs: MessageV2.WithParts[] = [
       {
-        info: userInfo(messageID),
+        info: {
+          ...userInfo(messageID),
+          editorContext: { activeFile: "src/app.ts" },
+        },
         parts: [
           {
             id: PartID.make("prt_p1"),
@@ -194,13 +197,14 @@ describe("KiloSessionPrompt.injectEditorContext", () => {
         ] as MessageV2.Part[],
       },
     ]
-    const lastUser = {
-      ...msgs[0].info,
-      editorContext: { activeFile: "src/app.ts" },
-    } as unknown as MessageV2.User
     const cache: KiloSessionPrompt.EnvCache = {}
 
-    KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache })
+    KiloSessionPrompt.injectEditorContext({
+      msgs,
+      session: { directory: "/repo/session", path: "session" },
+      sessionID,
+      cache,
+    })
 
     expect(msgs[0].parts).toHaveLength(2)
     const userText = msgs[0].parts[0] as MessageV2.TextPart
