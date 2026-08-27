@@ -177,6 +177,8 @@ export const dict = {
   "common.saving": "저장 중...",
   "common.default": "기본값",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Worktree 검색",
   "prompt.thinking.tooltip": "추론 강도",
   "prompt.action.send": "전송",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",

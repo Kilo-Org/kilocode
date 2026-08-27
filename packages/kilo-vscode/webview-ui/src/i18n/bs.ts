@@ -175,6 +175,8 @@ export const dict = {
   "common.saving": "Čuvanje...",
   "common.default": "Podrazumijevano",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Pretraži Worktree-ove",
   "prompt.thinking.tooltip": "Napor razmišljanja",
   "prompt.action.send": "Pošalji",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",

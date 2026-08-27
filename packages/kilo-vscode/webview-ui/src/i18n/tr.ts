@@ -174,6 +174,8 @@ export const dict = {
   "common.saving": "Kaydediliyor...",
   "common.default": "Varsayılan",
 
+  "prompt.worktrees.title": "Worktree'ler",
+  "prompt.worktrees.search": "Worktree'leri ara",
   "prompt.thinking.tooltip": "Akıl yürütme eforu",
   "prompt.action.send": "Gönder",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
