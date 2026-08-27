@@ -22,7 +22,7 @@ sealed class SessionState {
 
     data class Error(val message: String, val kind: String? = null) : SessionState()
 
-    data class TurnEnded(val outcome: Outcome, val tone: OutcomeTone) : SessionState()
+    data class TurnEnded(val outcome: Outcome) : SessionState()
 
     data class LoginRequired(val message: String) : SessionState()
 

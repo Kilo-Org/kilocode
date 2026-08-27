@@ -80,6 +80,7 @@ export const KilocodePaths = {
   sessionModelUsage: `/session/:sessionID/model-usage`,
   backgroundJobs: `${root}/background-jobs`,
   backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
+  backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -270,6 +271,18 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.backgroundJob.cancel",
             summary: "Cancel background job",
             description: "Cancel one background subagent job and its session tree.",
+          }),
+        ),
+        HttpApiEndpoint.post("backgroundJobPromote", KilocodePaths.backgroundJobPromote, {
+          params: { jobID: Schema.String },
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Background job promoted"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.backgroundJob.promote",
+            summary: "Promote background job",
+            description: "Continue one foreground subagent in the background.",
           }),
         ),
       )

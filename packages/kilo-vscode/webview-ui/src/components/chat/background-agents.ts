@@ -108,18 +108,3 @@ export function backgroundJobAgents(
       }
     })
 }
-
-export function foregroundAgent(tools: ToolPart[], status: Record<string, SessionStatusInfo>): string | undefined {
-  const latest = new Map<string, ToolPart>()
-  for (const part of tools) {
-    if (part.tool !== "task") continue
-    const id = text(meta(part, "sessionId"))
-    if (id) latest.set(id, part)
-  }
-  for (const part of latest.values()) {
-    const id = text(meta(part, "sessionId"))
-    if (!id || meta(part, "background") === true || !working(status[id])) continue
-    return id
-  }
-  return undefined
-}

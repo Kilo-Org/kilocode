@@ -5,6 +5,8 @@ description: "Enable your KiloClaw agents to perform financial transactions with
 
 # AgentCard Integration
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Enable your KiloClaw agents to perform financial transactions by creating and managing virtual debit cards. This integration allows for automated purchasing and expense management within set limits.
 
 ## AgentCard Setup

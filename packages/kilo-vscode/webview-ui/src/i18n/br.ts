@@ -186,7 +186,6 @@ export const dict = {
     "A aprovação automática está ativada. Solicitações de permissão serão aprovadas automaticamente.",
   "prompt.action.autoApprove.disabled":
     "A aprovação automática está desativada. Clique para aprovar solicitações de permissão automaticamente.",
-  "prompt.action.resetModel": "Redefinir modelo para o padrão",
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
@@ -1264,7 +1263,6 @@ export const dict = {
   "task.backgroundAgents.open": "Abrir agente em segundo plano",
   "task.backgroundAgents.cancel": "Parar",
   "task.backgroundAgents.continueInBackground": "Continuar em segundo plano",
-  "task.backgroundAgents.foreground": "O agente em primeiro plano está em execução",
   "task.backgroundAgents.waiting": "Um agente em segundo plano precisa da sua entrada",
   "task.backgroundAgents.needsInput": "Entrada necessária",
   "task.backgroundAgents.dismiss": "Dispensar",

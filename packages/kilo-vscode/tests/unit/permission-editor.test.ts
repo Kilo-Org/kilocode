@@ -4,6 +4,7 @@ import {
   clearGroupedPatch,
   clearWildcardPatch,
   DEFAULT_RULES,
+  effectiveConfigLevel,
   inheritedWildcard,
   mostRestrictive,
   permissionExceptions,
@@ -15,6 +16,8 @@ import {
   wildcardAction,
   effectiveRuleLevel,
 } from "../../webview-ui/src/components/settings/permission-utils"
+import { ConfigState } from "../../webview-ui/src/utils/config-utils"
+import { WORK_STYLE_PRESETS } from "../../src/shared/work-style-presets"
 import type { PermissionRule, PermissionRuleItem } from "../../webview-ui/src/types/messages"
 
 describe("effectiveRuleLevel", () => {
@@ -44,6 +47,33 @@ describe("effectiveRuleLevel", () => {
   it("falls back to ask when no resolved wildcard rule is available", () => {
     expect(effectiveRuleLevel(undefined, "bash")).toBe("ask")
     expect(effectiveRuleLevel([], "bash")).toBe("ask")
+  })
+})
+
+describe("Auto-Approve onboarding state", () => {
+  const permission = WORK_STYLE_PRESETS["human-in-the-loop"].config.permission ?? {}
+
+  it("reflects onboarding permissions in Auto-Approve", () => {
+    expect(effectiveConfigLevel(permission, "edit")).toBe("ask")
+    expect(effectiveConfigLevel(permission, "bash")).toBe("ask")
+    expect(effectiveConfigLevel(permission, "glob")).toBe("allow")
+    expect(effectiveConfigLevel(permission, "grep")).toBe("allow")
+  })
+
+  it("keeps an Auto-Approve change selected after saving", () => {
+    const state = new ConfigState()
+    state.handleConfigLoaded({ permission })
+
+    expect(effectiveConfigLevel(state.config.permission ?? {}, "edit")).toBe("ask")
+
+    state.updateConfig({ permission: { edit: "allow" } })
+    expect(effectiveConfigLevel(state.config.permission ?? {}, "edit")).toBe("allow")
+    expect(state.draft).toEqual({ permission: { edit: "allow" } })
+
+    state.saveConfig()
+    state.handleConfigUpdated(state.config)
+    expect(effectiveConfigLevel(state.config.permission ?? {}, "edit")).toBe("allow")
+    expect(state.dirty).toBe(false)
   })
 })
 

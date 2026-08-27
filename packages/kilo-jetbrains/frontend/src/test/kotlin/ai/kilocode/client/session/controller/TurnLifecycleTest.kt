@@ -2,7 +2,6 @@ package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Outcome
-import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.testing.FakeSessionRpcApi
@@ -274,8 +273,8 @@ class TurnLifecycleTest : SessionControllerTestBase() {
     fun `test turn outcome classifier`() {
         assertNull(TurnOutcome.classify("completed"))
         assertNull(TurnOutcome.classify("superseded"))
-        assertEquals(Outcome.INTERRUPTED to OutcomeTone.WARNING, TurnOutcome.classify("interrupted"))
-        assertEquals(Outcome.FAILED to OutcomeTone.CRITICAL, TurnOutcome.classify("error"))
+        assertEquals(Outcome.INTERRUPTED, TurnOutcome.classify("interrupted"))
+        assertEquals(Outcome.FAILED, TurnOutcome.classify("error"))
     }
 
     fun `test TurnClose completed preserves AwaitingQuestion state`() {
