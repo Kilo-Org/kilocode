@@ -3,11 +3,11 @@ package ai.kilocode.client.ui.diagram.ui
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.views.MessageToolbar
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
-import com.intellij.icons.AllIcons
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import javax.swing.JComponent
 
@@ -25,7 +25,7 @@ internal class DiagramBlock : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()), Sessi
     private val bar = MessageToolbar(
         text = { text() },
         actions = listOf(
-            ToolbarButtonAction(AllIcons.Actions.EditSource, KiloBundle.message("diagram.open")) {
+            ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("diagram.open")) {
                 openDiagram(this, text())
             },
         ),
@@ -34,6 +34,8 @@ internal class DiagramBlock : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()), Sessi
     override val copyAnchor: JComponent get() = this
 
     override val copyToolbar: JComponent get() = bar
+
+    override val copyCorner: Boolean get() = true
 
     @RequiresEdt
     override fun copyText() = text()

@@ -20,7 +20,6 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
-import com.intellij.ui.HyperlinkLabel
 import com.intellij.util.ui.UIUtil
 import java.awt.Point
 import javax.swing.JPanel
@@ -48,7 +47,7 @@ class MdViewDiagramTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test mermaid fence renders above toggle row and hides source`() {
+    fun `test mermaid fence renders above status label and hides source`() {
         view.set("```mermaid\nflowchart TD\nA-->B\n```")
         drain()
 
@@ -56,9 +55,17 @@ class MdViewDiagramTest : BasePlatformTestCase() {
 
         assertEquals(1, engine.calls)
         assertSame(diagram(), children.first())
-        assertSame(row(), children.last())
+        assertSame(label(), children.last())
         assertTrue(diagram().isVisible)
         assertFalse(codePane().isVisible)
+        assertFalse("a rendered diagram leaves no status row behind", label().isVisible)
+    }
+
+    fun `test block anchors its toolbar in the corner like a code block`() {
+        view.set("```mermaid\nflowchart TD\nA-->B\n```")
+        drain()
+
+        assertTrue(block().copyCorner)
     }
 
     fun `test block is the hover target and copies the fence text`() {
@@ -74,21 +81,6 @@ class MdViewDiagramTest : BasePlatformTestCase() {
         assertSame(block().copyToolbar, (target as SessionCopyTarget).copyToolbar)
     }
 
-    fun `test toggle switches between diagram and source`() {
-        view.set("```mermaid\nflowchart TD\nA-->B\n```")
-        drain()
-
-        toggle().doClick()
-
-        assertFalse(diagram().isVisible)
-        assertTrue(codePane().isVisible)
-
-        toggle().doClick()
-
-        assertTrue(diagram().isVisible)
-        assertFalse(codePane().isVisible)
-    }
-
     fun `test engine error keeps source visible`() {
         engine.out = Out.Err(ai.kilocode.client.ui.diagram.Fault.Syntax, "bad syntax")
 
@@ -97,6 +89,7 @@ class MdViewDiagramTest : BasePlatformTestCase() {
 
         assertFalse(diagram().isVisible)
         assertTrue(codePane().isVisible)
+        assertTrue(label().isVisible)
         assertTrue(labels().contains("bad syntax"))
     }
 
@@ -149,9 +142,7 @@ class MdViewDiagramTest : BasePlatformTestCase() {
 
     private fun codePane() = block().components[1]
 
-    private fun row() = block().components.last()
-
-    private fun toggle() = descendants(root()).filterIsInstance<HyperlinkLabel>().single()
+    private fun label() = block().components.last() as javax.swing.JLabel
 
     private fun labels() = descendants(root()).joinToString("\n") { (it as? javax.swing.JLabel)?.text.orEmpty() }
 

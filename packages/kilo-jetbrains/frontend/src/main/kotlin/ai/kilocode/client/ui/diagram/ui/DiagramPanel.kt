@@ -14,7 +14,7 @@ import java.awt.RenderingHints
 import javax.swing.JComponent
 import kotlin.math.roundToInt
 
-internal class DiagramPanel(private var palette: Palette) : JComponent() {
+internal class DiagramPanel(private var palette: Palette, private val fit: Boolean = false) : JComponent() {
     private var art: Art? = null
     private var last = Dimension(0, 0)
 
@@ -31,15 +31,19 @@ internal class DiagramPanel(private var palette: Palette) : JComponent() {
         repaint()
     }
 
-    override fun getPreferredSize() = fitSize()
+    override fun getPreferredSize() = if (fit) Dimension(0, 0) else fitSize()
 
-    override fun getMinimumSize() = fitSize()
+    override fun getMinimumSize() = if (fit) Dimension(0, 0) else fitSize()
 
-    override fun getMaximumSize() = Dimension(Int.MAX_VALUE, fitSize().height)
+    override fun getMaximumSize() = if (fit) Dimension(Int.MAX_VALUE, Int.MAX_VALUE) else Dimension(Int.MAX_VALUE, fitSize().height)
 
     override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
         val before = fitSize()
         super.setBounds(x, y, width, height)
+        if (fit) {
+            repaint()
+            return
+        }
         if (before.height != fitSize().height) resize()
     }
 
@@ -86,7 +90,7 @@ internal class DiagramPanel(private var palette: Palette) : JComponent() {
         val size = Painters.of(value).size(value)
         val avail = (width.takeIf { it > 0 } ?: parent?.width ?: 0) - pad() * 2
         val byWidth = if (avail > 0) minOf(1.0, avail / size.w) else 1.0
-        val max = JBUI.scale(SessionUiStyle.View.Diagram.MAX_HEIGHT) - pad() * 2
+        val max = if (fit) height - pad() * 2 else JBUI.scale(SessionUiStyle.View.Diagram.MAX_HEIGHT) - pad() * 2
         val byHeight = if (size.h > 0.0) minOf(1.0, max / size.h) else 1.0
         return minOf(byWidth, byHeight).coerceAtLeast(0.1)
     }

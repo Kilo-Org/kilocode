@@ -7,13 +7,12 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.diagram.FontSpec
 import ai.kilocode.client.ui.diagram.Out
-import ai.kilocode.client.ui.diagram.Palette
-import ai.kilocode.client.ui.diagram.Spec
 import ai.kilocode.client.ui.diagram.ui.DiagramBlock
 import ai.kilocode.client.ui.diagram.ui.DiagramPanel
 import ai.kilocode.client.ui.diagram.ui.Diagrams
+import ai.kilocode.client.ui.diagram.ui.diagramPalette
+import ai.kilocode.client.ui.diagram.ui.diagramSpec
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
@@ -35,7 +34,6 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
-import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBHtmlPaneConfiguration
@@ -516,23 +514,9 @@ internal open class MdViewHybrid(
         return pane
     }
 
-    private fun palette(opts: MdStyle): Palette {
-        val font = style.editorFont
-        return Palette(
-            surface = UiStyle.Colors.contrast(opts.preBg, 8),
-            border = opts.codeBorder,
-            text = opts.foreground,
-            muted = opts.quoteFg,
-            accent = opts.linkColor,
-            note = opts.quoteBg,
-            cluster = opts.codeBorder,
-            line = opts.quoteFg,
-            font = font,
-            bold = style.boldEditorFont,
-        )
-    }
+    private fun palette(opts: MdStyle) = diagramPalette(style, opts)
 
-    private fun spec() = Spec(FontSpec(style.editorFamily, style.editorSize))
+    private fun spec() = diagramSpec(style)
 
     private fun styleCodePane(pane: JBScrollPane, opts: MdStyle) {
         pane.apply {
@@ -982,27 +966,18 @@ internal open class MdViewHybrid(
         private val root = component as DiagramBlock
         private val codePane = codeBlock(desc.text, Kind.Source(kind.file), disposable)
         private val panel = DiagramPanel(palette(opts()))
-        private val toggle = HyperlinkLabel(KiloBundle.message("diagram.diagram"))
         private val label = JBLabel(KiloBundle.message("diagram.rendering")).apply {
             foreground = SessionUiStyle.Text.Secondary.foreground()
-        }
-        private val row = Stack.horizontal(gap = UiStyle.Gap.md()).apply {
-            next(toggle)
-            next(label)
         }
         private var hash = 0
         private var gen = 0
         private var font = spec().font
 
         init {
-            // Children keep a fixed order — the diagram above its source, both above the toggle row —
-            // because Stack lays children out in insertion order and ignores add() indexes. Switching
-            // between diagram and source flips visibility instead of re-adding components.
             panel.background = opts().preBg
             panel.isVisible = false
-            root.next(panel).next(codePane).next(row)
+            root.next(panel).next(codePane).next(label)
             root.text = { (this.desc as Desc.Code).text }
-            toggle.addHyperlinkListener { toggle() }
             kick()
         }
 
@@ -1047,21 +1022,19 @@ internal open class MdViewHybrid(
         private fun kick() {
             val item = desc as Desc.Code
             if (!Registry.`is`("kilo.diagram.inline.enabled", true)) {
-                label.text = ""
+                status("")
                 showSource()
                 return
             }
             if (item.open) {
                 showSource()
-                label.text = KiloBundle.message("diagram.rendering")
-                label.foreground = SessionUiStyle.Text.Secondary.foreground()
+                status(KiloBundle.message("diagram.rendering"))
                 return
             }
             val code = item.text.hashCode()
             if (hash == code) return
             hash = code
-            label.text = KiloBundle.message("diagram.rendering")
-            label.foreground = SessionUiStyle.Text.Secondary.foreground()
+            status(KiloBundle.message("diagram.rendering"))
             val seq = ++gen
             service<Diagrams>().render(item.text, spec(), disposable) { out ->
                 if (seq != gen) return@render
@@ -1075,22 +1048,15 @@ internal open class MdViewHybrid(
         private fun ok(out: Out.Ok) {
             panel.art(out.art)
             showDiagram()
-            label.text = ""
+            status("")
             root.revalidate()
             root.repaint()
         }
 
         private fun fail(message: String) {
             val text = message.ifBlank { KiloBundle.message("diagram.rendering") }
-            label.text = KiloBundle.message("diagram.error", text)
-            label.foreground = UiStyle.Colors.errorLabelForeground()
+            status(KiloBundle.message("diagram.error", text), true)
             showSource()
-            root.revalidate()
-            root.repaint()
-        }
-
-        private fun toggle() {
-            if (panel.isVisible) showSource() else showDiagram()
             root.revalidate()
             root.repaint()
         }
@@ -1098,13 +1064,17 @@ internal open class MdViewHybrid(
         private fun showDiagram() {
             panel.isVisible = true
             codePane.isVisible = false
-            toggle.setHyperlinkText(KiloBundle.message("diagram.source"))
         }
 
         private fun showSource() {
             panel.isVisible = false
             codePane.isVisible = true
-            toggle.setHyperlinkText(KiloBundle.message("diagram.diagram"))
+        }
+
+        private fun status(text: String, error: Boolean = false) {
+            label.text = text
+            label.foreground = if (error) UiStyle.Colors.errorLabelForeground() else SessionUiStyle.Text.Secondary.foreground()
+            label.isVisible = text.isNotEmpty()
         }
 
         private fun updateCode(text: String) {

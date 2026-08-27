@@ -80,7 +80,7 @@ internal object MdLanguage {
         return Kind.Source(type(single))
     }
 
-    private fun type(ext: String): FileType {
+    internal fun type(ext: String): FileType {
         val type = FileTypeRegistry.getInstance().getFileTypeByExtension(ext)
         if (type == UnknownFileType.INSTANCE) return PlainTextFileType.INSTANCE
         return type

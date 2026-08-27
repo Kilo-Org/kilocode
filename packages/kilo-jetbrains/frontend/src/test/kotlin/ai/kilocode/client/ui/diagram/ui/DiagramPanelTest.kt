@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui.diagram.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.ui.diagram.Mark
 import ai.kilocode.client.ui.diagram.Palette
 import ai.kilocode.client.ui.diagram.Rect
@@ -32,6 +33,17 @@ class DiagramPanelTest {
     }
 
     @Test
+    fun `test fit mode scales to the component bounds instead of the transcript cap`() {
+        val panel = DiagramPanel(palette(), fit = true)
+        panel.setSize(1_000, 1_000)
+        panel.art(scene(100.0, 2_000.0))
+
+        // The transcript cap (480) no longer applies; the panel fills whatever the tab gives it.
+        assertEquals(0, panel.preferredSize.height)
+        assertTrue(panel.maximumSize.height > 520)
+    }
+
+    @Test
     fun `test block copies fence text and offers copy plus open in editor`() {
         val block = DiagramBlock()
         block.text = { "flowchart TD" }
@@ -40,8 +52,10 @@ class DiagramPanelTest {
 
         assertEquals("flowchart TD", block.copyText())
         assertEquals(2, buttons.size)
+        assertTrue(block.copyCorner)
         assertTrue(buttons.any { it.toolTipText == KiloBundle.message("diagram.open") })
         assertTrue(buttons.any { it.toolTipText == KiloBundle.message("session.copy.hover") })
+        assertTrue(buttons.any { it.icon === SessionViewIcons.openDiff })
     }
 
     private fun buttons(root: java.awt.Container): List<AbstractButton> {

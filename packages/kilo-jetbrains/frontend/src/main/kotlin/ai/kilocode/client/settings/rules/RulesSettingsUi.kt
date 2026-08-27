@@ -5,7 +5,6 @@ import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.settings.base.SettingsContentField
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
 import ai.kilocode.client.settings.base.SettingsListPanel
@@ -16,6 +15,7 @@ import ai.kilocode.client.settings.base.SettingsToolbarAction
 import ai.kilocode.client.settings.base.settingsChoosePath
 import ai.kilocode.client.settings.base.settingsContentScroll
 import ai.kilocode.client.settings.base.settingsEditorFileType
+import ai.kilocode.client.ui.CodeViewField
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -294,7 +294,7 @@ internal class InstructionEditDialog(
     content: String,
 ) : DialogWrapper(true), RuleContentDialogHandle {
     private val base = content
-    private val field = SettingsContentField(base, settingsEditorFileType(heading, base), true)
+    private val field = CodeViewField(base, settingsEditorFileType(heading, base), true)
 
     init {
         title = heading
@@ -363,4 +363,3 @@ private fun writeInstruction(root: String?, path: String, text: String): Boolean
     }
     return ok
 }
-

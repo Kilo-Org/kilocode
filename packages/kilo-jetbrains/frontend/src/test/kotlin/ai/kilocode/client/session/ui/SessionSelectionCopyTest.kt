@@ -21,6 +21,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
@@ -312,6 +313,32 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         }
     }
 
+    fun `test hover toolbar opting into corner placement matches the code block copy button`() {
+        val root = ShowingPanel().also { it.setBounds(0, 0, 300, 300) }
+        val area = ShowingPanel().also { it.setBounds(0, 0, 300, 300) }
+        val toolbar = JPanel().also { it.preferredSize = Dimension(48, 24) }
+        root.add(area)
+
+        val corner = InlineTarget(fixed(24, 40), toolbar, corner = true)
+        corner.copyAnchor.setBounds(100, 50, 120, 40)
+        area.add(corner.copyAnchor)
+        val parent = Disposer.newDisposable("overlay-corner")
+        val overlay = SessionHoverCopyOverlay(root, area, parent)
+        root.add(overlay)
+
+        try {
+            show(overlay, corner)
+            val bounds = overlay.bounds(root, toolbar)
+            val gap = JBUI.scale(4)
+
+            // Same formula as a plain code block copy button: inset from the anchor's top-right corner.
+            assertEquals(100 + 120 - 48 - gap, bounds.x)
+            assertEquals(50 + gap, bounds.y)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
     fun `test session context menu can reinstall after parent disposal`() {
         val root = JPanel(null)
         val one = Disposer.newDisposable("context-one")
@@ -496,9 +523,11 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
     private class InlineTarget(
         private val anchor: JComponent,
         private val toolbar: JComponent,
+        private val corner: Boolean = false,
     ) : JPanel(), SessionCopyTarget {
         override val copyAnchor: JComponent get() = anchor
         override val copyToolbar: JComponent get() = toolbar
+        override val copyCorner: Boolean get() = corner
         override fun copyText(): String? = null
     }
 
