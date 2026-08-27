@@ -130,6 +130,8 @@ export interface ErrorMessage {
   message: string
   code?: string
   sessionID?: string
+  projectId?: string
+  worktreeId?: string
 }
 
 export interface SendMessageFailedMessage {

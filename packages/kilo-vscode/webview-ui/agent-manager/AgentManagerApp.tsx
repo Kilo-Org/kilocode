@@ -104,7 +104,7 @@ import {
   setReviewOpen,
 } from "./project/review-state"
 import { applyRunStatus } from "./project/run-status"
-import { clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
+import { clearFailedDelete, clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
 import {
   createSessionRestore,
   createTabMemory,
@@ -1388,6 +1388,7 @@ const AgentManagerContent: Component = () => {
     })
 
     const unsub = vscode.onMessage((msg) => {
+      clearFailedDelete(msg, registry)
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
         setRepoBranch(info.branch)
@@ -1822,8 +1823,8 @@ const AgentManagerContent: Component = () => {
 
   const confirmDeleteWorktree = (worktreeId: string) => {
     const wt = worktrees().find((w) => w.id === worktreeId)
-    if (!wt) return
-
+    const run = runStatuses()[worktreeId]?.state
+    if (!wt || busyWorktrees().has(worktreeId) || isAgentBusy(worktreeId, true) || (run && run !== "idle")) return
     // Second press/click: execute the delete
     if (pendingDelete() === worktreeId) {
       cancelPendingDelete()
@@ -2321,7 +2322,7 @@ const AgentManagerContent: Component = () => {
             states={projectStates()}
             store={(id) => registry.ensure(id)}
             busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
-            working={(projectId, id) => projectBusy(projectId, id)}
+            working={(projectId, id, waiting) => projectBusy(projectId, id, waiting)}
             localBusy={(projectId) => projectBusy(projectId, null)}
             stats={projectLive.stats()}
             local={projectLive.local()}

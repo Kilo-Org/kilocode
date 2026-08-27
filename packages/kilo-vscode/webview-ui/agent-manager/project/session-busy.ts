@@ -24,7 +24,7 @@ export function createSessionBusy(opts: {
   projects: () => Record<string, Item[]>
   active: () => string | undefined
 }) {
-  const any = (ids: string[]) => {
+  const any = (ids: string[], waiting = false) => {
     if (ids.length === 0) return false
     const statuses = opts.statuses()
     const blocked = new Set(
@@ -34,20 +34,29 @@ export function createSessionBusy(opts: {
     )
     return ids.some((id) => {
       const status = statuses[id]
+      if (waiting)
+        return (
+          (!!status && status.type !== "idle") ||
+          [...opts.permissions(), ...opts.questions()].some((prompt) => prompt.sessionID === id)
+        )
       return (status?.type === "busy" || status?.type === "retry") && !blocked.has(id)
     })
   }
-  const agent = (id: string) =>
+  const agent = (id: string, waiting = false) =>
     any(
       opts
         .managed()
         .filter((item) => item.worktreeId === id)
         .map((item) => item.id),
+      waiting,
     )
   const local = () => any(opts.local())
-  const project = (id: string, worktreeId: string | null) => {
-    if (id === opts.active()) return worktreeId === null ? local() : agent(worktreeId)
-    return any((opts.projects()[id] ?? []).filter((item) => item.worktreeId === worktreeId).map((item) => item.id))
+  const project = (id: string, worktreeId: string | null, waiting = false) => {
+    if (id === opts.active()) return worktreeId === null ? any(opts.local(), waiting) : agent(worktreeId, waiting)
+    return any(
+      (opts.projects()[id] ?? []).filter((item) => item.worktreeId === worktreeId).map((item) => item.id),
+      waiting,
+    )
   }
   return { any, agent, local, project, session: (id: string) => any([id]) }
 }
@@ -69,7 +78,8 @@ export function createWorktreeBusy(
     active().has(opts.worktrees(project).find((worktree) => worktree.id === id)?.path ?? "")
   return {
     ...busy,
-    agent: (id: string) => busy.agent(id) || working(id),
-    project: (project: string, id: string | null) => busy.project(project, id) || (id !== null && working(id, project)),
+    agent: (id: string, waiting = false) => busy.agent(id, waiting) || working(id),
+    project: (project: string, id: string | null, waiting = false) =>
+      busy.project(project, id, waiting) || (id !== null && working(id, project)),
   }
 }

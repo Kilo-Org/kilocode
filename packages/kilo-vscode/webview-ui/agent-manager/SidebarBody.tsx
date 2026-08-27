@@ -80,7 +80,7 @@ export interface SidebarBodyProps {
   worktreeSubtitle: (wt: WorktreeState) => string | undefined
   pendingDelete: () => string | null
   busy: (id: string) => boolean
-  isAgentBusy: (id: string) => boolean
+  isAgentBusy: (id: string, waiting?: boolean) => boolean
   isStaleWorktree: (id: string) => boolean
   shortcutMap: () => Map<string, number>
   worktreeStats: () => Record<string, WorktreeGitStats>
@@ -315,6 +315,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 pendingDelete={props.pendingDelete() === wt.id}
                                 busy={props.busy(wt.id)}
                                 working={props.isAgentBusy(wt.id)}
+                                blocked={props.isAgentBusy(wt.id, true)}
                                 stale={props.isStaleWorktree(wt.id)}
                                 shortcut={props.shortcutMap().get(wt.id)}
                                 stats={props.worktreeStats()[wt.id]}

@@ -49,6 +49,8 @@ describe("createSessionBusy", () => {
     expect(state.agent("wt-working")).toBe(false)
     expect(state.session("working")).toBe(false)
     expect(state.project("background", "wt-unknown")).toBe(false)
+    expect(state.agent("wt-working", true)).toBe(true)
+    expect(state.project("background", "wt-unknown", true)).toBe(true)
   })
 })
 
@@ -87,4 +89,27 @@ describe("createWorktreeBusy", () => {
     expect(state.project("background", "wt-idle")).toBe(false)
     expect(state.agent("wt-working")).toBe(true)
   })
+
+  it.each(["permission", "question", "non-blocking question"] as const)(
+    "blocks deletion for a pending %s without showing a running spinner",
+    (kind) => {
+      const state = createWorktreeBusy({
+        statuses: () => ({ session: { type: "idle" } }),
+        permissions: () => (kind === "permission" ? [{ sessionID: "session" }] : []),
+        questions: () => (kind !== "permission" ? [{ sessionID: "session", blocking: kind === "question" }] : []),
+        worktrees: () => [],
+        subscribe: () => () => undefined,
+        managed: () => [{ id: "session", worktreeId: "worktree" }],
+        local: () => [],
+        projects: () => ({ other: [{ id: "session", worktreeId: "worktree" }] }),
+        active: () => "active",
+      })
+
+      expect(state.agent("worktree")).toBe(false)
+      expect(state.agent("worktree", true)).toBe(true)
+      expect(state.project("active", "worktree", true)).toBe(true)
+      expect(state.project("other", "worktree")).toBe(false)
+      expect(state.project("other", "worktree", true)).toBe(true)
+    },
+  )
 })

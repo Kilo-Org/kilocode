@@ -58,6 +58,10 @@ export const RemoveAgentPayload = Schema.Struct({
   scope: Schema.optional(Scope),
 })
 
+export const RemoveSnapshotPayload = Schema.Struct({
+  worktree: Schema.String,
+})
+
 export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
 export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
 export const AgentManagerReplyPayload = Schema.Struct({ result: AgentManagerResult })
@@ -69,6 +73,7 @@ export const KilocodePaths = {
   removeCommand: `${root}/command/remove`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
+  removeSnapshot: `${root}/snapshot/remove`,
   providerUsage: `${root}/provider-usage`,
   providerUsageRefresh: `${root}/provider-usage/refresh`,
   notebookList: `${root}/notebook`,
@@ -143,6 +148,18 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Remove a custom agent",
             description:
               "Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.",
+          }),
+        ),
+        HttpApiEndpoint.post("removeSnapshot", KilocodePaths.removeSnapshot, {
+          query: WorkspaceRoutingQuery,
+          payload: RemoveSnapshotPayload,
+          success: described(Schema.Boolean, "Snapshot repository removed"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.removeSnapshot",
+            summary: "Remove a snapshot repository",
+            description: "Remove the snapshot repository for an already deleted Agent Manager worktree.",
           }),
         ),
         HttpApiEndpoint.get("providerUsage", KilocodePaths.providerUsage, {
