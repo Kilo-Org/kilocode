@@ -4,6 +4,16 @@ import { TERMINAL_MENTION } from "./terminal-context-utils"
 
 export const AT_PATTERN = /(?:^|\s)@(\S*)$/
 
+export type WorktreeReference = {
+  id: string
+  name: string
+  branch: string
+  path: string
+  base: string
+  sessions: { id: string; title?: string }[]
+  disabled: boolean
+}
+
 export type MentionResult =
   | { type: "terminal"; value: typeof TERMINAL_MENTION; label: string; description: string }
   | { type: "git-changes"; value: typeof GIT_CHANGES_MENTION; label: string; description: string }
@@ -13,9 +23,11 @@ export type MentionResult =
   | { type: "folder"; value: string }
   | { type: "file-picker"; value: "file-picker"; label: string; description: string }
   | { type: "session"; value: string; session: SessionSearchItem }
+  | { type: "worktrees"; value: "worktrees" }
 
 export const PAST_CHATS_MENTION = "past-chats"
 const PAST_CHATS_ALIASES = ["past", "chats", "sessions", "session", "history"]
+const WORKTREE_ALIASES = ["worktrees", "branches"]
 
 export const TERMINAL_RESULT: MentionResult = {
   type: "terminal",
@@ -63,7 +75,16 @@ export function getPastChatsMentionResult(query: string): MentionResult[] {
   return [PAST_CHATS_RESULT]
 }
 
-export function buildMentionResults(query: string, items: Array<FileSearchItem | string>, git = true): MentionResult[] {
+export function buildMentionResults(
+  query: string,
+  items: Array<FileSearchItem | string>,
+  git = true,
+  worktrees = false,
+): MentionResult[] {
+  const references: MentionResult[] =
+    worktrees && WORKTREE_ALIASES.some((alias) => alias.startsWith(query.toLowerCase()))
+      ? [{ type: "worktrees", value: "worktrees" }]
+      : []
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
     if (item.type === "folder") return { type: "folder", value: item.path }
@@ -74,6 +95,7 @@ export function buildMentionResults(query: string, items: Array<FileSearchItem |
     ...getTerminalMentionResult(query),
     ...(git ? getGitChangesMentionResult(query) : []),
     ...getPastChatsMentionResult(query),
+    ...filterMentionResults(query, references),
     ...results,
     FILE_PICKER_RESULT,
   ]
@@ -115,6 +137,7 @@ export function filterMentionResults(query: string, items: MentionResult[]): Men
     if (item.type === "git-changes") return GIT_CHANGES_MENTION.startsWith(value) || "git".startsWith(value)
     if (item.type === "past-chats") return PAST_CHATS_ALIASES.some((alias) => alias.startsWith(value))
     if (item.type === "file-picker") return true
+    if (item.type === "worktrees") return WORKTREE_ALIASES.some((alias) => alias.startsWith(value))
     return item.value.toLowerCase().includes(value)
   })
 }
@@ -335,6 +358,38 @@ export function buildFileAttachments(
     }
   }
   return result
+}
+
+export function buildWorktreeAttachments(text: string, worktrees: WorktreeReference[]): FileAttachment[] {
+  const paths = syncMentionedPaths(new Set(worktrees.map((worktree) => worktree.path)), text)
+  return worktrees
+    .filter((worktree) => paths.has(worktree.path))
+    .map((worktree) => {
+      const value = `@${worktree.path}`
+      const start = text.indexOf(value)
+      const content = [
+        "Agent Manager worktree reference (metadata only, not file contents or conversation history).",
+        "Use the directory to inspect files or git changes. Use the session IDs with Agent Manager or recall if needed.",
+        JSON.stringify(
+          {
+            worktreeID: worktree.id,
+            name: worktree.name,
+            directory: worktree.path,
+            branch: worktree.branch,
+            baseBranch: worktree.base,
+            sessions: worktree.sessions,
+          },
+          null,
+          2,
+        ),
+      ].join("\n\n")
+      return {
+        mime: "text/plain",
+        url: `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`,
+        filename: `worktree-${worktree.id}.txt`,
+        source: { type: "file", path: worktree.path, text: { value, start, end: start + value.length } },
+      }
+    })
 }
 
 /**

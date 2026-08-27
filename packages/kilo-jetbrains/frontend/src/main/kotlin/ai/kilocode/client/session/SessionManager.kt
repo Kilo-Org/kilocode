@@ -52,6 +52,7 @@ interface SessionManager {
         history = { showHistory() },
         activity = { activity() },
         titles = { titles() },
+        newWorktree = if (supportsNewWorktree) ({ newWorktree() }) else null,
     )
 
     fun openSession(session: SessionDto) {

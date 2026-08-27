@@ -173,6 +173,8 @@ export const dict = {
   "common.saving": "กำลังบันทึก...",
   "common.default": "ค่าเริ่มต้น",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "ค้นหา Worktree",
   "prompt.thinking.tooltip": "ความพยายามในการให้เหตุผล",
   "prompt.action.send": "ส่ง",
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",

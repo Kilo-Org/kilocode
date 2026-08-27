@@ -47,7 +47,7 @@
     "hono": "catalog:",
     "hono-openapi": "catalog:",
     "ignore": "7.0.5",
-    "minimatch": "10.2.5",
+    "minimatch": "10.2.6",
     "openai": "6.27.0",
     "p-limit": "7.3.0",
     "tree-sitter-wasms": "0.1.13",

@@ -57,6 +57,25 @@ describe("GitOps", () => {
     })
   })
 
+  it("uses an explicit Git executable path with spaces", async () => {
+    await withRepo(async (cwd) => {
+      const real = Bun.which("git")
+      if (!real) throw new Error("Git is required for this test")
+
+      const dir = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-gitops executable-"))
+      const binary = process.platform === "win32" ? real : nodePath.join(dir, "git")
+      try {
+        if (process.platform !== "win32") await fs.symlink(real, binary)
+
+        const git = new GitOps({ log: () => undefined, binary })
+        expect(git.path).toBe(binary)
+        expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      } finally {
+        await fs.rm(dir, { recursive: true, force: true })
+      }
+    })
+  })
+
   it("does not hold a semaphore slot while resolving Git", async () => {
     const semaphore = new Semaphore(1)
     let resolve!: (value: string) => void
