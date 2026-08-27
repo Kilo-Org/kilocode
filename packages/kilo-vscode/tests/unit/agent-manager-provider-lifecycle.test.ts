@@ -151,6 +151,33 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     expect(state.getWorktrees()).toHaveLength(1)
   })
 
+  it.each(["removeRun", "clearRun", "acquirePtyCleanup"] as const)(
+    "reports a %s failure without removing the worktree or checkpoints",
+    async (method) => {
+      const id = state.getWorktrees()[0]!.id
+      const post = mock(host.post)
+      host.post = post
+      host[method] = mock(async () => {
+        throw new Error("cleanup failed")
+      })
+
+      await deleteWorktree()
+
+      expect(post).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "error",
+          code: "agentManager.worktreeDeleteFailed",
+          projectId: ctx.id,
+          worktreeId: id,
+        }),
+      )
+      expect(calls).toContain("stats:unskip")
+      expect(calls).not.toContain("disk")
+      expect(client.kilocode.removeSnapshot).not.toHaveBeenCalled()
+      expect(state.getWorktrees()).toHaveLength(1)
+    },
+  )
+
   it("reports checkpoint cleanup failures while preserving and retargeting sessions", async () => {
     const session = state.addSession("retained", state.getWorktrees()[0]!.id)
     const notify = mock(host.notify)

@@ -201,10 +201,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 onClick={() => props.onClick()}
               >
                 <div class="am-wt-icon">
-                  <Show
-                    when={!props.busy && !props.working && !props.blocked}
-                    fallback={<Spinner class="am-worktree-spinner" />}
-                  >
+                  <Show when={!props.busy && !props.working} fallback={<Spinner class="am-worktree-spinner" />}>
                     <Icon name="branch" size="small" />
                   </Show>
                 </div>

@@ -10,7 +10,6 @@ import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./
 import { recordPromotionHandoff } from "./promotion-handoff"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
 import { routeProjectSession } from "./project/messages"
-const DELETE_ERROR = "agentManager.worktreeDeleteFailed"
 
 /**
  * Provider capabilities the worktree lifecycle needs beyond project state.
@@ -123,6 +122,10 @@ export async function deleteLifecycleWorktree(
     host.log(`Worktree ${worktreeId} not found in state`)
     return null
   }
+  const fail = (message: string) => {
+    host.post({ type: "error", code: "agentManager.worktreeDeleteFailed", projectId: ctx.id, worktreeId, message })
+    return null
+  }
   const retained = new Set(state.getSessions(worktreeId).map((session) => session.id))
   let client: KiloClient
   try {
@@ -145,26 +148,11 @@ export async function deleteLifecycleWorktree(
       throw new Error("Deletion safety checks returned no data")
     sessions.data.forEach((session) => retained.add(session.id))
     const active = Object.values(status.data).some((value) => value.type !== "idle")
-    if (active || permissions.data.length > 0 || questions.data.length > 0) {
-      host.post({
-        type: "error",
-        code: DELETE_ERROR,
-        projectId: ctx.id,
-        worktreeId,
-        message: "Cannot delete a worktree while a session is active or waiting for input",
-      })
-      return null
-    }
+    if (active || permissions.data.length > 0 || questions.data.length > 0)
+      return fail("Cannot delete a worktree while a session is active or waiting for input")
   } catch (error) {
     host.log(`Failed to verify worktree deletion safety: ${error}`)
-    host.post({
-      type: "error",
-      code: DELETE_ERROR,
-      projectId: ctx.id,
-      worktreeId,
-      message: "Cannot verify worktree sessions before deletion",
-    })
-    return null
+    return fail("Cannot verify worktree sessions before deletion")
   }
   // Stop pollers before cleanup. State is removed only after PTYs and disk are gone so a failed
   // process cleanup cannot leave a live shell rooted in an untracked worktree.
@@ -174,14 +162,7 @@ export async function deleteLifecycleWorktree(
   } catch (error) {
     host.unskipStats(worktreeId)
     host.log(`Failed to stop worktree services: ${error}`)
-    host.post({
-      type: "error",
-      code: DELETE_ERROR,
-      projectId: ctx.id,
-      worktreeId,
-      message: "Failed to stop worktree services before deletion",
-    })
-    return null
+    return fail("Failed to stop worktree services before deletion")
   }
   const cleared = await host.clearRun(worktreeId).catch((error) => {
     host.log(`Failed to stop the Run script: ${error}`)
@@ -189,14 +170,7 @@ export async function deleteLifecycleWorktree(
   })
   if (!cleared) {
     host.unskipStats(worktreeId)
-    host.post({
-      type: "error",
-      code: DELETE_ERROR,
-      projectId: ctx.id,
-      worktreeId,
-      message: "Failed to stop the Run script before deleting the worktree",
-    })
-    return null
+    return fail("Failed to stop the Run script before deleting the worktree")
   }
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
   let releasePtyCleanup: () => void
@@ -205,14 +179,7 @@ export async function deleteLifecycleWorktree(
   } catch (error) {
     host.log(`Failed to remove worktree from disk: ${error}`)
     host.unskipStats(worktreeId)
-    host.post({
-      type: "error",
-      code: DELETE_ERROR,
-      projectId: ctx.id,
-      worktreeId,
-      message: "Failed to remove worktree PTYs before deletion",
-    })
-    return null
+    return fail("Failed to remove worktree PTYs before deletion")
   }
   try {
     await ctx.worktreeManager().removeWorktree(worktree.path, branch)
@@ -242,14 +209,7 @@ export async function deleteLifecycleWorktree(
   } catch (error) {
     host.unskipStats(worktreeId)
     host.log(`Failed to delete worktree ${worktreeId}: ${error}`)
-    host.post({
-      type: "error",
-      code: DELETE_ERROR,
-      projectId: ctx.id,
-      worktreeId,
-      message: "Failed to delete the worktree",
-    })
-    return null
+    return fail("Failed to delete the worktree")
   } finally {
     releasePtyCleanup()
   }

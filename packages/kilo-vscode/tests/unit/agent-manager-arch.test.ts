@@ -647,26 +647,10 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(status).toContain("this.removedSessions.has(sid)")
   })
 
-  it("onDeleteWorktree removes snapshots after disk cleanup before state cleanup", () => {
+  it("limits snapshot cleanup to explicit worktree deletion without deleting sessions", () => {
     const text = body("onDeleteWorktree")
-    const check = text.indexOf("client.session.status")
-    const disk = text.indexOf("await ctx.worktreeManager().removeWorktree(worktree.path, branch)")
-    const snapshot = text.indexOf(".kilocode.removeSnapshot")
-    const state = text.indexOf("state.removeWorktree")
-
-    expect(check).toBeGreaterThanOrEqual(0)
-    expect(check).toBeLessThan(disk)
-    expect(disk).toBeGreaterThanOrEqual(0)
-    expect(snapshot).toBeGreaterThan(disk)
-    expect(state).toBeGreaterThan(snapshot)
-    expect(text).toContain("directory: ctx.root")
-    expect(text).toContain("worktree: worktree.path")
-    expect(text).toContain("throwOnError: true")
+    expect(text).toContain(".kilocode.removeSnapshot")
     expect(text).not.toContain("session.delete")
-    expect(text).toContain("client.experimental.controlPlane.moveSession")
-    expect(text).toContain("routeProjectSession(host.sessions, ctx.id, sessionID, ctx.root, ctx.generation)")
-    expect(text).not.toContain("sessions.clearDirectory(s.id)")
-    expect(text).toContain("host.push()")
     for (const name of ["onCreateWorktree", "onCreateMultiVersion", "onRemoveStaleWorktree"]) {
       expect(body(name)).not.toContain("removeSnapshot")
     }

@@ -172,12 +172,9 @@ export namespace KiloSnapshotCleanup {
     if (!inside(root, gitdir) || normalized(gitdir) === normalized(root))
       return yield* Effect.fail(new Error("snapshot repository is outside the snapshot root"))
 
-    yield* input.flock.withLock(
+    return yield* input.flock.withLock(
       Effect.gen(function* () {
         const paths = { root, project: path.join(root, input.project), directory, managed, worktree, gitdir }
-        yield* validate(input, paths)
-        if (!(yield* absent(input, worktree)))
-          return yield* Effect.fail(new Error("worktree must be absent before its snapshot repository is removed"))
         const checked = yield* validate(input, paths)
         if (!(yield* absent(input, worktree)))
           return yield* Effect.fail(new Error("worktree must be absent before its snapshot repository is removed"))
@@ -233,6 +230,5 @@ export namespace KiloSnapshotCleanup {
       }),
       `snapshot:${gitdir}`,
     )
-    return true
   })
 }

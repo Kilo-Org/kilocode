@@ -227,7 +227,6 @@ type ProviderInternals = {
   sessionStatusMap: Map<string, string>
   trackedSessionIds: Set<string>
   removedSessionIds: Set<string>
-  sessionStatusMap: Map<string, string>
   openSessionIds: Set<string>
   draftSessions: Map<string, { sid: string; dir: string; expires: number }>
   checkpoints: Map<string, Promise<void>>
