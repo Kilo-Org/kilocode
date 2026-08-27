@@ -19,6 +19,7 @@ const options = (values: Record<string, Activity>) => ({
   }),
   active: () => "current",
   activityFor: (id: string) => values[id] ?? "idle",
+  inUseFor: (id: string) => ["busy", "retry", "waiting"].includes(values[id] ?? "idle"),
 })
 const activity = (values: Record<string, Activity>) => createSessionActivity(options(values))
 
@@ -76,19 +77,25 @@ describe("createWorktreeActivity", () => {
       for (const callback of listeners) callback({ type: "agentManager.worktreeActivity", active })
     }
     expect(state.agent("wt-current")).toBe("done")
+    expect(state.blocked("wt-current")).toBe(false)
     expect(state.agent("wt-other")).toBe("busy")
     send(["/repo/worktree"])
     expect(state.agent("wt-current")).toBe("busy")
+    expect(state.blocked("wt-current")).toBe(true)
     expect(state.project("current", "wt-current")).toBe("busy")
     expect(state.project("background", "wt-current")).toBe("idle")
+    expect(state.blocked("wt-current", "background")).toBe(false)
     expect(state.project("background", null)).toBe("idle")
     expect(state.agent("missing")).toBe("idle")
     expect(state.local()).toBe("done")
     send(["/other/worktree"])
     expect(state.agent("wt-current")).toBe("done")
+    expect(state.blocked("wt-current")).toBe(false)
     expect(state.project("background", "wt-current")).toBe("busy")
+    expect(state.blocked("wt-current", "background")).toBe(true)
     send([])
     expect(state.project("background", "wt-current")).toBe("idle")
+    expect(state.blocked("wt-current", "background")).toBe(false)
     expect(state.agent("wt-other")).toBe("busy")
   })
 
@@ -105,5 +112,24 @@ describe("createWorktreeActivity", () => {
     for (const callback of listeners) callback({ type: "agentManager.worktreeActivity", active: ["/repo/worktree"] })
     expect(state.agent("wt-current")).toBe(value)
     expect(state.project("current", "wt-current")).toBe(value)
+  })
+
+  it.each(["idle", "waiting", "error"] as const)("keeps deletion guards independent of the %s icon", (value) => {
+    let pending = true
+    const state = createWorktreeActivity({
+      ...options({ "current-wt": value }),
+      inUseFor: (id) => id === "current-wt" && pending,
+      projects: () => ({ other: [{ id: "current-wt", worktreeId: "wt-current" }] }),
+      worktrees: () => [],
+      subscribe: () => () => undefined,
+    })
+    expect(state.agent("wt-current")).toBe(value)
+    expect(state.blocked("wt-current")).toBe(true)
+    expect(state.blocked("wt-current", "current")).toBe(true)
+    expect(state.blocked("wt-current", "other")).toBe(true)
+    expect(state.blocked("missing")).toBe(false)
+    pending = false
+    expect(state.blocked("wt-current")).toBe(false)
+    expect(state.blocked("wt-current", "other")).toBe(false)
   })
 })

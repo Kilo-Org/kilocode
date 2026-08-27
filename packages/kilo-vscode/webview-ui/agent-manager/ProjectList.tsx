@@ -47,6 +47,7 @@ interface Props {
   defaultBase?: (projectId: string) => string | undefined
   onCreate?: (projectId: string) => void
   busy: (projectId: string, id: string) => boolean
+  blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
   sessionActivity: (id: string) => Activity
   bindings: Record<string, string>
@@ -224,6 +225,7 @@ export const ProjectList: Component<Props> = (props) => {
           state={props.states[project.id]}
           store={props.store?.(project.id)}
           busy={(id) => props.busy(project.id, id)}
+          blocked={(id) => props.blocked(project.id, id)}
           activityFor={(id) => props.activityFor(project.id, id)}
           stats={props.stats[project.id]}
           local={props.local[project.id]}

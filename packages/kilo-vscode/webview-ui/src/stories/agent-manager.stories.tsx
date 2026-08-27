@@ -1613,6 +1613,7 @@ export const MultiProjectSidebar: Story = {
             }}
             prs={{ [projectA.id]: {}, [projectB.id]: {} }}
             busy={() => false}
+            blocked={() => false}
             sessions={{
               [projectA.id]: [
                 projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),

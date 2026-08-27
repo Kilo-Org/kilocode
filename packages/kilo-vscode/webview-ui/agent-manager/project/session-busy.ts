@@ -43,6 +43,7 @@ export function createSessionActivity(opts: {
 
 export function createWorktreeActivity(
   opts: Parameters<typeof createSessionActivity>[0] & {
+    inUseFor: (id: string) => boolean
     worktrees: (project?: string) => { id: string; path: string }[]
     subscribe: (callback: (message: ExtensionMessage) => void) => () => void
   },
@@ -61,5 +62,10 @@ export function createWorktreeActivity(
     agent: (id: string) => strongest([activity.agent(id), working(id)]),
     project: (project: string, id: string | null) =>
       strongest([activity.project(project, id), id === null ? "idle" : working(id, project)]),
+    blocked: (id: string, project?: string) => {
+      if (working(id, project) === "busy") return true
+      const items = project && project !== opts.active() ? (opts.projects()[project] ?? []) : opts.managed()
+      return items.some((item) => item.worktreeId === id && opts.inUseFor(item.id))
+    },
   }
 }

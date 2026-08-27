@@ -227,8 +227,10 @@ try {
   await check("root", "error")
   await check("task-child", "error")
   await check("task-grand", "error")
+  assert.equal(value.inUseFor("root"), true)
   await emit({ type: "sessionStatus", sessionID: "task-grand", status: "idle" })
   await check("root", "idle")
+  assert.equal(value.inUseFor("root"), false)
 
   await emit({
     type: "permissionRequest",
@@ -256,6 +258,11 @@ try {
   })
   await check("root", "busy")
   await check("task-child", "busy")
+  await emit({ type: "sessionStatus", sessionID: "task-child", status: "idle" })
+  await check("root", "idle")
+  assert.equal(value.inUseFor("root"), true)
+  assert.equal(value.inUseFor("background"), false)
+  await emit({ type: "sessionStatus", sessionID: "task-child", status: "busy" })
   await emit({
     type: "questionRequest",
     question: { id: "notice", sessionID: "task-child", blocking: true, questions: [] },
@@ -362,6 +369,7 @@ try {
   await check("root", "idle")
   await emit({ type: "sessionError", eventID: "root-error", error: { name: "ProviderError" } })
   await check("root", "error")
+  assert.equal(value.inUseFor("root"), false)
   await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
   await check("root", "error")
 

@@ -117,6 +117,17 @@ export function childID(part: TaskPart): string | undefined {
   return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
 }
 
+export function inUse(
+  family: ReadonlySet<string>,
+  statuses: Record<string, { type: string }>,
+  prompts: readonly { sessionID: string }[],
+): boolean {
+  return (
+    [...family].some((id) => !!statuses[id] && statuses[id].type !== "idle") ||
+    prompts.some((item) => family.has(item.sessionID))
+  )
+}
+
 export function ancestry(
   sessions: Record<string, ParentSession>,
   tools: Record<string, readonly TaskPart[]>,

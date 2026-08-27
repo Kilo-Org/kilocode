@@ -42,6 +42,7 @@ interface Props {
   state?: AgentManagerStateMessage
   store?: ProjectStore
   busy: (id: string) => boolean
+  blocked: (id: string) => boolean
   activityFor: (worktreeId: string | null) => Activity
   stats?: Record<string, WorktreeGitStats>
   local?: LocalGitStats
@@ -81,6 +82,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   onCleanup(() => clearTimeout(pendingTimer))
   /** Arm on the first click, execute on the second, matching the legacy sidebar. */
   const confirmDelete = (worktreeId: string) => {
+    if (props.busy(worktreeId) || props.blocked(worktreeId)) return
     if (pending() === worktreeId) {
       clearTimeout(pendingTimer)
       setPending(undefined)
@@ -239,6 +241,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           pendingDelete={pending() === worktree.id}
           busy={props.busy(worktree.id)}
           activity={props.activityFor(worktree.id)}
+          blocked={props.blocked(worktree.id)}
           stale={state()?.staleWorktreeIds?.includes(worktree.id) === true}
           stats={props.stats?.[worktree.id]}
           shortcut={values().shortcut}
