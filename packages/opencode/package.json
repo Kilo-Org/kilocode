@@ -62,7 +62,7 @@
     "why-is-node-running": "3.2.2",
     "@types/npmcli__arborist": "6.3.3",
     "@opencode-ai/http-recorder": "workspace:*",
-    "@babel/core": "7.28.4",
+    "@babel/core": "7.29.6",
     "@standard-schema/spec": "1.0.0",
     "@types/babel__core": "7.20.5"
   },
