@@ -199,6 +199,27 @@ describe("WorktreeStateManager", () => {
       manager.removeSession("s1")
       expect(manager.getSession("s1")).toBeUndefined()
     })
+
+    it("persists stopped worktree sessions across reloads", async () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.closeSession("ses-stopped", wt.id)
+      await manager.flush()
+
+      const restored = new WorktreeStateManager(root, () => undefined)
+      await restored.load()
+
+      expect(restored.isSessionClosed("ses-stopped")).toBe(true)
+      restored.addSession("ses-stopped", wt.id)
+      expect(restored.isSessionClosed("ses-stopped")).toBe(false)
+      await restored.flush()
+    })
+
+    it("removes stopped-session records when their worktree is deleted", () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.closeSession("ses-stopped", wt.id)
+      manager.removeWorktree(wt.id)
+      expect(manager.isSessionClosed("ses-stopped")).toBe(false)
+    })
   })
 
   describe("directoryFor", () => {
@@ -374,6 +395,24 @@ describe("WorktreeStateManager", () => {
       expect(worktree?.branch).toBe("fix-recovered")
       expect(worktree?.remote).toBe("origin")
       expect(manager.getSession("sess-recovered")?.worktreeId).toBe(worktree?.id)
+    })
+
+    it("does not recover a session that was explicitly stopped", () => {
+      const wt = manager.addWorktree({ branch: "fix-recovered", path: "/tmp/recovered", parentBranch: "main" })
+      manager.closeSession("sess-stopped", wt.id)
+      const result = restoreWorktrees(manager, [
+        {
+          branch: "fix-recovered",
+          path: "/tmp/recovered",
+          parentBranch: "main",
+          createdAt: Date.UTC(2026, 0, 1),
+          sessionId: "sess-stopped",
+        },
+      ])
+
+      expect(result).toEqual({ worktrees: 0, sessions: 0 })
+      expect(manager.getSession("sess-stopped")).toBeUndefined()
+      expect(manager.isSessionClosed("sess-stopped")).toBe(true)
     })
   })
 

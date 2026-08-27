@@ -151,7 +151,9 @@ class KiloSessionServiceTest : BasePlatformTestCase() {
             "ses_failed" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
             "ses_asking" to SessionActivityDto("/repo/wt", SessionActivityKindDto.QUESTION),
         )
-        service.activity.first { it.isNotEmpty() }
+        // Both maps feed the snapshot through separate collectors, so wait for each one.
+        service.statuses.first { it.isNotEmpty() }
+        service.activity.first { it.size == 2 }
 
         assertEquals(
             mapOf(

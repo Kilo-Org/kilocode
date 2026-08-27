@@ -156,6 +156,11 @@ export function useSlashCommand(
     { name: "review unpushed", description: "Review local commits ahead of upstream", hints: [] },
     { name: "review branch", description: "Review current branch against base branch", hints: [] },
     {
+      name: "review worktree",
+      description: "Review committed and uncommitted worktree changes against its base",
+      hints: [],
+    },
+    {
       name: "review quick",
       description: "Fast single-pass review with minimal token usage",
       hints: ["--quick", "fast"],

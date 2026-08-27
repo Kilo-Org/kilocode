@@ -18,6 +18,7 @@ import { clearIfOn } from "../../webview-ui/src/context/session-cloud-prune"
 const ROOT = path.resolve(import.meta.dir, "../..")
 const SESSION_FILE = path.join(ROOT, "webview-ui/src/context/session.tsx")
 const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.tsx")
+const AGENT_MANAGER_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
 const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const KILOPROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -148,6 +149,26 @@ describe("ChatView prompt-block contract", () => {
   })
 })
 
+describe("review worktree visibility contract", () => {
+  it("passes the worktree prop from ChatView to PromptInput", () => {
+    const source = readFile(CHATVIEW_FILE)
+    expect(source).toMatch(/worktree\?: boolean/)
+    expect(source).toMatch(/<PromptInput[\s\S]*worktree=\{props\.worktree\}/)
+  })
+
+  it("hides review worktree unless PromptInput is explicitly in a worktree", () => {
+    const source = readFile(PROMPT_FILE)
+    expect(source).toMatch(/worktree\?: boolean/)
+    expect(source).toMatch(/if \(props\.worktree !== true\) hidden\.add\("review worktree"\)/)
+  })
+
+  it("uses registered worktree membership for Agent Manager visibility", () => {
+    const source = readFile(AGENT_MANAGER_FILE)
+    expect(source).toMatch(/worktree=\{worktrees\(\)\.some\(\(wt\) => wt\.id === selection\(\)\)\}/)
+    expect(source).not.toMatch(/worktree=\{selection\(\(\)\) !== LOCAL\}/)
+  })
+})
+
 describe("isPromptBlocked signature contract", () => {
   const source = readFile(PROMPT_UTILS_FILE)
 
@@ -209,6 +230,18 @@ describe("handleSessionDeleted draft cleanup contract", () => {
     const body = extractFunctionBody(source, "handleSessionDeleted")
     expect(body).toContain("setRespondingPermissions")
   })
+
+  it("prevents late status and attention events from reviving a deleted session", () => {
+    expect(extractFunctionBody(source, "handleSessionDeleted")).toContain("removedSessions.add(sessionID)")
+    expect(extractFunctionBody(source, "handleSessionStatus")).toContain("removedSessions.has(sessionID)")
+    expect(extractFunctionBody(source, "handlePermissionRequest")).toContain(
+      "removedSessions.has(permission.sessionID)",
+    )
+    expect(extractFunctionBody(source, "handleQuestionRequest")).toContain("removedSessions.has(question.sessionID)")
+    expect(extractFunctionBody(source, "handleSuggestionRequest")).toContain(
+      "removedSessions.has(suggestion.sessionID)",
+    )
+  })
 })
 
 describe("KiloProvider pruneDeletedSession contract", () => {
@@ -222,7 +255,9 @@ describe("KiloProvider pruneDeletedSession contract", () => {
     // warning for the new current session.
     const match = source.match(/pruneDeletedSession\(sessionID: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
+    expect(match![1]).toContain("this.removedSessionIds.add(sessionID)")
     expect(match![1]).toContain("this.sessionStatusMap.delete(sessionID)")
+    expect(source).toContain("if (this.removedSessionIds.has(sid)) return")
   })
 
   it("clears currentSession and contextSessionID when the deleted id matches", () => {

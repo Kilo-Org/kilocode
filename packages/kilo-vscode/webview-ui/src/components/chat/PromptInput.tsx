@@ -117,6 +117,7 @@ interface PromptInputProps {
   questioning?: () => boolean
   /** When true, defer prompt focus while switching to a pending question */
   deferFocusToQuestion?: () => boolean
+  worktree?: boolean
   boxId?: string
   terminalContext?: () => string | undefined
   pendingSessionID?: string
@@ -310,6 +311,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const hidden = new Set<string>()
       if (session.variantList(sid()).length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
+      if (props.worktree !== true) hidden.add("review worktree")
       return hidden
     },
   )

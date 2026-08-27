@@ -1,22 +1,16 @@
 /** @jsxImportSource solid-js */
 
-/**
- * PromptRail component
- * Thin vertical summary rail on the left edge of the transcript. Hovering or
- * focusing opens a bounded navigator for every loaded prompt; clicking jumps
- * the virtualized transcript without mounting the intervening rows.
- */
-
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, type Accessor } from "solid-js"
+import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js"
 import { Portal } from "solid-js/web"
 import { VList, type VListHandle } from "virtua/solid"
 import { useLanguage } from "../../context/language"
 import { RAIL_INSET, ROW_HEIGHT, TICK_MIN, TICK_STEP, type PromptRailEntry, type PromptRailItem } from "./prompt-rail"
 
 interface PromptRailProps {
+  side: "left" | "right"
   entries: Accessor<PromptRailEntry[]>
   items: Accessor<PromptRailItem[]>
   /** Row key of the item whose turn is currently at the top of the transcript. */
@@ -35,6 +29,7 @@ interface PromptRailProps {
   seeking: Accessor<boolean>
 }
 
+const OPEN_DELAY = 350
 const CLOSE_DELAY = 120
 const EDGE = 12
 const GAP = 8
@@ -47,11 +42,12 @@ export function PromptRail(props: PromptRailProps) {
   const [open, setOpen] = createSignal(false)
   const [hover, setHover] = createSignal<string>()
   const [focused, setFocused] = createSignal<number>()
-  const [anchor, setAnchor] = createSignal<{ top: number; left: number; height: number }>()
+  const [anchor, setAnchor] = createSignal<{ top: number; edge: number; height: number }>()
   let rail: HTMLElement | undefined
   let card: HTMLDivElement | undefined
   let list: VListHandle | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
+  let pending: ReturnType<typeof setTimeout> | undefined
   let frame: number | undefined
   let revealing = false
 
@@ -98,9 +94,14 @@ export function PromptRail(props: PromptRailProps) {
     const center = rect.top + rect.height / 2 - height / 2
     setAnchor({
       top: max < min ? min : Math.min(Math.max(center, min), max),
-      left: rect.right + GAP,
+      edge: (props.side === "right" ? window.innerWidth - rect.left : rect.right) + GAP,
       height: limit,
     })
+  }
+
+  const cancelOpen = () => {
+    if (pending !== undefined) clearTimeout(pending)
+    pending = undefined
   }
 
   const cancelClose = () => {
@@ -135,9 +136,11 @@ export function PromptRail(props: PromptRailProps) {
   const dragging = (event: MouseEvent) => event.buttons !== 0
 
   const openCard = (index: number) => {
+    cancelOpen()
     cancelClose()
     const entry = entries()[index]
-    const item = entry && entryItem(entry)
+    if (!entry || entries().length < 2) return
+    const item = entryItem(entry)
     setFocused(index)
     setHover(item?.key)
     place()
@@ -145,17 +148,60 @@ export function PromptRail(props: PromptRailProps) {
     if (item) reveal(items().findIndex((candidate) => candidate.key === item.key))
   }
 
-  const closeCard = () => {
+  const preview = (index: number, event: MouseEvent) => {
+    cancelOpen()
+    if (dragging(event)) return
     cancelClose()
+    if (open()) return openCard(index)
+    const entry = entries()[index]
+    if (!entry) return
+    const key = entryItem(entry)?.key
+    pending = setTimeout(() => {
+      pending = undefined
+      const entry = entries()[index]
+      if (!entry || entryItem(entry)?.key !== key) return
+      openCard(index)
+    }, OPEN_DELAY)
+  }
+
+  const dismiss = () => {
+    cancelOpen()
+    cancelClose()
+    setOpen(false)
+    setHover(undefined)
+  }
+
+  const closeCard = () => {
+    cancelOpen()
+    cancelClose()
+    if (!open()) return
     timer = setTimeout(() => {
+      timer = undefined
       setOpen(false)
       setHover(undefined)
     }, CLOSE_DELAY)
   }
 
-  onCleanup(cancelClose)
+  const escape = (event: KeyboardEvent) => {
+    if (event.key !== "Escape" || event.defaultPrevented) return
+    cancelOpen()
+    if (!open()) return
+    event.preventDefault()
+    event.stopPropagation()
+    dismiss()
+  }
+
+  window.addEventListener("keydown", escape, true)
   onCleanup(() => {
+    cancelOpen()
+    cancelClose()
+    window.removeEventListener("keydown", escape, true)
     if (frame !== undefined) cancelAnimationFrame(frame)
+  })
+
+  createEffect(on(() => props.side, cancelOpen, { defer: true }))
+  createEffect(() => {
+    if (entries().length < 2) dismiss()
   })
 
   // Resizing the panel moves the rail out from under an open card.
@@ -168,11 +214,14 @@ export function PromptRail(props: PromptRailProps) {
 
   // Re-place once the card is measurable, so rows that wrap differently than
   // the estimate still end up centered on the ticks.
-  createEffect(() => {
-    if (!open() || !card) return
-    const frame = requestAnimationFrame(() => place())
-    onCleanup(() => cancelAnimationFrame(frame))
-  })
+  createEffect(
+    on([open, () => props.side], () => {
+      if (!open() || !card) return
+      place()
+      const frame = requestAnimationFrame(() => place())
+      onCleanup(() => cancelAnimationFrame(frame))
+    }),
+  )
 
   let seeking = false
   createEffect(() => {
@@ -190,9 +239,7 @@ export function PromptRail(props: PromptRailProps) {
     const current = focused() ?? 0
     if (event.key === "Escape") {
       event.preventDefault()
-      cancelClose()
-      setOpen(false)
-      setHover(undefined)
+      dismiss()
       return
     }
     if (event.key === "Enter" || event.key === " ") {
@@ -279,6 +326,7 @@ export function PromptRail(props: PromptRailProps) {
       <nav
         ref={rail}
         class="prompt-rail"
+        data-side={props.side}
         aria-label={language.t("session.prompts.navLabel")}
         style={{ "--prompt-rail-step": `${step()}px` }}
         onMouseLeave={closeCard}
@@ -288,6 +336,7 @@ export function PromptRail(props: PromptRailProps) {
         }}
         onKeyDown={onKeyDown}
         onWheel={(event) => {
+          cancelOpen()
           event.preventDefault()
           props.onWheel(event.deltaY)
         }}
@@ -305,12 +354,11 @@ export function PromptRail(props: PromptRailProps) {
               data-queued={(entry.type === "prompt" && entry.item.queued) || undefined}
               aria-label={entryLabel(entry)}
               tabIndex={index() === (focused() ?? 0) ? 0 : -1}
-              onMouseEnter={(event) => {
-                if (dragging(event)) return
-                openCard(index())
-              }}
+              onMouseEnter={(event) => preview(index(), event)}
+              onMouseLeave={cancelOpen}
               onFocus={() => openCard(index())}
               onClick={() => {
+                cancelOpen()
                 if (entry.type === "prompt") props.onSelect(entry.item)
                 if (entry.type === "history") selectFirst()
                 if (entry.type === "overflow") openCard(index())
@@ -328,16 +376,24 @@ export function PromptRail(props: PromptRailProps) {
             <div
               ref={card}
               class="prompt-rail-card"
+              data-side={props.side}
               data-virtualized={virtualized() || undefined}
               role="dialog"
               aria-label={language.t("session.prompts.navLabel")}
               style={{
                 top: `${position().top}px`,
-                left: `${position().left}px`,
+                left: props.side === "left" ? `${position().edge}px` : "auto",
+                right: props.side === "right" ? `${position().edge}px` : "auto",
                 "--prompt-rail-card-height": `${position().height}px`,
               }}
               onMouseEnter={cancelClose}
               onMouseLeave={closeCard}
+              onFocusIn={cancelClose}
+              onFocusOut={(event) => {
+                if (!event.relatedTarget) return
+                if (card?.contains(event.relatedTarget as Node) || rail?.contains(event.relatedTarget as Node)) return
+                closeCard()
+              }}
               onWheel={(event) => {
                 // A reveal placed the list here, so any wheel from now on is the
                 // user's. Scrolling up at the very top emits no scroll event, so

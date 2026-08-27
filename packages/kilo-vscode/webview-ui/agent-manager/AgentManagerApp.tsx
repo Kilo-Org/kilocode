@@ -91,7 +91,7 @@ import { createProjectRegistry, type PersistedProjectTabs } from "./project/regi
 import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
-import { createSessionBusy } from "./project/session-busy"
+import { createWorktreeBusy } from "./project/session-busy"
 import { switchProject } from "./project/switch"
 import { createProjectStateHandlers } from "./project/state-handlers"
 import { ownsParent as ownsParentSession, isCurrent } from "./project/message-ownership"
@@ -104,7 +104,7 @@ import {
   setReviewOpen,
 } from "./project/review-state"
 import { applyRunStatus } from "./project/run-status"
-import { clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
+import { clearFailedDelete, clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
 import {
   createSessionRestore,
   createTabMemory,
@@ -900,7 +900,7 @@ const AgentManagerContent: Component = () => {
 
   const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 
-  const busy = createSessionBusy({
+  const busy = createWorktreeBusy({
     statuses: session.allStatusMap,
     permissions: session.permissions,
     questions: session.questions,
@@ -908,6 +908,8 @@ const AgentManagerContent: Component = () => {
     local: localSessionIDs,
     projects: projectSessionsLive,
     active: activeProjectId,
+    worktrees: (id) => (id ? registry.ensure(id) : registry.active()).worktrees(),
+    subscribe: vscode.onMessage,
   })
   const isAgentBusy = busy.agent
   const isLocalBusy = busy.local
@@ -1386,6 +1388,7 @@ const AgentManagerContent: Component = () => {
     })
 
     const unsub = vscode.onMessage((msg) => {
+      clearFailedDelete(msg, registry)
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
         setRepoBranch(info.branch)
@@ -1820,8 +1823,8 @@ const AgentManagerContent: Component = () => {
 
   const confirmDeleteWorktree = (worktreeId: string) => {
     const wt = worktrees().find((w) => w.id === worktreeId)
-    if (!wt) return
-
+    const run = runStatuses()[worktreeId]?.state
+    if (!wt || busyWorktrees().has(worktreeId) || isAgentBusy(worktreeId, true) || (run && run !== "idle")) return
     // Second press/click: execute the delete
     if (pendingDelete() === worktreeId) {
       cancelPendingDelete()
@@ -2319,7 +2322,7 @@ const AgentManagerContent: Component = () => {
             states={projectStates()}
             store={(id) => registry.ensure(id)}
             busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
-            working={(projectId, id) => projectBusy(projectId, id)}
+            working={(projectId, id, waiting) => projectBusy(projectId, id, waiting)}
             localBusy={(projectId) => projectBusy(projectId, null)}
             stats={projectLive.stats()}
             local={projectLive.local()}
@@ -2563,6 +2566,7 @@ const AgentManagerContent: Component = () => {
                     onForkSession={readOnly() ? undefined : handleForkSession}
                     readonly={readOnly()}
                     continueInWorktree={selection() === LOCAL}
+                    worktree={worktrees().some((wt) => wt.id === selection())}
                     promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
                     terminalContext={() => selection() ?? undefined}
                     deferFocusToQuestion={hasQuestionOption}

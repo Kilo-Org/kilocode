@@ -4,7 +4,6 @@ import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.Outcome
-import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
@@ -1097,20 +1096,20 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     fun `test turn ended state makes outcome view visible`() {
         val item = panelWithPrompts()
-        model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED, OutcomeTone.WARNING))
+        model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED))
 
         val ov = find<SessionOutcomeView>(item)!!
         val comps = item.components.toList()
 
         assertTrue(ov.isVisible)
-        assertNotNull(text(item, KiloBundle.message("session.outcome.interrupted.description")))
+        assertNotNull(text(item, KiloBundle.message("session.outcome.interrupted.note")))
         assertTrue(comps.indexOf(ov) < comps.indexOf(item.progress))
         assertSame(item.progress, comps.last())
     }
 
     fun `test returning to idle hides outcome view`() {
         val item = panelWithPrompts()
-        model.setState(SessionState.TurnEnded(Outcome.FAILED, OutcomeTone.CRITICAL))
+        model.setState(SessionState.TurnEnded(Outcome.FAILED))
         model.setState(SessionState.Idle)
 
         val ov = find<SessionOutcomeView>(item)!!

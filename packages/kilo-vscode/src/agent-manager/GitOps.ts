@@ -20,7 +20,7 @@ interface GitOpsOptions {
   /** Shared concurrency gate for child process spawning. */
   semaphore?: Semaphore
   /** Validated Git executable shared by Agent Manager operations. */
-  binary?: GitExecutable
+  binary?: GitExecutable | string
 }
 
 export interface ApplyConflict {
@@ -131,6 +131,8 @@ export class GitOps {
   private static readonly DEFAULT_BRANCH_CACHE_TTL_MS = 10 * 60_000
   private static readonly MAX_CACHE_SIZE = 100
 
+  public readonly path: string
+
   get disposed(): boolean {
     return this.controller.signal.aborted
   }
@@ -138,7 +140,12 @@ export class GitOps {
   constructor(options: GitOpsOptions) {
     this.log = options.log
     this.semaphore = options.semaphore
-    this.binary = options.binary ?? (() => Promise.resolve("git"))
+    const configured = options.binary
+    this.path = typeof configured === "string" ? configured : "git"
+    this.binary =
+      typeof configured === "string"
+        ? () => Promise.resolve(configured)
+        : (configured ?? (() => Promise.resolve("git")))
     this.injected = options.runGit !== undefined
     this.runGit =
       options.runGit ??
@@ -147,6 +154,7 @@ export class GitOps {
         return simpleGit(cwd, {
           abort: this.controller.signal,
           binary,
+          unsafe: { allowUnsafeCustomBinary: binary !== "git" },
         })
           .raw(args)
           .then((out) => out.trim())
