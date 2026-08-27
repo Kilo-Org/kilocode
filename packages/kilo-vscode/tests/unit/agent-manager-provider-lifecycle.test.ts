@@ -18,6 +18,7 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     session: { status: ReturnType<typeof mock>; delete: ReturnType<typeof mock> }
     permission: { list: ReturnType<typeof mock> }
     question: { list: ReturnType<typeof mock> }
+    experimental: { session: { list: ReturnType<typeof mock> }; controlPlane: { moveSession: ReturnType<typeof mock> } }
     kilocode: { removeSnapshot: ReturnType<typeof mock> }
   }
   let host: LifecycleHost
@@ -46,7 +47,24 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       },
       permission: { list: mock(async () => ({ data: [] })) },
       question: { list: mock(async () => ({ data: [] })) },
-      kilocode: { removeSnapshot: mock(async () => ({ data: true })) },
+      experimental: {
+        session: {
+          list: mock(async () => ({
+            data: state.getSessions().map((session) => ({ id: session.id, directory: worktree })),
+          })),
+        },
+        controlPlane: {
+          moveSession: mock(async ({ sessionID }: { sessionID: string }) => {
+            calls.push(`move:${sessionID}`)
+          }),
+        },
+      },
+      kilocode: {
+        removeSnapshot: mock(async () => {
+          calls.push("snapshots")
+          return { data: true }
+        }),
+      },
     }
     host = {
       createOnDisk: async () => null,
@@ -84,6 +102,7 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       },
       metadata: async () => ({}),
       post: (message) => calls.push(`post:${message.type}`),
+      notify: (message) => calls.push(`notify:${message}`),
       log: () => undefined,
     }
   })
@@ -134,18 +153,14 @@ describe("Agent Manager worktree deletion lifecycle", () => {
 
   it("reports checkpoint cleanup failures while preserving and retargeting sessions", async () => {
     const session = state.addSession("retained", state.getWorktrees()[0]!.id)
-    const post = mock(host.post)
-    host.post = post
+    const notify = mock(host.notify)
+    host.notify = notify
     client.kilocode.removeSnapshot.mockRejectedValue(new Error("checkpoint cleanup failed"))
 
     await deleteWorktree()
 
-    expect(post).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "error",
-        code: "agentManager.snapshotCleanupFailed",
-        projectId: ctx.id,
-      }),
+    expect(notify).toHaveBeenCalledWith(
+      "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
     )
     expect(state.getWorktrees()).toHaveLength(0)
     expect(routes).toContainEqual({
@@ -154,6 +169,34 @@ describe("Agent Manager worktree deletion lifecycle", () => {
       directory: ctx.root,
       generation: ctx.generation,
     })
+    expect(client.session.delete).not.toHaveBeenCalled()
+  })
+
+  it("relocates archived and child sessions not present in Agent Manager state", async () => {
+    client.experimental.session.list.mockResolvedValue({
+      data: [
+        { id: "archived", directory: worktree, time: { archived: 1 } },
+        { id: "child", directory: worktree, parentID: "parent" },
+      ],
+    })
+
+    await deleteWorktree()
+
+    expect(routes.map((route) => route.sessionID)).toEqual(["archived", "child"])
+    expect(client.experimental.controlPlane.moveSession).toHaveBeenCalledTimes(2)
+    expect(client.session.delete).not.toHaveBeenCalled()
+  })
+
+  it("does not discard checkpoints when persistent session relocation fails", async () => {
+    state.addSession("retained", state.getWorktrees()[0]!.id)
+    client.experimental.controlPlane.moveSession.mockRejectedValue(new Error("move failed"))
+
+    await deleteWorktree()
+
+    expect(calls).toContain("disk")
+    expect(calls).toContain("post:error")
+    expect(client.kilocode.removeSnapshot).not.toHaveBeenCalled()
+    expect(state.getWorktrees()).toHaveLength(1)
     expect(client.session.delete).not.toHaveBeenCalled()
   })
 
@@ -170,6 +213,18 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     expect(calls).not.toContain(`clear:${first.id}`)
     expect(calls).not.toContain(`clear:${second.id}`)
     expect(client.session.delete).not.toHaveBeenCalled()
+    expect(client.experimental.session.list).toHaveBeenCalledWith(
+      { directory: worktree, archived: true, roots: false, limit: Number.MAX_SAFE_INTEGER },
+      { throwOnError: true },
+    )
+    for (const session of [first, second]) {
+      expect(client.experimental.controlPlane.moveSession).toHaveBeenCalledWith(
+        { sessionID: session.id, destination: { directory: ctx.root }, moveChanges: false },
+        { throwOnError: true },
+      )
+      expect(calls.indexOf(`move:${session.id}`)).toBeGreaterThan(calls.indexOf("disk"))
+      expect(calls.indexOf(`move:${session.id}`)).toBeLessThan(calls.indexOf("snapshots"))
+    }
     expect(client.kilocode.removeSnapshot).toHaveBeenCalledWith(
       { directory: ctx.root, worktree },
       { throwOnError: true },

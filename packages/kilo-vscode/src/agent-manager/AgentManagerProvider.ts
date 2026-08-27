@@ -1454,7 +1454,6 @@ export class AgentManagerProvider implements Disposable {
       runScriptConfigured: false,
     })
   }
-
   // Manager accessors — repository-bound services are owned by the active ProjectContext (immutable per root).
   /** Provider capabilities for the worktree lifecycle handlers (state stays in ProjectContext). */
   private get lifecycleHost(): LifecycleHost {
@@ -1489,6 +1488,7 @@ export class AgentManagerProvider implements Disposable {
       acquirePtyCleanup: (directory) => this.acquirePtyCleanup(directory),
       metadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
       post: (msg) => this.postToWebview(msg),
+      notify: (message) => this.host.showError(message),
       log: (...args) => this.log(...args),
     }
   }

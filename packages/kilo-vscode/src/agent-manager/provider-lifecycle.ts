@@ -53,6 +53,7 @@ export interface LifecycleHost {
   acquirePtyCleanup: (directory: string) => Promise<() => void>
   metadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   post: (message: AgentManagerOutMessage) => void
+  notify: (message: string) => void
   log: (...args: unknown[]) => void
 }
 
@@ -122,16 +123,27 @@ export async function deleteLifecycleWorktree(
     host.log(`Worktree ${worktreeId} not found in state`)
     return null
   }
+  const retained = new Set(state.getSessions(worktreeId).map((session) => session.id))
   let client: KiloClient
   try {
     client = host.client()
-    const [status, permissions, questions] = await Promise.all([
+    const [status, permissions, questions, sessions] = await Promise.all([
       client.session.status({ directory: worktree.path }, { throwOnError: true }),
       client.permission.list({ directory: worktree.path }, { throwOnError: true }),
       client.question.list({ directory: worktree.path }, { throwOnError: true }),
+      client.experimental.session.list(
+        { directory: worktree.path, archived: true, roots: false, limit: Number.MAX_SAFE_INTEGER },
+        { throwOnError: true },
+      ),
     ])
-    if (status.data === undefined || permissions.data === undefined || questions.data === undefined)
+    if (
+      status.data === undefined ||
+      permissions.data === undefined ||
+      questions.data === undefined ||
+      sessions.data === undefined
+    )
       throw new Error("Deletion safety checks returned no data")
+    sessions.data.forEach((session) => retained.add(session.id))
     const active = Object.values(status.data).some((value) => value.type !== "idle")
     if (active || permissions.data.length > 0 || questions.data.length > 0) {
       host.post({
@@ -204,24 +216,27 @@ export async function deleteLifecycleWorktree(
   }
   try {
     await ctx.worktreeManager().removeWorktree(worktree.path, branch)
+    await Promise.all(
+      [...retained].map((sessionID) =>
+        client.experimental.controlPlane.moveSession(
+          { sessionID, destination: { directory: ctx.root }, moveChanges: false },
+          { throwOnError: true },
+        ),
+      ),
+    )
     try {
       await client.kilocode.removeSnapshot({ directory: ctx.root, worktree: worktree.path }, { throwOnError: true })
     } catch (error) {
       host.log(`Failed to remove worktree snapshots: ${error}`)
-      host.post({
-        type: "error",
-        code: "agentManager.snapshotCleanupFailed",
-        projectId: ctx.id,
-        worktreeId,
-        message:
-          "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
-      })
+      host.notify(
+        "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
+      )
     }
     const orphaned = state.removeWorktree(worktreeId)
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
     host.stopDiffs(worktree.path, orphaned)
-    for (const s of orphaned) routeProjectSession(host.sessions, ctx.id, s.id, ctx.root, ctx.generation)
+    for (const sessionID of retained) routeProjectSession(host.sessions, ctx.id, sessionID, ctx.root, ctx.generation)
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
   } catch (error) {

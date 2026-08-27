@@ -663,7 +663,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("worktree: worktree.path")
     expect(text).toContain("throwOnError: true")
     expect(text).not.toContain("session.delete")
-    expect(text).toContain("routeProjectSession(host.sessions, ctx.id, s.id, ctx.root, ctx.generation)")
+    expect(text).toContain("client.experimental.controlPlane.moveSession")
+    expect(text).toContain("routeProjectSession(host.sessions, ctx.id, sessionID, ctx.root, ctx.generation)")
     expect(text).not.toContain("sessions.clearDirectory(s.id)")
     expect(text).toContain("host.push()")
     for (const name of ["onCreateWorktree", "onCreateMultiVersion", "onRemoveStaleWorktree"]) {
