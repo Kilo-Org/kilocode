@@ -4,7 +4,7 @@ import type { SSEPayload } from "../services/cli-backend/sdk-sse-adapter"
 import { sameDirectory } from "../kilo-provider-utils"
 import type { LocalStats, WorktreeStats } from "./GitStatsPoller"
 import type { PRStatus } from "./types"
-import type { WorktreeStateManager } from "./WorktreeStateManager"
+import type { ManagedSession, WorktreeStateManager } from "./WorktreeStateManager"
 import {
   OrchestrationError,
   answer,
@@ -50,6 +50,7 @@ interface Options {
   stats(directory?: string): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
   prs(directory?: string): Map<string, PRStatus>
   push(directory?: string): void
+  resolve?(sessionID: string, directory?: string): ManagedSession | undefined
   managed(sessionID: string, directory?: string): boolean
   close(sessionID: string, directory?: string): Promise<void>
   directories?(): string[]
@@ -287,6 +288,7 @@ export class AgentManagerOrchestrationBridge {
           text: request.prompt,
           messageID: request.id,
           signal: active.controller.signal,
+          managed: this.options.resolve?.(request.targetSessionID, origin.directory),
         })
         if (this.disposed || active.cancelled) return
         return { result: { operation: "prompt", sessionID: request.targetSessionID, delivered: true } }
@@ -295,7 +297,12 @@ export class AgentManagerOrchestrationBridge {
         return await this.resolveQuestion(client, root, state, request, origin, active)
       }
       if (request.operation === "move") {
-        move({ state, sessionID: request.targetSessionID, sectionID: request.sectionID })
+        move({
+          state,
+          sessionID: request.targetSessionID,
+          sectionID: request.sectionID,
+          managed: this.options.resolve?.(request.targetSessionID, origin.directory),
+        })
         this.options.push(origin.directory)
         if (this.disposed || active.cancelled) return
         return {
@@ -338,6 +345,7 @@ export class AgentManagerOrchestrationBridge {
       sessionID: request.targetSessionID,
       questionID: request.questionID,
       answers: request.answers,
+      managed: this.options.resolve?.(request.targetSessionID, origin.directory),
     })
     if (this.disposed || active.cancelled) return
     return {

@@ -37,7 +37,7 @@ class SubagentSessionEditorHostTest : BasePlatformTestCase() {
 
         assertTrue(host.readonly)
         assertTrue(host.hostedInEditorTab)
-        assertFalse(host.showsBranchBadgeInHeader)
+        assertFalse(host.showsBranchDock)
     }
 
     fun testOpenPresentsSessionUi() {

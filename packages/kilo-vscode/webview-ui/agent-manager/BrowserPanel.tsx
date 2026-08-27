@@ -1,10 +1,50 @@
-import { createEffect, createSignal, For, onCleanup, Show, type Accessor, type Component } from "solid-js"
+import { createEffect, createSignal, For, onCleanup, Show, type Accessor, type Component, type Setter } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { useLanguage } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
 import type { AgentManagerBrowserInspectionMessage, ExtensionMessage, WebviewMessage } from "../src/types/messages"
+import { SidePanel } from "./side-panel-layout"
+
+export function createBrowserPanel(
+  current: Accessor<SidePanel | null>,
+  panel: Setter<SidePanel | null>,
+  history: Setter<boolean>,
+  review: Setter<boolean>,
+) {
+  const [enabled, configure] = createSignal(
+    (globalThis as typeof globalThis & { KILO_BROWSER_AUTOMATION?: boolean }).KILO_BROWSER_AUTOMATION === true,
+  )
+  const visible = () => current() === SidePanel.Browser
+  const close = () => panel(null)
+  const open = () => {
+    history(false)
+    review(false)
+    panel(SidePanel.Browser)
+  }
+  return {
+    enabled,
+    visible,
+    close,
+    bind: (current: Accessor<string | undefined>) => ({
+      browser: configure,
+      current,
+      closeBrowser: close,
+      openBrowser: open,
+    }),
+    toggle: () => {
+      if (!enabled()) return
+      if (visible()) return close()
+      open()
+    },
+    render: (session: Accessor<string | undefined>, project: Accessor<string | undefined>) => (
+      <Show when={enabled() && visible()}>
+        <BrowserPanel sessionId={session} projectId={project} onClose={close} />
+      </Show>
+    ),
+  }
+}
 
 type State = Extract<ExtensionMessage, { type: "agentManager.browserState" }>
 type Devtools = Extract<ExtensionMessage, { type: "agentManager.browserDevtools" }>
@@ -265,7 +305,7 @@ interface Props {
   onClose: () => void
 }
 
-export const BrowserPanel: Component<Props> = (props) => {
+const BrowserPanel: Component<Props> = (props) => {
   const t = useLanguage().t
   const vscode = useVSCode()
   const [url, setUrl] = createSignal("")

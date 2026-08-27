@@ -49,7 +49,13 @@ data class MessageErrorDto(
     val responseBody: String? = null,
     val dataKeys: List<String> = emptyList(),
     val ref: String? = null,
-)
+) {
+    val aborted: Boolean get() = type == ABORTED
+
+    companion object {
+        const val ABORTED = "MessageAbortedError"
+    }
+}
 
 @Serializable
 data class MessageWithPartsDto(

@@ -149,6 +149,23 @@ describe("transcriptRows", () => {
     expect(rows.filter((row) => row.type === "assistant").map((row) => row.copy)).toEqual(["p1", "p1"])
   })
 
+  it("keeps historical copy rows while hiding the live turn copy row", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1")
+    const u2 = user("u2")
+    const a2 = assistant("a2", "u2")
+    const rows = transcriptRows(
+      messageTurns([u1, a1, u2, a2]),
+      lookup({ a1: [part("p1", "a1")], a2: [part("p2", "a2")] }),
+      { live: new Set(["u2"]) },
+    )
+
+    expect(rows.filter((row) => row.type === "assistant").map((row) => ({ turn: row.turn, copy: row.copy }))).toEqual([
+      { turn: "u1", copy: "p1" },
+      { turn: "u2", copy: undefined },
+    ])
+  })
+
   it("keeps compaction replies ordered under the compacted turn and respects revert turns", () => {
     const u1 = user("u1")
     const a1 = assistant("a1", "u1")

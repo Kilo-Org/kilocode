@@ -74,6 +74,7 @@ internal class RecentsList(
 
     init {
         isOpaque = false
+        border = JBUI.Borders.empty(0, UiStyle.Gap.pad(), 0, UiStyle.Gap.pad())
         add(title, BorderLayout.NORTH)
         add(list, BorderLayout.CENTER)
         setSessions(sessions)

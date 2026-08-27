@@ -747,8 +747,13 @@ export const MessageListLayoutCorrection: Story = {
   name: "MessageList - follow after layout correction",
   render: () => {
     const [output, setOutput] = createSignal("Initial streamed response.")
+    const [status, setStatus] = createSignal<"idle" | "busy">("busy")
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      status,
+      statusInfo: () => ({ type: status() }),
+      statusText: () => (status() === "busy" ? "Thinking…" : undefined),
+      busySince: () => (status() === "busy" ? Date.now() - 2000 : undefined),
       messages: () => correctionMessages,
       userMessages: () => correctionMessages.filter((msg) => msg.role === "user"),
       getParts: (id: string) => {
@@ -769,6 +774,8 @@ export const MessageListLayoutCorrection: Story = {
                 position: fixed;
                 inset: 8px 8px auto auto;
                 z-index: 10;
+                display: flex;
+                gap: 8px;
               }
             `}</style>
             <div class="auto-scroll-correction-controls">
@@ -778,6 +785,13 @@ export const MessageListLayoutCorrection: Story = {
                 onClick={() => setOutput((value) => `${value}\n\n${"More streamed output. ".repeat(30)}`)}
               >
                 Append stream
+              </button>
+              <button
+                type="button"
+                data-testid="toggle-status"
+                onClick={() => setStatus((value) => (value === "busy" ? "idle" : "busy"))}
+              >
+                Toggle status
               </button>
             </div>
             <ChatView />

@@ -73,7 +73,7 @@ import type { ProjectContext } from "./project/context"
 import { ProjectContexts } from "./project/contexts"
 import { hydrateExpanded } from "./project/hydrate"
 import { createMultiVersion, type MultiVersionHost } from "./provider-multi-version"
-import { handleProjectMessage, type ProjectMessageDeps } from "./project/messages"
+import { handleProjectMessage, routeProjectSession, type ProjectMessageDeps } from "./project/messages"
 import { createProjectWiring, type ProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
@@ -210,6 +210,7 @@ export class AgentManagerProvider implements Disposable {
       changed: () => this.onWorkspaceChanged(),
       removed: (id) => this.browserLifecycle.closeProject(id),
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
+      routeSession: (pid, sid, dir, gen) => routeProjectSession(this.panel?.sessions, pid, sid, dir, gen),
     })
     this.registry = wiring.registry
     this.contexts = wiring.contexts
@@ -225,7 +226,7 @@ export class AgentManagerProvider implements Disposable {
       log: (msg) => this.log(msg),
     })
     const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
-    this.diffCatalog = new DiffSourceCatalog(this.connectionService)
+    this.diffCatalog = new DiffSourceCatalog(this.connectionService, local)
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
@@ -286,6 +287,7 @@ export class AgentManagerProvider implements Disposable {
       getPrs: () => this.prBridge.snapshot(),
       pushState: (ctx) => this.pushState(ctx),
       hasPanelSession: (id) => this.panelSessions.has(id),
+      routeSession: (id, dir) => this.panel?.sessions.setSessionDirectory(id, dir),
       closeSession: (id) => this.onCloseSession(id),
       postSessionClosed: (id, projectId) =>
         this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id, projectId }),
@@ -312,7 +314,6 @@ export class AgentManagerProvider implements Disposable {
       (event) => this.onSessionLifecycle(event),
     )
   }
-
   /**
    * Keep each project's cached sidebar session list in sync with backend
    * session lifecycle events, so sessions created outside this panel (another
@@ -326,7 +327,6 @@ export class AgentManagerProvider implements Disposable {
       post: (message) => this.postToWebview(message),
     })
   }
-
   private onSessionStatus(event: unknown): void {
     const props = (event as { properties?: { sessionID?: string; status?: { type?: string } } }).properties
     const sid = props?.sessionID

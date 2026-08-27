@@ -332,6 +332,45 @@ describe("WorktreeManager.createWorktree", () => {
 
     expect(result.parentBranch).toBe(branch)
   })
+
+  it("uses two checkout workers without changing Git configuration", async () => {
+    const root = await createTempRepo()
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    const file = path.join(root, "workers")
+    await fs.writeFile(hook, `#!/bin/sh\ngit config --get checkout.workers > "${file}"\n`)
+    await fs.chmod(hook, 0o755)
+
+    await createManager(root).createWorktree({ branchName: "parallel-checkout" })
+
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("2")
+    expect((await simpleGit(root).getConfig("checkout.workers")).value).toBeNull()
+  })
+
+  it("preserves an explicitly configured checkout worker count", async () => {
+    const root = await createTempRepo()
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    const file = path.join(root, "workers")
+    gitExec(["git", "-C", root, "config", "checkout.workers", "1"])
+    await fs.writeFile(hook, `#!/bin/sh\ngit config --get checkout.workers > "${file}"\n`)
+    await fs.chmod(hook, 0o755)
+
+    await createManager(root).createWorktree({ branchName: "configured-checkout" })
+
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("1")
+    expect((await simpleGit(root).getConfig("checkout.workers")).value).toBe("1")
+  })
+
+  it("retains post-checkout hook failure tolerance with parallel checkout", async () => {
+    const root = await fs.realpath(await createTempRepo())
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    await fs.writeFile(hook, "#!/bin/sh\nprintf 'post-checkout hook failed' >&2\nexit 1\n")
+    await fs.chmod(hook, 0o755)
+
+    const result = await createManager(root).createWorktree({ branchName: "hook-failure" })
+
+    expect(existsSync(result.path)).toBe(true)
+    expect((await simpleGit(root).raw(["worktree", "list", "--porcelain"])).includes(result.path)).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -813,6 +852,17 @@ describe("WorktreeManager.createWorktree branch collision", () => {
     expect(second.branch).toBe("collide-2")
     expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
   })
+
+  it("does not treat remote-tracking refs as local branch collisions", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+    const hash = (await git.revparse(["HEAD"])).trim()
+    await git.raw(["update-ref", "refs/remotes/origin/remote-name", hash])
+
+    const result = await createManager(root).createWorktree({ branchName: "remote-name" })
+
+    expect(result.branch).toBe("remote-name")
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -1201,6 +1251,7 @@ describe("WorktreeManager.createWorktree advanced", () => {
     }
     internal.fetchPRInfo = async () => ({
       headRefName: "topic",
+      baseRefName: "main",
       isCrossRepository: false,
       title: "Topic PR",
     })
@@ -1210,7 +1261,8 @@ describe("WorktreeManager.createWorktree advanced", () => {
     const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
 
     expect(worktreeHead).toBe(remoteHead)
-    expect(result.parentBranch).toBe("topic")
+    expect(result.parentBranch).toBe("main")
+    expect(result.remote).toBe("origin")
   })
 
   it("does not track a deleted PR source branch when using the pull ref fallback", async () => {
@@ -1245,6 +1297,63 @@ describe("WorktreeManager.createWorktree advanced", () => {
 
     expect(worktreeHead).toBe(head)
     expect(upstream.trim()).toBe("")
+    expect(result.parentBranch).toBe("main")
+    expect(result.remote).toBe("origin")
+  })
+
+  it("preserves a non-default PR target branch for comparison", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("develop")
+    await fs.writeFile(path.join(clone, "develop.txt"), "develop")
+    await git.add(".")
+    await git.commit("develop commit")
+    await git.push("origin", "develop")
+    await git.checkout("main")
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      baseRefName: "develop",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    const result = await manager.createFromPR("https://github.com/org/repo/pull/1")
+    const target = (await git.revparse(["refs/remotes/origin/develop"])).trim()
+    const head = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(result.parentBranch).toBe("develop")
+    expect(result.remote).toBe("origin")
+    expect(head).not.toBe(target)
+  })
+
+  it("fails before creating a worktree for an unavailable PR target", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      baseRefName: "missing",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    await expect(manager.createFromPR("https://github.com/org/repo/pull/1")).rejects.toThrow(
+      'Could not resolve start point for branch "missing"',
+    )
+    expect(existsSync(path.join(clone, ".kilo", "worktrees"))).toBe(false)
   })
 })
 
