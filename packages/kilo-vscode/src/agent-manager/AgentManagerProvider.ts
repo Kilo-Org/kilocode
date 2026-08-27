@@ -46,6 +46,7 @@ import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
+import { createWorktreeActivity } from "./worktree-activity"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
 import { WorktreeImporter } from "./worktree-importer"
 import {
@@ -106,8 +107,7 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
-  private unsubStatus: (() => void) | undefined
-  private unsubSessions: (() => void) | undefined
+  private activity: ReturnType<typeof createWorktreeActivity>
   private unsubFont: (() => void) | undefined
   private unsubProjects: (() => void) | undefined
   /** Scratch set returned when no active context exists; mutations are discarded. */
@@ -284,22 +284,15 @@ export class AgentManagerProvider implements Disposable {
       (event) => (event as { type?: string }).type === "kilocode.agent_manager.start",
       (event, directory) => this.onToolEvent(event, directory),
     )
-    this.unsubStatus = this.connectionService.onEventFiltered(
-      (event) => (event as { type?: string }).type === "session.status",
-      (event) => this.onSessionStatus(event),
-    )
-    this.unsubSessions = this.connectionService.onEventFiltered(
-      (event) => {
-        const type = (event as { type?: string }).type
-        return (
-          type === "session.created" ||
-          type === "session.updated" ||
-          type === "session.deleted" ||
-          type === "session.error"
-        )
-      },
-      (event) => this.onSessionLifecycle(event),
-    )
+    this.activity = createWorktreeActivity({
+      connection: this.connectionService,
+      paths: () =>
+        [...this.contexts.values()].flatMap((ctx) => ctx.peekState()?.getWorktrees() ?? []).map((wt) => wt.path),
+      post: (active) => this.postToWebview({ type: "agentManager.worktreeActivity", active }),
+      status: (event) => this.onSessionStatus(event),
+      lifecycle: (event) => this.onSessionLifecycle(event),
+      log: (err) => this.log("Failed to load worktree activity:", err),
+    })
   }
   /**
    * Keep each project's cached sidebar session list in sync with backend
@@ -906,6 +899,7 @@ export class AgentManagerProvider implements Disposable {
     // instance are reaped by the router's generation guard.
     void this.terminalRouter.dispose()
     this.scripts.manager.snapshot()
+    void this.activity.sync(true)
     this.log(
       `onRequestState: stateReady=${this.stateReady ? "pending" : "missing"}, state=${this.state ? "ok" : "missing"}`,
     )
@@ -1428,6 +1422,7 @@ export class AgentManagerProvider implements Disposable {
       activeTarget: state.getActiveTarget(),
       ...(active ? this.runStateFor(target) : {}),
     })
+    void this.activity.sync()
     void pushProjectSessions(target, this.panel?.sessions, (message) => this.postToWebview(message))
     if (!active) return
 
@@ -1872,8 +1867,7 @@ export class AgentManagerProvider implements Disposable {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.contexts.dispose()
     this.unsubTool?.()
-    this.unsubStatus?.()
-    this.unsubSessions?.()
+    this.activity.dispose()
     this.unsubFont?.()
     this.unsubProjects?.()
     this.unsubDestination?.()
