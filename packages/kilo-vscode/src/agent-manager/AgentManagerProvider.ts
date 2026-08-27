@@ -274,6 +274,7 @@ export class AgentManagerProvider implements Disposable {
       getPrs: () => this.prBridge.snapshot(),
       pushState: (ctx) => this.pushState(ctx),
       hasPanelSession: (id) => this.panelSessions.has(id),
+      routeSession: (id, dir) => this.panel?.sessions.setSessionDirectory(id, dir),
       closeSession: (id) => this.onCloseSession(id),
       postSessionClosed: (id, projectId) =>
         this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id, projectId }),
@@ -300,7 +301,6 @@ export class AgentManagerProvider implements Disposable {
       (event) => this.onSessionLifecycle(event),
     )
   }
-
   /**
    * Keep each project's cached sidebar session list in sync with backend
    * session lifecycle events, so sessions created outside this panel (another
@@ -1804,7 +1804,7 @@ export class AgentManagerProvider implements Disposable {
     await continueInWorktree(
       {
         root,
-        connection: this.connectionService,
+        getClient: () => this.connectionService.getClient(),
         createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
         runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
         cleanupWorktree: async (id) => {

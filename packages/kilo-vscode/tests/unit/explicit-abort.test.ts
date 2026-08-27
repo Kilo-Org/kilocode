@@ -13,32 +13,29 @@ const close = (reason: "completed" | "interrupted", sessionID = "session") =>
 
 describe("explicit abort state", () => {
   it("does not suppress an unexpected interruption", () => {
-    const state = new ExplicitAbortState()
-
-    expect(state.event(close("interrupted"))).toBe(true)
+    expect(new ExplicitAbortState().event(close("interrupted"))).toBe(true)
   })
 
-  it("drops an interrupted close after an explicit abort succeeds", () => {
+  it("suppresses an abort without requiring an earlier busy event", () => {
     const state = new ExplicitAbortState()
-    state.event(status("busy"), "/repo")
     const id = state.begin("session", "/repo")
 
     expect(state.event(close("interrupted"), "/repo")).toBe(false)
     expect(state.finish("session", "/repo", id, true)).toEqual([])
+    expect(state.event(close("interrupted"), "/repo")).toBe(true)
   })
 
-  it("drops an interrupted close that arrives after abort success", () => {
+  it("suppresses a close that arrives after abort success only once", () => {
     const state = new ExplicitAbortState()
-    state.event(status("busy"), "/repo")
     const id = state.begin("session", "/repo")
     state.finish("session", "/repo", id, true)
 
     expect(state.event(close("interrupted"), "/repo")).toBe(false)
+    expect(state.event(close("interrupted"), "/repo")).toBe(true)
   })
 
   it("replays an interrupted close when the abort fails", () => {
     const state = new ExplicitAbortState()
-    state.event(status("busy"), "/repo")
     const id = state.begin("session", "/repo")
     const event = close("interrupted")
     state.event(event, "/repo")
@@ -48,15 +45,13 @@ describe("explicit abort state", () => {
 
   it("never suppresses a completed close", () => {
     const state = new ExplicitAbortState()
-    state.event(status("busy"), "/repo")
     state.begin("session", "/repo")
 
-    expect(state.event(close("completed"))).toBe(true)
+    expect(state.event(close("completed"), "/repo")).toBe(true)
   })
 
   it("waits for concurrent abort attempts before replaying", () => {
     const state = new ExplicitAbortState()
-    state.event(status("busy"), "/repo")
     const first = state.begin("session", "/repo")
     const second = state.begin("session", "/repo")
     state.event(close("interrupted"), "/repo")
@@ -65,23 +60,8 @@ describe("explicit abort state", () => {
     expect(state.finish("session", "/repo", second, true)).toEqual([])
   })
 
-  it("allows a later real interruption in the same session", () => {
-    const state = new ExplicitAbortState()
-    state.event(open(), "/repo")
-    state.event(status("busy"), "/repo")
-    const id = state.begin("session", "/repo")
-    state.finish("session", "/repo", id, true)
-    expect(state.event(close("interrupted"), "/repo")).toBe(false)
-    state.event(status("idle"), "/repo")
-    state.event(open(), "/repo")
-    state.event(status("busy"), "/repo")
-
-    expect(state.event(close("interrupted"), "/repo")).toBe(true)
-  })
-
   it("clears a pending abort when a new turn opens", () => {
     const state = new ExplicitAbortState()
-    state.event(status("busy"), "/repo")
     const id = state.begin("session", "/repo")
     state.event(open(), "/repo")
 
@@ -91,7 +71,6 @@ describe("explicit abort state", () => {
 
   it("isolates identical session ids by directory", () => {
     const state = new ExplicitAbortState()
-    state.event(status("busy"), "/repo/a")
     const id = state.begin("session", "/repo/a")
     state.finish("session", "/repo/a", id, true)
 
@@ -99,32 +78,12 @@ describe("explicit abort state", () => {
     expect(state.event(close("interrupted"), "/repo/a")).toBe(false)
   })
 
-  it("does not mark an already idle session", () => {
+  it("clears suppression when an idle session becomes busy again", () => {
     const state = new ExplicitAbortState()
-    state.event(status("idle"), "/repo")
-
-    expect(state.begin("session", "/repo")).toBeUndefined()
-    expect(state.event(close("interrupted"), "/repo")).toBe(true)
-  })
-
-  it("clears suppression on a later busy status without turn-open", () => {
-    const state = new ExplicitAbortState()
-    state.event(status("busy"), "/repo")
     const id = state.begin("session", "/repo")
     state.finish("session", "/repo", id, true)
     state.event(status("idle"), "/repo")
     state.event(status("busy"), "/repo")
-
-    expect(state.event(close("interrupted"), "/repo")).toBe(true)
-  })
-
-  it("does not carry a pending abort into a new busy turn", () => {
-    const state = new ExplicitAbortState()
-    state.event(status("busy"), "/repo")
-    const id = state.begin("session", "/repo")
-    state.event(status("idle"), "/repo")
-    state.event(status("busy"), "/repo")
-    state.finish("session", "/repo", id, true)
 
     expect(state.event(close("interrupted"), "/repo")).toBe(true)
   })

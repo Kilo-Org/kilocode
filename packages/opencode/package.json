@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.4.23",
+  "version": "7.5.5",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -180,7 +180,7 @@
     "@standard-schema/spec": "1.0.0",
     "chokidar": "4.0.3",
     "glob": "13.0.5",
-    "minimatch": "10.0.3",
+    "minimatch": "10.2.6",
     "partial-json": "0.1.7",
     "xdg-basedir": "5.1.0",
     "@ff-labs/fff-bun": "0.9.4",

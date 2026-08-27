@@ -1,7 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { KILO_DIR } from "../constants"
-import { powershellCommand } from "../../util/powershell"
 
 const RUN_SCRIPT_FILENAME = "run-script"
 const RUN_SCRIPT_SHELL_FILENAME = "run-script.sh"
@@ -86,7 +85,7 @@ function validated(file: string, dir: string): boolean {
 export function buildRunTaskCommand(script: RunScriptInfo): { command: string; args: string[] } {
   if (script.kind === "powershell") {
     return {
-      command: powershellCommand(),
+      command: "powershell.exe",
       args: ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script.path],
     }
   }

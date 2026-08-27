@@ -46,12 +46,8 @@ describe("KiloConnectionService explicit aborts", () => {
     type: "session.turn.close",
     properties: { sessionID: "session", reason: "interrupted" },
   } as SSEPayload
-  const status = {
-    type: "session.status",
-    properties: { sessionID: "session", status: { type: "busy" } },
-  } as SSEPayload
 
-  test("suppresses a successful explicit abort for every subscriber", () => {
+  function setup() {
     const service = new KiloConnectionService({} as any)
     const raw: SSEPayload[] = []
     const first: SSEPayload[] = []
@@ -65,46 +61,34 @@ describe("KiloConnectionService explicit aborts", () => {
       () => true,
       (event) => second.push(event),
     )
-    ;(service as any).broadcast(status, "/repo")
-    raw.length = 0
-    first.length = 0
-    second.length = 0
+    return { service, raw, first, second }
+  }
 
-    const id = service.beginExplicitAbort("session", "/repo")
-    ;(service as any).broadcast(close, "/repo")
-    service.finishExplicitAbort("session", "/repo", id, true)
+  test("suppresses a successful explicit abort for filtered subscribers", async () => {
+    const state = setup()
 
-    expect(first).toEqual([])
-    expect(second).toEqual([])
-    expect(raw).toEqual([close])
+    await state.service.runExplicitAbort("session", "/repo", async () => {
+      ;(state.service as any).broadcast(close, "/repo")
+    })
+
+    expect(state.first).toEqual([])
+    expect(state.second).toEqual([])
+    expect(state.raw).toEqual([close])
   })
 
-  test("replays a failed explicit abort for every subscriber", () => {
-    const service = new KiloConnectionService({} as any)
-    const raw: SSEPayload[] = []
-    const first: SSEPayload[] = []
-    const second: SSEPayload[] = []
-    service.onEvent((event) => raw.push(event))
-    service.onEventFiltered(
-      () => true,
-      (event) => first.push(event),
-    )
-    service.onEventFiltered(
-      () => true,
-      (event) => second.push(event),
-    )
-    ;(service as any).broadcast(status, "/repo")
-    raw.length = 0
-    first.length = 0
-    second.length = 0
+  test("replays a failed explicit abort for filtered subscribers", async () => {
+    const state = setup()
 
-    const id = service.beginExplicitAbort("session", "/repo")
-    ;(service as any).broadcast(close, "/repo")
-    service.finishExplicitAbort("session", "/repo", id, false)
+    await expect(
+      state.service.runExplicitAbort("session", "/repo", async () => {
+        ;(state.service as any).broadcast(close, "/repo")
+        throw new Error("abort failed")
+      }),
+    ).rejects.toThrow("abort failed")
 
-    expect(first).toEqual([close])
-    expect(second).toEqual([close])
-    expect(raw).toEqual([close])
+    expect(state.first).toEqual([close])
+    expect(state.second).toEqual([close])
+    expect(state.raw).toEqual([close])
   })
 })
 

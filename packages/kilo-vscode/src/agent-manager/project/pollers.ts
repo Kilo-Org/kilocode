@@ -33,6 +33,7 @@ export type StatsOutMessage =
   | { type: "agentManager.worktreeStats"; projectId?: string; stats: WorktreeStats[] }
   | { type: "agentManager.localStats"; projectId?: string; stats: LocalStats }
   | { type: "agentManager.prStatus"; projectId?: string; worktreeId: string; pr: PRStatus | null }
+  | { type: "agentManager.prError"; projectId?: string; error: "gh_missing" | "gh_auth" | "fetch_failed" }
 
 type StatsMessage = Extract<AgentManagerOutMessage, { type: "agentManager.worktreeStats" | "agentManager.localStats" }>
 

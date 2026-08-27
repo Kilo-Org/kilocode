@@ -361,8 +361,8 @@ export class WorktreeManager {
     }
 
     const existing = await this.git
-      .branch()
-      .then((result) => result.all)
+      .raw(["for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads"])
+      .then((refs) => refs.trim().split(/\r?\n/).filter(Boolean))
       .catch(() => [] as string[])
     const sanitized = params.branchName ? sanitizeBranchName(params.branchName) : undefined
     const branch = sanitized || generateBranchName(params.prompt || "agent-task", existing)
@@ -392,7 +392,13 @@ export class WorktreeManager {
    */
   private async runWorktreeAdd(args: string[], wtPath: string): Promise<void> {
     try {
-      await this.git.raw(args)
+      const workers = await this.git.getConfig("checkout.workers").catch((error: unknown) => {
+        this.log(
+          `Failed to inspect checkout worker configuration: ${error instanceof Error ? error.message : String(error)}`,
+        )
+        return undefined
+      })
+      await this.git.raw(workers?.value === null ? ["-c", "checkout.workers=2", ...args] : args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (this.isHookError(msg) && (await this.worktreeRegistered(wtPath))) {
@@ -1068,6 +1074,7 @@ export class WorktreeManager {
       throw new Error("This PR's branch is already checked out in another worktree")
     }
 
+    const base = await this.resolvePRBase(info)
     await this.fetchPRBranch(info, parsed, isFork, forkOwner)
 
     if (isFork && forkOwner) {
@@ -1077,7 +1084,15 @@ export class WorktreeManager {
       await this.git.raw(["branch", branch, `${forkOwner}/${info.headRefName}`])
     }
 
-    return this.createWorktreeImpl({ existingBranch: branch })
+    const result = await this.createWorktreeImpl({ existingBranch: branch })
+    return { ...result, parentBranch: base.branch, remote: base.remote }
+  }
+
+  private async resolvePRBase(info: PRInfo): Promise<{ branch: string; remote?: string }> {
+    if (info.baseRefName === undefined) return this.resolveBaseBranch()
+    validateGitRef(info.baseRefName, "base branch")
+    const point = await this.resolveStartPoint(info.baseRefName, undefined, { allowFallback: false })
+    return { branch: point.branch, remote: point.remote }
   }
 
   private async fetchPRInfo(parsed: { owner: string; repo: string; number: number }): Promise<PRInfo> {
@@ -1090,7 +1105,7 @@ export class WorktreeManager {
           "--repo",
           `${parsed.owner}/${parsed.repo}`,
           "--json",
-          "headRefName,headRepositoryOwner,isCrossRepository,title",
+          "headRefName,baseRefName,headRepositoryOwner,isCrossRepository,title",
         ],
         30000,
       )

@@ -286,24 +286,17 @@ export class KiloConnectionService {
     }
   }
 
-  beginExplicitAbort(sessionID: string, directory: string): number | undefined {
-    return this.explicitAborts.begin(sessionID, directory)
-  }
-
-  finishExplicitAbort(sessionID: string, directory: string, id: number | undefined, stopped: boolean): void {
-    for (const item of this.explicitAborts.finish(sessionID, directory, id, stopped))
-      this.broadcastFiltered(item.event, item.directory)
-  }
-
   async runExplicitAbort<T>(sessionID: string, directory: string, action: () => Promise<T>): Promise<T> {
-    const id = this.beginExplicitAbort(sessionID, directory)
+    const id = this.explicitAborts.begin(sessionID, directory)
     return action().then(
       (result) => {
-        this.finishExplicitAbort(sessionID, directory, id, true)
+        this.explicitAborts.finish(sessionID, directory, id, true)
         return result
       },
       (error) => {
-        this.finishExplicitAbort(sessionID, directory, id, false)
+        for (const item of this.explicitAborts.finish(sessionID, directory, id, false)) {
+          this.broadcastFiltered(item.event, item.directory)
+        }
         throw error
       },
     )
