@@ -62,7 +62,7 @@ export interface RequestOptions<
     }>,
     Pick<
       ServerSentEventsOptions<TData>,
-      "onSseError" | "onSseEvent" | "sseDefaultRetryDelay" | "sseMaxRetryAttempts" | "sseMaxRetryDelay"
+      "onRequest" | "onSseError" | "onSseEvent" | "sseDefaultRetryDelay" | "sseMaxRetryAttempts" | "sseMaxRetryDelay"
     > {
   /**
    * Any body that you want to add to your request.
@@ -84,6 +84,7 @@ export interface ResolvedRequestOptions<
   ThrowOnError extends boolean = boolean,
   Url extends string = string,
 > extends RequestOptions<unknown, TResponseStyle, ThrowOnError, Url> {
+  headers: Headers
   serializedBody?: string
 }
 
@@ -139,11 +140,12 @@ type MethodFn = <
 
 type SseFn = <
   TData = unknown,
-  TError = unknown,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _TError = unknown,
   ThrowOnError extends boolean = false,
   TResponseStyle extends ResponseStyle = "fields",
 >(
-  options: Omit<RequestOptions<TData, TResponseStyle, ThrowOnError>, "method">,
+  options: Omit<RequestOptions<never, TResponseStyle, ThrowOnError>, "method">,
 ) => Promise<ServerSentEventsResult<TData>>
 
 type RequestFn = <

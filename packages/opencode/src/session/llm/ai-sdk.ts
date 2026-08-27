@@ -4,6 +4,7 @@ import { type streamText } from "ai"
 import { errorMessage } from "@/util/error"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model" // kilocode_change
 import { KiloResponseMetadata } from "@/kilocode/session/response-metadata" // kilocode_change
+import { ProviderError } from "@/provider/error"
 
 type Result = Awaited<ReturnType<typeof streamText>>
 type AISDKEvent = Result["fullStream"] extends AsyncIterable<infer T> ? T : never
@@ -89,6 +90,8 @@ export function toLLMEvents(
       return Effect.succeed([LLMEvent.stepStart({ index: state.step })])
 
     case "finish-step":
+      if (event.rawFinishReason === "network_error")
+        return Effect.fail(new ProviderError.ResponseStreamError("Provider finish_reason: network_error"))
       return Effect.sync(() => {
         const original = providerMetadata(event.providerMetadata)
         const metadata =

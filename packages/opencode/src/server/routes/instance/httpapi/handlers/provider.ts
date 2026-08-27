@@ -2,6 +2,7 @@ import { ProviderAuth } from "@/provider/auth"
 import { Config } from "@/config/config"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Provider } from "@/provider/provider"
+import { Auth } from "@/auth"
 
 import { mapValues, pickBy } from "remeda" // kilocode_change
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
@@ -45,6 +46,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     const provider = yield* Provider.Service
     const svc = yield* ProviderAuth.Service
     const cache = yield* ModelCache.Service // kilocode_change
+    const authStore = yield* Auth.Service
 
     const list = Effect.fn("ProviderHttpApi.list")(function* () {
       const config = yield* cfg.get()
@@ -56,6 +58,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         if ((enabled ? enabled.has(key) : true) && !disabled.has(key)) filtered[key] = value
       }
       const connected = yield* provider.list()
+      const credentials = yield* authStore.all().pipe(Effect.orDie)
       // kilocode_change start
       const providers = filterPromptTrainingModels(
         Object.assign(
@@ -64,8 +67,6 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         ),
         config.hide_prompt_training_models === true,
       )
-      // kilocode_change end
-      // kilocode_change start
       const failed = yield* cache.failedProviders()
       // Note: connected only contains providers with non-empty models after Provider.Service.list(),
       // so failed must be checked explicitly for providers whose fetch returned an error.
@@ -78,9 +79,9 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         all: Object.values(validProviders).map((item) => ({
           ...Provider.toPublicInfo(item),
           metadata: providerMetadata(item.id),
-        })), // kilocode_change
+        })),
         default: Provider.defaultModelIDs(pickBy(validProviders, (item) => Object.keys(item.models).length > 0)),
-        connected: Object.keys(connected),
+        connected: Object.keys(validProviders).filter((id) => id in connected || credentials[id]),
         failed,
       }
       // kilocode_change end

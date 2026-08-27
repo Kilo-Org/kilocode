@@ -82,7 +82,12 @@ export function webSearchEnabled(
   providerID: ProviderV2.ID,
   flags = { exa: Flag.KILO_ENABLE_EXA, parallel: Flag.KILO_ENABLE_PARALLEL },
 ) {
-  return providerID === ProviderV2.ID.kilo || flags.exa || flags.parallel // kilocode_change
+  return (
+    providerID === ProviderV2.ID.kilo || // kilocode_change
+    providerID === ProviderV2.ID.make("opencode-go") ||
+    flags.exa ||
+    flags.parallel
+  )
 }
 
 type TaskDef = Tool.InferDef<typeof TaskTool>
