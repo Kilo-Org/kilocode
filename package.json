@@ -4,7 +4,7 @@
   "description": "AI-powered development tool",
   "private": true,
   "type": "module",
-  "packageManager": "bun@1.4.0",
+  "packageManager": "bun@1.3.14",
   "scripts": {
     "dev": "KILO_CLIENT=cli bun run --cwd packages/opencode --conditions=node src/index.ts",
     "dev:stats": "bun sst shell --stage=production -- bun run --cwd packages/stats/app dev",
@@ -35,7 +35,7 @@
       "@effect/platform-node": "4.0.0-beta.83",
       "@anthropic-ai/sandbox-runtime": "0.0.63",
       "@npmcli/arborist": "9.4.0",
-      "@types/bun": "1.4.0",
+      "@types/bun": "1.3.14",
       "@types/cross-spawn": "6.0.6",
       "@octokit/rest": "22.0.0",
       "@opentui/core": "0.4.5",
@@ -53,7 +53,7 @@
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
       "diff": "8.0.4",
-      "dompurify": "3.4.2",
+      "dompurify": "3.4.13",
       "drizzle-kit": "1.0.0-rc.2",
       "drizzle-orm": "1.0.0-rc.2",
       "effect": "4.0.0-beta.83",
@@ -152,7 +152,7 @@
     "fastify": ">=5.8.3",
     "vite": "7.3.5",
     "diff": "8.0.4",
-    "dompurify": "3.4.2",
+    "dompurify": "3.4.13",
     "happy-dom": ">=20.8.9",
     "@opentui/core": "catalog:",
     "@opentui/solid": "catalog:",
@@ -177,6 +177,6 @@
     "@tanstack/virtual-core@3.17.3": "patches/@tanstack%2Fvirtual-core@3.17.3.patch",
     "solid-js@1.9.12": "patches/solid-js@1.9.12.patch"
   },
-  "version": "7.4.23",
+  "version": "7.5.5",
   "peerDependencies": {}
 }

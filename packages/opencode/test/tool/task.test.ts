@@ -502,6 +502,70 @@ describe("tool.task", () => {
     }),
   )
 
+  // kilocode_change start - regression for #13469: a trailing synthetic empty text part (the memory marker)
+  // or an ignored length-warning part must not be picked as the task result
+  it.instance("returns the real answer when synthetic or ignored text parts trail it", () =>
+    Effect.gen(function* () {
+      const { chat, assistant } = yield* seed()
+      const tool = yield* TaskTool
+      const def = yield* tool.init()
+      const promptOps: TaskPromptOps = {
+        ...stubOps(),
+        prompt: (input) =>
+          Effect.sync(() => {
+            const rep = reply(input, "the actual answer")
+            const id = MessageID.ascending()
+            return {
+              ...rep,
+              parts: [
+                ...rep.parts,
+                {
+                  id: PartID.ascending(),
+                  messageID: id,
+                  sessionID: input.sessionID,
+                  type: "text",
+                  text: "output limit hit",
+                  ignored: true,
+                },
+                {
+                  id: PartID.ascending(),
+                  messageID: id,
+                  sessionID: input.sessionID,
+                  type: "text",
+                  text: "",
+                  synthetic: true,
+                  ignored: true,
+                },
+              ],
+            }
+          }),
+      }
+
+      const result = yield* def.execute(
+        {
+          description: "inspect bug",
+          prompt: "look into the cache key path",
+          subagent_type: "general",
+        },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: { promptOps },
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
+
+      expect(result.output).toContain("the actual answer")
+      expect(result.output).not.toContain("output limit hit")
+      expect(result.output).not.toContain("<task_result></task_result>")
+    }),
+  )
+  // kilocode_change end
+
   it.instance("prevents subagents from launching subagents by default", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service

@@ -20,6 +20,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+enum class CreateKind { CREATE, BRANCH, PR }
+
+data class CreateFailure(val error: String?, val kind: CreateKind, val branch: String)
+
 /**
  * Owns the worktree list model and drives the [KiloWorktreeService] off the EDT. Model mutations
  * are marshalled back onto the EDT via [edt]. Mirrors the History stack's controller shape.
@@ -37,7 +41,17 @@ class WorktreeController(
     private val tasks = LinkedHashMap<String, String>()
     private val moves = LinkedHashSet<String>()
     var onSelect: ((String) -> Unit)? = null
-    var onCreateFailure: ((String?) -> Unit)? = null
+
+    /** Fired on the EDT once a worktree exists, so callers can refresh state git just changed. */
+    var onCreated: ((WorktreeDto) -> Unit)? = null
+
+    /**
+     * Fired on the EDT after a reload settled. Replacing the model only notifies list listeners when
+     * the rows actually changed, so a repo whose sole worktree is the main one would otherwise never
+     * render its [current] row.
+     */
+    var onReload: (() -> Unit)? = null
+    var onCreateFailure: ((CreateFailure) -> Unit)? = null
     var onMoveFailure: ((String?) -> Unit)? = null
     var onRemoveSuccess: ((WorktreeDto, Int) -> Unit)? = null
     var onActivityChanged: (() -> Unit)? = null
@@ -89,7 +103,7 @@ class WorktreeController(
             edt {
                 val main = result.worktrees.firstOrNull { it.main }
                 val extra = result.worktrees.filter { !it.main }
-                val rows = extra + pending.values
+                val rows = pending.values.toList().asReversed() + extra
                 current = main
                 model.replaceAll(rows)
                 cache().putAll(rows)
@@ -97,6 +111,7 @@ class WorktreeController(
                 val worktreeBranches = rows.mapTo(HashSet()) { it.branch }
                 branches = branchInfo.branches.filter { it !in worktreeBranches }
                 known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
+                onReload?.invoke()
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }
         }
@@ -109,24 +124,30 @@ class WorktreeController(
     fun quickCreate() = create(suggestName(), defaultBranch)
 
     /** Imports a worktree that checks out an existing local branch. */
-    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true)
+    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true, kind = CreateKind.BRANCH)
 
     /**
      * Creates a worktree. When [prompt] is set, it is stashed for the worktree's first session so the
      * editor auto-sends it once it opens with its picked mode/model (see [PendingWorktreePrompt]).
      */
-    fun create(branch: String, base: String?, existingBranch: Boolean = false, prompt: PendingPrompt? = null) {
+    fun create(
+        branch: String,
+        base: String?,
+        existingBranch: Boolean = false,
+        prompt: PendingPrompt? = null,
+        kind: CreateKind = CreateKind.CREATE,
+    ) {
         val id = "pending:$branch:${System.nanoTime()}"
         val temp = WorktreeDto(id, branch, branch, id)
         edt {
             pending[temp.id] = temp
             tasks[temp.id] = KiloBundle.message("worktree.progress.creating")
-            model.add(temp)
+            model.add(0, temp)
             onSelect?.invoke(temp.id)
         }
         cs.launch {
             val result = service.create(directory, CreateWorktreeRequestDto(branch, base, existingBranch))
-            finishCreate(temp, branch, prompt, result)
+            finishCreate(temp, branch, prompt, result, kind)
         }
     }
 
@@ -136,12 +157,12 @@ class WorktreeController(
         edt {
             pending[temp.id] = temp
             tasks[temp.id] = KiloBundle.message("worktree.progress.creating")
-            model.add(temp)
+            model.add(0, temp)
             onSelect?.invoke(temp.id)
         }
         cs.launch {
             val result = service.importPr(directory, url)
-            finishCreate(temp, "pr", null, result)
+            finishCreate(temp, "pr", null, result, CreateKind.PR)
         }
     }
 
@@ -150,6 +171,7 @@ class WorktreeController(
         branch: String,
         prompt: PendingPrompt?,
         result: CreateWorktreeResultDto,
+        kind: CreateKind,
     ) {
         val created = result.worktree
         edt {
@@ -157,16 +179,17 @@ class WorktreeController(
             tasks.remove(temp.id)
             val idx = model.getElementIndex(temp)
             if (created != null) {
-                if (idx >= 0) model.setElementAt(created, idx) else model.add(created)
+                if (idx >= 0) model.setElementAt(created, idx) else model.add(0, created)
                 cache().put(created)
                 prompt?.let { service<PendingWorktreePrompt>().put(created.path, it) }
                 onSelect?.invoke(created.id)
+                onCreated?.invoke(created)
                 telemetry("Worktree Created", mapOf("branch" to branch))
                 return@edt
             }
             if (idx >= 0) model.remove(temp)
             telemetry("Worktree Create Failed", mapOf("branch" to branch))
-            onCreateFailure?.invoke(result.error)
+            onCreateFailure?.invoke(CreateFailure(result.error, kind, branch))
         }
     }
 
@@ -225,7 +248,7 @@ class WorktreeController(
         val temp = WorktreeDto("pending:$branch:${System.nanoTime()}", branch, branch, "pending:$branch")
         pending[temp.id] = temp
         tasks[temp.id] = label(MoveStage.CAPTURING)
-        model.add(temp)
+        model.add(0, temp)
         onSelect?.invoke(temp.id)
         cs.launch {
             var stage = MoveStage.CAPTURING
@@ -243,12 +266,13 @@ class WorktreeController(
                                 tasks.remove(temp.id)
                                 val worktree = event.worktree ?: return@edt
                                 val idx = model.getElementIndex(temp)
-                                if (idx >= 0) model.setElementAt(worktree, idx) else model.add(worktree)
+                                if (idx >= 0) model.setElementAt(worktree, idx) else model.add(0, worktree)
                                 cache().put(worktree)
                                 // Queue the forked session for the editor the selection is about to
                                 // open; the tab's identity stays the worktree path alone.
                                 event.session?.let { service<PendingWorktreeSession>().put(worktree.path, it) }
                                 onSelect?.invoke(worktree.id)
+                                onCreated?.invoke(worktree)
                                 telemetry(
                                     "Continue in Worktree",
                                     mapOf("surface" to "sidebar", "session" to (sessionId != null).toString()),

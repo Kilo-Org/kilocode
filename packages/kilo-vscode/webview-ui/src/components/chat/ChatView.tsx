@@ -37,6 +37,7 @@ interface ChatViewProps {
   readonly?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
+  worktree?: boolean
   promptBoxId?: string
   terminalContext?: () => string | undefined
   deferFocusToQuestion?: () => boolean
@@ -387,6 +388,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 blocked={blocked}
                 suggesting={suggesting}
                 questioning={questioning}
+                worktree={props.worktree}
                 boxId={props.promptBoxId}
                 terminalContext={props.terminalContext}
                 deferFocusToQuestion={props.deferFocusToQuestion}

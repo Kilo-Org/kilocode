@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { createRoot } from "solid-js"
 
 const observers: Array<() => void> = []
@@ -22,18 +22,23 @@ type Listener = {
 class FakeElement {
   scrollHeight = 100
   clientHeight = 100
+  clientWidth = 100
+  offsetWidth = 100
   scrollTop = 0
   style = { overflowAnchor: "" }
   hovered = false
+  control = false
+  dir = ""
+  rect = { left: 0, top: 0, right: 100, bottom: 100 }
   ownerDocument!: FakeDocument
   private children = new Set<FakeElement>()
   private listeners = new Map<string, Listener[]>()
 
-  closest() {
-    return null
+  closest(selector: string) {
+    return this.control && selector === "button, input, textarea, select" ? this : null
   }
 
-  contains(node: unknown) {
+  contains(node: unknown): boolean {
     return node === this || (node instanceof FakeElement && [...this.children].some((child) => child.contains(node)))
   }
 
@@ -44,6 +49,10 @@ class FakeElement {
 
   matches(selector: string) {
     return selector === ":hover" && this.hovered
+  }
+
+  getBoundingClientRect() {
+    return this.rect
   }
 
   scrollTo(options: ScrollToOptions) {
@@ -104,6 +113,27 @@ class FakeWheelEvent {
   ) {}
 }
 
+class FakeMouseEvent {
+  constructor(
+    readonly target: FakeElement,
+    readonly clientX = 0,
+    readonly clientY = 0,
+  ) {}
+}
+
+class FakePointerEvent extends FakeMouseEvent {
+  constructor(
+    readonly pointerId: number,
+    target: FakeElement,
+    clientX = 0,
+    clientY = 0,
+  ) {
+    super(target, clientX, clientY)
+  }
+}
+
+class FakeTouchEvent extends FakeMouseEvent {}
+
 class FakeKeyboardEvent {
   readonly defaultPrevented = false
   readonly shiftKey = false
@@ -161,6 +191,19 @@ function setup(options?: { doc?: FakeDocument; interacted?: () => void; working?
   }
 
   return { ...root, doc, el, resize, mutate }
+}
+
+function overflow(ctx: ReturnType<typeof setup>, height = 1000, top = 800) {
+  ctx.el.scrollHeight = height
+  ctx.el.clientHeight = 200
+  ctx.el.scrollTop = top
+}
+
+function gutter(ctx: ReturnType<typeof setup>, dir = "") {
+  ctx.el.clientWidth = 85
+  ctx.el.offsetWidth = 100
+  ctx.el.rect = { left: 0, top: 0, right: 100, bottom: 100 }
+  ctx.el.dir = dir
 }
 
 beforeEach(() => {
@@ -268,6 +311,140 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.scroll.handleScroll()
 
     expect(ctx.scroll.userScrolled()).toBe(false)
+    ctx.dispose()
+  })
+
+  test.each([0, 0.5, 1])("preserves upward intent after a %spx scroll near the bottom", (offset) => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.el.fire("wheel", new FakeWheelEvent(-1, ctx.el) as unknown as Event)
+      ctx.el.scrollTop -= offset
+      ctx.scroll.handleScroll()
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      now = 500
+      ctx.scroll.handleScroll()
+      ctx.el.scrollHeight = 1100
+      ctx.mutate()
+      ctx.resize()
+
+      expect(ctx.scroll.userScrolled()).toBe(true)
+      expect(ctx.el.scrollTop).toBe(800 - offset)
+    } finally {
+      clock.mockRestore()
+      ctx.dispose()
+    }
+  })
+
+  test("pauses for upward wheel input over a transcript button", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const button = new FakeElement()
+    button.control = true
+    ctx.el.append(button)
+
+    ctx.el.fire("wheel", new FakeWheelEvent(-240, button) as unknown as Event)
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    ctx.el.scrollTop = 560
+    ctx.scroll.handleScroll()
+    ctx.el.scrollHeight = 1100
+    ctx.mutate()
+    ctx.resize()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(560)
+    ctx.dispose()
+  })
+
+  test("does not treat button clicks and key presses as scroll input", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const button = new FakeElement()
+    button.control = true
+    ctx.el.append(button)
+
+    ctx.el.fire("pointerdown", new FakePointerEvent(1, button) as unknown as Event)
+    ctx.doc.fire("keydown", new FakeKeyboardEvent("ArrowUp", button) as unknown as Event)
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(1000)
+    ctx.dispose()
+  })
+
+  test("keeps a pause when a layout change puts the same position at the bottom", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx, 1000, 400)
+    ctx.scroll.pause()
+
+    ctx.el.scrollHeight = 600
+    ctx.scroll.handleScroll()
+    ctx.el.scrollHeight = 1000
+    ctx.mutate()
+    ctx.resize()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(400)
+    ctx.dispose()
+  })
+
+  test.each(["wheel", "keyboard"])("preserves new %s input before a pending bottom scroll", (input) => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.el.fire("wheel", new FakeWheelEvent(-20, ctx.el) as unknown as Event)
+      ctx.el.scrollTop = 780
+      ctx.scroll.handleScroll()
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      ctx.el.scrollTop = 800
+      if (input === "wheel") ctx.el.fire("wheel", new FakeWheelEvent(-20, ctx.el) as unknown as Event)
+      if (input === "keyboard") {
+        ctx.doc.fire("keydown", new FakeKeyboardEvent("ArrowUp", ctx.el) as unknown as Event)
+      }
+      ctx.scroll.handleScroll()
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      ctx.el.scrollTop = 780
+      ctx.scroll.handleScroll()
+      now = 500
+      ctx.el.scrollHeight = 1100
+      ctx.mutate()
+      ctx.resize()
+
+      expect(ctx.scroll.userScrolled()).toBe(true)
+      expect(ctx.el.scrollTop).toBe(780)
+    } finally {
+      clock.mockRestore()
+      ctx.dispose()
+    }
+  })
+
+  test("reattaches when a downward wheel returns to the bottom", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    ctx.el.fire("wheel", new FakeWheelEvent(-20, ctx.el) as unknown as Event)
+    ctx.el.scrollTop = 780
+    ctx.scroll.handleScroll()
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    ctx.el.fire("wheel", new FakeWheelEvent(20, ctx.el) as unknown as Event)
+    ctx.el.scrollTop = 800
+    ctx.scroll.handleScroll()
+    expect(ctx.scroll.userScrolled()).toBe(false)
+
+    ctx.el.scrollHeight = 1100
+    ctx.mutate()
+    expect(ctx.el.scrollTop).toBe(1100)
     ctx.dispose()
   })
 
@@ -535,6 +712,205 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.resize()
 
     expect(ctx.el.scrollTop).toBe(600)
+    ctx.dispose()
+  })
+
+  test("pauses for a document-targeted mousedown in the scrollbar gutter", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    gutter(ctx)
+
+    ctx.doc.fire("mousedown", new FakeMouseEvent(ctx.doc, 95, 50) as unknown as Event)
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(600)
+    ctx.dispose()
+  })
+
+  test("tracks gestures on the live document when a detached transcript is adopted", () => {
+    const detached = new FakeDocument()
+    const live = new FakeDocument()
+    const prior = Object.getOwnPropertyDescriptor(globalThis, "document")
+    Object.defineProperty(globalThis, "document", { value: live, configurable: true })
+
+    try {
+      const ctx = setup({ doc: detached, working: true })
+      overflow(ctx)
+      gutter(ctx)
+      ctx.el.ownerDocument = live
+
+      live.fire("mousedown", new FakeMouseEvent(live, 95, 50) as unknown as Event)
+      ctx.el.scrollTop = 600
+      ctx.scroll.handleScroll()
+
+      expect(ctx.scroll.userScrolled()).toBe(true)
+      expect(ctx.el.scrollTop).toBe(600)
+      ctx.dispose()
+    } finally {
+      if (prior) Object.defineProperty(globalThis, "document", prior)
+      if (!prior) Reflect.deleteProperty(globalThis, "document")
+    }
+  })
+
+  test("tracks document capture presses when the target receives no event", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    gutter(ctx)
+
+    ctx.doc.fire("pointerdown", new FakePointerEvent(1, ctx.doc, 95, 50) as unknown as Event)
+    ctx.doc.fire("mousedown", new FakeMouseEvent(ctx.doc, 95, 50) as unknown as Event)
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(600)
+    ctx.dispose()
+  })
+
+  test("keeps a scrollbar gesture active after reaching the bottom", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("pointerdown", new FakePointerEvent(1, ctx.el) as unknown as Event)
+      ctx.el.scrollTop = 600
+      ctx.scroll.handleScroll()
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      ctx.el.scrollTop = 800
+      ctx.scroll.handleScroll()
+      expect(ctx.scroll.userScrolled()).toBe(false)
+
+      now = 1000
+      ctx.el.scrollTop = 600
+      ctx.scroll.handleScroll()
+      expect(ctx.scroll.userScrolled()).toBe(true)
+      expect(ctx.el.scrollTop).toBe(600)
+    } finally {
+      clock.mockRestore()
+      ctx.dispose()
+    }
+  })
+
+  test("keeps a pointer gesture active beyond the grace period", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("pointerdown", new FakePointerEvent(1, ctx.el) as unknown as Event)
+      ctx.scroll.handleScroll()
+      now = 1000
+      ctx.doc.fire("pointermove", new FakePointerEvent(1, ctx.doc) as unknown as Event)
+      ctx.el.scrollTop = 600
+      ctx.scroll.handleScroll()
+
+      expect(ctx.scroll.userScrolled()).toBe(true)
+      expect(ctx.el.scrollTop).toBe(600)
+    } finally {
+      clock.mockRestore()
+      ctx.dispose()
+    }
+  })
+
+  test("keeps the release grace after a document mouse gesture", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    gutter(ctx)
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("mousedown", new FakeMouseEvent(ctx.doc, 95, 50) as unknown as Event)
+      ctx.scroll.handleScroll()
+      now = 100
+      ctx.doc.fire("mouseup", new FakeMouseEvent(ctx.doc) as unknown as Event)
+      now = 200
+      ctx.el.scrollTop = 600
+      ctx.scroll.handleScroll()
+
+      expect(ctx.scroll.userScrolled()).toBe(true)
+      expect(ctx.el.scrollTop).toBe(600)
+    } finally {
+      clock.mockRestore()
+      ctx.dispose()
+    }
+  })
+
+  test("does not mark an off-gutter document press", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    gutter(ctx)
+
+    ctx.doc.fire("mousedown", new FakeMouseEvent(ctx.doc, 50, 50) as unknown as Event)
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(1000)
+    ctx.dispose()
+  })
+
+  test("routes a nested document press to the deepest owner", () => {
+    const doc = new FakeDocument()
+    const outer = setup({ doc, working: true })
+    const inner = setup({ doc, working: true })
+    outer.el.append(inner.el)
+    overflow(outer)
+    overflow(inner, 500, 400)
+    gutter(outer)
+    inner.el.clientWidth = 65
+    inner.el.offsetWidth = 80
+    inner.el.rect = { left: 10, top: 10, right: 90, bottom: 90 }
+
+    doc.fire("pointerdown", new FakePointerEvent(1, doc, 80, 50) as unknown as Event)
+    inner.el.scrollTop = 200
+    inner.scroll.handleScroll()
+
+    expect(inner.scroll.userScrolled()).toBe(true)
+    expect(outer.scroll.userScrolled()).toBe(false)
+    outer.dispose()
+    inner.dispose()
+  })
+
+  test("keeps touch activity alive through a late move", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("touchstart", new FakeTouchEvent(ctx.el) as unknown as Event)
+      ctx.scroll.handleScroll()
+      now = 1000
+      ctx.doc.fire("touchmove", new FakeTouchEvent(ctx.doc) as unknown as Event)
+      ctx.el.scrollTop = 600
+      ctx.scroll.handleScroll()
+
+      expect(ctx.scroll.userScrolled()).toBe(true)
+      expect(ctx.el.scrollTop).toBe(600)
+    } finally {
+      clock.mockRestore()
+      ctx.dispose()
+    }
+  })
+
+  test("resume clears an in-progress gesture before correcting the viewport", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+
+    ctx.el.fire("pointerdown", new FakePointerEvent(1, ctx.el) as unknown as Event)
+    ctx.scroll.resume()
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(1000)
     ctx.dispose()
   })
 })

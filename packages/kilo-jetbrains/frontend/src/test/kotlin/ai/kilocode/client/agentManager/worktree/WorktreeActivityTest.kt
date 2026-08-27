@@ -32,12 +32,12 @@ class WorktreeActivityTest {
     }
 
     @Test
-    fun `error outranks running but yields to interactive prompts`() {
-        val errorOverRunning = aggregateWorktreeActivity(mapOf(
+    fun `running outranks a sibling error but yields to interactive prompts`() {
+        val runningOverError = aggregateWorktreeActivity(mapOf(
             "ses_run" to SessionActivityDto("/repo/wt", SessionActivityKindDto.RUNNING),
             "ses_error" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),
         ))
-        assertEquals(SessionActivityKind.ERROR, errorOverRunning["/repo/wt"])
+        assertEquals(SessionActivityKind.RUNNING, runningOverError["/repo/wt"])
 
         val questionOverError = aggregateWorktreeActivity(mapOf(
             "ses_error" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR),

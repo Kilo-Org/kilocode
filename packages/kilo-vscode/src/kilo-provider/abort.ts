@@ -27,11 +27,21 @@ export class SessionAbort {
     this.observe(sessionID, status, dir)
   }
 
-  async stop(client: KiloClient, sessionID: string, fallback: string) {
+  async stop(
+    client: KiloClient,
+    sessionID: string,
+    fallback: string,
+    run?: (dir: string, action: () => Promise<void>) => Promise<void>,
+  ) {
     const known = this.active.has(sessionID)
     const dirs = [...(this.active.get(sessionID) ?? [])]
     if (!dirs.some((dir) => sameDirectory(dir, fallback))) dirs.push(fallback)
-    const results = await Promise.allSettled(dirs.map((dir) => abortSession({ client, sessionID, dir })))
+    const results = await Promise.allSettled(
+      dirs.map((dir) => {
+        const action = () => abortSession({ client, sessionID, dir })
+        return known && run ? run(dir, action) : action()
+      }),
+    )
     const failures = results.flatMap((result, index) =>
       result.status === "rejected" ? [{ dir: dirs[index], error: result.reason }] : [],
     )

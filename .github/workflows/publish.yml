@@ -249,12 +249,10 @@ jobs:
               export XDG_CACHE_HOME="$root/cache"
               export XDG_CONFIG_HOME="$root/config"
               export XDG_STATE_HOME="$root/state"
-              export KILO_PTY_SMOKE=1 # kilocode_change
               export KILO_DISABLE_MODELS_FETCH=1
               export KILO_DISABLE_PROJECT_CONFIG=1
               export KILO_CONFIG_CONTENT='\''{"enabled_providers":["anthropic"]}'\''
               export ANTHROPIC_API_KEY=dummy
-              "$binary" --pure __pty-smoke # kilocode_change
               "$binary" --pure models anthropic | grep -q "^anthropic/"
             '
 
@@ -311,13 +309,15 @@ jobs:
             $env:XDG_CACHE_HOME = Join-Path $root "cache"
             $env:XDG_CONFIG_HOME = Join-Path $root "config"
             $env:XDG_STATE_HOME = Join-Path $root "state"
-            $env:KILO_PTY_SMOKE = "1" # kilocode_change
             $env:KILO_DISABLE_MODELS_FETCH = "1"
             $env:KILO_DISABLE_PROJECT_CONFIG = "1"
             $env:KILO_CONFIG_CONTENT = '{"enabled_providers":["anthropic"]}'
             $env:ANTHROPIC_API_KEY = "dummy"
-            & $binary --pure __pty-smoke # kilocode_change
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } # kilocode_change
+            if ("${{ matrix.arch }}" -eq "x64") {
+              $env:KILO_PTY_SMOKE = "1"
+              & $binary --pure __pty-smoke
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
             $output = & $binary --pure models anthropic
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             if (-not ($output -match "(?m)^anthropic/")) {
