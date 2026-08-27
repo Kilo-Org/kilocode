@@ -21,38 +21,45 @@ export function createRevertFile(
   projectId?: Accessor<string | undefined>,
 ) {
   const [files, setFiles] = createSignal<Record<string, Set<string>>>({})
+  const key = (project: string | undefined, scope: string) => `${project ?? "single"}\0${scope}`
 
   const reverting = createMemo(() => {
     const id = diffScopeId()
     if (!id) return new Set<string>()
-    return files()[id] ?? new Set<string>()
+    return files()[key(projectId?.(), id)] ?? new Set<string>()
   })
 
-  function revert(file: string) {
-    const id = diffScopeId()
-    const context = ctx()
+  const revertingFor = (id: string) => files()[key(projectId?.(), id)] ?? new Set<string>()
+
+  function revertFor(id: string | undefined, context: string | undefined, source: string, file: string) {
     if (!id || !context) return
+    const data = key(projectId?.(), id)
     setFiles((prev) => {
-      const set = new Set(prev[id] ?? [])
+      const set = new Set(prev[data] ?? [])
       set.add(file)
-      return { ...prev, [id]: set }
+      return { ...prev, [data]: set }
     })
     vscode.postMessage({
       type: "agentManager.revertWorktreeFile",
       projectId: projectId?.(),
       sessionId: context,
       file,
-      scope: scope(),
+      scope: source,
     })
   }
 
+  function revert(file: string) {
+    revertFor(diffScopeId(), ctx(), scope(), file)
+  }
+
   function onResult(ev: AgentManagerRevertWorktreeFileResultMessage) {
+    const data = key(ev.projectId, ev.sessionId)
     setFiles((prev) => {
-      const set = new Set(prev[ev.sessionId] ?? [])
+      const set = new Set(prev[data] ?? [])
       set.delete(ev.file)
       const next = { ...prev }
-      if (set.size === 0) delete next[ev.sessionId]
-      else next[ev.sessionId] = set
+      if (set.size === 0) delete next[data]
+      else next[data] = set
       return next
     })
     if (ev.status === "success") {
@@ -62,5 +69,5 @@ export function createRevertFile(
     }
   }
 
-  return { reverting, revert, onResult }
+  return { reverting, revertingFor, revert, revertFor, onResult }
 }

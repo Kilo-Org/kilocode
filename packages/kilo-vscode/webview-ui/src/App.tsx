@@ -220,6 +220,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
+  const [agentManagerProjectId, setAgentManagerProjectId] = createSignal<string | undefined>()
   // legacy-migration: state-driven flag independent of currentView to avoid
   // race conditions with SettingsEditorProvider's navigate messages.
   const [migrationNeeded, setMigrationNeeded] = createSignal(false)
@@ -294,6 +295,7 @@ const AppContent: Component = () => {
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
+        setAgentManagerProjectId(message.projectId)
         setCurrentView(message.view as ViewType)
         vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
       }
@@ -341,7 +343,11 @@ const AppContent: Component = () => {
   // VS Code's native title bar toolbar already covers those. Defaults to
   // true only when unset entirely (e.g. Storybook, which doesn't render the
   // real page HTML).
-  const host = window as { KILO_TOP_BAR?: boolean; KILO_TOP_BAR_SURFACE?: string }
+  const host = window as {
+    KILO_TOP_BAR?: boolean
+    KILO_TOP_BAR_SURFACE?: string
+    KILO_AGENT_MANAGER_SETTINGS?: boolean
+  }
   const showTopBar = host.KILO_TOP_BAR !== false
   const topBarSurface = host.KILO_TOP_BAR_SURFACE ?? "sidebar_title"
 
@@ -396,6 +402,8 @@ const AppContent: Component = () => {
             <Match when={currentView() === "settings"}>
               <Settings
                 tab={settingsTab()}
+                agentManagerProjectId={agentManagerProjectId()}
+                agentManagerSettings={host.KILO_AGENT_MANAGER_SETTINGS === true}
                 onTabChange={setSettingsTab}
                 onMigrationClick={(source) => {
                   setMigrationSource(source)

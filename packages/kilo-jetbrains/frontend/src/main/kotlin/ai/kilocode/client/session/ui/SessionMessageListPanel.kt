@@ -470,7 +470,7 @@ class SessionMessageListPanel(
                 question?.hideView()
                 permission?.hideView()
                 login?.hideView()
-                outcome?.showOutcome(state.outcome, state.tone)
+                outcome?.showOutcome(state.outcome)
             }
             else -> {
                 setHiddenQuestionTool(null)

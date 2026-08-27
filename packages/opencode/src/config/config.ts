@@ -22,7 +22,7 @@ import { isRecord } from "@/util/record"
 import type { ConsoleState } from "@opencode-ai/core/v1/config/console-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
-import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
+import { Context, Duration, Effect, Fiber, Layer, Option, Schema } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
@@ -55,6 +55,7 @@ import {
   IndexingSchema as KiloIndexingSchema,
 } from "@kilocode/kilo-indexing/config"
 import { unique } from "remeda"
+import { installLocalPluginDependency, needsLocalPluginDependency } from "@/kilocode/config/plugin-deps"
 // kilocode_change end
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
@@ -721,6 +722,7 @@ const layer = Layer.effect(
 
         // kilocode_change start
         for (const dir of unique(directories)) {
+          const plugins: ConfigPluginV1.Spec[] = [] // kilocode_change - track file plugins contributed by this directory
           const scope = primarySet.has(dir) ? "local" : undefined
           // kilocode_change - trust {file:}/{env:} only for global-scoped config dirs, never project ones
           const dirScope = scope ?? (yield* pluginScopeForSource(dir))
@@ -736,18 +738,14 @@ const layer = Layer.effect(
               yield* Effect.logDebug(`loading config from ${source}`)
               // kilocode_change - untrusted config dirs confine {file:} reads to projectRoot
               const fileScope = dirTrusted ? undefined : { root: projectRoot, source }
-              yield* merge(
-                source,
-                yield* loadFile(source, authEnv, dirTrusted, fileScope, dirTrusted ? undefined : warnings).pipe(
-                  // kilocode_change
-                  Effect.catchDefect((err: unknown) => {
-                    caughtWarning(warnings, source, err)
-                    return Effect.succeed({} as Info)
-                  }),
-                ),
-                dirScope,
-                dirTrusted,
+              const next = yield* loadFile(source, authEnv, dirTrusted, fileScope, dirTrusted ? undefined : warnings).pipe(
+                Effect.catchDefect((err: unknown) => {
+                  caughtWarning(warnings, source, err)
+                  return Effect.succeed({} as Info)
+                }),
               )
+              plugins.push(...(next.plugin ?? []))
+              yield* merge(source, next, dirScope, dirTrusted)
               result.agent ??= {}
               result.mode ??= {}
               result.plugin ??= []
@@ -756,27 +754,6 @@ const layer = Layer.effect(
           // kilocode_change end
 
           yield* ensureGitignore(dir).pipe(Effect.orDie)
-
-          const dep = yield* npmSvc
-            .install(dir, {
-              add: [
-                {
-                  name: "@kilocode/plugin",
-                  version: InstallationLocal ? undefined : InstallationVersion,
-                },
-              ],
-            })
-            .pipe(
-              Effect.exit,
-              Effect.tap((exit) =>
-                Exit.isFailure(exit)
-                  ? Effect.logWarning("background dependency install failed", { dir, error: String(exit.cause) })
-                  : Effect.void,
-              ),
-              Effect.asVoid,
-              Effect.forkDetach,
-            )
-          deps.push(dep)
 
           // kilocode_change start - propagate parse errors to the Warning accumulator
           const sourceScopes = (names: readonly string[]) => [
@@ -810,7 +787,14 @@ const layer = Layer.effect(
           // kilocode_change - Auto-discovered plugins under config directories are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
+          plugins.push(...list) // kilocode_change
           yield* mergePluginOrigins(dir, list, dirScope) // kilocode_change
+
+          // kilocode_change start
+          if (needsLocalPluginDependency(plugins)) {
+            deps.push(yield* installLocalPluginDependency(npmSvc, dir, InstallationVersion, InstallationLocal))
+          }
+          // kilocode_change end
         }
 
         if (process.env.KILO_CONFIG_CONTENT) {

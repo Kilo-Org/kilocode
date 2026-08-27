@@ -507,7 +507,7 @@ internal class ProvidersContent(
         ProvidersSettingsUi.LOG.info("provider settings content update: start providers=${state.providers.size} connected=${state.connected.size} disabled=${state.disabled.size} descriptions=$notes")
         this.state = state
         val rows = providerListRows(state, "", disabledRows = busy)
-        if (select != null) view.update(rows, ActiveListSelection.Key(select)) else view.update(rows)
+        view.update(rows, select?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
         ProvidersSettingsUi.LOG.info("provider settings content update: completed rows=${rows.size}")
     }
 

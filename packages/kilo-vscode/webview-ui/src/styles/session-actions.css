@@ -14,8 +14,13 @@
   width: 100%;
 }
 
-.chat-input > .session-dock + .prompt-input-container {
-  margin-top: var(--prompt-gutter);
+/* A visible dock owns the spacing above the composer, so both of its states sit
+   flush on the prompt and swapping the working indicator for the actions row
+   cannot move either of them. The dock is hidden rather than unmounted while
+   idle, so this must not match the inactive row: the composer keeps its own
+   gutter there. */
+.chat-input > .session-dock[data-active] + .prompt-input-container {
+  margin-top: 0;
 }
 
 :root {

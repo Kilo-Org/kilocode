@@ -68,6 +68,7 @@ import {
   reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
+  revertPromptState,
   upsertSessionToolPart,
   type MessageMutation,
   type MessagePageState,
@@ -78,7 +79,7 @@ import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { mergeOptimisticPart, mergeParts } from "./session-parts"
+import { isolate, mergeOptimisticPart, mergeParts } from "./session-parts"
 import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { state as todoState } from "./todo-revert"
 import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
@@ -189,12 +190,8 @@ interface SessionContextValue {
 
   // Model selection (global, extension-lifetime)
   selected: (sessionID?: string) => ModelSelection | null
-  configModel: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
-  configModelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
-  hasModelOverride: (sessionID?: string) => boolean
-  clearModelOverride: (sessionID?: string) => void
 
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
@@ -735,7 +732,7 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function clearModeModelSelection(agentName: string, persist = false) {
+  function clearModeModelSelection(agentName: string) {
     setUserSetAgents((prev) => {
       const next = { ...prev }
       delete next[agentName]
@@ -747,7 +744,6 @@ export const SessionProvider: ParentComponent = (props) => {
         delete selections[agentName]
       }),
     )
-    if (persist) vscode.postMessage({ type: "clearModelSelection", agent: agentName })
   }
 
   function shouldClearModeModelSelection(agentName: string) {
@@ -762,11 +758,6 @@ export const SessionProvider: ParentComponent = (props) => {
       if (next.size === prev.size) return prev
       return next
     })
-  }
-
-  function configModel(sessionID?: string): ModelSelection | null {
-    const agentName = agentForScope(sessionID)
-    return resolveModel(agentName)
   }
 
   function modelForAgent(agentName: string): ModelSelection | null {
@@ -787,36 +778,6 @@ export const SessionProvider: ParentComponent = (props) => {
       agentName,
       userSetAgents()[agentName] === true,
     )
-  }
-
-  function configModelForAgent(agentName: string): ModelSelection | null {
-    return resolveModel(agentName)
-  }
-
-  /** True when the active model differs from what the config dictates. */
-  function hasModelOverride(sessionID?: string) {
-    const sel = selected(sessionID)
-    const cfg = configModel(sessionID)
-    if (!sel || !cfg) return false
-    return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
-  }
-
-  /** Clear the per-mode model override, falling back to config default. */
-  function clearModelOverride(sessionID?: string) {
-    const sid = sessionID ?? currentSessionID()
-    const agentName = sid ? agentForScope(sid) : selectedAgentName()
-    // Always clear the persisted per-mode model selection so the user's
-    // configured (or fallback) model becomes effective, not the last manual pick.
-    clearModeModelSelection(agentName, true)
-    if (sid) {
-      setStore(
-        "sessionOverrides",
-        produce((overrides) => {
-          delete overrides[sid]
-        }),
-      )
-      hideErrors(sid)
-    }
   }
 
   // Handle agentsLoaded immediately (not in onMount) so we never miss
@@ -931,7 +892,7 @@ export const SessionProvider: ParentComponent = (props) => {
   onCleanup(variants.load())
 
   // Load persisted per-mode model selections from model.json via extension host.
-  // Uses replace semantics so a reset (empty payload) clears old entries.
+  // Uses replace semantics so an empty payload clears old entries.
   const unsubSelections = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "modelSelectionsLoaded") return
     setStore("modelSelections", reconcile(message.selections))
@@ -1496,7 +1457,7 @@ export const SessionProvider: ParentComponent = (props) => {
       const cutoff = Math.max(0, messages.length - 15)
       for (let i = 0; i < messages.length; i++) {
         const msg = messages[i]!
-        const parts = msg.parts ?? []
+        const parts = msg.parts?.map(isolate) ?? []
         if (mode === "reconcile" && store.parts[msg.id] && !optimisticParts.has(msg.id)) {
           const merged = mergeParts(store.parts[msg.id], parts, input.since ?? Number.POSITIVE_INFINITY)
           setStore("parts", msg.id, reconcile(merged, { key: "id" }))
@@ -1585,7 +1546,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (message.parts && message.parts.length > 0) {
       optimisticParts.delete(message.id)
       stash.remove(message.id)
-      setStore("parts", message.id, message.parts)
+      setStore("parts", message.id, message.parts.map(isolate))
     }
     rebuildToolParts(message.sessionID, store.messages[message.sessionID] ?? [])
   }
@@ -1663,7 +1624,7 @@ export const SessionProvider: ParentComponent = (props) => {
           }
         } else {
           // Add new part
-          list.push(part)
+          list.push(isolate(part))
         }
       }),
     )
@@ -2106,7 +2067,7 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore("messages", key, messages)
       for (const msg of messages) {
         if (msg.parts && msg.parts.length > 0) {
-          setStore("parts", msg.id, msg.parts)
+          setStore("parts", msg.id, msg.parts.map(isolate))
         }
       }
       rebuildToolParts(key, messages)
@@ -2821,31 +2782,16 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (!id) return
     clearClose(id)
-    // Restore the reverted user message's prompt text into the input.
-    // Dispatch as a window message so PromptInput picks it up via onMessage.
-    const parts = store.parts[messageID]
-    if (parts) {
-      const text = parts
-        .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
-        .map((p) => (p as { text: string }).text ?? "")
-        .join("")
-      // Pass the original attachments' exact paths alongside the restored text
-      // so PromptInput can seed them directly rather than re-deriving mentions
-      // from the text via regex, which truncates at the first space in a
-      // filename (see PromptInput's setChatBoxMessage handler).
-      const paths = parts
-        .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
-        .map((p) => p.source?.path)
-        .filter((p): p is string => !!p && !p.startsWith("session:"))
-      const sessions = parts
-        .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
-        .filter((p) => p.url.startsWith("session:"))
-        .map((p) => ({
-          id: p.url.slice("session:".length),
-          title: p.source?.text?.value.replace(/^@/, "") ?? p.filename ?? p.url,
-          updated: 0,
-        }))
-      if (text) window.postMessage({ type: "setChatBoxMessage", text, paths, sessions }, "*")
+    // Restore the reverted user message's prompt text and attachments into the
+    // input. Dispatch as a window message so PromptInput picks it up via onMessage.
+    const state = revertPromptState(getParts(messageID))
+    const { text, paths, sessions, images } = state
+    // Paths carry the attachments' exact locations so PromptInput can seed them
+    // directly rather than re-deriving mentions from the text via regex, which
+    // truncates at the first space in a filename (see PromptInput's
+    // setChatBoxMessage handler).
+    if (text || paths.length > 0 || sessions.length > 0 || images.length > 0) {
+      window.postMessage({ type: "setChatBoxMessage", text, paths, sessions, images }, "*")
     }
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
@@ -2854,7 +2800,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (!id) return
     // Clear the prompt input on full redo (matching TUI/desktop behavior)
-    window.postMessage({ type: "setChatBoxMessage", text: "" }, "*")
+    window.postMessage({ type: "setChatBoxMessage", text: "", images: [] }, "*")
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
@@ -3008,12 +2954,8 @@ export const SessionProvider: ParentComponent = (props) => {
     scopedQuestions,
     scopedSuggestions,
     selected,
-    configModel,
     modelForAgent,
-    configModelForAgent,
     selectModel,
-    hasModelOverride,
-    clearModelOverride,
     costBreakdown,
     contextUsage,
     modelUsage,

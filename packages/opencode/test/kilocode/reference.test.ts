@@ -7,7 +7,7 @@ import * as Reference from "../../src/kilocode/reference"
 import { Reference as CoreReference } from "@opencode-ai/core/reference"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Global } from "@opencode-ai/core/global"
-import { LocationServiceMap } from "@opencode-ai/core/location-services"
+import { buildLocationServiceMap, LocationServiceMap } from "@opencode-ai/core/location-services"
 import { Location } from "@opencode-ai/core/location"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { Config } from "../../src/config/config"
@@ -141,6 +141,7 @@ describe("configured references", () => {
       },
     })
     const layer = locations.pipe(
+      Layer.provide(buildLocationServiceMap()),
       Layer.provide(AppNodeBuilder.build(Config.node)),
       Layer.provide(testInstanceStoreLayer),
     )
