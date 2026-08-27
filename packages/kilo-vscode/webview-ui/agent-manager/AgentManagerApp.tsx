@@ -2563,6 +2563,7 @@ const AgentManagerContent: Component = () => {
                     onForkSession={readOnly() ? undefined : handleForkSession}
                     readonly={readOnly()}
                     continueInWorktree={selection() === LOCAL}
+                    worktree={worktrees().some((wt) => wt.id === selection())}
                     promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
                     terminalContext={() => selection() ?? undefined}
                     deferFocusToQuestion={hasQuestionOption}

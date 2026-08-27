@@ -1074,6 +1074,7 @@ export class WorktreeManager {
       throw new Error("This PR's branch is already checked out in another worktree")
     }
 
+    const base = await this.resolvePRBase(info)
     await this.fetchPRBranch(info, parsed, isFork, forkOwner)
 
     if (isFork && forkOwner) {
@@ -1083,7 +1084,15 @@ export class WorktreeManager {
       await this.git.raw(["branch", branch, `${forkOwner}/${info.headRefName}`])
     }
 
-    return this.createWorktreeImpl({ existingBranch: branch })
+    const result = await this.createWorktreeImpl({ existingBranch: branch })
+    return { ...result, parentBranch: base.branch, remote: base.remote }
+  }
+
+  private async resolvePRBase(info: PRInfo): Promise<{ branch: string; remote?: string }> {
+    if (info.baseRefName === undefined) return this.resolveBaseBranch()
+    validateGitRef(info.baseRefName, "base branch")
+    const point = await this.resolveStartPoint(info.baseRefName, undefined, { allowFallback: false })
+    return { branch: point.branch, remote: point.remote }
   }
 
   private async fetchPRInfo(parsed: { owner: string; repo: string; number: number }): Promise<PRInfo> {
@@ -1096,7 +1105,7 @@ export class WorktreeManager {
           "--repo",
           `${parsed.owner}/${parsed.repo}`,
           "--json",
-          "headRefName,headRepositoryOwner,isCrossRepository,title",
+          "headRefName,baseRefName,headRepositoryOwner,isCrossRepository,title",
         ],
         30000,
       )
