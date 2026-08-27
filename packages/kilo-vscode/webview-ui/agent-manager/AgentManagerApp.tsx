@@ -104,7 +104,7 @@ import {
   setReviewOpen,
 } from "./project/review-state"
 import { applyRunStatus } from "./project/run-status"
-import { clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
+import { clearFailedDelete, clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
 import {
   createSessionRestore,
   createTabMemory,
@@ -1386,10 +1386,7 @@ const AgentManagerContent: Component = () => {
     })
 
     const unsub = vscode.onMessage((msg) => {
-      if (msg.type === "error" && msg.code === "agentManager.worktreeDeleteFailed" && msg.worktreeId) {
-        const store = msg.projectId ? registry.ensure(msg.projectId) : registry.active()
-        store.setBusy((prev) => new Map([...prev].filter(([id]) => id !== msg.worktreeId)))
-      }
+      clearFailedDelete(msg, registry)
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
         setRepoBranch(info.branch)
