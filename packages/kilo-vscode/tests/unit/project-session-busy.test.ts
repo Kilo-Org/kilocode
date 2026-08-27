@@ -30,6 +30,19 @@ describe("createSessionBusy", () => {
     expect(busy({ working: { type } }).agent("wt-working")).toBe(true)
   })
 
+  it("keeps running for non-blocking questions", () => {
+    const questions: { sessionID: string; blocking?: boolean }[] = [{ sessionID: "working", blocking: false }]
+    const state = createSessionBusy({
+      ...options({ working: { type: "busy" } }),
+      questions: () => questions,
+    })
+    expect(state.agent("wt-working")).toBe(true)
+    questions[0].blocking = true
+    expect(state.agent("wt-working")).toBe(false)
+    delete questions[0].blocking
+    expect(state.agent("wt-working")).toBe(false)
+  })
+
   it("does not keep a spinner for an offline session", () => {
     const state = busy({ working: { type: "offline" }, unknown: { type: "offline" } })
 

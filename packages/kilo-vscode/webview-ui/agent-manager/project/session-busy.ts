@@ -12,6 +12,7 @@ interface Status {
 
 interface Prompt {
   sessionID: string
+  blocking?: boolean
 }
 
 export function createSessionBusy(opts: {
@@ -26,7 +27,11 @@ export function createSessionBusy(opts: {
   const any = (ids: string[]) => {
     if (ids.length === 0) return false
     const statuses = opts.statuses()
-    const blocked = new Set([...opts.permissions(), ...opts.questions()].map((item) => item.sessionID))
+    const blocked = new Set(
+      [...opts.permissions(), ...opts.questions().filter((item) => item.blocking !== false)].map(
+        (item) => item.sessionID,
+      ),
+    )
     return ids.some((id) => {
       const status = statuses[id]
       return (status?.type === "busy" || status?.type === "retry") && !blocked.has(id)

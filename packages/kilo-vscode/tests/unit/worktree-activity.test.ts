@@ -4,7 +4,7 @@ import { createWorktreeActivity, WorktreeActivity } from "../../src/agent-manage
 type Snapshot = {
   statuses: Record<string, { type: string }>
   permissions: Array<{ id: string; sessionID: string }>
-  questions: Array<{ id: string; sessionID: string }>
+  questions: Array<{ id: string; sessionID: string; blocking?: boolean }>
 }
 
 function defer<T>() {
@@ -137,6 +137,23 @@ describe("WorktreeActivity", () => {
     expect(test.posted.at(-1)).toEqual([])
   })
 
+  it("ignores non-blocking questions in snapshots and live events", async () => {
+    const test = setup(["/repo"], async () => ({
+      ...snapshot({ child: "busy" }),
+      questions: [{ id: "note", sessionID: "child", blocking: false }],
+    }))
+    await test.activity.sync()
+    expect(test.posted.at(-1)).toEqual(["/repo"])
+
+    const question = asked("question", "live", "child")
+    test.activity.event({ ...question, properties: { ...question.properties, blocking: false } }, "/repo")
+    expect(test.posted.at(-1)).toEqual(["/repo"])
+    test.activity.event(question, "/repo")
+    expect(test.posted.at(-1)).toEqual([])
+    test.activity.event({ ...question, properties: { ...question.properties, blocking: false } }, "/repo")
+    expect(test.posted.at(-1)).toEqual(["/repo"])
+  })
+
   it("clears sessions on completion, deletion, errors, and offline status", async () => {
     const test = setup(["/repo"], async () => snapshot())
     await test.activity.sync()
@@ -236,6 +253,8 @@ describe("WorktreeActivity", () => {
     test.activity.event(status("s1", "busy"), "/repo")
     dirs.length = 0
     await test.activity.sync()
+    expect(test.posted.at(-1)).toEqual([])
+    test.activity.event(status("s1", "busy"), "/repo")
     expect(test.posted.at(-1)).toEqual([])
     gate.resolve(snapshot({ s1: "busy" }))
     await pending

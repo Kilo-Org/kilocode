@@ -4,7 +4,7 @@ import type { KiloConnectionService } from "../services/cli-backend"
 type Snapshot = {
   statuses: Record<string, { type: string }>
   permissions: Array<{ id: string; sessionID: string }>
-  questions: Array<{ id: string; sessionID: string }>
+  questions: Array<{ id: string; sessionID: string; blocking?: boolean }>
 }
 
 type Change =
@@ -234,7 +234,7 @@ export class WorktreeActivity {
     }
     state.questions = new Map()
     for (const item of snapshot.questions ?? []) {
-      if (typeof item?.id === "string" && typeof item.sessionID === "string")
+      if (item?.blocking !== false && typeof item?.id === "string" && typeof item.sessionID === "string")
         state.questions.set(item.id, item.sessionID)
     }
     for (const change of req.events) this.apply(state, change)
@@ -282,6 +282,7 @@ export class WorktreeActivity {
     const id = string(value.id)
     const sessionID = string(value.sessionID)
     if (!id || !sessionID) return undefined
+    if (type === "question.asked" && value.blocking === false) return { kind: "question.remove", id, sessionID }
     return type === "permission.asked"
       ? { kind: "permission.add", id, sessionID }
       : { kind: "question.add", id, sessionID }
