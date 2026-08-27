@@ -1111,7 +1111,7 @@ class SessionUi(
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         val busy = state.isBusy()
-        if (wasBusy && state is SessionState.Idle) {
+        if (wasBusy && !busy) {
             refreshBranchChanges()
             refreshBranch()
         }
