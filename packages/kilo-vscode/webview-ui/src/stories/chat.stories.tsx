@@ -18,6 +18,10 @@ import { TaskUsage } from "../components/chat/TaskUsage"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
+import { PromptRail } from "../components/chat/PromptRail"
+import { promptItems, railEntries } from "../components/chat/prompt-rail"
+import { messageTurns } from "../context/session-queue"
+import { transcriptRows } from "../context/transcript-rows"
 import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
@@ -622,7 +626,6 @@ export const ChatViewReadable420: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// PromptRail — the left-edge tick rail and its hover card
 // Several turns so the rail and card are populated: a long prompt, a short
 // low-signal follow-up, a tool-only answer (empty preview), and a queued one.
 // ---------------------------------------------------------------------------
@@ -723,6 +726,55 @@ export const PromptRailWide: Story = {
 export const PromptRailSidebar: Story = {
   name: "PromptRail - narrow sidebar",
   render: () => renderRailChat("busy"),
+}
+
+const rail = (side: "left" | "right") => {
+  const items = promptItems(transcriptRows(messageTurns(railMessages), (id) => railParts[id] ?? []))
+  const [active, setActive] = createSignal<string | undefined>(items[0]?.key)
+  const [wheel, setWheel] = createSignal(0)
+  return (
+    <StoryProviders noPadding>
+      <div
+        class="message-list-container"
+        data-testid="prompt-rail-host"
+        data-selected={active()}
+        data-wheel={wheel()}
+        style={{ height: "100vh" }}
+      >
+        <div class="message-list">
+          <p data-testid="prompt-rail-content" tabIndex={0}>
+            {items.find((item) => item.key === active())?.prompt}
+          </p>
+        </div>
+        <PromptRail
+          side={side}
+          entries={() => railEntries(items, items.length)}
+          items={() => items}
+          active={active}
+          onSelect={(item) => setActive(item.key)}
+          onFirst={() => setActive(items[0]?.key)}
+          onLatest={() => setActive(items.at(-1)?.key)}
+          onLoadOlder={() => undefined}
+          onWheel={(delta) => setWheel(delta)}
+          height={() => window.innerHeight}
+          hasOlder={() => false}
+          loadingOlder={() => false}
+          prepending={() => false}
+          seeking={() => false}
+        />
+      </div>
+    </StoryProviders>
+  )
+}
+
+export const PromptRailLeft: Story = {
+  name: "PromptRail - left outer edge",
+  render: () => rail("left"),
+}
+
+export const PromptRailRight: Story = {
+  name: "PromptRail - right outer edge",
+  render: () => rail("right"),
 }
 
 // Long session: more prompts than fit the transcript height, so the rail and

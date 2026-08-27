@@ -132,7 +132,7 @@ export class AgentManagerProvider implements Disposable {
   constructor(
     private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
-    binary: GitExecutable = () => Promise.resolve("git"),
+    binary: GitExecutable | string = "git",
     browser?: BrowserBroker,
   ) {
     this.browserLifecycle = createBrowserLifecycle({
@@ -1791,10 +1791,10 @@ export class AgentManagerProvider implements Disposable {
 
     this.openPanel()
     await this.waitForStateReady("continueFromSidebar")
-
     await continueInWorktree(
       {
         root,
+        binary: this.gitOps.path,
         getClient: () => this.connectionService.getClient(),
         createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
         runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),

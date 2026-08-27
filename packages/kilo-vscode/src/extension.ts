@@ -46,7 +46,7 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
 // keybindings, autocomplete, commit-message generation, and URI deep links all work immediately —
 // without requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
   shuttingDown = false
 
@@ -163,9 +163,16 @@ export function activate(context: vscode.ExtensionContext) {
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
   const git = createGitExecutable({
+    preferred: async () => {
+      const extension = vscode.extensions.getExtension("vscode.git")
+      if (!extension) return undefined
+      if (!extension.isActive) await extension.activate()
+      return extension.exports?.getAPI(1).git.path
+    },
     log: (message) => console.warn(`[Kilo New] ${message}`),
   })
-  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, git, browserBroker)
+  const binary = process.platform === "win32" ? await git() : git
+  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, binary, browserBroker)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
   context.subscriptions.push(
