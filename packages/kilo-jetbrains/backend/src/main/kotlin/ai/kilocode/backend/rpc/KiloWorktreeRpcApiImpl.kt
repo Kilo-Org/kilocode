@@ -87,7 +87,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val items = managedWorktrees(parseWorktreeList(res.stdout))
         val alive = items.filter { it.main || Files.isDirectory(Path.of(it.path)) }
         val store = worktreeNameStore(alive)
-        val state = store?.let { syncWorktreeState(it, worktreePaths(alive)) } ?: WorktreeState()
+        val state = store?.let { syncWorktreeState(it, worktreePaths(alive), livePaths(alive)) } ?: WorktreeState()
         val named = overlayWorktreeNames(alive, state.names)
         WorktreeListDto(orderWorktrees(named, state.worktreeOrder))
     }
@@ -454,7 +454,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                 ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
             return@withContext try {
-                val state = readWorktreeState(store).reconcile(worktreePaths(items))
+                val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
                 val names = state.names.toMutableMap()
                 names[target.path] = title
                 writeWorktreeState(store, state.copy(names = names))
@@ -478,7 +478,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                 ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
             return@withContext try {
-                val state = readWorktreeState(store).reconcile(worktreePaths(items))
+                val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
                 val names = state.names.toMutableMap()
                 // Only adopt while the worktree is still default. A recorded name means the user (or a
                 // prior adoption) already titled it, so leave it untouched and report a no-op.
@@ -502,10 +502,39 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val store = worktreeNameStore(items) ?: return@withContext false
             return@withContext try {
                 val state = readWorktreeState(store)
-                writeWorktreeState(store, state.copy(worktreeOrder = paths).reconcile(worktreePaths(items)))
+                writeWorktreeState(store, state.copy(worktreeOrder = paths).reconcile(worktreePaths(items), livePaths(items)))
                 true
             } catch (e: Exception) {
                 LOG.warn("worktree reorder failed: dir=$directory message=${e.message}", e)
+                false
+            }
+        }
+
+    override suspend fun sessionList(directory: String): Boolean? =
+        withContext(Dispatchers.IO) {
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext null
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items) ?: return@withContext null
+            val target = items.firstOrNull { samePath(it.path, directory) } ?: return@withContext null
+            readWorktreeState(store).sessionList[target.path]
+        }
+
+    override suspend fun setSessionList(directory: String, visible: Boolean): Boolean =
+        withContext(Dispatchers.IO) {
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext false
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items) ?: return@withContext false
+            val target = items.firstOrNull { samePath(it.path, directory) } ?: return@withContext false
+            return@withContext try {
+                val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
+                writeWorktreeState(store, state.copy(sessionList = state.sessionList + (target.path to visible)))
+                true
+            } catch (e: Exception) {
+                LOG.warn("worktree session list state failed: dir=$directory message=${e.message}", e)
                 false
             }
         }
@@ -741,17 +770,26 @@ private const val WORKTREE_NAMES_FILE = "jetbrains.json"
 private data class WorktreeNamesFile(
     val names: Map<String, String> = emptyMap(),
     val worktreeOrder: List<String> = emptyList(),
+    val sessionList: Map<String, Boolean> = emptyMap(),
 )
 
 internal data class WorktreeState(
     val names: Map<String, String> = emptyMap(),
     val worktreeOrder: List<String> = emptyList(),
+    val sessionList: Map<String, Boolean> = emptyMap(),
 ) {
-    fun reconcile(paths: List<String>): WorktreeState {
+    /**
+     * Drops state for worktrees git no longer reports. Names and order cover linked worktrees only
+     * ([paths]), while the session list is also kept for the main working tree, which has a worktree
+     * editor of its own — hence the wider [live] set.
+     */
+    fun reconcile(paths: List<String>, live: List<String>): WorktreeState {
         val set = paths.toSet()
+        val all = live.toSet()
         val order = (worktreeOrder.filter { it in set } + paths.filter { it !in worktreeOrder }).distinct()
         val next = names.filterKeys { it in set }
-        return WorktreeState(next, order)
+        val visible = sessionList.filterKeys { it in all }
+        return WorktreeState(next, order, visible)
     }
 }
 
@@ -843,9 +881,13 @@ internal fun readWorktreeState(file: Path): WorktreeState {
     return try {
         val raw = Files.readString(file)
         val element = json.parseToJsonElement(raw)
-        if (element is JsonObject && ("names" in element || "worktreeOrder" in element)) {
+        if (element is JsonObject && ("names" in element || "worktreeOrder" in element || "sessionList" in element)) {
             val data = json.decodeFromJsonElement<WorktreeNamesFile>(element)
-            return WorktreeState(data.names.filterValues { it.isNotBlank() }, data.worktreeOrder.filter { it.isNotBlank() })
+            return WorktreeState(
+                data.names.filterValues { it.isNotBlank() },
+                data.worktreeOrder.filter { it.isNotBlank() },
+                data.sessionList.filterKeys { it.isNotBlank() },
+            )
         }
         val names = json.decodeFromJsonElement(codec, element).filterValues { it.isNotBlank() }
         WorktreeState(names, names.keys.toList())
@@ -856,8 +898,8 @@ internal fun readWorktreeState(file: Path): WorktreeState {
 }
 
 internal fun writeWorktreeNames(file: Path, names: Map<String, String>) {
-    val order = readWorktreeState(file).worktreeOrder
-    writeWorktreeState(file, WorktreeState(names, order))
+    val state = readWorktreeState(file)
+    writeWorktreeState(file, state.copy(names = names))
 }
 
 internal fun writeWorktreeState(file: Path, state: WorktreeState) {
@@ -865,6 +907,7 @@ internal fun writeWorktreeState(file: Path, state: WorktreeState) {
     val data = WorktreeNamesFile(
         names = state.names.filterValues { it.isNotBlank() },
         worktreeOrder = state.worktreeOrder.filter { it.isNotBlank() }.distinct(),
+        sessionList = state.sessionList.filterKeys { it.isNotBlank() },
     )
     val tmp = Files.createTempFile(file.parent, ".worktree-names", ".tmp")
     try {
@@ -879,9 +922,9 @@ internal fun writeWorktreeState(file: Path, state: WorktreeState) {
     }
 }
 
-private fun syncWorktreeState(file: Path, paths: List<String>): WorktreeState {
+private fun syncWorktreeState(file: Path, paths: List<String>, live: List<String>): WorktreeState {
     val state = readWorktreeState(file)
-    val next = state.reconcile(paths)
+    val next = state.reconcile(paths, live)
     if (next == state) return next
     try {
         writeWorktreeState(file, next)
@@ -903,12 +946,17 @@ private fun removeWorktreeState(file: Path, path: String) {
     val state = readWorktreeState(file)
     val names = state.names.filterKeys { !samePath(it, path) }
     val order = state.worktreeOrder.filter { !samePath(it, path) }
-    if (names == state.names && order == state.worktreeOrder) return
-    writeWorktreeState(file, state.copy(names = names, worktreeOrder = order))
+    val visible = state.sessionList.filterKeys { !samePath(it, path) }
+    if (names == state.names && order == state.worktreeOrder && visible == state.sessionList) return
+    writeWorktreeState(file, state.copy(names = names, worktreeOrder = order, sessionList = visible))
 }
 
 private fun worktreePaths(items: List<WorktreeDto>): List<String> {
     return items.filter { !it.main }.map { it.path }
+}
+
+private fun livePaths(items: List<WorktreeDto>): List<String> {
+    return items.map { it.path }
 }
 
 private fun worktreeNameStore(items: List<WorktreeDto>): Path? {
