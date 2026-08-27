@@ -61,7 +61,6 @@ export interface Handle {
   ) => Effect.Effect<void>
   readonly process: (streamInput: LLM.StreamInput) => Effect.Effect<Result>
   readonly compactError?: () => ReturnType<typeof MessageV2.ContextOverflowError.prototype.toObject> | undefined // kilocode_change
-  readonly compactProgress?: () => boolean // kilocode_change - whether the overflowing attempt produced durable progress
 }
 
 type Input = {
@@ -897,7 +896,6 @@ const layer = Layer.effect(
       // kilocode_change start
       const output = {
         compactError: () => ctx.compactionError,
-        compactProgress: () => attempt.text || attempt.reasoning || attempt.tool,
       }
       // kilocode_change end
 

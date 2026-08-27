@@ -114,7 +114,6 @@ export interface CompactionPart extends BasePart {
   type: "compaction"
   auto: boolean
   overflow?: boolean
-  pending_user_id?: string
   tail_start_id?: string
 }
 

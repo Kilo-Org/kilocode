@@ -900,11 +900,6 @@ export const layer: Layer.Layer<
           if (p.type === "compaction" && p.tail_start_id) {
             p.tail_start_id = idMap.get(p.tail_start_id)
           }
-          // kilocode_change start - remap the persisted pending turn when forking a session
-          if (p.type === "compaction" && p.pending_user_id) {
-            p.pending_user_id = idMap.get(p.pending_user_id)
-          }
-          // kilocode_change end
           yield* updatePart(p)
         }
       }

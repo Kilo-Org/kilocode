@@ -180,16 +180,14 @@ describe("durable PTY registry", () => {
       })
       yield* Effect.addFinalizer(() => unsubscribe)
 
-      const terminal = yield* Effect.scoped(
+      const info = yield* Effect.scoped(
         Effect.gen(function* () {
           const pty = yield* Pty.Service
-          const info = yield* pty.create({ command: "/bin/sh", args: ["-c", "read _; exit 7"], cwd: dir.path })
-          return { info, exit: pty.write(info.id, "exit\r") }
+          return yield* pty.create({ command: "/bin/sh", args: ["-c", "exit 7"], cwd: dir.path })
         }).pipe(Effect.provide(locations.get(target))),
       )
-      yield* terminal.exit
-      const exited = yield* Queue.take(queue).pipe(Effect.timeout("15 seconds"))
-      expect(exited).toEqual({ id: terminal.info.id, location: target })
+      const exited = yield* Queue.take(queue).pipe(Effect.timeout("5 seconds"))
+      expect(exited).toEqual({ id: info.id, location: target })
     }),
   )
 

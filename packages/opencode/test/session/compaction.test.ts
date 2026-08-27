@@ -1176,7 +1176,6 @@ describe("session.compaction.process", () => {
     }).pipe(withCompaction({ plugin: autocontinue(false) })),
   )
 
-  // kilocode_change start - preserve non-media attachments during overflow recovery
   it.instance(
     "replays the prior user turn on overflow when earlier context exists",
     Effect.gen(function* () {
@@ -1193,15 +1192,6 @@ describe("session.compaction.process", () => {
         filename: "cat.png",
         url: "https://example.com/cat.png",
       })
-      yield* ssn.updatePart({
-        id: PartID.ascending(),
-        messageID: replay.id,
-        sessionID: session.id,
-        type: "file",
-        mime: "text/plain",
-        filename: "notes.txt",
-        url: "https://example.com/notes.txt",
-      })
       const msg = yield* createUserMessage(session.id, "current")
       const msgs = yield* ssn.messages({ sessionID: session.id })
 
@@ -1217,100 +1207,19 @@ describe("session.compaction.process", () => {
 
       expect(result).toBe("continue")
       expect(last?.info.role).toBe("user")
-      expect(last?.parts.some((part) => part.type === "file" && part.mime === "image/png")).toBe(false) // kilocode_change
+      expect(last?.parts.some((part) => part.type === "file")).toBe(false)
       expect(
         last?.parts.some((part) => part.type === "text" && part.text.includes("Attached image/png: cat.png")),
       ).toBe(true)
-      expect(
-        last?.parts.some(
-          (part) => part.type === "file" && part.mime === "text/plain" && part.url === "https://example.com/notes.txt",
-        ),
-      ).toBe(true)
     }),
   )
-  it.instance(
-    "replays a pending turn without stripping media when requested",
-    Effect.gen(function* () {
-      const ssn = yield* SessionNs.Service
-      const session = yield* ssn.create({})
-      yield* createUserMessage(session.id, "root")
-      const replay = yield* createUserMessage(session.id, "image")
-      yield* ssn.updatePart({
-        id: PartID.ascending(),
-        messageID: replay.id,
-        sessionID: session.id,
-        type: "file",
-        mime: "image/png",
-        filename: "cat.png",
-        url: "https://example.com/cat.png",
-      })
-      const msg = yield* createUserMessage(session.id, "current")
-      const msgs = yield* ssn.messages({ sessionID: session.id })
 
-      const result = yield* SessionCompaction.use.process({
-        parentID: msg.id,
-        messages: msgs,
-        sessionID: session.id,
-        auto: true,
-        pending: replay.id,
-      })
-
-      const all = yield* ssn.messages({ sessionID: session.id })
-      const last = all.at(-1)
-
-      expect(result).toBe("continue")
-      expect(last?.info.role).toBe("user")
-      expect(last?.parts.some((part) => part.type === "text" && part.synthetic)).toBe(true)
-      expect(
-        all.filter(
-          (item) =>
-            item.info.role === "user" && item.parts.some((part) => part.type === "text" && part.text === "image"),
-        ),
-      ).toHaveLength(1)
-      expect(all.find((item) => item.info.id === replay.id)?.parts.some((part) => part.type === "file")).toBe(true)
-    }),
-  )
-  it.instance(
-    "does not replay a completed turn when overflow is false",
-    Effect.gen(function* () {
-      const ssn = yield* SessionNs.Service
-      const session = yield* ssn.create({})
-      yield* createUserMessage(session.id, "root")
-      yield* createUserMessage(session.id, "answered prompt")
-      const msg = yield* createUserMessage(session.id, "current")
-      const msgs = yield* ssn.messages({ sessionID: session.id })
-
-      const result = yield* SessionCompaction.use.process({
-        parentID: msg.id,
-        messages: msgs,
-        sessionID: session.id,
-        auto: true,
-        overflow: false,
-      })
-
-      const all = yield* ssn.messages({ sessionID: session.id })
-      const last = all.at(-1)
-
-      expect(result).toBe("continue")
-      expect(last?.parts[0]).toMatchObject({
-        type: "text",
-        synthetic: true,
-        metadata: { compaction_continue: true },
-      })
-      expect(
-        all.filter(
-          (item) =>
-            item.info.role === "user" &&
-            item.parts.some((part) => part.type === "text" && part.text === "answered prompt"),
-        ),
-      ).toHaveLength(1)
-    }),
-  )
   it.instance(
     "falls back to overflow guidance when no replayable turn exists",
     Effect.gen(function* () {
       const ssn = yield* SessionNs.Service
       const session = yield* ssn.create({})
+      yield* createUserMessage(session.id, "earlier")
       const msg = yield* createUserMessage(session.id, "current")
       const msgs = yield* ssn.messages({ sessionID: session.id })
 
@@ -1331,7 +1240,6 @@ describe("session.compaction.process", () => {
       }
     }),
   )
-  // kilocode_change end
 
   itCompaction.instance(
     "stops quickly when aborted during retry backoff",

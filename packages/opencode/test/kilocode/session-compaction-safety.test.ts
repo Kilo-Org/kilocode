@@ -9,7 +9,6 @@ import { MessageV2 } from "../../src/session/message-v2"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
-import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
 import type { Provider } from "../../src/provider/provider"
 
 const sessionID = SessionID.make("ses_safety")
@@ -87,29 +86,6 @@ function compactionPart(messageID: string, tailStartID: string): MessageV2.Compa
     tail_start_id: MessageID.make(tailStartID),
   }
 }
-
-test("fails closed for an ambiguous legacy compaction marker", () => {
-  const marker: MessageV2.WithParts = {
-    info: userInfo("msg_marker"),
-    parts: [
-      {
-        id: PartID.make("prt_marker"),
-        sessionID,
-        messageID: MessageID.make("msg_marker"),
-        type: "compaction",
-        auto: true,
-        overflow: false,
-      },
-    ],
-  }
-  const root = { info: userInfo("msg_root"), parts: [] }
-  const second = { info: userInfo("msg_second"), parts: [] }
-  const result = KiloSessionCompaction.resolve({
-    part: marker.parts[0] as MessageV2.CompactionPart,
-    messages: [root, second, marker],
-  })
-  expect(result.kind).toBe("unresolved")
-})
 
 function subtaskPart(messageID: string): MessageV2.SubtaskPart {
   return {

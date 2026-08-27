@@ -24,7 +24,6 @@ import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-pay
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
 import { SessionExport } from "@/kilocode/session-export"
 import { KiloSession } from "@/kilocode/session"
-import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 // kilocode_change end
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -158,7 +157,6 @@ export interface Interface {
     sessionID: SessionID
     auto: boolean
     overflow?: boolean
-    pending?: MessageID // kilocode_change - resume this pending turn after compaction
   }) => Effect.Effect<"continue" | "stop">
   readonly create: (input: {
     sessionID: SessionID
@@ -166,7 +164,6 @@ export interface Interface {
     model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
     auto: boolean
     overflow?: boolean
-    pending_user_id?: MessageID // kilocode_change - persist the user turn resumed by this marker
   }) => Effect.Effect<void>
 }
 
@@ -327,7 +324,6 @@ const layer = Layer.effect(
       sessionID: SessionID
       auto: boolean
       overflow?: boolean
-      pending?: MessageID // kilocode_change
     }) {
       const parent = input.messages.findLast((m) => m.info.id === input.parentID)
       if (!parent || parent.info.role !== "user") {
@@ -336,28 +332,41 @@ const layer = Layer.effect(
       const userMessage = parent.info
       const compactionPart = parent.parts.find((part): part is SessionV1.CompactionPart => part.type === "compaction")
 
-      const pending = input.pending
+      let messages = input.messages
       let replay:
         | {
             info: SessionV1.User
             parts: SessionV1.Part[]
           }
         | undefined
-      let history = input.messages
-      // kilocode_change start - replay only explicitly pending turns or provider-overflow requests
-      if (pending || input.overflow === true) {
-        const indexes = new Map(input.messages.map((msg, index) => [msg.info.id, index]))
-        const compare = (a: SessionV1.WithParts, b: SessionV1.WithParts) =>
-          KiloSessionMessageOrder.compare(a, b, indexes.get(a.info.id) ?? -1, indexes.get(b.info.id) ?? -1)
-        const before = input.messages.filter((msg) => compare(msg, parent) < 0)
-        const target = pending
-          ? before.find((msg) => msg.info.role === "user" && msg.info.id === pending)
-          : [...before]
-              .sort(compare)
-              .findLast((msg) => msg.info.role === "user" && !msg.parts.some((part) => part.type === "compaction"))
-        if (target?.info.role === "user") {
-          replay = { info: target.info, parts: target.parts }
-          history = input.messages.filter((msg) => compare(msg, target) < 0)
+      // kilocode_change start - false is preflight replay; undefined disables replay
+      if (input.overflow !== undefined) {
+        const idx = input.messages.findIndex((m) => m.info.id === input.parentID)
+        for (let i = idx - 1; i >= 0; i--) {
+          const msg = input.messages[i]
+          if (msg.info.role === "user" && !msg.parts.some((p) => p.type === "compaction")) {
+            const progress = input.messages
+              .slice(i + 1, idx)
+              .some(
+                (item) =>
+                  item.info.role === "assistant" &&
+                  (item.info.finish ||
+                    item.parts.some(
+                      (part) =>
+                        part.type === "tool" || ((part.type === "text" || part.type === "reasoning") && !!part.text),
+                    )),
+              )
+            if (progress) break
+            replay = { info: msg.info, parts: msg.parts }
+            messages = input.messages.slice(0, i)
+            break
+          }
+        }
+        const hasContent =
+          replay && messages.some((m) => m.info.role === "user" && !m.parts.some((p) => p.type === "compaction"))
+        if (!hasContent) {
+          replay = undefined
+          messages = input.messages
         }
       }
       // kilocode_change end
@@ -367,14 +376,16 @@ const layer = Layer.effect(
         ? yield* provider.getModel(agent.model.providerID, agent.model.modelID).pipe(Effect.orDie)
         : yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID).pipe(Effect.orDie)
       const cfg = yield* config.get()
-      if (compactionPart && history.at(-1)?.info.id === input.parentID) history = history.slice(0, -1)
+      const history = compactionPart && messages.at(-1)?.info.id === input.parentID ? messages.slice(0, -1) : messages
       const prior = completedCompactions(history)
       const hidden = new Set(prior.flatMap((item) => [item.userIndex, item.assistantIndex]))
       const previousSummary = prior.at(-1)?.summary
+      // kilocode_change start
       const available = history.filter((_, index) => !hidden.has(index))
       const selected = replay
         ? { head: available, tail_start_id: undefined }
         : yield* select({ messages: available, cfg, model })
+      // kilocode_change end
       // Allow plugins to inject context or replace compaction prompt.
       const compacting = yield* plugin.trigger(
         "experimental.session.compacting",
@@ -494,7 +505,6 @@ const layer = Layer.effect(
         // kilocode_change end
         if (replay) {
           // kilocode_change start - compact oversized replay turns instead of looping into replay overflow
-          const parts = replay.parts
           replay = yield* KiloCompactionChunks.replay({
             processors,
             session,
@@ -513,12 +523,7 @@ const layer = Layer.effect(
           }).pipe(Effect.provideService(Database.Service, database)) // kilocode_change
           // kilocode_change end
           const original = replay.info
-          KiloSessionPromptQueue.retarget(input.sessionID, original.id)
-          const preserve = input.overflow !== true && replay.parts === parts
-          if (compactionPart && preserve) {
-            yield* session.updatePart({ ...compactionPart, tail_start_id: original.id })
-          }
-          const next = yield* session.updateMessage({
+          const replayMsg = yield* session.updateMessage({
             id: MessageID.ascending(),
             role: "user",
             sessionID: input.sessionID,
@@ -528,40 +533,24 @@ const layer = Layer.effect(
             format: original.format,
             tools: original.tools,
             system: original.system,
-            editorContext: original.editorContext, // kilocode_change - preserve editor context across continuation
+            editorContext: original.editorContext, // kilocode_change
           })
-          KiloSessionPromptQueue.retarget(input.sessionID, next.id)
-          if (preserve) {
+          KiloSessionPromptQueue.retarget(input.sessionID, replayMsg.id) // kilocode_change - expose replay to scope()
+          for (const part of replay.parts) {
+            if (part.type === "compaction") continue
+            // kilocode_change start - preserve media for preflight replay but strip it after provider overflow
+            const replayPart =
+              input.overflow && part.type === "file" && MessageV2.isMedia(part.mime)
+                ? { type: "text" as const, text: `[Attached ${part.mime}: ${part.filename ?? "file"}]` }
+                : part
             yield* session.updatePart({
+              ...replayPart,
+              ...(replayPart.type === "text" && { synthetic: true }),
               id: PartID.ascending(),
-              messageID: next.id,
+              messageID: replayMsg.id,
               sessionID: input.sessionID,
-              type: "text",
-              metadata: { compaction_continue: true },
-              synthetic: true,
-              text: "Continue the pending user request from the compacted context.",
-              time: { start: Date.now(), end: Date.now() },
             })
-          } else {
-            for (const part of replay.parts) {
-              if (part.type === "compaction") continue
-              const item =
-                part.type === "file" && MessageV2.isMedia(part.mime) // kilocode_change - only replace media on overflow
-                  ? {
-                      type: "text" as const,
-                      text: `[Attached ${part.mime}: ${part.filename ?? "file"}]`,
-                      synthetic: true,
-                    }
-                  : part.type === "text"
-                    ? { ...part, synthetic: true }
-                    : part
-              yield* session.updatePart({
-                ...item,
-                id: PartID.ascending(),
-                messageID: next.id,
-                sessionID: input.sessionID,
-              })
-            }
+            // kilocode_change end
           }
         }
 
@@ -687,7 +676,6 @@ const layer = Layer.effect(
       model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
       auto: boolean
       overflow?: boolean
-      pending_user_id?: MessageID // kilocode_change - persist the turn resumed by this marker
     }) {
       const msg = yield* session.updateMessage({
         id: MessageID.ascending(),
@@ -704,7 +692,6 @@ const layer = Layer.effect(
         type: "compaction",
         auto: input.auto,
         overflow: input.overflow,
-        pending_user_id: input.pending_user_id, // kilocode_change
       })
       // kilocode_change start - keep auto-compaction markers visible during queued turns
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
