@@ -18,6 +18,18 @@ function position(message: BrowserMessage): { x: number; y: number; width: numbe
 }
 
 function fail(deps: { post: (message: AgentManagerOutMessage) => void }, m: BrowserMessage, error: string): void {
+  if (m.type === "agentManager.browser.inspect") {
+    deps.post({
+      type: "agentManager.browserInspection",
+      projectId: m.projectId,
+      sessionId: m.sessionId,
+      requestId: m.requestId ?? "",
+      hover: m.hover,
+      logs: [],
+      error,
+    })
+    return
+  }
   deps.post({
     type: "agentManager.browserState",
     browserId: "",
@@ -108,9 +120,10 @@ function action(
       return true
     }
     if (m.type === "agentManager.browser.input") {
-      void deps.browser
-        .input(m.sessionId, scope.project, point, m.click === true)
-        .catch((error: unknown) => deps.log("Browser developer tools input failed:", error))
+      void deps.browser.input(m.sessionId, scope.project, point, m.click === true).catch((error: unknown) => {
+        deps.log("Browser developer tools input failed:", error)
+        fail(deps, { ...m, projectId: scope.project }, diagnostic(error))
+      })
       return true
     }
     void deps.browser
@@ -125,7 +138,10 @@ function action(
           hover: m.hover,
         }),
       )
-      .catch((error: unknown) => deps.log("Browser element inspection failed:", error))
+      .catch((error: unknown) => {
+        deps.log("Browser element inspection failed:", error)
+        fail(deps, { ...m, projectId: scope.project }, diagnostic(error))
+      })
     return true
   }
   void deps.browser
@@ -147,15 +163,7 @@ export function handleBrowserMessage(
   if (!message.type.startsWith("agentManager.browser.")) return false
   const m = message as BrowserMessage
   if (!deps.host.isTrusted()) {
-    deps.post({
-      type: "agentManager.browserState",
-      browserId: "",
-      projectId: m.projectId,
-      sessionId: m.sessionId,
-      status: "error",
-      errors: 0,
-      error: "Browser preview requires a trusted workspace.",
-    })
+    fail(deps, m, "Browser preview requires a trusted workspace.")
     return true
   }
   if (!deps.host.browserAutomation()) {

@@ -466,6 +466,7 @@ interface BrowserStateMessage {
 
 interface BrowserInspectionMessage {
   type: "agentManager.browserInspection"
+  error?: string
   requestId: string
   projectId?: string
   sessionId: string

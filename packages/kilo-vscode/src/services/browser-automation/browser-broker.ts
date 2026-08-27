@@ -3,9 +3,10 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { Socket } from "node:net"
 import { URL } from "node:url"
 import { stripVTControlCharacters } from "node:util"
-import { chromium, type BrowserContext, type Page } from "playwright-core"
+import { chromium, type BrowserContext, type LaunchOptions, type Page } from "playwright-core"
 import { BrowserDevtools } from "./browser-devtools"
 import { capture as element, locate } from "./browser-element"
+import { options } from "./browser-runtime"
 
 export type BrowserStatus = "starting" | "ready" | "loading" | "error" | "closed"
 
@@ -61,7 +62,7 @@ export interface BrowserBrokerOptions {
   log: (...args: unknown[]) => void
   enabled?: () => boolean
   trusted?: () => boolean
-  launch?: () => Promise<BrowserContextFactory>
+  launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
   useSystemChrome?: () => boolean
 }
 
@@ -471,20 +472,8 @@ export class BrowserBroker {
     if (this.browserStarting) return this.browserStarting
     this.browserStarting = (async () => {
       const port = this.opts.launch ? undefined : await reserve()
-      const options = {
-        chromiumSandbox: true,
-        env: Object.fromEntries(
-          Object.entries(process.env).filter(
-            ([key, value]) =>
-              typeof value === "string" &&
-              !/(TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH|API[_-]?KEY|ACCESS[_-]?KEY|PRIVATE[_-]?KEY)(_|$)/i.test(key),
-          ),
-        ),
-        headless: true,
-        ...(port ? { args: ["--remote-debugging-address=127.0.0.1", `--remote-debugging-port=${port}`] } : {}),
-        ...(this.opts.useSystemChrome?.() !== false ? { channel: "chrome" as const } : {}),
-      }
-      const browser = await (this.opts.launch?.() ?? chromium.launch(options))
+      const config = options(this.opts.useSystemChrome?.() !== false, port)
+      const browser = await (this.opts.launch?.(config) ?? chromium.launch(config))
       this.debugging = ("debugging" in browser ? browser.debugging : undefined) ?? port
       this.browser = browser
       return browser

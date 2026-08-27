@@ -19,6 +19,7 @@ const EDIT_PREVIEW_PANEL_FILE = path.join(ROOT, "webview-ui/agent-manager/EditPr
 const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
+  path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
@@ -30,6 +31,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/BrowserPanel.tsx"),
+  path.join(ROOT, "webview-ui/browser/BrowserPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanelCache.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/review-composers.ts"),
   path.join(ROOT, "webview-ui/documents/DocumentPanel.tsx"),
@@ -168,6 +170,23 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const unused = defined.filter((c) => !tsx.includes(c!))
 
     expect(unused, `Classes defined in CSS but not used in TSX: ${unused.join(", ")}`).toEqual([])
+  })
+})
+
+describe("Browser module boundaries", () => {
+  it("keeps browser core independent from Agent Manager and VS Code context", () => {
+    const files = ["BrowserPanel.tsx", "controller.ts", "types.ts", "index.ts"]
+    for (const file of files) {
+      const source = fs.readFileSync(path.join(ROOT, "webview-ui/browser", file), "utf-8")
+      expect(source).not.toMatch(/agent-manager|AgentManager|SidePanel|useVSCode|window\.postMessage/)
+    }
+  })
+
+  it("owns browser styles in the reusable module", () => {
+    const css = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"), "utf-8")
+    const browser = fs.readFileSync(path.join(ROOT, "webview-ui/browser/BrowserPanel.tsx"), "utf-8")
+    expect(css).not.toContain(".am-browser-")
+    expect(browser).toContain('import "./browser.css"')
   })
 })
 

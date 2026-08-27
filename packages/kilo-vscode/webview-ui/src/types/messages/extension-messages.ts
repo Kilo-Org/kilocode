@@ -1436,6 +1436,7 @@ export interface AgentManagerBrowserStateMessage {
 
 export interface AgentManagerBrowserInspectionMessage {
   type: "agentManager.browserInspection"
+  error?: string
   requestId: string
   projectId?: string
   sessionId: string

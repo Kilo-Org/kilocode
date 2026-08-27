@@ -1,3 +1,17 @@
+import { partFeedback } from "../../../src/shared/browser-feedback"
+import type { SendMessageFailedMessage } from "../types/messages"
+
+export function failedPrompt(failed: Pick<SendMessageFailedMessage, "text" | "review" | "browserFeedback">) {
+  if (!failed.review && !failed.browserFeedback) return { text: failed.text, comments: [], browsers: [] }
+  const parsed = partFeedback({ kilo: { review: failed.review, browserFeedback: failed.browserFeedback } }, failed.text)
+  if (!parsed) return undefined
+  return {
+    text: parsed.body,
+    comments: parsed.review?.comments ?? [],
+    browsers: parsed.browserFeedback?.references ?? [],
+  }
+}
+
 export function sessionDraftKey(id?: string): string | undefined {
   if (!id) return undefined
   return `session:${id}`

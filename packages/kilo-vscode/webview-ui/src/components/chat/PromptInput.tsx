@@ -60,6 +60,7 @@ import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, Te
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
+  failedPrompt,
   movePromptDraft,
   pendingDraftKey,
   scopeDraftKey,
@@ -88,7 +89,6 @@ import {
   partFeedback,
   type BrowserReference,
 } from "../../../../src/shared/browser-feedback"
-import { reviewBody } from "../../../../src/shared/review-comments"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
@@ -610,12 +610,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   const restoreFailed = (failed: SendMessageFailedMessage) => {
-    const parsed = failed.browserFeedback
-      ? partFeedback({ review: failed.review, browserFeedback: failed.browserFeedback }, failed.text)
-      : undefined
-    if (failed.browserFeedback && !parsed) return
-    const draft = parsed?.body ?? (failed.review ? reviewBody(failed.review, failed.text) : failed.text)
-    if (draft === undefined) return
+    const restored = failedPrompt(failed)
+    if (!restored) return
+    const draft = restored.text
     if (
       (failed.draftID && isPendingDraftDiscarded(failed.draftID)) ||
       (failed.sessionID && isSessionDraftDiscarded(failed.sessionID))
@@ -633,8 +630,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           ? scopeDraftKey(boxKey(), "new")
           : undefined
     if (!target) return
-    const comments = failed.review?.comments ?? []
-    const browser = parsed?.browserFeedback?.references ?? []
+    const comments = restored.comments
+    const browser = restored.browsers
     const images = (failed.files ?? [])
       .filter((file) => file.mime.startsWith("image/") && file.url.startsWith("data:"))
       .map((file) => ({

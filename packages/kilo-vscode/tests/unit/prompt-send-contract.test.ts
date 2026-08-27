@@ -672,6 +672,13 @@ describe("browser element reference contract", () => {
     expect(source).toContain("references.delete(key)")
   })
 
+  it("uses the tested failed-send parser before restoring text and references", () => {
+    expect(source).toContain("const restored = failedPrompt(failed)")
+    expect(source).toContain("const draft = restored.text")
+    expect(source).toContain("const browser = restored.browsers")
+    expect(source).not.toContain("partFeedback({ review: failed.review")
+  })
+
   it("restores browser attachments for the correct session and allows attachment-only sends", () => {
     expect(source).toContain("setBrowsers(references.get(key) ?? [])")
     expect(source).toContain("if (reference.sessionId !== sid()) return")

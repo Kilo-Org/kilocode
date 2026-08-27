@@ -1,5 +1,7 @@
 import { beforeEach, describe, it, expect } from "bun:test"
 import { createEffect, createRoot, createSignal, on } from "solid-js"
+import { browserFeedbackData, formatBrowserFeedback } from "../../src/shared/browser-feedback"
+import { formatReviewCommentsMarkdown } from "../../src/shared/review-comments"
 import {
   browserDrafts,
   deleteDraftsForSession,
@@ -9,6 +11,7 @@ import {
 } from "../../webview-ui/src/utils/draft-store"
 import {
   createdDraftKey,
+  failedPrompt,
   movePromptDraft,
   pendingDraftKey,
   scopeDraftKey,
@@ -20,6 +23,48 @@ beforeEach(() => {
   browserDrafts.clear()
   reviewDrafts.clear()
   imageDrafts.clear()
+})
+
+describe("failedPrompt", () => {
+  it("restores browser feedback from the failed-send wire shape", () => {
+    const browser = browserFeedbackData([{ id: "button", sessionId: "session", selector: "#save", text: "Save" }])!
+    const text = `${formatBrowserFeedback(browser.references)}\n\nMake this button red`
+    expect(failedPrompt({ text, browserFeedback: browser })).toEqual({
+      text: "Make this button red",
+      comments: [],
+      browsers: browser.references,
+    })
+  })
+
+  it("restores both review comments and browser references without raw context text", () => {
+    const review = {
+      version: 1 as const,
+      comments: [
+        {
+          id: "review",
+          file: "src/app.ts",
+          side: "additions" as const,
+          line: 3,
+          comment: "Keep this",
+          selectedText: "value",
+        },
+      ],
+    }
+    const browser = browserFeedbackData([{ id: "button", sessionId: "session", selector: "#save" }])!
+    const text = `${formatReviewCommentsMarkdown(review.comments)}\n\n${formatBrowserFeedback(browser.references)}\n\nApply both`
+    expect(failedPrompt({ text, review, browserFeedback: browser })).toEqual({
+      text: "Apply both",
+      comments: review.comments,
+      browsers: browser.references,
+    })
+  })
+
+  it("preserves empty instructions and rejects mismatched feedback metadata", () => {
+    const browser = browserFeedbackData([{ id: "button", sessionId: "session", selector: "#save" }])!
+    expect(failedPrompt({ text: formatBrowserFeedback(browser.references), browserFeedback: browser })?.text).toBe("")
+    expect(failedPrompt({ text: "Unrelated text", browserFeedback: browser })).toBeUndefined()
+    expect(failedPrompt({ text: "Plain draft" })).toEqual({ text: "Plain draft", comments: [], browsers: [] })
+  })
 })
 
 describe("deleteDraftsForSession", () => {
