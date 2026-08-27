@@ -68,10 +68,12 @@ class MockCliServer : AutoCloseable {
     @Volatile var mcpStatus = 200
     @Volatile var mcpActionStatus = 200
     @Volatile var agentRemoveStatus = 200
+    @Volatile var commandRemoveStatus = 200
     @Volatile var skillRemoveStatus = 200
     @Volatile var agentBuilderStatus = 200
     @Volatile var lastMcpActionPath: String? = null
     @Volatile var lastAgentRemoveBody: String? = null
+    @Volatile var lastCommandRemoveBody: String? = null
     @Volatile var lastSkillRemoveBody: String? = null
     @Volatile var lastAgentBuilderPath: String? = null
     @Volatile var lastAgentBuilderBody: String? = null
@@ -83,11 +85,13 @@ class MockCliServer : AutoCloseable {
     @Volatile var providersAfterAuthPut: String? = null
     @Volatile var agents = "[]"
     @Volatile var commands = "[]"
+    @Volatile var commandFiles = "[]"
     @Volatile var skills = "[]"
     @Volatile var providersStatus = 200
     @Volatile var providerAuthStatus = 200
     @Volatile var agentsStatus = 200
     @Volatile var commandsStatus = 200
+    @Volatile var commandFilesStatus = 200
     @Volatile var skillsStatus = 200
 
     // File search responses
@@ -100,7 +104,13 @@ class MockCliServer : AutoCloseable {
     @Volatile var sessions = "[]"
     @Volatile var recentSessions = "[]"
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var sessionFork = """{"id":"ses_forked","slug":"forked","projectID":"prj_test","directory":"/worktree","title":"Forked Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var sessionForkStatus = 200
+    @Volatile var lastForkPath: String? = null
+    @Volatile var lastForkBody: String? = null
     @Volatile var sessionStatuses = "{}"
+    @Volatile var sessionDiff = "[]"
+    @Volatile var lastSessionDiffPath: String? = null
     @Volatile var summarizeResponse = "true"
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
@@ -368,7 +378,7 @@ class MockCliServer : AutoCloseable {
                     respond(output, organizationSetStatus, "true")
                 }
                 path == "/global/event" -> handleSse(output, latch)
-                path == "/path" -> respond(output, 200, this.path)
+                bare == "/path" -> respond(output, 200, this.path)
                 bare == "/provider" -> respond(output, providersStatus, providers)
                 bare == "/provider/auth" -> respond(output, providerAuthStatus, providerAuth)
                 bare == "/agent" -> respond(output, agentsStatus, agents)
@@ -381,6 +391,11 @@ class MockCliServer : AutoCloseable {
                 bare == "/kilocode/agent/remove" && method == "POST" -> {
                     lastAgentRemoveBody = body
                     respond(output, agentRemoveStatus, if (agentRemoveStatus == 200) "true" else """{"error":"Agent not found"}""")
+                }
+                bare == "/kilocode/command/files" -> respond(output, commandFilesStatus, commandFiles)
+                bare == "/kilocode/command/remove" && method == "POST" -> {
+                    lastCommandRemoveBody = body
+                    respond(output, commandRemoveStatus, if (commandRemoveStatus == 200) "true" else """{"error":"Command not found"}""")
                 }
                 bare == "/kilocode/skill/remove" && method == "POST" -> {
                     lastSkillRemoveBody = body
@@ -430,6 +445,15 @@ class MockCliServer : AutoCloseable {
                     lastSessionRenameBody = body
                     lastSessionRenameMethod = method
                     respond(output, sessionRenameStatus, sessionRenameResponse)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/fork")) && method == "POST" -> {
+                    lastForkPath = path
+                    lastForkBody = body
+                    respond(output, sessionForkStatus, sessionFork)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/diff")) && method == "GET" -> {
+                    lastSessionDiffPath = path
+                    respond(output, 200, sessionDiff)
                 }
                 bare.matches(Regex("/session/ses_[^/]+/summarize")) && method == "POST" -> {
                     lastSummarizePath = path

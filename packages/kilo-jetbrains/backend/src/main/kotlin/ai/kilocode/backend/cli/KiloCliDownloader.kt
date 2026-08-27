@@ -35,6 +35,7 @@ class KiloCliDownloader(
     private val root: File = File(PathManager.getSystemPath(), "kilo/cli"),
     private val baseUrl: String = "https://github.com/Kilo-Org/kilocode/releases/download",
     private val api: String = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags",
+    private val digests: Map<String, String> = KiloCliChecksums.load(),
     private val lockTimeoutMs: Long = LOCK_TIMEOUT_MS,
 ) {
     companion object {
@@ -64,7 +65,7 @@ class KiloCliDownloader(
                     cached(version, platform, exe, done)?.let { return@locked it }
                 }
 
-                val digest = asset(version, platform, ext)
+                val digest = digest(version, platform, ext)
                 val stage = stage(version, platform)
                 try {
                     val archive = File(stage, "kilo-$platform.$ext")
@@ -111,7 +112,7 @@ class KiloCliDownloader(
                 "completeExists=${done.isFile} digestValid=$valid exe=${exe.absolutePath} complete=${done.absolutePath}"
         )
         if (!exe.isFile || !valid) return null
-        log.info("Using cached Kilo CLI $version for $platform at ${exe.absolutePath}")
+        log.info("Kilo CLI $version ($platform) already cached at ${exe.absolutePath}; skipping download and extraction")
         if (!SystemInfo.isWindows) exe.setExecutable(true)
         prune(version)
         return exe
@@ -196,6 +197,17 @@ class KiloCliDownloader(
     private fun fail(message: String): Nothing {
         log.warn(message)
         throw IllegalStateException(message)
+    }
+
+    private fun digest(version: String, platform: String, ext: String): String {
+        val digest = digests[platform]
+        if (digest == null) return asset(version, platform, ext)
+        if (digest.matches(DIGEST)) {
+            log.info("Using bundled Kilo CLI checksum for $version $platform")
+            return digest
+        }
+        log.warn("Ignoring malformed bundled Kilo CLI checksum for $platform: $digest")
+        return asset(version, platform, ext)
     }
 
     private fun asset(version: String, platform: String, ext: String): String {

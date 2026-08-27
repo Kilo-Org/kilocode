@@ -3,7 +3,7 @@ import { mkdir, rm } from "fs/promises"
 import path from "path"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
-import { array, check, object } from "../../server/httpapi-exercise/assertions"
+import { array, check, isRecord, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
 import { anacondaDesktopScenarios } from "../anaconda-desktop/httpapi-exercise-scenarios"
@@ -34,6 +34,28 @@ const agent = async (dir: string) => {
   await Bun.write(
     path.join(dir, ".kilo/agent/httpapi-remove.md"),
     "---\ndescription: HTTP API remove\n---\nRemove me.\n",
+  )
+}
+
+const duplicates = async (dir: string) => {
+  for (const name of ["kilo.jsonc", "opencode.jsonc"]) {
+    await Bun.write(
+      path.join(dir, ".kilo", name),
+      JSON.stringify({
+        default_agent: "httpapi-duplicate",
+        agent: {
+          "httpapi-duplicate": { description: `Duplicate in ${name}` },
+          keep: { description: "Keep this agent" },
+        },
+      }),
+    )
+  }
+}
+
+const command = async (dir: string) => {
+  await Bun.write(
+    path.join(dir, ".kilo/command/httpapi-remove.md"),
+    "---\ndescription: HTTP API command remove\nmodel: anthropic/claude-sonnet-4-6\nvariant: high\n---\nRun command.\n",
   )
 }
 
@@ -175,6 +197,24 @@ export const kiloScenarios: Scenario[] = [
       body: { name: "httpapi-mcp", config: { type: "remote", url: "https://mcp-edit.example.test" } },
     }))
     .json(200, object),
+  // MCP Apps experimental endpoints are gated behind experimentalMcpApps; the exerciser runs with the
+  // flag off, so both routes return 404 before touching any MCP client.
+  http.protected
+    .post("/experimental/resource/read", "mcp.readResource")
+    .at((ctx) => ({
+      path: "/experimental/resource/read",
+      headers: ctx.headers(),
+      body: { server: "httpapi-missing", uri: "ui://httpapi/missing" },
+    }))
+    .status(404),
+  http.protected
+    .post("/experimental/mcp/call-tool", "mcp.callTool")
+    .at((ctx) => ({
+      path: "/experimental/mcp/call-tool",
+      headers: ctx.headers(),
+      body: { server: "httpapi-missing", name: "noop", arguments: {} },
+    }))
+    .status(404),
   http.protected.get("/config/sources", "config.sources").json(200, object),
   http.protected.get("/tui/config", "tui.config.get").json(200, object),
   http.protected.get("/tui/keybinds", "tui.keybind.list").json(200, object),
@@ -202,14 +242,17 @@ export const kiloScenarios: Scenario[] = [
     .json(200, object),
   http.protected
     .get("/experimental/worktree/diff", "worktree.diff")
+    .inProject({ git: true })
     .at((ctx) => ({ path: "/experimental/worktree/diff?base=HEAD", headers: ctx.headers() }))
     .json(200, array),
   http.protected
     .get("/experimental/worktree/diff/summary", "worktree.diffSummary")
+    .inProject({ git: true })
     .at((ctx) => ({ path: "/experimental/worktree/diff/summary?base=HEAD", headers: ctx.headers() }))
     .json(200, array),
   http.protected
     .get("/experimental/worktree/diff/file", "worktree.diffFile")
+    .inProject({ git: true })
     .at((ctx) => ({
       path: `/experimental/worktree/diff/file?${new URLSearchParams({ base: "HEAD", file: "missing.txt" })}`,
       headers: ctx.headers(),
@@ -389,6 +432,7 @@ export const kiloScenarios: Scenario[] = [
     .status(401),
   http.protected.get("/kilo/notifications", "kilo.notifications").json(200, array),
   http.protected.get("/kilo/models/images", "kilo.models.images").probe({ path: "/path" }).status(401),
+  http.protected.get("/kilo/models/transcriptions", "kilo.models.transcriptions").probe({ path: "/path" }).status(401),
   http.protected
     .post("/kilo/organization", "kilo.organization.set")
     .at((ctx) => ({ path: "/kilo/organization", headers: ctx.headers(), body: { organizationId: null } }))
@@ -522,6 +566,34 @@ export const kiloScenarios: Scenario[] = [
       check(body.models.length === 0, "a new session should have no model usage")
     }),
   http.protected
+    .get("/kilocode/background-jobs", "kilocode.backgroundJobs")
+    .at((ctx) => ({
+      path: "/kilocode/background-jobs?sessionID=ses_httpapi_missing",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      array(body)
+      for (const item of body) {
+        object(item)
+        check(typeof item.id === "string", "background job should include an id")
+        check(typeof item.status === "string", "background job should include a status")
+      }
+    }),
+  http.protected
+    .post("/kilocode/background-jobs/{jobID}/cancel", "kilocode.backgroundJob.cancel")
+    .at((ctx) => ({
+      path: route("/kilocode/background-jobs/{jobID}/cancel", { jobID: "job_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
+  http.protected
+    .post("/kilocode/background-jobs/{jobID}/promote", "kilocode.backgroundJob.promote")
+    .at((ctx) => ({
+      path: route("/kilocode/background-jobs/{jobID}/promote", { jobID: "job_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
+  http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
     .jsonEffect(200, (body) =>
@@ -531,18 +603,43 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
-    .get("/kilocode/agent/requirements", "kilocode.agentRequirements")
-    .at((ctx) => ({ path: "/kilocode/agent/requirements?agent=httpapi-agent", headers: ctx.headers() }))
+    .get("/kilocode/command/files", "kilocode.commandFiles")
+    .inProject({ git: true, init: command })
     .json(200, (body, ctx) => {
-      object(body)
-      check(body.agent === "httpapi-agent", "agent requirements should echo the requested agent")
-      check(body.directory === ctx.directory, "agent requirements should use the routed workspace directory")
-      check(body.enabled === false, "agent requirements should report disabled when the experiment is off")
-      check(body.state === "disabled", "agent requirements should return the disabled state")
-      array(body.skills)
-      array(body.mcps)
-      array(body.vscode_extensions)
+      array(body)
+      const item = body.find((item) => isRecord(item) && item.name === "httpapi-remove")
+      object(item)
+      check(item.description === "HTTP API command remove", "command file should include description")
+      check(
+        item.location === path.join(directory(ctx), ".kilo/command/httpapi-remove.md"),
+        "command file should include location",
+      )
+      check(item.editable === true, "command file should be editable")
+      check(item.builtin === false, "command file should not be builtin")
+      check(item.model === "anthropic/claude-sonnet-4-6", "command file should include model metadata")
+      check(item.variant === "high", "command file should include variant metadata")
+      check(typeof item.content === "string" && item.content.includes("Run command."), "command file should include content")
     }),
+  http.protected
+    .post("/kilocode/command/remove", "kilocode.removeCommand")
+    .inProject({ git: true, init: command })
+    .mutating()
+    .preserveDatabase()
+    .at((ctx) => ({
+      path: "/kilocode/command/remove",
+      headers: ctx.headers(),
+      body: { location: path.join(directory(ctx), ".kilo/command/httpapi-remove.md") },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        check(body === true, "command removal should return true")
+        const location = path.join(directory(ctx), ".kilo/command/httpapi-remove.md")
+        check(
+          !(yield* Effect.promise(() => Bun.file(location).exists())),
+          "removed command should not remain on disk",
+        )
+      }),
+    ),
   http.protected
     .post("/kilocode/skill/remove", "kilocode.removeSkill")
     .inProject({ git: true, init: skill })
@@ -558,14 +655,8 @@ export const kiloScenarios: Scenario[] = [
         check(body === true, "skill removal should return true")
         const location = path.join(directory(ctx), ".kilo/skill/httpapi-remove/SKILL.md")
         const sentinel = path.join(directory(ctx), ".kilo/skill/httpapi-remove/KEEP.txt")
-        check(
-          !(yield* Effect.promise(() => Bun.file(location).exists())),
-          "removed skill should not remain on disk",
-        )
-        check(
-          yield* Effect.promise(() => Bun.file(sentinel).exists()),
-          "skill removal should preserve sibling files",
-        )
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed skill should not remain on disk")
+        check(yield* Effect.promise(() => Bun.file(sentinel).exists()), "skill removal should preserve sibling files")
       }),
     ),
   http.protected
@@ -581,9 +672,42 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
+    .get("/kilocode/provider-usage", "kilocode.providerUsage.get")
+    .inProject({ git: true })
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
+  http.protected
+    .post("/kilocode/provider-usage/refresh", "kilocode.providerUsage.refresh")
+    .inProject({ git: true })
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
+  http.protected
+    .post("/kilocode/agent/remove", "kilocode.removeAgent.duplicates")
+    .inProject({ git: true, init: duplicates })
+    .mutating()
+    .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-duplicate" } }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        check(body === true, "duplicate agent removal should return true")
+        for (const name of ["kilo.jsonc", "opencode.jsonc"]) {
+          const cfg = yield* Effect.promise(() => Bun.file(path.join(directory(ctx), ".kilo", name)).json())
+          check(!cfg.agent["httpapi-duplicate"], `removed agent should not remain in ${name}`)
+          check(cfg.agent.keep.description === "Keep this agent", `unrelated agent should remain in ${name}`)
+          check(cfg.default_agent === undefined, `removed default agent should not remain in ${name}`)
+        }
+      }),
+    ),
+  http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent")
     .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-missing" } }))
-    .status(400),
+    .json(400, (body) => {
+      object(body)
+      check(body.message === "agent not found", "agent removal should preserve the backend error message")
+    }),
   http.protected
     .post("/kilocode/session-import/project", "kilocode.sessionImport.project")
     .mutating()

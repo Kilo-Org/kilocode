@@ -1,5 +1,6 @@
 import { Account } from "@/account/account"
 import { Auth } from "@/auth"
+import { GlobalBus } from "@/bus/global"
 import { Config } from "@/config/config"
 import * as InstanceState from "@/effect/instance-state"
 import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
@@ -10,6 +11,7 @@ import { ConfigRules } from "@/kilocode/server/routes/config-rules"
 import { KilocodeKeybinds } from "@/kilocode/tui/keybinds"
 import { KilocodeTuiConfig } from "@/kilocode/tui/config"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
+import { Event } from "@/server/event"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { markInstanceForDisposal } from "@/server/routes/instance/httpapi/lifecycle"
 import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
@@ -106,8 +108,30 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console")
       if (body.scope === "global") {
         yield* config.invalidate()
+        if (result.changed) {
+          yield* Effect.sync(() =>
+            GlobalBus.emit("event", {
+              directory: "global",
+              payload: {
+                type: Event.ConfigUpdated.type,
+                properties: { sandbox: result.sandboxChanged },
+              },
+            }),
+          ).pipe(Effect.catchCause(() => Effect.void))
+        }
       } else {
         yield* config.update({})
+        if (result.sandboxChanged) {
+          yield* Effect.sync(() =>
+            GlobalBus.emit("event", {
+              directory: instance.directory,
+              payload: {
+                type: Event.ConfigUpdated.type,
+                properties: { sandbox: true },
+              },
+            }),
+          ).pipe(Effect.catchCause(() => Effect.void))
+        }
         yield* markInstanceForDisposal(instance)
       }
       const all = yield* auth.all().pipe(Effect.orElseSucceed(() => ({})))
@@ -140,7 +164,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
           sources: sources.sources,
         }),
       )
-      if (body.scope === "global" && !hot) {
+      if (body.scope === "global" && result.changed && !hot) {
         yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
           Effect.catchCause(() => Effect.void),
         )

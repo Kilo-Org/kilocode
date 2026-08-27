@@ -36,6 +36,8 @@ class SessionLayout(
 
     private val cache = IdentityHashMap<Component, Measured>()
 
+    var maxWidth: ((Container) -> Int)? = null
+
     override fun addLayoutComponent(name: String, comp: Component) = Unit
     override fun removeLayoutComponent(comp: Component) {
         cache.remove(comp)
@@ -50,7 +52,7 @@ class SessionLayout(
             if (!comp.isVisible) continue
             if (!first) h += gap(comp)
             first = false
-            val child = bounds(ins, w, comp)
+            val child = bounds(parent, ins, w, comp)
             h += measure(comp, child.width)
         }
         // w and h are already scaled px (child preferred heights + scaled gaps/insets) and
@@ -70,7 +72,7 @@ class SessionLayout(
             if (!comp.isVisible) continue
             if (!first) y += gap(comp)
             first = false
-            val child = bounds(ins, w, comp)
+            val child = bounds(parent, ins, w, comp)
             val h = measure(comp, child.width)
             comp.setBounds(child.left, y, child.width, h)
             y += h
@@ -106,13 +108,20 @@ class SessionLayout(
         return h
     }
 
-    private fun bounds(ins: Insets, width: Int, comp: Component): Bounds {
-        val view = view(comp) ?: return Bounds(ins.left, width)
-        if (view.sessionViewKind != SessionView.Kind.UserPrompt) return Bounds(ins.left, width)
+    private fun bounds(parent: Container, ins: Insets, width: Int, comp: Component): Bounds {
+        val lane = lane(parent, ins, width)
+        val view = view(comp) ?: return lane
+        if (view.sessionViewKind != SessionView.Kind.UserPrompt) return lane
         val shift = JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT)
-        val next = width - shift
-        if (next < JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT)) return Bounds(ins.left, width)
-        return Bounds(ins.left + shift, next)
+        val next = lane.width - shift
+        if (next < JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT)) return lane
+        return Bounds(lane.left + shift, next)
+    }
+
+    private fun lane(parent: Container, ins: Insets, width: Int): Bounds {
+        val cap = maxWidth?.invoke(parent) ?: width
+        val w = minOf(width, cap.coerceAtLeast(0))
+        return Bounds(ins.left + (width - w) / 2, w)
     }
 
     private fun insets(parent: Container): Insets {
@@ -149,7 +158,35 @@ open class SessionLayoutPanel(
     pad: Insets = JBUI.emptyInsets(),
 ) : BorderLayoutPanel(), javax.swing.Scrollable {
     init {
+        isOpaque = false
         layout = SessionLayout(gap, pad)
+    }
+
+    override fun doLayout() {
+        super.doLayout()
+        reconcileValidateRoot()
+    }
+
+    /**
+     * Keep the parent [SessionLayout]'s cached height honest across validate-root boundaries.
+     *
+     * A validate root, such as a settled [ai.kilocode.client.session.views.TurnView], can be laid out
+     * independently by `RepaintManager`. Its `isValid` flag can flip back to `true` before the parent
+     * transcript remeasures it, so [SessionLayout] may otherwise keep stacking it at a stale cached
+     * height until some unrelated resize changes the cache key.
+     *
+     * Once this root has laid out its own content, its rendered height should match its preferred
+     * height. If it does not, the parent cache is stale: drop this entry and revalidate the parent so
+     * the outer transcript geometry follows the content. Non-roots are skipped because their
+     * invalidation already propagates to the parent and keeps `isValid` an honest cache signal.
+     */
+    private fun reconcileValidateRoot() {
+        if (!isValidateRoot()) return
+        val host = parent ?: return
+        val layout = host.layout as? SessionLayout ?: return
+        if (preferredSize.height == height) return
+        layout.forget(this)
+        (host as? javax.swing.JComponent)?.revalidate()
     }
 
     override fun getScrollableTracksViewportWidth() = true

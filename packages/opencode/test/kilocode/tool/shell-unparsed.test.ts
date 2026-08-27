@@ -9,6 +9,7 @@
 // recovered nothing falls back to the raw command text (also covering ERROR
 // chunks without a command_name descendant, such as backtick escapes).
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { Cause, Effect, Exit, Layer } from "effect"
 import path from "path"
@@ -28,11 +29,15 @@ import { SessionID, MessageID } from "../../../src/session/schema"
 import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } from "../../fixture/fixture"
 import { afterEach } from "bun:test"
 
-const layer = Layer.mergeAll(CrossSpawnSpawner.defaultLayer, FSUtil.defaultLayer, testInstanceStoreLayer)
+const layer = Layer.mergeAll(
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  AppNodeBuilder.build(FSUtil.node),
+  testInstanceStoreLayer,
+)
 
 type ScanRequest = Omit<PermissionV1.Request, "id" | "sessionID" | "tool">
 
-async function scan(dir: string, command: string, shell: string) {
+async function scan(dir: string, command: string, shell: string, sandbox = false) {
   const requests: ScanRequest[] = []
   const ctx = {
     sessionID: SessionID.make("ses_test"),
@@ -51,7 +56,7 @@ async function scan(dir: string, command: string, shell: string) {
     provideInstance(dir)(
       Effect.gen(function* () {
         const permission = yield* ShellPermission
-        yield* permission.ask(ctx, { command, cwd: dir, shell, description: "test" })
+        yield* permission.ask(ctx, { command, cwd: dir, shell, description: "test", escalate: sandbox })
       }),
     ).pipe(Effect.provide(layer)),
   )
@@ -79,6 +84,13 @@ afterEach(async () => {
 })
 
 describe("shell permission scanner fails closed on unparsed commands", () => {
+  test("asks separately before mutating Git when the session sandbox is enabled", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const requests = await scan(tmp.path, "git add . && git commit -m test", "bash", true)
+    expect(requests.map((request) => request.permission)).toEqual(["bash", "sandbox_escalation"])
+    expect(requests[1]?.metadata?.sandboxEscalation).toBe(true)
+  })
+
   test("pwsh: bare '--' git commands now produce a denied pattern", async () => {
     await using tmp = await tmpdir()
     for (const command of ["git checkout -- file", "git restore -- file", "git log -- file", "git checkout -- ."]) {
@@ -155,13 +167,13 @@ describe("shell permission scanner fails closed on unparsed commands", () => {
 })
 
 const execLayer = Layer.mergeAll(
-  CrossSpawnSpawner.defaultLayer,
-  FSUtil.defaultLayer,
-  Plugin.defaultLayer,
-  Truncate.defaultLayer,
-  Config.defaultLayer,
-  Agent.defaultLayer,
-  RuntimeFlags.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  AppNodeBuilder.build(FSUtil.node),
+  AppNodeBuilder.build(Plugin.node),
+  AppNodeBuilder.build(Truncate.node),
+  AppNodeBuilder.build(Config.node),
+  AppNodeBuilder.build(Agent.node),
+  AppNodeBuilder.build(RuntimeFlags.node),
   testInstanceStoreLayer,
 )
 

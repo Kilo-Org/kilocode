@@ -35,6 +35,7 @@ export type Options = {
   scenarioTimeout: Duration.Duration
   progress: boolean
   trace: boolean
+  shard: { index: number; total: number } // kilocode_change - opt-in sharding so CI runners can fan out across processes
 }
 
 export type RequestSpec = {
@@ -126,5 +127,9 @@ export type Result =
   | { status: "skip"; scenario: TodoScenario }
 
 export type SessionInfo = { id: SessionID; title: string; parentID?: SessionID }
-export type TodoInfo = { content: string; status: string; priority: string }
+export type TodoInfo = {
+  content: string
+  status: "pending" | "in_progress" | "completed" | "cancelled"
+  priority: "high" | "medium" | "low"
+}
 export type MessageSeed = { info: SessionV1.User; part: SessionV1.TextPart }

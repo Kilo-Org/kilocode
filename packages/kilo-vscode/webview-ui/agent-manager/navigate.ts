@@ -7,6 +7,8 @@
  * Returns the action to take: select a session by ID, go to local, or do nothing.
  */
 
+import { sortWorktrees } from "./section-helpers"
+
 /** Sentinel value for the local repo selection. */
 export const LOCAL = "local" as const
 
@@ -21,16 +23,6 @@ export function isKnownRootSession(session: Pick<SessionLike, "parentID">): bool
 export function canOpenRootSession(id: string, sessions: Pick<SessionLike, "id" | "parentID">[]): boolean {
   const session = sessions.find((item) => item.id === id)
   return !!session && isKnownRootSession(session)
-}
-
-export function filterUnassignedSessions<T extends SessionLike>(
-  sessions: T[],
-  worktree: Set<string>,
-  local: Set<string>,
-): T[] {
-  return [...sessions]
-    .filter((s) => isKnownRootSession(s) && !worktree.has(s.id) && !local.has(s.id))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
 
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
@@ -137,8 +129,8 @@ export function focusChatSearch(reset: { history(v: boolean): void; review(v: bo
  * Multi-project navigation.
  *
  * In multi-project mode the sidebar shows an accordion of projects; each
- * expanded project renders its own Local item, worktrees (sections first,
- * then ungrouped), and an unassigned-sessions list. Keyboard previous/next
+ * expanded project renders its own Local item, ungrouped worktrees, section
+ * members, and an unassigned-sessions list. Keyboard previous/next
  * and numeric shortcuts must traverse every expanded project in visual
  * order, not just the active one.
  *
@@ -160,24 +152,22 @@ export interface NavEntry {
 export interface ProjectNavInput {
   id: string
   expanded: boolean
-  worktrees: { id: string; sectionId?: string }[]
+  worktrees: { id: string; sectionId?: string; groupId?: string }[]
+  /** Persisted top-level order containing worktree and section IDs. */
+  worktreeOrder?: string[]
   sections: { id: string; collapsed: boolean }[]
-  sessionsCollapsed: boolean
-  /** Visible unassigned (root, no worktree) sessions in render order. */
-  unassigned: { id: string }[]
 }
 
 export const localNavId = (projectId: string) => `${projectId}:local`
 export const worktreeNavId = (projectId: string, worktreeId: string) => `${projectId}:wt:${worktreeId}`
-export const sessionNavId = (projectId: string, sessionId: string) => `${projectId}:sess:${sessionId}`
 
 /**
  * Build one global visual order across expanded projects.
  *
- * For each expanded project (in input order): Local, then worktrees in the
- * order the multi-project body renders them (each non-collapsed section's
- * members, then ungrouped), then visible unassigned sessions (when the
- * sessions section is not collapsed). Collapsed projects contribute nothing.
+ * For each expanded project (in input order): Local, then ungrouped worktrees,
+ * then members of each non-collapsed section in top-level order. This matches
+ * `buildTopLevelItems` and the project body. Collapsed projects contribute
+ * nothing.
  */
 export function buildProjectNavOrder(projects: ProjectNavInput[]): NavEntry[] {
   const order: NavEntry[] = []
@@ -185,22 +175,26 @@ export function buildProjectNavOrder(projects: ProjectNavInput[]): NavEntry[] {
     if (!p.expanded) continue
     const pid = p.id
     order.push({ id: localNavId(pid), target: { projectId: pid, kind: "local" } })
-    for (const sec of p.sections) {
+    const worktrees = sortWorktrees(p.worktrees, p.worktreeOrder ?? [])
+    const rank = new Map((p.worktreeOrder ?? []).map((id, index) => [id, index] as const))
+    const ungrouped = worktrees.filter((w) => !w.sectionId)
+    if (p.sections.length > 0) {
+      ungrouped.sort(
+        (a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+      )
+    }
+    const secs = [...p.sections].sort(
+      (a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+    )
+    for (const w of ungrouped) {
+      order.push({ id: worktreeNavId(pid, w.id), target: { projectId: pid, kind: "worktree", worktreeId: w.id } })
+    }
+    for (const sec of secs) {
       if (sec.collapsed) continue
-      for (const w of p.worktrees) {
+      for (const w of worktrees) {
         if (w.sectionId === sec.id) {
           order.push({ id: worktreeNavId(pid, w.id), target: { projectId: pid, kind: "worktree", worktreeId: w.id } })
         }
-      }
-    }
-    for (const w of p.worktrees) {
-      if (!w.sectionId) {
-        order.push({ id: worktreeNavId(pid, w.id), target: { projectId: pid, kind: "worktree", worktreeId: w.id } })
-      }
-    }
-    if (!p.sessionsCollapsed) {
-      for (const s of p.unassigned) {
-        order.push({ id: sessionNavId(pid, s.id), target: { projectId: pid, kind: "session", sessionId: s.id } })
       }
     }
   }

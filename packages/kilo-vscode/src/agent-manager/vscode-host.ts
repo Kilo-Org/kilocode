@@ -110,6 +110,12 @@ export class VscodeHost implements Host {
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
       rootDirectory: opts.workspaceRoot,
       disableViewedRegistration: true,
+      disableStatsPolling: true,
+      focusTargetContext: {
+        prompt: "kilo-code.new.agentManagerPromptFocused",
+        mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",
+        sideTerminal: "kilo-code.new.agentManagerSideTerminalFocused",
+      },
       routeService: this.routes,
       projectQualifier: () => {
         const projectId = opts.projectId?.()
@@ -151,6 +157,7 @@ export class VscodeHost implements Host {
       unregisterSessionRoute: (ref) => provider.unregisterSessionRoute(ref),
       isSessionRouteAmbiguous: (sessionId) => provider.isSessionRouteAmbiguous(sessionId),
       routeSessionDirectoryFor: (ref) => provider.routeSessionDirectoryFor(ref),
+      refreshGitStatus: () => void provider.refreshGitStatus(),
       dispose: () => provider.dispose(),
     }
 
@@ -297,7 +304,7 @@ export class VscodeHost implements Host {
     }
   }
 
-  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }> {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }
@@ -312,6 +319,10 @@ export class VscodeHost implements Host {
 
   openExternal(url: string): void {
     void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
+  openSettings(tab?: string, projectId?: string): void {
+    void vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", tab, projectId)
   }
 
   refreshGit(): void {

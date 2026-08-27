@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, beforeEach, describe, expect, spyOn } from "bun:test"
 import { Effect, Fiber, Layer } from "effect"
 import { Command } from "../../../src/command"
@@ -31,7 +32,7 @@ const status = Layer.succeed(
     set: (sessionID, value) => Effect.sync(() => statuses.push([sessionID, value])),
   }),
 )
-const it = testEffect(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer, command, status))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Truncate.node), AppNodeBuilder.build(Agent.node), command, status))
 
 const init = Effect.fn("SuggestToolTest.init")(function* () {
   const info = yield* SuggestTool

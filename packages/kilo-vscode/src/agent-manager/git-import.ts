@@ -15,6 +15,7 @@ interface PRUrlParts {
 
 export interface PRInfo {
   headRefName: string
+  baseRefName?: string
   headRepositoryOwner?: { login: string }
   isCrossRepository: boolean
   title: string

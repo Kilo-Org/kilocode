@@ -185,6 +185,56 @@ class SessionLayoutTest : BasePlatformTestCase() {
         assertEquals(20, child.height)
     }
 
+    fun `test max width centers default session view in wide container`() {
+        val p = panel(width = 500)
+        (p.layout as SessionLayout).maxWidth = { 300 }
+        val child = view(height = 20, kind = SessionView.Kind.Default)
+        p.add(child)
+        p.doLayout()
+
+        assertEquals(100, child.x)
+        assertEquals(300, child.width)
+        assertEquals(20, child.height)
+    }
+
+    fun `test max width fills narrow container`() {
+        val p = panel(width = 250)
+        (p.layout as SessionLayout).maxWidth = { 300 }
+        val child = view(height = 20, kind = SessionView.Kind.Default)
+        p.add(child)
+        p.doLayout()
+
+        assertEquals(0, child.x)
+        assertEquals(250, child.width)
+        assertEquals(20, child.height)
+    }
+
+    fun `test max width centers user prompt indent inside lane`() {
+        val p = panel(width = 500)
+        (p.layout as SessionLayout).maxWidth = { 300 }
+        val child = view(height = 20, kind = SessionView.Kind.UserPrompt)
+        p.add(child)
+        p.doLayout()
+
+        assertEquals(100 + JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT), child.x)
+        assertEquals(300 - JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT), child.width)
+        assertEquals(20, child.height)
+    }
+
+    fun `test max width measures child height at capped width`() {
+        val p = panel(width = 500)
+        (p.layout as SessionLayout).maxWidth = { 300 }
+        val child = object : JPanel() {
+            override fun getPreferredSize(): Dimension = Dimension(0, if (width == 300) 20 else 80)
+        }
+        p.add(child)
+        p.doLayout()
+
+        assertEquals(100, child.x)
+        assertEquals(300, child.width)
+        assertEquals(20, child.height)
+    }
+
     // ---- invisible children ------
 
     fun `test invisible child is skipped in layout`() {
@@ -361,6 +411,34 @@ class SessionLayoutTest : BasePlatformTestCase() {
         assertEquals(sCount + 1, second.count)
     }
 
+    fun `test validate root child reconciles stale parent cache after self layout`() {
+        val p = panel(width = 300)
+        val child = rootProbe(root = true)
+        p.add(child)
+        p.doLayout()
+        child.markValid()
+        child.preferred = 80
+
+        child.doLayout()
+        p.doLayout()
+
+        assertEquals(80, child.height)
+    }
+
+    fun `test non validate root child keeps parent cache until it invalidates upward`() {
+        val p = panel(width = 300)
+        val child = rootProbe(root = false)
+        p.add(child)
+        p.doLayout()
+        child.markValid()
+        child.preferred = 80
+
+        child.doLayout()
+        p.doLayout()
+
+        assertEquals(20, child.height)
+    }
+
     // ---- helpers ------
 
     /** A fixed-height JLabel. The width is reported as 0 until layout sets it. */
@@ -393,5 +471,25 @@ class SessionLayoutTest : BasePlatformTestCase() {
             count++
             return Dimension(0, height)
         }
+    }
+
+    private fun rootProbe(root: Boolean) = object : SessionLayoutPanel() {
+        var preferred = 20
+        private var valid = false
+
+        override fun isValid() = valid
+
+        override fun invalidate() {
+            valid = false
+            super.invalidate()
+        }
+
+        fun markValid() {
+            valid = true
+        }
+
+        override fun isValidateRoot() = root
+
+        override fun getPreferredSize(): Dimension = Dimension(0, preferred)
     }
 }

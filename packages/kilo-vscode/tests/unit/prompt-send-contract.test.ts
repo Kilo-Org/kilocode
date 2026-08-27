@@ -18,6 +18,7 @@ import { clearIfOn } from "../../webview-ui/src/context/session-cloud-prune"
 const ROOT = path.resolve(import.meta.dir, "../..")
 const SESSION_FILE = path.join(ROOT, "webview-ui/src/context/session.tsx")
 const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.tsx")
+const AGENT_MANAGER_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
 const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const KILOPROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -78,6 +79,25 @@ describe("sendCommand dismisses pending tool requests", () => {
   it("rejects questions before sending", () => {
     expect(body).toContain("dismissQuestion")
   })
+
+  it("applies model, agent, and variant overrides when provided by a command", () => {
+    expect(body).toContain("if (overrides?.agent)")
+    expect(body).toContain("selectAgent(overrides.agent, scope)")
+    expect(body).toContain("if (overrides?.model)")
+    expect(body).toContain("selectModel(parsed.providerID, parsed.modelID, scope)")
+    expect(body).toContain("if (overrides?.variant)")
+    expect(body).toContain("selectVariant(overrides.variant, scope)")
+  })
+})
+
+describe("confirmed queued prompts retain optimistic parts", () => {
+  const source = readFile(SESSION_FILE)
+  const body = extractFunctionBody(source, "handleMessageCreated")
+
+  it("does not clear optimistic parts before canonical part events arrive", () => {
+    expect(body).toContain("Keep placeholder parts until their canonical part.updated events arrive")
+    expect(body).not.toContain("delete p[message.id]")
+  })
 })
 
 describe("static command completion contract", () => {
@@ -126,6 +146,26 @@ describe("ChatView prompt-block contract", () => {
 
   it("does not reference q.blocking when building the blocked state", () => {
     expect(source).not.toMatch(/q\.blocking/)
+  })
+})
+
+describe("review worktree visibility contract", () => {
+  it("passes the worktree prop from ChatView to PromptInput", () => {
+    const source = readFile(CHATVIEW_FILE)
+    expect(source).toMatch(/worktree\?: boolean/)
+    expect(source).toMatch(/<PromptInput[\s\S]*worktree=\{props\.worktree\}/)
+  })
+
+  it("hides review worktree unless PromptInput is explicitly in a worktree", () => {
+    const source = readFile(PROMPT_FILE)
+    expect(source).toMatch(/worktree\?: boolean/)
+    expect(source).toMatch(/if \(props\.worktree !== true\) hidden\.add\("review worktree"\)/)
+  })
+
+  it("uses registered worktree membership for Agent Manager visibility", () => {
+    const source = readFile(AGENT_MANAGER_FILE)
+    expect(source).toMatch(/worktree=\{worktrees\(\)\.some\(\(wt\) => wt\.id === selection\(\)\)\}/)
+    expect(source).not.toMatch(/worktree=\{selection\(\(\)\) !== LOCAL\}/)
   })
 })
 
@@ -267,6 +307,19 @@ describe("sendMessage / sendCommand draft id contract", () => {
     )
   })
 
+  it("sendMessage and sendCommand post the agent returned by promptAgent", () => {
+    expect(extractFunctionBody(source, "sendMessage")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "sendCommand")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "promptAgent")).toContain("return resolvePromptAgent({")
+  })
+
+  it("createSession and clearCurrentSession do not pin the provisional default agent", () => {
+    expect(extractFunctionBody(source, "createSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "createSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+    expect(extractFunctionBody(source, "clearCurrentSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "clearCurrentSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+  })
+
   it("does not clear a newer pending agent when a seeded draft is promoted", () => {
     const body = extractFunctionBody(source, "handleSessionCreated")
     const draftBlock = body.match(/if \(draftID\) \{([\s\S]*?)\} else if/)
@@ -326,10 +379,10 @@ describe("PromptInput send origin contract", () => {
 
   it("captures the real or pending tab before asynchronous attachment resolution", () => {
     expect(source).toMatch(/const origin = session\.currentSessionID\(\)[\s\S]*const id = origin \?\? pendingId/)
-    expect(source.indexOf("beginPendingSend(pendingId)")).toBeLessThan(
-      source.indexOf("await terminal.resolveAttachment"),
+    expect(source.indexOf("beginPending(pendingId)")).toBeLessThan(
+      source.indexOf("const terminalFile = await terminal"),
     )
-    expect(source).toMatch(/await terminal\.resolveAttachment\(message, id\)/)
+    expect(source).toMatch(/resolveAttachment\(message, id, readTerminalContext\(props\.terminalContext\)\)/)
     expect(source).toMatch(/await git\.resolveAttachment\(message, id, context\)/)
   })
 
@@ -577,6 +630,29 @@ describe("Cloud import parts cleanup contract", () => {
       "pending",
     )
     expect(cleared).toBe(1)
+  })
+})
+
+describe("Optimistic parts preservation and smooth status contract", () => {
+  const source = readFile(SESSION_FILE)
+
+  it("handleMessageCreated preserves optimistic parts instead of deleting them", () => {
+    const created = extractFunctionBody(source, "handleMessageCreated")
+    expect(created).not.toMatch(/delete\s+p\[message\.id\]/)
+    expect(created).toContain("pendingOptimistic.get(message.sessionID)")
+  })
+
+  it("handlePartUpdated replaces matching optimistic parts in place", () => {
+    const updated = extractFunctionBody(source, "handlePartUpdated")
+    expect(updated).toContain("optimisticParts.get(effectiveMessageID)")
+    expect(updated).toContain("mergeOptimisticPart")
+  })
+
+  it("statusText derives status from the active turn instead of queued follow-ups", () => {
+    const match = source.match(/const statusText = createMemo<string \| undefined>\(\(\) => \{([\s\S]*?)\n  \}\)/)
+    expect(match).not.toBeNull()
+    expect(match![1]).toContain("activeUserMessageID(msgs, statusInfo()")
+    expect(match![1]).toContain('language.t("ui.sessionTurn.status.thinking")')
   })
 })
 

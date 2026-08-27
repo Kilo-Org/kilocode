@@ -5,6 +5,8 @@ description: "Start-to-finish guide for configuring your KiloClaw instance"
 
 # Setup walkthrough
 
+{% partial file="kiloclaw-eol.md" /%}
+
 This guide walks you through a full KiloClaw setup — from creating accounts to scheduling your first automated workflow. Plan for about 60 minutes.
 
 ## Planning your setup
@@ -158,6 +160,6 @@ Or ask your Claw to build a custom skill from scratch — it has a built-in skil
 
 ## Manage inference
 
-**Model picker:** Balanced is a good starting point. Frontier is more capable but significantly more expensive.
+**Model picker:** Efficient is a good starting point. Frontier is more capable but significantly more expensive.
 
 You can also use your [Kilo Pass](https://kilo.ai/pricing/kilo-pass) credits — find this under **Profile** in the dashboard.

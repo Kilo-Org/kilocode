@@ -1,10 +1,12 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
@@ -45,10 +47,16 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertFalse(panel.isVisible)
     }
 
+    fun `test panel paints the session background`() {
+        assertTrue(panel.isOpaque)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, panel.background.rgb)
+    }
+
     fun `test panel shows on Busy with text`() {
         model.setState(SessionState.Busy("Thinking\u2026"))
 
         assertTrue(panel.isVisible)
+        assertSame(SpinnerIcon.icon, spinner().icon)
         assertEquals("Thinking\u2026", panel.labelText())
         assertEquals("0s", panel.elapsedText())
     }

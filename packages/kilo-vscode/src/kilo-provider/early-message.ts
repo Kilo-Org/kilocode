@@ -6,6 +6,8 @@ import type { SuggestionContext } from "./handlers/suggestion"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
+import { buildAutoApprovalReasonSettingMessage } from "./auto-approval-reason-settings"
+import { handleModelUsageMessage, type ModelUsageMessage } from "./model-usage"
 
 type Ctx = {
   question: SuggestionContext
@@ -17,6 +19,40 @@ type Ctx = {
   exportTranscript: (sessionID: string) => Promise<void>
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
+  speechToTextModels: () => Promise<void>
+  modelUsage: (message: ModelUsageMessage) => Promise<void>
+  backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
+  cancelBackgroundJob: (jobID: string, sessionID: string, requestID: string) => Promise<void>
+  promoteBackgroundJob: (jobID: string, sessionID: string) => Promise<void>
+}
+
+async function routeBackgroundMessage(
+  message: { type: string; sessionID?: unknown; jobID?: unknown; requestID?: unknown },
+  ctx: Ctx,
+): Promise<boolean | undefined> {
+  if (message.type === "requestBackgroundJobs") {
+    if (typeof message.sessionID === "string" && typeof message.requestID === "string") {
+      await ctx.backgroundJobs(message.sessionID, message.requestID)
+    }
+    return true
+  }
+  if (message.type === "cancelBackgroundJob") {
+    if (
+      typeof message.jobID === "string" &&
+      typeof message.sessionID === "string" &&
+      typeof message.requestID === "string"
+    ) {
+      await ctx.cancelBackgroundJob(message.jobID, message.sessionID, message.requestID)
+    }
+    return true
+  }
+  if (message.type === "promoteBackgroundJob") {
+    if (typeof message.jobID === "string" && typeof message.sessionID === "string") {
+      await ctx.promoteBackgroundJob(message.jobID, message.sessionID)
+    }
+    return true
+  }
+  return undefined
 }
 
 export async function routeEarlyMessage(
@@ -39,6 +75,10 @@ export async function routeEarlyMessage(
           error: err instanceof Error ? err.message : String(err),
         }),
     )
+    return true
+  }
+  if (message.type === "recordModelUsage" || message.type === "requestModelUsage") {
+    await ctx.modelUsage(message as ModelUsageMessage)
     return true
   }
   await routeSuggestionWebviewMessage(ctx.question, message)
@@ -64,9 +104,20 @@ export async function routeEarlyMessage(
     ctx.post(buildThroughputSettingMessage())
     return true
   }
+  if (message.type === "requestAutoApprovalReasonSetting") {
+    ctx.post(buildAutoApprovalReasonSettingMessage())
+    return true
+  }
+  if (message.type === "requestSpeechToTextModels") {
+    await ctx.speechToTextModels()
+    return true
+  }
   if (message.type === "requestBrowserSettings") {
     ctx.browserSettings()
     return true
   }
-  return await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post })
+  const background = await routeBackgroundMessage(message, ctx)
+  return (
+    background ?? (await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post }))
+  )
 }

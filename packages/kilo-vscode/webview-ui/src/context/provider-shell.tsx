@@ -15,7 +15,6 @@ import { ProviderProvider } from "./provider"
 import { ConfigProvider } from "./config"
 import { DisplayProvider } from "./display"
 import { IndexingProvider } from "./indexing"
-import { AgentRequirementsProvider } from "./agent-requirements"
 import { MemoryProvider } from "./memory"
 import { SessionProvider } from "./session"
 import { LanguageBridge } from "./language-bridge"
@@ -23,6 +22,7 @@ import { NotificationsProvider } from "./notifications"
 import { FeedbackProvider } from "./feedback"
 import { KiloEmbeddingModelsProvider } from "./kilo-embedding-models"
 import { ImageModelsProvider } from "./image-models"
+import { SpeechToTextModelsProvider } from "./speech-to-text-models"
 import { SpeechToTextPrewarm } from "../components/speech-to-text/SpeechToTextPrewarm"
 
 type MermaidImageEvent = CustomEvent<{ dataUrl: string; filename: string }>
@@ -51,6 +51,8 @@ const Root: ParentComponent = (props) => (
         <MermaidDownloadBridge />
         <ServerProvider>
           <LanguageBridge>
+            {/* MarkedProvider is required here for all markdown consumers in the tree,
+                including PRPanel's PRDescription and PRComments components. Do not remove. */}
             <MarkedProvider>
               <DiffComponentProvider component={Diff}>
                 <CodeComponentProvider component={Code}>
@@ -77,20 +79,20 @@ const Session: ParentComponent = (props) => (
   <IndexingProvider>
     <KiloEmbeddingModelsProvider>
       <ImageModelsProvider>
-        <NotificationsProvider>
-          <SessionProvider>{props.children}</SessionProvider>
-        </NotificationsProvider>
+        <SpeechToTextModelsProvider>
+          <NotificationsProvider>
+            <SessionProvider>{props.children}</SessionProvider>
+          </NotificationsProvider>
+        </SpeechToTextModelsProvider>
       </ImageModelsProvider>
     </KiloEmbeddingModelsProvider>
   </IndexingProvider>
 )
 
 const Chat: ParentComponent = (props) => (
-  <AgentRequirementsProvider>
-    <MemoryProvider>
-      <FeedbackProvider>{props.children}</FeedbackProvider>
-    </MemoryProvider>
-  </AgentRequirementsProvider>
+  <MemoryProvider>
+    <FeedbackProvider>{props.children}</FeedbackProvider>
+  </MemoryProvider>
 )
 
 export const ProviderShell = { Root, Session, Chat }

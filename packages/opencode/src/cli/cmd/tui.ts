@@ -7,7 +7,7 @@ import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
 import { errorMessage } from "@opencode-ai/tui/util/error"
 import { withTimeout } from "@/util/timeout"
-import { withNetworkOptions, resolveNetworkOptionsNoConfig } from "@/cli/network"
+import { withNetworkOptions, resolveNetworkOptionsNoConfig, hasArg } from "@/cli/network"
 import { Filesystem } from "@/util/filesystem"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "@opencode-ai/tui/context/sdk"
@@ -168,6 +168,12 @@ export const TuiThreadCommand = cmd({
         type: "boolean",
         describe: "fetch session from cloud and continue locally (use with --session)",
       })
+      // kilocode_change start - create/reuse a git worktree before starting
+      .option("worktree", {
+        type: "string",
+        describe: "create (or reuse) a git worktree with this name and start kilo there",
+      })
+      // kilocode_change end
       .option("prompt", {
         type: "string",
         describe: "prompt to use",
@@ -175,13 +181,94 @@ export const TuiThreadCommand = cmd({
       .option("agent", {
         type: "string",
         describe: "agent to use",
+      })
+      .option("auto", {
+        type: "boolean",
+        describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
+        default: false,
+      })
+      .option("yolo", {
+        type: "boolean",
+        hidden: true,
+        default: false,
+      })
+      .option("dangerously-skip-permissions", {
+        type: "boolean",
+        hidden: true,
+        default: false,
+      })
+      .option("mini", {
+        type: "boolean",
+        describe: "start the minimal interactive interface",
+        default: false,
+      })
+      .option("replay", {
+        type: "boolean",
+        hidden: true,
+      })
+      .option("no-replay", {
+        type: "boolean",
+        describe: "disable mini session history replay on resume and after resize",
+      })
+      .option("replay-limit", {
+        type: "number",
+        describe: "cap visible mini replay to the newest N messages",
+      })
+      .option("demo", {
+        type: "boolean",
+        hidden: true,
       }),
   handler: async (args) => {
+    if (args.replay === true) {
+      UI.error("--replay is not supported; replay is enabled by default")
+      process.exitCode = 1
+      return
+    }
+    const noReplay = args.replay === false || args.noReplay === true
+
+    if (args.mini) {
+      const network = ["--port", "--hostname", "--mdns", "--no-mdns", "--mdns-domain", "--cors"].find((option) =>
+        process.argv.some((arg) => arg === option || arg.startsWith(option + "=")),
+      )
+      if (network) {
+        UI.error(`${network} cannot be used with --mini`)
+        process.exitCode = 1
+        return
+      }
+
+      const { runMini } = await import("./run")
+      await runMini({
+        directory: resolveThreadDirectory(args.project),
+        continue: args.continue,
+        session: args.session,
+        fork: args.fork,
+        model: args.model,
+        agent: args.agent,
+        prompt: args.prompt,
+        replay: noReplay ? false : undefined,
+        replayLimit: args.replayLimit,
+        demo: args.demo,
+      })
+      return
+    }
+
+    const unsupported = [
+      ["--no-replay", noReplay],
+      ["--replay-limit", args.replayLimit !== undefined],
+      ["--demo", args.demo !== undefined],
+    ].find((entry) => entry[1])?.[0]
+    if (unsupported) {
+      UI.error(`${unsupported} requires --mini`)
+      process.exitCode = 1
+      return
+    }
+
     // kilocode_change start - lazy Kilo implementations so other CLI commands
     // don't pay their module cost at startup
-    const { importCloudSession, localSessionID, validateCloudFork } = await import("@/kilocode/cloud-session")
+    const { importCloudSession, localSessionID, validateCloudFork, reportCloudImportError } = await import("@/kilocode/cloud-session")
     const { KiloTuiThreadDaemon } = await import("@/kilocode/cli/cmd/tui/thread")
     const { preload } = await import("@/kilocode/cli/cmd/tui")
+    const { resolveTuiDirectory } = await import("@/kilocode/cli/cmd/tui-worktree")
     // kilocode_change end
     const unguard = win32InstallCtrlCGuard()
     const shutdown = {
@@ -206,7 +293,14 @@ export const TuiThreadCommand = cmd({
 
       // Resolve relative --project paths from PWD, then use the real cwd after
       // chdir so the thread and worker share the same directory key.
-      const next = resolveThreadDirectory(args.project)
+      // kilocode_change start - `--worktree <name>` creates/reuses a worktree; resuming
+      // an explicit `--session <id>` tries to restart in that session's worktree
+      const next = await resolveTuiDirectory(args, resolveThreadDirectory(args.project)).catch((error) => {
+        UI.error(errorMessage(error))
+        process.exitCode = 1
+      })
+      if (!next) return
+      // kilocode_change end
       const file = await target()
       // kilocode_change start
       const preloads = preload(typeof KILO_WORKER_PATH !== "undefined", () =>
@@ -327,13 +421,7 @@ export const TuiThreadCommand = cmd({
       const config = await TuiConfig.get()
 
       const network = resolveNetworkOptionsNoConfig(args)
-      const external =
-        process.argv.includes("--port") ||
-        process.argv.includes("--hostname") ||
-        process.argv.includes("--mdns") ||
-        network.mdns ||
-        network.port !== 0 ||
-        network.hostname !== "127.0.0.1"
+      const external = hasArg("--port") || hasArg("--hostname") || network.mdns === true
 
       const transport = external
         ? {
@@ -349,6 +437,8 @@ export const TuiThreadCommand = cmd({
             events: createEventSource(client),
           }
 
+      // kilocode_change - upstream validates here, but --cloud-fork's session id is only local after
+      // the import below; the guarded validateSession further down covers both paths.
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch((err) => console.error("Upgrade check failed", err))
       }, 1000).unref?.()
@@ -364,14 +454,15 @@ export const TuiThreadCommand = cmd({
             headers: transport.headers, // kilocode_change
             directory: cwd,
           })
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-          if (!id) {
-            UI.error("Failed to import session from cloud")
+          try {
+            const id = await importCloudSession(sdk, args.session)
+            args.session = id
+            args.cloudFork = false
+          } catch (err) {
+            reportCloudImportError(err)
             shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
             return
           }
-          args.session = id
-          args.cloudFork = false
         }
         // kilocode_change end
 
@@ -402,7 +493,7 @@ export const TuiThreadCommand = cmd({
             config,
             directory: cwd,
             fetch: transport.fetch,
-            headers: transport.headers, // kilocode_change
+            headers: transport.headers,
             events: transport.events,
             args: {
               continue: args.continue,
@@ -411,6 +502,7 @@ export const TuiThreadCommand = cmd({
               model: args.model,
               prompt,
               fork: args.fork,
+              auto: args.auto || args.yolo || args["dangerously-skip-permissions"],
             },
           },
           embeddedRemoteExitClient(external, client),

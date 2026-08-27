@@ -26,6 +26,8 @@ test("model selector exposes combobox relationships and active option movement",
   await expect(combobox).toHaveAttribute("aria-controls", await tree.getAttribute("id"))
   await expect(combobox).toHaveAttribute("aria-activedescendant", await alpha.getAttribute("id"))
   await expect(combobox).toHaveAccessibleDescription("Choose the model used for code review tasks.")
+  await expect(alpha.locator(".model-selector-item-provider-tag")).toHaveText("Kilo")
+  await expect(bravo.locator(".model-selector-item-provider-tag")).toHaveText("Kilo")
   await expect(alpha.locator("button")).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Add to favorites: Alpha" })).toBeVisible()
   await expect(page.locator(".model-selector-group-label").nth(0)).toContainText("Auto Models")
@@ -80,17 +82,32 @@ test("auto efficient details show server description and model choices", async (
   await expect(preview).not.toContainText("openai/gpt-5.5")
 })
 
-test("typing a provider initial moves the active descendant to matching results", async ({ page }) => {
+test("auto frontier details show model choices when routes are present", async ({ page }) => {
+  await load(page, "shared--model-selector-accessible")
+
+  await page.getByRole("button", { name: "Review model: Alpha" }).click()
+  await page.getByRole("treeitem", { name: /Kilo Auto Frontier/ }).click()
+
+  const preview = page.locator(".model-selector-preview")
+  await expect(preview).toContainText("Routes each request to the strongest available models.")
+  await expect(preview).toContainText("Model choices")
+  await expect(preview).toContainText("openai/gpt-5.5")
+  await expect(preview).toContainText("anthropic/claude-opus-4.6")
+  await expect(preview).not.toContainText("google/gemini-2.5-flash")
+})
+
+test("search uses a flat relevance-ranked result list with provider labels", async ({ page }) => {
   await load(page, "shared--model-selector-accessible")
 
   await page.getByRole("button", { name: "Review model: Alpha" }).click()
   const combobox = page.getByRole("combobox", { name: "Review model: Alpha. Search models" })
-  await combobox.fill("N")
+  await combobox.fill("nov")
 
   const nova = page.getByRole("treeitem", { name: "Nova" })
   await expect(nova).toBeVisible()
   await expect(combobox).toHaveAttribute("aria-activedescendant", await nova.getAttribute("id"))
-  await expect(page.getByRole("treeitem", { name: "NVIDIA" })).toHaveAttribute("aria-expanded", "true")
+  await expect(page.locator(".model-selector-group-label").filter({ hasText: "NVIDIA" })).toHaveCount(0)
+  await expect(nova).toContainText("NVIDIA")
 })
 
 test("provider groups collapse, expand, and skip their model rows", async ({ page }) => {
@@ -99,7 +116,7 @@ test("provider groups collapse, expand, and skip their model rows", async ({ pag
   await page.getByRole("button", { name: "Review model: Alpha" }).click()
   const combobox = page.getByRole("combobox", { name: "Review model: Alpha. Search models" })
   const kilo = page.getByRole("treeitem", { name: "Kilo", exact: true })
-  const nvidia = page.getByRole("treeitem", { name: "NVIDIA" })
+  const nvidia = page.getByRole("treeitem", { name: "NVIDIA", exact: true })
 
   await combobox.press("ArrowDown")
   await combobox.press("ArrowLeft")
@@ -141,12 +158,13 @@ test("active descendant always identifies a visible tree item", async ({ page })
   await active()
   await combobox.fill("N")
   await active()
-  await combobox.press("ArrowLeft")
   await combobox.press("ArrowDown")
-  await combobox.press("ArrowLeft")
   await active()
   await combobox.fill("no matching model")
-  await active()
+  await expect(combobox).toHaveAttribute(
+    "aria-activedescendant",
+    await page.getByRole("treeitem", { name: "Use default model" }).getAttribute("id"),
+  )
 })
 
 test("expanded preview waits for explicit pointer selection", async ({ page }) => {
@@ -186,13 +204,25 @@ test("selected favorite remains selected when its duplicate group is collapsed",
 test("large catalogs keep the rendered tree bounded and navigate to distant models", async ({ page }) => {
   await load(page, "shared--model-selector-large-catalog")
 
-  await page.getByRole("button", { name: "Select model: Provider 0 / Model 300" }).click()
-  const combobox = page.getByRole("combobox", { name: "Select model: Provider 0 / Model 300. Search models" })
+  await page.getByRole("button", { name: "Select model: Model 300" }).click()
+  const combobox = page.getByRole("combobox", { name: "Select model: Model 300. Search models" })
   const tree = page.getByRole("tree", { name: "Select model" })
 
   // The window mounts before we measure it, yet stays far smaller than the catalog.
   await expect.poll(() => tree.getByRole("treeitem").count()).toBeGreaterThan(0)
   await expect.poll(() => tree.getByRole("treeitem").count()).toBeLessThan(50)
+  await expect(page.getByRole("treeitem", { name: "Model 300" })).toBeVisible()
+
+  // Searching from deep in the catalog scrolls the first active match into view.
+  await tree.getByRole("treeitem").last().hover()
+  await tree.evaluate((el) => el.scrollTo({ top: el.scrollHeight }))
+  await combobox.pressSequentially("Model 5")
+  const first = page.getByRole("treeitem", { name: "Model 500" })
+  await expect(first).toBeVisible()
+  await expect(combobox).toHaveAttribute("aria-activedescendant", await first.getAttribute("id"))
+  const hovered = page.getByRole("treeitem", { name: "Model 501" })
+  await hovered.hover()
+  await expect(combobox).toHaveAttribute("aria-activedescendant", await hovered.getAttribute("id"))
 
   // Reaching a distant model scrolls it into the mounted window and activates it.
   await combobox.fill("Model 599")

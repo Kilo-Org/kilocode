@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, expect, spyOn } from "bun:test"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Auth } from "../../../src/auth"
 import { Bus } from "../../../src/bus"
 import { GlobalBus } from "../../../src/bus/global"
-import type { Config } from "../../../src/config/config"
+import { Config } from "../../../src/config/config"
 import { clearInFlightCache } from "../../../src/kilo-sessions/inflight-cache"
 import {
   clearAll as clearRenameMarks,
@@ -16,6 +18,7 @@ import {
 import { Session } from "../../../src/session/session"
 import { SessionID } from "../../../src/session/schema"
 import { ProjectV2 } from "@opencode-ai/core/project"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { TestConfig } from "../../fixture/config"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 import { TestInstance } from "../../fixture/fixture"
@@ -24,13 +27,12 @@ const KiloSessions = (await import("../../../src/kilo-sessions/kilo-sessions")).
 
 // Session must be provideMerged so yield* Session.Service and the
 // KiloSessions Updated handler share one store (otherwise get() misses creates).
-const it = testEffect(Layer.mergeAll(CrossSpawnSpawner.defaultLayer, Auth.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), AppNodeBuilder.build(Auth.node)))
 
 function layer(overrides: Partial<Config.Interface> = {}) {
-  return KiloSessions.layer.pipe(
-    Layer.provideMerge(Bus.layer),
-    Layer.provideMerge(Session.defaultLayer),
-    Layer.provide(TestConfig.layer(overrides)),
+  return AppNodeBuilder.build(
+    LayerNode.group([KiloSessions.node, Session.node, SessionProjector.node]),
+    [[Config.node, TestConfig.layer(overrides)]],
   )
 }
 

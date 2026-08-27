@@ -23,6 +23,12 @@ import com.intellij.openapi.progress.runBlockingCancellable
 import com.intellij.util.textCompletion.TextCompletionProvider
 import java.util.Collections
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class KiloPromptCompletionProvider(
@@ -81,6 +87,18 @@ class KiloPromptCompletionProvider(
     }
 
     fun inside(text: String, caret: Int): Boolean = mentionSpans(text).any { span -> caret in span.start..span.end }
+
+    fun completing(text: String, caret: Int): Boolean = token(text, caret) != null
+
+    fun completingSlash(text: String, caret: Int): Boolean = token(text, caret)?.kind == Kind.SLASH
+
+    fun watchCommands(onChanged: () -> Unit): Job =
+        workspace.state
+            .map { it.commands }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach { onChanged() }
+            .launchIn(scope)
 
     private fun clientTokens(): Set<String> = actions.flatMapTo(mutableSetOf()) { action ->
         listOf(action.name) + action.hints
@@ -163,12 +181,18 @@ class KiloPromptCompletionProvider(
     private fun slash(prefix: String, result: CompletionResultSet) {
         result.restartCompletionOnAnyPrefixChange()
         val out = result.withPrefixMatcher(PlainPrefixMatcher.ALWAYS_TRUE)
+        val rank = PromptFuzzyRanker(prefix)
         val names = clientTokens()
-        val clients = actions.filter { action -> matches(prefix, action.name, action.hints) }
-        clients.forEach { action -> out.addElement(client(action)) }
+        val clients = actions.mapNotNull { action ->
+            rank.score(action.name, action.hints)?.let { Hit(client(action), it) }
+        }
         val commands = workspace.state.value.commands
-            .filter { it.name !in names && matches(prefix, it.name, it.hints) }
-        commands.forEach { command -> out.addElement(server(command)) }
+            .mapNotNull { command ->
+                if (command.name in names) return@mapNotNull null
+                rank.score(command.name, command.hints)?.let { Hit(server(command), it) }
+            }
+        val hits = (clients + commands).sortedByDescending { it.score }
+        hits.forEach { hit -> out.addElement(weight(hit.item, hit.score)) }
         if (clients.isNotEmpty() || commands.isNotEmpty()) return
         result.withPrefixMatcher(PlainPrefixMatcher.ALWAYS_TRUE)
             .addElement(info(prefix, KiloBundle.message("prompt.completion.noMatches")))
@@ -178,7 +202,8 @@ class KiloPromptCompletionProvider(
         result.restartCompletionOnAnyPrefixChange()
         val out = result.withPrefixMatcher(PlainPrefixMatcher.ALWAYS_TRUE)
         val search = search(prefix)
-        val known = mentions.filter { action -> matches(prefix, action.name, action.hints) && action.available(search) }
+        val rank = PromptFuzzyRanker(prefix)
+        val known = mentions.filter { action -> rank.matches(action.name, action.hints) && action.available(search) }
         known.forEach { action -> out.addElement(prioritize(resource(action))) }
         if (search.indexing) {
             val msg = KiloBundle.message("prompt.mention.indexing")
@@ -214,9 +239,6 @@ class KiloPromptCompletionProvider(
         }
         .withAutoCompletionPolicy(AutoCompletionPolicy.NEVER_AUTOCOMPLETE)
 
-    private fun matches(prefix: String, name: String, hints: List<String>): Boolean =
-        (listOf(name) + hints).any { it.startsWith(prefix, ignoreCase = true) }
-
     private fun commandName(text: String): String? {
         val raw = text.trimStart()
         if (!raw.startsWith('/')) return null
@@ -250,6 +272,11 @@ class KiloPromptCompletionProvider(
 
     private fun prioritize(element: LookupElement): LookupElement =
         PrioritizedLookupElement.withGrouping(PrioritizedLookupElement.withPriority(element, 100.0), 100)
+
+    private fun weight(element: LookupElement, score: Int): LookupElement =
+        PrioritizedLookupElement.withPriority(element, score.toDouble())
+
+    private data class Hit(val item: LookupElement, val score: Int)
 
     private fun file(file: WorkspaceFileDto): LookupElement = LookupElementBuilder.create(file.path)
         .withPresentableText("@${file.path}")

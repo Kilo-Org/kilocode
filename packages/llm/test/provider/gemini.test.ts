@@ -73,6 +73,7 @@ describe("Gemini route", () => {
             ]),
             Message.assistant([ToolCallPart.make({ id: "call_1", name: "lookup", input: { query: "weather" } })]),
             Message.tool({ id: "call_1", name: "lookup", result: { forecast: "sunny" } }),
+            Message.user("Summarize the result."), // kilocode_change - preserve Gemini role alternation
           ],
         }),
       )
@@ -91,6 +92,7 @@ describe("Gemini route", () => {
             role: "user",
             parts: [
               { functionResponse: { name: "lookup", response: { name: "lookup", content: '{"forecast":"sunny"}' } } },
+              { text: "Summarize the result." }, // kilocode_change - coalesce adjacent user content
             ],
           },
         ],
@@ -170,14 +172,16 @@ describe("Gemini route", () => {
         }),
       )
       expect(prepared.body.contents).toEqual([
-        { role: "user", parts: [{ inlineData: { mimeType: "image/png", data: "AAEC" } }] },
+        // kilocode_change start - adjacent user-compatible content is coalesced
         {
           role: "user",
           parts: [
+            { inlineData: { mimeType: "image/png", data: "AAEC" } },
             { functionResponse: { name: "read", response: { name: "read", content: "" } } },
             { inlineData: { mimeType: "image/jpeg", data: "/9j/" } },
           ],
         },
+        // kilocode_change end
       ])
     }),
   )
@@ -347,10 +351,10 @@ describe("Gemini route", () => {
         { type: "step-start", index: 0 },
         { type: "reasoning-start", id: "reasoning-0" },
         { type: "reasoning-delta", id: "reasoning-0", text: "thinking" },
+        { type: "reasoning-end", id: "reasoning-0" },
         { type: "text-start", id: "text-0" },
         { type: "text-delta", id: "text-0", text: "Hello" },
         { type: "text-delta", id: "text-0", text: "!" },
-        { type: "reasoning-end", id: "reasoning-0" },
         { type: "text-end", id: "text-0" },
         { type: "step-finish", index: 0, reason: "stop", usage, providerMetadata: undefined },
         {
@@ -399,6 +403,9 @@ describe("Gemini route", () => {
         providerMetadata: { google: { thoughtSignature: "thought_sig" } },
       })
       expect(toolCall).toMatchObject({ providerMetadata: { google: { thoughtSignature: "tool_sig" } } })
+      expect(response.events.findIndex((event) => event.type === "reasoning-end")).toBeLessThan(
+        response.events.findIndex((event) => event.type === "tool-call"),
+      )
 
       const prepared = yield* LLMClient.prepare<Gemini.GeminiBody>(
         LLM.request({

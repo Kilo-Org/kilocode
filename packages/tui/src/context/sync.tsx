@@ -38,7 +38,9 @@ import path from "path"
 import { useKV } from "./kv"
 import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { appendTerminalOutput } from "@/kilocode/interactive-terminal/output" // kilocode_change
+import { at, recent, slot } from "../kilocode/message-order" // kilocode_change
 import { useToast } from "../ui/toast" // kilocode_change
+import { usePermission } from "./permission"
 
 const emptyConsoleState: ConsoleState = {
   consoleManagedProviders: [],
@@ -67,6 +69,7 @@ export const {
   init: () => {
     const startup = useTuiStartup()
     const kv = useKV()
+    const permission = usePermission()
     const [store, setStore] = createStore<{
       status: "loading" | "partial" | "complete"
       provider: Provider[]
@@ -130,7 +133,7 @@ export const {
       },
       console_state: emptyConsoleState,
       capabilities: {
-        experimentalBackgroundSubagents: false,
+        experimentalBackgroundSubagents: true, // kilocode_change - background subagents are enabled by default
       },
       provider_auth: {},
       config: {},
@@ -225,7 +228,7 @@ export const {
         .then((x) => (x.data ?? []).toSorted((a, b) => a.id.localeCompare(b.id)))
     }
 
-    event.subscribe((event, { workspace }) => {
+    event.subscribe((event, { directory, workspace }) => {
       switch (event.type) {
         case "server.instance.disposed":
           // kilocode_change start
@@ -253,6 +256,15 @@ export const {
 
         case "permission.asked": {
           const request = event.properties
+          if (permission.mode === "auto") {
+            void sdk.client.permission.reply({
+              requestID: request.id,
+              reply: "once",
+              directory,
+              workspace,
+            })
+            break
+          }
           const requests = store.permission[request.sessionID]
           if (!requests) {
             setStore("permission", request.sessionID, [request])
@@ -490,7 +502,7 @@ export const {
             setStore("message", event.properties.info.sessionID, [event.properties.info])
             break
           }
-          const result = search(messages, event.properties.info.id, (m) => m.id)
+          const result = slot(messages, event.properties.info) // kilocode_change - order by created time, ids wrap
           if (result.found) {
             setStore("message", event.properties.info.sessionID, result.index, reconcile(event.properties.info))
             break
@@ -526,7 +538,7 @@ export const {
         case "message.removed": {
           touchMessage(event.properties.sessionID, event.properties.messageID)
           const messages = store.message[event.properties.sessionID]
-          const result = search(messages, event.properties.messageID, (m) => m.id)
+          const result = at(messages, event.properties.messageID) // kilocode_change - list is time-ordered, not id-sorted
           if (result.found) {
             setStore(
               "message",
@@ -669,7 +681,7 @@ export const {
             setStore("message", info.sessionID, [info])
             break
           }
-          const match = search(messages, info.id, (item) => item.id)
+          const match = slot(messages, info) // kilocode_change - order by created time, ids wrap
           if (match.found) {
             setStore("message", info.sessionID, match.index, reconcile(info))
             break
@@ -699,7 +711,7 @@ export const {
           touchMessage(event.data.sessionID, event.data.messageID)
           const messages = store.message[event.data.sessionID]
           if (!messages) break
-          const match = search(messages, event.data.messageID, (item) => item.id)
+          const match = at(messages, event.data.messageID) // kilocode_change - list is time-ordered, not id-sorted
           if (!match.found) break
           setStore(
             "message",
@@ -822,7 +834,13 @@ export const {
               setStore("provider", reconcile(providers.providers))
               setStore("provider_default", reconcile(providers.default))
               setStore("provider_next", reconcile(providerList))
-              setStore("capabilities", "experimentalBackgroundSubagents", capabilities?.backgroundSubagents === true)
+              // kilocode_change start - fail closed when the backend omits the capability
+              setStore(
+                "capabilities",
+                "experimentalBackgroundSubagents",
+                capabilities?.backgroundSubagents === true,
+              )
+              // kilocode_change end
               setStore("console_state", reconcile(consoleState))
               setStore("agent", reconcile(agents))
               setStore("config", reconcile(config))
@@ -997,9 +1015,11 @@ export const {
                     (message) => tracker.messages.has(message.id) && !infos.some((item) => item.id === message.id),
                   ),
                 )
-                const removed = infos.slice(0, -100)
-                const visible = infos.slice(-100)
+                // kilocode_change start - window by created time so wrapped ids stay visible
+                const visible = recent(infos)
                 const visibleIDs = new Set(visible.map((message) => message.id))
+                const removed = infos.filter((message) => !visibleIDs.has(message.id))
+                // kilocode_change end
                 for (const message of messages.data ?? []) {
                   if (!visibleIDs.has(message.info.id)) {
                     delete draft.part[message.info.id]

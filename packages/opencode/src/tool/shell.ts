@@ -12,6 +12,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "./shell/id"
 
@@ -25,6 +26,8 @@ import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
 import { BashArity } from "@/permission/arity"
+import { mutates as mutatesGit } from "@/kilocode/sandbox/git" // kilocode_change
+import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 
 export { Parameters } from "./shell/prompt"
 
@@ -326,6 +329,7 @@ type PermissionInput = {
   cwd: string
   shell: string
   description?: string
+  escalate?: boolean // kilocode_change
 }
 
 export const ShellPermission = Effect.gen(function* () {
@@ -429,6 +433,19 @@ export const ShellPermission = Effect.gen(function* () {
           scan.access = "unknown"
         }
         yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
+        const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
+        if (input.escalate && gitMutation) {
+          yield* ctx.ask({
+            permission: "sandbox_escalation", // kilocode_change
+            patterns: [input.command],
+            always: [],
+            metadata: {
+              command: normalizeUrls(input.command),
+              ...(input.description ? { description: input.description } : {}),
+              sandboxEscalation: true,
+            },
+          })
+        }
       }),
     )
   })
@@ -436,7 +453,11 @@ export const ShellPermission = Effect.gen(function* () {
   // kilocode_change start - expose the tree-sitter scan (sub-command patterns + external-dir globs) for skill-shell batching
   const dirGlob = (dir: string) =>
     process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(dir, "*")) : path.join(dir, "*")
-  const decompose = Effect.fn("ShellTool.decompose")(function* (input: { command: string; cwd: string; shell: string }) {
+  const decompose = Effect.fn("ShellTool.decompose")(function* (input: {
+    command: string
+    cwd: string
+    shell: string
+  }) {
     const instance = yield* InstanceState.context
     const ps = Shell.ps(input.shell)
     return yield* Effect.scoped(
@@ -518,10 +539,7 @@ export const ShellTool = Tool.define(
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      return {
-        ...process.env,
-        ...extra.env,
-      }
+      return modelEnv(extra.env) // kilocode_change - model shells must not inherit backend credentials
     })
 
     const run = Effect.fn("ShellTool.run")(function* (
@@ -531,7 +549,7 @@ export const ShellTool = Tool.define(
         cwd: string
         env: NodeJS.ProcessEnv
         timeout: number
-        description: string
+        description: string // kilocode_change
       },
       ctx: Tool.Context,
     ) {
@@ -575,7 +593,6 @@ export const ShellTool = Tool.define(
       yield* ctx.metadata({
         metadata: {
           output: "",
-          description: input.description,
         },
       })
 
@@ -584,7 +601,8 @@ export const ShellTool = Tool.define(
           yield* Effect.addFinalizer(closeSink)
           const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
 
-          const reader = yield* Effect.forkScoped( // kilocode_change - keep the fiber so trailing output can be drained
+          const reader = yield* Effect.forkScoped(
+            // kilocode_change - keep the fiber so trailing output can be drained
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
               const size = Buffer.byteLength(chunk, "utf-8")
               list.push({ text: chunk, size })
@@ -616,7 +634,6 @@ export const ShellTool = Tool.define(
                       ctx.metadata({
                         metadata: {
                           output: last,
-                          description: input.description,
                         },
                       }),
                     ),
@@ -627,7 +644,6 @@ export const ShellTool = Tool.define(
               return ctx.metadata({
                 metadata: {
                   output: last,
-                  description: input.description,
                 },
               })
             }),
@@ -695,11 +711,11 @@ export const ShellTool = Tool.define(
         output += "\n\n<shell_metadata>\n" + meta.join("\n") + "\n</shell_metadata>"
       }
       return {
-        title: input.description,
+        title: input.description, // kilocode_change - UI shows the model's description, command goes in metadata
         metadata: {
           output: last || preview(output),
           exit: code,
-          description: input.description,
+          description: input.description, // kilocode_change
           truncated: cut,
           ...(cut && file ? { outputPath: file } : {}),
         },
@@ -729,18 +745,29 @@ export const ShellTool = Tool.define(
                 throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
               }
               const timeout = CommandTimeout.clamp(params.timeout ?? defaultTimeoutMs).timeout // kilocode_change
-              yield* permission.ask(ctx, { command: params.command, cwd, shell, description: params.description }) // kilocode_change
-
-              return yield* run(
-                {
-                  shell,
-                  command: params.command,
-                  cwd,
-                  env: yield* shellEnv(ctx, cwd),
-                  timeout,
-                  description: params.description ?? params.command, // kilocode_change
-                },
-                ctx,
+              const sandboxed = ctx.extra?.["sandboxed"] === true
+              yield* permission.ask(ctx, {
+                command: params.command,
+                cwd,
+                shell,
+                description: params.description,
+                escalate: sandboxed, // kilocode_change
+              }) // kilocode_change
+              const approved = ctx.extra?.["sandboxEscalation"] === true
+              if (ctx.extra) ctx.extra["sandboxEscalation"] = false
+              return yield* SandboxPolicy.executeEscalated(
+                approved,
+                run(
+                  {
+                    shell,
+                    command: params.command,
+                    cwd,
+                    env: yield* shellEnv(ctx, cwd),
+                    timeout,
+                    description: params.description ?? params.command, // kilocode_change
+                  },
+                  ctx,
+                ),
               )
             }),
         }

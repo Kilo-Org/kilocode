@@ -40,6 +40,7 @@ export interface SaveError {
 interface ConfigContextValue {
   config: Accessor<Config>
   globalConfig: Accessor<Config>
+  globalDraft: Accessor<Partial<Config>>
   projectConfig: Accessor<Config>
   collections: Accessor<ConfigCollections>
   settings: Accessor<Record<string, unknown>>
@@ -76,6 +77,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
     return { "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant }
   }
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
+  if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
 }
 
 export const ConfigProvider: ParentComponent = (props) => {
@@ -86,7 +88,11 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [collections, setCollections] = createSignal<ConfigCollections>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
-  const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false, sandboxControls: false })
+  const [features, setFeatures] = createSignal<FeatureFlags>({
+    indexing: false,
+    sandboxControls: false,
+    backgroundSubagents: false,
+  })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
   const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})
@@ -397,6 +403,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const value: ConfigContextValue = {
     config,
     globalConfig,
+    globalDraft,
     projectConfig,
     collections,
     settings,

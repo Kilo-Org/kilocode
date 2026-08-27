@@ -11,6 +11,7 @@ import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.ProviderDto
+import kotlinx.coroutines.CompletableDeferred
 
 class HistoryLoadingTest : SessionControllerTestBase() {
 
@@ -64,7 +65,7 @@ class HistoryLoadingTest : SessionControllerTestBase() {
         )
     }
 
-    fun `test empty explicit session history shows messages view`() {
+    fun `test empty explicit session history shows empty view`() {
         rpc.recent.add(session("ses_recent"))
 
         val c = controller("ses_test")
@@ -76,17 +77,38 @@ class HistoryLoadingTest : SessionControllerTestBase() {
         assertModelEvents("HistoryLoaded", modelEvents)
         assertControllerEvents("""
             AccountOverlayChanged hide
+            AccountOverlayChanged show loggedIn=false
             AppChanged
             WorkspaceChanged
             ViewChanged progress
-            ViewChanged session
+            ViewChanged empty
         """, events)
         assertSession(
             """
             [app: DISCONNECTED] [workspace: PENDING]
             """,
             c,
+            show = false,
         )
+    }
+
+    fun `test prompt during history load keeps the session view`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+
+        val c = controller("ses_test")
+        val events = collect(c)
+        edt { c.prompt("hello") }
+        gate.complete(Unit)
+        flush()
+
+        assertControllerEvents("""
+            AccountOverlayChanged hide
+            AppChanged
+            WorkspaceChanged
+            ViewChanged progress
+            ViewChanged session
+        """, events)
     }
 
     fun `test loaded history derives agent from latest message`() {

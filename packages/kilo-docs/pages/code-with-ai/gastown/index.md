@@ -5,7 +5,7 @@ description: "Autonomous AI agent orchestration for your codebase"
 
 # {% $markdoc.frontmatter.title %}
 
-Gastown by Kilo is an autonomous agent orchestration platform that manages teams of AI agents working on your codebase. Built on [Gastown](https://gastown.dev) — the open protocol for agent orchestration — Kilo's implementation coordinates coding agents, a code review agent, and a conversational coordinator to ship features, fix bugs, and maintain your projects with minimal human intervention.
+Gastown by Kilo is an autonomous agent orchestration platform that manages teams of AI agents working on your codebase. Built on [Gastown](https://github.com/gastownhall/gastown) — the open protocol for agent orchestration — Kilo's implementation coordinates coding agents, a code review agent, and a conversational coordinator to ship features, fix bugs, and maintain your projects with minimal human intervention.
 
 You describe the work. Agents figure out how to do it, write the code, review each other's output, and land clean PRs — while you stay in control of what ships.
 

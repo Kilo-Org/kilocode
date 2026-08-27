@@ -48,8 +48,8 @@ This returns model information including pricing, context window, and supported 
 | `openai/gpt-5.4-mini` | OpenAI | Fast and efficient |
 | `google/gemini-3.1-pro-preview` | Google | Advanced reasoning |
 | `google/gemini-2.5-flash` | Google | Fast and efficient |
-| `x-ai/grok-4` | xAI | Most capable Grok model |
-| `x-ai/grok-code-fast-1` | xAI | Optimized for code tasks |
+| `x-ai/grok-4` | SpaceXAI | Most capable Grok model |
+| `x-ai/grok-code-fast-1` | SpaceXAI | Optimized for code tasks |
 | `deepseek/deepseek-v3.2` | DeepSeek | Strong coding and reasoning model |
 | `moonshotai/kimi-k2.5` | Moonshot | Strong coding and multilingual model |
 | `minimax/minimax-m2.7` | MiniMax | High-performance MoE model |
@@ -61,8 +61,10 @@ Several models are available at no cost, subject to rate limits:
 | Model ID | Description |
 |---|---|
 | `stepfun/step-3.7-flash:free` | StepFun Step 3.7 Flash |
-| `poolside/laguna-m.1:free` | Poolside Laguna M.1 |
+| `poolside/laguna-s-2.1:free` | Poolside Laguna S 2.1 |
+| `poolside/laguna-xs-2.1:free` | Poolside Laguna XS 2.1 |
 | `nvidia/nemotron-3-ultra-550b-a55b:free` | NVIDIA Nemotron 3 Ultra |
+| `tencent/hy3:free` | Tencent Hy3 |
 | `openrouter/free` | Best available free model |
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
@@ -73,7 +75,7 @@ For NVIDIA free endpoints (Super/Ultra/etc): Trial use only - do not submit pers
 
 ## Auto models
 
-Auto virtual models select an underlying model using tier-specific routing. Frontier uses the `x-kilocode-mode` request header. Balanced uses the API interface, Free uses deterministic affinity across available candidates, and Small uses account balance.
+Auto virtual models select an underlying model using tier-specific routing. Frontier uses the `x-kilocode-mode` request header. Efficient classifies task difficulty in session context and falls back to the API interface for its baseline model, Free uses deterministic affinity across available candidates, and Small uses account balance.
 
 {% callout type="info" title="Underlying models can change" %}
 The mappings below reflect the current routing. The underlying models behind each `kilo-auto/*` tier are updated server-side as better options become available or as providers change pricing and availability — the tier IDs themselves remain stable.
@@ -89,9 +91,9 @@ Highest performance and capability for any task. Frontier requests are sent with
 | `build`, `explore`, `code` | `anthropic/claude-sonnet-4.6` |
 | Default (no / unknown mode) | `anthropic/claude-sonnet-4.6` |
 
-### `kilo-auto/balanced`
+### `kilo-auto/efficient`
 
-Great balance of price and capability. The resolved model depends on the API interface used by the client.
+Session-aware routing that classifies each request by difficulty and routes to the cheapest model proven accurate enough for the task. When no confident routing decision can be made, requests fall back to a baseline model resolved by the API interface used by the client.
 
 | API interface | Resolved Model | Reasoning effort |
 |---|---|---|
@@ -132,5 +134,5 @@ curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
   -H "Authorization: Bearer $KILO_API_KEY" \
   -H "x-kilocode-mode: plan" \
   -H "Content-Type: application/json" \
-  -d '{"model": "kilo-auto/balanced", "messages": [{"role": "user", "content": "Design a database schema"}]}'
+  -d '{"model": "kilo-auto/efficient", "messages": [{"role": "user", "content": "Design a database schema"}]}'
 ```

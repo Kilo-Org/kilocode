@@ -1,4 +1,7 @@
 import { describe, it, expect } from "bun:test"
+import * as fs from "fs/promises"
+import * as os from "os"
+import * as path from "path"
 import { ProjectRouteService } from "../../src/agent-manager/project/route"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -11,8 +14,9 @@ type SessionGetParams = { sessionID: string; directory: string }
  * session.get records every call so tests can assert which directory was
  * queried. Mirrors the shape used by kilo-provider-session-refresh.test.ts.
  */
-function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>) {
+function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs = "git") {
   const calls: SessionGetParams[] = []
+  const projectCalls: string[] = []
   const client = {
     session: {
       get: async (p: SessionGetParams) => {
@@ -31,6 +35,13 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>) {
         }
       },
       list: async () => ({ data: [] }),
+      status: async () => ({ data: {} }),
+    },
+    project: {
+      current: async (p: { directory: string }) => {
+        projectCalls.push(p.directory)
+        return { data: { vcs } }
+      },
     },
     provider: { list: async () => ({ data: { all: [], connected: {}, default: {} } }) },
     app: {
@@ -47,6 +58,7 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>) {
   let current: typeof client | null = client
   return {
     calls,
+    projectCalls,
     connection: {
       connect: async () => {
         current = client
@@ -77,11 +89,30 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>) {
   }
 }
 
+async function withNestedRepo(run: (root: string) => Promise<void>): Promise<void> {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-nested-repo-"))
+  const root = path.join(base, "frontend")
+  await fs.mkdir(root)
+  const result = Bun.spawnSync({ cmd: ["git", "init"], cwd: root, stdout: "pipe", stderr: "pipe" })
+  if (result.exitCode !== 0) throw new Error(Buffer.from(result.stderr).toString())
+  try {
+    await run(root)
+  } finally {
+    await fs.rm(base, { recursive: true, force: true })
+  }
+}
+
 type ProviderInternals = {
   client: unknown
   connectionState: "connecting" | "connected" | "disconnected" | "error"
   initConnectionPromise: Promise<void> | null
+  isWebviewReady: boolean
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
+  startStatsPolling: () => void
+  contextSessionID: string | undefined
+  refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
+  refreshGitStatusFromParts: (parts: unknown[], sessionID?: string) => Promise<boolean>
+  refreshSessionDetails: (sessionID: string, dir: string) => void
   handleSendCommand: (
     command: string,
     args: string,
@@ -111,6 +142,172 @@ function connect(internal: ProviderInternals): void {
 }
 
 describe("KiloProvider route integration", () => {
+  it("finds a nested Git root when the workspace parent is not a repo", async () => {
+    await withNestedRepo(async (root) => {
+      const source = path.join(root, "src")
+      await fs.mkdir(source)
+      const { connection, projectCalls } = mockConnection(undefined, "none")
+      const provider = new KiloProvider({} as never, connection, undefined, {
+        rootDirectory: () => source,
+      })
+      const internal = provider as unknown as ProviderInternals
+      const sent: unknown[] = []
+      internal.connectionState = "connected"
+      internal.initConnectionPromise = Promise.resolve()
+      internal.isWebviewReady = true
+      internal.startStatsPolling = () => {}
+      internal.webview = { postMessage: async (message) => sent.push(message) }
+
+      await internal.refreshGitStatus(source)
+
+      expect(projectCalls).toEqual([source])
+      expect(sent).toContainEqual({ type: "gitStatus", repo: true })
+    })
+  })
+
+  it("keeps a session's discovered Git root across focus refreshes", async () => {
+    await withNestedRepo(async (root) => {
+      const source = path.join(root, "src")
+      await fs.mkdir(source)
+      const parent = path.dirname(root)
+      const { connection } = mockConnection(undefined, "none")
+      const provider = new KiloProvider({} as never, connection, undefined, {
+        rootDirectory: () => parent,
+      })
+      const internal = provider as unknown as ProviderInternals
+      internal.connectionState = "connected"
+      internal.initConnectionPromise = Promise.resolve()
+      internal.isWebviewReady = true
+      internal.startStatsPolling = () => {}
+      internal.webview = { postMessage: async () => true }
+
+      await internal.refreshGitStatus(source, "s1")
+      const resolved = await fs.realpath(root)
+      expect(provider.getSessionGitDirectory("s1")).toBe(resolved)
+
+      const calls: Array<{ directory?: string; sessionID?: string }> = []
+      internal.refreshGitStatus = async (directory, sessionID) => {
+        calls.push({ directory, sessionID })
+      }
+      internal.contextSessionID = "s1"
+      internal.refreshSessionDetails("s1", parent)
+
+      expect(calls).toEqual([{ directory: resolved, sessionID: "s1" }])
+    })
+  })
+
+  it("keeps the session on its owning repo after tools touch a nested repo", async () => {
+    await withNestedRepo(async (root) => {
+      const nested = path.join(root, "vendor", "lib")
+      await fs.mkdir(nested, { recursive: true })
+      const result = Bun.spawnSync({ cmd: ["git", "init"], cwd: nested, stdout: "pipe", stderr: "pipe" })
+      if (result.exitCode !== 0) throw new Error(Buffer.from(result.stderr).toString())
+
+      const { connection } = mockConnection(undefined, "none")
+      const provider = new KiloProvider({} as never, connection, undefined, {
+        rootDirectory: () => root,
+      })
+      const internal = provider as unknown as ProviderInternals
+      internal.contextSessionID = "s1"
+      internal.startStatsPolling = () => {}
+
+      expect(
+        await internal.refreshGitStatusFromParts(
+          [
+            {
+              type: "tool",
+              tool: "read",
+              state: { status: "completed", input: { filePath: path.join(nested, "readme.md") } },
+            },
+          ],
+          "s1",
+        ),
+      ).toBe(false)
+      expect(provider.getSessionGitDirectory("s1")).toBeUndefined()
+
+      await internal.refreshGitStatusFromParts(
+        [
+          {
+            type: "tool",
+            tool: "edit",
+            state: {
+              status: "completed",
+              metadata: { filediff: { file: path.join(nested, "src.ts") } },
+            },
+          },
+        ],
+        "s1",
+      )
+
+      expect(provider.getSessionGitDirectory("s1")).toBe(await fs.realpath(root))
+    })
+  })
+
+  it("caches an inactive child repo without changing the visible Git status", async () => {
+    await withNestedRepo(async (root) => {
+      const { connection } = mockConnection(undefined, "none")
+      const provider = new KiloProvider({} as never, connection, undefined, {
+        rootDirectory: () => path.dirname(root),
+      })
+      const internal = provider as unknown as ProviderInternals
+      const sent: unknown[] = []
+      internal.contextSessionID = "parent"
+      internal.isWebviewReady = true
+      internal.webview = { postMessage: async (message) => sent.push(message) }
+
+      await internal.refreshGitStatus(root, "child")
+
+      expect(provider.getSessionGitDirectory("child")).toBe(await fs.realpath(root))
+      expect(sent).not.toContainEqual({ type: "gitStatus", repo: true })
+    })
+  })
+
+  it("does no Git work for non-mutating part updates", async () => {
+    await withNestedRepo(async (root) => {
+      const { connection, projectCalls } = mockConnection(undefined, "none")
+      const provider = new KiloProvider({} as never, connection, undefined, {
+        rootDirectory: () => root,
+      })
+      const internal = provider as unknown as ProviderInternals
+      const parts = [
+        { type: "text", text: "chunk" },
+        { type: "reasoning", text: "thought" },
+        { type: "step-start" },
+        { type: "step-finish" },
+        { type: "tool", tool: "read", state: { status: "completed", input: { filePath: "README.md" } } },
+        { type: "tool", tool: "bash", state: { status: "running" } },
+        { type: "tool", tool: "grep", state: { status: "completed" } },
+      ]
+
+      for (const part of parts) {
+        expect(await internal.refreshGitStatusFromParts([part], "s1")).toBe(false)
+      }
+
+      expect(projectCalls).toEqual([])
+      expect(provider.getSessionGitDirectory("s1")).toBeUndefined()
+    })
+  })
+
+  it("checks Git capability in the active project directory", async () => {
+    const { connection, projectCalls } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      rootDirectory: () => "/workspace/parent/project-b",
+      projectQualifier: () => ({ projectId: "project-b" }),
+    })
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.initConnectionPromise = Promise.resolve()
+    internal.isWebviewReady = true
+    internal.startStatsPolling = () => {}
+    internal.webview = { postMessage: async (message) => sent.push(message) }
+
+    await internal.refreshGitStatus()
+
+    expect(projectCalls).toEqual(["/workspace/parent/project-b"])
+    expect(sent).toContainEqual({ type: "gitStatus", repo: true })
+  })
+
   it("resolves a unique Local session route to its exact project root", async () => {
     const routes = new ProjectRouteService()
     routes.registerProject("a", "/repo/a", 1)
