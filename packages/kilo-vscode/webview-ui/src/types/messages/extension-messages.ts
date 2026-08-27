@@ -168,6 +168,7 @@ export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
   reason: SessionCloseReason
+  parentID?: string
 }
 
 export interface SessionErrorMessage {

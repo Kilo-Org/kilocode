@@ -151,6 +151,33 @@ html[data-theme="kilo-vscode"]
   color: var(--text-weak);
 }
 
+.am-local-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+[data-activity="waiting"] [data-component="icon"],
+[data-activity="waiting"] [data-slot="icon-svg"],
+.am-sidebar-search-status[data-activity="waiting"] {
+  color: var(--icon-warning-base, var(--vscode-notificationsWarningIcon-foreground, #d9a13a));
+}
+
+[data-activity="error"] [data-component="icon"],
+[data-activity="error"] [data-slot="icon-svg"],
+.am-sidebar-search-status[data-activity="error"] {
+  color: var(--icon-critical-base, var(--vscode-errorForeground, #f14c4c));
+}
+
+[data-activity="done"] [data-component="icon"],
+[data-activity="done"] [data-slot="icon-svg"],
+.am-sidebar-search-status[data-activity="done"] {
+  color: var(--icon-success-base, var(--vscode-testing-iconPassed, #73c991));
+}
+
 .am-local-text {
   display: flex;
   flex-direction: column;

@@ -12,6 +12,8 @@ import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Button } from "@kilocode/kilo-ui/button"
 import type { WorktreeState, WorktreeGitStats, SectionState, RunStatus } from "../src/types/messages"
 import type { PRStatus } from "../src/types/messages"
+import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { label, type Activity } from "../src/utils/session-activity"
 import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -31,8 +33,7 @@ interface WorktreeItemProps {
   active: boolean
   pendingDelete: boolean
   busy: boolean
-  /** Whether an agent session on this worktree is actively working (shows spinner instead of branch icon). */
-  working: boolean
+  activity: Activity
   stale: boolean
   /** 1-indexed shortcut number shown as ⌘2, ⌘3, etc. Pass 0, >9, or undefined to hide. */
   shortcut?: number
@@ -155,6 +156,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
   const { t } = useLanguage()
   const [hovered, setHovered] = createSignal(false)
   const [overClose, setOverClose] = createSignal(false)
+  const state = () => props.activity
 
   const handleOpenPR = (e: MouseEvent) => {
     e.stopPropagation()
@@ -199,9 +201,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 data-sidebar-id={props.sidebarId ?? props.worktree.id}
                 onClick={() => props.onClick()}
               >
-                <div class="am-wt-icon">
-                  <Show when={!props.busy && !props.working} fallback={<Spinner class="am-worktree-spinner" />}>
-                    <Icon name="branch" size="small" />
+                <div class="am-wt-icon" data-activity={state()} aria-label={t(label(state()))}>
+                  <Show
+                    when={!props.busy && props.runStatus?.state !== "running"}
+                    fallback={<Spinner class="am-worktree-spinner" />}
+                  >
+                    <ActivityIcon state={state()} idle={<Icon name="branch" size="small" />} />
                   </Show>
                 </div>
                 <div class="am-wt-content">

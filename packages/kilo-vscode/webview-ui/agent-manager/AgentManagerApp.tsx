@@ -91,7 +91,7 @@ import { createProjectRegistry, type PersistedProjectTabs } from "./project/regi
 import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
-import { createSessionBusy } from "./project/session-busy"
+import { createSessionActivity } from "./project/session-busy"
 import { switchProject } from "./project/switch"
 import { createProjectStateHandlers } from "./project/state-handlers"
 import { ownsParent as ownsParentSession, isCurrent } from "./project/message-ownership"
@@ -116,6 +116,7 @@ import { DataBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
 import { useLanguage } from "../src/context/language"
 import { createTabFocus } from "../src/utils/tab-navigation"
+import { label, strongest } from "../src/utils/session-activity"
 import {
   canOpenRootSession,
   isKnownRootSession,
@@ -123,6 +124,7 @@ import {
   adjacentHint,
   focusChatSearch,
   LOCAL,
+  remoteSessions,
 } from "./navigate"
 import { buildProjectNavEntries, createProjectNav } from "./project-nav"
 import {
@@ -898,22 +900,26 @@ const AgentManagerContent: Component = () => {
     return label !== wt.branch ? wt.branch : undefined
   }
 
-  const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
-
-  const busy = createSessionBusy({
-    statuses: session.allStatusMap,
-    permissions: session.permissions,
-    questions: session.questions,
+  const activity = createSessionActivity({
     managed: managedSessions,
     local: localSessionIDs,
     projects: projectSessionsLive,
     active: activeProjectId,
+    activityFor: session.activityFor,
   })
-  const isAgentBusy = busy.agent
-  const isLocalBusy = busy.local
-  const projectBusy = busy.project
-  const isSessionBusy = busy.session
-
+  const sessionActivity = createMemo(() =>
+    strongest(
+      multiProject()
+        ? projectList()
+            .filter((project) => projectStates()[project.id])
+            .flatMap((project) => [
+              activity.project(project.id, null),
+              ...projectStates()[project.id]!.worktrees.map((worktree) => activity.project(project.id, worktree.id)),
+            ])
+        : remoteSessions(localSessionIDs(), managedSessions(), isPending).map(session.activityFor),
+    ),
+  )
+  createEffect(() => vscode.postMessage({ type: "sessionActivity", state: sessionActivity() }))
   /** Worktrees sorted so that grouped items are always adjacent, respecting custom order if set. */
   const sortedWorktrees = createMemo(() => sortWorktrees(worktrees(), sidebarWorktreeOrder()))
 
@@ -1050,14 +1056,11 @@ const AgentManagerContent: Component = () => {
     localBranch: repoBranch,
     selection,
     sessionId: session.currentSessionID,
-    statuses: session.allStatusMap,
-    permissions: session.permissions,
-    questions: session.questions,
+    activityFor: session.activityFor,
     label: worktreeLabel,
     sessions: sessionsForWorktree,
     pending: isPending,
     busy: (id) => busyWorktrees().has(id) || (runStatuses()[id]?.state ?? "idle") !== "idle",
-    localBusy: isLocalBusy,
     t,
   })
   const focusSidebarSearchItem = (item: SidebarSearchItem) => {
@@ -2255,7 +2258,8 @@ const AgentManagerContent: Component = () => {
       activePendingId,
       visibleTabId,
       isPending,
-      isBusy: isSessionBusy,
+      activityFor: (id) => session.activityFor(id),
+      stateLabel: (state) => t(label(state)),
       tabLookup,
       adjacentHint,
       activateTerminal: termHandlers.activate,
@@ -2319,8 +2323,6 @@ const AgentManagerContent: Component = () => {
             states={projectStates()}
             store={(id) => registry.ensure(id)}
             busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
-            working={(projectId, id) => projectBusy(projectId, id)}
-            localBusy={(projectId) => projectBusy(projectId, null)}
             stats={projectLive.stats()}
             local={projectLive.local()}
             prs={projectLive.prs()}
@@ -2337,6 +2339,8 @@ const AgentManagerContent: Component = () => {
             onShortcuts={handleShowKeyboardShortcuts}
             onHistory={openHistory}
             shortcutMap={projectShortcutMap}
+            activityFor={activity.project}
+            sessionActivity={session.activityFor}
           />
         </Show>
         <Show when={!multiProject()}>
@@ -2346,7 +2350,7 @@ const AgentManagerContent: Component = () => {
             currentSessionID={session.currentSessionID}
             selectLocal={selectLocal}
             selectWorktree={selectWorktree}
-            isLocalBusy={isLocalBusy}
+            activityFor={(id) => (id === null ? activity.local() : activity.agent(id))}
             repoBranch={repoBranch}
             localStats={localStats}
             search={{ items: sidebarSearch.items, current: sidebarSearch.current }}
@@ -2384,8 +2388,7 @@ const AgentManagerContent: Component = () => {
             worktreeSubtitle={worktreeSubtitle}
             pendingDelete={pendingDelete}
             busy={(id) => busyWorktrees().has(id)}
-            isAgentBusy={isAgentBusy}
-            isStaleWorktree={isStaleWorktree}
+            isStaleWorktree={(id) => staleWorktreeIds().has(id)}
             shortcutMap={shortcutMap}
             worktreeStats={worktreeStats}
             prStatuses={prStatuses}

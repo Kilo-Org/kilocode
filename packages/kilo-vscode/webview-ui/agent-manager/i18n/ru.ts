@@ -63,8 +63,6 @@ export const dict = {
   "agentManager.tab.terminal": "Терминал",
   "agentManager.tab.openTerminal": "Открыть терминал",
   "agentManager.tab.newOptions": "Другие параметры новой вкладки",
-  "agentManager.tabsMenu.status.waiting": "Ожидание",
-  "agentManager.tabsMenu.status.retry": "Повтор",
   "agentManager.sidebarSearch.label": "Поиск по Worktree и сессиям",
   "agentManager.sidebarSearch.scope":
     "Поиск локального рабочего пространства, локальных сессий, Worktree и связанных с ними сессий",
