@@ -7,6 +7,7 @@ import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type {
   ClearLegacyDataMessage,
@@ -56,8 +57,9 @@ export interface CancelBackgroundJobMessage {
   requestID: string
 }
 
-export interface BackgroundSubagentsMessage {
-  type: "backgroundSubagents"
+export interface PromoteBackgroundJobMessage {
+  type: "promoteBackgroundJob"
+  jobID: string
   sessionID: string
 }
 
@@ -233,6 +235,32 @@ export interface CompactRequest {
 export interface OpenSettingsPanelRequest {
   type: "openSettingsPanel"
   tab?: string
+  projectId?: string
+}
+
+export interface RequestAgentManagerSettingsMessage {
+  type: "requestAgentManagerSettings"
+  projectId?: string
+  requestId: string
+}
+
+export interface RequestAgentManagerSettingsBranchesMessage {
+  type: "requestAgentManagerSettingsBranches"
+  projectId: string
+  requestId: string
+}
+
+export interface SetAgentManagerDefaultBaseBranchMessage {
+  type: "setAgentManagerDefaultBaseBranch"
+  projectId: string
+  branch?: string
+  requestId: string
+}
+
+export interface ConfigureAgentManagerSetupScriptMessage {
+  type: "configureAgentManagerSetupScript"
+  projectId: string
+  requestId: string
 }
 
 export interface OpenProfilePanelRequest {
@@ -670,6 +698,13 @@ export interface OpenLocallyRequest {
   sessionId: string
 }
 
+// Move a worktree-bound session back to the project root and open it in the local tabs
+export interface OpenSessionLocallyRequest {
+  type: "agentManager.openSessionLocally"
+  projectId?: string
+  sessionId: string
+}
+
 // Add a new session to an existing worktree
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
@@ -819,6 +854,11 @@ export interface OpenWorktreeRequest {
   type: "agentManager.openWorktree"
   projectId?: string
   worktreeId: string
+}
+
+export interface AgentManagerCopyToClipboardRequest {
+  type: "agentManager.copyToClipboard"
+  text: string
 }
 
 // Copy text to the system clipboard via the extension host
@@ -1365,11 +1405,6 @@ export interface PersistModelSelectionRequest {
   modelID: string
 }
 
-export interface ClearModelSelectionRequest {
-  type: "clearModelSelection"
-  agent: string
-}
-
 export interface RequestModelSelectionsMessage {
   type: "requestModelSelections"
 }
@@ -1463,7 +1498,7 @@ export type WebviewMessage =
   | AbortRequest
   | RequestBackgroundJobsMessage
   | CancelBackgroundJobMessage
-  | BackgroundSubagentsMessage
+  | PromoteBackgroundJobMessage
   | RevertSessionRequest
   | UnrevertSessionRequest
   | DeleteMessageRequest
@@ -1478,8 +1513,14 @@ export type WebviewMessage =
   | LoginRequest
   | LogoutRequest
   | RefreshProfileRequest
+  | RequestProviderUsageMessage
+  | RefreshProviderUsageMessage
   | OpenExternalRequest
   | OpenSettingsPanelRequest
+  | RequestAgentManagerSettingsMessage
+  | RequestAgentManagerSettingsBranchesMessage
+  | SetAgentManagerDefaultBaseBranchMessage
+  | ConfigureAgentManagerSetupScriptMessage
   | OpenProfilePanelRequest
   | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
@@ -1563,6 +1604,7 @@ export type WebviewMessage =
   | RemoveStaleWorktreeRequest
   | PromoteSessionRequest
   | OpenLocallyRequest
+  | OpenSessionLocallyRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
   | SidebarForkSessionRequest
@@ -1588,6 +1630,7 @@ export type WebviewMessage =
   | ShowLocalTerminalRequest
   | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
+  | AgentManagerCopyToClipboardRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
@@ -1672,7 +1715,6 @@ export type WebviewMessage =
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
   | PersistModelSelectionRequest
-  | ClearModelSelectionRequest
   | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | SetRemoteEnabledMessage

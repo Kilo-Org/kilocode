@@ -5,6 +5,8 @@ description: "Pin your KiloClaw instance to a specific OpenClaw version and vari
 
 # Version Pinning
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Version pinning lets you lock your KiloClaw instance to a specific OpenClaw version and variant. This gives you control over when your instance upgrades — it stays on the pinned version until you explicitly change it.
 
 ## When to Use Version Pinning

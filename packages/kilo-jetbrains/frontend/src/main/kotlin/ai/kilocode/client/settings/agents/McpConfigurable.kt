@@ -147,7 +147,7 @@ internal class McpSettingsUi(
         val dialog = create(name, server.config)
         if (!dialog.showAndGet()) return
         val next = dialog.result()
-        mutateAndReload(selectionIndex()) {
+        mutateAndReload(ActiveListSelection.Key(name)) {
             if (!service<KiloAgentBehaviorService>().saveMcp(dir, name, server.scope, next)) {
                 throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.save.failed"))
             }
@@ -165,7 +165,7 @@ internal class McpSettingsUi(
         )
         if (result != Messages.YES) return
         val scope = servers[name]?.scope ?: return
-        mutateAndReload(selectionIndex()) {
+        mutateAndReload(ActiveListSelection.Slide) {
             if (!service<KiloAgentBehaviorService>().saveMcp(dir, name, scope, null)) {
                 throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.save.failed"))
             }

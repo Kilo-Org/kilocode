@@ -254,6 +254,14 @@ kilo agent list
 
 This displays each agent's name, mode, and permission configuration.
 
+## Inspecting delegated sessions in VS Code
+
+When a subagent is delegated from a session in the VS Code extension, open its transcript from the task card or background-agent row. In Agent Manager, the transcript opens in the **Subagents** inspector as a read-only tab. Use the inspector tab strip to switch between multiple child sessions, reorder tabs, or close tabs.
+
+Inspector tabs are scoped to the current project and parent session. When you switch worktrees or sessions, Agent Manager shows the tabs for that project and parent only, so child transcripts from another session are not mixed into the current view.
+
+This differs from the sidebar and Kilo editor subagent tabs. In those surfaces, **Open in Tab** opens the child transcript as a separate read-only VS Code editor tab. Agent Manager keeps the transcript inside its right-hand inspector alongside the session's other panels. In both surfaces, the child session is a delegated transcript, not a new prompt you can send messages to directly.
+
 ## Configuration Precedence
 
 Agent configurations are merged from multiple sources. Later sources override earlier ones:

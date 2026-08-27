@@ -102,6 +102,18 @@ function success() {
   ]
 }
 
+function reasoning() {
+  const usage = new Usage({ outputTokens: 8, reasoningTokens: 8, totalTokens: 8 })
+  return [
+    LLMEvent.stepStart({ index: 0 }),
+    LLMEvent.reasoningStart({ id: "reasoning" }),
+    LLMEvent.reasoningDelta({ id: "reasoning", text: "Investigating the problem" }),
+    LLMEvent.reasoningEnd({ id: "reasoning" }),
+    LLMEvent.stepFinish({ index: 0, reason: "unknown", usage }),
+    LLMEvent.finish({ reason: "unknown", usage }),
+  ]
+}
+
 function retryable429() {
   return new APICallError({
     message: "429 status code (no body)",
@@ -309,7 +321,57 @@ describe("session processor incomplete response retry", () => {
     ),
   )
 
-  it.effect("does not retry non-empty reasoning", () =>
+  it.effect("retries reasoning-only unknown responses", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const ctx = yield* setup(dir)
+          yield* ctx.test.reply(...reasoning())
+          yield* ctx.test.reply(...success())
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+
+          try {
+            expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
+          } finally {
+            delay.mockRestore()
+          }
+
+          expect(yield* ctx.test.calls).toBe(2)
+          expect(ctx.handle.message.finish).toBe("stop")
+          const parts = yield* MessageV2.parts(ctx.msg.id)
+          expect(parts.some((part) => part.type === "reasoning")).toBe(false)
+          expect(parts.find((part) => part.type === "text")?.text).toBe("Recovered")
+        }),
+      { git: true },
+    ),
+  )
+
+  it.effect("bounds reasoning-only unknown retries", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const ctx = yield* setup(dir)
+          yield* ctx.test.reply(...reasoning())
+          yield* ctx.test.reply(...reasoning())
+          yield* ctx.test.reply(...reasoning())
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+
+          try {
+            expect(yield* ctx.handle.process(ctx.input)).toBe("stop")
+          } finally {
+            delay.mockRestore()
+          }
+
+          expect(yield* ctx.test.calls).toBe(3)
+          expect(ctx.handle.message.finish).toBe("unknown")
+          expect(MessageV2.APIError.isInstance(ctx.handle.message.error)).toBe(true)
+          expect(yield* MessageV2.parts(ctx.msg.id)).toEqual([])
+        }),
+      { git: true },
+    ),
+  )
+
+  it.effect("does not retry reasoning with a deliberate finish", () =>
     provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
@@ -317,24 +379,19 @@ describe("session processor incomplete response retry", () => {
           const usage = new Usage({})
           yield* ctx.test.reply(
             LLMEvent.stepStart({ index: 0 }),
-            LLMEvent.reasoningStart({ id: "reasoning-1" }),
-            LLMEvent.reasoningDelta({ id: "reasoning-1", text: "Investigating the problem" }),
-            LLMEvent.reasoningEnd({ id: "reasoning-1" }),
-            LLMEvent.reasoningStart({ id: "reasoning-2" }),
-            LLMEvent.reasoningDelta({ id: "reasoning-2", text: "Preparing the final answer" }),
-            LLMEvent.reasoningEnd({ id: "reasoning-2" }),
-            LLMEvent.stepFinish({ index: 0, reason: "unknown", usage }),
-            LLMEvent.finish({ reason: "unknown", usage }),
+            LLMEvent.reasoningStart({ id: "reasoning" }),
+            LLMEvent.reasoningDelta({ id: "reasoning", text: "Complete reasoning" }),
+            LLMEvent.reasoningEnd({ id: "reasoning" }),
+            LLMEvent.stepFinish({ index: 0, reason: "stop", usage }),
+            LLMEvent.finish({ reason: "stop", usage }),
           )
-          expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
 
+          expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
           expect(yield* ctx.test.calls).toBe(1)
-          expect(ctx.handle.message.finish).toBe("unknown")
-          const parts = yield* MessageV2.parts(ctx.msg.id)
-          expect(parts.filter((part) => part.type === "reasoning").map((part) => part.text)).toEqual([
-            "Investigating the problem",
-            "Preparing the final answer",
-          ])
+          expect(ctx.handle.message.finish).toBe("stop")
+          expect((yield* MessageV2.parts(ctx.msg.id)).find((part) => part.type === "reasoning")?.text).toBe(
+            "Complete reasoning",
+          )
         }),
       { git: true },
     ),

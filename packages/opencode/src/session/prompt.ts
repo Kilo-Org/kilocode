@@ -1397,6 +1397,7 @@ export const layer = Layer.effect(
         // kilocode_change start - recover interrupted Kilo turns before accepting a follow-up
         yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
         yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
+        yield* KiloSessionPrompt.recoverFailedAssistant({ sessionID: input.sessionID, status, sessions })
         // kilocode_change end
         const message = yield* KiloSessionPrompt.intake(input.sessionID, createUserMessage(input)) // kilocode_change
         yield* sessions.touch(input.sessionID)
@@ -1727,7 +1728,7 @@ export const layer = Layer.effect(
           // kilocode_change start — ephemeral context injection + post-summary
           // media strip (keeps outgoing body under the gateway body-size limit
           // even when filterCompacted couldn't trim the pre-summary history).
-          KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
+          KiloSessionPrompt.injectEditorContext({ msgs, session, sessionID, cache: envCache })
           msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
           // kilocode_change end
 
@@ -1751,7 +1752,7 @@ export const layer = Layer.effect(
             msgs = KiloSessionPromptQueue.scope(sessionID, msgs)
             msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs)
             yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
-            KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
+            KiloSessionPrompt.injectEditorContext({ msgs, session, sessionID, cache: envCache })
             msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
             modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
               Effect.provideService(Database.Service, database),
@@ -1928,6 +1929,7 @@ export const layer = Layer.effect(
       const session = yield* sessions.get(input.sessionID)
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
+      yield* KiloSessionPrompt.recoverFailedAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSession.publishTurnOpen({ sessionID: input.sessionID })
       return yield* Effect.onExit(
         state.ensureRunning(
@@ -2540,7 +2542,10 @@ export const PromptInput = Schema.Struct({
 // `parts` type from the exported Schema input types so callers see a proper
 // tagged union.
 type PartInputUnion =
-  MessageV2.TextPartInput | MessageV2.FilePartInput | MessageV2.AgentPartInput | MessageV2.SubtaskPartInput
+  | MessageV2.TextPartInput
+  | MessageV2.FilePartInput
+  | MessageV2.AgentPartInput
+  | MessageV2.SubtaskPartInput
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext

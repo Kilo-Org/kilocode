@@ -161,6 +161,92 @@ describe("parsePRResult", () => {
     expect(result).toEqual(
       expect.objectContaining({ title: "", body: "", url: "", additions: 0, deletions: 0, files: 0 }),
     )
+    expect(result).not.toHaveProperty("checks")
+    expect(result).not.toHaveProperty("reviewers")
+  })
+
+  it("parses check runs and status contexts from the pull request response", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 7,
+        statusCheckRollup: [
+          {
+            name: "build",
+            status: "COMPLETED",
+            conclusion: "SUCCESS",
+            detailsUrl: "https://example.com/build",
+            startedAt: "2024-01-01T00:00:00Z",
+            completedAt: "2024-01-01T00:01:00Z",
+          },
+          { context: "lint", state: "PENDING", targetUrl: "https://example.com/lint" },
+          { name: "tests", conclusion: "FAILURE" },
+          { name: "docs", conclusion: "SKIPPED" },
+        ],
+      }),
+    )
+
+    expect(result?.checks).toEqual({
+      status: "failure",
+      total: 3,
+      passed: 1,
+      failed: 1,
+      pending: 1,
+      checks: [
+        { name: "build", status: "success", url: "https://example.com/build", duration: "1m 0s" },
+        { name: "lint", status: "pending", url: "https://example.com/lint", duration: undefined },
+        { name: "tests", status: "failure", url: undefined, duration: undefined },
+        { name: "docs", status: "skipped", url: undefined, duration: undefined },
+      ],
+    })
+  })
+
+  it("does not mark cancelled checks as successful", () => {
+    const result = parsePRResult(
+      JSON.stringify({ number: 10, statusCheckRollup: [{ name: "build", conclusion: "CANCELLED" }] }),
+    )
+    expect(result?.checks?.status).toBe("failure")
+    expect(result?.checks?.failed).toBe(1)
+  })
+
+  it("keeps CI running when cancelled checks coexist with pending checks", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 11,
+        statusCheckRollup: [
+          { name: "cancelled", conclusion: "CANCELLED" },
+          { name: "running", status: "IN_PROGRESS" },
+        ],
+      }),
+    )
+    expect(result?.checks?.status).toBe("pending")
+    expect(result?.checks?.failed).toBe(1)
+    expect(result?.checks?.pending).toBe(1)
+  })
+
+  it("preserves reviewer history and ignores dismissed reviews", () => {
+    const result = parsePRResult(
+      JSON.stringify({
+        number: 8,
+        reviewRequests: [{ login: "alice", avatarUrl: "https://example.com/alice" }],
+        reviews: [
+          { author: { login: "bob" }, state: "APPROVED" },
+          { author: { login: "bob" }, state: "COMMENTED" },
+          { author: { login: "dismissed" }, state: "DISMISSED" },
+        ],
+      }),
+    )
+
+    expect(result?.reviewers).toEqual([
+      { login: "alice", avatar: "https://example.com/alice", state: "pending" },
+      { login: "bob", avatar: undefined, state: "approved" },
+    ])
+  })
+
+  it("keeps empty rich fields so legacy follow-up requests are unnecessary", () => {
+    const result = parsePRResult(JSON.stringify({ number: 9, statusCheckRollup: [], reviewRequests: [], reviews: [] }))
+
+    expect(result?.checks).toEqual({ status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] })
+    expect(result?.reviewers).toEqual([])
   })
 })
 

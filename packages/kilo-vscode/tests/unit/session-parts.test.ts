@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import { mergeOptimisticPart, mergeParts, sameParts } from "../../webview-ui/src/context/session-parts"
+import { createStore, produce } from "solid-js/store"
+import { isolate, mergeOptimisticPart, mergeParts, sameParts } from "../../webview-ui/src/context/session-parts"
 import type { Part } from "../../webview-ui/src/types/messages"
 
 function text(id: string, value: string, time: { start?: number; end?: number } = {}): Part {
@@ -19,6 +20,39 @@ function value(parts: Part[], id: string) {
   if (!part || part.type !== "text") return
   return part.text
 }
+
+describe("isolate", () => {
+  it("keeps shared reasoning snapshots independent across session stores", () => {
+    const shared = {
+      id: "r1",
+      messageID: "m1",
+      type: "reasoning",
+      text: "Thinking",
+      time: { start: 1 },
+    } satisfies Part
+    const [first, setFirst] = createStore({ parts: [shared].map(isolate) })
+    const [second, setSecond] = createStore({ parts: [shared].map(isolate) })
+
+    setFirst(
+      "parts",
+      produce((parts) => {
+        const part = parts[0]
+        if (part?.type === "reasoning") part.text += " once"
+      }),
+    )
+    setSecond(
+      "parts",
+      produce((parts) => {
+        const part = parts[0]
+        if (part?.type === "reasoning") part.text += " once"
+      }),
+    )
+
+    expect(first.parts[0]?.type === "reasoning" && first.parts[0].text).toBe("Thinking once")
+    expect(second.parts[0]?.type === "reasoning" && second.parts[0].text).toBe("Thinking once")
+    expect(shared.text).toBe("Thinking")
+  })
+})
 
 describe("mergeParts", () => {
   it("keeps a final streamed tail part created after the reconcile snapshot started", () => {
@@ -119,6 +153,31 @@ describe("mergeOptimisticPart", () => {
 
     expect(result.parts.map((part) => part.id)).toEqual(["client-text", "server-file"])
     expect(result.replaced).toBe("client-file")
+  })
+
+  it("keeps streamed deltas independent across session stores", () => {
+    const shared = text("server", "start")
+    const [first, setFirst] = createStore({ parts: mergeOptimisticPart([], new Set(), shared).parts })
+    const [second, setSecond] = createStore({ parts: mergeOptimisticPart([], new Set(), shared).parts })
+
+    setFirst(
+      "parts",
+      produce((parts) => {
+        const part = parts[0]
+        if (part?.type === "text") part.text += " chunk"
+      }),
+    )
+    setSecond(
+      "parts",
+      produce((parts) => {
+        const part = parts[0]
+        if (part?.type === "text") part.text += " chunk"
+      }),
+    )
+
+    expect(value(first.parts, "server")).toBe("start chunk")
+    expect(value(second.parts, "server")).toBe("start chunk")
+    expect(value([shared], "server")).toBe("start")
   })
 })
 

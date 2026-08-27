@@ -109,7 +109,6 @@ export type Event =
   | EventInteractiveTerminalData
   | EventInteractiveTerminalDeleted
   | EventSandboxStatusChanged
-  | EventLspClientDiagnostics
   | EventSuggestionShown
   | EventSuggestionAccepted
   | EventSuggestionDismissed
@@ -119,6 +118,7 @@ export type Event =
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
   | EventKiloSessionsRemoteStatusChanged
+  | EventLspClientDiagnostics
   | EventMemoryStatus1
   | EventMemoryUpdated1
   | EventMemoryError1
@@ -382,11 +382,23 @@ export type AgentManagerMoveRequest = {
   sectionID: string | null
 }
 
+export type AgentManagerAnswers = Array<Array<string>>
+
+export type AgentManagerAnswerRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "answer"
+  targetSessionID: string
+  questionID?: string
+  answers: AgentManagerAnswers
+}
+
 export type AgentManagerRequest =
   | AgentManagerOverviewRequest
   | AgentManagerPromptRequest
   | AgentManagerStopRequest
   | AgentManagerMoveRequest
+  | AgentManagerAnswerRequest
 
 export type NotebookRequestId = string
 
@@ -1155,7 +1167,6 @@ export type GlobalEvent = {
     | EventInteractiveTerminalData
     | EventInteractiveTerminalDeleted
     | EventSandboxStatusChanged
-    | EventLspClientDiagnostics
     | EventSuggestionShown
     | EventSuggestionAccepted
     | EventSuggestionDismissed
@@ -1165,6 +1176,7 @@ export type GlobalEvent = {
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
     | EventKiloSessionsRemoteStatusChanged
+    | EventLspClientDiagnostics
     | EventMemoryStatus
     | EventMemoryUpdated
     | EventMemoryError
@@ -4155,6 +4167,52 @@ export type CommandFile = {
   hints: Array<string>
 }
 
+export type ProviderUsagePeriod = {
+  unit: "hour" | "day" | "week" | "month"
+  value: number
+}
+
+export type ProviderUsageWindow = {
+  id: string
+  resource: string
+  unit: string
+  orientation: "used_percent" | "remaining_percent" | "amount" | "count"
+  used?: number
+  remaining?: number
+  limit?: number
+  period?: ProviderUsagePeriod
+  durationMs?: number
+  resetAt?: string
+  state: "active" | "exhausted" | "unlimited" | "not_in_plan" | "unknown"
+}
+
+export type ProviderUsageError = {
+  code: string
+  message: string
+  retryable: boolean
+}
+
+export type ProviderUsageSnapshot = {
+  id: string
+  providerID: string
+  sourceKind: "kilo_managed" | "direct"
+  providerLabel: string
+  planLabel: string
+  sourceLabel: string
+  fetchState: "ready" | "stale" | "unavailable" | "error"
+  planState: "active" | "past_due" | "canceling" | "unknown"
+  routingState: "active" | "disabled" | "missing" | "replaced" | "not_applicable" | "unknown"
+  fetchedAt?: string
+  managementUrl?: string
+  windows: Array<ProviderUsageWindow>
+  error?: ProviderUsageError
+}
+
+export type ProviderUsage = {
+  items: Array<ProviderUsageSnapshot>
+  generatedAt: string
+}
+
 export type NotebookOutput = {
   mime: string
   text?: string
@@ -4333,11 +4391,19 @@ export type AgentManagerMoveResult = {
   moved: true
 }
 
+export type AgentManagerAnswerResult = {
+  operation: "answer"
+  sessionID: string
+  questionID: string
+  resolved: true
+}
+
 export type AgentManagerResult =
   | AgentManagerOverviewResult
   | AgentManagerPromptResult
   | AgentManagerStopResult
   | AgentManagerMoveResult
+  | AgentManagerAnswerResult
 
 export type AgentManagerFailure = {
   code:
@@ -4885,15 +4951,6 @@ export type EventSandboxStatusChanged = {
   }
 }
 
-export type EventLspClientDiagnostics = {
-  id: string
-  type: "lsp.client.diagnostics"
-  properties: {
-    serverID: string
-    path: string
-  }
-}
-
 export type EventSuggestionShown = {
   id: string
   type: "suggestion.shown"
@@ -4990,6 +5047,15 @@ export type EventKiloSessionsRemoteStatusChanged = {
   properties: {
     enabled: boolean
     connected: boolean
+  }
+}
+
+export type EventLspClientDiagnostics = {
+  id: string
+  type: "lsp.client.diagnostics"
+  properties: {
+    serverID: string
+    path: string
   }
 }
 
@@ -12078,6 +12144,90 @@ export type McpDisconnectResponses = {
 
 export type McpDisconnectResponse = McpDisconnectResponses[keyof McpDisconnectResponses]
 
+export type McpReadResourceData = {
+  body?: {
+    uri: string
+    server: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/resource/read"
+}
+
+export type McpReadResourceErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpReadResourceError = McpReadResourceErrors[keyof McpReadResourceErrors]
+
+export type McpReadResourceResponses = {
+  /**
+   * Resource content
+   */
+  200: {
+    uri: string
+    mimeType?: string
+    text?: string
+    blob?: string
+  }
+}
+
+export type McpReadResourceResponse = McpReadResourceResponses[keyof McpReadResourceResponses]
+
+export type McpCallToolData = {
+  body?: {
+    server: string
+    name: string
+    arguments?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/mcp/call-tool"
+}
+
+export type McpCallToolErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type McpCallToolError = McpCallToolErrors[keyof McpCallToolErrors]
+
+export type McpCallToolResponses = {
+  /**
+   * Tool call result
+   */
+  200: {
+    content: Array<unknown>
+    isError?: boolean
+    structuredContent?: {
+      [key: string]: unknown
+    }
+  }
+}
+
+export type McpCallToolResponse = McpCallToolResponses[keyof McpCallToolResponses]
+
 export type ProjectListData = {
   body?: never
   path?: never
@@ -16611,6 +16761,73 @@ export type KilocodeRemoveAgentResponses = {
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
 
+export type KilocodeProviderUsageGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/provider-usage"
+}
+
+export type KilocodeProviderUsageGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * ServiceUnavailable
+   */
+  503: EffectHttpApiErrorServiceUnavailable
+}
+
+export type KilocodeProviderUsageGetError = KilocodeProviderUsageGetErrors[keyof KilocodeProviderUsageGetErrors]
+
+export type KilocodeProviderUsageGetResponses = {
+  /**
+   * Current provider usage
+   */
+  200: ProviderUsage
+}
+
+export type KilocodeProviderUsageGetResponse =
+  KilocodeProviderUsageGetResponses[keyof KilocodeProviderUsageGetResponses]
+
+export type KilocodeProviderUsageRefreshData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/provider-usage/refresh"
+}
+
+export type KilocodeProviderUsageRefreshErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * ServiceUnavailable
+   */
+  503: EffectHttpApiErrorServiceUnavailable
+}
+
+export type KilocodeProviderUsageRefreshError =
+  KilocodeProviderUsageRefreshErrors[keyof KilocodeProviderUsageRefreshErrors]
+
+export type KilocodeProviderUsageRefreshResponses = {
+  /**
+   * Refreshed provider usage
+   */
+  200: ProviderUsage
+}
+
+export type KilocodeProviderUsageRefreshResponse =
+  KilocodeProviderUsageRefreshResponses[keyof KilocodeProviderUsageRefreshResponses]
+
 export type KilocodeNotebookListData = {
   body?: never
   path?: never
@@ -16954,6 +17171,42 @@ export type KilocodeBackgroundJobCancelResponses = {
 
 export type KilocodeBackgroundJobCancelResponse =
   KilocodeBackgroundJobCancelResponses[keyof KilocodeBackgroundJobCancelResponses]
+
+export type KilocodeBackgroundJobPromoteData = {
+  body?: never
+  path: {
+    jobID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/background-jobs/{jobID}/promote"
+}
+
+export type KilocodeBackgroundJobPromoteErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeBackgroundJobPromoteError =
+  KilocodeBackgroundJobPromoteErrors[keyof KilocodeBackgroundJobPromoteErrors]
+
+export type KilocodeBackgroundJobPromoteResponses = {
+  /**
+   * Background job promoted
+   */
+  200: boolean
+}
+
+export type KilocodeBackgroundJobPromoteResponse =
+  KilocodeBackgroundJobPromoteResponses[keyof KilocodeBackgroundJobPromoteResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never

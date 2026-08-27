@@ -3921,6 +3921,220 @@
         ]
       }
     },
+    "/experimental/resource/read": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.readResource",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uri": {
+                      "type": "string"
+                    },
+                    "mimeType": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "blob": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["uri"],
+                  "additionalProperties": false,
+                  "description": "Resource content"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read a resource from a connected MCP server by URI. Used by MCP Apps to load UI resources.",
+        "summary": "Read MCP resource",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "uri": {
+                    "type": "string"
+                  },
+                  "server": {
+                    "type": "string"
+                  }
+                },
+                "required": ["uri", "server"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.readResource({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/mcp/call-tool": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.callTool",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tool call result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "array"
+                    },
+                    "isError": {
+                      "type": "boolean"
+                    },
+                    "structuredContent": {
+                      "type": "object"
+                    }
+                  },
+                  "required": ["content"],
+                  "additionalProperties": false,
+                  "description": "Tool call result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.",
+        "summary": "Call MCP tool",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "server": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "arguments": {
+                    "type": "object"
+                  }
+                },
+                "required": ["server", "name"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.callTool({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/project": {
       "get": {
         "tags": ["project"],
@@ -15222,6 +15436,134 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeAgent({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/provider-usage": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.providerUsage.get",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current provider usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get cache-aware, secret-free provider plan usage and personal billing status.",
+        "summary": "Get provider usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.providerUsage.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/provider-usage/refresh": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.providerUsage.refresh",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refreshed provider usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Refresh provider plan usage while coalescing concurrent source requests.",
+        "summary": "Refresh provider usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.providerUsage.refresh({\n  ...\n})"
           }
         ]
       }
@@ -26987,6 +27329,50 @@
         "required": ["id", "sessionID", "operation", "targetSessionID", "sectionID"],
         "additionalProperties": false
       },
+      "AgentManagerAnswers": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "maxItems": 20
+        },
+        "minItems": 1,
+        "maxItems": 20
+      },
+      "AgentManagerAnswerRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/AgentManagerRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "targetSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "answers": {
+            "$ref": "#/components/schemas/AgentManagerAnswers"
+          }
+        },
+        "required": ["id", "sessionID", "operation", "targetSessionID", "answers"],
+        "additionalProperties": false
+      },
       "AgentManagerRequest": {
         "anyOf": [
           {
@@ -27000,6 +27386,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveRequest"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerRequest"
           }
         ]
       },
@@ -38656,6 +39045,158 @@
         "required": ["name", "builtin", "location", "editable", "hints"],
         "additionalProperties": false
       },
+      "ProviderUsagePeriod": {
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "enum": ["hour", "day", "week", "month"]
+          },
+          "value": {
+            "type": "integer"
+          }
+        },
+        "required": ["unit", "value"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "orientation": {
+            "type": "string",
+            "enum": ["used_percent", "remaining_percent", "amount", "count"]
+          },
+          "used": {
+            "type": "number"
+          },
+          "remaining": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "period": {
+            "$ref": "#/components/schemas/ProviderUsagePeriod"
+          },
+          "durationMs": {
+            "type": "number"
+          },
+          "resetAt": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["active", "exhausted", "unlimited", "not_in_plan", "unknown"]
+          }
+        },
+        "required": ["id", "resource", "unit", "orientation", "state"],
+        "additionalProperties": false
+      },
+      "ProviderUsageError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "retryable"],
+        "additionalProperties": false
+      },
+      "ProviderUsageSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "providerID": {
+            "type": "string"
+          },
+          "sourceKind": {
+            "type": "string",
+            "enum": ["kilo_managed", "direct"]
+          },
+          "providerLabel": {
+            "type": "string"
+          },
+          "planLabel": {
+            "type": "string"
+          },
+          "sourceLabel": {
+            "type": "string"
+          },
+          "fetchState": {
+            "type": "string",
+            "enum": ["ready", "stale", "unavailable", "error"]
+          },
+          "planState": {
+            "type": "string",
+            "enum": ["active", "past_due", "canceling", "unknown"]
+          },
+          "routingState": {
+            "type": "string",
+            "enum": ["active", "disabled", "missing", "replaced", "not_applicable", "unknown"]
+          },
+          "fetchedAt": {
+            "type": "string"
+          },
+          "managementUrl": {
+            "type": "string"
+          },
+          "windows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageWindow"
+            }
+          },
+          "error": {
+            "$ref": "#/components/schemas/ProviderUsageError"
+          }
+        },
+        "required": [
+          "id",
+          "providerID",
+          "sourceKind",
+          "providerLabel",
+          "planLabel",
+          "sourceLabel",
+          "fetchState",
+          "planState",
+          "routingState",
+          "windows"
+        ],
+        "additionalProperties": false
+      },
+      "ProviderUsage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageSnapshot"
+            }
+          },
+          "generatedAt": {
+            "type": "string"
+          }
+        },
+        "required": ["items", "generatedAt"],
+        "additionalProperties": false
+      },
       "NotebookOutput": {
         "type": "object",
         "properties": {
@@ -39197,6 +39738,30 @@
         "required": ["operation", "sessionID", "sectionID", "moved"],
         "additionalProperties": false
       },
+      "AgentManagerAnswerResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "resolved": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["operation", "sessionID", "questionID", "resolved"],
+        "additionalProperties": false
+      },
       "AgentManagerResult": {
         "anyOf": [
           {
@@ -39210,6 +39775,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveResult"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerResult"
           }
         ]
       },

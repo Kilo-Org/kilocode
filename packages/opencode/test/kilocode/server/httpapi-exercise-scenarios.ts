@@ -587,6 +587,13 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(404),
   http.protected
+    .post("/kilocode/background-jobs/{jobID}/promote", "kilocode.backgroundJob.promote")
+    .at((ctx) => ({
+      path: route("/kilocode/background-jobs/{jobID}/promote", { jobID: "job_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
+  http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
     .jsonEffect(200, (body) =>
@@ -664,6 +671,20 @@ export const kiloScenarios: Scenario[] = [
         check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed agent should not remain on disk")
       }),
     ),
+  http.protected
+    .get("/kilocode/provider-usage", "kilocode.providerUsage.get")
+    .inProject({ git: true })
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
+  http.protected
+    .post("/kilocode/provider-usage/refresh", "kilocode.providerUsage.refresh")
+    .inProject({ git: true })
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
   http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent.duplicates")
     .inProject({ git: true, init: duplicates })

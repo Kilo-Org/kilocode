@@ -3,6 +3,8 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.session.ui.header.BranchChangesBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.stateLabel
+import ai.kilocode.client.ui.style
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -34,9 +36,9 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(stateLabel(GhState.OPEN), (badge.icon as FilledBadgeIcon).text)
         assertSame(style(GhState.OPEN), (badge.icon as FilledBadgeIcon).style)
         assertTrue(badge.isVisible)
-        assertEquals(listOf("#123 ", "Implement header"), fragments.map { it.text })
-        assertEquals(SimpleTextAttributes.GRAYED_ATTRIBUTES.fgColor, fragments[0].attrs.fgColor)
-        assertEquals(SimpleTextAttributes.STYLE_BOLD, fragments[1].attrs.style)
+        assertEquals(listOf("Implement header", " #123"), fragments.map { it.text })
+        assertEquals(SimpleTextAttributes.STYLE_BOLD, fragments[0].attrs.style)
+        assertEquals(SimpleTextAttributes.GRAYED_ATTRIBUTES.fgColor, fragments[1].attrs.fgColor)
         assertEquals(Cursor.HAND_CURSOR, title.cursor.type)
         assertEquals(Cursor.HAND_CURSOR, badge.cursor.type)
         assertTrue(title.toolTipText.contains("Open #123 Implement header"))

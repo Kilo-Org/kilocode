@@ -5,6 +5,8 @@ description: "Start-to-finish guide for configuring your KiloClaw instance"
 
 # Setup walkthrough
 
+{% partial file="kiloclaw-eol.md" /%}
+
 This guide walks you through a full KiloClaw setup — from creating accounts to scheduling your first automated workflow. Plan for about 60 minutes.
 
 ## Planning your setup

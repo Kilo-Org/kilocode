@@ -8,6 +8,7 @@ import {
   WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
+import { ProviderUsage } from "@opencode-ai/schema/kilocode/provider-usage"
 import { AnacondaDesktopApi } from "./anaconda-desktop"
 import {
   Failure as AgentManagerFailure,
@@ -68,6 +69,8 @@ export const KilocodePaths = {
   removeCommand: `${root}/command/remove`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
+  providerUsage: `${root}/provider-usage`,
+  providerUsageRefresh: `${root}/provider-usage/refresh`,
   notebookList: `${root}/notebook`,
   notebookReply: `${root}/notebook/:requestID/reply`,
   notebookReject: `${root}/notebook/:requestID/reject`,
@@ -77,6 +80,7 @@ export const KilocodePaths = {
   sessionModelUsage: `/session/:sessionID/model-usage`,
   backgroundJobs: `${root}/background-jobs`,
   backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
+  backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -139,6 +143,28 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Remove a custom agent",
             description:
               "Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.",
+          }),
+        ),
+        HttpApiEndpoint.get("providerUsage", KilocodePaths.providerUsage, {
+          query: WorkspaceRoutingQuery,
+          success: described(ProviderUsage.Info, "Current provider usage"),
+          error: HttpApiError.ServiceUnavailable,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.providerUsage.get",
+            summary: "Get provider usage",
+            description: "Get cache-aware, secret-free provider plan usage and personal billing status.",
+          }),
+        ),
+        HttpApiEndpoint.post("providerUsageRefresh", KilocodePaths.providerUsageRefresh, {
+          query: WorkspaceRoutingQuery,
+          success: described(ProviderUsage.Info, "Refreshed provider usage"),
+          error: HttpApiError.ServiceUnavailable,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.providerUsage.refresh",
+            summary: "Refresh provider usage",
+            description: "Refresh provider plan usage while coalescing concurrent source requests.",
           }),
         ),
         HttpApiEndpoint.get("notebookList", KilocodePaths.notebookList, {
@@ -245,6 +271,18 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.backgroundJob.cancel",
             summary: "Cancel background job",
             description: "Cancel one background subagent job and its session tree.",
+          }),
+        ),
+        HttpApiEndpoint.post("backgroundJobPromote", KilocodePaths.backgroundJobPromote, {
+          params: { jobID: Schema.String },
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Background job promoted"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.backgroundJob.promote",
+            summary: "Promote background job",
+            description: "Continue one foreground subagent in the background.",
           }),
         ),
       )

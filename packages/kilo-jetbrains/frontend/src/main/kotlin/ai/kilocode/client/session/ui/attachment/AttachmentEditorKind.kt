@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.vfs.KiloEditorKind
@@ -16,7 +17,6 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -111,7 +111,7 @@ private fun component(data: AttachmentData): JComponent = when (data) {
 private fun connecting(): JComponent {
     return Stack.horizontal(gap = UiStyle.Gap.sm()).apply {
         border = JBUI.Borders.empty(UiStyle.Gap.pad())
-        next(JBLabel(AnimatedIcon.Default()))
+        next(JBLabel(SpinnerIcon.icon))
         next(JBLabel(KiloBundle.message("session.connection.connecting")))
     }.let { Centerizer(it, Centerizer.TYPE.BOTH) }
 }

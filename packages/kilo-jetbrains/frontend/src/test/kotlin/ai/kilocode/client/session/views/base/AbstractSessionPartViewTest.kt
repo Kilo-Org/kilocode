@@ -13,7 +13,9 @@ import java.awt.image.BufferedImage
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JLabel
+import javax.swing.JLayeredPane
 import javax.swing.JPanel
+import javax.swing.JRootPane
 
 @Suppress("UnstableApiUsage")
 class AbstractSessionPartViewTest : BasePlatformTestCase() {
@@ -191,6 +193,45 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         // Leaving the row through that nested child clears the fill instead of leaving it stuck.
         exit(child, 10_000, 10_000)
         assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+    }
+
+    fun `test hover survives an exit that stays on the row`() {
+        val view = NestedView(JLabel("link"))
+        val row = view.component(0) as JPanel
+        pane(view)
+
+        enter(row)
+        // Swing reports an exit for every nested crossing; one that lands back on the row is not a
+        // leave, so the fill must stay.
+        exit(row, 5, 5)
+
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+    }
+
+    fun `test hover clears when an overlay covers the row under the pointer`() {
+        val view = NestedView(JLabel("link"))
+        val row = view.component(0) as JPanel
+        val pane = pane(view)
+        enter(row)
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+
+        // A banner painted above the transcript owns the pointer even while it sits inside the row's
+        // bounds, so the row must not stay lit underneath it.
+        pane.add(JPanel().apply { setBounds(0, 0, 200, 40) }, JLayeredPane.PALETTE_LAYER)
+        exit(row, 5, 5)
+
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+    }
+
+    private fun pane(view: AbstractSessionPartView): JLayeredPane {
+        val root = JRootPane()
+        root.setSize(200, 40)
+        root.contentPane.add(view)
+        view.setSize(200, 40)
+        view.doLayout()
+        root.doLayout()
+        root.contentPane.doLayout()
+        return root.layeredPane
     }
 
     fun `test clicking a nested header child toggles the card`() {

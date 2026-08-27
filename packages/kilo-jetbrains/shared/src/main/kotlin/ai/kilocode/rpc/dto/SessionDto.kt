@@ -53,6 +53,7 @@ enum class SessionActivityKindDto {
     QUESTION,
     PLAN,
     PERMISSION,
+    ERROR,
 }
 
 @Serializable
@@ -65,4 +66,25 @@ data class SessionActivityDto(
 data class SessionListDto(
     val sessions: List<SessionDto>,
     val statuses: Map<String, SessionStatusDto>,
+)
+
+@Serializable
+enum class SessionChangeKindDto {
+    CREATED,
+    UPDATED,
+    DELETED,
+}
+
+/**
+ * A session lifecycle change observed on the CLI event stream, tagged with the session's own
+ * directory so directory-scoped views can decide whether it concerns them.
+ *
+ * The stream is app-wide: it carries changes for every directory this IDE's CLI serves, including
+ * sessions started in another project frame.
+ */
+@Serializable
+data class SessionChangeDto(
+    val id: String,
+    val directory: String,
+    val kind: SessionChangeKindDto,
 )
