@@ -25,9 +25,9 @@ type State = {
 }
 
 type Request = {
-  state: State
-  events: Change[]
-  promise: Promise<void>
+  readonly state: State
+  readonly events: Change[]
+  readonly promise: Promise<void>
 }
 
 type Options = {
@@ -204,41 +204,42 @@ export class WorktreeActivity {
     const req: Request = {
       state,
       events: [],
-      promise: Promise.resolve(),
+      promise: Promise.resolve()
+        .then(() => this.opts.load(state.dir))
+        .then((snapshot) => this.finish(req, snapshot))
+        .catch((err: unknown) => {
+          if (this.valid(req)) req.state.loaded = false
+          this.opts.log(err)
+        })
+        .finally(() => {
+          if (state.request === req) state.request = undefined
+        }),
     }
     state.request = req
-    req.promise = Promise.resolve()
-      .then(() => this.opts.load(state.dir))
-      .then((snapshot) => this.finish(req, snapshot))
-      .catch((err: unknown) => {
-        if (this.valid(req)) req.state.loaded = false
-        this.opts.log(err)
-      })
-      .finally(() => {
-        if (state.request === req) state.request = undefined
-      })
     return req
   }
 
   private finish(req: Request, snapshot: Snapshot): void {
     if (!this.valid(req)) return
-    const state = req.state
-    state.statuses = new Map()
+    const next = this.state(req.state.dir)
     for (const [sessionID, status] of Object.entries(snapshot.statuses ?? {})) {
-      if (typeof status?.type === "string") state.statuses.set(sessionID, status.type)
+      if (typeof status?.type === "string") next.statuses.set(sessionID, status.type)
     }
-    state.permissions = new Map()
     for (const item of snapshot.permissions ?? []) {
       if (typeof item?.id === "string" && typeof item.sessionID === "string")
-        state.permissions.set(item.id, item.sessionID)
+        next.permissions.set(item.id, item.sessionID)
     }
-    state.questions = new Map()
     for (const item of snapshot.questions ?? []) {
       if (item?.blocking !== false && typeof item?.id === "string" && typeof item.sessionID === "string")
-        state.questions.set(item.id, item.sessionID)
+        next.questions.set(item.id, item.sessionID)
     }
-    for (const change of req.events) this.apply(state, change)
-    state.loaded = true
+    for (const change of req.events) this.apply(next, change)
+    Object.assign(req.state, {
+      statuses: next.statuses,
+      permissions: next.permissions,
+      questions: next.questions,
+      loaded: true,
+    })
     this.publish()
   }
 

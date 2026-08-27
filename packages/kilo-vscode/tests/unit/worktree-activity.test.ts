@@ -229,6 +229,46 @@ describe("WorktreeActivity", () => {
     expect(test.posted.at(-1)).toEqual(["/repo/new"])
   })
 
+  it("defers the loader and recovers from synchronous failures", async () => {
+    const error = new Error("load failed")
+    let calls = 0
+    const test = setup(["/repo"], () => {
+      calls += 1
+      if (calls === 1) throw error
+      return Promise.resolve(snapshot({ child: "busy" }))
+    })
+    const pending = test.activity.sync()
+    expect(calls).toBe(0)
+    await pending
+    expect(test.errors).toEqual([error])
+
+    await test.activity.sync()
+    expect(calls).toBe(2)
+    expect(test.posted.at(-1)).toEqual(["/repo"])
+    await test.activity.sync()
+    expect(calls).toBe(2)
+  })
+
+  it("commits snapshots to the tracked state used by later events and refreshes", async () => {
+    const initial = snapshot({ child: "busy" }, [["p1", "child"]], [["q1", "child"]])
+    const snapshots = [initial, snapshot({ child: "retry" })]
+    const test = setup(["/repo"], async () => snapshots.shift()!)
+    await test.activity.sync()
+    expect(test.posted.at(-1)).toEqual([])
+
+    test.activity.event(replied("permission", "p1", "child"), "/repo")
+    expect(test.posted.at(-1)).toEqual([])
+    test.activity.event(replied("question", "q1", "child"), "/repo")
+    expect(test.posted.at(-1)).toEqual(["/repo"])
+
+    await test.activity.sync(true)
+    expect(test.posted.at(-1)).toEqual(["/repo"])
+    test.activity.event(status("child", "idle"), "/repo")
+    expect(test.posted.at(-1)).toEqual([])
+    expect(initial).toEqual(snapshot({ child: "busy" }, [["p1", "child"]], [["q1", "child"]]))
+    expect(test.errors).toEqual([])
+  })
+
   it("does not let a snapshot overwrite newer events or remove other active children", async () => {
     const gate = defer<Snapshot>()
     const test = setup(["/repo"], () => gate.promise)
