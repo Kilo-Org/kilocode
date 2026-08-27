@@ -33,6 +33,7 @@ interface WorktreeItemProps {
   busy: boolean
   /** Whether an agent session on this worktree is actively working (shows spinner instead of branch icon). */
   working: boolean
+  blocked?: boolean
   stale: boolean
   /** 1-indexed shortcut number shown as ⌘2, ⌘3, etc. Pass 0, >9, or undefined to hide. */
   shortcut?: number
@@ -303,7 +304,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             {props.shortcut}
                           </span>
                         </Show>
-                        <Show when={!props.busy && !props.pendingDelete}>
+                        <Show when={!props.busy && !props.working && !props.blocked && !props.pendingDelete}>
                           <div
                             class="am-worktree-close"
                             onMouseEnter={() => setOverClose(true)}
@@ -520,17 +521,19 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Icon name="edit" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.rename")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
-            <ContextMenu.Item onSelect={() => props.onDelete(new MouseEvent("click"))}>
-              <Icon name="trash" size="small" />
-              <ContextMenu.ItemLabel>{t("agentManager.worktree.delete")}</ContextMenu.ItemLabel>
-              <Show when={props.closeKeybind}>
-                <span class="am-menu-shortcut">
-                  {parseBindingTokens(props.closeKeybind).map((token) => (
-                    <kbd class="am-menu-key">{token}</kbd>
-                  ))}
-                </span>
-              </Show>
-            </ContextMenu.Item>
+            <Show when={!props.busy && !props.working && !props.blocked}>
+              <ContextMenu.Item onSelect={() => props.onDelete(new MouseEvent("click"))}>
+                <Icon name="trash" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.worktree.delete")}</ContextMenu.ItemLabel>
+                <Show when={props.closeKeybind}>
+                  <span class="am-menu-shortcut">
+                    {parseBindingTokens(props.closeKeybind).map((token) => (
+                      <kbd class="am-menu-key">{token}</kbd>
+                    ))}
+                  </span>
+                </Show>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Separator />
             <ContextMenu.Item onSelect={() => props.onOpen()}>
               <Icon name="open-file" size="small" />
