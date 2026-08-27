@@ -85,6 +85,7 @@ import { SidebarBody } from "./SidebarBody"
 import { TabBar } from "./TabBar"
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
+import { worktreeSessionIds as worktreeMembership, worktreeSessions } from "./project/session-filter"
 import { applyProjectSelection, createTargetRememberer } from "./project/selection"
 import { createLocalSessions, persistLocalTabs, projectLocalIds, projectLocalSessions } from "./project/local-tabs"
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
@@ -778,20 +779,8 @@ const AgentManagerContent: Component = () => {
     title: () => t("agentManager.session.newSession"),
   })
 
-  const sessionsForWorktree = (worktreeId: string): SessionInfo[] => {
-    const ids = new Set(
-      managedSessions()
-        .filter((ms) => ms.worktreeId === worktreeId)
-        .map((ms) => ms.id),
-    )
-    return applyTabOrder(
-      session
-        .sessions()
-        .filter((s) => isKnownRootSession(s) && ids.has(s.id))
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
-      worktreeTabOrder()[worktreeId],
-    )
-  }
+  const sessionsForWorktree = (id: string) =>
+    worktreeSessions(id, managedSessions(), session.sessions(), worktreeTabOrder()[id])
 
   const activeWorktreeSessions = createMemo((): SessionInfo[] => {
     const sel = selection()
@@ -802,11 +791,7 @@ const AgentManagerContent: Component = () => {
   const activeWorktreeSessionIds = createMemo<ReadonlySet<string> | undefined>(() => {
     const sel = selection()
     if (!sel || sel === LOCAL) return undefined
-    return new Set(
-      managedSessions()
-        .filter((item) => item.worktreeId === sel)
-        .map((item) => item.id),
-    )
+    return worktreeMembership(sel, managedSessions())
   })
 
   const activeTabs = createMemo((): SessionInfo[] => {
