@@ -15,7 +15,6 @@ import type {
   PRStatus,
   RunStatus,
   SectionState,
-  SessionInfo,
   WorktreeGitStats,
   WorktreeState,
 } from "../src/types/messages"
@@ -31,7 +30,6 @@ import SectionHeader from "./SectionHeader"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
-import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 
@@ -48,8 +46,6 @@ export interface SidebarBodyProps {
   isLocalBusy: () => boolean
   repoBranch: () => string | undefined
   localStats: () => LocalGitStats | undefined
-  sessionsCollapsed: () => boolean
-  toggleSessions: () => void
   search: { items: () => SidebarSearchItem[]; current: () => SidebarSearchItem | undefined }
   bindings: () => Record<string, string>
   defaultBranch: () => string
@@ -63,6 +59,7 @@ export interface SidebarBodyProps {
   onNewWorktree: () => void
   onNewSection: () => void
   onShortcuts: () => void
+  onHistory: () => void
   sections: () => SectionState[]
   sortedWorktrees: () => WorktreeState[]
   worktrees: () => WorktreeState[]
@@ -83,7 +80,7 @@ export interface SidebarBodyProps {
   worktreeSubtitle: (wt: WorktreeState) => string | undefined
   pendingDelete: () => string | null
   busy: (id: string) => boolean
-  isAgentBusy: (id: string) => boolean
+  isAgentBusy: (id: string, waiting?: boolean) => boolean
   isStaleWorktree: (id: string) => boolean
   shortcutMap: () => Map<string, number>
   worktreeStats: () => Record<string, WorktreeGitStats>
@@ -92,10 +89,6 @@ export interface SidebarBodyProps {
   confirmDeleteWorktree: (id: string) => void
   handleDeleteWorktree: (id: string, e: MouseEvent) => void
   confirmRemoveStaleWorktree: (id: string) => void
-  unassignedSessions: () => SessionInfo[]
-  selectUnassigned: (id: string) => void
-  promoteSession: (id: string) => void
-  openUnassigned: (id: string) => void
   track: (event: string, source: string, action: () => void) => () => void
 }
 
@@ -184,7 +177,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
       </button>
 
       {/* WORKTREES section */}
-      <div class={`am-section ${props.sessionsCollapsed() ? "am-section-grow" : ""}`}>
+      <div class="am-section am-section-grow">
         <SidebarSectionHeader
           class="am-section-header"
           label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
@@ -203,6 +196,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
               onNew={props.onNewWorktree}
               onSection={props.onNewSection}
               onShortcuts={props.onShortcuts}
+              onHistory={props.onHistory}
               onSettings={() =>
                 vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId: props.projectId })
               }
@@ -321,6 +315,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
                                 pendingDelete={props.pendingDelete() === wt.id}
                                 busy={props.busy(wt.id)}
                                 working={props.isAgentBusy(wt.id)}
+                                blocked={props.isAgentBusy(wt.id, true)}
                                 stale={props.isStaleWorktree(wt.id)}
                                 shortcut={props.shortcutMap().get(wt.id)}
                                 stats={props.worktreeStats()[wt.id]}
@@ -448,17 +443,6 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
           </Show>
         </div>
       </div>
-
-      <UnassignedSessionsSection
-        sessions={props.unassignedSessions}
-        loaded={props.sessionsLoaded}
-        collapsed={props.sessionsCollapsed}
-        active={() => (props.selection() === null ? props.currentSessionID() : undefined)}
-        onToggle={props.toggleSessions}
-        onSelect={props.selectUnassigned}
-        onPromote={props.promoteSession}
-        onOpen={props.openUnassigned}
-      />
     </>
   )
 }

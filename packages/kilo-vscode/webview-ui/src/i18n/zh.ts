@@ -180,7 +180,6 @@ export const dict = {
   "prompt.action.send.recording": "转录并发送",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "优化提示词",
-  "prompt.action.resetModel": "重置模型为默认值",
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
   "prompt.action.sandbox.enable": "启用沙盒",
@@ -1185,7 +1184,6 @@ export const dict = {
   "task.backgroundAgents.open": "打开后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",
-  "task.backgroundAgents.foreground": "前台智能体正在运行",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",
   "task.backgroundAgents.needsInput": "需要输入",
   "task.backgroundAgents.dismiss": "关闭",

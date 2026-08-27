@@ -587,6 +587,13 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(404),
   http.protected
+    .post("/kilocode/background-jobs/{jobID}/promote", "kilocode.backgroundJob.promote")
+    .at((ctx) => ({
+      path: route("/kilocode/background-jobs/{jobID}/promote", { jobID: "job_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
+  http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
     .jsonEffect(200, (body) =>
@@ -595,6 +602,24 @@ export const kiloScenarios: Scenario[] = [
         yield* Effect.promise(() => rm(body, { force: true }))
       }),
     ),
+  http.protected
+    .post("/kilocode/snapshot/remove", "kilocode.removeSnapshot")
+    .mutating()
+    .inProject({ git: true })
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const worktree = path.join(directory(ctx), ".kilo", "worktrees", "api-snapshot-remove")
+        yield* Effect.promise(() => mkdir(worktree, { recursive: true }))
+        yield* Effect.promise(() => rm(worktree, { recursive: true, force: true }))
+        return worktree
+      }),
+    )
+    .at((ctx) => ({
+      path: `/kilocode/snapshot/remove?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+      body: { worktree: ctx.state },
+    }))
+    .status(401),
   http.protected
     .get("/kilocode/command/files", "kilocode.commandFiles")
     .inProject({ git: true, init: command })

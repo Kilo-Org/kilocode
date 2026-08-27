@@ -26,6 +26,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { useProvider } from "../../context/provider"
@@ -103,6 +104,7 @@ interface MessageListProps {
 export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
+  const vscode = useVSCode()
   const language = useLanguage()
   const provider = useProvider()
   const i18n = useI18n()
@@ -1332,6 +1334,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearch={activeKey() === row.key}
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                        readonly={props.readonly}
                       />
                     )}
                   </Virtualizer>
@@ -1345,6 +1348,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearch={activeKey() === key}
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
+                      readonly={props.readonly}
                     />
                   )}
                 </For>
@@ -1360,6 +1364,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearch={activeKey() === row.key}
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                  readonly={props.readonly}
                 />
               )}
             </For>
@@ -1371,6 +1376,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
       </div>
 
       <PromptRail
+        // Editor tabs and Agent Manager have no sidebar edge signal. Keep their rail on the physical right in RTL too.
+        side={vscode.sidebarSide() ?? "right"}
         entries={entries}
         items={items}
         active={() => railActiveKey()}

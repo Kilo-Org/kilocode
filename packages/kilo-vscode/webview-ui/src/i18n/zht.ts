@@ -179,7 +179,6 @@ export const dict = {
   "prompt.action.autoApprove.disable": "停用自動核准",
   "prompt.action.autoApprove.enabled": "自動核准已啟用。權限請求將自動獲准。",
   "prompt.action.autoApprove.disabled": "自動核准已停用。點擊以自動核准權限請求。",
-  "prompt.action.resetModel": "重置模型為預設值",
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
   "prompt.action.sandbox.enable": "啟用沙盒",
@@ -1189,7 +1188,6 @@ export const dict = {
   "task.backgroundAgents.open": "開啟背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",
-  "task.backgroundAgents.foreground": "前景 Agent 執行中",
   "task.backgroundAgents.waiting": "背景 Agent 需要你的輸入",
   "task.backgroundAgents.needsInput": "需要輸入",
   "task.backgroundAgents.dismiss": "關閉",

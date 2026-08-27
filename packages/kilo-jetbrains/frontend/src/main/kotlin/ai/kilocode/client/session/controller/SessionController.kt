@@ -24,7 +24,6 @@ import ai.kilocode.client.session.ui.mode.agentTitle
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Outcome
-import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
@@ -126,7 +125,6 @@ class SessionController(
 
     companion object {
         private val LOG = KiloLog.create(SessionController::class.java)
-        private const val ABORT_ERROR = "MessageAbortedError"
         internal const val RECENT_LIMIT = 5
         internal const val DISPLAY_DELAY_MS = 1_000L
         internal const val REVERT_TIMEOUT_MS = 30_000L
@@ -488,6 +486,98 @@ class SessionController(
             }
         }
     }
+
+    /**
+     * Re-runs the last user turn after it failed, discarding the failed assistant turn first.
+     *
+     * Reverting to the failed assistant message restores the workspace when that turn already edited
+     * files (a no-op server-side when it edited nothing), and the prompt that follows is what actually
+     * removes the message: `SessionRevert.cleanup` drops everything at or after the revert target on the
+     * next prompt. The replay reuses the original user message id, so no synthetic message is appended.
+     *
+     * A turn that failed before the assistant message existed (model resolution, missing provider
+     * credentials) has nothing to roll back, so that path skips the revert and only replays.
+     */
+    fun retry() {
+        assertEdt()
+        val id = sid ?: return
+        val target = retryTarget() ?: return
+        LOG.info("${ChatLogSummary.sid(id)} kind=retry clicked=true message=${target.assistant ?: "none"}")
+        val op = beginReverting(
+            KiloBundle.message("session.status.retrying"),
+            // No rollback marker: the transcript should not paint the failed turn as a revert target,
+            // it is about to be replaced. SessionMessageListPanel only marks when message != null.
+            SessionState.Reverting.Kind.ROLLBACK,
+            message = null,
+        ) ?: return
+        revertJob = cs.launch {
+            try {
+                target.assistant?.let {
+                    sessions.revert(id, directory, it, null)
+                    synchronizeFromDisk(id, "retry")
+                }
+                capture("Session Retry", sessionProps(id) + mapOf("rolledBack" to (target.assistant != null).toString()))
+                edt {
+                    if (disposed) return@edt
+                    clearReverting(op)
+                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+                }
+                sessions.prompt(id, directory, target.prompt)
+                LOG.info("${ChatLogSummary.sid(id)} kind=retry ok=true")
+            } catch (e: CancellationException) {
+                edt { cancelReverting(op) }
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "retry", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=retry dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt {
+                    if (disposed) return@edt
+                    // The revert may already have landed. Leave it applied and surface the failure so the
+                    // user can retry again or redo, rather than silently dropping back to idle.
+                    if (revertOp?.key == op.key) failReverting(op, e)
+                    else model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.prompt")))
+                }
+            }
+        }
+    }
+
+    /** Whether the error card should offer Retry. Gates the action so it is never painted as a no-op. */
+    @RequiresEdt
+    fun canRetry(): Boolean = retryTarget() != null
+
+    /**
+     * The failed tail turn to replay, or null when retry does not apply: no session, an operation already
+     * in flight, a busy session, a turn that did not fail, or a tail that is neither the last user message
+     * nor the assistant that failed answering it.
+     */
+    private fun retryTarget(): RetryTarget? {
+        assertEdt()
+        if (sid == null) return null
+        if (revertOp != null) return null
+        if (model.state.isBusy()) return null
+        val tail = model.messages().lastOrNull() ?: return null
+        val err = tail.info.error
+        val state = model.state
+        val failed = when {
+            // A user stop also lands an errored tail (MessageAbortedError), and it is not a failure.
+            err != null -> !err.aborted
+            // A turn that completed cleanly is not retryable even when a session-level error arrives
+            // afterwards: replaying it would revert work the model actually delivered.
+            tail.info.role == "assistant" && tail.info.time.completed != null -> false
+            else -> state is SessionState.Error ||
+                (state is SessionState.TurnEnded && state.outcome == Outcome.FAILED)
+        }
+        if (!failed) return null
+        val prompt = retryPromptCurrent() ?: return null
+        // The failure hit before the assistant message existed — model resolution and provider
+        // credentials are checked ahead of it — so the user turn is the tail and nothing needs rolling
+        // back.
+        if (tail.info.id == prompt.messageID) return RetryTarget(null, prompt)
+        if (tail.info.role != "assistant") return null
+        if (tail.info.parentID != prompt.messageID) return null
+        return RetryTarget(tail.info.id, prompt)
+    }
+
+    private data class RetryTarget(val assistant: String?, val prompt: PromptDto)
 
     fun deleteQueuedMessage(message: String) {
         assertEdt()
@@ -1422,8 +1512,8 @@ class SessionController(
 
     private fun seedOutcome() {
         val err = model.messages().lastOrNull { it.info.role == "assistant" }?.info?.error ?: return
-        if (err.type == ABORT_ERROR) {
-            model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED, OutcomeTone.WARNING))
+        if (err.aborted) {
+            model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED))
             return
         }
         model.setState(SessionState.Error(err.message ?: err.type, err.type))
@@ -1510,7 +1600,7 @@ class SessionController(
                 if (current is SessionState.Error && event.reason != "completed") return
                 val ended = TurnOutcome.classify(event.reason)
                 when {
-                    ended != null -> model.setState(SessionState.TurnEnded(ended.first, ended.second))
+                    ended != null -> model.setState(SessionState.TurnEnded(ended))
                     event.reason == "completed" -> {
                         capture("Task Completed", sessionProps(event.sessionID))
                         model.setState(SessionState.Idle)
@@ -1522,7 +1612,7 @@ class SessionController(
             is ChatEventDto.SessionCreated -> adoptFollowup(event.info)
 
             is ChatEventDto.Error -> {
-                if (event.error?.type != ABORT_ERROR) {
+                if (event.error?.aborted != true) {
                     capture("Session Error", sessionProps(event.sessionID) + mapOf("context" to "event", "errorClass" to (event.error?.type ?: "unknown")))
                 }
                 error(event, true)
@@ -1645,7 +1735,7 @@ class SessionController(
             model.setState(SessionState.LoginRequired(KiloBundle.message("session.login.required.description")))
             return
         }
-        if (event.error?.type == ABORT_ERROR) return
+        if (event.error?.aborted == true) return
         val msg = event.error?.message ?: event.error?.type ?: KiloBundle.message("session.error.unknown")
         model.setState(SessionState.Error(msg, event.error?.type))
     }
@@ -1877,6 +1967,12 @@ class SessionController(
         }
     }
 
+    /**
+     * Replays the last user message with the agent/model recorded on it.
+     *
+     * Login resume needs exactly this: the user authenticated for the model that demanded it, so
+     * resuming must use that model rather than whatever is selected now.
+     */
     private fun retryPrompt(): PromptDto? {
         val msg = model.messages().lastOrNull { it.info.role == "user" } ?: return null
         return PromptDto(
@@ -1887,6 +1983,24 @@ class SessionController(
             agent = msg.info.agent,
             variant = model.variant?.takeIf { it in model.variants },
             noReply = false,
+        )
+    }
+
+    /**
+     * Like [retryPrompt], but honours the *current* model/agent/effort selection.
+     *
+     * A turn usually fails because of the model it ran with — missing credentials, provider overload,
+     * context limit — so switching model or effort and pressing Retry has to pick that change up.
+     * Resolution mirrors [promptDto]; the recorded values are only a fallback for when no selection has
+     * resolved yet.
+     */
+    private fun retryPromptCurrent(): PromptDto? {
+        val base = retryPrompt() ?: return null
+        val sel = model.model?.let(::parseModel)
+        return base.copy(
+            providerID = sel?.first ?: base.providerID,
+            modelID = sel?.second ?: base.modelID,
+            agent = model.agent ?: base.agent,
         )
     }
 
@@ -2308,6 +2422,9 @@ class SessionController(
     private fun setControllerViewState(event: SessionControllerEvent.ViewChanged) {
         assertEdt()
         if (disposed) return
+        // A late empty history load must not re-show the empty screen after a prompt opened the
+        // transcript.
+        if (event is SessionControllerEvent.ViewChanged.ShowEmpty && model.showSession) return
         if (event is SessionControllerEvent.ViewChanged.ShowSession) openLocal()
         if (viewState == event) return
         fire(event) {
@@ -2407,6 +2524,14 @@ class SessionController(
             return SessionControllerEvent.ConnectionChanged.ShowError(
                 KiloBundle.message("session.connection.unsupported"),
                 unsupported(workspace.error, directory),
+                "workspace",
+            )
+        }
+
+        if (workspace.status == KiloWorkspaceStatusDto.MISSING) {
+            return SessionControllerEvent.ConnectionChanged.ShowError(
+                KiloBundle.message("session.connection.missing"),
+                KiloBundle.message("session.connection.missing.detail", workspace.error ?: directory),
                 "workspace",
             )
         }

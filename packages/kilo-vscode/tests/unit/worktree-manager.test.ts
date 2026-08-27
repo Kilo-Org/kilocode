@@ -263,6 +263,96 @@ describe("WorktreeStateManager.updateWorktreeLabel", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.createWorktree", () => {
+  it("uses a configured Git executable for worktree creation", async () => {
+    const root = await createTempRepo()
+    gitExec(["git", "-C", root, "config", "core.autocrlf", "false"])
+    gitExec(["git", "-C", root, "config", "core.eol", "lf"])
+    const real = Bun.which("git")
+    if (!real) throw new Error("Git is required for this test")
+
+    const fake = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-no-git-"))
+    tempDirs.push(fake)
+    const file = path.join(fake, process.platform === "win32" ? "git.cmd" : "git")
+    await fs.writeFile(file, process.platform === "win32" ? "@exit /b 127\r\n" : "#!/bin/sh\nexit 127\n")
+    if (process.platform !== "win32") await fs.chmod(file, 0o755)
+
+    const bin =
+      process.platform === "win32"
+        ? real
+        : path.join(await fs.mkdtemp(path.join(os.tmpdir(), "kilo-git executable-")), "git")
+    if (process.platform !== "win32") {
+      const dir = path.dirname(bin)
+      tempDirs.push(dir)
+      await fs.symlink(real, bin)
+    }
+
+    const env: Record<string, string> = {}
+    for (const [key, value] of Object.entries(process.env)) {
+      if (typeof value === "string" && key.toLowerCase() !== "path") env[key] = value
+    }
+    const key = Object.keys(process.env).find((name) => name.toLowerCase() === "path") ?? "PATH"
+    const dirs = [fake]
+    if (process.platform === "win32") {
+      const root = process.env.SystemRoot ?? process.env.windir
+      if (root) {
+        dirs.push(
+          path.join(root, "System32"),
+          path.join(root, "System32", "Wbem"),
+          path.join(root, "System32", "WindowsPowerShell", "v1.0"),
+        )
+      }
+    }
+    env[key] = dirs.join(path.delimiter)
+    env.KILO_TEST_ROOT = root
+    env.KILO_TEST_GIT = bin
+
+    const script = `
+      import { existsSync } from "node:fs"
+      import path from "node:path"
+      import { GitOps } from "./src/agent-manager/GitOps"
+      import { apply, capture } from "./src/agent-manager/git-transfer"
+      import { WorktreeManager } from "./src/agent-manager/WorktreeManager"
+
+      const root = process.env.KILO_TEST_ROOT
+      const git = process.env.KILO_TEST_GIT
+      if (!root || !git) throw new Error("Missing configured Git test environment")
+
+      const ops = new GitOps({ log: () => undefined, binary: git })
+      const manager = new WorktreeManager(root, () => undefined, ops)
+      const result = await manager.createWorktree({ branchName: "configured-git" })
+      if (!existsSync(path.join(result.path, ".git"))) throw new Error("Worktree was not created")
+      if ((await ops.currentBranch(result.path)) !== result.branch) throw new Error("GitOps did not use configured Git")
+      if (await manager.hasWork(result.path, result.parentBranch)) throw new Error("New worktree unexpectedly has work")
+      await Bun.write(path.join(result.path, "configured.txt"), "configured")
+      if (!(await manager.hasWork(result.path, result.parentBranch))) throw new Error("WorktreeManager did not use configured Git")
+      await Bun.write(path.join(root, "README.md"), "staged\\n")
+      const staged = await ops.execGit(["add", "README.md"], root)
+      if (staged.code !== 0) throw new Error("Could not stage configured Git test change")
+      await Bun.write(path.join(root, "README.md"), "unstaged\\n")
+      const snapshot = await capture(root, () => undefined, git)
+      if (!snapshot.staged?.includes("staged") || !snapshot.unstaged?.includes("unstaged")) {
+        throw new Error("Git transfer did not capture staged and unstaged changes")
+      }
+      const applied = await apply(snapshot, result.path, () => undefined, git)
+      if (!applied.ok) throw new Error(applied.error ?? "Git transfer did not apply changes")
+      if ((await Bun.file(path.join(result.path, "README.md")).text()) !== "unstaged\\n") {
+        throw new Error("Git transfer did not apply the working tree content")
+      }
+      const status = (await ops.execGit(["status", "--porcelain", "--", "README.md"], result.path)).stdout.trim()
+      if (status !== "MM README.md") throw new Error("Git transfer did not preserve staged state: " + status)
+    `
+    const child = Bun.spawnSync([process.execPath, "-e", script], {
+      cwd: process.cwd(),
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    const stderr = child.stderr.toString("utf8")
+
+    expect(child.exitCode, stderr).toBe(0)
+    expect(existsSync(path.join(root, ".kilo", "worktrees", "configured-git", ".git"))).toBe(true)
+  }, 120_000)
+
   it("creates a worktree with a new branch", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
@@ -331,6 +421,45 @@ describe("WorktreeManager.createWorktree", () => {
     const result = await mgr.createWorktree({ prompt: "test" })
 
     expect(result.parentBranch).toBe(branch)
+  })
+
+  it("uses two checkout workers without changing Git configuration", async () => {
+    const root = await createTempRepo()
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    const file = path.join(root, "workers")
+    await fs.writeFile(hook, `#!/bin/sh\ngit config --get checkout.workers > "${file}"\n`)
+    await fs.chmod(hook, 0o755)
+
+    await createManager(root).createWorktree({ branchName: "parallel-checkout" })
+
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("2")
+    expect((await simpleGit(root).getConfig("checkout.workers")).value).toBeNull()
+  })
+
+  it("preserves an explicitly configured checkout worker count", async () => {
+    const root = await createTempRepo()
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    const file = path.join(root, "workers")
+    gitExec(["git", "-C", root, "config", "checkout.workers", "1"])
+    await fs.writeFile(hook, `#!/bin/sh\ngit config --get checkout.workers > "${file}"\n`)
+    await fs.chmod(hook, 0o755)
+
+    await createManager(root).createWorktree({ branchName: "configured-checkout" })
+
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("1")
+    expect((await simpleGit(root).getConfig("checkout.workers")).value).toBe("1")
+  })
+
+  it("retains post-checkout hook failure tolerance with parallel checkout", async () => {
+    const root = await fs.realpath(await createTempRepo())
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    await fs.writeFile(hook, "#!/bin/sh\nprintf 'post-checkout hook failed' >&2\nexit 1\n")
+    await fs.chmod(hook, 0o755)
+
+    const result = await createManager(root).createWorktree({ branchName: "hook-failure" })
+
+    expect(existsSync(result.path)).toBe(true)
+    expect((await simpleGit(root).raw(["worktree", "list", "--porcelain"])).includes(result.path)).toBe(true)
   })
 })
 
@@ -813,6 +942,17 @@ describe("WorktreeManager.createWorktree branch collision", () => {
     expect(second.branch).toBe("collide-2")
     expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
   })
+
+  it("does not treat remote-tracking refs as local branch collisions", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+    const hash = (await git.revparse(["HEAD"])).trim()
+    await git.raw(["update-ref", "refs/remotes/origin/remote-name", hash])
+
+    const result = await createManager(root).createWorktree({ branchName: "remote-name" })
+
+    expect(result.branch).toBe("remote-name")
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -1201,6 +1341,7 @@ describe("WorktreeManager.createWorktree advanced", () => {
     }
     internal.fetchPRInfo = async () => ({
       headRefName: "topic",
+      baseRefName: "main",
       isCrossRepository: false,
       title: "Topic PR",
     })
@@ -1210,7 +1351,8 @@ describe("WorktreeManager.createWorktree advanced", () => {
     const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
 
     expect(worktreeHead).toBe(remoteHead)
-    expect(result.parentBranch).toBe("topic")
+    expect(result.parentBranch).toBe("main")
+    expect(result.remote).toBe("origin")
   })
 
   it("does not track a deleted PR source branch when using the pull ref fallback", async () => {
@@ -1245,6 +1387,63 @@ describe("WorktreeManager.createWorktree advanced", () => {
 
     expect(worktreeHead).toBe(head)
     expect(upstream.trim()).toBe("")
+    expect(result.parentBranch).toBe("main")
+    expect(result.remote).toBe("origin")
+  })
+
+  it("preserves a non-default PR target branch for comparison", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("develop")
+    await fs.writeFile(path.join(clone, "develop.txt"), "develop")
+    await git.add(".")
+    await git.commit("develop commit")
+    await git.push("origin", "develop")
+    await git.checkout("main")
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      baseRefName: "develop",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    const result = await manager.createFromPR("https://github.com/org/repo/pull/1")
+    const target = (await git.revparse(["refs/remotes/origin/develop"])).trim()
+    const head = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(result.parentBranch).toBe("develop")
+    expect(result.remote).toBe("origin")
+    expect(head).not.toBe(target)
+  })
+
+  it("fails before creating a worktree for an unavailable PR target", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      baseRefName: "missing",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    await expect(manager.createFromPR("https://github.com/org/repo/pull/1")).rejects.toThrow(
+      'Could not resolve start point for branch "missing"',
+    )
+    expect(existsSync(path.join(clone, ".kilo", "worktrees"))).toBe(false)
   })
 })
 
