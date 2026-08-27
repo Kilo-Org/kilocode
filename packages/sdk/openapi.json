@@ -35225,6 +35225,9 @@
               "task_model_selection": {
                 "type": "boolean"
               },
+              "code_mode": {
+                "type": "boolean"
+              },
               "speech_to_text_model": {
                 "type": "string"
               },
