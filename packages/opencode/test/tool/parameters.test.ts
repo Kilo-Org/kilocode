@@ -13,6 +13,7 @@ import { Parameters as ApplyPatch } from "../../src/tool/apply_patch"
 import { Parameters as Edit } from "../../src/tool/edit"
 import { Parameters as Glob } from "../../src/tool/glob"
 import { Parameters as Grep } from "../../src/tool/grep"
+import { Parameters as Invalid } from "../../src/tool/invalid"
 import { Parameters as Lsp } from "../../src/tool/lsp"
 import { Parameters as Plan } from "../../src/tool/plan"
 import { Parameters as Question } from "../../src/tool/question"
@@ -40,6 +41,7 @@ describe("tool parameters", () => {
     test("edit", () => expect(toJsonSchema(Edit)).toMatchSnapshot())
     test("glob", () => expect(toJsonSchema(Glob)).toMatchSnapshot())
     test("grep", () => expect(toJsonSchema(Grep)).toMatchSnapshot())
+    test("invalid", () => expect(toJsonSchema(Invalid)).toMatchSnapshot())
     test("lsp", () => expect(toJsonSchema(Lsp)).toMatchSnapshot())
     test("plan", () => expect(toJsonSchema(Plan)).toMatchSnapshot())
     test("question", () => expect(toJsonSchema(Question)).toMatchSnapshot())
@@ -178,6 +180,16 @@ describe("tool parameters", () => {
     // kilocode_change end
     test("rejects missing pattern", () => {
       expect(accepts(Grep, {})).toBe(false)
+    })
+  })
+
+  describe("invalid", () => {
+    test("accepts tool + error", () => {
+      expect(parse(Invalid, { tool: "foo", error: "bar" })).toEqual({ tool: "foo", error: "bar" })
+    })
+    test("rejects missing fields", () => {
+      expect(accepts(Invalid, { tool: "foo" })).toBe(false)
+      expect(accepts(Invalid, { error: "bar" })).toBe(false)
     })
   })
 

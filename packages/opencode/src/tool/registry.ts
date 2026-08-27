@@ -18,6 +18,7 @@ import { Database } from "@opencode-ai/core/database/database"
 import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
+import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
 import * as Tool from "./tool"
 import { Config } from "@/config/config"
@@ -123,6 +124,7 @@ const layer = Layer.effect(
     const mcp = yield* MCP.Service
     const sessions = yield* Session.Service
 
+    const invalid = yield* InvalidTool
     const task = yield* TaskTool
     const read = yield* ReadTool
     const question = yield* QuestionTool
@@ -252,6 +254,7 @@ const layer = Layer.effect(
         const questionEnabled = ["app", "cli", "desktop", "vscode"].includes(flags.client) || flags.enableQuestionTool // kilocode_change: add vscode client
 
         const tool = yield* Effect.all({
+          invalid: Tool.init(invalid),
           shell: Tool.init(shell),
           read: Tool.init(read),
           glob: Tool.init(globtool),
@@ -286,6 +289,7 @@ const layer = Layer.effect(
           // kilocode_change start
           builtin: KiloToolRegistry.describe(
             [
+              tool.invalid,
               ...(questionEnabled ? [tool.question] : []),
               tool.shell,
               tool.read,
