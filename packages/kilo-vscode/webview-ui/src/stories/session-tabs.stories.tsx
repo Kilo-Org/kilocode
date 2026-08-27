@@ -25,6 +25,22 @@ const rows = [
     pending: false,
   },
   {
+    id: "waiting",
+    title: "Approve a pending command",
+    active: false,
+    state: "waiting" as const,
+    stateLabel: "Needs input",
+    pending: false,
+  },
+  {
+    id: "error",
+    title: "Review the failed session",
+    active: false,
+    state: "error" as const,
+    stateLabel: "Error",
+    pending: false,
+  },
+  {
     id: "pending",
     title: "Untitled session",
     active: false,
@@ -124,7 +140,7 @@ export const SwitcherOpen: Story = {
       <div
         style={{
           display: "flex",
-          "min-height": "420px",
+          "min-height": "560px",
           "justify-content": "flex-end",
           "align-items": "flex-start",
           padding: "16px",
@@ -146,7 +162,6 @@ export const SwitcherOpen: Story = {
             onRestore={focus}
             onClose={noop}
             defaultOpen
-            portal={false}
           />
         </div>
       </div>

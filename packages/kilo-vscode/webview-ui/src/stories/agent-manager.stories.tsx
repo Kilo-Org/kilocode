@@ -10,6 +10,7 @@ import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import { SessionTab } from "../components/chat/SessionTab"
 import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
@@ -566,24 +567,22 @@ const defaultProps = {
 // WorktreeItem stories
 // ---------------------------------------------------------------------------
 
+const activityStates = [
+  ["busy", "Running"],
+  ["waiting", "Needs input"],
+  ["done", "Completed"],
+  ["retry", "Retrying"],
+  ["error", "Error"],
+  ["idle", "Idle"],
+] as const
+
 export const WorktreeActivityStates: Story = {
   name: "Worktree cards - all activity states",
-  render: () => (
+  render: (args: { active?: boolean }) => (
     <StoryProviders noPadding>
       <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
         <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
-        <For
-          each={
-            [
-              ["busy", "Running"],
-              ["waiting", "Needs input"],
-              ["done", "Completed"],
-              ["retry", "Retrying"],
-              ["error", "Error"],
-              ["idle", "Idle"],
-            ] as const
-          }
-        >
+        <For each={activityStates}>
           {([state, title]) => (
             <WorktreeItem
               {...defaultProps}
@@ -595,10 +594,47 @@ export const WorktreeActivityStates: Story = {
               }}
               label={title}
               subtitle={`feature/${state}`}
+              active={args.active === true}
               activity={state}
               stats={{ ...baseStats, worktreeId: `wt-${state}` }}
               shortcut={0}
             />
+          )}
+        </For>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const WorktreeActivityStatesActive: Story = {
+  ...WorktreeActivityStates,
+  name: "Worktree cards - selected activity states",
+  args: { active: true },
+}
+
+export const SessionTabActivityStates: Story = {
+  name: "Agent Manager session tabs - activity states",
+  render: () => (
+    <StoryProviders noPadding>
+      <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
+        <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+        <For each={activityStates}>
+          {([state, title]) => (
+            <div class="am-tab-bar" role="tablist" aria-label={title}>
+              <SessionTab
+                title={title}
+                active
+                state={state}
+                stateLabel={title}
+                closeTitle="Close tab"
+                closeLabel="Close tab"
+                role="tab"
+                selected
+                onSelect={noop}
+                onMiddleClick={noop}
+                onClose={noop}
+              />
+            </div>
           )}
         </For>
       </div>
