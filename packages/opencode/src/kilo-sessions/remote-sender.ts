@@ -719,19 +719,32 @@ export namespace RemoteSender {
             const directories: RemoteCommand.ListDirectoriesEntry[] = []
             for (const entry of entries) {
               if (directories.length >= RemoteCommand.MAX_DIRECTORIES) break
-              const childReal = Filesystem.resolve(join(listed, entry.name))
+              let childReal: string
+              try {
+                childReal = Filesystem.resolve(join(listed, entry.name))
+              } catch {
+                continue // skip a child whose canonical path cannot be resolved (ELOOP, EACCES)
+              }
               // A symlink whose canonical path equals the launch directory
               // resolves to launchReal, so its relative path is "" and would
               // violate ListDirectoriesEntry.path min(1). Never emit it.
               const childPath = relative(launchReal, childReal).split(sep).join("/")
               if (!childPath) continue
+              // Windows junctions report isDirectory() without isSymbolicLink(), so apply
+              // the containment check to every entry, not only symlinks.
+              if (!Filesystem.contains(launchReal, childReal)) continue
               if (entry.isDirectory()) {
                 directories.push({ name: entry.name, path: childPath })
                 continue
               }
               if (entry.isSymbolicLink()) {
-                const realIsDir = Filesystem.stat(childReal)?.isDirectory() === true
-                if (realIsDir && Filesystem.contains(launchReal, childReal)) {
+                let realIsDir = false
+                try {
+                  realIsDir = Filesystem.stat(childReal)?.isDirectory() === true
+                } catch {
+                  continue
+                }
+                if (realIsDir) {
                   directories.push({ name: entry.name, path: childPath })
                 }
               }
