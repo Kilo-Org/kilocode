@@ -8,6 +8,11 @@ import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.ui.CollectionListModel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 class WorktreeSessionListController(
@@ -17,6 +22,28 @@ class WorktreeSessionListController(
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
     val model = CollectionListModel<SessionDto>()
+
+    /** Coalescing hop: many session changes in, at most one reload per quiet period out. */
+    private val pings = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    init {
+        // A session started in another project frame only reaches this list through the CLI's
+        // event stream — nothing local fires, so without this the row never appears until the tab
+        // is reopened.
+        cs.launch {
+            service.changes
+                .filter { normalizeWorktreePath(it.directory) == normalizeWorktreePath(dir) }
+                .collect { pings.emit(Unit) }
+        }
+        cs.launch {
+            // collectLatest restarts the delay on every new ping, so a streaming title (one
+            // session.updated per delta) costs one reload, not one per event.
+            pings.collectLatest {
+                delay(COALESCE_MS)
+                reload()
+            }
+        }
+    }
 
     /** Snapshot of the listed sessions, in model order. */
     @RequiresEdt
@@ -119,6 +146,7 @@ class WorktreeSessionListController(
 
     companion object {
         private val LOG = KiloLog.create(WorktreeSessionListController::class.java)
+        private const val COALESCE_MS = 300L
     }
 
     private fun capture(event: String, props: Map<String, String>) {

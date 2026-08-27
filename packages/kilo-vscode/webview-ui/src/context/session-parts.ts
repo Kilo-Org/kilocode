@@ -1,5 +1,9 @@
 import type { Part } from "../types/messages"
 
+export function isolate(part: Part): Part {
+  return { ...part }
+}
+
 function stream(part: Part): part is Extract<Part, { type: "text" | "reasoning" }> {
   return part.type === "text" || part.type === "reasoning"
 }
@@ -27,10 +31,11 @@ export function sameParts(local: Part[] = [], snapshot: Part[] = []): boolean {
 
 export function mergeOptimisticPart(current: Part[], ids: ReadonlySet<string>, part: Part) {
   const index = current.findIndex((item) => ids.has(item.id) && item.type === part.type)
-  if (index < 0) return { parts: [...current, part] }
+  const copy = isolate(part)
+  if (index < 0) return { parts: [...current, copy] }
   const old = current[index]!
   const next = current.slice()
-  next[index] = part
+  next[index] = copy
   return { parts: next, replaced: old.id }
 }
 

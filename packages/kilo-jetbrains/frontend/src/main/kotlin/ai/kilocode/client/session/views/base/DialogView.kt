@@ -87,7 +87,10 @@ open class DialogView(
         isVisible = false
     }
 
-    private val headerText: JBTextArea = makeText("", SessionUiStyle.Colors.foreground(), bold = true)
+    // Both rows start blank, so both start hidden; setHeader/setDescription drive visibility from text.
+    private val headerText: JBTextArea = makeText("", SessionUiStyle.Colors.foreground(), bold = true).apply {
+        isVisible = false
+    }
     private val descriptionText: JBTextArea = makeText("", SessionUiStyle.Text.Secondary.foreground(), bold = false).apply {
         isVisible = false
     }
@@ -106,6 +109,7 @@ open class DialogView(
     private var padLeft = true
     private var padRight = true
     private var padBottom = true
+    private var outlined = true
 
     // action buttons keyed by id for retained updates
     private val actionButtons = mutableMapOf<String, JButton>()
@@ -137,6 +141,7 @@ open class DialogView(
     @RequiresEdt
     fun setHeader(text: String, description: String? = null) {
         headerText.text = text
+        headerText.isVisible = text.isNotBlank()
         setDescription(description)
         syncNorth()
     }
@@ -303,6 +308,13 @@ open class DialogView(
         btn.text = text
     }
 
+    @RequiresEdt
+    fun setOutlined(value: Boolean) {
+        if (outlined == value) return
+        outlined = value
+        repaint()
+    }
+
     /** Returns the retained action component for focus management, or this card when absent. */
     @RequiresEdt
     fun preferredActionComponent(id: String): JComponent = actionButtons[id] ?: this
@@ -327,7 +339,7 @@ open class DialogView(
 
     override fun contentColor(): Color = SessionUiStyle.View.Surface.bgColor()
 
-    override fun outlineColor(): Color = SessionUiStyle.View.Outline.brightColor()
+    override fun outlineColor(): Color? = if (outlined) SessionUiStyle.View.Outline.brightColor() else null
 
     // ---- private helpers ----
 
@@ -340,7 +352,7 @@ open class DialogView(
         north.repaint()
     }
 
-    private fun hasHeader() = icon.icon != null || headerText.text.isNotBlank() || descriptionText.isVisible
+    private fun hasHeader() = icon.icon != null || headerText.isVisible || descriptionText.isVisible
 
     private fun syncInsets() {
         val side = UiStyle.Gap.pad()

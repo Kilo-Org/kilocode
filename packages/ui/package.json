@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.4.23",
+  "version": "7.5.5",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -95,11 +95,11 @@
     "@solidjs/meta": "catalog:",
     "@solidjs/router": "catalog:",
     "diff": "catalog:",
-    "dompurify": "3.4.2",
+    "dompurify": "3.4.13",
     "fuzzysort": "catalog:",
     "katex": "0.16.27",
     "marked": "catalog:",
-    "mermaid": "11.15.0",
+    "mermaid": "11.17.2",
     "morphdom": "2.7.8",
     "motion": "12.34.5",
     "motion-dom": "12.34.3",

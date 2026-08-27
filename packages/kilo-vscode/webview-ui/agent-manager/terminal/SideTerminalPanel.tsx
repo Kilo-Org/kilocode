@@ -5,8 +5,14 @@
  * panels, so every mode uses the same persisted resize width. The tab row is
  * the shared inspector strip used by subagents as well.
  *
- * Visibility is opacity-based, never unmount: the xterm render loop dies when
- * its subtree leaves the paint tree (see `render.tsx`).
+ * Hidden slots are translated off-screen while keeping their layout
+ * box, never unmounted: xterm keeps its buffer, socket, and parser
+ * alive, while xterm's own render observer (IntersectionObserver on the
+ * screen element) pauses the render loop for hidden slots and replays a
+ * full refresh when a slot becomes visible again. Keeping the box means
+ * FitAddon can measure the panel (correct wrapping) even while hidden.
+ * `TerminalTab` still does an explicit fit + refresh on activation as
+ * insurance (see `render.tsx`).
  */
 
 import type { Accessor, Component } from "solid-js"

@@ -1,7 +1,6 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.agentManager.worktree.WorktreeStatsView
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
@@ -13,17 +12,26 @@ import ai.kilocode.client.ui.layout.align
 import com.intellij.icons.AllIcons
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
+import com.intellij.ui.RelativeFont
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.IconUtil
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import ai.kilocode.rpc.dto.WorktreeStatsDto
+import java.awt.AlphaComposite
+import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.Point
+import java.awt.RenderingHints
 import java.awt.Rectangle
+import java.awt.image.BufferedImage
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
@@ -125,6 +133,7 @@ internal class ActiveListRenderer(
     )
     private val wrap = PickerRow()
     private var bodyHeight: Int? = null
+    private var gap = false
 
     init {
         isOpaque = true
@@ -183,29 +192,41 @@ internal class ActiveListRenderer(
     ): JPanel {
         val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
-        val weak = if (active) fg else UiStyle.Colors.weak()
-        val titleFg = if (value.deleting) weak else fg
+        val weak = UiStyle.Colors.weak()
+        val titleFg = if (value.progress != null) weak else fg
         val section = activeListSectionTitle(model.items, index)
 
         background = list.background
         top.background = list.background
         wrap.update(list, selected, active)
-        sep.caption = section
-        sep.setHideLine(index == 0)
-        top.isVisible = section != null
-        top.setPreferredSize(section?.let {
-            val height = sep.preferredSize.height
-                .coerceAtLeast(sep.getFontMetrics(sep.font).height + insets.top + insets.bottom)
-            Dimension(0, height + JBUI.scale(2))
-        })
+        syncHeader(section, index)
+
+        if (value is ActiveListGap) {
+            gap = true
+            layers.isVisible = false
+            pill.isVisible = false
+            glyph.isVisible = false
+            wrap.update(list, false, false)
+            wrap.setPreferredSize(Dimension(0, bodyHeight ?: value.height))
+            activeListInvalidate(this)
+            return this
+        }
+        gap = false
+        layers.isVisible = true
 
         title.clear()
-        title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, titleFg))
+        // Bold carries most rows by default: the description under it and the icon beside it both
+        // render in the muted secondary color, so cfg.title separates the two lines when enabled.
+        val style = if (cfg.title == ActiveListWeight.BOLD) SimpleTextAttributes.STYLE_BOLD else SimpleTextAttributes.STYLE_PLAIN
+        title.append(value.title, SimpleTextAttributes(style, titleFg))
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
         syncBadges(value)
-        icon.icon = value.icon
+        // A selected row paints its title in the selection foreground; recolor a tinted glyph to
+        // match so it reads as part of the highlighted text. Colored status icons opt out and keep
+        // their own hue.
+        icon.icon = value.icon?.let { if (active && value.tinted) IconUtil.colorize(it, fg, keepBrightness = false) else it }
         mark.isVisible = value.icon != null
         val note = if (cfg.description) value.description.orEmpty() else ""
         desc.text = note
@@ -216,13 +237,13 @@ internal class ActiveListRenderer(
             JBUI.Borders.empty()
         }
         desc.foreground = weak
-        val data = if (value.deleting) null else value.metrics
+        val data = if (value.progress != null) null else value.metrics
         metrics.update(data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) }, data?.pr, data?.prTooltip ?: data?.pr?.text)
         metrics.setActions(data?.onChanges, data?.onPr)
-        val end = if (value.deleting) KiloBundle.message("common.deleting") else value.trailing.orEmpty()
+        val end = value.progress ?: value.trailing.orEmpty()
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
-        metrics.isVisible = data != null && !value.deleting
+        metrics.isVisible = data != null
         // Hide the wrapper too so a metrics-less row does not reserve the trailing gap on its
         // description, and collapse the whole second row when it would be empty so title-only rows
         // stay vertically centered.
@@ -241,8 +262,55 @@ internal class ActiveListRenderer(
         pill.background = if (selected && list.isEnabled) UIUtil.getListBackground(true, active) else list.background
         val height = bodyHeight
         wrap.setPreferredSize(height?.let { Dimension(0, it) })
-        top.invalidate()
+        // Neither the content mutations above nor setPreferredSize invalidate reliably: a same-size
+        // icon swap, an equal label text, or an explicit preferred size leave the tree valid, and a
+        // valid subtree keeps the sizes it was measured with for another row.
+        activeListInvalidate(this)
         return this
+    }
+
+    private fun syncHeader(section: String?, index: Int) {
+        sep.caption = section
+        sep.setHideLine(!cfg.divider || index == 0)
+        val font = if (cfg.header == ActiveListWeight.BOLD) {
+            RelativeFont.BOLD.derive(sep.font)
+        } else {
+            RelativeFont.PLAIN.derive(sep.font)
+        }
+        if (sep.font != font) sep.font = font
+        top.isVisible = section != null
+        top.setPreferredSize(section?.let {
+            val height = sep.preferredSize.height
+                .coerceAtLeast(sep.getFontMetrics(sep.font).height + insets.top + insets.bottom)
+            Dimension(0, height + JBUI.scale(2))
+        })
+    }
+
+    override fun paintChildren(g: Graphics) {
+        super.paintChildren(g)
+        if (!gap) return
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            val inset = UiStyle.Gap.xs()
+            val arc = UiStyle.Arc.component()
+            val x = wrap.x + inset
+            val y = wrap.y + inset
+            val width = (wrap.width - inset * 2 - 1).coerceAtLeast(0)
+            val height = (wrap.height - inset * 2 - 1).coerceAtLeast(0)
+            g2.color = JBUI.CurrentTheme.List.Selection.background(true)
+            g2.stroke = BasicStroke(
+                JBUI.scale(1).toFloat(),
+                BasicStroke.CAP_ROUND,
+                BasicStroke.JOIN_ROUND,
+                0f,
+                floatArrayOf(JBUI.scale(3).toFloat(), JBUI.scale(3).toFloat()),
+                0f,
+            )
+            g2.drawRoundRect(x, y, width, height, arc, arc)
+        } finally {
+            g2.dispose()
+        }
     }
 
     fun setBodyHeight(height: Int?) {
@@ -265,8 +333,39 @@ internal class ActiveListRenderer(
         return height
     }
 
+    /**
+     * Paints the row body — the section-header band excluded — into an image, together with the
+     * body's origin inside the cell so callers can map a grab point in cell coordinates onto the
+     * image. Rendered as the focused selection so the dragged copy reads as a lifted row.
+     */
+    fun rowImage(
+        list: JList<out ActiveListItem>,
+        value: ActiveListItem,
+        index: Int,
+        width: Int,
+    ): Pair<BufferedImage, Point>? {
+        getListCellRendererComponent(list, value, index, true, true)
+        val size = preferredSize
+        setBounds(0, 0, width, size.height)
+        activeListLayout(this)
+        if (wrap.width <= 0 || wrap.height <= 0) return null
+        val image = UIUtil.createImage(list, wrap.width, wrap.height, BufferedImage.TYPE_INT_ARGB)
+        val g2 = image.createGraphics()
+        try {
+            g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.9f)
+            // paint() already treats the graphics origin as the body's own top-left, so the body's
+            // offset inside the cell must not be applied again: on a row that opens a section that
+            // offset is the header band, and shifting by it would lift the copy off the image and
+            // leave most of it blank.
+            wrap.paint(g2)
+        } finally {
+            g2.dispose()
+        }
+        return image to Point(wrap.x, wrap.y)
+    }
+
     private fun syncBadges(item: ActiveListItem) {
-        val items = if (item.deleting) emptyList() else item.badges
+        val items = if (item.progress != null) emptyList() else item.badges
         while (badges.componentCount > items.size) badges.remove(badges.componentCount - 1)
         while (badges.componentCount < items.size) {
             badges.add(JBLabel().apply {
