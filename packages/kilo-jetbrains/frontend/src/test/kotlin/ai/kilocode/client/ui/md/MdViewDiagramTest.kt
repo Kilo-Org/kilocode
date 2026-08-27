@@ -3,8 +3,11 @@ package ai.kilocode.client.ui.md
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionTargetResolver
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.diagram.Engine
+import ai.kilocode.client.ui.diagram.Fault
 import ai.kilocode.client.ui.diagram.Mark
 import ai.kilocode.client.ui.diagram.Out
 import ai.kilocode.client.ui.diagram.Pt
@@ -26,6 +29,7 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.LoggedErrorProcessor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.util.ui.UIUtil
@@ -146,7 +150,7 @@ class MdViewDiagramTest : BasePlatformTestCase() {
     }
 
     fun `test engine error keeps source visible`() {
-        engine.out = Out.Err(ai.kilocode.client.ui.diagram.Fault.Syntax, "bad syntax")
+        engine.out = Out.Err(Fault.Syntax, "bad syntax")
 
         view.set("```mermaid\nflowchart TD\nA-->\n```")
         drain()
@@ -155,6 +159,39 @@ class MdViewDiagramTest : BasePlatformTestCase() {
         assertTrue(codePane().isVisible)
         assertTrue(label().isVisible)
         assertTrue(labels().contains("bad syntax"))
+        assertEquals(UiStyle.Colors.errorLabelForeground(), label().foreground)
+    }
+
+    /**
+     * `classDiagram`, `stateDiagram` and friends are valid mermaid this engine does not draw. Marking them
+     * red would report working markdown as broken, so they read as a note over the source instead.
+     */
+    fun `test an unsupported diagram type reads as a note rather than an error`() {
+        engine.out = Out.Err(Fault.Unsupported, "unsupported diagram type: Class")
+
+        view.set("```mermaid\nclassDiagram\nA <|-- B\n```")
+        drain()
+
+        assertFalse(diagram().isVisible)
+        assertTrue(codePane().isVisible)
+        assertTrue(labels().contains(KiloBundle.message("diagram.unsupported")))
+        assertFalse("the engine's internal wording should not reach the reader", labels().contains("unsupported diagram type"))
+        assertEquals(SessionUiStyle.Text.Secondary.foreground(), label().foreground)
+    }
+
+    /** A crash in the engine has to land on the same source fallback as a refusal, and be logged. */
+    fun `test an engine crash keeps source visible and is logged`() {
+        engine.fail = IllegalStateException("boom")
+
+        val logged = LoggedErrorProcessor.executeAndReturnLoggedError {
+            view.set("```mermaid\nflowchart TD\nA-->B\n```")
+            drain()
+        }
+
+        assertEquals("boom", logged.message)
+        assertFalse(diagram().isVisible)
+        assertTrue(codePane().isVisible)
+        assertTrue(labels().contains("boom"))
     }
 
     fun `test streaming waits for closed fence`() {
@@ -273,11 +310,13 @@ class MdViewDiagramTest : BasePlatformTestCase() {
     private class FakeEngine : Engine {
         var calls = 0
         var out: Out? = null
+        var fail: Exception? = null
 
         override fun accepts(type: Type) = true
 
         override suspend fun draw(source: String, spec: Spec): Out {
             calls++
+            fail?.let { throw it }
             return out ?: Out.Ok(
                 Scene(
                     Type.Flowchart,

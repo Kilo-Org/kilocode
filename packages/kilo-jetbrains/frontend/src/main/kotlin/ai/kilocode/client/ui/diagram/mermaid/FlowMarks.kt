@@ -10,23 +10,27 @@ import ai.kilocode.client.ui.diagram.Scene
 import ai.kilocode.client.ui.diagram.Size
 import ai.kilocode.client.ui.diagram.Spec
 import ai.kilocode.client.ui.diagram.Type
+import kotlin.coroutines.coroutineContext
 import kotlin.math.max
+import kotlinx.coroutines.ensureActive
 
 /** Turns laid-out flowchart geometry into marks. Cluster frames are emitted first so they paint behind. */
 internal class FlowMarks(private val measure: Measure, private val spec: Spec) {
     private val pad get() = spec.metrics.pad
 
-    fun run(placed: Placed): Scene {
+    suspend fun run(placed: Placed): Scene {
         val frames = frames(placed)
         val dx = -minOf(0.0, frames.minOfOrNull { it.rect.x } ?: 0.0)
         val dy = -minOf(0.0, frames.minOfOrNull { it.rect.y } ?: 0.0)
         val marks = mutableListOf<Mark>()
         for (frame in frames) marks.add(group(frame, dx, dy))
         for (route in placed.routes) {
+            coroutineContext.ensureActive()
             marks.add(line(route, dx, dy))
             marks.addAll(tag(route, dx, dy))
         }
         for (slot in placed.slots.values) {
+            coroutineContext.ensureActive()
             val node = slot.node ?: continue
             val rect = move(slot.rect, dx, dy)
             marks.addAll(shape(node, rect))
@@ -41,39 +45,61 @@ internal class FlowMarks(private val measure: Measure, private val spec: Spec) {
         return Size(wide, high)
     }
 
-    private fun frames(placed: Placed): List<Frame> {
+    /**
+     * A frame spans the member nodes of its subgraph and of every subgraph nested inside it, padded by
+     * one step per nesting level so an outer frame reserves room for the inner ones.
+     *
+     * Both the member set and the nesting depth are resolved in one reverse pass instead of a recursive
+     * walk per cluster. A cluster's parent is always declared before it, so visiting declaration order
+     * backwards visits children first, and each cluster only merges the bounds its children already
+     * resolved. Recursing per cluster instead rescans every node for every cluster, which is quadratic
+     * on deeply nested subgraphs and, since this phase is not the one holding the layout, was also the
+     * only phase with no cancellation point at all.
+     */
+    private suspend fun frames(placed: Placed): List<Frame> {
+        val kids = linkedMapOf<String, MutableList<String>>()
+        for (cluster in placed.graph.clusters.values) {
+            if (cluster.parent == null) continue
+            kids.getOrPut(cluster.parent) { mutableListOf() }.add(cluster.id)
+        }
+        val owned = linkedMapOf<String, MutableList<Rect>>()
+        for (node in placed.graph.nodes.values) {
+            val id = node.cluster ?: continue
+            val rect = placed.slots[node.id]?.rect ?: continue
+            owned.getOrPut(id) { mutableListOf() }.add(rect)
+        }
+
+        val reach = linkedMapOf<String, Span>()
+        val deep = linkedMapOf<String, Int>()
+        for (cluster in placed.graph.clusters.values.reversed()) {
+            coroutineContext.ensureActive()
+            val below = kids[cluster.id].orEmpty()
+            val bounds = owned[cluster.id].orEmpty().map(::span) + below.mapNotNull { reach[it] }
+            val merged = bounds.reduceOrNull(::merge)
+            if (merged != null) reach[cluster.id] = merged
+            deep[cluster.id] = below.maxOfOrNull { 1 + (deep[it] ?: 0) } ?: 0
+        }
+
         val out = mutableListOf<Frame>()
         for (cluster in placed.graph.clusters.values) {
-            val rects = members(placed.graph, cluster.id).mapNotNull { placed.slots[it]?.rect }
-            if (rects.isEmpty()) continue
-            val room = pad * 2 * (1 + deep(placed.graph, cluster.id))
+            val bounds = reach[cluster.id] ?: continue
+            val room = pad * 2 * (1 + (deep[cluster.id] ?: 0))
             val title = measure.height(spec.font) * cluster.label.size
-            val x = rects.minOf { it.x } - room
-            val y = rects.minOf { it.y } - room - title
-            val wide = rects.maxOf { it.x + it.w } + room - x
-            val high = rects.maxOf { it.y + it.h } + room - y
-            out.add(Frame(cluster, Rect(x, y, wide, high)))
+            val x = bounds.minX - room
+            val y = bounds.minY - room - title
+            out.add(Frame(cluster, Rect(x, y, bounds.maxX + room - x, bounds.maxY + room - y)))
         }
         return out
     }
 
-    private fun members(graph: Graph, id: String): List<String> {
-        val out = mutableListOf<String>()
-        for (node in graph.nodes.values) {
-            if (node.cluster == id) out.add(node.id)
-        }
-        for (cluster in graph.clusters.values) {
-            if (cluster.parent == id) out.addAll(members(graph, cluster.id))
-        }
-        return out
-    }
+    private fun span(rect: Rect) = Span(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h)
 
-    /** Nesting depth below [id]; used so an outer frame reserves room for the frames inside it. */
-    private fun deep(graph: Graph, id: String): Int {
-        val kids = graph.clusters.values.filter { it.parent == id }
-        if (kids.isEmpty()) return 0
-        return 1 + (kids.maxOfOrNull { deep(graph, it.id) } ?: 0)
-    }
+    private fun merge(a: Span, b: Span) = Span(
+        minOf(a.minX, b.minX),
+        minOf(a.minY, b.minY),
+        max(a.maxX, b.maxX),
+        max(a.maxY, b.maxY),
+    )
 
     private fun group(frame: Frame, dx: Double, dy: Double): Mark {
         val rect = move(frame.rect, dx, dy)
@@ -222,6 +248,9 @@ internal class FlowMarks(private val measure: Measure, private val spec: Spec) {
     private fun move(rect: Rect, dx: Double, dy: Double) = Rect(rect.x + dx, rect.y + dy, rect.w, rect.h)
 
     private data class Frame(val cluster: Cluster, val rect: Rect)
+
+    /** Bounding box of the nodes a subgraph reaches, kept separate from the padded [Frame] rect. */
+    private data class Span(val minX: Double, val minY: Double, val maxX: Double, val maxY: Double)
 
     private companion object {
         const val HALF = 0.5

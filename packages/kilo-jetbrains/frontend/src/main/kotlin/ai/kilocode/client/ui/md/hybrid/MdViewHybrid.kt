@@ -7,6 +7,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.diagram.Fault
 import ai.kilocode.client.ui.diagram.Out
 import ai.kilocode.client.ui.diagram.ui.DiagramBlock
 import ai.kilocode.client.ui.diagram.ui.DiagramPanel
@@ -989,6 +990,7 @@ internal open class MdViewHybrid(
             panel.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             panel.toolTipText = KiloBundle.message("diagram.viewer.hint")
             panel.addMouseListener(click)
+            panel.onFault = { fail(KiloBundle.message("diagram.paint")) }
             Disposer.register(disposable) { panel.removeMouseListener(click) }
             root.next(panel).next(codePane).next(label)
             root.text = { (this.desc as Desc.Code).text }
@@ -1057,7 +1059,7 @@ internal open class MdViewHybrid(
                 if (seq != gen) return@render
                 when (out) {
                     is Out.Ok -> ok(out)
-                    is Out.Err -> fail(out.message)
+                    is Out.Err -> fail(out)
                 }
             }
         }
@@ -1068,6 +1070,22 @@ internal open class MdViewHybrid(
             status("")
             root.revalidate()
             root.repaint()
+        }
+
+        /**
+         * A diagram type this engine does not draw is not a broken diagram, so it reads as a note rather
+         * than an error. `classDiagram`, `stateDiagram` and friends are common in model output and marking
+         * every one of them red would report working markdown as a failure.
+         */
+        private fun fail(out: Out.Err) {
+            if (out.fault == Fault.Unsupported) {
+                status(KiloBundle.message("diagram.unsupported"))
+                showSource()
+                root.revalidate()
+                root.repaint()
+                return
+            }
+            fail(out.message)
         }
 
         private fun fail(message: String) {

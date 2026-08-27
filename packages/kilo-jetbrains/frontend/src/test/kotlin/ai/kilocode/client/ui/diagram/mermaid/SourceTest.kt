@@ -82,10 +82,33 @@ class SourceTest {
     }
 
     @Test
-    fun `open reports bracket and quote nesting`() {
+    fun `opens reports bracket and quote nesting`() {
         val text = "A[x --> y] --> B"
+        val mask = Source.opens(text)
 
-        assertTrue(Source.open(text, text.lastIndexOf("-->")))
-        assertTrue(!Source.open(text, text.indexOf("-->")))
+        assertTrue(mask[text.lastIndexOf("-->")])
+        assertTrue(!mask[text.indexOf("-->")])
+    }
+
+    @Test
+    fun `opens treats bracketed and quoted regions as closed`() {
+        // The flag is the state *before* each character, so an opening quote or bracket is still open and
+        // its closing partner is not.
+        val mask = Source.opens("a\"b\"c(d)e")
+
+        assertEquals(
+            listOf(true, true, false, false, true, true, false, false, true),
+            mask.toList(),
+        )
+    }
+
+    /** Answering "is this index open" per index rescans from 0 each time, which stalls on a long line. */
+    @Test
+    fun `opens scans a long line in one pass`() {
+        val text = "A".repeat(200_000) + "-->B"
+        val mask = Source.opens(text)
+
+        assertEquals(text.length, mask.size)
+        assertTrue(mask.all { it })
     }
 }

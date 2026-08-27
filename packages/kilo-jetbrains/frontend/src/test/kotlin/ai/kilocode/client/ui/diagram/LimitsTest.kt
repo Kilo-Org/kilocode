@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.diagram.mermaid.Mermaid
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** Model output can be pathological; the engine must refuse rather than hang or exhaust memory. */
 class LimitsTest {
@@ -62,11 +63,44 @@ class LimitsTest {
         assertEquals(Fault.Limit, err(people).fault)
     }
 
+    /** One line is the unit of uninterruptible work, so it needs a cap of its own. */
+    @Test
+    fun `single line cap is enforced`() {
+        val source = "flowchart TD\n  A[" + "x".repeat(200) + "] --> B"
+        val out = runBlocking { engine.draw(source, spec().copy(limits = Limits(span = 50))) }
+
+        assertEquals(Fault.Limit, err(out).fault)
+        assertTrue(err(out).message.contains("50"))
+    }
+
+    @Test
+    fun `a long source of short lines is not refused by the line span cap`() {
+        val source = "flowchart TD\n" + (1..20).joinToString("\n") { "  n$it --> n${it + 1}" }
+        val out = runBlocking { engine.draw(source, spec().copy(limits = Limits(span = 40))) }
+
+        assertTrue(scene(out).marks.isNotEmpty())
+    }
+
     @Test
     fun `a graph at the cap still renders`() {
         val source = "flowchart TD\n" + (1..9).joinToString("\n") { "  n$it --> n${it + 1}" }
         val out = runBlocking { engine.draw(source, spec().copy(limits = Limits(nodes = 10, edges = 9))) }
 
         assertEquals(10, scene(out).marks.count { it is Mark.Box })
+    }
+
+    /**
+     * Subgraph nesting is capped only by the line limit, so a frame's members and depth have to be
+     * resolved in one pass. Walking the cluster tree per cluster rescans every node per cluster, which
+     * turns a few hundred levels into a stall in a phase that cannot be cancelled cheaply.
+     */
+    @Test
+    fun `deeply nested subgraphs still render`() {
+        val depth = 200
+        val open = (1..depth).joinToString("\n") { "  subgraph s$it" }
+        val close = (1..depth).joinToString("\n") { "  end" }
+        val out = runBlocking { engine.draw("flowchart TD\n$open\n  a --> b\n$close", spec()) }
+
+        assertEquals(depth, scene(out).marks.count { it is Mark.Group })
     }
 }

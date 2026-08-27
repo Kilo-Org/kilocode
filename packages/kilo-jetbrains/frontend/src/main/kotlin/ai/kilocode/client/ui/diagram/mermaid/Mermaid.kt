@@ -27,6 +27,11 @@ internal class Mermaid(private val measure: Measure) : Engine {
         if (clean.lines.size > spec.limits.lines) {
             return Out.Err(Fault.Limit, "source exceeds ${spec.limits.lines} lines")
         }
+        // Cancellation is only checked between lines, so one line is also the unit of uninterruptible
+        // work and needs its own cap rather than relying on the whole-source character limit.
+        if (clean.lines.any { it.text.length > spec.limits.span }) {
+            return Out.Err(Fault.Limit, "a line exceeds ${spec.limits.span} characters")
+        }
         val type = Type.of(clean)
         if (!accepts(type)) return Out.Err(Fault.Unsupported, "unsupported diagram type: $type")
         if (type == Type.Flowchart) return flow(clean, spec)

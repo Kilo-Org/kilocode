@@ -1,6 +1,9 @@
 package ai.kilocode.client.ui.diagram
 
 import ai.kilocode.client.ui.diagram.mermaid.Flow
+import ai.kilocode.client.ui.diagram.mermaid.FlowLayout
+import ai.kilocode.client.ui.diagram.mermaid.FlowMarks
+import ai.kilocode.client.ui.diagram.mermaid.FlowOut
 import ai.kilocode.client.ui.diagram.mermaid.Mermaid
 import ai.kilocode.client.ui.diagram.mermaid.Seq
 import ai.kilocode.client.ui.diagram.mermaid.Source
@@ -44,6 +47,23 @@ class CancelTest {
         assertTrue(seq.isEmpty(), "sequence parsing ignored cancellation")
     }
 
+    /**
+     * Mark generation measures only line heights, so the measurement hook cannot reach it. It is also the
+     * phase that used to have no cancellation point at all, which is why it gets its own proof.
+     */
+    @Test
+    fun `mark generation stops when the job is cancelled`() {
+        val measure = FakeMeasure()
+        val placed = runBlocking {
+            val parsed = Flow().parse(Source.clean(NESTED)) as FlowOut.Ok
+            FlowLayout(measure, spec()).run(parsed.graph)
+        }
+
+        val marks = sink { FlowMarks(measure, spec()).run(placed) }
+
+        assertTrue(marks.isEmpty(), "mark generation ignored cancellation")
+    }
+
     /** Runs [body] in a coroutine that cancels itself first; a result only lands if that was ignored. */
     private fun sink(body: suspend () -> Any): List<Any> = runBlocking {
         val out = mutableListOf<Any>()
@@ -71,5 +91,14 @@ class CancelTest {
 
     private companion object {
         const val CUT = 3
+
+        val NESTED = """
+            flowchart TD
+              subgraph one
+                subgraph two
+                  A --> B
+                end
+              end
+        """.trimIndent()
     }
 }

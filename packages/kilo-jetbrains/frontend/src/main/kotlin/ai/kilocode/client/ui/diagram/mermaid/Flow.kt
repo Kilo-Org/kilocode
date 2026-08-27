@@ -194,10 +194,11 @@ internal class Flow(private val limits: Limits = Limits()) {
     /** Splits `A & B` groups at bracket depth zero. */
     private fun parts(segment: String): List<String> {
         val out = mutableListOf<String>()
+        val mask = Source.opens(segment)
         var start = 0
         for (idx in segment.indices) {
             if (segment[idx] != '&') continue
-            if (!Source.open(segment, idx)) continue
+            if (!mask[idx]) continue
             out.add(segment.substring(start, idx))
             start = idx + 1
         }
@@ -258,9 +259,10 @@ internal class Flow(private val limits: Limits = Limits()) {
 
     private fun hits(text: String): List<Hit> {
         val out = mutableListOf<Hit>()
+        val mask = Source.opens(text)
         var idx = 0
         while (idx < text.length) {
-            if (!Source.open(text, idx)) {
+            if (!mask[idx]) {
                 idx++
                 continue
             }

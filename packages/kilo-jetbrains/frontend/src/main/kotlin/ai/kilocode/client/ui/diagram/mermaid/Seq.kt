@@ -122,7 +122,8 @@ internal class Seq(private val limits: Limits = Limits()) {
     private fun actor(text: String): String? {
         val rest = text.substringAfter(' ', "").trim()
         if (rest.isEmpty()) return "participant needs a name"
-        val cut = AS.findAll(rest).firstOrNull { Source.open(rest, it.range.first) }
+        val mask = Source.opens(rest)
+        val cut = AS.findAll(rest).firstOrNull { mask[it.range.first] }
         val id = name(if (cut == null) rest else rest.substring(0, cut.range.first))
         val label = if (cut == null) rest else rest.substring(cut.range.last + 1)
         add(id, Source.label(label))

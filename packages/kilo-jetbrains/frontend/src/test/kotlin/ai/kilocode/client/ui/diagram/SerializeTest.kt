@@ -30,7 +30,8 @@ class SerializeTest {
 
     @Test
     fun `spec round trips`() {
-        val value = Spec(FontSpec("Inter", 13, bold = true), Metrics(pad = 3.0), Limits(nodes = 7))
+        val limits = Limits(nodes = 7, span = 11, millis = 13)
+        val value = Spec(FontSpec("Inter", 13, bold = true), Metrics(pad = 3.0), limits)
 
         assertEquals(value, json.decodeFromString<Spec>(json.encodeToString(value)))
     }

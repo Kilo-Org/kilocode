@@ -40,6 +40,11 @@ internal data class Metrics(
  * Guards against pathological model output. [chars] is checked before any preprocessing so a single
  * enormous line cannot reach the parsers; [nodes] and [edges] are enforced while the model is built
  * rather than after, so `A & B & … --> …` cannot expand into a huge edge list first.
+ *
+ * [span] caps one line on its own because per-line scanning and the message regex are superlinear in
+ * line length, and cancellation is only checked between lines. [millis] is the wall clock ceiling the
+ * caller applies around the whole draw, so a phase that turns out to be slower than its cooperative
+ * checks can observe still ends as a [Fault.Limit] rather than an endless "rendering" state.
  */
 @Serializable
 internal data class Limits(
@@ -47,4 +52,6 @@ internal data class Limits(
     val edges: Int = 800,
     val lines: Int = 2_000,
     val chars: Int = 100_000,
+    val span: Int = 4_000,
+    val millis: Long = 4_000,
 )

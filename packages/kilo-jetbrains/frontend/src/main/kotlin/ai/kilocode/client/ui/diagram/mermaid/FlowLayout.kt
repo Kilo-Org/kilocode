@@ -121,10 +121,17 @@ internal class FlowLayout(private val measure: Measure, private val spec: Spec) 
         return out
     }
 
-    /** Expands each edge into the chain of ranks it crosses, adding a virtual slot per crossed rank. */
-    private fun paths(links: List<FlowEdge>, rank: Map<String, Int>, sizes: MutableMap<String, Size>): List<Path> {
+    /**
+     * Expands each edge into the chain of ranks it crosses, adding a virtual slot per crossed rank.
+     *
+     * This is the one phase whose output is not bounded by [Limits] directly: a long edge contributes a
+     * slot per rank it spans, so within the node and edge caps it can still mint six figures of virtual
+     * slots. Hence the per-edge cancellation check rather than one at the phase boundary.
+     */
+    private suspend fun paths(links: List<FlowEdge>, rank: Map<String, Int>, sizes: MutableMap<String, Size>): List<Path> {
         val out = mutableListOf<Path>()
         for (edge in links) {
+            coroutineContext.ensureActive()
             val from = rank[edge.from] ?: 0
             val to = rank[edge.to] ?: 0
             val ids = mutableListOf(edge.from)
@@ -142,7 +149,7 @@ internal class FlowLayout(private val measure: Measure, private val spec: Spec) 
         return out
     }
 
-    private fun order(
+    private suspend fun order(
         graph: Graph,
         rank: Map<String, Int>,
         paths: List<Path>,
@@ -161,7 +168,7 @@ internal class FlowLayout(private val measure: Measure, private val spec: Spec) 
         return out
     }
 
-    private fun sweep(
+    private suspend fun sweep(
         graph: Graph,
         order: List<MutableList<String>>,
         pairs: List<Pair<String, String>>,
@@ -173,14 +180,18 @@ internal class FlowLayout(private val measure: Measure, private val spec: Spec) 
             val down = pass % 2 == 0
             val ranks = if (down) order.indices.drop(1) else order.indices.reversed().drop(1)
             for (at in ranks) {
+                coroutineContext.ensureActive()
                 val other = order[at + if (down) -1 else 1]
                 val slot = linkedMapOf<String, Double>()
                 other.forEachIndexed { idx, id -> slot[id] = idx.toDouble() }
                 val group = order[at].associateWith { key(graph, it) }
+                // Both keys are resolved once per id: a comparator that recomputed the median would
+                // re-sort a node's neighbour positions on every comparison.
+                val want = order[at].associateWith { median(adj[it]?.mapNotNull { peer -> slot[peer] } ?: emptyList()) }
                 order[at].sortWith(
                     compareBy(
                         { group[it] },
-                        { median(adj[it]?.mapNotNull { peer -> slot[peer] } ?: emptyList()) ?: Double.MAX_VALUE },
+                        { want[it] ?: Double.MAX_VALUE },
                         { index[it] ?: 0 },
                     ),
                 )
@@ -212,7 +223,7 @@ internal class FlowLayout(private val measure: Measure, private val spec: Spec) 
         return out
     }
 
-    private fun place(
+    private suspend fun place(
         order: List<List<String>>,
         sizes: Map<String, Size>,
         pairs: List<Pair<String, String>>,
@@ -230,7 +241,7 @@ internal class FlowLayout(private val measure: Measure, private val spec: Spec) 
         return x
     }
 
-    private fun align(
+    private suspend fun align(
         order: List<List<String>>,
         sizes: Map<String, Size>,
         adj: Map<String, MutableList<String>>,
@@ -239,6 +250,7 @@ internal class FlowLayout(private val measure: Measure, private val spec: Spec) 
     ) {
         val ranks = if (down) order.indices.drop(1) else order.indices.reversed().drop(1)
         for (at in ranks) {
+            coroutineContext.ensureActive()
             val other = order[at + if (down) -1 else 1]
             val centers = linkedMapOf<String, Double>()
             for (id in other) centers[id] = (x[id] ?: 0.0) + width(sizes, id) / 2
@@ -283,17 +295,19 @@ internal class FlowLayout(private val measure: Measure, private val spec: Spec) 
         return out
     }
 
-    private fun routes(graph: Graph, boxes: Map<String, Slot>, paths: List<Path>): List<Route> {
+    private suspend fun routes(graph: Graph, boxes: Map<String, Slot>, paths: List<Path>): List<Route> {
         val out = mutableListOf<Route>()
         val seen = linkedMapOf<String, Int>()
+        val chains = paths.associateBy { it.edge.index }
         for (edge in graph.edges) {
+            coroutineContext.ensureActive()
             val from = boxes[edge.from] ?: continue
             if (edge.from == edge.to) {
                 out.add(Route(edge, loop(from.rect)))
                 continue
             }
             val to = boxes[edge.to] ?: continue
-            val path = paths.firstOrNull { it.edge.index == edge.index } ?: continue
+            val path = chains[edge.index] ?: continue
             val lane = seen.getOrDefault(lane(edge), 0)
             seen[lane(edge)] = lane + 1
             out.add(Route(edge, trace(path, boxes, from.rect, to.rect, lane)))

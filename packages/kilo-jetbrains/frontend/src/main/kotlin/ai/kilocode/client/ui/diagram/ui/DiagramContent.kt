@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.diagram.Fault
 import ai.kilocode.client.ui.diagram.Out
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -42,9 +43,11 @@ internal fun diagramContent(source: String, parent: Disposable): JComponent {
                     label.isVisible = false
                 }
 
+                // An unsupported diagram type is a note, not a failure; the source tab still has the text.
                 is Out.Err -> {
-                    label.text = KiloBundle.message("diagram.error", out.message)
-                    label.foreground = UiStyle.Colors.errorLabelForeground()
+                    val hint = out.fault == Fault.Unsupported
+                    label.text = if (hint) KiloBundle.message("diagram.unsupported") else KiloBundle.message("diagram.error", out.message)
+                    label.foreground = if (hint) SessionUiStyle.Text.Secondary.foreground() else UiStyle.Colors.errorLabelForeground()
                     label.isVisible = true
                 }
             }

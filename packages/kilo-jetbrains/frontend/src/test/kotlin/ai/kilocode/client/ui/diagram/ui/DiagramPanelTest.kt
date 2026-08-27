@@ -11,9 +11,11 @@ import ai.kilocode.client.ui.diagram.Size
 import ai.kilocode.client.ui.diagram.Type
 import java.awt.Color
 import java.awt.Font
+import java.awt.image.BufferedImage
 import javax.swing.AbstractButton
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class DiagramPanelTest {
@@ -45,6 +47,42 @@ class DiagramPanelTest {
         assertTrue(buttons.any { it.toolTipText == KiloBundle.message("diagram.open") })
         assertTrue(buttons.any { it.toolTipText == KiloBundle.message("session.copy.hover") })
         assertTrue(buttons.any { it.icon === SessionViewIcons.openDiff })
+    }
+
+    @Test
+    fun `test a normal diagram is copied at the crisp shot scale`() {
+        val image = diagramImage(scene(100.0, 50.0), palette(), Color.WHITE)
+
+        assertNotNull(image)
+        assertEquals(100 * 2 + 16 * 2 * 2, image.width)
+        assertEquals(50 * 2 + 16 * 2 * 2, image.height)
+    }
+
+    /**
+     * The engine caps the model, not the geometry, so a legal diagram can still span tens of thousands
+     * of units. Copying it must downscale rather than ask for a multi-gigabyte raster on the EDT.
+     */
+    @Test
+    fun `test a huge diagram is copied downscaled instead of allocating gigabytes`() {
+        val image = diagramImage(scene(120_000.0, 90_000.0), palette(), Color.WHITE)
+
+        assertNotNull(image)
+        assertTrue(image.width <= 8_000, "width ${image.width}")
+        assertTrue(image.height <= 8_000, "height ${image.height}")
+        assertTrue(image.width.toLong() * image.height <= 9_000_000L, "pixels ${image.width * image.height}")
+        assertTrue(image.width > 0 && image.height > 0)
+    }
+
+    @Test
+    fun `test painting a scene reports that it drew`() {
+        val target = BufferedImage(80, 80, BufferedImage.TYPE_INT_RGB)
+        val g = target.createGraphics()
+
+        try {
+            assertTrue(paintDiagram(g, scene(40.0, 20.0), palette(), 1.0, 4, 4))
+        } finally {
+            g.dispose()
+        }
     }
 
     private fun buttons(root: java.awt.Container): List<AbstractButton> {

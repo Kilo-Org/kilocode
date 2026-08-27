@@ -5,6 +5,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.diagram.Art
 import ai.kilocode.client.ui.diagram.Painters
 import ai.kilocode.client.ui.diagram.Palette
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Dimension
@@ -18,10 +19,20 @@ import kotlin.math.roundToInt
 internal class DiagramPanel(private var palette: Palette) : JComponent() {
     private var art: Art? = null
     private var last = Dimension(0, 0)
+    private var faulted = false
+
+    /**
+     * Called once, off the paint pass, when the diagram could not be drawn.
+     *
+     * The owner uses it to go back to showing the source: by the time painting fails the source pane is
+     * already hidden, so without this the reader is left looking at a blank surface.
+     */
+    var onFault: () -> Unit = {}
 
     @RequiresEdt
     fun art(value: Art) {
         art = value
+        faulted = false
         resize()
         repaint()
     }
@@ -60,9 +71,14 @@ internal class DiagramPanel(private var palette: Palette) : JComponent() {
         }
         val value = art ?: return
         val scale = scale(value)
-        SessionSurface.clipped(g, width, height) { clipped ->
+        val drew = SessionSurface.clipped(g, width, height) { clipped ->
             paintDiagram(clipped, value, palette, scale, pad(), pad())
         }
+        if (drew || faulted) return
+        // Swapping the visible component from inside a paint pass is not safe, so hand the fallback to
+        // the owner on the next event instead.
+        faulted = true
+        ApplicationManager.getApplication().invokeLater(onFault)
     }
 
     private fun resize() {

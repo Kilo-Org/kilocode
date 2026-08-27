@@ -40,18 +40,29 @@ internal object Source {
         return text
     }
 
-    /** True when [index] sits outside quotes and outside any bracket group. */
-    fun open(text: String, index: Int): Boolean {
+    /**
+     * Per-index "sits outside quotes and outside any bracket group" flags for one line.
+     *
+     * Computed in a single pass and reused by every scanner on that line. Answering the question per
+     * index instead (rescanning from 0 each time) is quadratic, which a 100k character line turns into
+     * seconds of uninterruptible work because cancellation is only checked between lines.
+     */
+    fun opens(text: String): BooleanArray {
+        val out = BooleanArray(text.length)
         var quote = false
         var depth = 0
-        for (idx in 0 until index) {
+        for (idx in text.indices) {
+            out[idx] = !quote && depth <= 0
             val char = text[idx]
-            if (char == '"') quote = !quote
+            if (char == '"') {
+                quote = !quote
+                continue
+            }
             if (quote) continue
             if (char == '[' || char == '(' || char == '{') depth++
             if (char == ']' || char == ')' || char == '}') depth--
         }
-        return !quote && depth <= 0
+        return out
     }
 
     fun rail(char: Char) = RAILS.indexOf(char) >= 0
