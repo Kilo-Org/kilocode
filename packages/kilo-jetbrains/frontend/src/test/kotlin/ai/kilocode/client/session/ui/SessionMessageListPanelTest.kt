@@ -364,6 +364,27 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertSame(cards("a1").single(), view.components.last())
     }
 
+    /**
+     * SessionLayout sizes the card and then reads its preferred size, so the text area has to measure
+     * itself at that width. Reporting an unwrapped single line would clip a long provider error.
+     */
+    fun `test long failure text is measured at the transcript width`() {
+        model.upsertMessage(
+            msg("a1", "assistant").copy(error = failure("Snowflake Cortex: missing credentials. ".repeat(20))),
+        )
+
+        panel.setSize(320, 4000)
+        layout(panel)
+
+        val card = cards("a1").single()
+        val area = components(card).filterIsInstance<JBTextArea>().single()
+        val line = area.getFontMetrics(area.font).height
+        val chrome = area.insets.top + area.insets.bottom
+
+        assertTrue("the card must wrap, not report one line: ${card.height}", card.height > line * 3 + chrome)
+        assertEquals("the card must be exactly as tall as the wrapped text", area.preferredSize.height, card.height)
+    }
+
     fun `test transcript content has symmetric side padding`() {
         model.upsertMessage(msg("a1", "assistant"))
 

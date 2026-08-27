@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
+import java.awt.Dimension
 import javax.swing.JPanel
 
 /**
@@ -55,7 +56,6 @@ class MessageErrorView : JPanel(BorderLayout()), SessionEditorStyleTarget, Sessi
     fun setText(value: String): Boolean {
         if (body.text == value) return false
         body.text = value
-        body.caretPosition = 0
         revalidate()
         repaint()
         return true
@@ -92,6 +92,38 @@ private class ErrorText : JBTextArea() {
         caret.isSelectionVisible = true
         lineWrap = true
         wrapStyleWord = true
+    }
+
+    /**
+     * Measured at the width it will actually be painted at, so wrapped text reports its real height.
+     *
+     * [ai.kilocode.client.session.ui.SessionLayout] sizes [MessageErrorView] and then reads its
+     * preferred size, but the wrapper's `BorderLayout` forwards that question here without passing the
+     * width down. A wrapping area would answer with a single unwrapped line, clipping a long provider
+     * error to a one-line slot. Same approach as the transcript's other text rows
+     * (`DialogView.makeText`, `QuestionResultView.makeText`).
+     */
+    override fun getPreferredSize(): Dimension {
+        val width = space()
+        if (width <= 0) return super.getPreferredSize()
+        val old = size
+        setSize(width, Int.MAX_VALUE)
+        val height = super.getPreferredSize().height
+        setSize(old)
+        return Dimension(width, height)
+    }
+
+    /** Width the nearest sized ancestor leaves for this area, falling back to its own. */
+    private fun space(): Int {
+        var node = parent
+        while (node != null) {
+            if (node.width > 0) {
+                val ins = node.insets
+                return (node.width - ins.left - ins.right).coerceAtLeast(0)
+            }
+            node = node.parent
+        }
+        return width
     }
 
     override fun updateUI() {
