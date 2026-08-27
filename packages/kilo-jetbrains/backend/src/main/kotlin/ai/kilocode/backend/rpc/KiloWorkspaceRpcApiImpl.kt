@@ -508,6 +508,10 @@ class KiloWorkspaceRpcApiImpl internal constructor(
                 status = KiloWorkspaceStatusDto.UNSUPPORTED,
                 error = state.reason,
             )
+            is KiloWorkspaceState.Missing -> KiloWorkspaceStateDto(
+                status = KiloWorkspaceStatusDto.MISSING,
+                error = state.path,
+            )
             is KiloWorkspaceState.Error -> KiloWorkspaceStateDto(
                 status = KiloWorkspaceStatusDto.ERROR,
                 error = state.message,

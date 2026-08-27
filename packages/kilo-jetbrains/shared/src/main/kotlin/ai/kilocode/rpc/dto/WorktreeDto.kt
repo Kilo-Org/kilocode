@@ -11,6 +11,7 @@ data class WorktreeDto(
     val main: Boolean = false,     // primary working tree — not deletable
     val locked: Boolean = false,   // git worktree lock — blocks a plain remove
     val lockReason: String? = null, // optional reason recorded when the tree was locked
+    val prunable: Boolean = false, // git marks metadata stale because the directory is gone
 )
 
 @Serializable
@@ -48,6 +49,31 @@ enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING }
 data class WorktreePrListDto(
     val availability: GhAvailability = GhAvailability.OK,
     val items: List<WorktreePrDto> = emptyList(),
+)
+
+/**
+ * Single-directory branch status for the chat branch/PR dock: the current branch, whether the
+ * directory is a linked worktree, gh availability, and the PR for the branch (if any).
+ */
+@Serializable
+data class BranchStatusDto(
+    val branch: String = "",
+    val worktree: Boolean = false,
+    val availability: GhAvailability = GhAvailability.OK,
+    val pr: WorktreePrDto? = null,
+)
+
+/** Stages of the "Move to Worktree" flow. Mirrors VS Code's ContinueInWorktreeStatus minus setup. */
+@Serializable
+enum class MoveStage { CAPTURING, CREATING, TRANSFERRING, FORKING, DONE, ERROR }
+
+/** Progress event streamed while moving a session into a new worktree. */
+@Serializable
+data class MoveProgressDto(
+    val stage: MoveStage,
+    val error: String? = null,
+    val worktree: WorktreeDto? = null,
+    val session: String? = null,
 )
 
 @Serializable

@@ -1,67 +1,92 @@
 /** @jsxImportSource solid-js */
 
-import { createMemo, createSignal, onCleanup, onMount, type Component } from "solid-js"
+import { createMemo, createSignal, type Component } from "solid-js"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
+import "./agent-manager.css"
+import "./agent-manager-review.css"
 import { BranchSelect } from "../src/components/shared/BranchSelect"
 import { useLanguage } from "../src/context/language"
-import { useVSCode } from "../src/context/vscode"
-import type { AgentManagerBranchesMessage, BranchInfo } from "../src/types/messages"
+import type { BranchInfo } from "../src/types/messages"
 
 interface Props {
-  projectId: string
   selected?: string
   detected?: string
+  branches: () => BranchInfo[]
+  loading: () => boolean
+  onSelect: (branch?: string) => void
   onClose: () => void
 }
 
 export const ProjectBranchDialog: Component<Props> = (props) => {
-  const { t } = useLanguage()
-  const vscode = useVSCode()
+  const language = useLanguage()
   const [search, setSearch] = createSignal("")
-  const [branches, setBranches] = createSignal<BranchInfo[]>([])
-  const [loading, setLoading] = createSignal(true)
   const [highlighted, setHighlighted] = createSignal(-1)
   const filtered = createMemo(() => {
     const value = search().toLowerCase()
-    return value ? branches().filter((branch) => branch.name.toLowerCase().includes(value)) : branches()
+    const items = props.branches()
+    return value ? items.filter((branch) => branch.name.toLowerCase().includes(value)) : items
   })
   const select = (branch?: string) => {
-    vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", projectId: props.projectId, branch })
+    props.onSelect(branch)
     props.onClose()
   }
-  const unsubscribe = vscode.onMessage((message) => {
-    if (message.type !== "agentManager.branches") return
-    const event = message as AgentManagerBranchesMessage
-    if (event.projectId !== props.projectId) return
-    setBranches(event.branches)
-    setLoading(false)
-  })
-  onCleanup(unsubscribe)
-  onMount(() => vscode.postMessage({ type: "agentManager.requestBranches", projectId: props.projectId }))
+  const keydown = (event: KeyboardEvent) => {
+    const items = filtered()
+    const total = items.length + 1
+    if (event.key === "ArrowDown") {
+      event.preventDefault()
+      event.stopPropagation()
+      setHighlighted((value) => Math.min(value + 1, total - 2))
+      return
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault()
+      event.stopPropagation()
+      setHighlighted((value) => Math.max(value - 1, -1))
+      return
+    }
+    if (event.key === "Enter") {
+      event.preventDefault()
+      event.stopPropagation()
+      const index = highlighted()
+      if (index === -1) {
+        select()
+        return
+      }
+      const branch = items[index]
+      if (branch) select(branch.name)
+      return
+    }
+    if (event.key !== "Escape") return
+    event.preventDefault()
+    event.stopPropagation()
+    props.onClose()
+  }
 
   return (
-    <Dialog title={t("agentManager.worktree.defaultBaseBranch")} fit>
+    <Dialog title={language.t("agentManager.worktree.defaultBaseBranch")} fit>
       <div class="am-default-base-branch">
         <BranchSelect
           branches={filtered()}
-          loading={loading()}
+          loading={props.loading()}
           search={search()}
           onSearch={(value) => {
             setSearch(value)
             setHighlighted(-1)
           }}
           onSelect={(branch) => select(branch.name)}
+          onSearchKeyDown={keydown}
           selected={props.selected}
           highlighted={highlighted()}
           onHighlight={setHighlighted}
-          searchPlaceholder={t("agentManager.dialog.searchBranches")}
-          emptyLabel={t("agentManager.import.noMatchingBranches")}
-          loadingLabel={t("agentManager.import.loadingBranches")}
-          defaultLabel={t("agentManager.dialog.branchBadge.default")}
-          remoteLabel={t("agentManager.dialog.branchBadge.remote")}
+          searchPlaceholder={language.t("agentManager.dialog.searchBranches")}
+          emptyLabel={language.t("agentManager.import.noMatchingBranches")}
+          loadingLabel={language.t("agentManager.import.loadingBranches")}
+          defaultLabel={language.t("agentManager.dialog.branchBadge.default")}
+          remoteLabel={language.t("agentManager.dialog.branchBadge.remote")}
           defaultName={props.selected ?? props.detected}
           autoOption={{
-            label: t("agentManager.worktree.defaultBaseBranchAuto"),
+            label: language.t("agentManager.worktree.defaultBaseBranchAuto"),
             hint: props.detected,
             active: !props.selected,
             highlighted: highlighted() === -1,

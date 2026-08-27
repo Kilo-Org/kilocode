@@ -332,6 +332,45 @@ describe("WorktreeManager.createWorktree", () => {
 
     expect(result.parentBranch).toBe(branch)
   })
+
+  it("uses two checkout workers without changing Git configuration", async () => {
+    const root = await createTempRepo()
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    const file = path.join(root, "workers")
+    await fs.writeFile(hook, `#!/bin/sh\ngit config --get checkout.workers > "${file}"\n`)
+    await fs.chmod(hook, 0o755)
+
+    await createManager(root).createWorktree({ branchName: "parallel-checkout" })
+
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("2")
+    expect((await simpleGit(root).getConfig("checkout.workers")).value).toBeNull()
+  })
+
+  it("preserves an explicitly configured checkout worker count", async () => {
+    const root = await createTempRepo()
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    const file = path.join(root, "workers")
+    gitExec(["git", "-C", root, "config", "checkout.workers", "1"])
+    await fs.writeFile(hook, `#!/bin/sh\ngit config --get checkout.workers > "${file}"\n`)
+    await fs.chmod(hook, 0o755)
+
+    await createManager(root).createWorktree({ branchName: "configured-checkout" })
+
+    expect((await fs.readFile(file, "utf8")).trim()).toBe("1")
+    expect((await simpleGit(root).getConfig("checkout.workers")).value).toBe("1")
+  })
+
+  it("retains post-checkout hook failure tolerance with parallel checkout", async () => {
+    const root = await fs.realpath(await createTempRepo())
+    const hook = path.join(root, ".git", "hooks", "post-checkout")
+    await fs.writeFile(hook, "#!/bin/sh\nprintf 'post-checkout hook failed' >&2\nexit 1\n")
+    await fs.chmod(hook, 0o755)
+
+    const result = await createManager(root).createWorktree({ branchName: "hook-failure" })
+
+    expect(existsSync(result.path)).toBe(true)
+    expect((await simpleGit(root).raw(["worktree", "list", "--porcelain"])).includes(result.path)).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -812,6 +851,17 @@ describe("WorktreeManager.createWorktree branch collision", () => {
 
     expect(second.branch).toBe("collide-2")
     expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
+  })
+
+  it("does not treat remote-tracking refs as local branch collisions", async () => {
+    const root = await createTempRepo()
+    const git = simpleGit(root)
+    const hash = (await git.revparse(["HEAD"])).trim()
+    await git.raw(["update-ref", "refs/remotes/origin/remote-name", hash])
+
+    const result = await createManager(root).createWorktree({ branchName: "remote-name" })
+
+    expect(result.branch).toBe("remote-name")
   })
 })
 

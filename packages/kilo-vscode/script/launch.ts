@@ -37,6 +37,7 @@ import { spawn } from "node:child_process"
 const win = process.platform === "win32"
 const root = join(import.meta.dir, "..")
 const repo = resolve(root, "..", "..")
+const temp = tmpdir().trimEnd()
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -102,7 +103,7 @@ const base =
     ? expand(opts["state-dir"])
     : isolated
       ? join(dev, "vscode")
-      : join(tmpdir(), `kilo-vscode-dev-${hash}`)
+      : join(temp, `kilo-vscode-dev-${hash}`)
 const userDir = join(base, "user-data")
 const extDir = join(base, "extensions")
 const kilo =

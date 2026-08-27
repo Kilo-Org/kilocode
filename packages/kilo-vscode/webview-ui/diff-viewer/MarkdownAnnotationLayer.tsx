@@ -183,7 +183,7 @@ export const MarkdownAnnotationLayer: Component<MarkdownAnnotationLayerProps> = 
       layer.appendChild(row)
     }
 
-    observer?.observe(root, { childList: true, subtree: true })
+    observer?.observe(pane, { childList: true, subtree: true })
   }
 
   createEffect(() => {
@@ -199,14 +199,14 @@ export const MarkdownAnnotationLayer: Component<MarkdownAnnotationLayerProps> = 
   })
 
   createEffect(() => {
-    const root = props.root()
-    if (!root) return
+    const pane = props.pane()
+    if (!pane) return
     observer?.disconnect()
     observer = new MutationObserver((mutations) => {
       if (mutations.every(isAnnotationMutation)) return
       schedule()
     })
-    observer.observe(root, { childList: true, subtree: true })
+    observer.observe(pane, { childList: true, subtree: true })
   })
 
   onCleanup(() => {

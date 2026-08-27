@@ -203,7 +203,6 @@ export const dict = {
   "prompt.action.sandbox.description.disabled": "برای محدود کردن نوشتن در سیستم فایل و دسترسی به شبکه کلیک کنید.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "برای محدود کردن نوشتن در سیستم فایل کلیک کنید. دسترسی به شبکه طبق تنظیمات sandbox شما مجاز است.",
-  "prompt.action.resetModel": "بازنشانی مدل به حالت پیش‌فرض",
   "prompt.action.enhanceDescription":
     "دکمه «بهبود پرامپت» با ارائه زمینه بیشتر، توضیح یا بازنویسی، به بهتر کردن پرامپت شما کمک می‌کند. یک پرامپت تایپ کنید و دوباره روی دکمه کلیک کنید تا نحوه عملکرد آن را ببینید.",
   "speechToText.tooltip.start": "شروع ورودی صوتی با Kilo Gateway",
@@ -1246,7 +1245,6 @@ export const dict = {
   "task.backgroundAgents.open": "باز کردن عامل پس‌زمینه",
   "task.backgroundAgents.cancel": "توقف",
   "task.backgroundAgents.continueInBackground": "ادامه در پس‌زمینه",
-  "task.backgroundAgents.foreground": "عامل پیش‌زمینه در حال اجراست",
   "task.backgroundAgents.waiting": "یک عامل پس‌زمینه به ورودی شما نیاز دارد",
   "task.backgroundAgents.needsInput": "ورودی لازم است",
   "task.backgroundAgents.dismiss": "رد کردن",

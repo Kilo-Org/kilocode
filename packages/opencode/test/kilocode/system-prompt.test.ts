@@ -153,6 +153,12 @@ describe("environmentDetails", () => {
     expect(result.startsWith("\n\n<environment_details>")).toBe(true)
     expect(result.endsWith("</environment_details>")).toBe(true)
   })
+
+  test("formats the supplied message time", () => {
+    const result = environmentDetails({}, new Date("2026-08-24T12:34:56.123Z"))
+
+    expect(result).toContain("Message time: 2026-08-24T12:34:56Z")
+  })
 })
 
 describe("KiloSessionPrompt.injectEditorContext", () => {

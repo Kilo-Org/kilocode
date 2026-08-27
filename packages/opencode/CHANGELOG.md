@@ -1,5 +1,61 @@
 # @kilocode/cli
 
+## 7.5.5
+
+### Patch Changes
+
+- [#13489](https://github.com/Kilo-Org/kilocode/pull/13489) [`b74dc0c`](https://github.com/Kilo-Org/kilocode/commit/b74dc0c1b60007fedf7a13259e35ee6f040fa89a) - Prevent inaccessible Windows PowerShell execution aliases from blocking CLI and extension startup.
+
+## 7.5.3
+
+### Patch Changes
+
+- [#13481](https://github.com/Kilo-Org/kilocode/pull/13481) [`42a6366`](https://github.com/Kilo-Org/kilocode/commit/42a63663bfe258fed6af93f4a0c8d7410dc0c597) - Restore reliable CLI terminal startup across release targets.
+
+- [#13472](https://github.com/Kilo-Org/kilocode/pull/13472) [`7b9a84f`](https://github.com/Kilo-Org/kilocode/commit/7b9a84f63a4dd5cb2130810f2d1597a660e52146) - Prevent the CLI from opening to a blank terminal on startup.
+
+- Updated dependencies [[`e4003da`](https://github.com/Kilo-Org/kilocode/commit/e4003da9e1842e0bc8f49777619faa3284b24f95)]:
+  - @opencode-ai/ui@7.5.1
+  - @opencode-ai/tui@7.5.1
+
+## 7.5.0
+
+### Minor Changes
+
+- [#11611](https://github.com/Kilo-Org/kilocode/pull/11611) [`486f66c`](https://github.com/Kilo-Org/kilocode/commit/486f66c022c0f240bdc68368c1e7cf5c1611c0a6) - View current provider plan usage and quota windows in the CLI and VS Code profile.
+
+### Patch Changes
+
+- [#13362](https://github.com/Kilo-Org/kilocode/pull/13362) [`9f7b4e4`](https://github.com/Kilo-Org/kilocode/commit/9f7b4e49815a0a4a5c534b085021997d1523a429) - Clarify when to use foreground subagents and wait for required background results before the final answer.
+
+- Enable background subagents by default, including automatic completion notifications and foreground-to-background promotion. Running background agents now appear in a collapsible strip in the chat header, so they stay visible after the task card scrolls away and can be opened from there.
+
+- [#13419](https://github.com/Kilo-Org/kilocode/pull/13419) [`78692a7`](https://github.com/Kilo-Org/kilocode/commit/78692a7f2a06d6b30e1b75385888fdb2f823a26a) - Allow Agent Manager task model overrides to specify an explicit provider when resolving model names.
+
+- [#13425](https://github.com/Kilo-Org/kilocode/pull/13425) [`e748515`](https://github.com/Kilo-Org/kilocode/commit/e748515a2c45b7833cc4ffd626b0df9d6f925a76) - Prevent stale subagent cards from showing background promotion and respect the background-subagent capability when promoting running tasks.
+
+- [#13420](https://github.com/Kilo-Org/kilocode/pull/13420) [`184ed23`](https://github.com/Kilo-Org/kilocode/commit/184ed23007d14e48d42a6f8f1d82113cb97e5b46) - Fix CLI help disposal and shell completion after startup optimization.
+
+- [#13301](https://github.com/Kilo-Org/kilocode/pull/13301) [`43c4491`](https://github.com/Kilo-Org/kilocode/commit/43c4491560e14c70cade9036e4064e2d671a703f) - Prevent provider errors when agents reach their step limit by sending the final summary instruction as user input instead of an assistant prefill.
+
+- [#13371](https://github.com/Kilo-Org/kilocode/pull/13371) [`8c1122f`](https://github.com/Kilo-Org/kilocode/commit/8c1122f3a75da5c7512d141f20ff85a930302d75) - Fix PTY cleanup on Windows when POSIX process-tree inspection is unavailable.
+
+- [#13349](https://github.com/Kilo-Org/kilocode/pull/13349) [`1761172`](https://github.com/Kilo-Org/kilocode/commit/17611729e29ad2aff84e7ac4d3e15c6612c66dd3) - Prevent encrypted reasoning state from incorrectly reducing the output token budget for long-running sessions.
+
+- [#13365](https://github.com/Kilo-Org/kilocode/pull/13365) [`98ea338`](https://github.com/Kilo-Org/kilocode/commit/98ea338c829e0cb2e4b155c9a248dab08ec5727f) - Prefer PowerShell 7 over legacy Windows PowerShell 5.1 when running agent commands on Windows. PowerShell 7 installs are now found even when `pwsh` is missing from PATH, Agent Manager setup and run scripts launch pwsh when available, and an explicit `shell` in kilo.json still overrides detection.
+
+- [#13412](https://github.com/Kilo-Org/kilocode/pull/13412) [`4ca951c`](https://github.com/Kilo-Org/kilocode/commit/4ca951c88508ab259ebf5f02990145524dce06d9) - Improve CLI cold and warm startup time.
+
+- [#13378](https://github.com/Kilo-Org/kilocode/pull/13378) [`903c027`](https://github.com/Kilo-Org/kilocode/commit/903c0279400fd68bac2ba5085a885fbabbeacd52) - Prevent runaway memory growth in long-running editor servers by sharing project services across file, terminal, reference, agent, and session routes.
+
+- [#13300](https://github.com/Kilo-Org/kilocode/pull/13300) [`c0cc714`](https://github.com/Kilo-Org/kilocode/commit/c0cc71489ae69f5584ef1fe30f70cb3f7b9494b3) Thanks [@mvanhorn](https://github.com/mvanhorn)! - Avoid creating project-local dependency trees when configuration directories contain no file plugins.
+
+- [#13373](https://github.com/Kilo-Org/kilocode/pull/13373) [`58eea73`](https://github.com/Kilo-Org/kilocode/commit/58eea7381abfb10da98102e035ac37cdcb6bc5a9) - Retry reasoning-only incomplete model responses within the bounded recovery budget instead of silently ending the turn.
+
+- [#13418](https://github.com/Kilo-Org/kilocode/pull/13418) [`1aeb626`](https://github.com/Kilo-Org/kilocode/commit/1aeb626047f16193b1072b8b98919e95a2be9d3d) - Keep file route location services on the same cache key as workspace-aware server routes.
+
+- [#13409](https://github.com/Kilo-Org/kilocode/pull/13409) [`eba00e6`](https://github.com/Kilo-Org/kilocode/commit/eba00e6affabb684380549d87cafe9c2c7877a2b) - Build the CLI with Bun 1.4 to reduce compiled binary size and build time.
+
 ## 7.4.23
 
 ### Minor Changes

@@ -27,11 +27,7 @@ const agents = [
   { name: "architect", description: "Plan and design before implementation", mode: "primary" as const },
 ]
 
-const noop = () => {}
-
-const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boolean; training?: boolean }> = (
-  props,
-) => {
+const PromptProviders: ParentComponent<{ variants?: boolean; training?: boolean }> = (props) => {
   const base = mockSessionValue({ status: "idle" })
   const session = {
     ...base,
@@ -39,8 +35,6 @@ const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boo
     selectedAgent: () => "code",
     variantList: () => (props.variants ? ["low", "medium", "high"] : []),
     currentVariant: () => (props.variants ? ("medium" as string | undefined) : undefined),
-    hasModelOverride: () => props.modelOverride ?? false,
-    clearModelOverride: noop,
   }
 
   return (
@@ -165,28 +159,6 @@ export const WithThinking200: Story = {
   name: "With thinking selector — 200px",
   render: () => (
     <PromptProviders variants>
-      <PromptInput />
-    </PromptProviders>
-  ),
-}
-
-// ---------------------------------------------------------------------------
-// Stories — model override active (reset button visible)
-// ---------------------------------------------------------------------------
-
-export const WithModelOverride420: Story = {
-  name: "With model override — 420px",
-  render: () => (
-    <PromptProviders modelOverride>
-      <PromptInput />
-    </PromptProviders>
-  ),
-}
-
-export const WithModelOverride200: Story = {
-  name: "With model override — 200px",
-  render: () => (
-    <PromptProviders modelOverride>
       <PromptInput />
     </PromptProviders>
   ),

@@ -203,7 +203,6 @@ export const dict = {
   "prompt.action.sandbox.description.disabled": "Click to restrict filesystem writes and network access.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
-  "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
   "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
@@ -1234,7 +1233,6 @@ export const dict = {
   "task.backgroundAgents.open": "Open background agent",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Continue in background",
-  "task.backgroundAgents.foreground": "Foreground subagent running",
   "task.backgroundAgents.waiting": "A background agent needs your input",
   "task.backgroundAgents.needsInput": "Needs input",
   "task.backgroundAgents.dismiss": "Dismiss",
