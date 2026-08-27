@@ -112,7 +112,7 @@ export class CodeIndexServiceFactory {
     }
     if (provider === "gemini") {
       if (!config.geminiOptions?.apiKey) throw new Error("Gemini API key is required for embedding.")
-      return new GeminiEmbedder(config.geminiOptions.apiKey, config.modelId)
+      return new GeminiEmbedder(config.geminiOptions.apiKey, config.modelId, config.modelDimension)
     }
     if (provider === "mistral") {
       if (!config.mistralOptions?.apiKey) throw new Error("Mistral API key is required for embedding.")

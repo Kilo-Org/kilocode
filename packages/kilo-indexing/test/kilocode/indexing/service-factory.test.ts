@@ -63,6 +63,29 @@ describe("CodeIndexServiceFactory", () => {
     expect(factory.createEmbedder().embedderInfo).toEqual({ name: "openai-compatible" })
   })
 
+  test("passes configured dimension to Gemini embedding requests", async () => {
+    const factory = createFactory({
+      embedderProvider: "gemini",
+      openAiKey: undefined,
+      geminiApiKey: "gemini-test",
+      modelId: "gemini-embedding-001",
+      modelDimension: 768,
+    })
+    mockEmbeddingsCreate.mockResolvedValue({
+      data: [{ embedding: [0.1, 0.2] }],
+      usage: { prompt_tokens: 2, total_tokens: 2 },
+    })
+
+    await factory.createEmbedder().createEmbeddings(["test text"])
+
+    expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+      input: ["test text"],
+      model: "gemini-embedding-001",
+      encoding_format: "base64",
+      dimensions: 768,
+    })
+  })
+
   test("lets SDK-backed embedders own validation timeouts", async () => {
     const original = globalThis.setTimeout
     const timer = mock((...args: Parameters<typeof setTimeout>) => original(...args))
