@@ -28,4 +28,25 @@ describe("createSessionBusy", () => {
   it("marks sessions with an active status as busy", () => {
     expect(busy({ working: { type: "busy" } }).agent("wt-working")).toBe(true)
   })
+
+  it.each(["permission", "question"] as const)(
+    "blocks deletion for a pending %s without showing a running spinner",
+    (kind) => {
+      const state = createSessionBusy({
+        statuses: () => ({ session: { type: "busy" } }),
+        permissions: () => (kind === "permission" ? [{ sessionID: "session" }] : []),
+        questions: () => (kind === "question" ? [{ sessionID: "session" }] : []),
+        managed: () => [{ id: "session", worktreeId: "worktree" }],
+        local: () => [],
+        projects: () => ({ other: [{ id: "session", worktreeId: "worktree" }] }),
+        active: () => "active",
+      })
+
+      expect(state.agent("worktree")).toBe(false)
+      expect(state.agent("worktree", true)).toBe(true)
+      expect(state.project("active", "worktree", true)).toBe(true)
+      expect(state.project("other", "worktree")).toBe(false)
+      expect(state.project("other", "worktree", true)).toBe(true)
+    },
+  )
 })

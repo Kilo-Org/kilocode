@@ -643,6 +643,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
     expect(lifecycle).toContain("this.removedSessions.add(id)")
     expect(lifecycle).toContain("this.busySessions.delete(id)")
+    expect(lifecycle).toContain("info && !this.removedSessions.has(info.id) ? info.directory : undefined")
     expect(status).toContain("this.removedSessions.has(sid)")
   })
 

@@ -208,6 +208,14 @@ export async function deleteLifecycleWorktree(
       await client.kilocode.removeSnapshot({ directory: ctx.root, worktree: worktree.path }, { throwOnError: true })
     } catch (error) {
       host.log(`Failed to remove worktree snapshots: ${error}`)
+      host.post({
+        type: "error",
+        code: "agentManager.snapshotCleanupFailed",
+        projectId: ctx.id,
+        worktreeId,
+        message:
+          "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
+      })
     }
     const orphaned = state.removeWorktree(worktreeId)
     host.removePR(worktreeId)

@@ -166,7 +166,7 @@ export namespace KiloSnapshotCleanup {
     if (!path.isAbsolute(input.worktree) || worktree === managed || !FSUtil.contains(managed, worktree))
       return yield* Effect.fail(new Error("worktree must be an absolute path inside the managed worktrees directory"))
     const child = path.relative(managed, worktree).split(path.sep).filter(Boolean)
-    if (child.length !== 1 || !component(child[0]!))
+    if (child.length !== 1 || !component(child[0]))
       return yield* Effect.fail(new Error("worktree must be a single safe path component"))
     const gitdir = path.join(root, input.project, Hash.fast(worktree))
     if (!inside(root, gitdir) || normalized(gitdir) === normalized(root))
@@ -181,6 +181,26 @@ export namespace KiloSnapshotCleanup {
         const checked = yield* validate(input, paths)
         if (!(yield* absent(input, worktree)))
           return yield* Effect.fail(new Error("worktree must be absent before its snapshot repository is removed"))
+        if (checked.project.exists) {
+          const prefix = `.${path.basename(gitdir)}.cleanup-`
+          const entries = yield* input.fs.readDirectoryEntries(checked.project.canonical)
+          for (const entry of entries) {
+            if (!entry.name.startsWith(prefix)) continue
+            if (
+              !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entry.name.slice(prefix.length))
+            )
+              continue
+            const target = path.join(checked.project.canonical, entry.name)
+            const retained = yield* inspect(input.fs, target)
+            yield* dir(retained, "snapshot cleanup quarantine")
+            if (!retained.exists) continue
+            if (normalized(retained.canonical) !== normalized(target) || (yield* pending(input.fs, target)))
+              return yield* Effect.fail(new Error("snapshot cleanup quarantine is unsafe or still pending"))
+            if (!(yield* absent(input, worktree)))
+              return yield* Effect.fail(new Error("worktree must be absent before its snapshot repository is removed"))
+            yield* Effect.uninterruptible(input.fs.remove(target, { recursive: true, force: true }))
+          }
+        }
         if (!checked.gitdir.exists) return true
 
         const final = yield* validate(input, paths)

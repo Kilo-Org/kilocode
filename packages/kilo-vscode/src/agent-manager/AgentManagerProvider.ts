@@ -325,7 +325,7 @@ export class AgentManagerProvider implements Disposable {
     }
     const info = ev.properties?.info
     if (ev.type === "session.created" && info) this.removedSessions.delete(info.id)
-    const dir = info?.directory
+    const dir = info && !this.removedSessions.has(info.id) ? info.directory : undefined
     // Session events from sync or older backends can lack time/directory; a throw
     // would escape into the SSE dispatch loop and starve the other listeners.
     if (!info?.time || !dir || (info.parentID !== undefined && info.parentID !== null)) return

@@ -222,6 +222,71 @@ it.live("isolates snapshot repositories by project", () =>
   }),
 )
 
+it.live("finishes an interrupted quarantine without deleting unrelated directories", () =>
+  Effect.gen(function* () {
+    const base = yield* tmpdirScoped()
+    const input = item(base, "project", "retry")
+    const current = yield* repo(input)
+    yield* drop(input.worktree)
+    const quarantine = path.join(
+      path.dirname(current.dir),
+      `.${path.basename(current.dir)}.cleanup-${crypto.randomUUID()}`,
+    )
+    const unrelated = path.join(path.dirname(current.dir), ".other.cleanup-00000000-0000-0000-0000-000000000000")
+    const fs = yield* FSUtil.Service
+    yield* fs.rename(current.dir, quarantine)
+    yield* write(path.join(unrelated, "keep"), "keep")
+
+    expect(yield* remove(input)).toBe(true)
+    expect(yield* exist(quarantine)).toBe(false)
+    expect(yield* exist(unrelated)).toBe(true)
+    expect(yield* remove(input)).toBe(true)
+  }),
+)
+
+it.live("preserves a pending quarantine and completes cleanup after materialization", () =>
+  Effect.gen(function* () {
+    const base = yield* tmpdirScoped()
+    const input = item(base, "project", "retry-pending")
+    const current = yield* repo(input)
+    yield* drop(input.worktree)
+    const quarantine = path.join(
+      path.dirname(current.dir),
+      `.${path.basename(current.dir)}.cleanup-${crypto.randomUUID()}`,
+    )
+    const fs = yield* FSUtil.Service
+    yield* fs.rename(current.dir, quarantine)
+    const marker = path.join(quarantine, "seed.index")
+    yield* write(marker, "pending")
+
+    expect(Exit.isFailure(yield* remove(input).pipe(Effect.exit))).toBe(true)
+    expect(yield* exist(quarantine)).toBe(true)
+    yield* drop(marker)
+    expect(yield* remove(input)).toBe(true)
+    expect(yield* exist(quarantine)).toBe(false)
+  }),
+)
+
+it.live("rejects a symlinked cleanup quarantine during a retry", () =>
+  Effect.gen(function* () {
+    const base = yield* tmpdirScoped()
+    const input = item(base, "project", "retry-symlink")
+    const current = yield* repo(input)
+    yield* drop(input.worktree)
+    yield* drop(current.dir)
+    const outside = path.join(base, "outside-quarantine")
+    yield* write(path.join(outside, "keep"), "keep")
+    const quarantine = path.join(
+      path.dirname(current.dir),
+      `.${path.basename(current.dir)}.cleanup-${crypto.randomUUID()}`,
+    )
+    yield* link(outside, quarantine)
+
+    expect(Exit.isFailure(yield* remove(input).pipe(Effect.exit))).toBe(true)
+    expect(yield* exist(path.join(outside, "keep"))).toBe(true)
+  }),
+)
+
 it.live("removes an absent snapshot repository idempotently", () =>
   Effect.gen(function* () {
     const base = yield* tmpdirScoped()
@@ -353,7 +418,7 @@ it.live("rejects a dangling managed worktree symlink", () =>
   Effect.gen(function* () {
     const base = yield* tmpdirScoped()
     const input = item(base, "dangling-worktree", "dangling-worktree")
-    const current = yield* repo(input)
+    yield* repo(input)
     yield* drop(input.worktree)
     yield* write(path.join(base, "outside"), "keep")
     yield* link(path.join(base, "missing"), input.worktree)

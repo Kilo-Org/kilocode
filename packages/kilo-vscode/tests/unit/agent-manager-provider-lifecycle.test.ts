@@ -132,6 +132,31 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     expect(state.getWorktrees()).toHaveLength(1)
   })
 
+  it("reports checkpoint cleanup failures while preserving and retargeting sessions", async () => {
+    const session = state.addSession("retained", state.getWorktrees()[0]!.id)
+    const post = mock(host.post)
+    host.post = post
+    client.kilocode.removeSnapshot.mockRejectedValue(new Error("checkpoint cleanup failed"))
+
+    await deleteWorktree()
+
+    expect(post).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "error",
+        code: "agentManager.snapshotCleanupFailed",
+        projectId: ctx.id,
+      }),
+    )
+    expect(state.getWorktrees()).toHaveLength(0)
+    expect(routes).toContainEqual({
+      sessionID: session.id,
+      projectID: ctx.id,
+      directory: ctx.root,
+      generation: ctx.generation,
+    })
+    expect(client.session.delete).not.toHaveBeenCalled()
+  })
+
   it("retargets orphaned sessions to the exact project root without deleting them", async () => {
     const first = state.addSession("first", state.getWorktrees()[0]!.id)
     const second = state.addSession("second", state.getWorktrees()[0]!.id)
