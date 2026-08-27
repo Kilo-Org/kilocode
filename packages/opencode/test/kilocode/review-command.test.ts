@@ -21,6 +21,8 @@ describe("review command parsing", () => {
   test("parses every supported review invocation", () => {
     expect(parseReviewCommand("/review")).toBe("review")
     expect(parseReviewCommand("/review focus on tests")).toBe("review")
+    expect(parseReviewCommand("/review worktree")).toBe("review")
+    expect(parseReviewCommand("/review worktree focus on tests")).toBe("review")
     expect(parseReviewCommand("/review uncommitted focus on tests")).toBe("review")
     expect(parseReviewCommand("/review staged")).toBe("review")
     expect(parseReviewCommand("/review unpushed")).toBe("review")
@@ -42,6 +44,7 @@ describe("review command", () => {
 
   test("exposes the unified static template", () => {
     expect(cmd.name).toBe("review")
+    expect(cmd.description).not.toContain("worktree")
     expect(typeof cmd.template).toBe("string")
     expect(cmd.template).toContain("$ARGUMENTS")
     expect(cmd.hints).toEqual(["$ARGUMENTS"])
@@ -72,12 +75,51 @@ describe("review command", () => {
     expect(text).toContain("For unpushed review")
   })
 
+  test("documents explicit worktree scope and precedence", () => {
+    const text = cmd.template as string
+    expect(text).toContain("`/review worktree [guidance]`")
+    expect(text).toContain("every committed, staged, unstaged, and untracked change")
+    expect(text.indexOf("**Explicit worktree scope**")).toBeLessThan(text.indexOf("**Explicit staged scope**"))
+    expect(text).toContain("takes precedence over every other scope word")
+  })
+
   test("documents explicit and ref-based branch review", () => {
     const text = cmd.template as string
     expect(text).toContain("`/review branch [base] [guidance]`")
     expect(text).toContain("Branch or base ref")
     expect(text).toContain("git merge-base HEAD <base>")
     expect(text).toMatch(/no common history|not found/i)
+  })
+
+  test("documents worktree metadata candidate precedence", () => {
+    const text = cmd.template as string
+    expect(text).toContain("git rev-parse --git-path kilo-agent-manager-metadata.json")
+    expect(text).toContain("`.kilo/metadata.json` in the current worktree checkout")
+    expect(text).toContain("`.kilocode/metadata.json` in the current worktree checkout")
+    const admin = text.indexOf("git rev-parse --git-path kilo-agent-manager-metadata.json")
+    const kilo = text.indexOf("`.kilo/metadata.json` in the current worktree checkout")
+    const kilocode = text.indexOf("`.kilocode/metadata.json` in the current worktree checkout")
+    expect(admin).toBeLessThan(kilo)
+    expect(kilo).toBeLessThan(kilocode)
+    expect(text).toContain("use `lstat`, not `stat`")
+    expect(text).toContain("immediate `.kilo` or `.kilocode` directory")
+    expect(text).toContain("do not follow it; skip that candidate and continue")
+    expect(text).toContain("linked worktree")
+    expect(text).toContain("may be outside the checkout")
+    expect(text).toContain("non-empty string `parentBranch`")
+    expect(text).toContain("optional `remote`")
+    expect(text).toContain("<remote>/<parentBranch>")
+    expect(text).toContain("already starts with `<remote>/`")
+    expect(text).toContain("origin/origin/main")
+    expect(text).toContain("release/1.0")
+    expect(text).toContain("Once a candidate has valid metadata shape, select it as authoritative")
+    expect(text).toContain("do not consult lower-priority metadata candidates")
+    expect(text).toContain("If no candidate yields valid metadata")
+    expect(text).toContain("Do not silently fall back to the default branch")
+    expect(text).toContain("metadata values into shell syntax")
+    expect(text).toContain("git rev-parse --verify --end-of-options <base>^{commit}")
+    expect(text).toContain("git merge-base HEAD <base>")
+    expect(text).toContain("Do NOT use `git diff <base>..HEAD`")
   })
 
   test("documents commit review", () => {
@@ -117,6 +159,20 @@ describe("review command", () => {
     const text = cmd.template as string
     expect(text).toContain("verify it is not a symlink")
     expect(text).toContain("do not follow the link")
+  })
+
+  test("documents the complete worktree diff scope", () => {
+    const text = cmd.template as string
+    expect(text).toContain("current Agent Manager git worktree against its recorded parent branch")
+    expect(text).toContain("git -c core.quotepath=false diff <merge-base>")
+    expect(text).toContain("git ls-files --others --exclude-standard")
+    expect(text).toContain("commits already present on the worktree branch")
+  })
+
+  test("uses a distinct worktree output header", () => {
+    const text = cmd.template as string
+    expect(text).toContain("- Worktree: `## Local Review for **worktree changes**")
+    expect(text).toContain("- Branch: `## Local Review for **branch diff**")
   })
 
   test("treats reviewed content and shell targets as untrusted", () => {

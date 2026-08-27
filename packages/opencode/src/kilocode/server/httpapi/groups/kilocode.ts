@@ -5,8 +5,10 @@ import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/midd
 import {
   WorkspaceRoutingMiddleware,
   WorkspaceRoutingQuery,
+  WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
+import { ProviderUsage } from "@opencode-ai/schema/kilocode/provider-usage"
 import { AnacondaDesktopApi } from "./anaconda-desktop"
 import {
   Failure as AgentManagerFailure,
@@ -34,6 +36,22 @@ import { CommandFiles } from "@/kilocode/command-files"
 const root = "/kilocode"
 const Scope = Schema.Literals(["global", "project"])
 
+export const BackgroundJobInfo = Schema.Struct({
+  id: Schema.String,
+  type: Schema.String,
+  title: Schema.optional(Schema.String),
+  status: Schema.Literals(["running", "completed", "error", "cancelled"]),
+  started_at: Schema.Number,
+  completed_at: Schema.optional(Schema.Number),
+  error: Schema.optional(Schema.String),
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+})
+
+export const BackgroundJobsQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  sessionID: SessionID,
+})
+
 export const RemoveSkillPayload = Schema.Struct({
   location: Schema.String,
 })
@@ -45,6 +63,10 @@ export const RemoveCommandPayload = Schema.Struct({
 export const RemoveAgentPayload = Schema.Struct({
   name: Schema.String,
   scope: Schema.optional(Scope),
+})
+
+export const RemoveSnapshotPayload = Schema.Struct({
+  worktree: Schema.String,
 })
 
 export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
@@ -61,6 +83,9 @@ export const KilocodePaths = {
   marketplaceList: `${root}/marketplace`,
   marketplaceInstall: `${root}/marketplace/install`,
   marketplaceRemove: `${root}/marketplace/remove`,
+  removeSnapshot: `${root}/snapshot/remove`,
+  providerUsage: `${root}/provider-usage`,
+  providerUsageRefresh: `${root}/provider-usage/refresh`,
   notebookList: `${root}/notebook`,
   notebookReply: `${root}/notebook/:requestID/reply`,
   notebookReject: `${root}/notebook/:requestID/reject`,
@@ -68,6 +93,9 @@ export const KilocodePaths = {
   agentManagerReply: `${root}/agent-manager/:requestID/reply`,
   agentManagerReject: `${root}/agent-manager/:requestID/reject`,
   sessionModelUsage: `/session/:sessionID/model-usage`,
+  backgroundJobs: `${root}/background-jobs`,
+  backgroundJobCancel: `${root}/background-jobs/:jobID/cancel`,
+  backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -166,6 +194,40 @@ export const KilocodeApi = HttpApi.make("kilocode")
             description: "Remove a marketplace MCP server, agent, or skill from project or global Kilo config.",
           }),
         ),
+        HttpApiEndpoint.post("removeSnapshot", KilocodePaths.removeSnapshot, {
+          query: WorkspaceRoutingQuery,
+          payload: RemoveSnapshotPayload,
+          success: described(Schema.Boolean, "Snapshot repository removed"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.removeSnapshot",
+            summary: "Remove a snapshot repository",
+            description: "Remove the snapshot repository for an already deleted Agent Manager worktree.",
+          }),
+        ),
+        HttpApiEndpoint.get("providerUsage", KilocodePaths.providerUsage, {
+          query: WorkspaceRoutingQuery,
+          success: described(ProviderUsage.Info, "Current provider usage"),
+          error: HttpApiError.ServiceUnavailable,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.providerUsage.get",
+            summary: "Get provider usage",
+            description: "Get cache-aware, secret-free provider plan usage and personal billing status.",
+          }),
+        ),
+        HttpApiEndpoint.post("providerUsageRefresh", KilocodePaths.providerUsageRefresh, {
+          query: WorkspaceRoutingQuery,
+          success: described(ProviderUsage.Info, "Refreshed provider usage"),
+          error: HttpApiError.ServiceUnavailable,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.providerUsage.refresh",
+            summary: "Refresh provider usage",
+            description: "Refresh provider plan usage while coalescing concurrent source requests.",
+          }),
+        ),
         HttpApiEndpoint.get("notebookList", KilocodePaths.notebookList, {
           query: WorkspaceRoutingQuery,
           success: described(Schema.Array(NotebookRequest), "Pending notebook host requests"),
@@ -248,6 +310,40 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.sessionModelUsage",
             summary: "Get session model usage",
             description: "Get token usage and direct cost by model for the complete top-level session tree.",
+          }),
+        ),
+        HttpApiEndpoint.get("backgroundJobs", KilocodePaths.backgroundJobs, {
+          query: BackgroundJobsQuery,
+          success: described(Schema.Array(BackgroundJobInfo), "Background jobs"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.backgroundJobs",
+            summary: "List background jobs",
+            description: "List background subagent jobs owned by one parent session.",
+          }),
+        ),
+        HttpApiEndpoint.post("backgroundJobCancel", KilocodePaths.backgroundJobCancel, {
+          params: { jobID: Schema.String },
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Background job cancelled"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.backgroundJob.cancel",
+            summary: "Cancel background job",
+            description: "Cancel one background subagent job and its session tree.",
+          }),
+        ),
+        HttpApiEndpoint.post("backgroundJobPromote", KilocodePaths.backgroundJobPromote, {
+          params: { jobID: Schema.String },
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Background job promoted"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.backgroundJob.promote",
+            summary: "Promote background job",
+            description: "Continue one foreground subagent in the background.",
           }),
         ),
       )

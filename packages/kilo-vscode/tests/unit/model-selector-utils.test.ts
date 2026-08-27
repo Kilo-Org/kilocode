@@ -197,9 +197,14 @@ const SEARCH_MODELS: EnrichedModel[] = [
   { id: "gpt-5.6-sol", name: "GPT-5.6 Sol", providerID: "openai", providerName: "OpenAI" },
   { id: "gpt-5.6-sol", name: "GPT-5.6 Sol", providerID: "kilo", providerName: "Kilo" },
   { id: "gpt-5.6", name: "GPT-5.6", providerID: "anthropic", providerName: "Anthropic" },
+  { id: "xai/grok-4.20", name: "SpaceXAI: Grok 4.20", providerID: "kilo", providerName: "Kilo Gateway" },
 ]
 
 describe("rankModelSearch", () => {
+  it("matches colon-separated prefixes in model display names", () => {
+    expect(rankModelSearch(SEARCH_MODELS, "SpaceX").map((model) => model.name)).toEqual(["SpaceXAI: Grok 4.20"])
+  })
+
   it("prefers an exact model token over a longer prefix match", () => {
     expect(
       rankModelSearch(SEARCH_MODELS, "sol")

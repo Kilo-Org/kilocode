@@ -18,7 +18,6 @@ import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMen
 import type { SidebarSearchItem } from "./sidebar-search"
 import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import { ProjectBranchDialog } from "./ProjectBranchDialog"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
 
@@ -42,12 +41,13 @@ interface Props {
   defaultBase?: (projectId: string) => string | undefined
   onCreate?: (projectId: string) => void
   busy?: (projectId: string, id: string) => boolean
-  working?: (projectId: string, id: string) => boolean
+  working?: (projectId: string, id: string, waiting?: boolean) => boolean
   localBusy?: (projectId: string) => boolean
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
   onShortcuts: () => void
+  onHistory: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
 }
 
@@ -155,15 +155,6 @@ export const ProjectList: Component<Props> = (props) => {
       />
     ))
   }
-  const defaultBranch = (projectId: string, selected?: string, detected?: string) =>
-    dialog.show(() => (
-      <ProjectBranchDialog
-        projectId={projectId}
-        selected={selected}
-        detected={detected}
-        onClose={() => dialog.close()}
-      />
-    ))
   return (
     <ProjectsSection
       projects={props.projects}
@@ -212,6 +203,7 @@ export const ProjectList: Component<Props> = (props) => {
         })
       }
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
+      onHistory={props.onHistory}
       onExpand={(projectId, expanded) =>
         vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded })
       }
@@ -225,7 +217,7 @@ export const ProjectList: Component<Props> = (props) => {
           state={props.states[project.id]}
           store={props.store?.(project.id)}
           busy={(id) => props.busy?.(project.id, id) ?? false}
-          working={(id) => props.working?.(project.id, id) ?? false}
+          working={(id, waiting) => props.working?.(project.id, id, waiting) ?? false}
           localBusy={() => props.localBusy?.(project.id) ?? false}
           stats={props.stats[project.id]}
           local={props.local[project.id]}
@@ -238,9 +230,7 @@ export const ProjectList: Component<Props> = (props) => {
           t={props.t}
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
-          onSelectSession={(projectId, sessionId) => select({ projectId, kind: "session", sessionId })}
           onNewWorktree={newWorktree}
-          onDefaultBranch={defaultBranch}
           shortcutMap={props.shortcutMap}
         />
       )}

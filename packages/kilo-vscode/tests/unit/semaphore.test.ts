@@ -69,6 +69,22 @@ describe("Semaphore", () => {
     expect(order).toEqual([1, 2, 3])
   })
 
+  it("removes an aborted task from the pending queue", async () => {
+    const sem = new Semaphore(1)
+    let release: () => void = () => {}
+    const first = sem.run(() => new Promise<void>((resolve) => (release = resolve)))
+    const controller = new AbortController()
+    const aborted = sem.run(async () => "aborted", controller.signal)
+    const next = sem.run(async () => "next")
+
+    controller.abort(new Error("cancelled"))
+    await expect(aborted).rejects.toThrow("cancelled")
+    release()
+
+    expect(await next).toBe("next")
+    await first
+  })
+
   it("allows full concurrency when limit exceeds task count", async () => {
     const sem = new Semaphore(10)
     let running = 0

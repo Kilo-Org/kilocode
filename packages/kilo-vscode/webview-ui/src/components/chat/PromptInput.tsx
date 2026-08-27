@@ -27,7 +27,7 @@ import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
-import type { MentionResult } from "../../hooks/file-mention-utils"
+import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
@@ -40,6 +40,7 @@ import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
+import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
@@ -56,7 +57,7 @@ import {
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
-import type { ExtensionMessage, ReviewComment, SendMessageFailedMessage, TextPart } from "../../types/messages"
+import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
@@ -84,7 +85,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
 
-function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
+function mergeReviewComments(current: ReviewCommentEntry[], incoming: ReviewCommentEntry[]): ReviewCommentEntry[] {
   if (incoming.length === 0) return current
   const map = new Map(current.map((item) => [item.id, item]))
   for (const item of incoming) {
@@ -117,8 +118,10 @@ interface PromptInputProps {
   questioning?: () => boolean
   /** When true, defer prompt focus while switching to a pending question */
   deferFocusToQuestion?: () => boolean
+  worktree?: boolean
   boxId?: string
   terminalContext?: () => string | undefined
+  worktrees?: () => WorktreeReference[]
   pendingSessionID?: string
   /** Agent Manager can suppress automatic prompt focus when this session last
    *  used its side terminal instead. Other callers retain the old behavior. */
@@ -129,6 +132,7 @@ interface PromptInputProps {
 
 function MentionItemContent(props: { item: MentionResult }) {
   const item = props.item
+  const language = useLanguage()
   if (item.type === "terminal")
     return (
       <>
@@ -137,12 +141,16 @@ function MentionItemContent(props: { item: MentionResult }) {
         <span class="file-mention-dir">{item.description}</span>
       </>
     )
-  if (item.type === "git-changes")
+  if (item.type === "git-changes" || item.type === "worktrees")
     return (
       <>
         <Icon name="branch" class="file-mention-icon" />
-        <span class="file-mention-name">{item.label}</span>
-        <span class="file-mention-dir">{item.description}</span>
+        <span class="file-mention-name">
+          {item.type === "worktrees" ? language.t("prompt.worktrees.title") : item.label}
+        </span>
+        <span class="file-mention-dir">
+          {item.type === "worktrees" ? language.t("prompt.worktrees.search") : item.description}
+        </span>
       </>
     )
   if (item.type === "past-chats")
@@ -193,7 +201,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return rest === "unassigned" ? undefined : rest
   }
   const hasGit = () => server.gitInstalled()
-  const mention = useFileMention(vscode, sid, hasGit)
+  const mention = useFileMention(vscode, sid, hasGit, props.worktrees)
   const terminal = useTerminalContext(props.resolveEmbeddedTerminal)
   const git = useGitChangesContext(vscode, ctx, hasGit)
   const imageAttach = useImageAttachments()
@@ -232,7 +240,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const saveDraft = (
     key: string,
     next: string,
-    comments: ReviewComment[],
+    comments: ReviewCommentEntry[],
     imgs: ImageAttachment[],
     scroll = textareaRef?.scrollTop ?? scrollDrafts.get(key) ?? 0,
   ) => savePromptDraft(key, next, comments, imgs, scroll)
@@ -244,7 +252,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   const [text, setText] = createSignal("")
-  const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
+  const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
@@ -310,6 +318,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const hidden = new Set<string>()
       if (session.variantList(sid()).length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
+      if (props.worktree !== true) hidden.add("review worktree")
       return hidden
     },
   )
@@ -358,7 +367,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const speech = useSpeechToText(vscode, server, language)
   const speechModels = useSpeechToTextModels()
 
-  const replaceReviewComments = (next: ReviewComment[]) => {
+  const replaceReviewComments = (next: ReviewCommentEntry[]) => {
     setReviewComments(next)
     if (next.length === 0) {
       reviewDrafts.delete(draftKey())
@@ -389,6 +398,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const pending = reviewDrafts.get(key) ?? []
       const scroll = scrollDrafts.get(key) ?? 0
       setText(draft)
+      mention.seedFromText(draft)
       setReviewComments(pending)
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
@@ -723,6 +733,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
+      }
+      // When present, images are authoritative: replace current attachments
+      // (an empty array clears them, e.g. on redo). Absent leaves them alone.
+      if (message.images) {
+        const imgs = message.images.map((img) => ({
+          id: crypto.randomUUID(),
+          filename: img.filename ?? "image",
+          mime: img.mime,
+          dataUrl: img.dataUrl,
+        }))
+        imageAttach.replace(imgs)
+        imageDrafts.set(draftKey(), imgs)
       }
     }
 
@@ -1323,14 +1345,31 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             }
           >
             <Show
-              when={mention.mentionResults().length > 0}
-              fallback={<div class="file-mention-empty">No files or folders found</div>}
+              when={!mention.worktreePicker() && mention.mentionResults().length > 0}
+              fallback={
+                <Show
+                  when={mention.worktreePicker()}
+                  fallback={<div class="file-mention-empty">No files or folders found</div>}
+                >
+                  <WorktreeMentionPicker
+                    worktrees={mention.worktreeCandidates()}
+                    onSelect={(picked) => {
+                      if (textareaRef) mention.selectWorktree(picked, textareaRef, setText, adjustHeight)
+                    }}
+                    onClose={() => {
+                      mention.closeMention()
+                      textareaRef?.focus()
+                    }}
+                  />
+                </Show>
+              }
             >
               <For each={mention.mentionResults()}>
                 {(item, index) => (
                   <>
                     <div
                       class="file-mention-item"
+                      data-type={item.type}
                       classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
                       onMouseDown={(e) => {
                         e.preventDefault()
@@ -1510,20 +1549,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <ModeSwitcher sessionID={sid} />
           <ModelSelector sessionID={sid} />
           <ThinkingSelector sessionID={sid} />
-          <Show when={session.hasModelOverride(sid())}>
-            <Tooltip value={language.t("prompt.action.resetModel")} placement="top" openDelay={0}>
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={() => session.clearModelOverride(sid())}
-                aria-label={language.t("prompt.action.resetModel")}
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
-                </svg>
-              </Button>
-            </Tooltip>
-          </Show>
         </div>
         <div class="prompt-input-hint-actions">
           <Show when={showIndexing()}>

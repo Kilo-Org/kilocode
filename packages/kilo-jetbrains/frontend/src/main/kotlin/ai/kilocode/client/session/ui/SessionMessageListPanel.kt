@@ -66,6 +66,7 @@ class SessionMessageListPanel(
     private val cancelRevert: (() -> Unit)? = null,
     private val deleteQueued: ((String) -> Unit)? = null,
     private val banner: RevertBanner? = null,
+    private val onOpenSubagent: ((String, String) -> Unit)? = null,
 ) : SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
     Insets(
@@ -228,6 +229,8 @@ class SessionMessageListPanel(
         this.openDiff = openDiff
         this.sessionId = sessionId
         banner?.setDiffOpener(openDiff, sessionId)
+        permission?.setDiffOpener(openDiff, sessionId)
+        permission?.setHoverSink(::hover)
         turnViews.values.forEach { it.setDiffOpener(openDiff, sessionId) }
     }
 
@@ -297,7 +300,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued).also {
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued, onOpenSubagent).also {
             it.setDiffOpener(openDiff, sessionId)
         }
         turnViews[turn.id] = tv
@@ -366,7 +369,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued).also {
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued, onOpenSubagent).also {
                 it.setDiffOpener(openDiff, sessionId)
             }
             turnViews[turn.id] = tv
@@ -467,7 +470,7 @@ class SessionMessageListPanel(
                 question?.hideView()
                 permission?.hideView()
                 login?.hideView()
-                outcome?.showOutcome(state.outcome, state.tone)
+                outcome?.showOutcome(state.outcome)
             }
             else -> {
                 setHiddenQuestionTool(null)
@@ -499,6 +502,15 @@ class SessionMessageListPanel(
         if (hiddenTool == ref) return
         hiddenTool = ref
         for (mv in msgToView.values) mv.setHiddenQuestionTool(ref)
+    }
+
+    @RequiresEdt
+    fun syncApprovalReasons(visible: Boolean) {
+        var changed = false
+        for (mv in msgToView.values) changed = mv.syncApprovalReasons(visible) || changed
+        if (!changed) return
+        reflow()
+        refresh()
     }
 
     private fun syncSettled(state: SessionState = model.state) {

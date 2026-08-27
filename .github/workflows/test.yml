@@ -61,14 +61,14 @@ jobs:
         run: |
           if [ "$GENERAL" != "true" ]; then
             echo 'general=false' >> "$GITHUB_OUTPUT"
-            echo 'settings=[{"os":"linux","index":1,"total":1,"host":"blacksmith-4vcpu-ubuntu-2404","run":false,"packages":false}]' >> "$GITHUB_OUTPUT"
+            echo 'settings=[{"os":"linux","index":1,"total":1,"host":"blacksmith-4vcpu-ubuntu-2404","run":false,"packages":false,"pty":false}]' >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo 'general=true' >> "$GITHUB_OUTPUT"
           # kilocode_change - Windows runs 6 shards at KILO_TEST_CONCURRENCY=2. Measured: a
           # 5-shard matrix was worse on both wall-clock (slowest job 9.3m vs 6.7m) and machine
           # minutes (43 vs 37) — with 2 workers per shard, packing more work per shard loses.
-          echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true},{"os":"windows","index":1,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true},{"os":"windows","index":2,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":3,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":4,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":5,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":6,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false}]' >> "$GITHUB_OUTPUT"
+          echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true,"pty":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false,"pty":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true,"pty":true},{"os":"windows","index":1,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true,"pty":true},{"os":"windows","index":2,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":3,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":4,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":5,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false},{"os":"windows","index":6,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false,"pty":false}]' >> "$GITHUB_OUTPUT"
   # kilocode_change end
   unit:
     # kilocode_change start
@@ -118,7 +118,6 @@ jobs:
           }
           Write-Host "Defender path exclusions applied: $applied"
       # kilocode_change end
-
       - name: Checkout repository
         if: matrix.settings.run # kilocode_change
         uses: actions/checkout@v6 # kilocode_change
@@ -187,8 +186,21 @@ jobs:
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - non-CLI tests use the watcher-free unit-test profile
-      # kilocode_change end
 
+      # Keep this outside the CLI shard and OS profiles so one real PTY contract
+      # always runs on Linux, macOS, and Windows.
+      - name: Run cross-platform PTY service tests
+        if: matrix.settings.run && matrix.settings.pty
+        working-directory: packages/core
+        run: bun test test/kilocode/pty-platform.test.ts --timeout 60000
+
+      - name: Run cross-platform PTY route tests
+        if: matrix.settings.run && matrix.settings.pty
+        working-directory: packages/opencode
+        run: |
+          bun test test/server/httpapi-pty.test.ts --test-name-pattern "serves Agent Manager regular terminal" --timeout 60000
+          bun test test/server/httpapi-v2-pty.test.ts --test-name-pattern "serves Agent Manager script terminal" --timeout 60000
+      # kilocode_change end
       # kilocode_change start - ensure the Darwin profile cannot suppress its own validation
       - name: Validate Darwin CLI test profile
         if: matrix.settings.run && matrix.settings.os == 'macos'

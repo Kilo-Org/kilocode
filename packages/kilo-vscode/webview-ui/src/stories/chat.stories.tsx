@@ -18,6 +18,10 @@ import { TaskUsage } from "../components/chat/TaskUsage"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
+import { PromptRail } from "../components/chat/PromptRail"
+import { promptItems, railEntries } from "../components/chat/prompt-rail"
+import { messageTurns } from "../context/session-queue"
+import { transcriptRows } from "../context/transcript-rows"
 import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
@@ -30,6 +34,7 @@ import type {
   Part,
   QuestionRequest,
   ReviewComment,
+  ReviewCommentEntry,
   SessionModelUsage,
   SuggestionRequest,
   TodoItem,
@@ -189,6 +194,76 @@ export const ChatViewAgentManagerCompleted: Story = {
   },
 }
 
+/**
+ * The session dock swaps the working indicator for the session actions when a
+ * turn finishes. Toggling `busy` here drives that swap inside one mounted view
+ * so a test can assert the transcript viewport keeps its exact height.
+ */
+export const ChatViewSessionDockStability: Story = {
+  name: "ChatView — session dock keeps its height",
+  render: () => {
+    const [busy, setBusy] = createSignal(false)
+    // Statuses of deliberately different widths: the label swap is what used to
+    // shove the centered spinner sideways.
+    const labels = ["Thinking…", "Searching the codebase", "Making edits"]
+    const [step, setStep] = createSignal(0)
+    const status = () => (busy() ? "busy" : "idle")
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
+      status,
+      statusInfo: () => ({ type: status() }),
+      statusText: () => (busy() ? labels[step() % labels.length] : undefined),
+      busySince: () => (busy() ? Date.now() - 2000 : undefined),
+      submitting: () => busy(),
+      isSubmitting: () => busy(),
+      messages: () => [{ id: "msg-001" }] as any[],
+      worktreeStats: () => ({ files: 2, additions: 164, deletions: 111 }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <ServerContext.Provider value={mockServer as any}>
+          <SessionContext.Provider value={session as any}>
+            <WorktreeModeProvider>
+              <div style={{ height: "320px", display: "flex", "flex-direction": "column" }}>
+                <button data-testid="toggle-busy" onClick={() => setBusy(!busy())}>
+                  toggle busy
+                </button>
+                <button data-testid="next-status" onClick={() => setStep(step() + 1)}>
+                  next status
+                </button>
+                <ChatView onForkSession={() => undefined} continueInWorktree />
+              </div>
+            </WorktreeModeProvider>
+          </SessionContext.Provider>
+        </ServerContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+/** Builds the user message a review-comment send produces: markdown prefix + review metadata. */
+function reviewMessage(comments: ReviewCommentEntry[]) {
+  const prefix = formatReviewCommentsMarkdown(comments)
+  const message: Message = {
+    id: "review-user-message",
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: "review-user-part",
+      sessionID: SESSION_ID,
+      messageID: message.id,
+      type: "text",
+      text: `${prefix}\n\nPlease address these review comments.`,
+      metadata: reviewMetadata({ version: 1, comments }),
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
 export const UserMessageReviewComments: Story = {
   name: "User message — interactive review comments",
   render: () => {
@@ -206,36 +281,38 @@ export const UserMessageReviewComments: Story = {
         file: "resources/messages/KiloBundle_bs.properties",
         side: "deletions",
         line: 235,
-        comment: "Translate the modified setting description.",
+        comment:
+          "Translate the modified setting description. The Bosnian bundle still ships the English sentence, so the settings panel shows mixed languages for anyone running a localized IDE.",
         selectedText: "settings.models.smallModel.description=The lightweight model used for quick tasks.",
-      },
-    ]
-    const prefix = formatReviewCommentsMarkdown(comments)
-    const text = `${prefix}\n\nPlease address these review comments.`
-    const review = { version: 1 as const, comments }
-    const message: Message = {
-      id: "review-user-message",
-      sessionID: SESSION_ID,
-      role: "user",
-      createdAt: new Date(0).toISOString(),
-      time: { created: 0 },
-    }
-    const parts: Part[] = [
-      {
-        id: "review-user-part",
-        sessionID: SESSION_ID,
-        messageID: message.id,
-        type: "text",
-        text,
-        metadata: reviewMetadata(review),
       },
     ]
 
     return (
       <StoryProviders sessionID={SESSION_ID} status="idle">
-        <div style={{ "max-height": "400px", padding: "12px" }}>
-          <VscodeUserMessage message={message} parts={parts} />
-        </div>
+        <div style={{ "max-height": "400px", padding: "12px" }}>{reviewMessage(comments)}</div>
+      </StoryProviders>
+    )
+  },
+}
+
+/**
+ * Many local review comments at once. Locks in the collapsed preview + "show
+ * more" behavior so a large paste cannot take over the transcript.
+ */
+export const UserMessageManyReviewComments: Story = {
+  name: "User message — many review comments",
+  render: () => {
+    const local: ReviewCommentEntry[] = Array.from({ length: 8 }, (_, index) => ({
+      id: `local-${index}`,
+      file: `src/agent-manager/handlers/worktree-${index}.ts`,
+      side: index % 2 === 0 ? "additions" : "deletions",
+      line: 40 + index * 17,
+      comment: `Guard the ${index % 2 === 0 ? "apply" : "discard"} path against a missing worktree before touching git.`,
+      selectedText: `const worktree = state.worktrees[${index}]`,
+    }))
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle">
+        <div style={{ "max-height": "620px", padding: "12px" }}>{reviewMessage(local)}</div>
       </StoryProviders>
     )
   },
@@ -492,7 +569,6 @@ export const ChatViewReadable420: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// PromptRail — the left-edge tick rail and its hover card
 // Several turns so the rail and card are populated: a long prompt, a short
 // low-signal follow-up, a tool-only answer (empty preview), and a queued one.
 // ---------------------------------------------------------------------------
@@ -595,6 +671,55 @@ export const PromptRailSidebar: Story = {
   render: () => renderRailChat("busy"),
 }
 
+const rail = (side: "left" | "right") => {
+  const items = promptItems(transcriptRows(messageTurns(railMessages), (id) => railParts[id] ?? []))
+  const [active, setActive] = createSignal<string | undefined>(items[0]?.key)
+  const [wheel, setWheel] = createSignal(0)
+  return (
+    <StoryProviders noPadding>
+      <div
+        class="message-list-container"
+        data-testid="prompt-rail-host"
+        data-selected={active()}
+        data-wheel={wheel()}
+        style={{ height: "100vh" }}
+      >
+        <div class="message-list">
+          <p data-testid="prompt-rail-content" tabIndex={0}>
+            {items.find((item) => item.key === active())?.prompt}
+          </p>
+        </div>
+        <PromptRail
+          side={side}
+          entries={() => railEntries(items, items.length)}
+          items={() => items}
+          active={active}
+          onSelect={(item) => setActive(item.key)}
+          onFirst={() => setActive(items[0]?.key)}
+          onLatest={() => setActive(items.at(-1)?.key)}
+          onLoadOlder={() => undefined}
+          onWheel={(delta) => setWheel(delta)}
+          height={() => window.innerHeight}
+          hasOlder={() => false}
+          loadingOlder={() => false}
+          prepending={() => false}
+          seeking={() => false}
+        />
+      </div>
+    </StoryProviders>
+  )
+}
+
+export const PromptRailLeft: Story = {
+  name: "PromptRail - left outer edge",
+  render: () => rail("left"),
+}
+
+export const PromptRailRight: Story = {
+  name: "PromptRail - right outer edge",
+  render: () => rail("right"),
+}
+
 // Long session: more prompts than fit the transcript height, so the rail and
 // the card both cap to the newest ones that fit.
 const manyTurns = Array.from({ length: 80 }, (_, i) =>
@@ -644,6 +769,83 @@ export const PromptRailManyPrompts: Story = {
       <StoryProviders data={manyData} sessionID={SESSION_ID} status="idle" noPadding>
         <SessionContext.Provider value={session as any}>
           <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+const correctionTurns = Array.from({ length: 30 }, (_, i) =>
+  railTurn(300 + i, `Virtualized prompt ${i + 1}`, `Virtualized answer ${i + 1}.`),
+)
+const correctionActive = railTurn(400, "Continue streaming", "Initial streamed response.")
+const correctionMessages = [...correctionTurns.flatMap((turn) => turn.messages), ...correctionActive.messages]
+const correctionAssistant = correctionActive.messages[1]!
+correctionAssistant.finish = "tool-calls"
+const correctionParts = Object.assign(
+  {},
+  ...correctionTurns.map((turn) => turn.parts),
+  correctionActive.parts,
+) as Record<string, any[]>
+const correctionData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: correctionMessages },
+  part: correctionParts,
+}
+
+export const MessageListLayoutCorrection: Story = {
+  name: "MessageList - follow after layout correction",
+  render: () => {
+    const [output, setOutput] = createSignal("Initial streamed response.")
+    const [status, setStatus] = createSignal<"idle" | "busy">("busy")
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      status,
+      statusInfo: () => ({ type: status() }),
+      statusText: () => (status() === "busy" ? "Thinking…" : undefined),
+      busySince: () => (status() === "busy" ? Date.now() - 2000 : undefined),
+      messages: () => correctionMessages,
+      userMessages: () => correctionMessages.filter((msg) => msg.role === "user"),
+      getParts: (id: string) => {
+        if (id !== correctionAssistant.id) return correctionParts[id] ?? []
+        const part = correctionParts[id]![0]!
+        return [{ ...part, text: output() }]
+      },
+    }
+    return (
+      <StoryProviders data={correctionData} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div
+            class="auto-scroll-correction-fixture"
+            style={{ height: "100vh", display: "flex", "flex-direction": "column" }}
+          >
+            <style>{`
+              .auto-scroll-correction-controls {
+                position: fixed;
+                inset: 8px 8px auto auto;
+                z-index: 10;
+                display: flex;
+                gap: 8px;
+              }
+            `}</style>
+            <div class="auto-scroll-correction-controls">
+              <button
+                type="button"
+                data-testid="append-stream"
+                onClick={() => setOutput((value) => `${value}\n\n${"More streamed output. ".repeat(30)}`)}
+              >
+                Append stream
+              </button>
+              <button
+                type="button"
+                data-testid="toggle-status"
+                onClick={() => setStatus((value) => (value === "busy" ? "idle" : "busy"))}
+              >
+                Toggle status
+              </button>
+            </div>
             <ChatView />
           </div>
         </SessionContext.Provider>

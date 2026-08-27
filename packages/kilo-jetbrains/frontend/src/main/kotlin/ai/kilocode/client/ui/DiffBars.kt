@@ -11,7 +11,7 @@ import javax.swing.JPanel
 internal class DiffBars(
     additions: Int,
     deletions: Int,
-) : JPanel() {
+) : JPanel(), DiffBadge {
     private var additions = additions
     private var deletions = deletions
 
@@ -19,7 +19,7 @@ internal class DiffBars(
         isOpaque = false
     }
 
-    fun update(additions: Int, deletions: Int) {
+    override fun update(additions: Int, deletions: Int) {
         if (this.additions == additions && this.deletions == deletions) return
         this.additions = additions
         this.deletions = deletions

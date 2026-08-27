@@ -352,6 +352,52 @@ describe("diffFile", () => {
     })
   })
 
+  it("reuses cached detail while the summary stamp is unchanged", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncached\n")
+      const local = createLocalDiff(git())
+      await local.summary(dir, base)
+
+      const first = await local.file(dir, base, "seed.txt")
+      const second = await local.file(dir, base, "seed.txt")
+
+      expect(second).toBe(first)
+    })
+  })
+
+  it("does not cache detail that is aborted before Git completes", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncached\n")
+      const local = createLocalDiff(git())
+      await local.summary(dir, base)
+
+      const ctl = new AbortController()
+      const pending = local.file(dir, base, "seed.txt", ctl.signal)
+      ctl.abort()
+      await expect(pending).rejects.toThrow()
+
+      const result = await local.file(dir, base, "seed.txt")
+      expect(result?.after).toBe("seed\ncached\n")
+    })
+  })
+
+  it("invalidates cached detail after the summary stamp changes", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfirst\n")
+      const local = createLocalDiff(git())
+      await local.summary(dir, base)
+      const first = await local.file(dir, base, "seed.txt")
+
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nsecond value\n")
+      await local.summary(dir, base)
+      const second = await local.file(dir, base, "seed.txt")
+
+      expect(second).not.toBe(first)
+      expect(second?.after).toBe("seed\nsecond value\n")
+    })
+  })
+
   it("does not materialize binary detail from a cached summary", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "tone.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x01, 0x02, 0x03]))
@@ -448,6 +494,40 @@ describe("diffFile", () => {
 })
 
 describe("resolveLocalDiffTarget + revertFile", () => {
+  it("uses the remote's current trunk when local origin/HEAD is stale", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "local-diff-stale-head-"))
+    const remote = path.join(root, "remote.git")
+    const dir = path.join(root, "clone")
+    try {
+      runSync(root, ["init", "--bare", "-b", "master", remote])
+      runSync(root, ["clone", remote, dir])
+      runSync(dir, ["config", "user.email", "test@example.com"])
+      runSync(dir, ["config", "user.name", "Test"])
+      await fs.writeFile(path.join(dir, "seed.txt"), "master\n")
+      runSync(dir, ["add", "seed.txt"])
+      runSync(dir, ["commit", "-m", "master seed"])
+      runSync(dir, ["push", "-u", "origin", "master"])
+      runSync(dir, ["checkout", "-b", "main"])
+      await fs.writeFile(path.join(dir, "seed.txt"), "main\n")
+      runSync(dir, ["commit", "-am", "move trunk to main"])
+      runSync(dir, ["push", "-u", "origin", "main"])
+      runSync(remote, ["symbolic-ref", "HEAD", "refs/heads/main"])
+      runSync(dir, ["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/master"])
+      runSync(dir, ["checkout", "-b", "feature"])
+      await fs.writeFile(path.join(dir, "feature.txt"), "one line\n")
+
+      const target = await resolveLocalDiffTarget(git(), () => undefined, dir)
+
+      expect(target?.baseBranch).toBe("origin/main")
+      expect(runSync(dir, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"])).toBe("origin/master")
+      const entries = await diffSummary(git(), dir, target!.baseBranch)
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toMatchObject({ file: "feature.txt", additions: 1, deletions: 0 })
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
   it("resolves a real candidate branch so revertFile actually restores the file when there is no remote", async () => {
     await withRepo(async (dir) => {
       // No remote; `main` exists locally with the seed commit.

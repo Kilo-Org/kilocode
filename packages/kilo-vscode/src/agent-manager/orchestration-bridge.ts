@@ -4,9 +4,10 @@ import type { SSEPayload } from "../services/cli-backend/sdk-sse-adapter"
 import { sameDirectory } from "../kilo-provider-utils"
 import type { LocalStats, WorktreeStats } from "./GitStatsPoller"
 import type { PRStatus } from "./types"
-import type { WorktreeStateManager } from "./WorktreeStateManager"
+import type { ManagedSession, WorktreeStateManager } from "./WorktreeStateManager"
 import {
   OrchestrationError,
+  answer,
   move,
   overview,
   prompt,
@@ -28,12 +29,14 @@ type Request =
   | (RequestBase & { operation: "prompt"; targetSessionID: string; prompt: string })
   | (RequestBase & { operation: "stop"; targetSessionID: string })
   | (RequestBase & { operation: "move"; targetSessionID: string; sectionID: string | null })
+  | (RequestBase & { operation: "answer"; targetSessionID: string; questionID?: string; answers: string[][] })
 
 type Result =
   | { operation: "overview"; overview: Overview }
   | { operation: "prompt"; sessionID: string; delivered: true }
   | { operation: "stop"; sessionID: string; stopped: true }
   | { operation: "move"; sessionID: string; sectionID: string | null; moved: true }
+  | { operation: "answer"; sessionID: string; questionID: string; resolved: true }
 
 interface Failure {
   code: FailureCode | "cancelled" | "disconnected" | "timeout"
@@ -47,6 +50,7 @@ interface Options {
   stats(directory?: string): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
   prs(directory?: string): Map<string, PRStatus>
   push(directory?: string): void
+  resolve?(sessionID: string, directory?: string): ManagedSession | undefined
   managed(sessionID: string, directory?: string): boolean
   close(sessionID: string, directory?: string): Promise<void>
   directories?(): string[]
@@ -284,12 +288,21 @@ export class AgentManagerOrchestrationBridge {
           text: request.prompt,
           messageID: request.id,
           signal: active.controller.signal,
+          managed: this.options.resolve?.(request.targetSessionID, origin.directory),
         })
         if (this.disposed || active.cancelled) return
         return { result: { operation: "prompt", sessionID: request.targetSessionID, delivered: true } }
       }
+      if (request.operation === "answer") {
+        return await this.resolveQuestion(client, root, state, request, origin, active)
+      }
       if (request.operation === "move") {
-        move({ state, sessionID: request.targetSessionID, sectionID: request.sectionID })
+        move({
+          state,
+          sessionID: request.targetSessionID,
+          sectionID: request.sectionID,
+          managed: this.options.resolve?.(request.targetSessionID, origin.directory),
+        })
         this.options.push(origin.directory)
         if (this.disposed || active.cancelled) return
         return {
@@ -301,15 +314,47 @@ export class AgentManagerOrchestrationBridge {
           },
         }
       }
-      if (!this.options.managed(request.targetSessionID, origin.directory)) {
-        throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
-      }
-      await this.options.close(request.targetSessionID, origin.directory)
-      if (this.disposed || active.cancelled) return
-      return { result: { operation: "stop", sessionID: request.targetSessionID, stopped: true } }
+      return await this.deactivate(request.targetSessionID, origin.directory, active)
     } catch (error) {
       if (this.disposed || active.cancelled) return
       return { error: failure(error) }
+    }
+  }
+
+  private async deactivate(sessionID: string, originDirectory: string, active: Active): Promise<Outcome | undefined> {
+    if (!this.options.managed(sessionID, originDirectory)) {
+      throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
+    }
+    await this.options.close(sessionID, originDirectory)
+    if (this.disposed || active.cancelled) return
+    return { result: { operation: "stop", sessionID, stopped: true } }
+  }
+
+  private async resolveQuestion(
+    client: KiloClient,
+    root: string,
+    state: WorktreeStateManager,
+    request: Extract<Request, { operation: "answer" }>,
+    origin: Origin,
+    active: Active,
+  ): Promise<Outcome | undefined> {
+    const resolved = await answer({
+      client,
+      root,
+      state,
+      sessionID: request.targetSessionID,
+      questionID: request.questionID,
+      answers: request.answers,
+      managed: this.options.resolve?.(request.targetSessionID, origin.directory),
+    })
+    if (this.disposed || active.cancelled) return
+    return {
+      result: {
+        operation: "answer",
+        sessionID: request.targetSessionID,
+        questionID: resolved.questionID,
+        resolved: true,
+      },
     }
   }
 

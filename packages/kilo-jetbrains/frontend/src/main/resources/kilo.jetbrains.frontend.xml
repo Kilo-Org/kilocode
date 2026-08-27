@@ -84,6 +84,14 @@
                 key="settings.autoApprove.displayName"/>
 
         <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.advanced"
+                groupWeight="-2"
+                instance="ai.kilocode.client.settings.AdvancedConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.advanced.displayName"/>
+
+        <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
                 id="ai.kilocode.jetbrains.settings.agentBehavior.agents"
                 instance="ai.kilocode.client.settings.agents.AgentsConfigurable"
@@ -103,6 +111,13 @@
                 instance="ai.kilocode.client.settings.agents.SkillsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.skills.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings.agentBehavior"
+                id="ai.kilocode.jetbrains.settings.agentBehavior.workflows"
+                instance="ai.kilocode.client.settings.agents.WorkflowsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.agentBehavior.workflows.displayName"/>
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
@@ -192,6 +207,16 @@
 
         <action id="Kilo.NewWorktree"
                 class="ai.kilocode.client.actions.NewWorktreeAction"/>
+
+        <action id="Kilo.Chat.NewWorktree"
+                class="ai.kilocode.client.actions.ChatNewWorktreeAction"
+                text="New Worktree"
+                description="Create a new git worktree with its own branch and session"/>
+
+        <action id="Kilo.Chat.MoveToWorktree"
+                class="ai.kilocode.client.actions.ChatMoveToWorktreeAction"
+                text="Move to Worktree"
+                description="Move this session into a new git worktree"/>
 
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>

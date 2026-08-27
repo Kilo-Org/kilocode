@@ -181,6 +181,12 @@ import type {
   KilocodeAgentManagerRejectResponses,
   KilocodeAgentManagerReplyErrors,
   KilocodeAgentManagerReplyResponses,
+  KilocodeBackgroundJobCancelErrors,
+  KilocodeBackgroundJobCancelResponses,
+  KilocodeBackgroundJobPromoteErrors,
+  KilocodeBackgroundJobPromoteResponses,
+  KilocodeBackgroundJobsErrors,
+  KilocodeBackgroundJobsResponses,
   KilocodeCommandFilesErrors,
   KilocodeCommandFilesResponses,
   KilocodeHeapSnapshotErrors,
@@ -197,12 +203,18 @@ import type {
   KilocodeNotebookRejectResponses,
   KilocodeNotebookReplyErrors,
   KilocodeNotebookReplyResponses,
+  KilocodeProviderUsageGetErrors,
+  KilocodeProviderUsageGetResponses,
+  KilocodeProviderUsageRefreshErrors,
+  KilocodeProviderUsageRefreshResponses,
   KilocodeRemoveAgentErrors,
   KilocodeRemoveAgentResponses,
   KilocodeRemoveCommandErrors,
   KilocodeRemoveCommandResponses,
   KilocodeRemoveSkillErrors,
   KilocodeRemoveSkillResponses,
+  KilocodeRemoveSnapshotErrors,
+  KilocodeRemoveSnapshotResponses,
   KilocodeSessionImportMessageErrors,
   KilocodeSessionImportMessageResponses,
   KilocodeSessionImportPartErrors,
@@ -242,11 +254,15 @@ import type {
   McpAuthRemoveResponses,
   McpAuthStartErrors,
   McpAuthStartResponses,
+  McpCallToolErrors,
+  McpCallToolResponses,
   McpConnectErrors,
   McpConnectResponses,
   McpDisconnectErrors,
   McpDisconnectResponses,
   McpLocalConfig,
+  McpReadResourceErrors,
+  McpReadResourceResponses,
   McpRemoteConfig,
   McpStatusErrors,
   McpStatusResponses,
@@ -3179,6 +3195,88 @@ export class Mcp extends HeyApiClient {
       url: "/mcp/{name}/disconnect",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Read MCP resource
+   *
+   * Read a resource from a connected MCP server by URI. Used by MCP Apps to load UI resources.
+   */
+  public readResource<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      uri?: string
+      server?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "uri" },
+            { in: "body", key: "server" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<McpReadResourceResponses, McpReadResourceErrors, ThrowOnError>({
+      url: "/experimental/resource/read",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Call MCP tool
+   *
+   * Call a tool on a connected MCP server. Used by MCP Apps for widget-initiated tool calls.
+   */
+  public callTool<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      server?: string
+      name?: string
+      arguments?: {
+        [key: string]: unknown
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "server" },
+            { in: "body", key: "name" },
+            { in: "body", key: "arguments" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<McpCallToolResponses, McpCallToolErrors, ThrowOnError>({
+      url: "/experimental/mcp/call-tool",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 
@@ -7680,6 +7778,76 @@ export class Marketplace extends HeyApiClient {
   }
 }
 
+export class ProviderUsage extends HeyApiClient {
+  /**
+   * Get provider usage
+   *
+   * Get cache-aware, secret-free provider plan usage and personal billing status.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeProviderUsageGetResponses,
+      KilocodeProviderUsageGetErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/provider-usage",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh provider usage
+   *
+   * Refresh provider plan usage while coalescing concurrent source requests.
+   */
+  public refresh<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeProviderUsageRefreshResponses,
+      KilocodeProviderUsageRefreshErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/provider-usage/refresh",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Notebook extends HeyApiClient {
   /**
    * List pending notebook requests
@@ -7920,6 +8088,80 @@ export class AgentManager extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class BackgroundJob extends HeyApiClient {
+  /**
+   * Cancel background job
+   *
+   * Cancel one background subagent job and its session tree.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters: {
+      jobID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "jobID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeBackgroundJobCancelResponses,
+      KilocodeBackgroundJobCancelErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs/{jobID}/cancel",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Promote background job
+   *
+   * Continue one foreground subagent in the background.
+   */
+  public promote<ThrowOnError extends boolean = false>(
+    parameters: {
+      jobID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "jobID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeBackgroundJobPromoteResponses,
+      KilocodeBackgroundJobPromoteErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs/{jobID}/promote",
+      ...options,
+      ...params,
     })
   }
 }
@@ -8466,6 +8708,47 @@ export class Kilocode extends HeyApiClient {
   }
 
   /**
+   * Remove a snapshot repository
+   *
+   * Remove the snapshot repository for an already deleted Agent Manager worktree.
+   */
+  public removeSnapshot<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      worktree?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "worktree" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRemoveSnapshotResponses,
+      KilocodeRemoveSnapshotErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/snapshot/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Get session model usage
    *
    * Get token usage and direct cost by model for the complete top-level session tree.
@@ -8501,6 +8784,42 @@ export class Kilocode extends HeyApiClient {
     })
   }
 
+  /**
+   * List background jobs
+   *
+   * List background subagent jobs owned by one parent session.
+   */
+  public backgroundJobs<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeBackgroundJobsResponses,
+      KilocodeBackgroundJobsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/background-jobs",
+      ...options,
+      ...params,
+    })
+  }
+
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
@@ -8511,6 +8830,11 @@ export class Kilocode extends HeyApiClient {
     return (this._marketplace ??= new Marketplace({ client: this.client }))
   }
 
+  private _providerUsage?: ProviderUsage
+  get providerUsage(): ProviderUsage {
+    return (this._providerUsage ??= new ProviderUsage({ client: this.client }))
+  }
+
   private _notebook?: Notebook
   get notebook(): Notebook {
     return (this._notebook ??= new Notebook({ client: this.client }))
@@ -8519,6 +8843,11 @@ export class Kilocode extends HeyApiClient {
   private _agentManager?: AgentManager
   get agentManager(): AgentManager {
     return (this._agentManager ??= new AgentManager({ client: this.client }))
+  }
+
+  private _backgroundJob?: BackgroundJob
+  get backgroundJob(): BackgroundJob {
+    return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport

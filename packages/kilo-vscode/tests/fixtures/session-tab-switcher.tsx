@@ -107,6 +107,15 @@ async function closeFiltered() {
   input.dispatchEvent(new InputEvent("input", { bubbles: true, data: "be", inputType: "insertText" }))
   await settle()
 
+  query<HTMLButtonElement>('[aria-label="Clear filter"]', "Clear button did not render").click()
+  await settle()
+  assert.equal(input.value, "", "Clearing did not reset the search input")
+  assert.equal(root.querySelectorAll('[data-slot="list-item"]').length, 3, "Clearing did not restore all tabs")
+  assert.equal(document.activeElement, input, "Clearing did not restore search focus")
+  input.value = "be"
+  input.dispatchEvent(new InputEvent("input", { bubbles: true, data: "be", inputType: "insertText" }))
+  await settle()
+
   const close = query<HTMLButtonElement>(
     '[aria-label="Close tab: Beta"]',
     "Filtered result close button did not render",

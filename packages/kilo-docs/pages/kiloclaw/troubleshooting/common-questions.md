@@ -5,6 +5,8 @@ description: "Answers to common KiloClaw troubleshooting questions"
 
 # Common Questions
 
+{% partial file="kiloclaw-eol.md" /%}
+
 ## OpenClaw Doctor
 
 OpenClaw Doctor is the recommended first step when something isn't working. It runs diagnostics on your instance and automatically fixes common configuration issues.

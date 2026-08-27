@@ -49,7 +49,13 @@ data class MessageErrorDto(
     val responseBody: String? = null,
     val dataKeys: List<String> = emptyList(),
     val ref: String? = null,
-)
+) {
+    val aborted: Boolean get() = type == ABORTED
+
+    companion object {
+        const val ABORTED = "MessageAbortedError"
+    }
+}
 
 @Serializable
 data class MessageWithPartsDto(
@@ -72,6 +78,7 @@ data class PartDto(
     val title: String? = null,
     val input: Map<String, String> = emptyMap(),
     val metadata: Map<String, String> = emptyMap(),
+    val approval: ToolApprovalDto? = null,
     val output: String? = null,
     val error: String? = null,
     val time: PartTimeDto? = null,
@@ -85,6 +92,17 @@ data class PartDto(
     val filename: String? = null,
     val synthetic: Boolean? = null,
     val source: PartSourceDto? = null,
+)
+
+@Serializable
+data class ToolApprovalDto(
+    val source: String,
+    val agent: String? = null,
+    val rulePermission: String? = null,
+    val rulePattern: String? = null,
+    val ruleAction: String? = null,
+    val outsideWorkspace: Boolean = false,
+    val outsideWorkspacePath: String? = null,
 )
 
 @Serializable
