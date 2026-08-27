@@ -4,6 +4,9 @@ import * as os from "os"
 import * as path from "path"
 import type { AgentManagerRequest, Session } from "@kilocode/sdk/v2/client"
 import { AgentManagerOrchestrationBridge } from "../../src/agent-manager/orchestration-bridge"
+import { createOrchestrationBridge } from "../../src/agent-manager/orchestration-setup"
+import { ProjectContexts } from "../../src/agent-manager/project/contexts"
+import { ProjectScope } from "../../src/agent-manager/project/scope"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import type { SSEPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
 
@@ -113,6 +116,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       },
       prs: (dir) => (overrides?.prs ? overrides.prs(dir) : new Map()),
       push: (dir) => (overrides?.push ? overrides.push(dir) : push()),
+      resolve: (id, dir) => overrides?.resolve?.(id, dir),
       managed: (id, dir) => (overrides?.managed ? overrides.managed(id, dir) : managed.has(id)),
       close: async (id, dir) => (overrides?.close ? overrides.close(id, dir) : close(id, dir)),
       log: () => undefined,
@@ -126,6 +130,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       bridge,
       client,
       close,
+      connection,
       handlers,
       lists,
       managed,
@@ -308,6 +313,186 @@ describe("AgentManagerOrchestrationBridge", () => {
     test.bridge.dispose()
   })
 
+  it("routes prompt, answer, move, and stop for a live-only managed worktree session", async () => {
+    const wt = state.getWorktrees()[0]!
+    const live = { id: "ses_live", worktreeId: wt.id, createdAt: "" }
+    const section = state.addSection("Review", null)
+    const contexts = new ProjectContexts({
+      workspaceRoot: () => root,
+      registry: { list: () => [], get: () => undefined },
+      enabled: () => false,
+      deps: { log: () => undefined, state: () => state },
+    })
+    const ctx = contexts.active()!
+    ctx.stateManager()
+    ctx.upsertSession({
+      ...live,
+      parentID: null,
+      title: "Live",
+      updatedAt: "",
+      revert: null,
+      summary: null,
+    })
+    const routes = new Map<string, string>()
+    const test = harness()
+    test.bridge.dispose()
+    const close = mock(async (id: string) => {
+      expect(routes.get(id)).toBe(dir)
+      routes.delete(id)
+    })
+    const bridge = createOrchestrationBridge({
+      connectionService: test.connection as never,
+      contexts,
+      projectScope: new ProjectScope(),
+      getRoot: () => ctx.root,
+      getState: () => state,
+      getStateReady: () => Promise.resolve(),
+      initStateReady: () => Promise.resolve(),
+      getStats: async () => ({ worktrees: [] }),
+      getPrs: () => new Map(),
+      pushState: () => undefined,
+      hasPanelSession: () => false,
+      routeSession: (id, path) => void routes.set(id, path),
+      closeSession: close,
+      postSessionClosed: () => undefined,
+      log: () => undefined,
+    })
+    const send = (request: AgentManagerRequest) => test.request(request, ctx.root)
+
+    send({
+      id: "amr_live_prompt",
+      sessionID: "ses_caller",
+      operation: "prompt",
+      targetSessionID: live.id,
+      prompt: "Continue",
+    })
+    await waitFor(() => test.replies.length === 1)
+    expect(test.promptAsync).toHaveBeenCalledWith(expect.objectContaining({ sessionID: live.id, directory: dir }), {
+      throwOnError: true,
+    })
+    ;(test.client.question.list as ReturnType<typeof mock>).mockImplementation(async () => ({
+      data: [
+        {
+          id: "que_live",
+          sessionID: live.id,
+          questions: [{ header: "Approve", question: "Proceed?", options: [{ label: "Yes", description: "go" }] }],
+        },
+      ],
+    }))
+    send({
+      id: "amr_live_answer",
+      sessionID: "ses_caller",
+      operation: "answer",
+      targetSessionID: live.id,
+      answers: [["Yes"]],
+    })
+    await waitFor(() => test.replies.length === 2)
+    expect(test.questionReply).toHaveBeenCalledWith(
+      { requestID: "que_live", answers: [["Yes"]], directory: dir },
+      { throwOnError: true },
+    )
+
+    send({
+      id: "amr_live_move",
+      sessionID: "ses_caller",
+      operation: "move",
+      targetSessionID: live.id,
+      sectionID: section.id,
+    })
+    await waitFor(() => test.replies.length === 3)
+    expect(state.getWorktree(wt.id)?.sectionId).toBe(section.id)
+
+    send({
+      id: "amr_live_stop",
+      sessionID: "ses_caller",
+      operation: "stop",
+      targetSessionID: live.id,
+    })
+    await waitFor(() => test.replies.length === 4)
+    expect(close).toHaveBeenCalledWith(live.id)
+    expect(ctx.hasLiveSession(live.id)).toBe(false)
+    expect(state.getSession(live.id)).toBeUndefined()
+
+    ctx.upsertSession({
+      ...live,
+      parentID: null,
+      title: "Live",
+      updatedAt: "",
+      revert: null,
+      summary: null,
+    })
+    send({
+      id: "amr_live_closed",
+      sessionID: "ses_caller",
+      operation: "prompt",
+      targetSessionID: live.id,
+      prompt: "Do not reopen",
+    })
+    await waitFor(() => test.rejections.length === 1)
+    expect(test.rejections[0]).toMatchObject({ error: { code: "unknown_session" } })
+    bridge.dispose()
+  })
+
+  it("rejects a stopped live-only session after its project state is restored", async () => {
+    const wt = state.getWorktrees()[0]!
+    state.closeSession("ses_stopped", wt.id)
+    await state.flush()
+    const restored = new WorktreeStateManager(root, () => undefined)
+    await restored.load()
+    const contexts = new ProjectContexts({
+      workspaceRoot: () => root,
+      registry: { list: () => [], get: () => undefined },
+      enabled: () => false,
+      deps: { log: () => undefined, state: () => restored },
+    })
+    const ctx = contexts.active()!
+    ctx.stateManager()
+    ctx.upsertSession({
+      id: "ses_stopped",
+      worktreeId: wt.id,
+      parentID: null,
+      title: "Stopped",
+      createdAt: "",
+      updatedAt: "",
+      revert: null,
+      summary: null,
+    })
+    const test = harness()
+    test.bridge.dispose()
+    const bridge = createOrchestrationBridge({
+      connectionService: test.connection as never,
+      contexts,
+      projectScope: new ProjectScope(),
+      getRoot: () => ctx.root,
+      getState: () => restored,
+      getStateReady: () => Promise.resolve(),
+      initStateReady: () => Promise.resolve(),
+      getStats: async () => ({ worktrees: [] }),
+      getPrs: () => new Map(),
+      pushState: () => undefined,
+      hasPanelSession: () => false,
+      routeSession: () => undefined,
+      closeSession: async () => undefined,
+      postSessionClosed: () => undefined,
+      log: () => undefined,
+    })
+
+    test.request(
+      {
+        id: "amr_restored_stopped",
+        sessionID: "ses_caller",
+        operation: "prompt",
+        targetSessionID: "ses_stopped",
+        prompt: "Do not reopen",
+      },
+      ctx.root,
+    )
+    await waitFor(() => test.rejections.length === 1)
+    expect(test.rejections[0]).toMatchObject({ error: { code: "unknown_session" } })
+    expect(test.promptAsync).not.toHaveBeenCalled()
+    bridge.dispose()
+  })
+
   it("answers a managed session's pending question through the backend reply route", async () => {
     const test = harness()
     ;(test.client.question.list as ReturnType<typeof mock>).mockImplementation(async () => ({
@@ -449,6 +634,53 @@ describe("AgentManagerOrchestrationBridge", () => {
     expect(test.client.kilocode.agentManager.list).toHaveBeenCalledWith({ directory: dir })
     expect(test.promptAsync).toHaveBeenCalledTimes(1)
     test.bridge.dispose()
+  })
+
+  it("keeps live-only secondary worktree sessions scoped to their owning project", async () => {
+    const secondary = fs.mkdtempSync(path.join(os.tmpdir(), "am-orchestration-secondary-live-"))
+    const worktree = path.join(secondary, "worktree")
+    fs.mkdirSync(path.join(secondary, ".kilo"), { recursive: true })
+    fs.mkdirSync(worktree)
+    const other = new WorktreeStateManager(secondary, () => undefined)
+    const wt = other.addWorktree({ branch: "fix/secondary-live", path: worktree, parentBranch: "main" })
+    const live = { id: "ses_secondary_live", worktreeId: wt.id, createdAt: "" }
+    const test = harness({
+      root: (origin) => (origin === secondary ? secondary : root),
+      ready: async (origin) => (origin === secondary ? other : state),
+      state: (origin) => (origin === secondary ? other : state),
+      resolve: (id, origin) => (id === live.id && origin === secondary ? live : undefined),
+    })
+
+    test.request(
+      {
+        id: "amr_secondary_live",
+        sessionID: "ses_caller",
+        operation: "prompt",
+        targetSessionID: live.id,
+        prompt: "Continue",
+      },
+      secondary,
+    )
+    await waitFor(() => test.replies.length === 1)
+    expect(test.promptAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionID: live.id, directory: worktree }),
+      { throwOnError: true },
+    )
+    expect(other.getSession(live.id)).toBeUndefined()
+
+    test.request({
+      id: "amr_secondary_foreign",
+      sessionID: "ses_caller",
+      operation: "prompt",
+      targetSessionID: live.id,
+      prompt: "Cross project",
+    })
+    await waitFor(() => test.rejections.length === 1)
+    expect(test.rejections[0]).toMatchObject({ error: { code: "unknown_session" } })
+
+    test.bridge.dispose()
+    await other.flush()
+    fs.rmSync(secondary, { recursive: true, force: true })
   })
 
   it("handles requests for secondary project directories in multi-project mode", async () => {

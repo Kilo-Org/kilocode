@@ -23,9 +23,17 @@ Before using Cloud Agents:
 
 ## Cost
 
-- **Compute is free during limited beta**
-  - Please provide any feedback in our Cloud Agents beta Discord channel: [Kilo Discord](https://kilo.ai/discord)
-- **Kilo Code credits are still used** when the agent performs work (model usage, operations, etc.).
+Cloud Agent compute is billed per second while the container is awake. Compute and model inference draw from the same Kilo credit balance, but they are charged separately.
+
+| Cloud Agent size | Hourly rate |
+|---|---|
+| Docker | $0.60 |
+| Small | $0.60 |
+| Standard | $1.20 |
+
+Usage is measured in whole seconds, with no rounding up to a longer billing interval and no minimum usage charge. Your balance must contain at least $5 to launch a container, but this is not an extra charge or minimum spend. BYOK users still pay for cloud compute because their provider keys cover inference only.
+
+See [Kilo Code pricing](https://kilo.ai/pricing) for current rates and pricing for other cloud products.
 
 ## How to Use
 

@@ -63,7 +63,9 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
 
     /**
      * Imports a worktree from a GitHub pull request [url]. Resolves the PR's head branch via `gh`,
-     * fetches it (adding a fork remote for cross-repo PRs), then checks it out into a new worktree.
+     * fetches it, records the branch's remote and merge ref so the PR stays identifiable, then
+     * checks it out into a new worktree. Fork PRs are fetched through `refs/pull/<number>/head` and
+     * get an owner-prefixed local branch; no fork remote is added.
      */
     suspend fun importPr(directory: String, url: String): CreateWorktreeResultDto
 
