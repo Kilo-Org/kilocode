@@ -176,7 +176,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     const title = () => (configured() ? (active() ? "Stop" : "Run") : "Configure run script")
                     return (
                       <span
-                        class={`am-run-group ${active() ? "am-run-active" : ""} ${!configured() ? "am-run-unconfigured" : ""}`}
+                        class={`am-split-button am-run-group ${active() ? "am-run-active" : ""} ${!configured() ? "am-run-unconfigured" : ""}`}
                       >
                         <TooltipKeybind title={title()} keybind={props.bindings().runScript ?? ""} placement="bottom">
                           <Button
@@ -197,18 +197,9 @@ export const TabBar: Component<TabBarProps> = (props) => (
                           </Button>
                         </TooltipKeybind>
                         <DropdownMenu gutter={4} placement="bottom-end">
-                          <DropdownMenu.Trigger
-                            as={(p: Record<string, unknown>) => (
-                              <IconButton
-                                {...p}
-                                icon="chevron-down"
-                                size="small"
-                                variant="ghost"
-                                label={props.t("agentManager.run.options")}
-                                class="am-run-group-chevron"
-                              />
-                            )}
-                          />
+                          <DropdownMenu.Trigger class="am-split-arrow" aria-label={props.t("agentManager.run.options")}>
+                            <Icon name="chevron-down" size="small" />
+                          </DropdownMenu.Trigger>
                           <DropdownMenu.Portal>
                             <DropdownMenu.Content class="am-split-menu">
                               <DropdownMenu.Item

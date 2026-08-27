@@ -1,6 +1,5 @@
 package ai.kilocode.client.ui
 
-import ai.kilocode.client.agentManager.worktree.style
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.GhState
@@ -50,11 +49,12 @@ class UiStyleTest : BasePlatformTestCase() {
     }
 
     fun `test session status badges use shared styles`() {
-        assertSame(UiStyle.Badge.SessionRunning, SessionActivityKind.RUNNING.style())
-        assertSame(UiStyle.Badge.Primary, SessionActivityKind.QUESTION.style())
-        assertSame(UiStyle.Badge.Primary, SessionActivityKind.PLAN.style())
-        assertSame(UiStyle.Badge.Primary, SessionActivityKind.PERMISSION.style())
-        assertSame(UiStyle.Badge.Primary, SessionActivityKind.LOGIN_REQUIRED.style())
+        assertSame(UiStyle.Badge.ActivityRunning, SessionActivityKind.RUNNING.style())
+        assertSame(UiStyle.Badge.ActivityAttention, SessionActivityKind.QUESTION.style())
+        assertSame(UiStyle.Badge.ActivityAttention, SessionActivityKind.PLAN.style())
+        assertSame(UiStyle.Badge.ActivityAttention, SessionActivityKind.PERMISSION.style())
+        assertSame(UiStyle.Badge.ActivityAttention, SessionActivityKind.LOGIN_REQUIRED.style())
+        assertSame(UiStyle.Badge.ActivityError, SessionActivityKind.ERROR.style())
     }
 
     fun `test pull request states use github badge styles`() {
@@ -62,5 +62,19 @@ class UiStyleTest : BasePlatformTestCase() {
         assertSame(UiStyle.Badge.PullRequestDraft, style(GhState.DRAFT))
         assertSame(UiStyle.Badge.PullRequestMerged, style(GhState.MERGED))
         assertSame(UiStyle.Badge.PullRequestClosed, style(GhState.CLOSED))
+    }
+
+    fun `test pull request badges use soft accent backgrounds`() {
+        val styles = listOf(
+            UiStyle.Badge.PullRequestOpen,
+            UiStyle.Badge.PullRequestDraft,
+            UiStyle.Badge.PullRequestMerged,
+            UiStyle.Badge.PullRequestClosed,
+        )
+
+        styles.forEach { style ->
+            assertTrue(style.bg().alpha < Color.WHITE.alpha)
+            assertEquals(Color.WHITE.alpha, style.fg().alpha)
+        }
     }
 }

@@ -37,6 +37,36 @@ class HeaderPopupBodyTest : BasePlatformTestCase() {
         assertEquals(JBUI.scale(40), body.component.preferredSize.height)
     }
 
+    fun `test fitWithin caps the body to the space beside the chat`() {
+        val wide = JPanel().apply {
+            preferredSize = Dimension(
+                JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH),
+                JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT),
+            )
+        }
+        val body = HeaderPopupBody(wide, owner(), UIUtil.getPanelBackground())
+
+        body.fitWithin(JBUI.scale(120), JBUI.scale(90))
+
+        assertEquals(JBUI.scale(120), body.component.preferredSize.width)
+        assertEquals(JBUI.scale(90), body.component.preferredSize.height)
+    }
+
+    fun `test fitWithin wins over the opt-in floor width`() {
+        val wide = JPanel().apply {
+            preferredSize = Dimension(JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH), JBUI.scale(80))
+        }
+        // A body that asks for a floor width still has to fit its side, otherwise the balloon would
+        // re-point above or below the chat.
+        val body = HeaderPopupBody(wide, owner(), UIUtil.getPanelBackground(), minWidth = JBUI.scale(300))
+
+        body.fitWithin(JBUI.scale(100), JBUI.scale(400))
+
+        assertEquals(JBUI.scale(100), body.component.preferredSize.width)
+    }
+
+    private fun owner() = Disposer.newDisposable("popup body").also { Disposer.register(testRootDisposable, it) }
+
     private fun descendants(root: Component): List<Component> {
         val out = mutableListOf<Component>()
         fun visit(node: Component) {

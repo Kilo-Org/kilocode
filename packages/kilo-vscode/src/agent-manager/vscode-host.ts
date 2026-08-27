@@ -110,6 +110,7 @@ export class VscodeHost implements Host {
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
       rootDirectory: opts.workspaceRoot,
       disableViewedRegistration: true,
+      disableStatsPolling: true,
       focusTargetContext: {
         prompt: "kilo-code.new.agentManagerPromptFocused",
         mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",
@@ -318,6 +319,10 @@ export class VscodeHost implements Host {
 
   openExternal(url: string): void {
     void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
+  openSettings(tab?: string, projectId?: string): void {
+    void vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", tab, projectId)
   }
 
   refreshGit(): void {

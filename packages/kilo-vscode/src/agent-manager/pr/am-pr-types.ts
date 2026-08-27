@@ -1,4 +1,4 @@
-import type { PRState, ReviewDecision } from "../types"
+import type { PRState, PRStatus, ReviewDecision } from "../types"
 
 // Raw shapes returned by `gh pr view --json`
 
@@ -25,6 +25,8 @@ export interface GhThread {
 }
 export interface GhReviewRequest {
   requestedReviewer?: GhAuthor
+  login?: string
+  avatarUrl?: string
 }
 export interface GhReview {
   author?: GhAuthor
@@ -41,4 +43,6 @@ export interface PRResult {
   additions: number
   deletions: number
   files: number
+  checks?: PRStatus["checks"]
+  reviewers?: PRStatus["reviewers"]
 }

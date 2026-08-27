@@ -3,8 +3,6 @@ import { For, type Component } from "solid-js"
 /** Staggered widths so stacked placeholder rows read as a list, not a striped block. */
 const BRANCH = ["62%", "44%", "70%", "52%"]
 const SUB = ["38%", "30%", "46%", "34%"]
-const TITLE = ["70%", "55%", "65%", "48%"]
-
 const rows = (count: number) => Array.from({ length: count }, (_, index) => index)
 
 /** Offset each row's pulse so any row count keeps the wave effect. */
@@ -27,23 +25,6 @@ export const WorktreeSkeleton: Component<{ count?: number }> = (props) => (
               style={{ width: SUB[index % SUB.length], "animation-delay": delay(index) }}
             />
           </div>
-        </div>
-      )}
-    </For>
-  </div>
-)
-
-/** Placeholder session rows shown until a project's session list arrives. */
-export const SessionSkeleton: Component<{ count?: number }> = (props) => (
-  <div class="am-skeleton-list">
-    <For each={rows(props.count ?? 3)}>
-      {(index) => (
-        <div class="am-skeleton-session">
-          <div
-            class="am-skeleton-session-title"
-            style={{ width: TITLE[index % TITLE.length], "animation-delay": delay(index) }}
-          />
-          <div class="am-skeleton-session-time" style={{ "animation-delay": delay(index) }} />
         </div>
       )}
     </For>

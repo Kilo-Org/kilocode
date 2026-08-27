@@ -15,6 +15,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { groupApplyConflicts } from "./apply-conflicts"
 import { ApplyDialog } from "./ApplyDialog"
 import { composeDiffId } from "./diff-scope-state"
+import { diffDataKey } from "./worktree-diffs"
 import type { tracker } from "./telemetry"
 import type { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import type { useLanguage } from "../src/context/language"
@@ -74,7 +75,7 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
   const applyDiffs = createMemo(() => {
     const key = applyDiffKey()
     if (!key) return [] as WorktreeFileDiff[]
-    return diffDatas()[key] ?? ([] as WorktreeFileDiff[])
+    return diffDatas()[diffDataKey(opts.projectId?.(), key)] ?? ([] as WorktreeFileDiff[])
   })
 
   const applyStateForTarget = createMemo(() => {

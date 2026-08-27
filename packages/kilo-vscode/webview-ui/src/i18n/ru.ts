@@ -184,7 +184,6 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений будут одобряться автоматически.",
   "prompt.action.autoApprove.disabled":
     "Автоодобрение отключено. Нажмите, чтобы автоматически одобрять запросы разрешений.",
-  "prompt.action.resetModel": "Сбросить модель на значение по умолчанию",
   "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
@@ -1249,7 +1248,6 @@ export const dict = {
   "task.backgroundAgents.open": "Открыть фонового агента",
   "task.backgroundAgents.cancel": "Остановить",
   "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
-  "task.backgroundAgents.foreground": "Агент на переднем плане выполняется",
   "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
   "task.backgroundAgents.needsInput": "Требуется ввод",
   "task.backgroundAgents.dismiss": "Скрыть",

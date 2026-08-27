@@ -208,6 +208,16 @@
         <action id="Kilo.NewWorktree"
                 class="ai.kilocode.client.actions.NewWorktreeAction"/>
 
+        <action id="Kilo.Chat.NewWorktree"
+                class="ai.kilocode.client.actions.ChatNewWorktreeAction"
+                text="New Worktree"
+                description="Create a new git worktree with its own branch and session"/>
+
+        <action id="Kilo.Chat.MoveToWorktree"
+                class="ai.kilocode.client.actions.ChatMoveToWorktreeAction"
+                text="Move to Worktree"
+                description="Move this session into a new git worktree"/>
+
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
 

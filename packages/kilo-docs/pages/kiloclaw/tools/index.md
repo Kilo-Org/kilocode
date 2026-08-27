@@ -5,6 +5,8 @@ description: "Third-party tool integrations for your KiloClaw agent"
 
 # Tools
 
+{% partial file="kiloclaw-eol.md" /%}
+
 KiloClaw supports integrations with third-party tools that extend your agent's capabilities — from secure credential management to web search and financial transactions.
 
 ## Available Integrations
