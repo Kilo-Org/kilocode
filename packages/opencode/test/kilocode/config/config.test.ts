@@ -1085,4 +1085,56 @@ describe("bash permission migration", () => {
       await disposeAllInstances()
     }
   })
+
+  test("does not mark migration done for malformed config and retries after fix", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      const file = path.join(tmp.path, "kilo.jsonc")
+      const marker = path.join(tmp.path, ".bash-permission-migrated")
+      await Filesystem.write(file, "{ not valid json")
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(false)
+      expect(await Filesystem.readText(file)).toBe("{ not valid json")
+      await Filesystem.write(file, JSON.stringify({ permission: { read: "allow" } }))
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(true)
+      expect(JSON.parse(await Filesystem.readText(file)).permission.bash).toBe("allow")
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("does not mark migration done for unreadable config and retries after fix", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      const file = path.join(tmp.path, "kilo.jsonc")
+      const marker = path.join(tmp.path, ".bash-permission-migrated")
+      await Filesystem.write(file, JSON.stringify({ permission: { read: "allow" } }))
+      await $`rm ${file}`.quiet().nothrow()
+      await $`mkdir -p ${file}`.quiet()
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(false)
+      await $`rm -rf ${file}`.quiet()
+      await Filesystem.write(file, JSON.stringify({ permission: { read: "allow" } }))
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(true)
+      expect(JSON.parse(await Filesystem.readText(file)).permission.bash).toBe("allow")
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
 })

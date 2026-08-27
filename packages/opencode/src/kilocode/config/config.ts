@@ -2,7 +2,7 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { existsSync } from "fs"
 import { Effect, Schema } from "effect"
-import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
+import { applyEdits, modify, parse as parseJsonc, type ParseError } from "jsonc-parser"
 import { mergeDeep } from "remeda"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
@@ -432,15 +432,34 @@ export namespace KilocodeConfig {
     if (existing.length === 0 && !hasLegacy) return done()
 
     const configs: Array<{ file: string; data: Record<string, unknown> }> = []
+    let hasFailure = false
     // check if any config file already has an explicit bash permission
     for (const file of existing) {
-      const text = await Bun.file(file)
-        .text()
-        .catch(() => "")
-      const data = parseJsonc(text) ?? {}
+      let text: string
+      try {
+        text = await Bun.file(file).text()
+      } catch (err) {
+        hasFailure = true
+        log.warn("skipping bash permission migration due to unreadable config", { file, err })
+        continue
+      }
+      if (text.trim() === "") {
+        const data: Record<string, unknown> = {}
+        configs.push({ file, data })
+        continue
+      }
+      const errors: ParseError[] = []
+      const data = (parseJsonc(text, errors) as Record<string, unknown> | undefined) ?? {}
+      if (errors.length > 0) {
+        hasFailure = true
+        log.warn("skipping bash permission migration due to malformed config", { file, errors })
+        continue
+      }
       configs.push({ file, data })
       if (typeof data.permission === "string" || (isRecord(data.permission) && data.permission.bash)) return done()
     }
+
+    if (hasFailure) return
 
     // A schema-only file is generated for editor completion. It does not mean
     // the user predates the bash permission default.
@@ -448,8 +467,16 @@ export namespace KilocodeConfig {
 
     // also check legacy TOML config for bash permission
     if (hasLegacy) {
-      const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } }).catch(() => undefined)
-      if (toml?.default?.permission?.bash) return done()
+      try {
+        const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } })
+        if (toml?.default?.permission?.bash) return done()
+      } catch (err) {
+        log.warn("skipping bash permission migration due to unreadable or malformed legacy config", {
+          path: legacy,
+          err,
+        })
+        return
+      }
     }
 
     // existing user without bash permission → write bash:allow to highest-precedence file
