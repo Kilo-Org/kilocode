@@ -5,7 +5,7 @@ description: "Using Kilo Code in the browser"
 
 # {% $markdoc.frontmatter.title %}
 
-Cloud Agents let you run Kilo Code in the cloud from any device, without relying on your local machine. They provide a remote development environment that can read and modify your GitHub and GitLab repositories, run commands, and auto-commit changes as work progresses.
+Cloud Agents let you run Kilo Code in the cloud from any device, without relying on your local machine. They provide a remote development environment that can read and modify your GitHub, GitLab, or Bitbucket repositories, run commands, and auto-commit changes as work progresses. Bitbucket repositories are available for organizations only, not personal accounts.
 
 ## What Cloud Agents Enable
 
@@ -18,8 +18,8 @@ Cloud Agents let you run Kilo Code in the cloud from any device, without relying
 
 Before using Cloud Agents:
 
-- **GitHub or GitLab Integration must be configured**
-  Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories.
+- **A GitHub, GitLab, or Bitbucket integration must be configured**
+  Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories. Bitbucket is available for organizations only.
 
 ## Cost
 
@@ -46,12 +46,12 @@ If a compute billing check fails — for example, when the paying account has in
 
 ## How to Use
 
-1. **Connect your GitHub or GitLab account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard.
-2. **Select a repository** to use as your workspace.
+1. **Connect your GitHub, GitLab, or Bitbucket account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard. Bitbucket is available for organizations only.
+2. **Select a repository** to use as your workspace. The repository picker groups your repositories into Recently used and per-provider sections.
 3. **Add environment variables** (secrets supported) and set optional startup commands.
 4. **Start chatting with Kilo Code.**
 
-Your work is always pushed to GitHub, ensuring nothing is lost.
+Your work is always pushed to your repository, ensuring nothing is lost.
 
 ## Starting Tasks from the CLI
 

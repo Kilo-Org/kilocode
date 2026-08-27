@@ -54,6 +54,10 @@ Copy the Service Provider details (Entity ID, ACS URL, and Metadata) from the Wo
 1. Set the organization policy and user provisioning settings according to your organization's needs.
 2. Configure domain policy and domain verification in WorkOS.
 
+{% callout type="info" %}
+WorkOS domain verification for SSO is separate from [verified-domain auto-join](/docs/collaborate/teams/team-management#joining-automatically-with-a-verified-domain), which automatically adds users with a matching email domain to your organization and does not require SSO.
+{% /callout %}
+
 After enabling SSO:
 
 - Invite new users with their company email domain.

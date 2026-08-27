@@ -155,6 +155,7 @@ Layer review in before asking a teammate:
 - **`/review`** — slash command, AI review of staged, unstaged, and untracked changes in the worktree when run without arguments. Good as a last pass before committing.
 - **`/review uncommitted [guidance]`** — explicitly review uncommitted changes, optionally focusing the review with guidance.
 - **`/review branch [base] [guidance]`** — review the whole branch vs. its detected or specified base, with optional guidance.
+- **`/review worktree [guidance]`** — review every committed, staged, unstaged, and untracked change in the worktree against its recorded parent branch. This scope is offered only in Agent Manager worktree sessions.
 - **`/review <commit-hash>` or `/review <PR URL or number>`** — review a specific commit or pull request.
 - **`kilo review` in CI** — automated PR review. See [Code Reviews](/docs/automate/code-reviews/overview) for the setup.
 - **Human review** — push the branch from the session terminal and `gh pr create`. The PR badge appears on the worktree and stays in sync with CI and reviews.

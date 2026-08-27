@@ -18,6 +18,20 @@ Your organization will become inaccessible.
 No charges will be applied.
 If you have any remaining credits in your organization, you can contact Support to request that they be moved to your personal account.
 
+### How do I delete my account?
+
+You can delete your personal account yourself from the [profile page](https://app.kilo.ai/profile):
+
+1. Open the **Danger Zone** card on your profile
+2. Start the deletion flow and confirm by entering your email address
+3. You are signed out once the deletion starts
+
+Account deletion is permanent. Cancel any active subscriptions before starting. When the deletion completes, you receive a confirmation email.
+
+{% callout type="note" %}
+Accounts managed by an organization cannot be deleted self-service — the Danger Zone is hidden for them. Contact your organization admin or Kilo support instead.
+{% /callout %}
+
 ## Integrations
 
 ### How do I unlink my GitHub account?

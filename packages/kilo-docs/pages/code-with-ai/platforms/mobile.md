@@ -41,6 +41,14 @@ On first launch, the app asks for your consent before enabling optional telemetr
 
 You can review or change your decision at any time in **Settings**. Declining optional telemetry keeps you signed in, and optional telemetry state stored on the device is stopped and discarded when you revoke consent or sign out.
 
+## Links and images in chat
+
+Model replies can contain links and images, and the app asks before anything loads or opens:
+
+- **Images stay hidden until you tap Load.** Each image shows its host and a **Load** button, and nothing is fetched until you tap it. Only HTTPS images can load — `http` and `data:` images show a static "HTTPS images only" chip instead.
+- **Links confirm their destination host** in a native alert before they open in the browser. Choose **Trust this host** to open that host's links directly from then on.
+- **Preferences → Trusted hosts** lists every host you have trusted, and you can revoke any of them. Trusted hosts are cleared when you sign out.
+
 ## Kilo Pass and Billing
 
 For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
@@ -65,6 +73,8 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 - **A connected CLI instance** — a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
+
+For Cloud Agent sessions, you pick the repository the agent works on. The repository picker groups your repositories into **Recently used** and per-provider sections — GitHub, GitLab, and, for organizations, Bitbucket — and shows each repository's provider next to its name. Each provider shows its own connect prompt or error message, so a problem with one provider does not hide the repositories of another.
 
 ## Queueing follow-up messages
 

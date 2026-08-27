@@ -34,7 +34,7 @@ The Kilo Code tool window is split into two tabs:
 
 When the workspace is a git repository, the chat header shows a branch dock with the current branch, a file-change summary, and worktree actions:
 
-- **New Worktree** — create a new git worktree with its own branch and session.
+- **New Worktree** — open the New Worktree dialog, which has three tabs: **New** creates a worktree on a new branch with an optional initial prompt, **From PR** imports a GitHub pull request by URL, and **From Branch** imports an existing local branch that no worktree is using yet. Imported PR branches get git tracking set up, so `git push` and `git pull` work in the new worktree.
 - **Move to Worktree** — move the conversation and your current local changes into a dedicated worktree for isolated follow-up work. Available whenever the repository has local changes, even before the chat has a session.
 
 When the branch has an associated pull request, the dock shows the PR badge and title with access to the diff. Worktree actions appear only while the session is idle.
@@ -48,3 +48,9 @@ When the branch has an associated pull request, the dock shows the PR badge and 
 ## Permission requests
 
 When the agent asks for several approvals at once, permission requests queue up instead of replacing each other. Resolve the current request to advance to the next one in the queue.
+
+## Turn failures and retries
+
+When a turn fails — for example from a provider error or missing provider credentials — the transcript ends with an error card showing the failure details and a **Retry** action. Retry replays the failed turn using the model and agent selected at that moment, so you can switch away from an unavailable provider and press **Retry** to continue the conversation.
+
+Pressing **Stop** is not treated as a failure. The transcript shows a short "Stopped" note, and the session does not get an error badge in the history, recents, or Agent Manager worktree rows.
