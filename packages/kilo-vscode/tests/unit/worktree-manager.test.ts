@@ -1251,6 +1251,7 @@ describe("WorktreeManager.createWorktree advanced", () => {
     }
     internal.fetchPRInfo = async () => ({
       headRefName: "topic",
+      baseRefName: "main",
       isCrossRepository: false,
       title: "Topic PR",
     })
@@ -1260,7 +1261,8 @@ describe("WorktreeManager.createWorktree advanced", () => {
     const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
 
     expect(worktreeHead).toBe(remoteHead)
-    expect(result.parentBranch).toBe("topic")
+    expect(result.parentBranch).toBe("main")
+    expect(result.remote).toBe("origin")
   })
 
   it("does not track a deleted PR source branch when using the pull ref fallback", async () => {
@@ -1295,6 +1297,63 @@ describe("WorktreeManager.createWorktree advanced", () => {
 
     expect(worktreeHead).toBe(head)
     expect(upstream.trim()).toBe("")
+    expect(result.parentBranch).toBe("main")
+    expect(result.remote).toBe("origin")
+  })
+
+  it("preserves a non-default PR target branch for comparison", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("develop")
+    await fs.writeFile(path.join(clone, "develop.txt"), "develop")
+    await git.add(".")
+    await git.commit("develop commit")
+    await git.push("origin", "develop")
+    await git.checkout("main")
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      baseRefName: "develop",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    const result = await manager.createFromPR("https://github.com/org/repo/pull/1")
+    const target = (await git.revparse(["refs/remotes/origin/develop"])).trim()
+    const head = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(result.parentBranch).toBe("develop")
+    expect(result.remote).toBe("origin")
+    expect(head).not.toBe(target)
+  })
+
+  it("fails before creating a worktree for an unavailable PR target", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const manager = createManager(clone)
+    const internal = manager as unknown as {
+      fetchPRInfo: (parsed: { owner: string; repo: string; number: number }) => Promise<PRInfo>
+    }
+    internal.fetchPRInfo = async () => ({
+      headRefName: "topic",
+      baseRefName: "missing",
+      isCrossRepository: false,
+      title: "Topic PR",
+    })
+
+    await expect(manager.createFromPR("https://github.com/org/repo/pull/1")).rejects.toThrow(
+      'Could not resolve start point for branch "missing"',
+    )
+    expect(existsSync(path.join(clone, ".kilo", "worktrees"))).toBe(false)
   })
 })
 
