@@ -1,5 +1,25 @@
 # kilo-code
 
+## 7.5.5
+
+### Patch Changes
+
+- [#13489](https://github.com/Kilo-Org/kilocode/pull/13489) [`b74dc0c`](https://github.com/Kilo-Org/kilocode/commit/b74dc0c1b60007fedf7a13259e35ee6f040fa89a) - Prevent inaccessible Windows PowerShell execution aliases from blocking CLI and extension startup.
+
+## 7.5.3
+
+### Patch Changes
+
+- [#13465](https://github.com/Kilo-Org/kilocode/pull/13465) [`4e38e0c`](https://github.com/Kilo-Org/kilocode/commit/4e38e0c2e4d3375e34b06663ad6d1f72e9975ade) Thanks [@WebReflection](https://github.com/WebReflection)! - Update DOMPurify to 3.4.13 to fix XSS vulnerabilities flagged by Dependabot in markdown sanitization.
+
+- [#13463](https://github.com/Kilo-Org/kilocode/pull/13463) [`743fafc`](https://github.com/Kilo-Org/kilocode/commit/743fafce09e5cc264df1cc4152cd86ec92a0f333) - Reduce Agent Manager background Git and GitHub activity without adding file watchers.
+
+- [#13459](https://github.com/Kilo-Org/kilocode/pull/13459) [`f9606d8`](https://github.com/Kilo-Org/kilocode/commit/f9606d8def5010fea7801722759eab621346bb46) - Restore the session title and branch subtitle immediately when opening an existing session in a worktree.
+
+- Updated dependencies [[`e4003da`](https://github.com/Kilo-Org/kilocode/commit/e4003da9e1842e0bc8f49777619faa3284b24f95)]:
+  - @opencode-ai/ui@7.5.1
+  - @kilocode/kilo-ui@7.5.1
+
 ## 7.5.0
 
 ### Minor Changes

@@ -127,6 +127,11 @@ interface WorktreeStatsMessage {
   stats: WorktreeStats[]
 }
 
+interface WorktreeActivityMessage {
+  type: "agentManager.worktreeActivity"
+  active: string[]
+}
+
 interface LocalStatsMessage {
   type: "agentManager.localStats"
   /** Owning project; absent in single-project mode. */
@@ -455,6 +460,7 @@ interface RunStatusMessage extends RunStatus {
 
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
+  | WorktreeActivityMessage
   | WorktreeStatsMessage
   | LocalStatsMessage
   | WorktreeSetupMessage

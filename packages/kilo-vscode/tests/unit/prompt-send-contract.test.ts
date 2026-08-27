@@ -18,6 +18,7 @@ import { clearIfOn } from "../../webview-ui/src/context/session-cloud-prune"
 const ROOT = path.resolve(import.meta.dir, "../..")
 const SESSION_FILE = path.join(ROOT, "webview-ui/src/context/session.tsx")
 const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.tsx")
+const AGENT_MANAGER_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
 const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const KILOPROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -145,6 +146,26 @@ describe("ChatView prompt-block contract", () => {
 
   it("does not reference q.blocking when building the blocked state", () => {
     expect(source).not.toMatch(/q\.blocking/)
+  })
+})
+
+describe("review worktree visibility contract", () => {
+  it("passes the worktree prop from ChatView to PromptInput", () => {
+    const source = readFile(CHATVIEW_FILE)
+    expect(source).toMatch(/worktree\?: boolean/)
+    expect(source).toMatch(/<PromptInput[\s\S]*worktree=\{props\.worktree\}/)
+  })
+
+  it("hides review worktree unless PromptInput is explicitly in a worktree", () => {
+    const source = readFile(PROMPT_FILE)
+    expect(source).toMatch(/worktree\?: boolean/)
+    expect(source).toMatch(/if \(props\.worktree !== true\) hidden\.add\("review worktree"\)/)
+  })
+
+  it("uses registered worktree membership for Agent Manager visibility", () => {
+    const source = readFile(AGENT_MANAGER_FILE)
+    expect(source).toMatch(/worktree=\{worktrees\(\)\.some\(\(wt\) => wt\.id === selection\(\)\)\}/)
+    expect(source).not.toMatch(/worktree=\{selection\(\(\)\) !== LOCAL\}/)
   })
 })
 

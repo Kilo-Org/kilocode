@@ -2,12 +2,14 @@ package ai.kilocode.client.session.model
 
 enum class Outcome { INTERRUPTED, FAILED }
 
-enum class OutcomeTone { WARNING, CRITICAL }
-
 object TurnOutcome {
-    fun classify(reason: String): Pair<Outcome, OutcomeTone>? = when (reason) {
-        "interrupted" -> Outcome.INTERRUPTED to OutcomeTone.WARNING
-        "error" -> Outcome.FAILED to OutcomeTone.CRITICAL
+    /**
+     * Maps a `session.turn.close` reason to the outcome the transcript should show. `completed` and
+     * `superseded` are normal endings and return null so the session simply falls back to idle.
+     */
+    fun classify(reason: String): Outcome? = when (reason) {
+        "interrupted" -> Outcome.INTERRUPTED
+        "error" -> Outcome.FAILED
         else -> null
     }
 }

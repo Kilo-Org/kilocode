@@ -2,6 +2,7 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
@@ -55,7 +56,7 @@ class KiloBackendActivityManagerTest {
     }
 
     @Test
-    fun `permission asked overlays running and reply reverts`() = runBlocking {
+    fun `permission asked overlays running and reply reverts`() = runBlocking<Unit> {
         directories["ses_1"] = "/repo/wt"
         statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
         start()
@@ -69,7 +70,7 @@ class KiloBackendActivityManagerTest {
     }
 
     @Test
-    fun `question kinds distinguish plain and plan followup`() = runBlocking {
+    fun `question kinds distinguish plain and plan followup`() = runBlocking<Unit> {
         directories["ses_plain"] = "/repo/a"
         directories["ses_plan"] = "/repo/b"
         start()
@@ -115,12 +116,26 @@ class KiloBackendActivityManagerTest {
     }
 
     @Test
-    fun `busy outranks a pending error so a resumed session runs`() = runBlocking {
+    fun `aborted error does not badge the session`() = runBlocking {
+        directories["ses_1"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+        await("ses_1", SessionActivityKindDto.RUNNING)
+
+        events.emit(ChatEventDto.Error("ses_1", MessageErrorDto(MessageErrorDto.ABORTED, "aborted")))
+        statuses.value = mapOf("ses_1" to SessionStatusDto("idle"))
+        events.emit(ChatEventDto.SessionIdle("ses_1"))
+
+        withTimeout(5_000) { manager.activity.first { "ses_1" !in it } }
+        assertFalse("ses_1" in manager.activity.value)
+    }
+
+    @Test
+    fun `busy outranks a pending provider error so a resumed session runs`() = runBlocking<Unit> {
         directories["ses_1"] = "/repo/wt"
         start()
 
-        // A Stop leaves the session errored and idle.
-        events.emit(ChatEventDto.Error("ses_1"))
+        events.emit(ChatEventDto.Error("ses_1", MessageErrorDto("APIError", "Provider failed")))
         await("ses_1", SessionActivityKindDto.ERROR)
 
         // Resumed: busy arrives before anything clears the error.

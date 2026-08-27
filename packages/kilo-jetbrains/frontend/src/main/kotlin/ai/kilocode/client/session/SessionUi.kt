@@ -400,6 +400,8 @@ class SessionUi(
         outcome = SessionOutcomeView(
             selection = selection,
             focus = focus,
+            retry = if (readonly) null else controller::retry,
+            retryable = controller::canRetry,
         )
         messageBody = SessionMessageListPanel(
             controller.model,

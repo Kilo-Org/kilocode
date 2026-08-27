@@ -752,7 +752,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       localResourceRoots: [this.extensionUri],
     }
 
-    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview)
+    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview, true)
     this.setupWebviewMessageHandler(webviewView.webview)
 
     this.setSidebarVisible(webviewView.visible)
@@ -5323,8 +5323,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return resolveProjectDirectory(this.projectDirectory, () => this.getWorkspaceDirectory(sessionId))
   }
 
-  private _getHtmlForWebview(webview: vscode.Webview): string {
+  private _getHtmlForWebview(webview: vscode.Webview, sidebar = false): string {
     return buildWebviewHtml(webview, {
+      // The rail follows the physical workbench edge. RTL text direction must not move it between chat and code.
+      sidebar: sidebar
+        ? vscode.workspace.getConfiguration("workbench").get("sideBar.location") === "right"
+          ? "right"
+          : "left"
+        : undefined,
       scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")),
       styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css")),
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),

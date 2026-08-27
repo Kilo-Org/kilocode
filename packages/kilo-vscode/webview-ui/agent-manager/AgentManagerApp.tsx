@@ -91,7 +91,7 @@ import { createProjectRegistry, type PersistedProjectTabs } from "./project/regi
 import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
-import { createSessionBusy } from "./project/session-busy"
+import { createWorktreeBusy } from "./project/session-busy"
 import { switchProject } from "./project/switch"
 import { createProjectStateHandlers } from "./project/state-handlers"
 import { ownsParent as ownsParentSession, isCurrent } from "./project/message-ownership"
@@ -900,7 +900,7 @@ const AgentManagerContent: Component = () => {
 
   const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 
-  const busy = createSessionBusy({
+  const busy = createWorktreeBusy({
     statuses: session.allStatusMap,
     permissions: session.permissions,
     questions: session.questions,
@@ -908,6 +908,8 @@ const AgentManagerContent: Component = () => {
     local: localSessionIDs,
     projects: projectSessionsLive,
     active: activeProjectId,
+    worktrees: (id) => (id ? registry.ensure(id) : registry.active()).worktrees(),
+    subscribe: vscode.onMessage,
   })
   const isAgentBusy = busy.agent
   const isLocalBusy = busy.local
@@ -2564,6 +2566,7 @@ const AgentManagerContent: Component = () => {
                     onForkSession={readOnly() ? undefined : handleForkSession}
                     readonly={readOnly()}
                     continueInWorktree={selection() === LOCAL}
+                    worktree={worktrees().some((wt) => wt.id === selection())}
                     promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
                     terminalContext={() => selection() ?? undefined}
                     deferFocusToQuestion={hasQuestionOption}
