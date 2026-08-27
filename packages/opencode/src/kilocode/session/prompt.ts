@@ -416,7 +416,7 @@ export namespace KiloSessionPrompt {
       if (msg.info.role !== "user") continue
       if (
         msg.parts.some(
-          (part) => part.type === "text" && part.synthetic && part.text.startsWith("<environment_details>"),
+          (part) => part.type === "text" && part.synthetic && part.text.trimStart().startsWith("<environment_details>"),
         )
       )
         continue
