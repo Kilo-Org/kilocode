@@ -18,6 +18,7 @@ import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.views.failureText
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
@@ -164,6 +165,8 @@ class SessionMessageListPanel(
                     syncReverted()
                     syncReverting(event.state)
                     anchorFooter()
+                    val turn = tail()?.let { msgToTurn[it] }
+                    if (turn?.let(::syncFailures) == true) (layout as? SessionLayout)?.forget(turn)
                     refresh()
                 }
 
@@ -189,13 +192,18 @@ class SessionMessageListPanel(
 
                 is SessionModelEvent.MessageUpdated -> {
                     // message.updated fires on every streamed metadata delta (time/tokens/cost). Only
-                    // relayout the transcript when the turn's modified-files card actually changed,
-                    // not on each delta or when this message isn't a turn anchor.
-                    val view = turnViews[event.info.info.id]
+                    // relayout the transcript when something visible changed: the visible failure for
+                    // this turn, or the modified-files card when this message anchors a turn.
+                    val id = event.info.info.id
+                    val turn = msgToTurn[id]
+                    var changed = turn?.let(::syncFailures) == true
+                    if (changed && turn != null) (layout as? SessionLayout)?.forget(turn)
+                    val view = turnViews[id]
                     if (view?.setDiffs(event.info.info.summary?.diffs.orEmpty()) == true) {
                         (layout as? SessionLayout)?.forget(view)
-                        refresh()
+                        changed = true
                     }
+                    if (changed) refresh()
                 }
 
                 is SessionModelEvent.DiffUpdated -> {
@@ -312,6 +320,7 @@ class SessionMessageListPanel(
         tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
         syncQueued(tv)
+        syncFailures()
         syncReverted()
         add(tv)
         syncSettled()
@@ -341,6 +350,7 @@ class SessionMessageListPanel(
         tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
         syncQueued(tv)
+        syncFailures()
         syncReverted()
         syncSettled()
 
@@ -352,6 +362,7 @@ class SessionMessageListPanel(
         for (msgId in tv.messageIds()) unregister(msgId)
         remove(tv)
         Disposer.dispose(tv)
+        syncFailures()
         syncSettled()
         anchorFooter()
         refresh()
@@ -387,12 +398,60 @@ class SessionMessageListPanel(
         syncActive(model.state)
         syncSettled(model.state)
         syncQueued()
+        syncFailures()
         syncReverted()
         syncReverting(model.state)
         banner?.update()
         anchorFooter()
         scheduleReflow()
         refresh()
+    }
+
+    /** Last message in the transcript, which is the only message the outcome footer can describe. */
+    private fun tail(): String? = turnViews.values.lastOrNull()?.messageIds()?.lastOrNull()
+
+    /** Failure text currently owned by the footer, if it is showing a concrete error. */
+    private fun presented(): String? {
+        val state = model.state as? SessionState.Error ?: return null
+        return state.message.takeIf { it.isNotBlank() }
+    }
+
+    /** Apply failure visibility policy to every turn. */
+    private fun syncFailures(): Boolean {
+        var changed = false
+        for (view in turnViews.values) {
+            if (syncFailures(view)) {
+                (layout as? SessionLayout)?.forget(view)
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    /**
+     * Shows at most one failure per turn, and lets the footer own the active tail failure when it is
+     * already displaying the same text with the Retry affordance.
+     */
+    private fun syncFailures(view: TurnView): Boolean {
+        val ids = view.messageIds()
+        val last = ids.lastOrNull()
+        val tail = tail()
+        val shown = presented()
+        var changed = false
+        for (id in ids) {
+            val msg = msgToView[id] ?: continue
+            // Only the turn's final attempt speaks for the turn. Retry continues a turn by appending
+            // another assistant message, so every attempt keeps its own errored message and earlier
+            // ones would stack the same text; a turn that ended well says nothing at all.
+            val error = model.message(id)?.info?.error?.takeIf { id == last }
+            val text = failureText(error)
+            // The outcome footer owns the live failure while it is showing that exact text, because that
+            // is the card carrying Retry. A generic TurnEnded(FAILED) footer carries no message, so the
+            // card stays and remains the only place the reason is visible.
+            val duplicate = id == tail && text != null && text == shown
+            changed = msg.syncError(if (duplicate) null else error) || changed
+        }
+        return changed
     }
 
     private fun syncReverted() {

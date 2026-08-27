@@ -22,6 +22,7 @@ import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
+import ai.kilocode.client.session.views.MessageErrorView
 import ai.kilocode.client.session.views.MessageToolbar
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.PromptAttachmentView
@@ -37,6 +38,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
@@ -138,6 +140,148 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         val card = components(panel.findTurn("u1")!!).filterIsInstance<ModifiedFilesView>().single()
         assertTrue(card.isVisible)
         assertEquals("1 file", card.countText())
+    }
+
+    // ------ failed turns ------
+
+    fun `test failed message renders the provider text in the transcript`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        assertTrue(cards("a1").isEmpty())
+
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("The provider ended the response with an error")))
+
+        val card = cards("a1").single()
+        assertEquals("The provider ended the response with an error", card.text())
+        assertSame("The failure belongs after the content it interrupted", card, panel.findMessage("a1")!!.components.last())
+    }
+
+    fun `test failed message with no text falls back to the error type`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = MessageErrorDto("ProviderAuthError")))
+
+        assertEquals("ProviderAuthError", cards("a1").single().text())
+    }
+
+    /** A Stop is a deliberate user action the footer already reports as "Stopped", not a failure. */
+    fun `test stopped message renders no failure card`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = MessageErrorDto(MessageErrorDto.ABORTED, "aborted")))
+
+        assertTrue(cards("a1").isEmpty())
+    }
+
+    fun `test repeated retry failures collapse to the last failed attempt in the turn`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant").copy(parentID = "u1", error = failure("Missing credentials")))
+        model.upsertMessage(msg("a2", "assistant").copy(parentID = "u1", error = failure("Missing credentials")))
+        model.upsertMessage(msg("a3", "assistant").copy(parentID = "u1", error = failure("Missing credentials")))
+
+        assertTrue(cards("a1").isEmpty())
+        assertTrue(cards("a2").isEmpty())
+        assertEquals("Missing credentials", cards("a3").single().text())
+    }
+
+    fun `test recovered turn hides an earlier failed attempt`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant").copy(parentID = "u1", error = failure("Missing credentials")))
+        model.upsertMessage(msg("a2", "assistant").copy(parentID = "u1"))
+
+        assertTrue(cards("a1").isEmpty())
+        assertTrue(cards("a2").isEmpty())
+    }
+
+    fun `test outcome card owns the active tail error while it shows the same text`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
+        assertEquals("Missing credentials", cards("a1").single().text())
+
+        model.setState(SessionState.Error("Missing credentials"))
+
+        assertTrue("The footer already shows this message next to Retry", cards("a1").isEmpty())
+    }
+
+    fun `test tail failure card returns once the footer moves on`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
+        model.setState(SessionState.Error("Missing credentials"))
+        assertTrue(cards("a1").isEmpty())
+
+        model.setState(SessionState.Busy("thinking"))
+
+        assertEquals("Missing credentials", cards("a1").single().text())
+    }
+
+    fun `test generic failed outcome keeps the provider error in the transcript`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
+        model.setState(SessionState.TurnEnded(Outcome.FAILED))
+
+        assertEquals("Missing credentials", cards("a1").single().text())
+    }
+
+    fun `test unrelated footer error does not hide the message failure`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Missing credentials")))
+        model.setState(SessionState.Error("Workspace failed"))
+
+        assertEquals("Missing credentials", cards("a1").single().text())
+    }
+
+    fun `test history load paints a failure that arrived before the panel existed`() {
+        model.loadHistory(
+            listOf(
+                MessageWithPartsDto(
+                    msg("a1", "assistant").copy(error = failure("Context window exceeded")),
+                    emptyList(),
+                ),
+            ),
+        )
+
+        assertEquals("Context window exceeded", cards("a1").single().text())
+    }
+
+    /** The footer outcome card is state-bound and vanishes on the next turn; this record must not. */
+    fun `test failure card survives the following turn`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Provider overloaded")))
+        model.upsertMessage(msg("u2", "user"))
+        model.upsertMessage(msg("a2", "assistant"))
+
+        assertEquals("Provider overloaded", cards("a1").single().text())
+        assertTrue(cards("a2").isEmpty())
+    }
+
+    fun `test clearing the failure removes its card`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Provider overloaded")))
+        assertEquals(1, cards("a1").size)
+
+        model.upsertMessage(msg("a1", "assistant"))
+
+        assertTrue(cards("a1").isEmpty())
+    }
+
+    /** message.updated also fires on every token/cost delta, so an unchanged failure must be inert. */
+    fun `test repeated identical failure update does not refresh panel`() {
+        val failed = msg("a1", "assistant").copy(error = failure("Provider overloaded"))
+        model.upsertMessage(failed)
+        val view = panel.findMessage("a1")!!
+        val card = cards("a1").single()
+        val repaint = TrackingRepaintManager(setOf(panel, view, card))
+        val old = RepaintManager.currentManager(panel)
+
+        try {
+            RepaintManager.setCurrentManager(repaint)
+
+            model.upsertMessage(failed)
+
+            assertSame("The card must be reused, not rebuilt", card, cards("a1").single())
+            assertTrue(repaint.dirty.isEmpty())
+            assertTrue(repaint.invalid.isEmpty())
+        } finally {
+            RepaintManager.setCurrentManager(old)
+        }
+    }
+
+    fun `test streamed content stays above the failure card`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("Provider overloaded")))
+        model.updateContent("a1", part("p1", "a1", "text", "partial answer"))
+
+        val view = panel.findMessage("a1")!!
+        assertTrue(view.components.first() is TextView)
+        assertSame(cards("a1").single(), view.components.last())
     }
 
     fun `test transcript content has symmetric side padding`() {
@@ -1614,6 +1758,13 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     private fun msg(id: String, role: String) = MessageDto(
         id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0),
     )
+
+    private fun failure(message: String) = MessageErrorDto("APIError", message)
+
+    private fun cards(msgId: String): List<MessageErrorView> {
+        val view = panel.findMessage(msgId) ?: return emptyList()
+        return components(view).filterIsInstance<MessageErrorView>()
+    }
 
     private fun summary(path: String) = MessageSummaryDto(
         diffs = listOf(DiffFileDto(path, 2, 1, PATCH)),

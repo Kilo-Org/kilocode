@@ -152,6 +152,9 @@ class SessionRecoveryTest : SessionControllerTestBase() {
 
     fun `test busy status is seeded from statuses map`() {
         rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
+        // recoverPending() reads the service's status map once, and that map arrives through a flow, so
+        // the seed has to be observable before the controller loads or recovery races it to Idle.
+        assertTrue(waitFor { sessions.statuses.value["ses_test"]?.type == "busy" })
 
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
@@ -173,6 +176,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             attempt = 3,
             next = 5000L,
         ))
+        assertTrue(waitFor { sessions.statuses.value["ses_test"]?.type == "retry" })
 
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
@@ -196,6 +200,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             message = "No network",
             requestID = "req_xyz",
         ))
+        assertTrue(waitFor { sessions.statuses.value["ses_test"]?.type == "offline" })
 
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
