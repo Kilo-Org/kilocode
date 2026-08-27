@@ -939,16 +939,28 @@ const layer = Layer.effect(
               ctx.reasoningMap = {}
               yield* status.set(ctx.sessionID, { type: "busy" })
               ctx.step = { reasoning: false, text: false, tool: false }
+              // kilocode_change start - fail the attempt when the provider stalls on a dead network
+              const guard = KiloSessionProcessor.offlineGuard({
+                busy: () => Object.keys(ctx.toolcalls).length > 0,
+              })
+              // kilocode_change end
               const stream = llm.stream({
                 ...streamInput,
                 preflight: !ctx.assistantMessage.summary,
               })
 
-              yield* stream.pipe(
-                Stream.tap((event) => handleEvent(event)),
-                Stream.takeUntil(() => ctx.needsCompaction),
-                Stream.runDrain,
+              // kilocode_change start
+              yield* guard.watch.pipe(
+                Effect.raceFirst(
+                  stream.pipe(
+                    Stream.tap((event) => handleEvent(event)),
+                    Stream.tap(() => Effect.sync(() => guard.touch())),
+                    Stream.takeUntil(() => ctx.needsCompaction),
+                    Stream.runDrain,
+                  ),
+                ),
               )
+              // kilocode_change end
             }).pipe(
               Effect.onInterrupt(() =>
                 Effect.gen(function* () {

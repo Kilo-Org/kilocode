@@ -7,7 +7,7 @@ import { MessageV2 } from "@/session/message-v2"
 import { isRecord } from "@/util/record"
 import { parseReviewCommand, reviewCommandName } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
-import { Cause, Effect, Exit } from "effect"
+import { Cause, Duration, Effect, Exit } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { EffectBridge } from "@/effect/bridge"
 import type { LLMEvent, ProviderMetadata, Usage } from "@opencode-ai/llm"
@@ -193,6 +193,61 @@ export namespace KiloSessionProcessor {
           }),
       )
     })
+  }
+
+  /** How long a stream may stay silent before the guard probes connectivity. */
+  export const STALL_MS = 10_000
+
+  /** Synthetic stall failure; its message is matched by SessionNetwork.disconnected(). */
+  export class DisconnectedError extends Error {
+    constructor() {
+      super("network connection was lost")
+      this.name = "DisconnectedError"
+    }
+  }
+
+  /**
+   * Fails a stalled attempt (no stream events for `stallMs`) with
+   * DisconnectedError when the connectivity probe also fails. A passing probe
+   * resets the clock; tool calls hold it back.
+   */
+  export function offlineGuard(input: {
+    busy?: () => boolean
+    stallMs?: number
+    tickMs?: number
+    check?: () => Promise<boolean>
+  }) {
+    const stall = input.stallMs ?? STALL_MS
+    const tick = input.tickMs ?? 1_000
+    const check = input.check ?? (() => SessionNetwork.probe())
+    const state = { at: Date.now() }
+    return {
+      touch() {
+        state.at = Date.now()
+      },
+      watch: Effect.gen(function* () {
+        while (true) {
+          yield* Effect.sleep(Duration.millis(tick))
+          if (Date.now() - state.at < stall) continue
+          if (input.busy?.()) {
+            state.at = Date.now()
+            continue
+          }
+          // a rejected probe can't confirm connectivity either
+          const ok = yield* Effect.tryPromise({
+            try: check,
+            catch: () => new DisconnectedError(),
+          })
+          if (ok) {
+            state.at = Date.now()
+            continue
+          }
+          // stream activity during the probe proves the connection is alive
+          if (Date.now() - state.at < stall) continue
+          return yield* Effect.fail(new DisconnectedError())
+        }
+      }),
+    }
   }
 
   /**

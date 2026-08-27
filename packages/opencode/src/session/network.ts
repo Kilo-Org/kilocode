@@ -216,7 +216,7 @@ export namespace SessionNetwork {
       .finally(() => clearTimeout(timer))
   }
 
-  async function probe() {
+  export async function probe() {
     return Promise.any(
       urls.map(async (url) => {
         if (await check(url)) return true
