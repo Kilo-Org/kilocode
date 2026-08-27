@@ -1,18 +1,21 @@
 package ai.kilocode.client.ui.diagram.ui
 
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.diagram.Art
 import ai.kilocode.client.ui.diagram.Painters
 import ai.kilocode.client.ui.diagram.Palette
 import com.intellij.ui.components.Magnificator
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.RenderingHints
+import java.awt.image.BufferedImage
 import javax.swing.JComponent
 import javax.swing.JViewport
 import javax.swing.Scrollable
@@ -54,6 +57,10 @@ internal class DiagramCanvas(private var palette: Palette) : JComponent(), Scrol
         palette = value
         repaint()
     }
+
+    /** The rendered diagram as an image, or null while nothing has been drawn yet. */
+    @RequiresEdt
+    fun image(): BufferedImage? = art?.let { diagramImage(it, palette, background) }
 
     /**
      * Sets an explicit scale, or restores fit when [value] is null.
@@ -149,6 +156,37 @@ internal class DiagramCanvas(private var palette: Palette) : JComponent(), Scrol
         const val FIT_ZOOM = 4.0
     }
 }
+
+/**
+ * Renders [art] into an image for the clipboard, padded and filled with [background].
+ *
+ * Painted from the scene rather than grabbed off the component, so the result is the whole diagram at
+ * a fixed [SHOT] scale regardless of the current zoom, scroll position or viewport size. The
+ * background is filled because the palette follows the IDE theme: a transparent PNG of a dark theme
+ * diagram would be unreadable once pasted onto white.
+ */
+internal fun diagramImage(art: Art, palette: Palette, background: Color?): BufferedImage {
+    val size = Painters.of(art).size(art)
+    val pad = SessionUiStyle.View.Diagram.PADDING * SHOT
+    val w = (size.w * SHOT + pad * 2).roundToInt().coerceAtLeast(1)
+    val h = (size.h * SHOT + pad * 2).roundToInt().coerceAtLeast(1)
+    // A plain image on purpose: ImageUtil.createImage would add the IDE's HiDPI scale on top of SHOT,
+    // making the picture depend on the display it was copied from.
+    val image = BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
+    val g = image.createGraphics()
+    try {
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+        g.color = background ?: UiStyle.Colors.editorBackground()
+        g.fillRect(0, 0, w, h)
+        paintDiagram(g, art, palette, SHOT, pad.roundToInt(), pad.roundToInt())
+    } finally {
+        g.dispose()
+    }
+    return image
+}
+
+/** Clipboard images render larger than the screen so they stay crisp when pasted. */
+private const val SHOT = 2.0
 
 /** Keeps a viewport position inside the scrollable range of its view. */
 internal fun clamped(viewport: JViewport, at: Point): Point {

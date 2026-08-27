@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui.diagram.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.ui.selection.SessionCopyButton
 import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.diagram.Art
@@ -10,6 +11,7 @@ import ai.kilocode.client.ui.toolbarButton
 import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBLayeredPane
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.IconUtil
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Color
@@ -26,9 +28,10 @@ import javax.swing.SwingUtilities
 /**
  * Reusable zoomable diagram surface: a scrollable [DiagramCanvas] with floating zoom controls.
  *
- * Shared by the diagram editor tab and the detached diagram window. Zoom comes from three sources:
- * trackpad pinch (via the canvas [com.intellij.ui.components.Magnificator]), Ctrl/Cmd + wheel, and
- * the overlay buttons. Dragging pans whenever the scaled diagram overflows the viewport.
+ * Shared by the diagram editor tab and the detached diagram window. Zoom comes from four sources:
+ * trackpad pinch (via the canvas [com.intellij.ui.components.Magnificator]), Ctrl/Cmd + wheel, the
+ * overlay buttons, and a double click to fit again. Dragging pans whenever the scaled diagram
+ * overflows the viewport, and the overlay can copy the diagram as a picture.
  */
 internal class DiagramViewer(palette: Palette) : JBLayeredPane() {
     private val canvas = DiagramCanvas(palette)
@@ -38,13 +41,21 @@ internal class DiagramViewer(palette: Palette) : JBLayeredPane() {
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
+    private val copy = SessionCopyButton(
+        tooltip = KiloBundle.message("diagram.copy"),
+        icon = big(AllIcons.Actions.Copy),
+        image = { canvas.image() },
+    ) { null }
     // Built by chaining rather than `apply`, so these lambdas cannot bind to Stack's own fit().
-    private val controls = Stack.horizontal(UiStyle.Gap.xs())
+    private val controls = Stack.vertical(UiStyle.Gap.xs())
         .next(control(AllIcons.General.ZoomIn, "diagram.zoom.in") { zoomIn() })
         .next(control(AllIcons.General.ZoomOut, "diagram.zoom.out") { zoomOut() })
         .next(control(AllIcons.General.FitContent, "diagram.zoom.fit") { fit() })
+        .gap(UiStyle.Gap.md())
+        .next(copy.button)
     private val wheel = Wheel()
     private val drag = Drag()
+    private val click = Click()
 
     init {
         // Layer first, then add: add(Component, Int) binds to Container.add(comp, index) from Kotlin,
@@ -57,6 +68,7 @@ internal class DiagramViewer(palette: Palette) : JBLayeredPane() {
         scroll.addMouseWheelListener(wheel)
         canvas.addMouseListener(drag)
         canvas.addMouseMotionListener(drag)
+        canvas.addMouseListener(click)
     }
 
     @RequiresEdt
@@ -93,11 +105,24 @@ internal class DiagramViewer(palette: Palette) : JBLayeredPane() {
         canvas.fit()
     }
 
+    override fun removeNotify() {
+        copy.dismiss()
+        super.removeNotify()
+    }
+
     override fun doLayout() {
         scroll.setBounds(0, 0, width, height)
         val size = controls.preferredSize
         controls.setBounds(width - size.width - UiStyle.Gap.pad(), UiStyle.Gap.pad(), size.width, size.height)
         controls.doLayout()
+    }
+
+    /** Double click is the usual "show me all of it again" gesture in image and diagram viewers. */
+    private inner class Click : MouseAdapter() {
+        override fun mouseClicked(e: MouseEvent) {
+            if (e.button != MouseEvent.BUTTON1 || e.clickCount != 2) return
+            fit()
+        }
     }
 
     private inner class Wheel : MouseWheelListener {
@@ -118,7 +143,7 @@ internal class DiagramViewer(palette: Palette) : JBLayeredPane() {
             if (e.button != MouseEvent.BUTTON1 || !overflows()) return
             from = e.point
             origin = scroll.viewport.viewPosition
-            canvas.cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
+            canvas.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         }
 
         override fun mouseDragged(e: MouseEvent) {
@@ -152,8 +177,12 @@ internal class DiagramViewer(palette: Palette) : JBLayeredPane() {
 
     private companion object {
         const val STEP = 1.25
+        const val SIZE = 2f
 
         fun control(icon: Icon, key: String, handler: () -> Unit) =
-            toolbarButton(ToolbarButtonAction(icon, KiloBundle.message(key), handler), fill = true)
+            toolbarButton(ToolbarButtonAction(big(icon), KiloBundle.message(key), handler))
+
+        /** Overlay icons are drawn over the diagram, so they are sized up to stay readable. */
+        fun big(icon: Icon): Icon = IconUtil.scale(icon, null, SIZE)
     }
 }

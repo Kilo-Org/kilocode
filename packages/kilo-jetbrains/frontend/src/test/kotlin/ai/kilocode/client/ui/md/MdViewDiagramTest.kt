@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.md
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionTargetResolver
 import ai.kilocode.client.testing.TestCoroutines
@@ -22,6 +23,7 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -29,7 +31,10 @@ import com.intellij.testFramework.replaceService
 import com.intellij.util.ui.UIUtil
 import java.awt.Cursor
 import java.awt.Point
+import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
+import javax.swing.AbstractButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -118,6 +123,28 @@ class MdViewDiagramTest : BasePlatformTestCase() {
         assertTrue(opened.isEmpty())
     }
 
+    fun `test copying a rendered diagram puts a picture on the clipboard`() {
+        view.set("```mermaid\nflowchart TD\nA-->B\n```")
+        drain()
+
+        copyButton().doClick()
+
+        val image = CopyPasteManager.getInstance().contents?.getTransferData(DataFlavor.imageFlavor) as BufferedImage
+        assertTrue(image.width > 0 && image.height > 0)
+    }
+
+    fun `test copying a streaming fence still copies its source`() {
+        // The source pane is what the reader sees until the fence closes, so copy follows the text.
+        view.append("```mermaid\nflowchart TD\n")
+        drain()
+
+        copyButton().doClick()
+
+        val contents = CopyPasteManager.getInstance().contents!!
+        assertFalse(contents.isDataFlavorSupported(DataFlavor.imageFlavor))
+        assertEquals("flowchart TD", (contents.getTransferData(DataFlavor.stringFlavor) as String).trim())
+    }
+
     fun `test engine error keeps source visible`() {
         engine.out = Out.Err(ai.kilocode.client.ui.diagram.Fault.Syntax, "bad syntax")
 
@@ -202,6 +229,11 @@ class MdViewDiagramTest : BasePlatformTestCase() {
             ),
         )
     }
+
+    /** The block's toolbar is only parented while the hover overlay shows it, so reach it directly. */
+    private fun copyButton() = descendants(block().copyToolbar!!)
+        .filterIsInstance<AbstractButton>()
+        .single { it.toolTipText == KiloBundle.message("session.copy.hover") }
 
     private fun root() = view.component as JPanel
 

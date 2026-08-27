@@ -10,15 +10,19 @@ import ai.kilocode.client.ui.diagram.Size
 import ai.kilocode.client.ui.diagram.Type
 import ai.kilocode.client.util.edtWait
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.Magnificator
 import java.awt.Color
 import java.awt.Container
+import java.awt.Cursor
 import java.awt.Font
 import java.awt.Point
+import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
+import java.awt.image.BufferedImage
 import javax.swing.AbstractButton
 import javax.swing.JComponent
 import javax.swing.JViewport
@@ -151,24 +155,81 @@ class DiagramViewerTest : BasePlatformTestCase() {
         assertEquals(Point(0, 0), viewport(viewer).viewPosition)
     }
 
-    fun `test overlay offers zoom in zoom out and fit`() = edtWait {
+    fun `test overlay stacks zoom controls and copy in one column`() = edtWait {
         val viewer = viewer(400, 300)
+        layout(viewer)
 
         val buttons = buttons(viewer)
 
-        assertEquals(3, buttons.size)
-        assertEquals(
-            listOf(AllIcons.General.ZoomIn, AllIcons.General.ZoomOut, AllIcons.General.FitContent),
-            buttons.map { it.icon },
-        )
         assertEquals(
             listOf(
                 KiloBundle.message("diagram.zoom.in"),
                 KiloBundle.message("diagram.zoom.out"),
                 KiloBundle.message("diagram.zoom.fit"),
+                KiloBundle.message("diagram.copy"),
             ),
             buttons.map { it.toolTipText },
         )
+        assertEquals("the overlay is a single column", 1, buttons.map { it.x }.distinct().size)
+        assertTrue(
+            "each control sits below the previous one",
+            buttons.zipWithNext().all { (above, below) -> below.y >= above.y + above.height },
+        )
+    }
+
+    fun `test overlay icons are twice the platform size and size their buttons`() = edtWait {
+        val viewer = viewer(400, 300)
+
+        val zoom = buttons(viewer).first()
+
+        assertEquals(AllIcons.General.ZoomIn.iconWidth * 2, zoom.icon.iconWidth)
+        assertTrue("the hit target grows with the icon", zoom.preferredSize.width > zoom.icon.iconWidth)
+        assertTrue("icon-only controls stay square", zoom.preferredSize.width == zoom.preferredSize.height)
+    }
+
+    fun `test copy puts the whole diagram on the clipboard as a picture`() = edtWait {
+        val viewer = viewer(400, 300)
+        viewer.art(scene(200.0, 100.0))
+        layout(viewer)
+
+        buttons(viewer).single { it.toolTipText == KiloBundle.message("diagram.copy") }.doClick()
+
+        val image = CopyPasteManager.getInstance().contents?.getTransferData(DataFlavor.imageFlavor) as BufferedImage
+        // Rendered from the scene at 2x with padding, so zoom and scroll state cannot crop it.
+        assertEquals(200 * 2 + PAD * 2, image.width)
+        assertEquals(100 * 2 + PAD * 2, image.height)
+    }
+
+    fun `test double clicking restores fit`() = edtWait {
+        val viewer = viewer(400, 300)
+        viewer.art(scene(2_000.0, 1_000.0))
+        layout(viewer)
+        val fit = scale(viewer)
+        viewer.zoomIn()
+        layout(viewer)
+        assertTrue(scale(viewer) > fit)
+        val canvas = canvas(viewer)
+
+        canvas.dispatchEvent(mouse(canvas, MouseEvent.MOUSE_CLICKED, 100, 100, clicks = 2))
+        layout(viewer)
+
+        assertEquals(fit, scale(viewer), 1e-6)
+        assertEquals(0, canvas.preferredSize.width)
+    }
+
+    fun `test dragging shows the hand cursor until the drag ends`() = edtWait {
+        val viewer = viewer(400, 300)
+        viewer.art(scene(2_000.0, 1_000.0))
+        layout(viewer)
+        repeat(4) { viewer.zoomIn() }
+        layout(viewer)
+        val canvas = canvas(viewer)
+
+        canvas.dispatchEvent(mouse(canvas, MouseEvent.MOUSE_PRESSED, 200, 150))
+        assertEquals(Cursor.HAND_CURSOR, canvas.cursor.type)
+
+        canvas.dispatchEvent(mouse(canvas, MouseEvent.MOUSE_RELEASED, 200, 150))
+        assertEquals(Cursor.DEFAULT_CURSOR, canvas.cursor.type)
     }
 
     fun `test overlay floats above the scroll pane and receives its own clicks`() = edtWait {
@@ -243,14 +304,14 @@ class DiagramViewerTest : BasePlatformTestCase() {
         )
     }
 
-    private fun mouse(target: JComponent, id: Int, x: Int, y: Int) = MouseEvent(
+    private fun mouse(target: JComponent, id: Int, x: Int, y: Int, clicks: Int = 1) = MouseEvent(
         target,
         id,
         System.currentTimeMillis(),
         MouseEvent.BUTTON1_DOWN_MASK,
         x,
         y,
-        1,
+        clicks,
         false,
         MouseEvent.BUTTON1,
     )
@@ -291,4 +352,9 @@ class DiagramViewerTest : BasePlatformTestCase() {
         font = Font(Font.SANS_SERIF, Font.PLAIN, 12),
         bold = Font(Font.SANS_SERIF, Font.BOLD, 12),
     )
+
+    private companion object {
+        /** The padding `diagramImage` leaves around a copied diagram, in image pixels. */
+        const val PAD = 32
+    }
 }

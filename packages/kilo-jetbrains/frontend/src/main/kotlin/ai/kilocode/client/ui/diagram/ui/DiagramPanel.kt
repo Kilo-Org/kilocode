@@ -11,6 +11,7 @@ import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.image.BufferedImage
 import javax.swing.JComponent
 import kotlin.math.roundToInt
 
@@ -30,6 +31,10 @@ internal class DiagramPanel(private var palette: Palette) : JComponent() {
         palette = value
         repaint()
     }
+
+    /** The rendered diagram as an image, or null while nothing has been drawn yet. */
+    @RequiresEdt
+    fun image(): BufferedImage? = art?.let { diagramImage(it, palette, background) }
 
     override fun getPreferredSize() = fitSize()
 

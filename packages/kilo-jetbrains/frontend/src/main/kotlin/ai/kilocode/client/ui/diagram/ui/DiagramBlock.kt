@@ -9,6 +9,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import java.awt.image.BufferedImage
 import javax.swing.JComponent
 
 /**
@@ -22,8 +23,12 @@ internal class DiagramBlock : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()), Sessi
     /** Source of the fence text; the owning view rebinds it as the diagram streams or updates. */
     var text: () -> String = { "" }
 
+    /** The rendered diagram, when there is one; copy prefers it over the fence text. */
+    var image: () -> BufferedImage? = { null }
+
     private val bar = MessageToolbar(
         text = { text() },
+        image = { image() },
         actions = listOf(
             ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("diagram.open")) {
                 openDiagram(this, text())

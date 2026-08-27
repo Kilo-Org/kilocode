@@ -992,6 +992,9 @@ internal open class MdViewHybrid(
             Disposer.register(disposable) { panel.removeMouseListener(click) }
             root.next(panel).next(codePane).next(label)
             root.text = { (this.desc as Desc.Code).text }
+            // Only offer the picture while the rendered diagram is the thing on screen, so copying the
+            // streaming or failed source still copies that source.
+            root.image = { panel.takeIf { it.isVisible }?.image() }
             kick()
         }
 
