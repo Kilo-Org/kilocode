@@ -656,6 +656,7 @@ export const dict = {
   "profile.usage.source.direct": "Direkte",
   "profile.usage.state.stale": "Viser de senest opdaterede forbrugsdata.",
   "profile.usage.state.unavailable": "Forbrugsdata er ikke tilgængelige.",
+  "profile.usage.state.empty": "Ingen forbrugsgrænser rapporteret.",
   "profile.usage.plan.pastDue": "Abonnement: Betaling forfalden",
   "profile.usage.plan.canceling": "Abonnement: Opsiges ved periodens udgang",
   "profile.usage.plan.unknown": "Abonnement: Status ukendt",

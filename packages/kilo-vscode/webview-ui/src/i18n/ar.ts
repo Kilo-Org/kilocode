@@ -603,6 +603,7 @@ export const dict = {
   "profile.usage.source.direct": "مباشر",
   "profile.usage.state.stale": "يتم عرض بيانات الاستخدام في آخر تحديث.",
   "profile.usage.state.unavailable": "بيانات الاستخدام غير متوفرة.",
+  "profile.usage.state.empty": "لم يتم الإبلاغ عن أي حدود للاستخدام.",
   "profile.usage.plan.pastDue": "الخطة: الدفع متأخر",
   "profile.usage.plan.canceling": "الخطة: تُلغى في نهاية الفترة",
   "profile.usage.plan.unknown": "الخطة: الحالة غير معروفة",

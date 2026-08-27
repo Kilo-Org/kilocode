@@ -632,6 +632,7 @@ export const dict = {
   "profile.usage.source.direct": "直接",
   "profile.usage.state.stale": "正在显示上次更新的用量。",
   "profile.usage.state.unavailable": "用量数据不可用。",
+  "profile.usage.state.empty": "未报告任何用量限制。",
   "profile.usage.plan.pastDue": "套餐：付款逾期",
   "profile.usage.plan.canceling": "套餐：将在周期结束时取消",
   "profile.usage.plan.unknown": "套餐：状态未知",

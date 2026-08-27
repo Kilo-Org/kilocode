@@ -570,6 +570,7 @@ export const dict = {
   "profile.usage.source.direct": "مستقیم",
   "profile.usage.state.stale": "آخرین میزان استفاده به‌روزشده نمایش داده می‌شود.",
   "profile.usage.state.unavailable": "میزان استفاده در دسترس نیست.",
+  "profile.usage.state.empty": "هیچ محدودیتی برای استفاده گزارش نشده است.",
   "profile.usage.plan.pastDue": "طرح: سررسید گذشته",
   "profile.usage.plan.canceling": "طرح: در پایان دوره لغو می‌شود",
   "profile.usage.plan.unknown": "طرح: وضعیت نامشخص",

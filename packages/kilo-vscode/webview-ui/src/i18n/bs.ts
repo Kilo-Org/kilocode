@@ -658,6 +658,7 @@ export const dict = {
   "profile.usage.source.direct": "Direktno",
   "profile.usage.state.stale": "Prikazuju se posljednji ažurirani podaci o korištenju.",
   "profile.usage.state.unavailable": "Podaci o korištenju nisu dostupni.",
+  "profile.usage.state.empty": "Nisu prijavljena ograničenja korištenja.",
   "profile.usage.plan.pastDue": "Plan: Plaćanje kasni",
   "profile.usage.plan.canceling": "Plan: Otkazuje se na kraju perioda",
   "profile.usage.plan.unknown": "Plan: Status nepoznat",

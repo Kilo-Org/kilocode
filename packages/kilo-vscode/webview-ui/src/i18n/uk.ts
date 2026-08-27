@@ -608,6 +608,7 @@ export const dict = {
   "profile.usage.source.direct": "Напряму",
   "profile.usage.state.stale": "Показано останні оновлені дані про використання.",
   "profile.usage.state.unavailable": "Дані про використання недоступні.",
+  "profile.usage.state.empty": "Про обмеження використання не повідомлено.",
   "profile.usage.plan.pastDue": "План: Платіж прострочено",
   "profile.usage.plan.canceling": "План: Скасування наприкінці періоду",
   "profile.usage.plan.unknown": "План: Статус невідомий",

@@ -655,6 +655,7 @@ export const dict = {
   "profile.usage.source.direct": "Напрямую",
   "profile.usage.state.stale": "Показаны последние обновлённые данные об использовании.",
   "profile.usage.state.unavailable": "Данные об использовании недоступны.",
+  "profile.usage.state.empty": "Лимиты использования не указаны.",
   "profile.usage.plan.pastDue": "Тариф: Платёж просрочен",
   "profile.usage.plan.canceling": "Тариф: Отмена в конце периода",
   "profile.usage.plan.unknown": "Тариф: Статус неизвестен",
