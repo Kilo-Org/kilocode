@@ -152,4 +152,18 @@ class KiloWorktreeService internal constructor(
         LOG.warn("worktree reorder failed for $directory", e)
         false
     }
+
+    suspend fun sessionList(directory: String): Boolean? = try {
+        call { sessionList(directory) }
+    } catch (e: Exception) {
+        LOG.warn("worktree session list state failed for $directory", e)
+        null
+    }
+
+    suspend fun setSessionList(directory: String, visible: Boolean): Boolean = try {
+        call { setSessionList(directory, visible) }
+    } catch (e: Exception) {
+        LOG.warn("worktree session list state write failed for $directory", e)
+        false
+    }
 }

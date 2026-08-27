@@ -15,7 +15,8 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
@@ -37,16 +38,22 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import com.intellij.util.ui.JBUI
 import java.awt.Container
+import javax.swing.JPanel
+import javax.swing.JSeparator
+import javax.swing.SwingConstants
 import java.awt.Point
 import java.awt.event.ActionEvent
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.KeyStroke
@@ -61,27 +68,42 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     private lateinit var controller: WorktreeSessionListController
     private lateinit var manager: FakeManager
     private lateinit var panel: WorktreeSessionEditorPanel
+    private val saves = mutableListOf<Boolean>()
     private val workspace = Workspace(DIR, kotlinx.coroutines.flow.MutableStateFlow(ai.kilocode.rpc.dto.KiloWorkspaceStateDto(ai.kilocode.rpc.dto.KiloWorkspaceStatusDto.READY)), {}, {})
 
     override fun setUp() {
         super.setUp()
-        KiloPluginSettings.unsetWorktreeSessionListExpanded()
         coroutines = TestCoroutines()
         rpc = FakeSessionRpcApi()
         sessions = KiloSessionService(project, coroutines.scope, rpc)
         controller = WorktreeSessionListController(sessions, DIR, coroutines.scope)
         manager = FakeManager()
-        panel = edt { WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace, confirm = { _, _, run -> run() }) }
+        // Most tests inspect the session list, so the shared panel starts from a stored "visible".
+        panel = view(stored = true)
     }
 
     override fun tearDown() {
         try {
             TestDialogManager.setTestDialog(TestDialog.DEFAULT)
-            KiloPluginSettings.unsetWorktreeSessionListExpanded()
             coroutines.close(::pump)
         } finally {
             super.tearDown()
         }
+    }
+
+    private fun view(
+        stored: Boolean? = null,
+        load: ((Boolean?) -> Unit) -> Unit = { done -> done(stored) },
+    ): WorktreeSessionEditorPanel = edt {
+        WorktreeSessionEditorPanel(
+            testRootDisposable,
+            manager,
+            controller,
+            workspace,
+            confirm = { _, _, run -> run() },
+            load = load,
+            save = { saves += it },
+        )
     }
 
     fun `test panel builds splitter toolbar list and right component`() {
@@ -92,7 +114,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
             assertEquals(0.25f, splitter.proportion, 0.01f)
             assertNotNull(UIUtil.findComponentOfType(panel, WorktreePrHeaderView::class.java))
             val buttons = components(panel).filterIsInstance<ActionButton>().mapNotNull { it.presentation.text }
-            assertTrue(buttons.contains("Hide sessions"))
+            assertEquals("Hide sessions", toggle().toolTipText)
+            assertFalse(buttons.contains("Hide sessions"))
             assertTrue(buttons.contains("New session"))
             assertTrue(buttons.contains("Rename session"))
             assertTrue(buttons.contains("Delete session"))
@@ -152,36 +175,228 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
             assertTrue(shown("Rename session"))
             assertTrue(shown("Delete session"))
 
-            toggle().click()
+            click(toggle())
 
             assertNull(splitter.firstComponent)
+            assertEquals("Show sessions", toggle().toolTipText)
             assertTrue(shown("New session"))
             assertFalse(shown("Rename session"))
             assertFalse(shown("Delete session"))
             assertNotNull(UIUtil.findComponentOfType(panel, WorktreePrHeaderView::class.java))
-            assertFalse(KiloPluginSettings.getWorktreeSessionListExpanded())
+            assertEquals(listOf(false), saves)
 
-            toggle().click()
+            click(toggle())
 
             assertSame(list, splitter.firstComponent)
+            assertEquals("Hide sessions", toggle().toolTipText)
             assertTrue(shown("Rename session"))
             assertTrue(shown("Delete session"))
-            assertTrue(KiloPluginSettings.getWorktreeSessionListExpanded())
+            assertEquals(listOf(false, true), saves)
         }
     }
 
-    fun `test collapsed state persists for new panels`() {
-        edt { toggle().click() }
-
-        val view = edt { WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace, confirm = { _, _, run -> run() }) }
+    fun `test stored visibility decides whether the session list is shown`() {
+        val off = view(stored = false)
+        val on = view(stored = true)
 
         edt {
-            val splitter = UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!
-            assertNull(splitter.firstComponent)
-            assertTrue(shown(view, "New session"))
-            assertFalse(shown(view, "Rename session"))
-            assertFalse(shown(view, "Delete session"))
+            assertNull(UIUtil.findComponentOfType(off, OnePixelSplitter::class.java)!!.firstComponent)
+            assertNotNull(UIUtil.findComponentOfType(on, OnePixelSplitter::class.java)!!.firstComponent)
+            assertFalse(shown(off, "Rename session"))
+            assertTrue(shown(on, "Rename session"))
+            assertTrue(saves.isEmpty())
         }
+    }
+
+    fun `test a worktree without a stored choice stays hidden for a single session`() {
+        val view = view()
+        rpc.listed += session("ses_1", 1.0)
+        edt { controller.reload() }
+        flush()
+
+        edt {
+            assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertNull(badge(view))
+            assertTrue(saves.isEmpty())
+        }
+    }
+
+    fun `test a second session shows the list once and stores that choice`() {
+        val view = view()
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        edt {
+            assertNotNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertEquals(listOf(true), saves)
+        }
+
+        rpc.listed += session("ses_3", 3.0)
+        edt { controller.reload() }
+        flush()
+
+        assertEquals(listOf(true), saves)
+    }
+
+    fun `test a stored hidden list survives extra sessions`() {
+        val view = view(stored = false)
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        edt {
+            assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertTrue(saves.isEmpty())
+        }
+    }
+
+    fun `test a click before the stored value arrives wins`() {
+        var answer: ((Boolean?) -> Unit)? = null
+        val view = view(load = { done -> answer = done })
+
+        edt { click(toggle(view)) }
+        edt { answer!!(false) }
+
+        edt {
+            assertNotNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertEquals(listOf(true), saves)
+        }
+    }
+
+    fun `test sessions arriving before the stored answer never force the list open`() {
+        var answer: ((Boolean?) -> Unit)? = null
+        val view = view(load = { done -> answer = done })
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        edt { assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent) }
+        assertTrue(saves.isEmpty())
+
+        edt { answer!!(false) }
+
+        edt {
+            assertNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertTrue(saves.isEmpty())
+        }
+    }
+
+    fun `test an empty stored answer promotes a worktree that already holds two sessions`() {
+        var answer: ((Boolean?) -> Unit)? = null
+        val view = view(load = { done -> answer = done })
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        edt { answer!!(null) }
+
+        edt {
+            assertNotNull(UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!.firstComponent)
+            assertEquals(listOf(true), saves)
+        }
+    }
+
+    fun `test hidden toggle badges the session count from the second session on`() {
+        val view = view(stored = false)
+        rpc.listed += session("ses_1", 1.0)
+        edt { controller.reload() }
+        flush()
+
+        assertNull(edt { badge(view) })
+
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        val icon = edt { badge(view) as FilledBadgeIcon }
+        assertEquals("2", icon.text)
+        assertSame(UiStyle.Badge.Secondary, icon.style)
+    }
+
+    fun `test shown session list drops the count badge`() {
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        assertNull(edt { badge() })
+    }
+
+    fun `test hidden toggle surfaces a session waiting on the user instead of the count`() {
+        val view = view(stored = false)
+        manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING, "ses_2" to SessionActivityKind.QUESTION)
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        assertSame(SessionActivityKind.QUESTION.icon(), edt { badge(view) })
+    }
+
+    fun `test toolbar strip pads three sides and keeps the divider flush`() {
+        val standard = JBUI.CurrentTheme.Toolbar.horizontalToolbarInsets()!!
+
+        val ins = edt { strip().insets }
+
+        assertEquals(standard.top, ins.top)
+        assertEquals(standard.left, ins.left)
+        assertEquals(standard.bottom, ins.bottom)
+        // Right carries the divider line only: padding there would push it off the header content.
+        assertEquals(1, ins.right)
+    }
+
+    fun `test a vertical separator follows the toggle in the toolbar strip`() {
+        val kids = edt { row().components.toList() }
+
+        assertEquals(2, kids.size)
+        assertTrue(SwingUtilities.isDescendingFrom(toggle(), kids.first()))
+        assertEquals(SwingConstants.VERTICAL, (kids.last() as JSeparator).orientation)
+    }
+
+    fun `test toggle keeps its own height inside a taller toolbar strip`() {
+        edt {
+            val strip = strip()
+            strip.setSize(JBUI.scale(400), JBUI.scale(48))
+            lay(strip)
+        }
+
+        // Tracking the strip height would push the hover box against the strip's top and bottom.
+        assertEquals(JBUI.scale(24), edt { toggle().height })
+        assertTrue(edt { toggle().y } > 0)
+    }
+
+    fun `test attention badge returns after showing and hiding the list again`() {
+        val view = view(stored = false)
+        manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING, "ses_2" to SessionActivityKind.QUESTION)
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        assertSame(SessionActivityKind.QUESTION.icon(), edt { badge(view) })
+
+        edt { click(toggle(view)) }
+        assertNull(edt { badge(view) })
+
+        edt { click(toggle(view)) }
+
+        assertSame(SessionActivityKind.QUESTION.icon(), edt { badge(view) })
+    }
+
+    fun `test hidden toggle keeps the count while sessions only run`() {
+        val view = view(stored = false)
+        manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING, "ses_2" to SessionActivityKind.RUNNING)
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        assertEquals("2", edt { (badge(view) as FilledBadgeIcon).text })
     }
 
     fun `test editor kind delegates preferred focus to panel`() {
@@ -550,9 +765,26 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         return out
     }
 
-    private fun toggle(root: java.awt.Component = panel): ActionButton {
-        val actions = setOf("New session", "Rename session", "Delete session")
-        return components(root).filterIsInstance<ActionButton>().first { it.presentation.text !in actions }
+    private fun toggle(root: java.awt.Component = panel): WorktreeSessionListToggle =
+        components(root).filterIsInstance<WorktreeSessionListToggle>().single()
+
+    /** The row holding the toggle and its separator, left of the toolbar. */
+    private fun row(): JPanel = edt { toggle().parent.parent as JPanel }
+
+    /** The strip panel holding that row plus the action toolbar. */
+    private fun strip(): JPanel = edt { row().parent as JPanel }
+
+    /** Lays a detached subtree out top-down, since validate() is a no-op without a peer. */
+    private fun lay(root: java.awt.Component) {
+        if (root !is Container) return
+        root.doLayout()
+        root.components.forEach(::lay)
+    }
+
+    /** Trailing badge icon of the toggle, or null while it carries none. */
+    private fun badge(root: java.awt.Component = panel): Icon? {
+        val label = components(toggle(root)).filterIsInstance<JBLabel>().getOrNull(1) ?: return null
+        return if (label.isVisible) label.icon else null
     }
 
     private fun shown(text: String): Boolean = shown(panel, text)
