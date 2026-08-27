@@ -235,6 +235,18 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertNotNull(button(ov, KiloBundle.message("session.outcome.retry")))
     }
 
+    fun `test incomplete outcome shows footer without message failure card`() {
+        val item = panelWithRetry { true }
+        model.upsertMessage(msg("a1", "assistant").copy(finish = "unknown"))
+        model.setState(SessionState.TurnEnded(Outcome.INCOMPLETE, "unknown"))
+
+        val ov = find<SessionOutcomeView>(item)!!
+        assertTrue(cards(item, "a1").isEmpty())
+        assertNotNull(text(ov, KiloBundle.message("session.outcome.incomplete.title")))
+        assertNotNull(text(ov, KiloBundle.message("session.outcome.incomplete.description")))
+        assertNull(button(ov, KiloBundle.message("session.outcome.retry")))
+    }
+
     fun `test failure landing after the error state still collapses the footer`() {
         val item = panelWithRetry { true }
         model.upsertMessage(msg("a1", "assistant"))

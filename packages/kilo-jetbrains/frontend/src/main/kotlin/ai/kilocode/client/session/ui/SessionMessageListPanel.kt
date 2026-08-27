@@ -537,7 +537,7 @@ class SessionMessageListPanel(
                 // A failed turn close carries no message of its own; when the tail message explains
                 // itself the generic "stopped with an error" line is noise next to that card.
                 if (state.outcome == Outcome.FAILED && explained() != null) outcome?.showRetry()
-                else outcome?.showOutcome(state.outcome)
+                else outcome?.showOutcome(state.outcome, state.finish)
             }
             else -> {
                 setHiddenQuestionTool(null)

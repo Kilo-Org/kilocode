@@ -79,7 +79,7 @@ class SessionOutcomeView(
      * outline. Only a model/provider failure gets the error card treatment.
      */
     @RequiresEdt
-    fun showOutcome(outcome: Outcome) {
+    fun showOutcome(outcome: Outcome, finish: String? = null) {
         when (outcome) {
             Outcome.INTERRUPTED -> {
                 setOutlined(false)
@@ -94,6 +94,15 @@ class SessionOutcomeView(
                 setHeaderIcon(AllIcons.General.Error, title)
                 setHeader(title, KiloBundle.message("session.outcome.failed.description"))
                 syncRetry(true)
+            }
+
+            Outcome.INCOMPLETE -> {
+                val title = KiloBundle.message("session.outcome.incomplete.title")
+                val tip = finish?.let { KiloBundle.message("session.outcome.incomplete.reason", it) } ?: title
+                setOutlined(true)
+                setHeaderIcon(AllIcons.General.Warning, tip)
+                setHeader(title, KiloBundle.message("session.outcome.incomplete.description"))
+                syncRetry(false)
             }
         }
         setContentPadding()

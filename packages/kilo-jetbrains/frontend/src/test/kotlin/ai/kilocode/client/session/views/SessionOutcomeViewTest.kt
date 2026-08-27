@@ -101,11 +101,13 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
         edt {
             val view = SessionOutcomeView()
             view.showOutcome(Outcome.INTERRUPTED)
+            view.showOutcome(Outcome.INCOMPLETE, "unknown")
             view.showOutcome(Outcome.FAILED)
 
             assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.title")))
             assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.description")))
             assertNull(findText(view, KiloBundle.message("session.outcome.interrupted.note")))
+            assertNull(findText(view, KiloBundle.message("session.outcome.incomplete.title")))
             assertIcons(view, AllIcons.General.Error)
         }
     }
@@ -161,6 +163,35 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
             view.showOutcome(Outcome.INTERRUPTED)
 
             assertNull("A user stop is not a failure and must not offer Retry", retryButton(view))
+        }
+    }
+
+    fun `test incomplete outcome shows warning without retry`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showOutcome(Outcome.INCOMPLETE, "unknown")
+
+            assertTrue(view.isVisible)
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.incomplete.title")))
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.incomplete.description")))
+            assertIcons(view, AllIcons.General.Warning)
+            assertTrue(findAll<JBLabel>(view).any {
+                it.icon == AllIcons.General.Warning &&
+                    it.toolTipText == KiloBundle.message("session.outcome.incomplete.reason", "unknown")
+            })
+            assertNull("An incomplete completed message has no Retry action", retryButton(view))
+        }
+    }
+
+    fun `test incomplete outcome falls back to title tooltip`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showOutcome(Outcome.INCOMPLETE)
+
+            assertTrue(findAll<JBLabel>(view).any {
+                it.icon == AllIcons.General.Warning &&
+                    it.toolTipText == KiloBundle.message("session.outcome.incomplete.title")
+            })
         }
     }
 

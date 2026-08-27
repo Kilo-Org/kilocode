@@ -265,6 +265,62 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         )
     }
 
+    fun `test incomplete tail recovers even when the server reports idle`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(finish = "unknown"),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        val state = m.model.state
+        assertTrue(state is SessionState.TurnEnded)
+        assertEquals(
+            ai.kilocode.client.session.model.Outcome.INCOMPLETE,
+            (state as SessionState.TurnEnded).outcome,
+        )
+        assertEquals("unknown", state.finish)
+    }
+
+    fun `test normal finish does not recover an outcome`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(finish = "stop"),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        assertEquals(SessionState.Idle, m.model.state)
+    }
+
+    fun `test tail error wins over incomplete finish during recovery`() {
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
+        rpc.history.add(MessageWithPartsDto(
+            msg("msg1", "ses_test", "assistant").copy(
+                finish = "unknown",
+                error = MessageErrorDto(type = "APIError", message = "missing credentials"),
+            ),
+            emptyList(),
+        ))
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        val state = m.model.state
+        assertTrue(state is SessionState.Error)
+        assertEquals("missing credentials", (state as SessionState.Error).message)
+    }
+
     /** An unrecognised status carries no live work either, so the transcript still decides. */
     fun `test unknown status falls through to the failed tail`() {
         rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("something-new"))

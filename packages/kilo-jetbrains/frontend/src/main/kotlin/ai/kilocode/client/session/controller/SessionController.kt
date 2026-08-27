@@ -1513,7 +1513,13 @@ class SessionController(
     }
 
     private fun seedOutcome() {
-        val err = model.messages().lastOrNull { it.info.role == "assistant" }?.info?.error ?: return
+        val tail = model.messages().lastOrNull { it.info.role == "assistant" } ?: return
+        val err = tail.info.error
+        if (err == null) {
+            val ended = TurnOutcome.incomplete(tail.info.finish) ?: return
+            model.setState(SessionState.TurnEnded(ended, tail.info.finish))
+            return
+        }
         if (err.aborted) {
             model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED))
             return
@@ -1600,11 +1606,14 @@ class SessionController(
                 if (current is SessionState.AwaitingPermission) return
                 if (current is SessionState.LoginRequired) return
                 if (current is SessionState.Error && event.reason != "completed") return
-                val ended = TurnOutcome.classify(event.reason)
+                val finish = model.messages().lastOrNull { it.info.role == "assistant" }?.info?.finish
+                val ended = if (current is SessionState.Error) null else TurnOutcome.classify(event.reason, finish)
+                if (event.reason == "completed") {
+                    capture("Task Completed", sessionProps(event.sessionID) + mapOf("finish" to (finish ?: "none")))
+                }
                 when {
-                    ended != null -> model.setState(SessionState.TurnEnded(ended))
+                    ended != null -> model.setState(SessionState.TurnEnded(ended, finish))
                     event.reason == "completed" -> {
-                        capture("Task Completed", sessionProps(event.sessionID))
                         model.setState(SessionState.Idle)
                     }
                     current is SessionState.Busy || current is SessionState.Retry || current is SessionState.Offline -> model.setState(SessionState.Idle)
