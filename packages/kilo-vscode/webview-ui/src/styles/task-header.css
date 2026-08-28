@@ -205,6 +205,11 @@
     width: max-content;
     white-space: nowrap;
     color: var(--text-base);
+    pointer-events: none;
+
+    > [aria-hidden="false"] {
+      pointer-events: auto;
+    }
 
     > [aria-hidden="true"] {
       visibility: hidden;
