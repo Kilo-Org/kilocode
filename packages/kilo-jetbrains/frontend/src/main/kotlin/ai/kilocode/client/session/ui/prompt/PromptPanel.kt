@@ -44,6 +44,7 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Document
@@ -664,7 +665,7 @@ class PromptPanel(
             JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
             true,
         )
-        popup.showUnderneathOf(menu)
+        popup.show(PopupShowOptions.aboveComponent(menu))
     }
 
     @RequiresEdt
