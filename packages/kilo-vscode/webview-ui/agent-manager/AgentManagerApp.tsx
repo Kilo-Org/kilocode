@@ -8,6 +8,7 @@ import {
   createMemo,
   createEffect,
   on,
+  untrack,
   onMount,
   onCleanup,
   type Component,
@@ -725,6 +726,7 @@ const AgentManagerContent: Component = () => {
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
     composers.prune(ids)
+    untrack(() => diffs.prune(ids))
     setReviewOpenByContext((prev) => {
       const next = pruneReviewState(prev, currentProjectId() ?? "single", ids)
       if (Object.keys(next).length === Object.keys(prev).length) return prev
@@ -1683,6 +1685,7 @@ const AgentManagerContent: Component = () => {
     const id = review.id()
 
     if ((panel || active) && id) {
+      untrack(() => diffs.retain(id))
       vscode.postMessage({ type: "agentManager.startDiffWatch", projectId: activeProjectId(), ...wireDiffId(id) })
       return
     }
@@ -2659,10 +2662,7 @@ const AgentManagerContent: Component = () => {
                       revertingFiles={revertCtl.revertingFor}
                       activeTerminalId={terms.activeId()}
                       contexts={() => new Set(worktrees().map((wt) => wt.id))}
-                      onEvict={(key) => {
-                        composers.drop(key)
-                        diffs.drop(key)
-                      }}
+                      onEvict={(key) => composers.drop(key)}
                     />
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
                       <PRPanelHost
