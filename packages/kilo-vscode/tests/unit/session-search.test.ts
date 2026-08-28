@@ -35,9 +35,7 @@ describe("handleSessionSearch", () => {
       post: (msg) => posted.push(msg),
     })
 
-    expect(calls).toEqual([
-      { worktrees: true, roots: true, directory: "/repo/.kilo/worktrees/wt-1", limit: Number.MAX_SAFE_INTEGER },
-    ])
+    expect(calls).toEqual([{ worktrees: true, roots: true, directory: "/repo/.kilo/worktrees/wt-1", limit: 5_000 }])
     expect(posted).toEqual([
       {
         type: "sessionSearchResult",
@@ -104,7 +102,7 @@ describe("handleSessionSearch", () => {
       post: (msg) => posted.push(msg as never),
     })
 
-    expect(api.calls).toEqual([{ worktrees: true, roots: true, directory: dir, limit: Number.MAX_SAFE_INTEGER }])
+    expect(api.calls).toEqual([{ worktrees: true, roots: true, directory: dir, limit: 5_000 }])
     expect(posted).toHaveLength(1)
     expect(posted[0]?.sessions.map((item) => item.id)).toEqual([...recent.map((item) => item.id), source.id])
   })

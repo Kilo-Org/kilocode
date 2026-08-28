@@ -23,7 +23,7 @@ function request(directory: string) {
     directory,
     worktrees: "true",
     roots: "true",
-    limit: String(Number.MAX_SAFE_INTEGER),
+    limit: String(5_000),
   })
   return requestInDirectory(`/experimental/session?${query}`, directory)
 }
