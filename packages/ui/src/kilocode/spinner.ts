@@ -13,7 +13,6 @@ function refresh() {
 
 export function observe(root: SVGSVGElement) {
   onMount(() => {
-    if (typeof IntersectionObserver === "undefined") return
     if (!observer) {
       observer = new IntersectionObserver((entries) => {
         for (const entry of entries) {
