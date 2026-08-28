@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.testing.TestUiTimers
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
@@ -138,7 +139,5 @@ class DelayedStateTest : BasePlatformTestCase() {
         return state
     }
 
-    private fun edt(block: () -> Unit) {
-        ApplicationManager.getApplication().invokeAndWait(block)
-    }
+    private fun edt(block: () -> Unit) = edtWait(block)
 }

@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -18,7 +19,10 @@ import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.test.CopyProviderSink
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.ide.actions.UndoRedoAction
@@ -70,6 +74,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.ui.scale.JBUIScale
+import com.intellij.util.DocumentUtil
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -137,11 +142,11 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(style.transcriptFont.size, font.size)
     }
 
-    fun `test prompt input uses editor background`() {
+    fun `test prompt input uses prompt background`() {
         val style = SessionEditorStyle.current()
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
 
-        assertEquals(style.editorScheme.defaultBackground, panel.defaultFocusedComponent.background)
+        assertEquals(SessionUiStyle.View.Prompt.bgColor(style), panel.defaultFocusedComponent.background)
     }
 
     fun `test prompt editor hides floating toolbar`() {
@@ -229,6 +234,53 @@ class PromptPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test editor tab prompt reserves focus inset and paints session backdrop`() {
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            hostedInEditorTab = true,
+        )
+        realize(panel, 260, 400)
+        panel.setBounds(0, 0, 260, panel.preferredSize.height)
+        panel.doLayout()
+        val ins = panel.insets
+
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.FOCUS_WIDTH), ins.bottom)
+        assertEquals(ins.bottom, ins.left)
+        assertEquals(ins.bottom, ins.right)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, paint(panel, 0, panel.height / 2).rgb)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, paint(panel, panel.width - 1, panel.height / 2).rgb)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, paint(panel, panel.width / 2, panel.height - 1).rgb)
+
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val current = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        val focus = TestFocusManager()
+        KeyboardFocusManager.setCurrentKeyboardFocusManager(focus)
+        try {
+            focus.focus(editor.contentComponent)
+            editor.contentComponent.focusListeners.forEach {
+                it.focusGained(FocusEvent(editor.contentComponent, FocusEvent.FOCUS_GAINED))
+            }
+
+            assertEquals(
+                JBUI.CurrentTheme.Focus.focusColor().rgb,
+                paint(panel, panel.width / 2, panel.height - 1 - ins.bottom).rgb,
+            )
+            assertEquals(
+                JBUI.CurrentTheme.Focus.focusColor().rgb,
+                paint(panel, ins.left + 1, panel.height / 2).rgb,
+            )
+            assertEquals(
+                JBUI.CurrentTheme.Focus.focusColor().rgb,
+                paint(panel, panel.width - ins.right - 1, panel.height / 2).rgb,
+            )
+        } finally {
+            KeyboardFocusManager.setCurrentKeyboardFocusManager(current)
+        }
+    }
+
     fun `test applyStyle updates prompt input and height`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val style = SessionEditorStyle.create(family = "Courier New", size = 26)
@@ -248,7 +300,12 @@ class PromptPanelTest : BasePlatformTestCase() {
             HighlighterColors.TEXT,
             TextAttributes(Color(0xEA, 0xEA, 0xEA), bg, null, null, Font.PLAIN),
         )
+        scheme.setAttributes(
+            DefaultLanguageHighlighterColors.DOC_CODE_BLOCK,
+            TextAttributes(null, bg, null, null, Font.PLAIN),
+        )
         val style = SessionEditorStyle.create(scheme = scheme)
+        val promptBg = SessionUiStyle.View.Prompt.bgColor(style)
 
         realize(panel, 260, 400)
         val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
@@ -258,11 +315,11 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         panel.applyStyle(style)
 
-        assertEquals(bg, panel.defaultFocusedComponent.background)
-        assertEquals(bg, editor.backgroundColor)
-        assertEquals(bg, editor.scrollPane.background)
-        assertEquals(bg, editor.scrollPane.viewport.background)
-        assertEquals(bg, editor.contentComponent.background)
+        assertEquals(promptBg, panel.defaultFocusedComponent.background)
+        assertEquals(promptBg, editor.backgroundColor)
+        assertEquals(promptBg, editor.scrollPane.background)
+        assertEquals(promptBg, editor.scrollPane.viewport.background)
+        assertEquals(promptBg, editor.contentComponent.background)
     }
 
     fun `test prompt editor grows when lines are added`() {
@@ -501,6 +558,22 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals("hello", editor.document.text)
     }
 
+    fun `test prompt editor height sync skips bulk document updates`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        val editor = field.getEditor(false)!!
+        WriteCommandAction.runWriteCommandAction(project) {
+            DocumentUtil.executeInBulk(editor.document, true) {
+                editor.document.insertString(0, "hello")
+            }
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals("hello", editor.document.text)
+    }
+
     fun `test prompt editor highlights missing mention as wrong reference`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
@@ -624,6 +697,46 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue("items=$items", items.contains("new"))
     }
 
+    fun `test slash lookup reopens while typing after it closes`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        // The whole-token set does not open a lookup (matches a paste / programmatic set, not typing).
+        field.text = "/n"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+        assertNull("no lookup expected before typing", LookupManager.getActiveLookup(editor))
+
+        // A single keystroke inside the slash token reopens the completion, simulating the popup
+        // having closed during fast typing.
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(editor.caretModel.offset, "e")
+        }
+        editor.caretModel.moveToOffset(editor.document.textLength)
+
+        val items = waitForLookupItems(editor)
+        assertTrue("items=$items", items.contains("new"))
+    }
+
+    fun `test slash lookup refreshes when server commands load`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "/deploy"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+
+        invokeCompletionAction(editor)
+        val before = waitForLookupItems(editor)
+        assertFalse("before=$before", before.contains("deploy"))
+
+        rpc.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY, commands = listOf(CommandDto("deploy")))
+
+        assertTrue("expected deploy after load", waitForLookupItem(editor, "deploy"))
+    }
+
     fun `test prompt completion lookup is positioned above caret`() {
         rpc.searchResult = FileSearchResultDto(
             files = listOf(WorkspaceFileDto("src/deploy.ts", "deploy.ts")),
@@ -726,6 +839,43 @@ class PromptPanelTest : BasePlatformTestCase() {
         waitForSend { sent }
 
         assertTrue(sent)
+    }
+
+    fun `test dialog prompt hides runtime submit and approve controls`() {
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            rounded = false,
+            showSubmit = false,
+            approve = false,
+        )
+
+        assertFalse(components(panel).contains(panel.buttonForTest()))
+    }
+
+    fun `test hidden submit button still exposes send context from editor`() {
+        var sent: String? = null
+        val panel = PromptPanel(
+            project = project,
+            onSend = { text, _ -> sent = text },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            showSubmit = false,
+        )
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        panel.setReady(true)
+        editor.text = "create it"
+
+        val sink = TestSink()
+        (editor as UiDataProvider).uiDataSnapshot(sink)
+        val send = sink.send as ai.kilocode.client.session.ui.prompt.SendPromptContext
+        assertTrue(send.isSendEnabled)
+        send.send()
+        waitForSend { sent != null }
+
+        assertEquals("create it", sent)
     }
 
     fun `test submit resolves mentions from current text`() {
@@ -1192,6 +1342,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals("make a plan", seen)
         assertFalse(enhance.isEnabled)
         assertTrue(enhance.icon is AnimatedIcon)
+        assertSame(SpinnerIcon.icon, enhance.icon)
         val icon = enhance.icon
 
         panel.setReady(true)
@@ -1415,6 +1566,16 @@ class PromptPanelTest : BasePlatformTestCase() {
             Thread.sleep(20)
         }
         return LookupManager.getActiveLookup(editor)?.items.orEmpty().map { it.lookupString }
+    }
+
+    private fun waitForLookupItem(editor: Editor, value: String): Boolean {
+        repeat(50) {
+            UIUtil.dispatchAllInvocationEvents()
+            val items = LookupManager.getActiveLookup(editor)?.items.orEmpty().map { it.lookupString }
+            if (items.contains(value)) return true
+            Thread.sleep(20)
+        }
+        return false
     }
 
     private fun acceptLookup(editor: Editor) {

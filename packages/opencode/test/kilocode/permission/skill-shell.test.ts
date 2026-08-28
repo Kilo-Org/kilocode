@@ -80,6 +80,27 @@ it.instance(
 )
 
 it.instance(
+  "sandbox escalation - forces a one-shot interactive prompt",
+  () =>
+    Effect.gen(function* () {
+      const fiber = yield* ask({
+        sessionID: SessionID.make("session_sandbox"),
+        permission: "sandbox_escalation",
+        patterns: ["git commit -m message"],
+        metadata: { sandboxEscalation: true },
+        always: [],
+        ruleset: [{ permission: "sandbox_escalation", pattern: "*", action: "allow" }],
+      }).pipe(Effect.forkScoped)
+
+      const pending = yield* waitForPending(1)
+      expect(pending[0]?.metadata?.sandboxEscalation).toBe(true)
+      yield* reply({ requestID: pending[0]!.id, reply: "once", interactive: true })
+      expect((yield* Fiber.join(fiber)).manual).toBe(true)
+    }),
+  { git: true },
+)
+
+it.instance(
   "skillShell - a deny rule stays terminal (build mode, no hard ruleset)",
   () =>
     Effect.gen(function* () {

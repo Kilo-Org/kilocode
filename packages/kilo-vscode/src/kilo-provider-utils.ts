@@ -411,7 +411,12 @@ export type WebviewMessage =
       message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
-  | { type: "sessionTurnClosed"; sessionID: string; reason: "completed" | "error" | "interrupted" | "superseded" }
+  | {
+      type: "sessionTurnClosed"
+      sessionID: string
+      reason: "completed" | "error" | "interrupted" | "superseded"
+      parentID?: string
+    }
   | {
       type: "permissionRequest"
       permission: {
@@ -450,7 +455,7 @@ export type WebviewMessage =
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionDeleted"; sessionID: string }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
-  | { type: "sessionError"; sessionID?: string; error?: unknown }
+  | { type: "sessionError"; eventID: string; sessionID?: string; error?: unknown }
   | {
       type: "sandboxStatus"
       sessionID: string
@@ -556,6 +561,7 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
         type: "sessionTurnClosed",
         sessionID: event.properties.sessionID,
         reason: event.properties.reason,
+        ...(event.properties.parentID ? { parentID: event.properties.parentID } : {}),
       }
     case "permission.asked":
       return {
@@ -620,6 +626,7 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
     case "session.error": {
       return {
         type: "sessionError",
+        eventID: event.id,
         sessionID: event.properties.sessionID,
         error: event.properties.error,
       }

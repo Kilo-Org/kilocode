@@ -105,6 +105,9 @@ test.describe("history session accessibility", () => {
 
     const local = page.getByRole("tab", { name: "Local" })
     const worktree = page.getByRole("tab", { name: "Worktree" })
+    await expect(worktree).toHaveAttribute("aria-selected", "true")
+    await expect(page.getByRole("tabpanel", { name: "Worktree" })).toBeVisible()
+
     await local.focus()
     await page.keyboard.press("End")
     await expect(worktree).toBeFocused()

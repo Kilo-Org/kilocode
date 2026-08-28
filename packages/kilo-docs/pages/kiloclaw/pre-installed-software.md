@@ -5,6 +5,8 @@ description: "Default system utilities, languages, and CLI tools included in the
 
 # Pre-installed Software
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Every KiloClaw instance ships with a curated set of system utilities, language runtimes, package managers, and CLI tools. This page documents everything that comes pre-installed in the KiloClaw Docker image so you know what's available out of the box. Where a specific version is listed it reflects the pin in the Dockerfile as of March 2026. Entries marked **unpinned** install the latest available version at image build time and may differ between releases.
 
 ## Base Image

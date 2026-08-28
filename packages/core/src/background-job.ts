@@ -137,7 +137,7 @@ export const make = Effect.gen(function* () {
       if (job.info.status !== "running") return [{ info: snapshot(job) }, jobs]
       const pending = job.pending - 1
       const output =
-        Exit.isSuccess(exit) && (!job.output || sequence > job.output.sequence)
+        Exit.isSuccess(exit) && exit.value && sequence > (job.output?.sequence ?? -1) // kilocode_change - empty outputs never clobber; only the latest non-empty result wins (#13469)
           ? { sequence, text: exit.value }
           : job.output
       if (Exit.isSuccess(exit) && pending > 0) {

@@ -7,6 +7,7 @@ import { digestPrompt, typedPrompt } from "../src/capture/capture"
 import { MemoryCapture } from "../src/effect/capture"
 import { MemoryEvents } from "../src/effect/events"
 import { KiloMemory } from "../src/effect/index"
+import { MemoryLog } from "../src/effect/log"
 import type { MemoryPorts } from "../src/effect/ports"
 import { MemoryService } from "../src/effect/service"
 import { MemoryTimers } from "../src/effect/timers"
@@ -49,11 +50,18 @@ function session(turn: MemoryPorts.TurnView | undefined): MemoryPorts.SessionPor
 
 /** Model port that answers digest/typed calls from canned JSON, keyed by system prompt so it is
  * order-independent (digest and typed run concurrently). */
-function model(input: { digest: string; typed: string; fallback?: string; onRun?: (system: string) => void }): MemoryPorts.ModelPort {
+function model(input: {
+  digest: string
+  typed: string
+  fallback?: string
+  fail?: Error
+  onRun?: (system: string) => void
+}): MemoryPorts.ModelPort {
   return {
     resolve: () => Effect.succeed({ handle: {}, ...(input.fallback ? { fallback: { reason: input.fallback } } : {}) }),
     run: async ({ system }) => {
       input.onRun?.(system)
+      if (system === typedPrompt && input.fail) throw input.fail
       const text = system === digestPrompt ? input.digest : system === typedPrompt ? input.typed : "{}"
       return { text, usage: USAGE }
     },
@@ -66,6 +74,7 @@ function run(input: {
   model: MemoryPorts.ModelPort
   memoryModel?: string
   reason?: "completed" | "interrupted" | "error"
+  bypassInterval?: boolean
 }) {
   return Effect.runPromise(
     MemoryCapture.turn({
@@ -75,6 +84,7 @@ function run(input: {
       model: input.model,
       memoryModel: input.memoryModel,
       reason: input.reason ?? "completed",
+      bypassInterval: input.bypassInterval,
     }).pipe(Effect.provideService(MemoryService.Service, MemoryService.make())),
   )
 }
@@ -102,6 +112,121 @@ describe("MemoryCapture (fake ports)", () => {
 
       const shown = await KiloMemory.show({ root: t.root })
       expect(shown.sources.environment).toContain("cli_memory_tests")
+    } finally {
+      await t.done()
+    }
+  })
+
+  test("typed timeout preserves digest progress without advancing the typed clock", async () => {
+    const t = await tmp()
+    const events: MemoryEvents.Status[] = []
+    const logs: string[] = []
+    try {
+      await KiloMemory.enable({ root: t.root })
+      await KiloMemory.configure({ root: t.root, settings: { autoConsolidate: true } })
+      MemoryLog.setWarn((message, meta) => logs.push(`${message}:${meta?.reason}:${meta?.detail}`))
+      MemoryEvents.setSink((input) => {
+        events.push(input.payload)
+      })
+
+      const result = await run({
+        root: t.root,
+        session: session(view()),
+        model: model({
+          digest: '{"topic":"repo setup","summary":"Explored repo setup commands. Next step: verify memory tests."}',
+          typed: "{}",
+          fail: new DOMException("memory model timed out", "TimeoutError"),
+        }),
+      })
+
+      expect(result).toMatchObject({ skipped: false, operationCount: 0 })
+      const state = await MemoryFiles.readState(t.root)
+      expect(state.stats.lastTypedConsolidationAt).toBeNull()
+      expect(state.stats.lastSessionSavedAt).toEqual(expect.any(Number))
+      expect(state.stats.lastConsolidatedMessageID).toBe("msg_assistant")
+      expect(events.find((item) => item.state === "error")?.reason).toBe("transient")
+      expect(logs).toEqual(["memory capture transient failure:transient:memory model timed out"])
+
+      const calls: string[] = []
+      const retry = await run({
+        root: t.root,
+        session: session(view()),
+        model: model({
+          digest: "{}",
+          typed: '{"operations":[],"skipped":[]}',
+          onRun: (system) => calls.push(system),
+        }),
+        bypassInterval: true,
+      })
+      expect(retry).toMatchObject({ skipped: true, reason: "no_new_content" })
+      expect(calls).toEqual([])
+
+      const next = await run({
+        root: t.root,
+        session: session(
+          view({
+            assistant: "Use bun install, then run the package tests and typecheck.",
+            lastAssistantID: "msg_assistant_next",
+          }),
+        ),
+        model: model({
+          digest: "{}",
+          typed: '{"operations":[],"skipped":[]}',
+          onRun: (system) => calls.push(system),
+        }),
+      })
+      expect(next).toMatchObject({ skipped: false, operationCount: 0 })
+      expect(calls).toEqual([typedPrompt])
+      const updated = await MemoryFiles.readState(t.root)
+      expect(updated.stats.lastTypedConsolidationAt).toEqual(expect.any(Number))
+      expect(updated.stats.lastConsolidatedMessageID).toBe("msg_assistant_next")
+    } finally {
+      MemoryLog.setWarn(() => {})
+      MemoryEvents.setSink(() => {})
+      await t.done()
+    }
+  })
+
+  test("fallback commit preserves metrics from the prior successful typed consolidation", async () => {
+    const t = await tmp()
+    try {
+      await KiloMemory.enable({ root: t.root })
+      await KiloMemory.configure({ root: t.root, settings: { autoConsolidate: true } })
+
+      const first = await run({
+        root: t.root,
+        session: session(view()),
+        model: model({
+          digest: '{"topic":"repo setup","summary":"Explored repo setup."}',
+          typed:
+            '{"operations":[{"op":"upsert_environment_fact","section":"Commands","key":"test_cmd","value":"bun test"}],"skipped":[]}',
+        }),
+      })
+      expect(first).toMatchObject({ skipped: false, operationCount: 1 })
+      const initial = await MemoryFiles.readState(t.root)
+      expect(initial.stats.lastOperationCount).toBe(1)
+      expect(initial.stats.lastTypedConsolidationAt).toEqual(expect.any(Number))
+
+      const second = await run({
+        root: t.root,
+        session: session(
+          view({
+            assistant: "Investigated a timeout edge case.",
+            lastAssistantID: "msg_assistant_timeout",
+          }),
+        ),
+        model: model({
+          digest: '{"topic":"investigation","summary":"Investigated timeouts."}',
+          typed: "{}",
+          fail: new DOMException("memory model timed out", "TimeoutError"),
+        }),
+        bypassInterval: true,
+      })
+      expect(second).toMatchObject({ skipped: false, operationCount: 0 })
+      const preserved = await MemoryFiles.readState(t.root)
+      expect(preserved.stats.lastOperationCount).toBe(1)
+      expect(preserved.stats.lastTypedConsolidationAt).toBe(initial.stats.lastTypedConsolidationAt)
+      expect(preserved.stats.lastConsolidatedMessageID).toBe("msg_assistant_timeout")
     } finally {
       await t.done()
     }

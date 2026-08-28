@@ -23,13 +23,17 @@ import type { WorktreeStateManager } from "../WorktreeStateManager"
 
 export interface PollerPair {
   stats: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void }
-  pr: { poller: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void } }
+  pr: {
+    poller: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void }
+    replay?(): void
+  }
 }
 
 export type StatsOutMessage =
   | { type: "agentManager.worktreeStats"; projectId?: string; stats: WorktreeStats[] }
   | { type: "agentManager.localStats"; projectId?: string; stats: LocalStats }
   | { type: "agentManager.prStatus"; projectId?: string; worktreeId: string; pr: PRStatus | null }
+  | { type: "agentManager.prError"; projectId?: string; error: "gh_missing" | "gh_auth" | "fetch_failed" }
 
 type StatsMessage = Extract<AgentManagerOutMessage, { type: "agentManager.worktreeStats" | "agentManager.localStats" }>
 
@@ -76,12 +80,14 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
     openExternal: deps.openExternal,
     log: deps.log,
     semaphore: deps.semaphore,
+    projectId: () => ctx.id,
   })
   return { stats, pr }
 }
 
 export class ProjectPollers {
   private readonly pollers = new Map<string, PollerPair>()
+  private readonly cache = new Map<string, { worktrees?: StatsOutMessage; local?: StatsOutMessage }>()
 
   constructor(
     private readonly deps: PollerDeps,
@@ -89,19 +95,47 @@ export class ProjectPollers {
   ) {}
 
   /**
+   * Record the latest stats per project on the way to the webview. A poller
+   * only emits when something changed, so a webview that mounts (or reloads)
+   * after an emit would otherwise keep its stats placeholders forever.
+   */
+  private recording(id: string): PollerDeps {
+    return {
+      ...this.deps,
+      post: (msg) => {
+        const entry = this.cache.get(id) ?? {}
+        if (msg.type === "agentManager.worktreeStats") entry.worktrees = msg
+        if (msg.type === "agentManager.localStats") entry.local = msg
+        this.cache.set(id, entry)
+        this.deps.post(msg)
+      },
+    }
+  }
+
+  /** Re-post the latest background project stats and PR statuses. */
+  replay(): void {
+    for (const [id, pair] of this.pollers) {
+      const entry = this.cache.get(id)
+      if (entry?.worktrees) this.deps.post(entry.worktrees)
+      if (entry?.local) this.deps.post(entry.local)
+      pair.pr.replay?.()
+    }
+  }
+
+  /**
    * Reconcile pollers with the current expanded set: start pollers for
-   * expanded, trusted, non-active projects whose state is initialized, and
+   * expanded, non-active projects whose state is initialized, and
    * stop pollers for projects that were collapsed, removed, or activated.
    */
   sync(contexts: ProjectContexts): void {
     const wanted = new Set<string>()
     for (const snap of contexts.snapshots()) {
-      if (snap.active || !snap.expanded || !snap.trusted || snap.missing) continue
+      if (snap.active || !snap.expanded || snap.missing) continue
       const ctx = contexts.get(snap.id)
       if (!ctx?.peekState()) continue
       wanted.add(snap.id)
       if (this.pollers.has(snap.id)) continue
-      const pair = this.create(ctx, this.deps)
+      const pair = this.create(ctx, this.recording(snap.id))
       pair.stats.setVisible(this.deps.visible())
       pair.pr.poller.setVisible(this.deps.visible())
       pair.stats.setEnabled(true)
@@ -113,6 +147,7 @@ export class ProjectPollers {
       pair.stats.stop()
       pair.pr.poller.stop()
       this.pollers.delete(id)
+      this.cache.delete(id)
     }
   }
 
@@ -129,6 +164,7 @@ export class ProjectPollers {
       pair.pr.poller.stop()
     }
     this.pollers.clear()
+    this.cache.clear()
   }
 }
 
@@ -175,6 +211,7 @@ export function createPollers(opts: {
     openExternal: opts.openExternal,
     log: opts.log,
     semaphore: opts.semaphore,
+    projectId: opts.activeId,
   })
   const projects = new ProjectPollers({
     git: opts.git,

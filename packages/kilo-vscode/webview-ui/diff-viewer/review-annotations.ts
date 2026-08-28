@@ -1,6 +1,7 @@
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { extractLines, type ReviewComment } from "./review-comments"
+import type { ReviewCommentEntry } from "../src/types/messages"
 
 export interface AnnotationLabels {
   commentOnLine: (line: number) => string
@@ -13,6 +14,21 @@ export interface AnnotationLabels {
   sendToChat: string
   edit: string
   delete: string
+}
+
+export function labels(t: (key: string, params?: Record<string, string | number>) => string): AnnotationLabels {
+  return {
+    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
+    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
+    placeholder: t("agentManager.review.commentPlaceholder"),
+    cancel: t("common.cancel"),
+    comment: t("agentManager.review.commentAction"),
+    send: t("prompt.action.send"),
+    save: t("common.save"),
+    sendToChat: t("agentManager.review.sendToChat"),
+    edit: t("common.edit"),
+    delete: t("common.delete"),
+  }
 }
 
 // A draft is the active unsaved inline comment composer opened from the gutter.
@@ -137,7 +153,7 @@ function makeActionButton(title: string, icon: SVGSVGElement, action: () => void
   return button
 }
 
-export function sendReviewComments(comments: ReviewComment[], activeTerminalId?: string): void {
+export function sendReviewComments(comments: ReviewCommentEntry[], activeTerminalId?: string): void {
   window.dispatchEvent(
     new MessageEvent("message", {
       data: {

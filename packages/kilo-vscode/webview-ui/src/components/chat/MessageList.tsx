@@ -3,9 +3,6 @@
 /**
  * MessageList component
  * Scrollable turn-based message list with virtualization.
- * Each user message is rendered as a VscodeSessionTurn — a custom component that
- * renders all assistant parts as a flat, verbose list with no context grouping,
- * and fully expands sub-agent (task tool) parts inline.
  * Shows recent sessions in the empty state for quick resumption.
  */
 
@@ -26,6 +23,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { useProvider } from "../../context/provider"
@@ -36,7 +34,6 @@ import type { ErrorDisplayProps } from "./ErrorDisplay"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
-import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { TurnOutcome } from "../shared/TurnOutcome"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
@@ -104,6 +101,7 @@ interface MessageListProps {
 export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
+  const vscode = useVSCode()
   const language = useLanguage()
   const provider = useProvider()
   const i18n = useI18n()
@@ -179,10 +177,23 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const isEmpty = () => turns().length === 0 && !session.loading() && !revert()
 
   const activeUserID = createMemo(() =>
-    getActiveUserMessageID(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id)),
+    getActiveUserMessageID(
+      session.messages(),
+      session.statusInfo(),
+      (msg) => session.getParts(msg.id),
+      session.submitting(),
+    ),
   )
   const queuedIDs = createMemo(
-    () => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id))),
+    () =>
+      new Set(
+        queuedUserMessageIDs(
+          session.messages(),
+          session.statusInfo(),
+          (msg) => session.getParts(msg.id),
+          session.submitting(),
+        ),
+      ),
   )
   const rows = createMemo((prev: TranscriptRow[] | undefined) => {
     const active = activeUserID()
@@ -1221,26 +1232,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const id = pendingRestore()
     if (!id || session.loading()) return
     turns().length
-    // Double-rAF: the first frame lets the browser paint the new DOM from
-    // the messagesLoaded batch. The second frame restores scroll position
-    // without forcing a synchronous layout reflow mid-paint.
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (pendingRestore() !== id) return
-        const el = scrollEl()
-        if (!el) return
-        const state = getScroll(id)
-        const anchor = resolveAnchor(state, keys())
-        const handle = virtualizer()
-        if (state?.type === "anchor" && anchor && handle) {
-          handle.scrollToIndex(anchor.index, { offset: anchor.offset })
-          autoScroll.pause()
-          maybeLoadOlder()
-        } else {
-          autoScroll.forceScrollToBottom()
-        }
-        setPendingRestore(undefined)
-      })
+      if (pendingRestore() !== id) return
+      const el = scrollEl()
+      if (!el) return
+      const state = getScroll(id)
+      const anchor = resolveAnchor(state, keys())
+      const handle = virtualizer()
+      if (state?.type === "anchor" && anchor && handle) {
+        handle.scrollToIndex(anchor.index, { offset: anchor.offset })
+        autoScroll.pause()
+        maybeLoadOlder()
+      } else {
+        autoScroll.forceScrollToBottom()
+      }
+      setPendingRestore(undefined)
     })
   })
 
@@ -1325,6 +1331,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         activeSearch={activeKey() === row.key}
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                        readonly={props.readonly}
                       />
                     )}
                   </Virtualizer>
@@ -1338,6 +1345,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       activeSearch={activeKey() === key}
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
+                      readonly={props.readonly}
                     />
                   )}
                 </For>
@@ -1353,10 +1361,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
                   activeSearch={activeKey() === row.key}
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                  readonly={props.readonly}
                 />
               )}
             </For>
-            <WorkingIndicator />
             <TurnOutcome />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
@@ -1365,6 +1373,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
       </div>
 
       <PromptRail
+        // Editor tabs and Agent Manager have no sidebar edge signal. Keep their rail on the physical right in RTL too.
+        side={vscode.sidebarSide() ?? "right"}
         entries={entries}
         items={items}
         active={() => railActiveKey()}
@@ -1377,7 +1387,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
         onLoadOlder={() => session.loadOlderMessages()}
         onWheel={(deltaY: number) => {
           const el = scrollEl()
-          if (el) el.scrollTop += deltaY
+          if (!el) return
+          if (deltaY < 0 && el.scrollHeight - el.clientHeight > 1) autoScroll.pause()
+          el.scrollTop += deltaY
         }}
         height={height}
         hasOlder={session.hasOlderMessages}

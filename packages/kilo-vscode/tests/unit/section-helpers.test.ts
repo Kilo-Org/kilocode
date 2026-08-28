@@ -174,7 +174,7 @@ describe("buildSidebarOrder", () => {
   it("returns LOCAL + all sorted worktrees when no sections exist", () => {
     const sorted = [wt("a"), wt("b"), wt("c")]
     const items = buildTopLevelItems([], [], sorted, [])
-    const result = buildSidebarOrder(items, sorted, [], () => [], [])
+    const result = buildSidebarOrder(items, sorted, [], () => [])
     expect(result).toEqual([
       { type: "local", id: "local" },
       { type: "wt", id: "a" },
@@ -191,7 +191,7 @@ describe("buildSidebarOrder", () => {
     const sorted = [w1, w2, w3]
     const items = buildTopLevelItems([s1], [w3], sorted, ["s1", "w3"])
     const members = (id: string) => (id === "s1" ? [w1, w2] : [])
-    const result = buildSidebarOrder(items, sorted, [s1], members, [])
+    const result = buildSidebarOrder(items, sorted, [s1], members)
     expect(result).toEqual([
       { type: "local", id: "local" },
       { type: "wt", id: "w3" },
@@ -207,7 +207,7 @@ describe("buildSidebarOrder", () => {
     const sorted = [w1, w2]
     const items = buildTopLevelItems([s1], [w2], sorted, ["s1", "w2"])
     const members = (id: string) => (id === "s1" ? [w1] : [])
-    const result = buildSidebarOrder(items, sorted, [s1], members, [])
+    const result = buildSidebarOrder(items, sorted, [s1], members)
     expect(result).toEqual([
       { type: "local", id: "local" },
       { type: "wt", id: "w2" },
@@ -227,20 +227,17 @@ describe("buildSidebarOrder", () => {
       if (id === "s2") return [w3]
       return []
     }
-    const result = buildSidebarOrder(items, sorted, [s1, s2], members, [])
+    const result = buildSidebarOrder(items, sorted, [s1, s2], members)
     expect(result.map((r) => r.id)).toEqual(["local", "w2", "w1", "w3"])
   })
 
-  it("appends unassigned sessions after worktrees", () => {
+  it("appends nothing after worktrees (sessions live in the history view)", () => {
     const sorted = [wt("a")]
     const items = buildTopLevelItems([], [], sorted, [])
-    const sessions = [{ id: "sess1" }, { id: "sess2" }]
-    const result = buildSidebarOrder(items, sorted, [], () => [], sessions)
+    const result = buildSidebarOrder(items, sorted, [], () => [])
     expect(result).toEqual([
       { type: "local", id: "local" },
       { type: "wt", id: "a" },
-      { type: "session", id: "sess1" },
-      { type: "session", id: "sess2" },
     ])
   })
 })

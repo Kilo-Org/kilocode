@@ -9,6 +9,7 @@ import ai.kilocode.client.session.history.HistoryController
 import ai.kilocode.client.session.history.HistoryDataKeys
 import ai.kilocode.client.session.history.HistoryPanel
 import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.Question
@@ -19,6 +20,7 @@ import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -87,6 +89,21 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         assertSame(manager, provider.getData(SessionManager.KEY.name))
     }
 
+    fun `test host empty panel is full recents panel`() {
+        rpc.recent.add(session("ses_recent"))
+        val manager = manager()
+        val controller = controller()
+        settle()
+
+        val panel = manager.emptyPanel(testRootDisposable, controller)
+
+        assertTrue(panel.logoVisible())
+        assertTrue(panel.feedbackVisible())
+        assertTrue(panel.descriptionVisible())
+        assertTrue(panel.historyVisible())
+        assertTrue(panel.recentVisible())
+    }
+
     fun `test new session replaces active component`() {
         val manager = manager()
 
@@ -136,6 +153,19 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         val history = active(manager) as HistoryPanel
 
         assertSame(history.defaultFocusedComponent, manager.defaultFocusedComponent)
+    }
+
+    fun `test history back callback overrides local session fallback`() {
+        val manager = manager()
+        var calls = 0
+
+        manager.newSession()
+        manager.showHistory { calls++ }
+        settle()
+        val history = active(manager) as HistoryPanel
+        history.clickBack()
+
+        assertEquals(1, calls)
     }
 
     fun `test opening same existing session reuses component`() {
@@ -699,7 +729,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
                 }
             },
             resolve = { workspaces.workspace(it) },
-            status = { sessions.activity() },
+            status = { sessions.activitySnapshot() },
             history = history,
             timers = timers,
             request = request,
@@ -709,6 +739,15 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     }
 
     private fun active(manager: SessionSidePanelManager) = manager.component.getComponent(0) as JPanel
+
+    private fun controller() = SessionController(
+        parent = testRootDisposable,
+        sessions = sessions,
+        workspace = workspace,
+        app = app,
+        cs = coroutines.scope,
+        timers = timers,
+    )
 
     private fun empty(panel: JPanel): Boolean {
         var empty = false
@@ -765,11 +804,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
 
     private fun settle() = coroutines.drain(::pump)
 
-    private fun pump() {
-        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
-            com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
-        }
-    }
+    private fun pump() = pumpEdt()
 
     private fun session(id: String) = session(id, "/test")
 

@@ -8,6 +8,8 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useMemory } from "../../context/memory"
+import { parseModelString } from "../../../../src/shared/provider-model"
+import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
 
 const ContextTab: Component = () => {
@@ -138,6 +140,24 @@ const ContextTab: Component = () => {
           >
             {language.t("settings.context.autoCompaction.title")}
           </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.context.compactionModel.title")}
+          description={language.t("settings.context.compactionModel.description")}
+        >
+          <ModelSelectorBase
+            value={parseModelString(config().agent?.compaction?.model ?? undefined)}
+            onSelect={(providerID, modelID) =>
+              updateConfig({
+                agent: { compaction: { model: providerID && modelID ? `${providerID}/${modelID}` : null } },
+              })
+            }
+            placement="bottom-start"
+            allowClear
+            clearLabel={language.t("settings.context.compactionModel.useChatModel")}
+            label={language.t("settings.context.compactionModel.title")}
+            description={language.t("settings.context.compactionModel.description")}
+          />
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.context.compactionLimit.title")}

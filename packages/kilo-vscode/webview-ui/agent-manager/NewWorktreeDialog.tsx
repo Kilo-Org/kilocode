@@ -214,12 +214,6 @@ export const NewWorktreeDialog: Component<{
     setVariant(session.variantForAgent(name, sel))
   }
 
-  const resetModel = () => {
-    const sel = session.configModelForAgent(agent())
-    setModel(sel)
-    setVariant(session.variantForAgent(agent(), sel))
-  }
-
   const cycle = (direction: 1 | -1) => {
     cycleAgent({
       agents: session.agents(),
@@ -244,20 +238,12 @@ export const NewWorktreeDialog: Component<{
     return Object.keys(found.variants)
   })
 
-  // Current effective variant — falls back to first available if stored value is invalid
+  // Current effective variant — an absent or invalid selection uses the model default.
   const effectiveVariant = createMemo(() => {
     const list = variants()
     if (list.length === 0) return undefined
     const stored = variant()
-    return stored && list.includes(stored) ? stored : list[0]
-  })
-
-  // True when the user has changed the model from the session/config default
-  const overridden = createMemo(() => {
-    const sel = model()
-    const cfg = session.configModelForAgent(agent())
-    if (!sel || !cfg) return false
-    return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
+    return stored && list.includes(stored) ? stored : undefined
   })
 
   // Reset variant when model changes and stored variant is not in new list
@@ -268,7 +254,7 @@ export const NewWorktreeDialog: Component<{
       return
     }
     const stored = variant()
-    if (!stored || !list.includes(stored)) setVariant(preserveVariant(stored, list) ?? list[0])
+    if (stored && !list.includes(stored)) setVariant(preserveVariant(stored, list))
   })
 
   createEffect(() => {
@@ -475,7 +461,7 @@ export const NewWorktreeDialog: Component<{
       modelID: sel?.modelID,
       agent: selectedAgent,
       variant: isCompare ? undefined : effectiveVariant(),
-      baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
+      baseBranch: effectiveBaseBranch(),
       branchName: customBranch,
       modelAllocations: allocations,
       sandbox: sandboxVisible() ? sandboxOverride() : undefined,
@@ -526,7 +512,6 @@ export const NewWorktreeDialog: Component<{
       const list = variants()
       if (list.length === 0) return
       const next = cycleVariant(effectiveVariant(), list)
-      if (!next) return
       e.preventDefault()
       setVariant(next)
       return
@@ -746,7 +731,6 @@ export const NewWorktreeDialog: Component<{
                     setProjectOpen(false)
                   }}
                   labels={{
-                    untrusted: t("agentManager.dialog.project.untrusted"),
                     missing: t("agentManager.dialog.project.missing"),
                   }}
                 />
@@ -889,25 +873,14 @@ export const NewWorktreeDialog: Component<{
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
+                      onClear={() => setVariant(undefined)}
+                      allowClear
+                      clearLabel={t("common.default")}
                       trigger={WORKTREE_PROMPT_SCOPE}
                       portal={false}
                       deferDismiss
                       cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}
                     />
-                    <Show when={overridden()}>
-                      <Tooltip value={t("prompt.action.resetModel")} placement="top">
-                        <Button
-                          variant="ghost"
-                          size="small"
-                          onClick={resetModel}
-                          aria-label={t("prompt.action.resetModel")}
-                        >
-                          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
-                          </svg>
-                        </Button>
-                      </Tooltip>
-                    </Show>
                   </Show>
                 </div>
                 <div class="prompt-input-hint-actions">

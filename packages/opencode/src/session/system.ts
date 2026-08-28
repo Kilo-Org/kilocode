@@ -11,6 +11,7 @@ import PROMPT_GPT from "./prompt/gpt.txt"
 import PROMPT_GPT55 from "./prompt/kilocode-gpt-5.5.txt" // kilocode_change
 import PROMPT_KIMI from "./prompt/kimi.txt"
 import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
+import PROMPT_META from "./prompt/meta.txt"
 
 import PROMPT_CODEX from "./prompt/codex.txt"
 import PROMPT_TRINITY from "./prompt/trinity.txt"
@@ -72,7 +73,7 @@ export function provider(model: Provider.Model) {
   const kilo = prompt()
   if (kilo) return kilo
   // kilocode_change end
-
+  if (model.api.id.includes("muse-spark")) return [PROMPT_META]
   if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
     return [PROMPT_BEAST]
   if (model.api.id.includes("gpt")) {

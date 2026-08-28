@@ -44,10 +44,11 @@ export namespace KiloLLM {
    * Like opencode, the provider is the source of truth: when the last finished
    * turn reported usage, `reported` carries that provider-tokenized context size
    * (input + output + cache), which already accounts for image/vision input the
-   * client cannot see. The client-side media-normalized estimate (encoded bytes
-   * excluded) is used as a floor so newly added text or tool schemas still cap
-   * output, and as the sole basis on the first turn before any usage is reported.
-   * The larger of the two is used so the cap never under-counts.
+   * client cannot see. The client-side normalized estimate (encoded media and
+   * opaque reasoning-state bytes excluded) is used as a floor so newly added
+   * text or tool schemas still cap output, and as the sole basis on the first
+   * turn before any usage is reported. The larger of the two is used so the cap
+   * never under-counts.
    *
    * Many small models (e.g. qwen 7B, 32K context) ship with a default
    * max_output of 32K, leaving no room for input once tools are included.

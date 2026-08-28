@@ -62,7 +62,7 @@ export interface Config {
   requestValidator?: (data: unknown) => Promise<unknown>
   /**
    * A function transforming response data before it's returned. This is useful
-   * for post-processing data, e.g. converting ISO strings into Date objects.
+   * for post-processing data, e.g., converting ISO strings into Date objects.
    */
   responseTransformer?: (data: unknown) => Promise<unknown>
   /**

@@ -10,6 +10,7 @@ import { MessageV2 } from "./message-v2"
 import { Session } from "./session"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import CODE_SWITCH from "./prompt/code-switch.txt" // kilocode_change
+import ASK_CODE_SWITCH from "@/kilocode/session/ask-code-switch.txt" // kilocode_change
 
 export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
   messages: SessionV1.WithParts[]
@@ -22,8 +23,7 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
   const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
   if (!userMessage) return input.messages
 
-  // kilocode_change start - shared planning reminder path
-  // No-op unless the active agent is plan-like.
+  // kilocode_change start - shared planning / agent-switch reminder path
   yield* Effect.promise(() =>
     KiloSessionPrompt.insertPlanReminders({
       agent: input.agent,
@@ -32,11 +32,21 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
       messages: input.messages,
     }),
   )
+  const switched = KiloSessionPrompt.insertAgentSwitchReminder({
+    agent: input.agent,
+    userMessage,
+    messages: input.messages,
+  })
+  if (switched) userMessage.parts.push(yield* sessions.updatePart(switched))
   // kilocode_change end
 
   if (!flags.experimentalPlanMode) {
     const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
-    if (wasPlan && input.agent.name === "code") {
+    if (
+      wasPlan &&
+      input.agent.name === "code" &&
+      !userMessage.parts.some((part) => part.type === "text" && part.text === ASK_CODE_SWITCH)
+    ) {
       // kilocode_change - renamed from "build" to "code"
       userMessage.parts.push({
         id: PartID.ascending(),

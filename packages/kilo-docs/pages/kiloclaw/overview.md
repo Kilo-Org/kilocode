@@ -5,6 +5,8 @@ description: "One-click deployment of your Kilo-hosted AI agent with OpenClaw"
 
 # KiloClaw 🦀
 
+{% partial file="kiloclaw-eol.md" /%}
+
 KiloClaw is Kilo's hosted [OpenClaw](https://openclaw.ai) service — a one-click deployment that gives you a personal or organization-scoped AI agent without the complexity of self-hosting. OpenClaw is a 24/7, open source AI agent that connects to Kilo Chat and optional chat platforms like Telegram, Discord, and Slack so it can take real actions automatically, not just chat.
 
 KiloClaw is powered by Kilo Code. The API key is platform-managed, so you never need to bring your own.
@@ -30,6 +32,7 @@ Depending on your setup, you can also use:
 - **Organization access** if your organization has KiloClaw enabled and you want the instance scoped to that organization.
 
 ## Creating an Instance
+
 
 1. Navigate to your [Kilo profile](https://app.kilo.ai/profile)
 2. Click **Claw** in the left navigation
