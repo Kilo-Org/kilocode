@@ -1268,6 +1268,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} tareas completadas",
   "task.backgroundAgents.running.one": "1 agente en segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes en segundo plano",
+  "task.backgroundAgents.more": "+{{count}} más",
   "task.backgroundAgents.open": "Abrir agente en segundo plano",
   "task.backgroundAgents.cancel": "Detener",
   "task.backgroundAgents.continueInBackground": "Continuar en segundo plano",

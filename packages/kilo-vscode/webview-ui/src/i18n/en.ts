@@ -1244,6 +1244,7 @@ export const dict = {
   "task.backgroundAgents.dismiss": "Dismiss",
   "task.backgroundAgents.clearFinished": "Clear finished",
   "task.backgroundAgents.summary": "{{running}} of {{total}} background agents running",
+  "task.backgroundAgents.more": "+{{count}} more",
   "task.backgroundAgents.status.running": "Running",
   "task.backgroundAgents.status.completed": "Done",
   "task.backgroundAgents.status.cancelled": "Cancelled",
