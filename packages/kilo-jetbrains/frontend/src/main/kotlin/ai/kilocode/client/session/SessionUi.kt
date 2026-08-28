@@ -47,7 +47,6 @@ import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.session.ui.header.BranchDock
-import ai.kilocode.client.session.ui.header.ChatDockKeys
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.selection.SessionContextMenu
 import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
@@ -340,13 +339,11 @@ class SessionUi(
     override fun uiDataSnapshot(sink: DataSink) {
         sink[PlatformDataKeys.COPY_PROVIDER] = provider
         sink[SessionActionsKeys.ACTIONS] = this
-        // The prompt panel and the branch dock are siblings of the transcript, so their own providers
-        // only resolve for clicks inside them. Republish here — SessionUi is an ancestor of the whole
-        // session — so the shared Stop / New Worktree / Move to Worktree actions work from any
-        // right-click. Nearest-provider-wins keeps the local providers authoritative inside those
-        // subtrees, and both publish the same instances anyway.
+        // The prompt panel is a sibling of the transcript, so its own SendPromptContext only resolves
+        // for clicks inside it. Republish here — SessionUi is an ancestor of the whole session — so
+        // the reused Kilo.StopSession action works from any right-click. Nearest-provider-wins keeps
+        // PromptPanel authoritative inside its own subtree, and both publish the same instance anyway.
         if (this::prompt.isInitialized) sink[PromptDataKeys.SEND] = prompt
-        dock?.let { sink[ChatDockKeys.DOCK] = it }
     }
 
     @RequiresEdt

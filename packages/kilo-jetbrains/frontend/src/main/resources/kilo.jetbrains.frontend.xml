@@ -325,24 +325,38 @@
 
         <!--
           Right-click menu inside a chat session. Every item resolves its context from
-          SessionActionsKeys.ACTIONS (or PromptDataKeys.SEND / ChatDockKeys.DOCK) which SessionUi
-          publishes, so the menu works from any point in the session. Items hide rather than disable
-          when they do not apply, which keeps the menu short in the common case.
+          SessionActionsKeys.ACTIONS (or PromptDataKeys.SEND) which SessionUi publishes, so the menu
+          works from any point in the session. Items hide rather than disable when they do not apply,
+          which keeps the menu short in the common case. New Worktree / Move to Worktree live only on
+          the branch dock toolbar, not here.
         -->
         <group id="Kilo.Session.ContextMenu">
-            <reference ref="Kilo.StopSession"/>
-            <separator/>
             <reference ref="Kilo.Session.AutoApprove"/>
             <separator/>
-            <reference ref="Kilo.Chat.NewWorktree"/>
-            <reference ref="Kilo.Chat.MoveToWorktree"/>
-            <separator/>
             <reference ref="Kilo.Session.CompareToBase"/>
+            <reference ref="Kilo.Session.OpenPr"/>
+            <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
             <reference ref="$Copy"/>
             <separator/>
+            <reference ref="Kilo.Session.CopyId"/>
+            <reference ref="Kilo.Session.Share"/>
+            <reference ref="Kilo.Session.CopyShareLink"/>
+            <separator/>
+            <reference ref="Kilo.StopSession"/>
+        </group>
+
+        <!--
+          Popup shown from the "more" icon in the prompt bar. Same SessionActionsKeys.ACTIONS context
+          as the context menu, with Copy and Stop reserved for the right-click menu.
+        -->
+        <group id="Kilo.Session.PromptMenu">
+            <reference ref="Kilo.Session.AutoApprove"/>
+            <separator/>
+            <reference ref="Kilo.Session.CompareToBase"/>
             <reference ref="Kilo.Session.OpenPr"/>
             <reference ref="Kilo.Session.CopyPrRef"/>
+            <separator/>
             <reference ref="Kilo.Session.CopyId"/>
             <reference ref="Kilo.Session.Share"/>
             <reference ref="Kilo.Session.CopyShareLink"/>

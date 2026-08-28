@@ -7,7 +7,6 @@ import ai.kilocode.client.session.SessionActionsKeys
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUiTestBase
-import ai.kilocode.client.session.ui.header.ChatDockKeys
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
@@ -24,6 +23,7 @@ import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.Toggleable
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.project.DumbAware
 import com.intellij.testFramework.replaceService
 import ai.kilocode.client.session.model.SessionState
 import org.w3c.dom.Document
@@ -32,11 +32,11 @@ import java.awt.Component
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Covers the session right-click menu: the registered group's shape, each new action's visibility
- * rules, and — most importantly — that the context published by `SessionUi` resolves from a target
- * deep inside the transcript. The three reused actions (Stop, New Worktree, Move to Worktree) read
- * data keys whose local providers are siblings of the transcript, so without `SessionUi` republishing
- * them the menu would silently render them invisible.
+ * Covers the two session action menus — the right-click context menu and the prompt bar's "more"
+ * popup — plus each new action's visibility rules. Most importantly, it covers that the context
+ * published by `SessionUi` resolves from a target deep inside the transcript: the reused
+ * `Kilo.StopSession` action reads a data key whose local provider is a sibling of the transcript, so
+ * without `SessionUi` republishing it the menu would silently render it invisible.
  */
 @Suppress("UnstableApiUsage")
 class SessionContextMenuActionsTest : SessionUiTestBase() {
@@ -46,37 +46,63 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
     fun `test context menu group lists actions in order with separators`() {
         assertEquals(
             listOf(
-                "Kilo.StopSession",
-                "---",
                 "Kilo.Session.AutoApprove",
                 "---",
-                "Kilo.Chat.NewWorktree",
-                "Kilo.Chat.MoveToWorktree",
-                "---",
                 "Kilo.Session.CompareToBase",
+                "Kilo.Session.OpenPr",
+                "Kilo.Session.CopyPrRef",
                 "---",
                 "\$Copy",
                 "---",
+                "Kilo.Session.CopyId",
+                "Kilo.Session.Share",
+                "Kilo.Session.CopyShareLink",
+                "---",
+                "Kilo.StopSession",
+            ),
+            menuChildren("Kilo.Session.ContextMenu"),
+        )
+    }
+
+    /**
+     * New Worktree / Move to Worktree are deliberately not here — they live only on the branch dock
+     * toolbar, which is their own `UiDataProvider` and needs no republishing from `SessionUi`.
+     */
+    fun `test context menu does not reference worktree actions`() {
+        val worktree = menuChildren("Kilo.Session.ContextMenu").filter { it.startsWith("Kilo.Chat.") }
+
+        assertEquals(emptyList<String>(), worktree)
+    }
+
+    fun `test prompt menu group lists session actions in order`() {
+        assertEquals(
+            listOf(
+                "Kilo.Session.AutoApprove",
+                "---",
+                "Kilo.Session.CompareToBase",
                 "Kilo.Session.OpenPr",
                 "Kilo.Session.CopyPrRef",
+                "---",
                 "Kilo.Session.CopyId",
                 "Kilo.Session.Share",
                 "Kilo.Session.CopyShareLink",
             ),
-            menuChildren(),
+            menuChildren("Kilo.Session.PromptMenu"),
         )
     }
 
-    fun `test context menu references only declared or platform actions`() {
+    fun `test both menus reference only declared or platform actions`() {
         val declared = descriptor().getElementsByTagName("action").let { nodes ->
             (0 until nodes.length).mapNotNull { (nodes.item(it) as Element).getAttribute("id").takeIf(String::isNotEmpty) }
         }.toSet()
 
-        val missing = menuChildren()
-            .filter { it != "---" && !it.startsWith("$") }
-            .filterNot { it in declared }
+        for (group in listOf("Kilo.Session.ContextMenu", "Kilo.Session.PromptMenu")) {
+            val missing = menuChildren(group)
+                .filter { it != "---" && !it.startsWith("$") }
+                .filterNot { it in declared }
 
-        assertEquals("context menu references undeclared action ids", emptyList<String>(), missing)
+            assertEquals("$group references undeclared action ids", emptyList<String>(), missing)
+        }
     }
 
     /**
@@ -84,9 +110,11 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
      * missing key would render a blank menu item rather than failing anywhere else.
      */
     fun `test every declared session action has bundle text and description`() {
-        val ids = menuChildren().filter { it.startsWith("Kilo.Session.") }
+        val ids = (menuChildren("Kilo.Session.ContextMenu") + menuChildren("Kilo.Session.PromptMenu"))
+            .filter { it.startsWith("Kilo.Session.") }
+            .distinct()
 
-        assertTrue("expected the new session actions in the menu", ids.isNotEmpty())
+        assertTrue("expected the new session actions in at least one menu", ids.isNotEmpty())
         // optional() consults containsKey; message() would return "!key!" and pass vacuously.
         val keys = ids.flatMap { listOf("action.$it.text", "action.$it.description") } +
             // The share item flips its wording, so it needs a second pair.
@@ -97,16 +125,33 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         assertEquals("session actions missing bundle strings", emptyList<String>(), missing)
     }
 
-    fun `test every context menu action class is instantiable`() {
+    fun `test every menu action class is instantiable`() {
+        val ids = menuChildren("Kilo.Session.ContextMenu") + menuChildren("Kilo.Session.PromptMenu")
         val classes = descriptor().getElementsByTagName("action").let { nodes ->
             (0 until nodes.length).map { nodes.item(it) as Element }
-        }.filter { it.getAttribute("id") in menuChildren() }
+        }.filter { it.getAttribute("id") in ids }
             .map { it.getAttribute("class") }
 
         assertTrue("expected the new session actions to be declared", classes.isNotEmpty())
         for (name in classes) {
             assertNotNull(name, Class.forName(name).getDeclaredConstructor().newInstance())
         }
+    }
+
+    fun `test every owned menu action works during indexing`() {
+        val ids = (menuChildren("Kilo.Session.ContextMenu") + menuChildren("Kilo.Session.PromptMenu"))
+            .filter { it.startsWith("Kilo.") }
+            .distinct()
+        val actions = descriptor().getElementsByTagName("action").let { nodes ->
+            (0 until nodes.length).map { nodes.item(it) as Element }
+        }.filter { it.getAttribute("id") in ids }
+
+        val blocked = actions.mapNotNull { action ->
+            val cls = Class.forName(action.getAttribute("class"))
+            action.getAttribute("id").takeUnless { DumbAware::class.java.isAssignableFrom(cls) }
+        }
+
+        assertEquals("menu actions blocked during indexing", emptyList<String>(), blocked)
     }
 
     // ---- context resolution from the transcript ----
@@ -123,7 +168,6 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
 
         assertNotNull("SessionActions must resolve from the transcript", ctx.getData(SessionActionsKeys.ACTIONS))
         assertNotNull("PromptDataKeys.SEND must resolve from the transcript", ctx.getData(PromptDataKeys.SEND))
-        assertNotNull("ChatDockKeys.DOCK must resolve from the transcript", ctx.getData(ChatDockKeys.DOCK))
     }
 
     fun `test reused stop action is enabled from the transcript while a turn runs`() {
@@ -296,12 +340,12 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         }
     }
 
-    private fun menuChildren(): List<String> {
+    private fun menuChildren(groupId: String): List<String> {
         val groups = descriptor().getElementsByTagName("group")
         val menu = (0 until groups.length)
             .map { groups.item(it) as Element }
-            .firstOrNull { it.getAttribute("id") == "Kilo.Session.ContextMenu" }
-            ?: error("Kilo.Session.ContextMenu group missing")
+            .firstOrNull { it.getAttribute("id") == groupId }
+            ?: error("$groupId group missing")
         val children = menu.childNodes
         return (0 until children.length)
             .mapNotNull { children.item(it) as? Element }

@@ -4,11 +4,12 @@ import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.openapi.actionSystem.DataKey
 
 /**
- * Session-scoped capabilities the right-click context menu actions act on.
+ * Session-scoped capabilities backing the session's two action menus: the right-click context menu
+ * (`Kilo.Session.ContextMenu`) and the prompt bar's "more" popup (`Kilo.Session.PromptMenu`).
  *
  * Implemented by [SessionUi] and published from its `uiDataSnapshot`. `SessionUi` is an ancestor of
  * every component in the session, and `DataManager` collects data along the whole ancestor chain, so
- * a right-click anywhere inside the session resolves this key.
+ * both menus resolve this key regardless of where in the session they are triggered from.
  */
 internal interface SessionActions {
     /** Session id, or null while the session has not been created yet (created on first prompt). */
