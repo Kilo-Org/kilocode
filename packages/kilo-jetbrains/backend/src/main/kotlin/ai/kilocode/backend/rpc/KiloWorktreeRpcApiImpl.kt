@@ -152,11 +152,33 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     override suspend fun stats(directory: String): WorktreeStatsListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
-        val res = runGit(root, "worktree", "list", "--porcelain")
-        if (!res.ok) return@withContext WorktreeStatsListDto()
-        val items = managedWorktrees(parseWorktreeList(res.stdout))
+        val items = sync(root) ?: return@withContext WorktreeStatsListDto()
         val fallback = baseBranch(items) ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
+    }
+
+    /**
+     * Lists the managed worktrees of [root] after reconciling git's metadata with the disk: stale
+     * entries are pruned and entries whose checkout is gone are dropped, so callers never probe a
+     * directory that no longer exists. Returns null when [root] itself is gone or git cannot list.
+     */
+    private fun sync(root: Path): List<WorktreeDto>? {
+        if (!Files.isDirectory(root)) {
+            LOG.info("worktree sync skipped, directory does not exist: $root")
+            return null
+        }
+        val res = runGit(root, "worktree", "list", "--porcelain")
+        if (!res.ok) return null
+        val raw = parseWorktreeList(res.stdout)
+        val gone = raw.any { !it.main && (it.prunable || !Files.isDirectory(Path.of(it.path))) }
+        val synced = if (!gone) managedWorktrees(raw) else {
+            val prune = runGit(root, "worktree", "prune")
+            if (!prune.ok) LOG.warn("worktree prune during sync failed: exit=${prune.exit} stderr=${snippet(prune.stderr)}")
+            val again = runGit(root, "worktree", "list", "--porcelain")
+            if (!again.ok) return null
+            managedWorktrees(parseWorktreeList(again.stdout))
+        }
+        return synced.filter { Files.isDirectory(Path.of(it.path)) }
     }
 
     override suspend fun ghStatus(directory: String): GhAvailability = withContext(Dispatchers.IO) {
@@ -167,11 +189,11 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val now = System.currentTimeMillis()
         prs[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
+        // Sync the worktree list before any git/gh probe so a worktree that was added and then
+        // deleted on disk is pruned instead of probed from a directory that no longer exists.
+        val all = sync(root) ?: return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
         val available = ghAvailable(root)
         if (available != GhAvailability.OK) return@withContext WorktreePrListDto(available).also { prs[directory] = Timed(now, it) }
-        val res = runGit(root, "worktree", "list", "--porcelain")
-        if (!res.ok) return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
-        val all = managedWorktrees(parseWorktreeList(res.stdout))
         val items = prTargets(all)
         val base = baseBranch(all)
         var status = GhAvailability.OK
@@ -192,6 +214,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val now = System.currentTimeMillis()
         branches[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
+        if (!Files.isDirectory(root)) {
+            LOG.info("branch status skipped, directory does not exist: $root")
+            return@withContext BranchStatusDto()
+        }
         val branch = runGit(root, "branch", "--show-current").stdout.trim()
         val worktree = isLinkedWorktree(root)
         val availability = ghAvailable(root)
@@ -603,6 +629,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
     }
 
     private fun ghAvailable(root: Path): GhAvailability {
+        if (!Files.isDirectory(root)) {
+            LOG.info("gh availability skipped dir=$root missing=true")
+            return GhAvailability.OK
+        }
         val status = probeGh(root, "availability")
         if (status != GhAvailability.MISSING) return status
         val now = System.currentTimeMillis()
@@ -614,6 +644,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
     }
 
     private fun probeGh(root: Path, reason: String): GhAvailability = synchronized(ghLock) {
+        // A stale/removed worktree directory makes the process spawn fail, which would be
+        // misreported as GIT_MISSING. Treat a missing directory as "nothing to report" and
+        // don't cache it, so the next probe on a real directory still runs.
+        if (!Files.isDirectory(root)) {
+            LOG.info("gh probe skipped reason=$reason dir=$root missing=true")
+            return@synchronized GhAvailability.OK
+        }
         val now = System.currentTimeMillis()
         ghCache?.takeIf { now - it.time < GH_STATUS_TTL }?.let {
             LOG.info("gh probe cache hit reason=$reason value=${it.value}")
@@ -623,6 +660,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         LOG.info("gh probe start reason=$reason dir=$root")
         val git = runGit(root, "--version")
         if (!git.ok) {
+            // The directory can disappear between the check above and the spawn; a failed working
+            // directory is not evidence that git is uninstalled, so report nothing in that case.
+            if (badDir(git.stderr)) {
+                LOG.info("gh probe skipped reason=$reason dir=$root badDir=true stderr=${snippet(git.stderr)}")
+                return@synchronized GhAvailability.OK
+            }
             val value = GhAvailability.GIT_MISSING
             ghCache = Timed(System.currentTimeMillis(), value)
             LOG.info("gh probe result reason=$reason value=$value exit=${git.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(git.stderr)}")
@@ -639,6 +682,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return text.trim().replace(Regex("\\s+"), " ").take(180)
     }
 
+}
+
+/** True when a process failed because its working directory is gone, not because the tool is absent. */
+internal fun badDir(text: String): Boolean {
+    val msg = text.lowercase()
+    return msg.contains("working directory") && (msg.contains("does not exist") || msg.contains("not a directory"))
 }
 
 internal fun classifyGhError(text: String): GhAvailability {

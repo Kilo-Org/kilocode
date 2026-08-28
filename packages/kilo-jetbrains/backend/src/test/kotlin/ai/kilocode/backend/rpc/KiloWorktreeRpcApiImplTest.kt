@@ -38,6 +38,36 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `ghStatus does not report git missing for a removed directory`() = runBlocking {
+        assertEquals(GhAvailability.OK, api.ghStatus(repo.resolve("missing").toString()))
+    }
+
+    @Test
+    fun `prStatus does not report git missing for a removed directory`() = runBlocking {
+        assertEquals(GhAvailability.OK, api.prStatus(repo.resolve("missing").toString()).availability)
+    }
+
+    @Test
+    fun `stats syncs away a worktree deleted from disk`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        assertTrue(api.stats(repo.toString()).items.any { it.path == created.path })
+
+        delete(Path.of(created.path))
+
+        assertTrue(api.stats(repo.toString()).items.none { it.path == created.path })
+        // The stale entry is pruned from git metadata, so later probes never target the gone directory.
+        val listed = output(repo, "worktree", "list", "--porcelain")
+        assertFalse(listed.contains(created.path), "stale worktree should be pruned during sync: $listed")
+    }
+
+    @Test
+    fun `badDir detects a missing working directory spawn failure`() {
+        assertTrue(badDir("Cannot start a process, the working directory '/tmp/gone' does not exist"))
+        assertFalse(badDir("Cannot run program \"git\": error=2, No such file or directory"))
+    }
+
+    @Test
     fun `parseWorktreeList reads porcelain output and flags the main tree`() {
         val raw = """
             worktree /repo
