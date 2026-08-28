@@ -1,17 +1,18 @@
-import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { List } from "@kilocode/kilo-ui/list"
 import type { ListRef } from "@kilocode/kilo-ui/list"
 import { Popover } from "@kilocode/kilo-ui/popover"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Show, createEffect, createMemo, createSignal, type Component, type JSX } from "solid-js"
+import { ActivityIcon } from "../shared/ActivityIcon"
+import type { Activity } from "../../utils/session-activity"
 
 interface SessionTabSwitcherItem {
   id: string
   title: string
   active: boolean
-  busy: boolean
+  state: Activity
+  stateLabel: string
   pending: boolean
 }
 
@@ -23,7 +24,6 @@ interface SessionTabSwitcherProps {
     close: string
     current: string
     pending: string
-    busy: string
   }
   onSelect: (id: string) => void
   onRestore: () => void
@@ -144,19 +144,17 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
           >
             {(item) => (
               <span class="search-menu-row">
-                <span class="search-menu-icon">
-                  <Show when={!item.busy} fallback={<Spinner class="search-menu-spinner" />}>
-                    <Icon name="speech-bubble" size="small" />
-                  </Show>
+                <span class="search-menu-icon" data-activity={item.state} aria-label={item.stateLabel}>
+                  <ActivityIcon state={item.state} spinner="search-menu-spinner" />
                 </span>
                 <span class="search-menu-copy">
                   <span class="search-menu-title" dir="auto">
                     {item.title}
                   </span>
-                  <Show when={item.busy || item.pending}>
-                    <span class="search-menu-meta session-tab-switcher-meta">
-                      <Show when={item.busy} fallback={props.labels.pending}>
-                        {props.labels.busy}
+                  <Show when={item.state !== "idle" || item.pending}>
+                    <span class="search-menu-meta session-tab-switcher-meta" data-activity={item.state}>
+                      <Show when={item.state !== "idle"} fallback={props.labels.pending}>
+                        {item.stateLabel}
                       </Show>
                     </span>
                   </Show>

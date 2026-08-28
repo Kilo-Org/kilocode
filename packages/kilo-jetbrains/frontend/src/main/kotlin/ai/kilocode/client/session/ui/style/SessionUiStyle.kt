@@ -281,6 +281,12 @@ object SessionUiStyle {
             fun topPadding(): Int = VIEWPORT_TOP_PADDING + UiStyle.Gap.lg()
         }
 
+        object Diagram {
+            const val MAX_HEIGHT = 480
+            const val PADDING = 16
+            const val EMPTY_HEIGHT = 96
+        }
+
         /** Permission session-view command preview limits. */
         object Permission {
             const val COMMAND_LINES = 3

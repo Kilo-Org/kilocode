@@ -29,11 +29,16 @@ export interface UntrackedFile {
 
 const MAX_FILE = 10 * 1024 * 1024 // 10 MB
 
-function git(args: string[], cwd: string, stdin?: string): Promise<{ code: number; stdout: string; stderr: string }> {
+function git(
+  args: string[],
+  cwd: string,
+  stdin?: string,
+  binary = "git",
+): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
     if (stdin !== undefined) {
       // Use spawn for stdin piping — execFile doesn't reliably create a stdin pipe
-      const child = cp.spawn("git", args, { cwd, windowsHide: true })
+      const child = cp.spawn(binary, args, { cwd, windowsHide: true })
       let stdout = ""
       let stderr = ""
       child.stdout.on("data", (d: Buffer) => (stdout += d.toString()))
@@ -42,7 +47,7 @@ function git(args: string[], cwd: string, stdin?: string): Promise<{ code: numbe
       child.stdin.end(stdin)
     } else {
       cp.execFile(
-        "git",
+        binary,
         args,
         { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, windowsHide: true },
         (error, stdout, stderr) => {
@@ -58,8 +63,8 @@ function git(args: string[], cwd: string, stdin?: string): Promise<{ code: numbe
   })
 }
 
-async function raw(args: string[], cwd: string): Promise<string> {
-  const result = await git(args, cwd)
+async function raw(args: string[], cwd: string, binary = "git"): Promise<string> {
+  const result = await git(args, cwd, undefined, binary)
   return result.stdout.trim()
 }
 
@@ -67,19 +72,19 @@ async function raw(args: string[], cwd: string): Promise<string> {
  * Capture the current git state from `cwd` as a portable snapshot.
  * This is a read-only operation — the source directory is never modified.
  */
-export async function capture(cwd: string, log: (...args: unknown[]) => void): Promise<GitSnapshot> {
+export async function capture(cwd: string, log: (...args: unknown[]) => void, binary = "git"): Promise<GitSnapshot> {
   const patch = (args: string[]) =>
-    git(args, cwd).then((r) => {
+    git(args, cwd, undefined, binary).then((r) => {
       const out = r.stdout
       return out.trim() ? out : null
     })
 
   const [branch, head, unstaged, staged, untrackedRaw] = await Promise.all([
-    raw(["branch", "--show-current"], cwd),
-    raw(["rev-parse", "HEAD"], cwd),
+    raw(["branch", "--show-current"], cwd, binary),
+    raw(["rev-parse", "HEAD"], cwd, binary),
     patch(["diff", "--binary"]),
     patch(["diff", "--cached", "--binary"]),
-    raw(["ls-files", "--others", "--exclude-standard"], cwd).then((s: string) =>
+    raw(["ls-files", "--others", "--exclude-standard"], cwd, binary).then((s: string) =>
       s.split("\n").filter((l: string) => l.length > 0),
     ),
   ])
@@ -111,10 +116,11 @@ export async function apply(
   snapshot: GitSnapshot,
   target: string,
   log: (...args: unknown[]) => void,
+  binary = "git",
 ): Promise<{ ok: boolean; error?: string }> {
   // Apply staged patch first, then re-stage those files
   if (snapshot.staged) {
-    const result = await git(["apply", "--whitespace=nowarn", "-"], target, snapshot.staged)
+    const result = await git(["apply", "--whitespace=nowarn", "-"], target, snapshot.staged, binary)
     if (result.code !== 0) {
       const msg = result.stderr.trim() || "Patch did not apply"
       log("Failed to apply staged patch:", msg)
@@ -122,13 +128,13 @@ export async function apply(
     }
     const files = parsePatchFiles(snapshot.staged)
     if (files.length > 0) {
-      await git(["add", "--", ...files], target)
+      await git(["add", "--", ...files], target, undefined, binary)
     }
   }
 
   // Apply unstaged patch (leave as unstaged working-tree changes)
   if (snapshot.unstaged) {
-    const result = await git(["apply", "--whitespace=nowarn", "-"], target, snapshot.unstaged)
+    const result = await git(["apply", "--whitespace=nowarn", "-"], target, snapshot.unstaged, binary)
     if (result.code !== 0) {
       const msg = result.stderr.trim() || "Patch did not apply"
       log("Failed to apply unstaged patch:", msg)

@@ -7,6 +7,7 @@ import {
   buildMentionResults,
   buildSessionAttachments,
   filterMentionResults,
+  filterSessions,
   getMentionRemovalRange,
   getPastChatsMentionResult,
   isCursorAtMentionEnd,
@@ -116,6 +117,39 @@ describe("filterMentionResults", () => {
   it("always preserves file picker result regardless of query", () => {
     const result = filterMentionResults("zz", [FILE_PICKER_RESULT])
     expect(result).toEqual([FILE_PICKER_RESULT])
+  })
+})
+
+describe("filterSessions", () => {
+  const sessions = Array.from({ length: 60 }, (_, index) => ({
+    id: `ses_${index}`,
+    title: `Recent session ${index}`,
+    updated: 60 - index,
+    worktreeName: "branch",
+  }))
+
+  it("shows the first 50 sessions in their existing order without a query", () => {
+    expect(filterSessions(sessions, "")).toEqual(sessions.slice(0, 50))
+  })
+
+  it("limits broad search results to 50 matches", () => {
+    expect(filterSessions(sessions, "recent")).toHaveLength(50)
+  })
+
+  it.each(["ORCHID", "old-branch"])("finds older sessions beyond the display limit by %s", (query) => {
+    const source = { id: "ses_old", title: "Orchid reference source", updated: 0, worktreeName: "old-branch" }
+    expect(filterSessions([...sessions, source], query)).toEqual([source])
+  })
+
+  it("ranks an older exact match before newer partial matches", () => {
+    const source = { id: "ses_old", title: "Recent", updated: 0 }
+    const matches = filterSessions([...sessions, source], "recent")
+    expect(matches).toHaveLength(50)
+    expect(matches[0]).toBe(source)
+  })
+
+  it("returns no results when nothing matches", () => {
+    expect(filterSessions(sessions, "zzzz")).toEqual([])
   })
 })
 

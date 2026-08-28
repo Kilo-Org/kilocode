@@ -19,6 +19,7 @@ type Ctx = {
   exportTranscript: (sessionID: string) => Promise<void>
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
+  activity: (state: unknown) => void
   speechToTextModels: () => Promise<void>
   modelUsage: (message: ModelUsageMessage) => Promise<void>
   backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
@@ -56,7 +57,7 @@ async function routeBackgroundMessage(
 }
 
 export async function routeEarlyMessage(
-  message: { type: string; id?: unknown; text?: unknown },
+  message: { type: string; id?: unknown; text?: unknown; state?: unknown },
   ctx: Ctx,
 ): Promise<boolean> {
   if (message.type === "copyToClipboard") {
@@ -86,6 +87,10 @@ export async function routeEarlyMessage(
   if (message.type === "exportSessionTranscript") {
     const input = message as { sessionID?: unknown }
     if (typeof input.sessionID === "string") await ctx.exportTranscript(input.sessionID)
+    return true
+  }
+  if (message.type === "sessionActivity") {
+    ctx.activity(message.state)
     return true
   }
   if (message.type === "sidebar.openSessions") {

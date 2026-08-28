@@ -22,6 +22,9 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import z from "zod"
 import { zodObject } from "@opencode-ai/core/effect-zod"
 import { Effect, Option, Schema } from "effect"
+import { readdir } from "node:fs/promises"
+import { isAbsolute, join, relative, sep } from "path"
+import { Filesystem } from "@/util/filesystem"
 
 type Provide = typeof import("@/kilocode/instance").provide
 
@@ -61,6 +64,11 @@ const CreateSessionRequest = z
     agent: z.string().min(1).optional(),
     model: CreateSessionModel.optional(),
     orgId: z.string().uuid().optional(),
+    directory: z.string().min(1).max(RemoteCommand.MAX_STRING_LENGTH).optional(),
+    // kilocode_change - cloneFromKiloSessionId: optional cloud-session import.
+    // The old wire form omits this field and performs a fresh sessionCreate;
+    // remove the fresh-create branch when every shipped CLI advertises sessionClone.
+    cloneFromKiloSessionId: z.string().min(1).optional(),
   })
   .strict()
 
@@ -89,6 +97,43 @@ function errorName(error: unknown): string {
   return typeof error
 }
 // kilocode_change end
+
+// kilocode_change - k1: resolve a client-supplied directory path under the
+// launch directory. Reuses Filesystem.resolve (canonicalize) and
+// Filesystem.contains (lexical containment on canonical paths) so a symlink
+// that escapes the launch directory is rejected, not a bespoke check.
+function resolveUnderLaunch(launchDir: string, relative: string | undefined): string {
+  const launchReal = Filesystem.resolve(launchDir)
+  if (relative === undefined) return launchReal
+  if (isAbsolute(relative)) throw new Error("absolute directory paths are not allowed")
+  // Require the target to exist and be a directory before canonicalizing:
+  // Filesystem.resolve falls back to the lexical path on ENOENT, so a
+  // symlinked ancestor with a missing final component would pass the
+  // containment test below. Both callers select an existing folder.
+  const requested = join(launchDir, relative)
+  if (!Filesystem.stat(requested)?.isDirectory()) {
+    throw new Error("directory does not exist")
+  }
+  const requestedReal = Filesystem.resolve(requested)
+  if (!Filesystem.contains(launchReal, requestedReal)) {
+    throw new Error("directory path escapes the launch directory")
+  }
+  return requestedReal
+}
+
+// kilocode_change - create_session cloud-import error mapping. The import seam
+// rejects with a tagged error carrying the upstream `status` (or a
+// "CloudSessionImportUnauthorized" tag for missing credentials). Map those to
+// the exact wire literals; never surface the upstream message (it may embed
+// credentials) and never fall back to a fresh sessionCreate.
+function importErrorText(error: unknown): string {
+  const value = error as { status?: unknown; _tag?: unknown } | null | undefined
+  if (value?._tag === "CloudSessionImportUnauthorized") return "cloud session import unauthorized"
+  if (value?.status === 404) return "cloud session not found"
+  if (value?.status === 401) return "cloud session import unauthorized"
+  if (value?.status === 403) return "cloud session import access denied"
+  return "cloud session import failed"
+}
 
 // kilocode_change start — lazy init to avoid circular dependency
 // (Server → RemoteRoutes → RemoteSender → SessionPrompt at module load time)
@@ -173,6 +218,14 @@ export namespace RemoteSender {
     hasSession?: (sessionID: SessionID) => boolean
     ownedCount?: () => number
     cancelPrompt?: (sessionID: SessionID) => Promise<void>
+    // kilocode_change - injectable cloud-session import seam for create_session
+    // clone requests. Takes the cloud session id and returns the imported
+    // local Session.Info plus a `finalize` closure that restores workspace
+    // files and writes session_diff storage keys; the caller must run
+    // `finalize` only after a successful attach. Production wires this to the
+    // in-process import helper (dynamic import + AppRuntime.runPromise); a
+    // missing seam is a wiring bug, never a fallback to sessionCreate.
+    importFromCloud?: (cloneId: string) => Promise<{ session: Session.Info; finalize: () => Promise<void> }>
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
@@ -643,6 +696,80 @@ export namespace RemoteSender {
         })()
         return
       }
+      // kilocode_change - k1: connection-scoped directory listing for the
+      // instance-picker folder tree. Lists exactly one level, directories
+      // only, with symlink escapes skipped.
+      if (msg.command === "list_directories") {
+        const parsed = RemoteCommand.ListDirectoriesRequest.safeParse(msg.data)
+        if (!parsed.success) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid list_directories request",
+          })
+          return
+        }
+        const launchReal = Filesystem.resolve(options.directory)
+        let listed: string
+        try {
+          listed = resolveUnderLaunch(options.directory, parsed.data.path)
+        } catch {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid list_directories path",
+          })
+          return
+        }
+        void (async () => {
+          try {
+            const entries = await readdir(listed, { withFileTypes: true })
+            const directories: RemoteCommand.ListDirectoriesEntry[] = []
+            for (const entry of entries) {
+              if (directories.length >= RemoteCommand.MAX_DIRECTORIES) break
+              let childReal: string
+              try {
+                childReal = Filesystem.resolve(join(listed, entry.name))
+              } catch {
+                continue // skip a child whose canonical path cannot be resolved (ELOOP, EACCES)
+              }
+              // A symlink whose canonical path equals the launch directory
+              // resolves to launchReal, so its relative path is "" and would
+              // violate ListDirectoriesEntry.path min(1). Never emit it.
+              const childPath = relative(launchReal, childReal).split(sep).join("/")
+              if (!childPath) continue
+              // Windows junctions report isDirectory() without isSymbolicLink(), so apply
+              // the containment check to every entry, not only symlinks.
+              if (!Filesystem.contains(launchReal, childReal)) continue
+              if (entry.isDirectory()) {
+                directories.push({ name: entry.name, path: childPath })
+                continue
+              }
+              if (entry.isSymbolicLink()) {
+                let realIsDir = false
+                try {
+                  realIsDir = Filesystem.stat(childReal)?.isDirectory() === true
+                } catch {
+                  continue
+                }
+                if (realIsDir) {
+                  directories.push({ name: entry.name, path: childPath })
+                }
+              }
+            }
+            const listedRelative = relative(launchReal, listed).split(sep).join("/")
+            options.conn.send({
+              type: "response",
+              id: msg.id,
+              result: { protocolVersion: 1, path: listedRelative, directories },
+            })
+          } catch (error) {
+            options.log.error("list directories failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to list directories" })
+          }
+        })()
+        return
+      }
       if (msg.command === "send_command") {
         const parsed = RemoteCommand.SendRequest.safeParse(msg.data)
         const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
@@ -799,6 +926,10 @@ export namespace RemoteSender {
         // (a) accepts an absent `sessionId` (instance-picker path), (b)
         // resolves the target directory from that session or options.directory,
         // (c) attaches in-process; attach failures roll back via sessionRemove.
+        // kilocode_change - clone: an optional cloneFromKiloSessionId imports a
+        // cloud session in-process (importFromCloud) instead of a fresh
+        // sessionCreate; a missing importFromCloud seam is a wiring bug, never
+        // a fallback to sessionCreate.
         const parsed = CreateSessionRequest.safeParse(msg.data)
         if (!parsed.success) {
           options.conn.send({
@@ -810,6 +941,16 @@ export namespace RemoteSender {
         }
         const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
         if (msg.sessionId && Option.isNone(current)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid create_session command",
+          })
+          return
+        }
+        const cloneId = parsed.data.cloneFromKiloSessionId
+        const importFromCloud = options.importFromCloud
+        if (cloneId && !importFromCloud) {
           options.conn.send({
             type: "response",
             id: msg.id,
@@ -830,18 +971,90 @@ export namespace RemoteSender {
             : {}),
           ...(parsed.data.orgId ? { metadata: { orgId: parsed.data.orgId } } : {}),
         }
+        // kilocode_change - k1: a present `directory` starts the session in a
+        // contained relative path under the launch directory. Resolve it before
+        // the create try/catch so a bad path is a request error ("invalid
+        // create_session directory"), not a create failure. Old clients omit
+        // `directory`; keep the sessionId/options.directory fallback below until
+        // every supported client sends it.
+        const targetOverride = (() => {
+          if (parsed.data.directory === undefined) return undefined
+          try {
+            return resolveUnderLaunch(options.directory, parsed.data.directory)
+          } catch {
+            return undefined
+          }
+        })()
+        if (parsed.data.directory !== undefined && targetOverride === undefined) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid create_session directory",
+          })
+          return
+        }
         const run = options.provide ?? provide
         void (async () => {
           try {
-            // Resolve the target directory: a present `sessionId` keeps the
-            // legacy mobile /new-inside-a-session behavior (target = that
-            // session's directory); an absent `sessionId` targets the
-            // instance's own launch directory (the new instance-picker path).
-            const targetDirectory = await current.pipe(
-              Option.map((sid) => session.get(sid)),
-              Option.map((p) => p.then((info) => info.directory)),
-              Option.getOrElse(() => Promise.resolve(options.directory)),
-            )
+            // Resolve the target directory: a present `directory` field wins
+            // (contained relative path under the launch directory); otherwise a
+            // present `sessionId` keeps the legacy mobile
+            // /new-inside-a-session behavior (target = that session's
+            // directory); an absent `sessionId` targets the instance's own
+            // launch directory (the new instance-picker path).
+            const targetDirectory =
+              targetOverride ??
+              (await current.pipe(
+                Option.map((sid) => session.get(sid)),
+                Option.map((p) => p.then((info) => info.directory)),
+                Option.getOrElse(() => Promise.resolve(options.directory)),
+              ))
+            if (cloneId) {
+              // Clone path: import in-process, then attach. Import failures
+              // map to the exact literals and never fall back to a fresh
+              // sessionCreate; attach failures roll back the imported session.
+              const outcome = await run({
+                directory: targetDirectory,
+                fn: async (): Promise<{ id: string } | { error: string }> => {
+                  let imported: { session: Session.Info; finalize: () => Promise<void> }
+                  try {
+                    imported = await importFromCloud!(cloneId)
+                  } catch (importError) {
+                    return { error: importErrorText(importError) }
+                  }
+                  try {
+                    await attachSession(imported.session.id)
+                  } catch (attachError) {
+                    // Roll back the imported root session so the DB does not
+                    // keep an orphan the relay never learned about. Swallow
+                    // the cleanup error; re-throw the original attach error.
+                    try {
+                      await sessionRemove(imported.session.id)
+                    } catch (cleanupError) {
+                      options.log.error("create session cleanup failed", {
+                        id: msg.id,
+                        error: errorName(cleanupError),
+                      })
+                    }
+                    throw attachError
+                  }
+                  // Restore workspace files and write storage keys only after
+                  // the attach succeeded. finalize never rejects.
+                  await imported.finalize()
+                  return { id: imported.session.id }
+                },
+              })
+              if ("error" in outcome) {
+                options.conn.send({ type: "response", id: msg.id, error: outcome.error })
+                return
+              }
+              options.conn.send({
+                type: "response",
+                id: msg.id,
+                result: { protocolVersion: 1, sessionID: outcome.id },
+              })
+              return
+            }
             const result = await run({
               directory: targetDirectory,
               fn: async () => {

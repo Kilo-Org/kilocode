@@ -47,7 +47,7 @@ describe("planDisplayPath", () => {
 describe("plan_exit renderer uses openFile not openDiff (source)", () => {
   const ROOT = path.resolve(import.meta.dir, "../..")
   const FILE = path.join(ROOT, "webview-ui/src/components/chat/AssistantMessage.tsx")
-  const TURN_FILE = path.join(ROOT, "webview-ui/src/components/chat/VscodeSessionTurn.tsx")
+  const TURN_FILE = path.join(ROOT, "webview-ui/src/components/chat/TranscriptRow.tsx")
   const src = fs.readFileSync(FILE, "utf-8")
   const turnSrc = fs.readFileSync(TURN_FILE, "utf-8")
 
@@ -76,6 +76,7 @@ describe("plan_exit renderer uses openFile not openDiff (source)", () => {
     expect(src).not.toContain("Object.values(data.store.part ?? {}).flat()")
     expect(src).not.toContain("[...props.parts, ...all()]")
     expect(src).not.toContain("turnParts")
+    expect(turnSrc).toContain("parts={row().parts as unknown as SDKPart[]}")
     expect(turnSrc).not.toContain("assistantMessages().flatMap")
     expect(turnSrc).not.toContain("turnParts={assistantParts()}")
   })

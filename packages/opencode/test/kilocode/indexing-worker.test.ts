@@ -57,6 +57,38 @@ test("routes multiple directories through the shared indexing worker", async () 
   expect(failures).toEqual([])
 })
 
+test("pools workers by both directory and root", async () => {
+  await using tmp = await tmpdir()
+  await using root = await tmpdir()
+  const failures: unknown[] = []
+  const hooks: IndexingWorker.Hooks = {
+    status() {},
+    telemetry() {},
+    warning() {},
+    log() {},
+    failure(err) {
+      failures.push(err)
+    },
+  }
+  const first = IndexingWorker.create(tmp.path, tmp.path, hooks)
+  const again = IndexingWorker.create(tmp.path, tmp.path, hooks)
+  const second = IndexingWorker.create(tmp.path, root.path, hooks)
+
+  try {
+    expect(again).toBe(first)
+    expect(second).not.toBe(first)
+    const statuses = await Promise.all([
+      first.init({ enabled: false, embedderProvider: "openai" }),
+      second.init({ enabled: false, embedderProvider: "openai" }),
+    ])
+    expect(statuses.map((status) => status.state)).toEqual(["Disabled", "Disabled"])
+  } finally {
+    await Promise.all([first.dispose(), second.dispose()])
+  }
+
+  expect(failures).toEqual([])
+})
+
 test("waits for the primary index instead of scanning a worktree independently", async () => {
   await using tmp = await tmpdir()
   const main = path.join(tmp.path, "main")

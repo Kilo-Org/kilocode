@@ -12,6 +12,8 @@ import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Button } from "@kilocode/kilo-ui/button"
 import type { WorktreeState, WorktreeGitStats, SectionState, RunStatus } from "../src/types/messages"
 import type { PRStatus } from "../src/types/messages"
+import { ActivityIcon } from "../src/components/shared/ActivityIcon"
+import { label, running, type Activity } from "../src/utils/session-activity"
 import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -31,8 +33,8 @@ interface WorktreeItemProps {
   active: boolean
   pendingDelete: boolean
   busy: boolean
-  /** Whether an agent session on this worktree is actively working (shows spinner instead of branch icon). */
-  working: boolean
+  activity: Activity
+  blocked?: boolean
   stale: boolean
   /** 1-indexed shortcut number shown as ⌘2, ⌘3, etc. Pass 0, >9, or undefined to hide. */
   shortcut?: number
@@ -155,6 +157,13 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
   const { t } = useLanguage()
   const [hovered, setHovered] = createSignal(false)
   const [overClose, setOverClose] = createSignal(false)
+  const state = () => props.activity
+  const blocked = () =>
+    props.busy ||
+    props.blocked ||
+    running(state()) ||
+    props.runStatus?.state === "running" ||
+    props.runStatus?.state === "stopping"
 
   const handleOpenPR = (e: MouseEvent) => {
     e.stopPropagation()
@@ -199,9 +208,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 data-sidebar-id={props.sidebarId ?? props.worktree.id}
                 onClick={() => props.onClick()}
               >
-                <div class="am-wt-icon">
-                  <Show when={!props.busy && !props.working} fallback={<Spinner class="am-worktree-spinner" />}>
-                    <Icon name="branch" size="small" />
+                <div class="am-wt-icon" data-activity={state()} aria-label={t(label(state()))}>
+                  <Show
+                    when={!props.busy && props.runStatus?.state !== "running"}
+                    fallback={<Spinner class="am-worktree-spinner" />}
+                  >
+                    <ActivityIcon state={state()} idle={<Icon name="branch" size="small" />} />
                   </Show>
                 </div>
                 <div class="am-wt-content">
@@ -303,7 +315,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             {props.shortcut}
                           </span>
                         </Show>
-                        <Show when={!props.busy && !props.pendingDelete}>
+                        <Show when={!blocked() && !props.pendingDelete}>
                           <div
                             class="am-worktree-close"
                             onMouseEnter={() => setOverClose(true)}
@@ -520,17 +532,19 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Icon name="edit" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.rename")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
-            <ContextMenu.Item onSelect={() => props.onDelete(new MouseEvent("click"))}>
-              <Icon name="trash" size="small" />
-              <ContextMenu.ItemLabel>{t("agentManager.worktree.delete")}</ContextMenu.ItemLabel>
-              <Show when={props.closeKeybind}>
-                <span class="am-menu-shortcut">
-                  {parseBindingTokens(props.closeKeybind).map((token) => (
-                    <kbd class="am-menu-key">{token}</kbd>
-                  ))}
-                </span>
-              </Show>
-            </ContextMenu.Item>
+            <Show when={!blocked()}>
+              <ContextMenu.Item onSelect={() => props.onDelete(new MouseEvent("click"))}>
+                <Icon name="trash" size="small" />
+                <ContextMenu.ItemLabel>{t("agentManager.worktree.delete")}</ContextMenu.ItemLabel>
+                <Show when={props.closeKeybind}>
+                  <span class="am-menu-shortcut">
+                    {parseBindingTokens(props.closeKeybind).map((token) => (
+                      <kbd class="am-menu-key">{token}</kbd>
+                    ))}
+                  </span>
+                </Show>
+              </ContextMenu.Item>
+            </Show>
             <ContextMenu.Separator />
             <ContextMenu.Item onSelect={() => props.onOpen()}>
               <Icon name="open-file" size="small" />

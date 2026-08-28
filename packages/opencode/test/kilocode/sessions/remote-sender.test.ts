@@ -18,6 +18,9 @@ import { SessionID } from "../../../src/session/schema"
 import { Session } from "../../../src/session/session"
 import { Suggestion } from "../../../src/kilocode/suggestion"
 import { KiloSessionPromptQueue } from "../../../src/kilocode/session/prompt-queue"
+import { mkdir, symlink, writeFile } from "node:fs/promises"
+import { join } from "node:path"
+import { tmpdir } from "../../fixture/fixture"
 
 function fakeConn() {
   const sent: any[] = []
@@ -3915,6 +3918,243 @@ describe("RemoteSender slash commands", () => {
     }
   })
 
+  test("create_session with cloneFromKiloSessionId imports in-process, attaches, and never creates", async () => {
+    const { conn, sent } = fakeConn()
+    const dirs: string[] = []
+    const importCalls: string[] = []
+    const createCalls: unknown[] = []
+    const attachCalls: SessionID[] = []
+    const order: string[] = []
+    const importedId = SessionID.make("ses_imported")
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_fresh"), directory: "/workspace/project-a" } as any
+        },
+      },
+      attachSession: async (input) => {
+        attachCalls.push(input)
+        order.push("attach")
+      },
+      importFromCloud: async (cloneId) => {
+        importCalls.push(cloneId)
+        return {
+          session: { id: importedId, directory: "/workspace/project-a" } as any,
+          finalize: async () => {
+            order.push("finalize")
+          },
+        }
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_clone")
+    sender.handle({
+      type: "command",
+      id: "req_clone",
+      command: "create_session",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1, cloneFromKiloSessionId: "ses_cloud" },
+    })
+    await response.promise
+    response.restore()
+
+    expect(dirs).toEqual(["/workspace/project-a"])
+    expect(importCalls).toEqual(["ses_cloud"])
+    expect(createCalls).toHaveLength(0)
+    expect(attachCalls).toEqual([importedId])
+    expect(order).toEqual(["attach", "finalize"])
+    expect(sent).toEqual([{ type: "response", id: "req_clone", result: { protocolVersion: 1, sessionID: importedId } }])
+  })
+
+  test("create_session with cloneFromKiloSessionId and no importFromCloud seam rejects without creating", () => {
+    const { conn, sent } = fakeConn()
+    const createCalls: unknown[] = []
+    const attachCalls: SessionID[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_fresh"), directory: "/workspace/project-a" } as any
+        },
+      },
+      attachSession: async (input) => {
+        attachCalls.push(input)
+      },
+      // importFromCloud intentionally omitted — a missing seam must fail closed.
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_clone_no_seam",
+      command: "create_session",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1, cloneFromKiloSessionId: "ses_cloud" },
+    })
+
+    expect(sent).toEqual([{ type: "response", id: "req_clone_no_seam", error: "invalid create_session command" }])
+    expect(createCalls).toHaveLength(0)
+    expect(attachCalls).toHaveLength(0)
+  })
+
+  test("create_session clone import failure maps each failure to its exact literal and never creates or attaches", async () => {
+    const cases: Array<{ error: unknown; wire: string }> = [
+      { error: { status: 404, error: "Session not found in cloud" }, wire: "cloud session not found" },
+      { error: { status: 401, error: "Import failed: 401" }, wire: "cloud session import unauthorized" },
+      {
+        error: { _tag: "CloudSessionImportUnauthorized", message: "missing token" },
+        wire: "cloud session import unauthorized",
+      },
+      { error: { status: 403, error: "Import failed: 403" }, wire: "cloud session import access denied" },
+      { error: new Error("boom"), wire: "cloud session import failed" },
+    ]
+    for (const { error, wire } of cases) {
+      const { conn, sent } = fakeConn()
+      const createCalls: unknown[] = []
+      const attachCalls: SessionID[] = []
+      const removeCalls: string[] = []
+      const sender = RemoteSender.create({
+        conn,
+        directory: "/tmp/process-default",
+        log: nolog,
+        subscribe: fakeBus().subscribe,
+        provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+        session: {
+          get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
+          children: async () => [],
+          create: async (input) => {
+            createCalls.push(input)
+            return { id: SessionID.make("ses_fresh") } as any
+          },
+          remove: async (id) => {
+            removeCalls.push(id)
+          },
+        },
+        attachSession: async (input) => {
+          attachCalls.push(input)
+        },
+        importFromCloud: async () => {
+          throw error
+        },
+      })
+
+      const response = expectResponse(conn, sent, "req_clone_fail")
+      sender.handle({
+        type: "command",
+        id: "req_clone_fail",
+        command: "create_session",
+        sessionId: "ses_current",
+        data: { protocolVersion: 1, cloneFromKiloSessionId: "ses_cloud" },
+      })
+      await response.promise
+      response.restore()
+
+      expect(createCalls).toHaveLength(0)
+      expect(attachCalls).toHaveLength(0)
+      expect(removeCalls).toHaveLength(0)
+      expect(sent).toEqual([{ type: "response", id: "req_clone_fail", error: wire }])
+    }
+  })
+
+  test("create_session clone attach failure rolls back the imported session and never reports success", async () => {
+    const { conn, sent } = fakeConn()
+    const removeCalls: string[] = []
+    const importedId = SessionID.make("ses_imported")
+    const createCalls: unknown[] = []
+    const finalizeCalls: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_fresh") } as any
+        },
+        remove: async (id) => {
+          removeCalls.push(id)
+        },
+      },
+      attachSession: async () => {
+        throw new Error("attach failed")
+      },
+      importFromCloud: async () => ({
+        session: { id: importedId, directory: "/workspace/project-a" } as any,
+        finalize: async () => {
+          finalizeCalls.push("finalize")
+        },
+      }),
+    })
+
+    const response = expectResponse(conn, sent, "req_clone_attach_fail")
+    sender.handle({
+      type: "command",
+      id: "req_clone_attach_fail",
+      command: "create_session",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1, cloneFromKiloSessionId: "ses_cloud" },
+    })
+    await response.promise
+    response.restore()
+
+    expect(createCalls).toHaveLength(0)
+    expect(removeCalls).toEqual([importedId])
+    expect(finalizeCalls).toHaveLength(0)
+    expect(sent).toEqual([{ type: "response", id: "req_clone_attach_fail", error: "failed to create session" }])
+  })
+
+  test("create_session clone still rejects unknown fields under strict schema", () => {
+    const { conn, sent } = fakeConn()
+    const createCalls: unknown[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/tmp" }) as any,
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_x"), directory: "/tmp" } as any
+        },
+      },
+      attachSession: async () => {},
+      importFromCloud: async () => ({
+        session: { id: SessionID.make("ses_imported"), directory: "/tmp" } as any,
+        finalize: async () => {},
+      }),
+    })
+    sender.handle({
+      type: "command",
+      id: "req_clone_strict",
+      command: "create_session",
+      data: { protocolVersion: 1, cloneFromKiloSessionId: "ses_cloud", unknown: true },
+    })
+    expect(sent).toEqual([{ type: "response", id: "req_clone_strict", error: "invalid create_session command" }])
+    expect(createCalls).toHaveLength(0)
+  })
+
   test("system session.renamed applies setTitle and marks adoption", async () => {
     const { conn } = fakeConn()
     const titles: { sessionID: string; title: string }[] = []
@@ -4065,6 +4305,378 @@ describe("RemoteSender slash commands", () => {
     expect(sawMarkInsideSetTitle).toBe(true)
     // Production catch must clear the re-mark so a later local write is not skipped.
     expect(consumeRenameAdoption(sid, "Cloud title")).toBe(false)
+  })
+
+  // k1: list_directories — one level, directories only, no recursion, symlink
+  // escapes skipped.
+  test("list_directories lists one level of directories at launch and omits files", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await mkdir(join(dir, "alpha"))
+        await mkdir(join(dir, "beta", "nested"), { recursive: true })
+        await writeFile(join(dir, "file.txt"), "x")
+      },
+    })
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    const response = expectResponse(conn, sent, "req_list")
+    sender.handle({ type: "command", id: "req_list", command: "list_directories", data: { protocolVersion: 1 } })
+    await response.promise
+    response.restore()
+
+    const result = sent[0]?.result
+    expect(result.protocolVersion).toBe(1)
+    expect(result.path).toBe("")
+    expect(result.directories.map((d: any) => d.name).sort()).toEqual(["alpha", "beta"])
+    expect(result.directories.map((d: any) => d.name)).not.toContain("file.txt")
+    expect(result.directories.find((d: any) => d.name === "beta")?.path).toBe("beta")
+  })
+
+  test("list_directories lists only the requested child level, not grandchildren", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await mkdir(join(dir, "beta", "nested", "deep"), { recursive: true })
+        await writeFile(join(dir, "beta", "nested", "file.txt"), "x")
+      },
+    })
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    const response = expectResponse(conn, sent, "req_child")
+    sender.handle({
+      type: "command",
+      id: "req_child",
+      command: "list_directories",
+      data: { protocolVersion: 1, path: "beta" },
+    })
+    await response.promise
+    response.restore()
+
+    expect(sent).toEqual([
+      {
+        type: "response",
+        id: "req_child",
+        result: { protocolVersion: 1, path: "beta", directories: [{ name: "nested", path: "beta/nested" }] },
+      },
+    ])
+  })
+
+  test("list_directories rejects a relative path outside the launch directory", async () => {
+    await using tmp = await tmpdir()
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_escape",
+      command: "list_directories",
+      data: { protocolVersion: 1, path: ".." },
+    })
+
+    expect(sent).toEqual([{ type: "response", id: "req_escape", error: "invalid list_directories path" }])
+  })
+
+  test("list_directories omits a symlink child that resolves outside the launch directory", async () => {
+    await using outside = await tmpdir({
+      init: async (dir) => {
+        await mkdir(join(dir, "escape"))
+      },
+    })
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await mkdir(join(dir, "alpha"))
+        await symlink(join(outside.path, "escape"), join(dir, "link-out"))
+      },
+    })
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    const response = expectResponse(conn, sent, "req_symlink")
+    sender.handle({ type: "command", id: "req_symlink", command: "list_directories", data: { protocolVersion: 1 } })
+    await response.promise
+    response.restore()
+
+    const names = sent[0]?.result.directories.map((d: any) => d.name)
+    expect(names).toContain("alpha")
+    expect(names).not.toContain("link-out")
+  })
+
+  test("list_directories keeps a symlink to a contained directory and omits a symlink to a file", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await mkdir(join(dir, "real-dir"))
+        await writeFile(join(dir, "real-file.txt"), "x")
+        await symlink(join(dir, "real-dir"), join(dir, "link-dir"))
+        await symlink(join(dir, "real-file.txt"), join(dir, "link-file"))
+      },
+    })
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    const response = expectResponse(conn, sent, "req_symlink_in")
+    sender.handle({ type: "command", id: "req_symlink_in", command: "list_directories", data: { protocolVersion: 1 } })
+    await response.promise
+    response.restore()
+
+    const names = sent[0]?.result.directories.map((d: any) => d.name).sort()
+    expect(names).toEqual(["link-dir", "real-dir"])
+    expect(names).not.toContain("link-file")
+    expect(names).not.toContain("real-file.txt")
+  })
+
+  test("list_directories omits a symlink whose canonical path equals the launch directory", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await mkdir(join(dir, "alpha"))
+        await symlink(dir, join(dir, "link-self"))
+      },
+    })
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    const response = expectResponse(conn, sent, "req_self_symlink")
+    sender.handle({
+      type: "command",
+      id: "req_self_symlink",
+      command: "list_directories",
+      data: { protocolVersion: 1 },
+    })
+    await response.promise
+    response.restore()
+
+    const directories = sent[0]?.result.directories
+    expect(directories.map((d: any) => d.name).sort()).toEqual(["alpha"])
+    expect(directories.every((d: any) => d.path !== "")).toBe(true)
+  })
+
+  test("list_directories caps the response at MAX_DIRECTORIES entries", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        for (let i = 0; i < RemoteCommand.MAX_DIRECTORIES + 5; i++) {
+          await mkdir(join(dir, `dir-${String(i).padStart(3, "0")}`))
+        }
+      },
+    })
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    const response = expectResponse(conn, sent, "req_cap")
+    sender.handle({ type: "command", id: "req_cap", command: "list_directories", data: { protocolVersion: 1 } })
+    await response.promise
+    response.restore()
+
+    const directories = sent[0]?.result.directories
+    expect(directories).toHaveLength(RemoteCommand.MAX_DIRECTORIES)
+  })
+
+  test("list_directories rejects an invalid request", () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    sender.handle({ type: "command", id: "req_bad", command: "list_directories", data: { protocolVersion: 2 } })
+
+    expect(sent).toEqual([{ type: "response", id: "req_bad", error: "invalid list_directories request" }])
+  })
+
+  test("list_directories does not shadow the unknown-command fallback for other names", () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    sender.handle({ type: "command", id: "req_unknown", command: "list_dirs", data: {} } as RemoteProtocol.Command)
+
+    expect(sent).toEqual([{ type: "response", id: "req_unknown", error: "unknown command: list_dirs" }])
+  })
+
+  // k1: create_session.directory — contained relative path override.
+  test("create_session starts in the contained relative directory when directory is set", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await mkdir(join(dir, "child"))
+      },
+    })
+    const { conn, sent } = fakeConn()
+    const dirs: string[] = []
+    const attachCalls: SessionID[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      session: {
+        get: async () => {
+          throw new Error("session.get must not be called when directory overrides")
+        },
+        children: async () => [],
+        create: async () => ({ id: SessionID.make("ses_dir"), directory: join(tmp.path, "child") }) as any,
+      },
+      attachSession: async (input) => {
+        attachCalls.push(input)
+        return
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_dir")
+    sender.handle({
+      type: "command",
+      id: "req_dir",
+      command: "create_session",
+      data: { protocolVersion: 1, directory: "child" },
+    })
+    await response.promise
+    response.restore()
+
+    expect(dirs).toEqual([join(tmp.path, "child")])
+    expect(attachCalls).toEqual([SessionID.make("ses_dir")])
+    expect(sent).toEqual([{ type: "response", id: "req_dir", result: { protocolVersion: 1, sessionID: "ses_dir" } }])
+  })
+
+  test("create_session rejects an escaped or absolute directory and does not create a session", async () => {
+    await using tmp = await tmpdir()
+    const { conn, sent } = fakeConn()
+    const createCalls: unknown[] = []
+    const attachCalls: unknown[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async () => {
+          throw new Error("session.get must not be called")
+        },
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_x"), directory: tmp.path } as any
+        },
+      },
+      attachSession: async (input) => {
+        attachCalls.push(input)
+        return
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_escape",
+      command: "create_session",
+      data: { protocolVersion: 1, directory: ".." },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_abs",
+      command: "create_session",
+      data: { protocolVersion: 1, directory: "/tmp" },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_escape", error: "invalid create_session directory" },
+      { type: "response", id: "req_abs", error: "invalid create_session directory" },
+    ])
+    expect(createCalls).toEqual([])
+    expect(attachCalls).toEqual([])
+  })
+
+  test("create_session rejects a missing target under a symlinked ancestor that escapes", async () => {
+    await using outside = await tmpdir()
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await symlink(outside.path, join(dir, "link"), "dir")
+      },
+    })
+    const { conn, sent } = fakeConn()
+    const provideCalls: unknown[] = []
+    const createCalls: unknown[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: tmp.path,
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        provideCalls.push(input.directory)
+        return input.fn()
+      },
+      session: {
+        get: async () => {
+          throw new Error("session.get must not be called")
+        },
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_x"), directory: tmp.path } as any
+        },
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_missing",
+      command: "create_session",
+      data: { protocolVersion: 1, directory: "link/missing" },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_list_missing",
+      command: "list_directories",
+      data: { protocolVersion: 1, path: "link/missing" },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_missing", error: "invalid create_session directory" },
+      { type: "response", id: "req_list_missing", error: "invalid list_directories path" },
+    ])
+    expect(provideCalls).toEqual([])
+    expect(createCalls).toEqual([])
   })
 })
 // kilocode_change end

@@ -385,6 +385,88 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `session list visibility round trips beside names and order`() {
+        val file = repo.resolve(".kilo").resolve("jetbrains.json")
+        val path = "/repo/.kilo/worktrees/feature-x"
+
+        writeWorktreeState(file, WorktreeState(mapOf(path to "Feature"), listOf(path), mapOf(path to true, "/repo" to false)))
+
+        val state = readWorktreeState(file)
+        assertEquals(mapOf(path to true, "/repo" to false), state.sessionList)
+        assertEquals(mapOf(path to "Feature"), state.names)
+        assertEquals(listOf(path), state.worktreeOrder)
+
+        // A file that only ever recorded visibility must not be mistaken for the legacy name map.
+        Files.writeString(file, """{"sessionList":{"$path":true}}""")
+        assertEquals(mapOf(path to true), readWorktreeState(file).sessionList)
+        assertTrue(readWorktreeState(file).names.isEmpty())
+    }
+
+    @Test
+    fun `reconcile drops visibility for vanished worktrees but keeps the main tree`() {
+        val main = "/repo"
+        val live = "/repo/.kilo/worktrees/live"
+        val dead = "/repo/.kilo/worktrees/dead"
+        val state = WorktreeState(sessionList = mapOf(main to true, live to false, dead to true))
+
+        val next = state.reconcile(listOf(live), listOf(main, live))
+
+        assertEquals(mapOf(main to true, live to false), next.sessionList)
+    }
+
+    @Test
+    fun `session list visibility is unknown until set and then persists per worktree`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val main = api.list(repo.toString()).worktrees.single { it.main }
+
+        assertNull(api.sessionList(created.path), "a fresh worktree has no stored choice")
+        assertNull(api.sessionList(main.path))
+
+        assertTrue(api.setSessionList(created.path, true))
+        assertTrue(api.setSessionList(main.path, false))
+
+        assertEquals(true, api.sessionList(created.path))
+        assertEquals(false, api.sessionList(main.path))
+        // The main working tree keeps its entry across a list, which reconciles the file.
+        api.list(repo.toString())
+        assertEquals(false, api.sessionList(main.path))
+    }
+
+    @Test
+    fun `create and list never record session list visibility`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+
+        api.list(repo.toString())
+
+        assertTrue(readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).sessionList.isEmpty())
+        assertNull(api.sessionList(created.path))
+    }
+
+    @Test
+    fun `remove prunes session list visibility`() = runBlocking {
+        initRepo()
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
+        val second = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("alpha")).worktree)
+        assertTrue(api.setSessionList(first.path, true))
+        assertTrue(api.setSessionList(second.path, true))
+
+        assertTrue(api.remove(repo.toString(), first.path, first.branch).ok)
+
+        assertEquals(
+            mapOf(second.path to true),
+            readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).sessionList,
+        )
+    }
+
+    @Test
+    fun `session list visibility reports nothing outside a repo`() = runBlocking {
+        assertNull(api.sessionList(repo.toString()))
+        assertFalse(api.setSessionList(repo.toString(), true))
+    }
+
+    @Test
     fun `rename persists a custom worktree name and list overlays it`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)

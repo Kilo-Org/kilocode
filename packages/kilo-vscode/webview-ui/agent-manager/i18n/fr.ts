@@ -64,8 +64,6 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Ouvrir le Terminal",
   "agentManager.tab.newOptions": "Plus d'options de nouvel onglet",
-  "agentManager.tabsMenu.status.waiting": "Attente",
-  "agentManager.tabsMenu.status.retry": "Réessai",
   "agentManager.sidebarSearch.label": "Rechercher des Worktrees et des sessions",
   "agentManager.sidebarSearch.scope":
     "Recherche dans l'espace de travail local, les sessions locales, les Worktrees et leurs sessions",
