@@ -1473,6 +1473,19 @@ export const SessionProvider: ParentComponent = (props) => {
       // proxy creation for each message object dominated the trace (~900ms).
       // "prepend" / "reconcile": reconcile to preserve existing proxies.
       if (mode === "replace") {
+        const keep = new Set(merged.map((message) => message.id))
+        const removed = current.filter((message) => !keep.has(message.id)).map((message) => message.id)
+        clearHiddenErrors(removed)
+        setStore(
+          "parts",
+          produce((parts) => {
+            for (const id of removed) {
+              stash.remove(id)
+              optimisticParts.delete(id)
+              delete parts[id]
+            }
+          }),
+        )
         setStore("messages", sessionID, merged)
       } else {
         setStore("messages", sessionID, reconcile(merged, { key: "id" }))
