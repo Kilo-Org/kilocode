@@ -48,6 +48,17 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `branch status skips a missing directory without caching the empty result`() = runBlocking {
+        initRepo()
+        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("late")
+        assertEquals("", api.branchStatus(dir.toString()).branch)
+
+        git(repo, "worktree", "add", "-b", "feature/x", dir.toString())
+
+        assertEquals("feature/x", api.branchStatus(dir.toString()).branch)
+    }
+
+    @Test
     fun `stats syncs away a worktree deleted from disk`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)

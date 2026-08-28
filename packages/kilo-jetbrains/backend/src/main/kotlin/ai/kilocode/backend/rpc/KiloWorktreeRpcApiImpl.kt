@@ -189,11 +189,17 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val now = System.currentTimeMillis()
         prs[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
-        // Sync the worktree list before any git/gh probe so a worktree that was added and then
-        // deleted on disk is pruned instead of probed from a directory that no longer exists.
-        val all = sync(root) ?: return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
+        // A gone directory reports nothing and is not cached, so a real availability problem found
+        // from a live directory still reaches the UI.
+        if (!Files.isDirectory(root)) {
+            LOG.info("pr status skipped, directory does not exist: $root")
+            return@withContext WorktreePrListDto()
+        }
         val available = ghAvailable(root)
         if (available != GhAvailability.OK) return@withContext WorktreePrListDto(available).also { prs[directory] = Timed(now, it) }
+        // Sync the worktree list before the per-worktree lookups so a worktree that was added and
+        // then deleted on disk is pruned instead of resolved from a directory that no longer exists.
+        val all = sync(root) ?: return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
         val items = prTargets(all)
         val base = baseBranch(all)
         var status = GhAvailability.OK
