@@ -595,6 +595,7 @@ export class KiloConnectionService {
         for (const q of qs) {
           const { error } = await client.question.reject({ requestID: q.id, directory: dir })
           if (error && !isNotFound(error)) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
+          this.clearQuestionDirectory(q.id)
         }
       }
     })
