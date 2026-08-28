@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "プロバイダーに接続",
 
+  "session.activity.waiting": "回答または承認を待っています。",
+  "session.activity.error": "エラーまたは接続切断。",
+  "session.activity.retry": "自動的に再試行中。",
+  "session.activity.busy": "進行中。",
+  "session.activity.done": "ターン完了。",
+  "session.activity.idle": "実行されていません。",
+
   "command.session.new": "新しいセッション",
   "command.session.show.changes": "変更を表示",
   "command.review.toggle": "レビューの切り替え",
@@ -174,8 +181,11 @@ export const dict = {
   "common.saving": "保存中...",
   "common.default": "デフォルト",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Worktreeを検索",
   "prompt.thinking.tooltip": "推論の強度",
   "prompt.action.send": "送信",
+  "prompt.action.continue": "続行",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
@@ -1053,6 +1063,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
   "settings.context.compaction.title": "圧縮",
+  "settings.context.compactionModel.title": "圧縮モデル",
+  "settings.context.compactionModel.description":
+    "自動および手動の圧縮に使用するモデル。チャットモデルを使用するには未設定のままにしてください。コスト、速度、要約の品質はモデルによって異なります。",
+  "settings.context.compactionModel.useChatModel": "チャットモデルを使用",
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
@@ -1238,6 +1252,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} タスク完了",
   "task.backgroundAgents.running.one": "バックグラウンドエージェント 1 件",
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
+  "task.backgroundAgents.more": "+{{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { parseServerPort } from "../../src/services/cli-backend/server-utils"
+import { parseServerPort, scanServerPort } from "../../src/services/cli-backend/server-utils"
 import {
   resolveServerCwd,
   resolveIndexingEnv,
@@ -60,6 +60,51 @@ describe("parseServerPort", () => {
   it("matches only first occurrence when multiple ports present", () => {
     const output = "listening on http://127.0.0.1:3000 and http://127.0.0.1:4000"
     expect(parseServerPort(output)).toBe(3000)
+  })
+
+  it("waits for the complete startup line before resolving a split port", () => {
+    const first = "kilo server listening on http://127.0.0.1:43"
+
+    expect(parseServerPort(first, true)).toBeNull()
+    expect(parseServerPort(`${first}123\n`, true)).toBe(43123)
+  })
+
+  it("detects a startup announcement split across stdout chunks", () => {
+    const first = "kilo server listening on http://127.0."
+    const second = "0.1:43123\n"
+
+    expect(parseServerPort(first, true)).toBeNull()
+    expect(parseServerPort(`${first}${second}`, true)).toBe(43123)
+  })
+
+  it("accepts complete Windows startup lines", () => {
+    expect(parseServerPort("kilo server listening on http://127.0.0.1:43123\r\n", true)).toBe(43123)
+  })
+})
+
+describe("scanServerPort", () => {
+  it("detects startup announcements split across stdout chunks", () => {
+    const first = scanServerPort("", "kilo server listening on http://127.0.", 1024)
+    const second = scanServerPort(first.output, "0.1:43123\n", 1024)
+
+    expect(first.port).toBeNull()
+    expect(second.port).toBe(43123)
+  })
+
+  it("waits for split port digits before resolving startup", () => {
+    const first = scanServerPort("", "kilo server listening on http://127.0.0.1:43", 1024)
+    const second = scanServerPort(first.output, "123\n", 1024)
+
+    expect(first.port).toBeNull()
+    expect(second.port).toBe(43123)
+  })
+
+  it("preserves startup announcements followed by oversized stdout chunks", () => {
+    const chunk = `kilo server listening on http://127.0.0.1:43123\n${"x".repeat(1024)}`
+    const state = scanServerPort("", chunk, 1024)
+
+    expect(state.port).toBe(43123)
+    expect(state.output).toHaveLength(1024)
   })
 })
 

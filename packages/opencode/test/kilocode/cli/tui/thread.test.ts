@@ -10,7 +10,7 @@ import {
   resolveThreadDirectory,
   runEmbeddedRemoteExitBridge,
 } from "../../../../src/cli/cmd/tui"
-import { preload } from "../../../../src/kilocode/cli/cmd/tui"
+import { preload, validate } from "../../../../src/kilocode/cli/cmd/tui"
 import { KiloTuiThreadDaemon } from "../../../../src/kilocode/cli/cmd/tui/thread"
 import { DaemonClient } from "../../../../src/kilocode/daemon/client"
 
@@ -19,6 +19,14 @@ afterEach(() => {
 })
 
 describe("kilo tui thread", () => {
+  test("starts fresh sessions without requesting session validation", async () => {
+    await expect(validate({ url: "http://127.0.0.1:0" })).resolves.toBeUndefined()
+  })
+
+  test("still rejects invalid IDs when resuming a session", async () => {
+    await expect(validate({ url: "http://127.0.0.1:0", sessionID: "invalid" })).rejects.toThrow("Invalid session ID")
+  })
+
   test("skips preload resolver invocation in compiled mode", () => {
     let calls = 0
 

@@ -52,6 +52,31 @@ describe("per-session variant selection", () => {
     expect(getAgentVariant(store, model, { variants: { low: {}, high: {} } }, "ask")).toBe("high")
   })
 
+  it("falls back to the configured mode variant", () => {
+    expect(getAgentVariant({}, model, { variants: { high: {}, max: {} } }, "code", "max")).toBe("max")
+  })
+
+  it.each(["anthropic/claude-sonnet-4", variantKey(model, "code")])(
+    "prefers the configured variant over the remembered preference %s",
+    (key) => {
+      const store = { [key]: "high" }
+      expect(getVariant(store, model, ["high", "max"], "code", "pending-new", "max")).toBe("max")
+      expect(getAgentVariant(store, model, { variants: { high: {}, max: {} } }, "code", "max")).toBe("max")
+    },
+  )
+
+  it.each(["low", ""])("preserves a session choice %s above configured and remembered variants", (value) => {
+    const store = {
+      [variantKey(model, "code")]: "high",
+      [variantKey(model, "code", "session-a")]: value,
+    }
+    expect(getVariant(store, model, ["low", "high", "max"], "code", "session-a", "max")).toBe(value || undefined)
+  })
+
+  it("ignores a configured variant that the model does not support", () => {
+    expect(getAgentVariant({}, model, { variants: { low: {}, high: {} } }, "code", "max")).toBeUndefined()
+  })
+
   it("uses the model default when no variant is selected", () => {
     expect(getVariant({}, model, variants, "code")).toBeUndefined()
     expect(getVariant({ [variantKey(model, "code")]: "" }, model, variants, "code")).toBeUndefined()

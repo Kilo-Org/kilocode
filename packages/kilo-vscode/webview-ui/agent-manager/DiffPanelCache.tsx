@@ -5,7 +5,7 @@ import type { ReviewComposer } from "../diff-viewer/review-annotations"
 import { DiffPanel } from "./DiffPanel"
 import { diffDataKey } from "./worktree-diffs"
 
-const CACHE_SIZE = 4
+const CACHE_SIZE = 16
 
 interface Entry {
   key: string

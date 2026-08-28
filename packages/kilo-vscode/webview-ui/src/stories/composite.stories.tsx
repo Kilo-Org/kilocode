@@ -11,7 +11,10 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage as SDKAssistantMessage, ReasoningPart, TextPart, ToolPart } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
-import { VscodeSessionTurn } from "../components/chat/VscodeSessionTurn"
+import { For } from "solid-js"
+import { TranscriptRowView } from "../components/chat/TranscriptRow"
+import { messageTurns } from "../context/session-queue"
+import { transcriptRows } from "../context/transcript-rows"
 import { ChatView } from "../components/chat/ChatView"
 import { Part } from "@kilocode/kilo-ui/message-part"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
@@ -1380,20 +1383,28 @@ export const DiffSummaryCollapsed: Story = {
           {
             id: USER_MSG_ID,
             sessionID: SESSION_ID,
-            role: "user",
+            role: "user" as const,
+            createdAt: new Date(now - 10000).toISOString(),
             time: { created: now - 10000 },
             summary: { diffs: mockDiffs },
           },
-          { ...baseAssistantMessage, parentID: USER_MSG_ID },
+          { ...baseAssistantMessage, parentID: USER_MSG_ID, createdAt: new Date(now - 9000).toISOString() },
         ],
       },
       part: {
         [USER_MSG_ID]: [
-          { id: "part-user-text", sessionID: SESSION_ID, messageID: USER_MSG_ID, type: "text", text: "Fix the bug" },
+          {
+            id: "part-user-text",
+            sessionID: SESSION_ID,
+            messageID: USER_MSG_ID,
+            type: "text" as const,
+            text: "Fix the bug",
+          },
         ],
         [ASST_MSG_ID]: [textPart],
       },
     }
+    const parts = new Map(Object.entries(data.part))
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
       messages: () => data.message[SESSION_ID],
@@ -1419,13 +1430,9 @@ export const DiffSummaryCollapsed: Story = {
         <ServerContext.Provider value={server as any}>
           <SessionContext.Provider value={session as any}>
             <div style={{ width: "380px", padding: "12px" }}>
-              <VscodeSessionTurn
-                turn={{
-                  id: USER_MSG_ID,
-                  user: data.message[SESSION_ID][0] as any,
-                  assistant: [data.message[SESSION_ID][1] as any],
-                }}
-              />
+              <For each={transcriptRows(messageTurns(data.message[SESSION_ID]), (id) => parts.get(id) ?? [])}>
+                {(row) => <TranscriptRowView row={row} />}
+              </For>
             </div>
           </SessionContext.Provider>
         </ServerContext.Provider>

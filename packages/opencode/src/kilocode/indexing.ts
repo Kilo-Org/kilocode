@@ -1,5 +1,6 @@
 import z from "zod"
 import path from "path"
+import { realpathSync } from "node:fs"
 import { Effect, Schema } from "effect"
 import { type IndexingTelemetryEvent, type VectorStoreSearchResult } from "@kilocode/kilo-indexing/engine"
 import { toIndexingConfigInput, type IndexingConfig } from "@kilocode/kilo-indexing/config"
@@ -7,6 +8,7 @@ import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { IndexingStatus, disabledIndexingStatus } from "@kilocode/kilo-indexing/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
+import { allowed, message } from "@opencode-ai/core/kilocode/fff"
 import { Instance } from "@/kilocode/instance"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
@@ -32,6 +34,7 @@ const consent = new Map<string, boolean>()
 const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for this workspace.")
 const noWorkspace = () =>
   disabledIndexingStatus("Codebase indexing is disabled because no workspace folder is open in VS Code.")
+const unsafeRoot = () => disabledIndexingStatus(message)
 const noConsent = () =>
   disabledIndexingStatus("Codebase indexing is disabled until you enable it for this project in Kilo Settings.")
 
@@ -264,6 +267,15 @@ export namespace KiloIndexing {
 
   const boot = async (hit: Cache): Promise<Entry> => {
     const dir = Instance.directory
+    if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
+      return track(hit, await inert(() => noWorkspace()))
+    }
+    try {
+      if (!allowed(realpathSync.native(dir))) return track(hit, await inert(() => unsafeRoot()))
+    } catch (err) {
+      log.warn("indexing directory resolution failed", { err, workspacePath: dir })
+      return track(hit, await inert(() => failed(err)))
+    }
     const startup = await AppRuntime.runPromise(
       Effect.gen(function* () {
         const baseline = yield* baselineDirectory(dir)
@@ -275,9 +287,6 @@ export namespace KiloIndexing {
     const cfg = startup.cfg
     const project = (await AppRuntime.runPromise(primaryWorktree(dir))) ?? dir
     projects.set(dir, project)
-    if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
-      return track(hit, await inert(() => noWorkspace()))
-    }
     if (process.env["KILO_PLATFORM"] === "vscode" && !consent.get(project)) {
       return track(hit, await inert(() => noConsent()))
     }

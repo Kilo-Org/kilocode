@@ -1472,6 +1472,38 @@ class KiloCliDataParserTest {
             val result = KiloCliDataParser.parseSession(raw)
             assertEquals("ses_min", result.id)
             assertNull(result.summary)
+            assertNull(result.share)
+        }
+
+        @Test
+        fun `parseSession - reads the share url`() {
+            val raw = """{
+                "id": "ses_shared",
+                "projectID": "proj_1",
+                "directory": "/tmp",
+                "title": "Shared",
+                "version": "1",
+                "time": { "created": 0.0, "updated": 0.0 },
+                "share": { "url": "https://app.kilo.ai/s/tok" }
+            }"""
+
+            assertEquals("https://app.kilo.ai/s/tok", KiloCliDataParser.parseSession(raw).share?.url)
+        }
+
+        @Test
+        fun `parseSession - ignores a blank or absent share url`() {
+            fun session(share: String) = """{
+                "id": "ses_x",
+                "projectID": "proj_1",
+                "directory": "/tmp",
+                "title": "T",
+                "version": "1",
+                "time": { "created": 0.0, "updated": 0.0 }
+                $share
+            }"""
+
+            assertNull(KiloCliDataParser.parseSession(session(""", "share": { "url": "" }""")).share)
+            assertNull(KiloCliDataParser.parseSession(session(""", "share": {}""")).share)
         }
 
         // ---- parseMessages ----
@@ -1610,6 +1642,7 @@ class KiloCliDataParserTest {
                 "info": {
                     "id": "m1", "sessionID": "s1", "role": "assistant",
                     "time": { "created": 1.0, "completed": 2.0 },
+                    "finish": "unknown",
                     "tokens": { "input": 100, "output": 50, "reasoning": 10, "cache": { "read": 20, "write": 5 } },
                     "cost": 0.005
                 },
@@ -1624,6 +1657,7 @@ class KiloCliDataParserTest {
             assertEquals(10L, info.tokens?.reasoning)
             assertEquals(20L, info.tokens?.cacheRead)
             assertEquals(5L, info.tokens?.cacheWrite)
+            assertEquals("unknown", info.finish)
             assertEquals(0.005, info.cost)
             assertEquals(2.0, info.time.completed)
         }
