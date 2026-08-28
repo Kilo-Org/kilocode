@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
+import { BrowserClient } from "../../../src/kilocode/browser-task/client"
 import type { ServerWebSocket } from "bun"
 
 function nolog() {
@@ -641,6 +642,147 @@ describe("RemoteWS", () => {
     }
   }
 
+  test("browser frames require fresh negotiation and never enter the legacy reconnect buffer", async () => {
+    await withFakeWebSocket(async (clock) => {
+      const legacy: unknown[] = []
+      const browser: unknown[] = []
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        timers: clock,
+        now: () => clock.now,
+        onMessage: (message) => legacy.push(message),
+        onBrowserMessage: (message) => browser.push(message),
+      })
+      const request = {
+        type: "browser_request",
+        requestId: crypto.randomUUID(),
+        operation: "invoke",
+        owner: { parentSessionId: "ses_parent", parentProof: "1".repeat(64) },
+        providerId: "bp_00000000-0000-4000-8000-000000000001",
+        invocationId: `b1.${Date.now()}.${"2".repeat(64)}`,
+        goal: "Read the page title",
+      } as const
+      const response = {
+        type: "browser_response",
+        requestId: request.requestId,
+        response: {
+          kind: "ack",
+          operation: "invoke",
+          providerId: request.providerId,
+          browserTaskId: "bt_00000000-0000-4000-8000-000000000002",
+          jobId: "bj_00000000-0000-4000-8000-000000000003",
+          invocationId: request.invocationId,
+        },
+      }
+      expect(conn.send(request, { connectedOnly: true })).toBe(false)
+      await flush()
+      const first = FakeWebSocket.instances.at(0)!
+      first.open()
+      expect(conn.send(request, { connectedOnly: true })).toBe(false)
+      first.receive(response)
+      expect(browser).toEqual([])
+      first.receive({ type: "heartbeat_ack" })
+      expect(conn.send(request, { connectedOnly: true })).toBe(false)
+      first.receive({ type: "heartbeat_ack", capabilities: { browserJobsV1: true } })
+      expect(conn.send(request, { connectedOnly: true })).toBe(true)
+      first.receive(response)
+      expect(browser).toEqual([response])
+      expect(legacy).toHaveLength(2)
+      const beat = conn.heartbeat()
+      await flushLong()
+      await beat
+      expect(JSON.parse(first.sent.at(-1)!).capabilities.browserJobsV1).toBe(true)
+      first.disconnect()
+      expect(conn.send(request, { connectedOnly: true })).toBe(false)
+      conn.send({ type: "response", id: "legacy", result: "buffered" })
+      expect(conn.send({ type: "response", id: "connected-only" }, { connectedOnly: true })).toBe(false)
+      clock.advance(1_000)
+      await flush()
+      const second = FakeWebSocket.instances.at(1)!
+      second.open()
+      expect(second.sent.map((value) => JSON.parse(value))).toEqual([
+        { type: "response", id: "legacy", result: "buffered" },
+      ])
+      expect(conn.send(request, { connectedOnly: true })).toBe(false)
+      second.receive({ type: "heartbeat_ack", capabilities: { browserJobsV1: true } })
+      expect(conn.send(request, { connectedOnly: true })).toBe(true)
+      expect(second.sent.filter((value) => JSON.parse(value).type === "browser_request")).toHaveLength(1)
+    })
+  })
+
+  test("browser negotiation preserves immediate instance advertisement on reconnect", async () => {
+    await withFakeWebSocket(async (clock) => {
+      const instance = { name: "headless", projectName: "browser-project", version: "1.2.3" }
+      const browser = BrowserClient.create(() => conn!, { timers: clock, now: () => clock.now })
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [], instance }),
+        log: nolog(),
+        timers: clock,
+        now: () => clock.now,
+        onOpen: () => browser.open(),
+        onDisconnect: () => browser.disconnect(),
+        onBrowserMessage: (message) => browser.handle(message),
+      })
+      await flush()
+      const first = FakeWebSocket.instances.at(0)!
+      first.open()
+      await flushLong()
+      expect(first.sent.map((value) => JSON.parse(value))).toEqual([
+        expect.objectContaining({
+          type: "heartbeat",
+          instance,
+          capabilities: expect.objectContaining({ browserJobsV1: true }),
+        }),
+      ])
+      first.disconnect()
+      clock.advance(1_000)
+      await flush()
+      const second = FakeWebSocket.instances.at(1)!
+      second.open()
+      await flushLong()
+      expect(second.sent.map((value) => JSON.parse(value))).toEqual([
+        expect.objectContaining({
+          type: "heartbeat",
+          instance,
+          capabilities: expect.objectContaining({ browserJobsV1: true }),
+        }),
+      ])
+      browser.close()
+    })
+  })
+
+  test("legacy callbacks reject browser envelopes without logging secret fields", async () => {
+    await withFakeWebSocket(async () => {
+      const cap = capture()
+      const received: unknown[] = []
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: cap.log,
+        onMessage: (message) => received.push(message),
+      })
+      await flush()
+      const socket = FakeWebSocket.instances.at(0)!
+      socket.open()
+      socket.receive({
+        type: "browser_response",
+        requestId: crypto.randomUUID(),
+        response: { kind: "providers", providers: [] },
+        PRIVATE_PROOF: "secret",
+      })
+      socket.receive({ type: "subscribe", sessionId: "legacy" })
+      expect(received).toEqual([{ type: "subscribe", sessionId: "legacy" }])
+      expect(JSON.stringify(cap.calls)).not.toContain("PRIVATE_PROOF")
+      expect(JSON.stringify(cap.calls)).not.toContain("secret")
+    })
+  })
+
   test("AC2a: getToken() rejection schedules a bounded retry and later succeeds", async () => {
     await withFakeWebSocket(async (clock) => {
       let attempt = 0
@@ -816,7 +958,7 @@ describe("RemoteWS", () => {
           heartbeat: 60_000,
           timers: clock,
           now: () => clock.now,
-        timeout: 300_000,
+          timeout: 300_000,
           connectTimeout: 1000,
         })
 
@@ -1103,7 +1245,7 @@ describe("RemoteWS", () => {
           heartbeat: 60_000,
           timers: clock,
           now: () => clock.now,
-        timeout: 300_000,
+          timeout: 300_000,
           onClose: (c) => codes.push(c),
         })
 
@@ -1277,9 +1419,7 @@ describe("RemoteWS", () => {
   test("AC4a: degraded heartbeat preserves the last known-good non-empty session list", async () => {
     await withFakeWebSocket(async (clock) => {
       let mode: "fresh" | "wedge" = "fresh"
-      const knownGoodSessions = [
-        { id: "s1", status: "active" as const, title: "One" },
-      ] as RemoteWS.SessionInfo[]
+      const knownGoodSessions = [{ id: "s1", status: "active" as const, title: "One" }] as RemoteWS.SessionInfo[]
       const getSessions = () =>
         mode === "fresh"
           ? Promise.resolve({ sessions: knownGoodSessions })
@@ -1372,9 +1512,7 @@ describe("RemoteWS", () => {
   test("AC4c: after a timed-out cycle, a later fresh-gather cycle sends fresh sessions", async () => {
     await withFakeWebSocket(async (clock) => {
       let mode: "wedge" | "fresh" = "wedge"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () =>
         mode === "wedge"
           ? new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
@@ -1422,9 +1560,7 @@ describe("RemoteWS", () => {
       let calls = 0
       let mode: "wedge" | "fresh" = "wedge"
       const wedgeResolvers: Array<(v: { sessions: RemoteWS.SessionInfo[] }) => void> = []
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () => {
         calls++
         if (mode === "wedge") {
@@ -1494,9 +1630,7 @@ describe("RemoteWS", () => {
     await withFakeWebSocket(async (clock) => {
       let calls = 0
       let mode: "reject" | "fresh" = "reject"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () => {
         calls++
         return mode === "reject"
@@ -1547,9 +1681,7 @@ describe("RemoteWS", () => {
     await withFakeWebSocket(async (clock) => {
       let calls = 0
       let mode: "throw" | "fresh" = "throw"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () => {
         calls++
         if (mode === "throw") {
@@ -1619,9 +1751,7 @@ describe("RemoteWS", () => {
   test("AC6a: heartbeat() does not resolve on degraded, resolves on the next fresh send", async () => {
     await withFakeWebSocket(async (clock) => {
       let mode: "wedge" | "fresh" = "wedge"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () =>
         mode === "wedge"
           ? new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
@@ -1678,9 +1808,7 @@ describe("RemoteWS", () => {
   test("AC6b: pending heartbeat() survives disconnect+reconnect and resolves on fresh send over the new socket", async () => {
     await withFakeWebSocket(async (clock) => {
       let mode: "wedge" | "fresh" = "wedge"
-      const freshSessions = [
-        { id: "fresh", status: "active" as const, title: "Fresh" },
-      ] as RemoteWS.SessionInfo[]
+      const freshSessions = [{ id: "fresh", status: "active" as const, title: "Fresh" }] as RemoteWS.SessionInfo[]
       const getSessions = () =>
         mode === "wedge"
           ? new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
@@ -1745,8 +1873,7 @@ describe("RemoteWS", () => {
 
   test("AC6c: pending heartbeat() rejects (does not hang) when close() is called", async () => {
     await withFakeWebSocket(async (clock) => {
-      const getSessions = () =>
-        new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {}) // wedge
+      const getSessions = () => new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {}) // wedge
 
       conn = RemoteWS.connect({
         url: "ws://example.test",
@@ -1806,8 +1933,7 @@ describe("RemoteWS", () => {
       const targetSession = { id: "target", status: "active" as const, title: "Target" }
       const listWithout = [otherSession] as RemoteWS.SessionInfo[]
       const listWith = [otherSession, targetSession] as RemoteWS.SessionInfo[]
-      const getSessions = () =>
-        Promise.resolve({ sessions: mode === "without" ? listWithout : listWith })
+      const getSessions = () => Promise.resolve({ sessions: mode === "without" ? listWithout : listWith })
 
       conn = RemoteWS.connect({
         url: "ws://example.test",

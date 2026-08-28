@@ -92,6 +92,24 @@ describe("model network boundaries", () => {
     }),
   )
 
+  for (const mode of ["allow", "deny"] as const) {
+    it.effect(`treats browser_task as opaque network authority in ${mode} mode`, () =>
+      Effect.gen(function* () {
+        const exit = yield* Effect.exit(
+          run(profile(mode), Network.tool(Network.builtin({ id: "browser_task" }), Effect.succeed("browser dispatch"))),
+        )
+        if (mode === "allow") {
+          expect(Exit.isSuccess(exit) && exit.value).toBe("browser dispatch")
+          return
+        }
+        expect(Exit.isFailure(exit)).toBe(true)
+        if (Exit.isFailure(exit)) {
+          expect(Cause.pretty(exit.cause)).toContain("Sandbox denied outbound network access")
+        }
+      }),
+    )
+  }
+
   it.effect("fails closed before opaque network helper tools run", () =>
     Effect.gen(function* () {
       let called = false

@@ -1,4 +1,5 @@
 export const opaque = [
+  { id: "browser_task", file: "kilocode/tool/browser-task.ts" },
   { id: "semantic_search", file: "kilocode/tool/semantic-search.ts" },
   { id: "lsp", file: "tool/lsp.ts" },
 ] as const

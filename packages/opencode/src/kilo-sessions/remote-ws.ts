@@ -26,6 +26,8 @@ export namespace RemoteWS {
       warn: (...args: any[]) => void
     }
     onMessage?: (msg: RemoteProtocol.Inbound) => void
+    /** Opt in without widening the legacy callback contract. */
+    onBrowserMessage?: (msg: RemoteProtocol.BrowserResponse | RemoteProtocol.BrowserEvent) => void
     onOpen?: () => void
     onDisconnect?: () => void
     heartbeat?: number
@@ -52,6 +54,7 @@ export namespace RemoteWS {
   export type Connection = {
     readonly connectionId: string
     send(msg: RemoteProtocol.Outbound): void
+    send(msg: RemoteProtocol.OutboundWithBrowser, options: { connectedOnly: true }): boolean
     /**
      * Resolves when a heartbeat built from a FRESH gather has actually been
      * sent over a live socket. Degraded sends and non-live buffered sends
@@ -97,6 +100,7 @@ export namespace RemoteWS {
     let timer: unknown
     let beat: unknown
     let closed = false
+    let negotiated = false
     const buffer: string[] = []
     let beating: Promise<void> | undefined
     let queued = false
@@ -268,7 +272,11 @@ export namespace RemoteWS {
               send({
                 type: "heartbeat",
                 protocolVersion: InstallationVersion,
-                capabilities: { attachments: true, sessionClone: true },
+                capabilities: {
+                  attachments: true,
+                  sessionClone: true,
+                  ...(options.onBrowserMessage ? { browserJobsV1: true } : {}),
+                },
                 sessions: fresh.sessions,
                 ...(fresh.instance ? { instance: fresh.instance } : {}),
               })
@@ -313,7 +321,11 @@ export namespace RemoteWS {
               send({
                 type: "heartbeat",
                 protocolVersion: InstallationVersion,
-                capabilities: { attachments: true, sessionClone: true },
+                capabilities: {
+                  attachments: true,
+                  sessionClone: true,
+                  ...(options.onBrowserMessage ? { browserJobsV1: true } : {}),
+                },
                 sessions: lastGood ?? [],
               })
               waiters = cycleWaiters.concat(waiters)
@@ -457,6 +469,7 @@ export namespace RemoteWS {
             return
           }
           g.opened = true
+          negotiated = false
           stopConnectDeadline()
           options.log.info("remote-ws connected", { gen: g.id, buffered: buffer.length })
           void withContext(() => options.onOpen?.())
@@ -482,12 +495,24 @@ export namespace RemoteWS {
           }
           const preview = RemoteProtocol.Preview.safeParse(json)
           options.log.info("remote-ws received", { bytes: raw.length, ...preview.data })
-          const parsed = RemoteProtocol.Inbound.safeParse(json)
+          const parsed = (
+            options.onBrowserMessage ? RemoteProtocol.InboundWithBrowser : RemoteProtocol.Inbound
+          ).safeParse(json)
           if (!parsed.success) {
-            options.log.warn("remote-ws message parse failed", { error: parsed.error })
+            options.log.warn("remote-ws message parse failed", { bytes: raw.length })
             return
           }
-          options.onMessage?.(parsed.data)
+          const message = parsed.data
+          if (message.type === "heartbeat_ack") {
+            negotiated =
+              !!options.onBrowserMessage &&
+              RemoteProtocol.NormalizedBrowserCapabilities.parse(message.capabilities).browserJobsV1
+          }
+          if (message.type === "browser_response" || message.type === "browser_event") {
+            if (negotiated) options.onBrowserMessage?.(message)
+            return
+          }
+          options.onMessage?.(message)
         }
 
         socket.onclose = (event) => {
@@ -495,6 +520,7 @@ export namespace RemoteWS {
           stopConnectDeadline()
           options.log.info("remote-ws closed", { code: event.code, reason: event.reason, gen: g.id })
           ws = undefined
+          negotiated = false
           stopHeartbeat()
           stopWatchdog()
           if (closed) return
@@ -530,12 +556,17 @@ export namespace RemoteWS {
       backoff = Math.min(backoff * 2, 60000)
     }
 
-    function send(msg: RemoteProtocol.Outbound) {
+    function send(msg: RemoteProtocol.Outbound): void
+    function send(msg: RemoteProtocol.OutboundWithBrowser, opts: { connectedOnly: true }): boolean
+    function send(msg: RemoteProtocol.OutboundWithBrowser, opts?: { connectedOnly: true }): boolean | void {
+      if (msg.type === "browser_request" && (closed || !negotiated)) return false
       const raw = JSON.stringify(msg)
-      if (ws?.readyState === WebSocket.OPEN) {
+      if (!closed && ws?.readyState === WebSocket.OPEN) {
         ws.send(raw)
-        return
+        return true
       }
+      // Legacy callers retain buffering. Browser work must renegotiate and recover, never flush blindly.
+      if (opts?.connectedOnly || msg.type === "browser_request") return false
       buffer.push(raw)
       if (buffer.length > 200) buffer.shift()
     }

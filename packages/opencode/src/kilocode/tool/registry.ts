@@ -2,6 +2,7 @@ import { RecallTool } from "../../tool/recall"
 import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { BrowserTaskTool } from "./browser-task"
 import { ChartTool } from "./chart"
 import { GenerateImageTool } from "./generate-image"
 import { InteractiveTerminalTool } from "./interactive-terminal"
@@ -75,6 +76,7 @@ export namespace KiloToolRegistry {
       const process = yield* BackgroundProcessTool
       const chart = yield* ChartTool
       const image = yield* GenerateImageTool
+      const browser = yield* BrowserTaskTool
       const terminal = yield* InteractiveTerminalTool
       // The notify_user tool depends on KiloSessions.Service, which the tool-registry layer provides
       // via KiloSessions.defaultLayer (see src/tool/registry.ts). Grabs the service from the surrounding
@@ -83,13 +85,27 @@ export namespace KiloToolRegistry {
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const send = yield* SendFileTool
       if (!notebook)
-        return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send }
+        return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, browser }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, ...tools }
+      return {
+        recall,
+        managerModels,
+        memory,
+        save,
+        manager,
+        process,
+        chart,
+        image,
+        terminal,
+        notify,
+        send,
+        browser,
+        ...tools,
+      }
     })
   }
 
@@ -108,6 +124,7 @@ export namespace KiloToolRegistry {
       terminal?: Tool.Info
       notify: Tool.Info
       send: Tool.Info
+      browser?: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
       notebookExecute?: Tool.Info
@@ -129,6 +146,7 @@ export namespace KiloToolRegistry {
         send: Tool.init(tools.send),
       })
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
+      const browser = tools.browser ? yield* Tool.init(tools.browser) : undefined
       const notebooks =
         tools.notebookRead && tools.notebookEdit && tools.notebookExecute
           ? yield* Effect.all({
@@ -138,7 +156,7 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, terminal, ...notebooks, semantic, notify: base.notify, send: base.send }
+      return { ...base, terminal, browser, ...notebooks, semantic, notify: base.notify, send: base.send }
     })
   }
 
@@ -202,6 +220,7 @@ export namespace KiloToolRegistry {
       terminal?: Tool.Def
       notify: Tool.Def
       send: Tool.Def
+      browser?: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
@@ -227,6 +246,7 @@ export namespace KiloToolRegistry {
         : []),
       tools.notify,
       tools.send,
+      ...(tools.browser ? [tools.browser] : []),
     ]
   }
 

@@ -48,6 +48,7 @@ import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
+import { BrowserClient } from "@/kilocode/browser-task/client"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { provide } = await import("@/kilocode/instance")
@@ -270,7 +271,7 @@ export namespace KiloSessions {
   }
 
   const remoteEnabled = process.env["KILO_REMOTE"] === "1"
-  let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined
+  let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender; browser: BrowserClient.Client } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
   // kilocode_change - K1 W1: module-level instance advertisement flag.
@@ -775,6 +776,7 @@ export namespace KiloSessions {
         return { type: "heartbeat", sessions: advertised, ...(instance ? { instance } : {}) }
       }
 
+      const browser = BrowserClient.create(() => conn)
       const conn = RemoteWS.connect({
         url,
         getToken: kilocodeToken,
@@ -782,29 +784,24 @@ export namespace KiloSessions {
         getSessions,
         log,
         onOpen: () => {
+          // The negotiation heartbeat also preserves immediate instance advertisement on reconnect.
+          browser.open()
           void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: true })
-          // kilocode_change - K1 W1: on reconnect, a headless `kilo remote` host
-          // preserves its module-level advertisement flag but would otherwise not
-          // be re-advertised until the next periodic heartbeat (up to ~10s).
-          // Fire one immediate out-of-band heartbeat when the flag is set.
-          // This is intentionally conditional: tests that do not set the flag
-          // must not see extra heartbeats.
-          if (instanceAdvertisement) {
-            void conn.heartbeat().catch((err) =>
-              log.warn("reconnect advertisement heartbeat failed", {
-                error: String(err),
-              }),
-            )
-          }
         },
         onDisconnect: () => {
+          browser.disconnect()
           void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: !!remote, connected: false })
         },
         onMessage: (msg) => {
-          // Restore the directory context before dispatching an async remote message.
+          if (msg.type === "heartbeat_ack") browser.handle(msg)
+          // Restore the directory context only for the legacy remote sender.
           void provide({ directory, fn: () => sender.handle(msg) })
         },
-        onClose: () => disableRemote(),
+        onBrowserMessage: (msg) => browser.handle(msg),
+        onClose: () => {
+          browser.close()
+          disableRemote()
+        },
       })
 
       const sender = RemoteSender.create({
@@ -851,12 +848,13 @@ export namespace KiloSessions {
       })
 
       if (seq !== remoteSeq) {
+        browser.close()
         sender.dispose()
         conn.close()
         return
       }
 
-      remote = { conn, sender }
+      remote = { conn, sender, browser }
       log.info("remote connection enabled", { connected: conn.connected })
       Telemetry.trackRemoteConnectionOpened()
       void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
@@ -884,11 +882,25 @@ export namespace KiloSessions {
       if (pending) void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
       return
     }
+    remote.browser.close()
     remote.sender.dispose()
     remote.conn.close()
     remote = undefined
     log.info("remote connection disabled")
     void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
+  }
+
+  /** Browser jobs use only the explicitly enabled, authenticated remote connection. */
+  export function browser(): BrowserClient.Client {
+    if (!remote) {
+      throw new BrowserClient.Error({
+        code: "remote_disabled",
+        message:
+          "Remote access is disabled. Sign in with `kilo auth login`, then explicitly enable `/remote`. No session was uploaded or enabled.",
+        retryable: true,
+      })
+    }
+    return remote.browser
   }
 
   export function remoteStatus() {
