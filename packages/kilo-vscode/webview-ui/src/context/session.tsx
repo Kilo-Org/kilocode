@@ -1941,6 +1941,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
+    pendingOptimistic.get(sessionID)?.delete(messageID)
+    finishSubmission(messageID)
     optimisticParts.delete(messageID)
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
     dropMessageTools(sessionID, messageID)
@@ -2741,13 +2743,23 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
-  // Clear local send bookkeeping and request deletion. The message stays visible
-  // until messageRemoved confirms deletion; a false response leaves it in place.
   function deleteQueuedMessage(sessionID: string, messageID: string) {
-    if (!server.isConnected()) return
-    pendingOptimistic.get(sessionID)?.delete(messageID)
-    finishSubmission(messageID)
-    vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
+    if (!server.isConnected()) return Promise.resolve(false)
+    const requestID = crypto.randomUUID()
+    return new Promise<boolean>((resolve) => {
+      const unsubscribe = vscode.onMessage((message) => {
+        if (message.type === "sessionDeleted" && message.sessionID === sessionID) {
+          unsubscribe()
+          resolve(false)
+          return
+        }
+        if (message.type !== "deleteMessageResult" || message.requestID !== requestID) return
+        unsubscribe()
+        if (message.success) handleMessageRemoved(sessionID, messageID)
+        resolve(message.success)
+      })
+      vscode.postMessage({ type: "deleteMessage", sessionID, messageID, requestID })
+    })
   }
 
   function syncSession(sessionID: string, parentSessionID = currentSessionID(), scope: "task" | "inspector" = "task") {
