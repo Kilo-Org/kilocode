@@ -75,6 +75,8 @@ export interface SessionContextValue {
   // Tool parts for a specific session, maintained incrementally for streaming views
   getSessionToolParts: (sessionID: string) => ToolPart[]
   getSessionToolCount: (sessionID: string) => number
+  dismissedBackgroundJobs: (sessionID: string) => ReadonlySet<string>
+  dismissBackgroundJobs: (sessionID: string, ids: string[]) => void
 
   // Hidden after model changes so switching models can clear stale provider errors
   // without removing messages and their checkpoint restore actions.
