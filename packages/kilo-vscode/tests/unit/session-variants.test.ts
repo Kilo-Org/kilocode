@@ -4,7 +4,7 @@ import type { ExtensionMessage, ModelSelection } from "../../webview-ui/src/type
 
 const model: ModelSelection = { providerID: "anthropic", modelID: "claude-sonnet-4" }
 
-function setup(session?: string) {
+function setup(session?: string, configured?: string) {
   const selections: Record<string, string> = {}
   const messages: Array<{ type: string; key?: string; value?: string }> = []
   const order: string[] = []
@@ -17,7 +17,8 @@ function setup(session?: string) {
     selected: () => model,
     session: () => session,
     agent: () => "code",
-    find: () => ({ variants: { low: {}, high: {} } }),
+    configured: () => configured,
+    find: () => ({ variants: { low: {}, high: {}, max: {} } }),
     post: (message) => {
       order.push("post")
       messages.push(message)
@@ -49,6 +50,19 @@ describe("session variants", () => {
       variants: { "agent/code/anthropic/claude-sonnet-4": "high", "session/old/model": "low" },
     })
     expect(state.selections).toEqual({ "agent/code/anthropic/claude-sonnet-4": "high" })
+  })
+
+  it("uses the configured agent variant when no picker selection exists", () => {
+    const state = setup(undefined, "max")
+    expect(state.variants.agent("code", model)).toBe("max")
+    expect(state.variants.current()).toBe("max")
+  })
+
+  it("lets an explicit model default override the configured agent variant", () => {
+    const state = setup(undefined, "max")
+    state.variants.select(undefined)
+    expect(state.variants.agent("code", model)).toBeUndefined()
+    expect(state.variants.current()).toBeUndefined()
   })
 
   it("persists global selections but keeps session selections local", () => {

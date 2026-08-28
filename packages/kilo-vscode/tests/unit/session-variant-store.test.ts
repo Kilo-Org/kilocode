@@ -52,6 +52,15 @@ describe("per-session variant selection", () => {
     expect(getAgentVariant(store, model, { variants: { low: {}, high: {} } }, "ask")).toBe("high")
   })
 
+  it("falls back to the configured mode variant", () => {
+    expect(getAgentVariant({}, model, { variants: { high: {}, max: {} } }, "code", "max")).toBe("max")
+  })
+
+  it("prefers an explicit model default over the configured mode variant", () => {
+    const store = { [variantKey(model, "code")]: "" }
+    expect(getAgentVariant(store, model, { variants: { high: {}, max: {} } }, "code", "max")).toBeUndefined()
+  })
+
   it("uses the model default when no variant is selected", () => {
     expect(getVariant({}, model, variants, "code")).toBeUndefined()
     expect(getVariant({ [variantKey(model, "code")]: "" }, model, variants, "code")).toBeUndefined()

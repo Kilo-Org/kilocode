@@ -489,6 +489,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selected,
     session: currentSessionID,
     agent: agentForScope,
+    configured: (agent) => config().agent?.[agent]?.variant ?? undefined,
     find: provider.findModel,
     post: vscode.postMessage,
     listen: vscode.onMessage,
