@@ -58,6 +58,13 @@ export const dict = {
 
   "command.provider.connect": "اتصال بموفر",
 
+  "session.activity.waiting": "في انتظار إجابة أو موافقة.",
+  "session.activity.error": "حدث خطأ أو فُقد الاتصال.",
+  "session.activity.retry": "إعادة المحاولة تلقائيًا.",
+  "session.activity.busy": "قيد التنفيذ.",
+  "session.activity.done": "اكتمل الدور.",
+  "session.activity.idle": "غير قيد التشغيل.",
+
   "command.session.new": "جلسة جديدة",
   "command.session.show.changes": "إظهار التغييرات",
   "command.review.toggle": "تبديل المراجعة",

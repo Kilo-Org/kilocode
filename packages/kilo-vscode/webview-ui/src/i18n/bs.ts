@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Poveži provajdera",
 
+  "session.activity.waiting": "Čeka se odgovor ili odobrenje.",
+  "session.activity.error": "Greška ili prekinuta veza.",
+  "session.activity.retry": "Automatski novi pokušaj.",
+  "session.activity.busy": "U toku.",
+  "session.activity.done": "Potez završen.",
+  "session.activity.idle": "Ne radi.",
+
   "command.session.new": "Nova sesija",
   "command.session.show.changes": "Prikaži promjene",
   "command.review.toggle": "Prikaži/sakrij pregled",

@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Sağlayıcı bağla",
 
+  "session.activity.waiting": "Yanıt veya onay bekleniyor.",
+  "session.activity.error": "Hata veya bağlantı kaybı.",
+  "session.activity.retry": "Otomatik olarak yeniden deneniyor.",
+  "session.activity.busy": "Devam ediyor.",
+  "session.activity.done": "Tur tamamlandı.",
+  "session.activity.idle": "Çalışmıyor.",
+
   "command.session.new": "Yeni oturum",
   "command.session.show.changes": "Değişiklikleri Göster",
   "command.review.toggle": "İncelemeyi aç/kapat",

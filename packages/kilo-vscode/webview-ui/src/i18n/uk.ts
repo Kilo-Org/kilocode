@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Підключити провайдера",
 
+  "session.activity.waiting": "Очікується відповідь або підтвердження.",
+  "session.activity.error": "Помилка або втрата з'єднання.",
+  "session.activity.retry": "Автоматична повторна спроба.",
+  "session.activity.busy": "Виконується.",
+  "session.activity.done": "Хід завершено.",
+  "session.activity.idle": "Не запущено.",
+
   "command.session.new": "Нова сесія",
   "command.session.show.changes": "Показати зміни",
   "command.review.toggle": "Перемкнути огляд",

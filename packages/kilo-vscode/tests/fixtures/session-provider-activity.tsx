@@ -32,7 +32,8 @@ Object.assign(globalThis, {
 })
 
 const { render } = await import("solid-js/web")
-const { For } = await import("solid-js")
+const { For, createSignal } = await import("solid-js")
+const { WorktreeItem } = await import("../../webview-ui/agent-manager/WorktreeItem")
 const { DragDropProvider, SortableProvider } = await import("@thisbeyond/solid-dnd")
 const { renderTab } = await import("../../webview-ui/agent-manager/tab-rendering")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
@@ -81,6 +82,8 @@ const language = {
 }
 
 const ref = { value: undefined as ReturnType<typeof useSession> | undefined }
+const [operation, setOperation] = createSignal(false)
+const [run, setRun] = createSignal(false)
 const Probe = () => {
   const session = useSession()
   ref.value = session
@@ -105,6 +108,40 @@ const Probe = () => {
       <SortableProvider ids={ids}>
         <For each={ids}>{(id) => renderTab(id, deps)}</For>
       </SortableProvider>
+      <WorktreeItem
+        worktree={{
+          id: "worktree",
+          path: "/test/worktree",
+          branch: "test",
+          parentBranch: "main",
+          createdAt: "2026-01-01T00:00:00.000Z",
+        }}
+        label="Recovery test"
+        active
+        pendingDelete={false}
+        busy={operation()}
+        activity={session.activityFor("root")}
+        runStatus={run() ? { worktreeId: "worktree", state: "running" } : undefined}
+        stale={false}
+        sessions={1}
+        grouped={false}
+        groupStart={false}
+        groupEnd={false}
+        groupSize={0}
+        renaming={false}
+        renameValue=""
+        closeKeybind=""
+        openKeybind=""
+        onClick={() => {}}
+        onDelete={() => {}}
+        onStartRename={() => {}}
+        onRenameInput={() => {}}
+        onCommitRename={() => {}}
+        onCancelRename={() => {}}
+        onRemoveStale={() => {}}
+        onCopyPath={() => {}}
+        onOpen={() => {}}
+      />
     </DragDropProvider>
   )
 }
@@ -145,12 +182,19 @@ const state = (id: string) => {
   assert(value)
   return value.activityFor(id)
 }
+const card = (expected: string) => {
+  const icon = host.querySelector('[data-sidebar-id="worktree"] .am-wt-icon')
+  assert(icon)
+  assert.equal(icon.getAttribute("data-activity"), expected)
+  assert.equal(!!icon.querySelector('[data-component="spinner"]'), expected === "busy" || expected === "retry")
+}
 const check = async (id: string, expected: string) => {
   await settle()
   step.value += 1
   const value = ref.value
   assert(value)
   const actual = state(id)
+  if (id === "root") card(expected)
   const tab = host.querySelector(`[data-tab-id="${id}"] [data-activity]`)
   if (id === "root" || id === "background") assert(tab, `Missing rendered tab for ${id}`)
   if (tab && tab.getAttribute("data-activity") !== expected) {
@@ -199,6 +243,14 @@ try {
   value.setCurrentSessionID("root")
   await check("root", "idle")
   await check("background", "idle")
+  for (const update of [setOperation, setRun]) {
+    update(true)
+    await settle()
+    card("busy")
+    update(false)
+    await settle()
+    card("idle")
+  }
 
   await emit({ type: "sessionStatus", sessionID: "background", status: "busy" })
   await check("background", "busy")
@@ -240,6 +292,12 @@ try {
   await check("root", "waiting")
   await check("task-child", "waiting")
   await check("task-grand", "waiting")
+  for (const update of [setOperation, setRun]) {
+    update(true)
+    await settle()
+    card("waiting")
+    update(false)
+  }
   await emit({ type: "permissionError", permissionID: "permission", stale: true })
   await check("root", "idle")
   assert.equal(value.permissions().length, 0)
@@ -290,7 +348,9 @@ try {
     type: "suggestionRequest",
     suggestion: { id: "suggestion", sessionID: "task-grand", text: "Try this", actions: [] },
   })
-  await check("root", "waiting")
+  await check("root", "idle")
+  await check("task-grand", "idle")
+  assert.equal(value.scopedSuggestions("root").length, 1)
   await emit({ type: "suggestionResolved", requestID: "suggestion" })
   await check("root", "idle")
   assert.equal(value.suggestions().length, 0)
@@ -307,11 +367,17 @@ try {
   await check("root", "idle")
 
   await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
+  await emit({
+    type: "suggestionRequest",
+    suggestion: { id: "review", sessionID: "root", text: "Review the changes", actions: [] },
+  })
   await check("root", "done")
+  assert.equal(value.suggestions().length, 1)
   await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await check("root", "busy")
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await check("root", "idle")
+  await emit({ type: "suggestionResolved", requestID: "review" })
 
   await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
   await check("root", "done")
@@ -370,14 +436,39 @@ try {
   await check("root", "idle")
   await emit({ type: "sessionError", eventID: "root-error", error: { name: "ProviderError" } })
   await check("root", "error")
+  for (const update of [setOperation, setRun]) {
+    update(true)
+    await settle()
+    card("error")
+    update(false)
+  }
   assert.equal(value.inUseFor("root"), false)
   await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
   await check("root", "error")
 
   await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
   await check("root", "busy")
+  for (const status of ["busy", "retry"] as const) {
+    await emit({ type: "sessionStatus", sessionID: "root", status })
+    await emit({
+      type: "sessionError",
+      sessionID: "root",
+      eventID: `root-${status}-error`,
+      error: { name: "ProviderError", message: "Request Entity Too Large" },
+    })
+    await check("root", "error")
+    await emit({ type: "sessionStatus", sessionID: "root", status })
+    await check("root", status)
+    assert.equal(value.closeReason(), undefined)
+    assert(value.messages().some((message) => message.sessionErrorID === `root-${status}-error`))
+  }
+  await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
-  await check("root", "idle")
+  await check("root", "done")
+  await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+  await emit({ type: "sessionError", sessionID: "root", eventID: "terminal-error", error: { name: "ProviderError" } })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+  await check("root", "error")
 
   await emit({
     type: "questionRequest",

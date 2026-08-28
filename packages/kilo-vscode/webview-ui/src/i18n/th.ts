@@ -58,6 +58,13 @@ export const dict = {
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 
+  "session.activity.waiting": "กำลังรอคำตอบหรือการอนุมัติ",
+  "session.activity.error": "เกิดข้อผิดพลาดหรือการเชื่อมต่อขาดหาย",
+  "session.activity.retry": "กำลังลองใหม่โดยอัตโนมัติ",
+  "session.activity.busy": "กำลังดำเนินการ",
+  "session.activity.done": "จบรอบการทำงานแล้ว",
+  "session.activity.idle": "ไม่ได้ทำงานอยู่",
+
   "command.session.new": "เซสชันใหม่",
   "command.session.show.changes": "แสดงการเปลี่ยนแปลง",
   "command.review.toggle": "สลับการตรวจสอบ",
