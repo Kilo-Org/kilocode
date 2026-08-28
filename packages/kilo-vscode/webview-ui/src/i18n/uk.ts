@@ -179,6 +179,7 @@ export const dict = {
   "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
   "prompt.action.send": "Надіслати",
+  "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",

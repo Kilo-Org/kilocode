@@ -178,6 +178,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktree'leri ara",
   "prompt.thinking.tooltip": "Akıl yürütme eforu",
   "prompt.action.send": "Gönder",
+  "prompt.action.continue": "Devam et",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",

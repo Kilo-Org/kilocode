@@ -544,15 +544,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const sendReady = () => !isDisabled() && !terminal.pending() && !git.pending() && !props.blocked?.()
+  const canContinue = () => speech.state() === "idle" && !hasInput() && session.canResume()
   const canSend = () =>
-    !isDisabled() &&
-    !terminal.pending() &&
-    !git.pending() &&
-    !props.blocked?.() &&
-    (speech.state() === "recording" || (hasInput() && !speech.active()))
+    sendReady() && (speech.state() === "recording" || (!speech.active() && (hasInput() || canContinue())))
+  const canSendContinue = () => sendReady() && !speech.active() && canContinue()
   const sendLabel = () => {
     if (props.blocked?.()) return language.t("prompt.action.send.blocked")
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
+    if (canSendContinue()) return language.t("prompt.action.continue")
     return language.t("prompt.action.send")
   }
   const showStop = () => isBusy() && !hasInput() && speech.state() !== "recording"
@@ -1155,17 +1155,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const imgs = imageAttach.images()
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
+    if (canSendContinue()) {
+      session.resume()
+      return
+    }
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
     const data = review ? { version: 1 as const, comments: pending } : undefined
-    if (
-      (!message && imgs.length === 0) ||
-      isDisabled() ||
-      speech.active() ||
-      terminal.pending() ||
-      git.pending() ||
-      props.blocked?.()
-    )
-      return
+    if ((!message && imgs.length === 0) || !sendReady() || speech.active()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))

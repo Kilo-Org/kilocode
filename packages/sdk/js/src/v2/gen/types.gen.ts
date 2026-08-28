@@ -16590,6 +16590,43 @@ export type KiloCloudSessionImportResponses = {
 
 export type KiloCloudSessionImportResponse = KiloCloudSessionImportResponses[keyof KiloCloudSessionImportResponses]
 
+export type KilocodeResumeSessionData = {
+  body?: {
+    messageID: string
+    snapshotInitialization?: "wait"
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session/{sessionID}/resume"
+}
+
+export type KilocodeResumeSessionErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type KilocodeResumeSessionError = KilocodeResumeSessionErrors[keyof KilocodeResumeSessionErrors]
+
+export type KilocodeResumeSessionResponses = {
+  /**
+   * Session continuation accepted
+   */
+  200: boolean
+}
+
+export type KilocodeResumeSessionResponse = KilocodeResumeSessionResponses[keyof KilocodeResumeSessionResponses]
+
 export type KilocodeHeapSnapshotData = {
   body?: never
   path?: never

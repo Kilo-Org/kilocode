@@ -1046,6 +1046,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           post: (msg) => this.postMessage(msg),
           browserSettings: () => this.sendBrowserSettings(),
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
+          resume: (sessionID, messageID, requestID) => this.handleResumeSession(sessionID, messageID, requestID),
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
           activity: (state) => {
@@ -4203,6 +4204,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return this.aborts.stop(client, sid, dir, (dir, action) =>
       this.connectionService.runExplicitAbort(sid, dir, action),
     )
+  }
+
+  private async handleResumeSession(sessionID: string, messageID: string, requestID: string): Promise<void> {
+    try {
+      if (!this.client) throw new Error("Not connected to CLI backend")
+      const directory = this.getWorkspaceDirectory(sessionID)
+      await this.checkpoints.get(sessionID)
+      await this.client.kilocode.resumeSession(
+        { sessionID, messageID, directory, snapshotInitialization: this.opts.snapshotInitialization },
+        { throwOnError: true },
+      )
+      this.postMessage({ type: "sessionResumeResult", sessionID, requestID })
+    } catch (error) {
+      console.error("[Kilo New] Failed to resume session:", error)
+      this.postMessage({
+        type: "sessionResumeResult",
+        sessionID,
+        requestID,
+        error: getErrorMessage(error) || "Failed to resume session",
+      })
+    }
   }
 
   private async handleAbort(sessionID?: string): Promise<void> {

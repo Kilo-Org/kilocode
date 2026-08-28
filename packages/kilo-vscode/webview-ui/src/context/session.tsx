@@ -91,6 +91,7 @@ import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/revi
 import { activeUserMessageID, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
+import { continuation } from "./session-continuation"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
 import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
@@ -898,6 +899,7 @@ export const SessionProvider: ParentComponent = (props) => {
     refreshModelUsageForMessage(message)
     if (handleStreamMessage(message)) return
     handleCommandCompletion(message)
+    handleResumeResult(message)
     cah.handleMessage(message)
     switch (message.type) {
       case "sessionCreated":
@@ -1402,6 +1404,12 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore("parts", message.id, message.parts.map(isolate))
     }
     rebuildToolParts(message.sessionID, store.messages[message.sessionID] ?? [])
+  }
+
+  function handleResumeResult(message: ExtensionMessage): void {
+    if (message.type !== "sessionResumeResult" || !message.error) return
+    finishSubmission(message.requestID)
+    showToast({ variant: "error", title: language.t("prompt.action.continue"), description: message.error })
   }
 
   function handleCommandCompletion(message: ExtensionMessage): void {
@@ -2280,6 +2288,32 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  const resumable = () =>
+    continuation({
+      id: currentSessionID(),
+      status: status(),
+      messages: messages(),
+      parts: getParts,
+      submitting: submitting(),
+      loading: loading(),
+      reverted: !!revert(),
+      blocked:
+        scopedPermissions(currentSessionID()).length > 0 ||
+        scopedQuestions(currentSessionID()).length > 0 ||
+        scopedSuggestions(currentSessionID()).length > 0,
+    })
+
+  function resume() {
+    const sessionID = currentSessionID()
+    const messageID = resumable()
+    if (!server.isConnected() || !sessionID || !messageID) return
+    const requestID = crypto.randomUUID()
+    clearClose(sessionID)
+    startSubmission(sessionID, requestID)
+    vscode.postMessage({ type: "resumeSession", sessionID, messageID, requestID })
+    queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
+  }
+
   function abort() {
     const sessionID = currentSessionID()
     const scope = sessionID ?? draftSessionID()
@@ -2814,6 +2848,8 @@ export const SessionProvider: ParentComponent = (props) => {
     statusText,
     busySince,
     submitting,
+    canResume: () => !!resumable(),
+    resume,
     isSubmitting,
     loading,
     loadingOlderMessages,

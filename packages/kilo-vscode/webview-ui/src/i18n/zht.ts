@@ -173,6 +173,7 @@ export const dict = {
   "prompt.worktrees.search": "搜尋 Worktree",
   "prompt.thinking.tooltip": "推理強度",
   "prompt.action.send": "傳送",
+  "prompt.action.continue": "繼續",
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",

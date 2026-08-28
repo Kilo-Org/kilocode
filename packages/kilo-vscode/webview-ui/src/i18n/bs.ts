@@ -179,6 +179,7 @@ export const dict = {
   "prompt.worktrees.search": "Pretraži Worktree-ove",
   "prompt.thinking.tooltip": "Napor razmišljanja",
   "prompt.action.send": "Pošalji",
+  "prompt.action.continue": "Nastavi",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",

@@ -178,6 +178,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktreeを検索",
   "prompt.thinking.tooltip": "推論の強度",
   "prompt.action.send": "送信",
+  "prompt.action.continue": "続行",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",

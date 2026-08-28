@@ -553,6 +553,15 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
   http.protected
+    .post("/kilocode/session/{sessionID}/resume", "kilocode.resumeSession")
+    .seeded((ctx) => ctx.session({ title: "Empty resume" }))
+    .at((ctx) => ({
+      path: route("/kilocode/session/{sessionID}/resume", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { messageID: "msg_httpapi_missing" },
+    }))
+    .status(400),
+  http.protected
     .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
     .seeded((ctx) => ctx.session({ title: "Model usage" }))
     .at((ctx) => ({

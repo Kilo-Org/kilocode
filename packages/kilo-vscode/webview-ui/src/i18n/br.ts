@@ -178,6 +178,7 @@ export const dict = {
   "prompt.worktrees.search": "Pesquisar Worktrees",
   "prompt.thinking.tooltip": "Esforço de raciocínio",
   "prompt.action.send": "Enviar",
+  "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda ou feche a pergunta pendente primeiro",
   "prompt.action.send.recording": "Transcrever e enviar",
   "prompt.action.stop": "Parar",

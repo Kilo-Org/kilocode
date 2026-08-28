@@ -181,6 +181,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktree 검색",
   "prompt.thinking.tooltip": "추론 강도",
   "prompt.action.send": "전송",
+  "prompt.action.continue": "계속",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",

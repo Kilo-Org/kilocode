@@ -145,6 +145,13 @@ export interface SendMessageFailedMessage {
   review?: import("../../../../src/shared/review-comments").ReviewMessageData
 }
 
+export interface SessionResumeResultMessage {
+  type: "sessionResumeResult"
+  sessionID: string
+  requestID: string
+  error?: string
+}
+
 export interface SessionCommandCompletedMessage {
   type: "sessionCommandCompleted"
   messageID: string
@@ -1427,6 +1434,7 @@ export type ExtensionMessage =
   | ConnectionStateMessage
   | ErrorMessage
   | SendMessageFailedMessage
+  | SessionResumeResultMessage
   | SessionCommandCompletedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
