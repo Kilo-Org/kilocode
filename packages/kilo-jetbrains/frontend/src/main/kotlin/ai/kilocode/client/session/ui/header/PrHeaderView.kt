@@ -27,6 +27,8 @@ import java.awt.Component
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.JSeparator
+import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 
 internal class PrHeaderView @RequiresEdt constructor(
@@ -39,9 +41,14 @@ internal class PrHeaderView @RequiresEdt constructor(
     private val title = SimpleColoredComponent()
     private val changes = ChangesPanel(mode, onBase = openDiff, onLocal = onLocal)
     private val statusPane = status.align(HAlign.LEFT, VAlign.CENTER)
+    // Hidden until the first action is added: hosts with no trailing actions (e.g. BranchDock) show
+    // just the changes summary, so an always-visible separator would dangle with nothing after it.
+    private val actionsSeparator = JSeparator(SwingConstants.VERTICAL).apply { isVisible = false }
     private val actions = Stack.horizontal(UiStyle.Gap.sm())
         .next(changes.align(HAlign.CENTER, VAlign.CENTER))
+        .next(actionsSeparator)
     private var style = SessionEditorStyle.current()
+    private var actionCount = 0
     private var state: GhState? = null
     private var number: String? = null
     private var body: String? = null
@@ -74,7 +81,9 @@ internal class PrHeaderView @RequiresEdt constructor(
 
     @RequiresEdt
     fun addAction(component: Component) {
+        actionCount++
         actions.next(component.align(HAlign.CENTER, VAlign.CENTER))
+        syncSeparator()
     }
 
     @RequiresEdt
@@ -92,7 +101,14 @@ internal class PrHeaderView @RequiresEdt constructor(
         base: String = "",
     ) {
         changes.update(files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base)
+        syncSeparator()
         applyPr(pull, name)
+    }
+
+    @RequiresEdt
+    private fun syncSeparator() {
+        val visible = actionCount > 0 && changes.isVisible
+        if (actionsSeparator.isVisible != visible) actionsSeparator.isVisible = visible
     }
 
     @RequiresEdt

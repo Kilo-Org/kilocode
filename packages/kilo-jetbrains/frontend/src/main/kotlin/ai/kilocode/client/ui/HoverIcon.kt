@@ -8,6 +8,7 @@ import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JButton
+import javax.swing.plaf.basic.BasicGraphicsUtils
 
 class HoverIcon(private val fill: Boolean = false) : JButton() {
     private var over = false
@@ -27,12 +28,16 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
 
     // Icon-only buttons are square: a 24x24 hit target for the usual 16px icon, growing with the icon
     // so a larger one keeps the same padding inside the hover pill. Labelled buttons size to their
-    // content plus their (symmetric) border, which already gives equal padding on every side.
+    // icon+text content plus their (symmetric) border/margin only -- bypassing
+    // DarculaButtonUI.getPreferredSize()'s dialog-button minimum (72x24 by default), which would
+    // otherwise pad a short label like "Open" out to a much wider button than a toolbar action needs.
     override fun getPreferredSize(): Dimension {
-        if (!text.isNullOrEmpty()) return super.getPreferredSize()
-        val icon = icon ?: return JBUI.size(MIN, MIN)
-        val side = maxOf(JBUI.scale(MIN), icon.iconWidth + JBUI.scale(PAD), icon.iconHeight + JBUI.scale(PAD))
-        return Dimension(side, side)
+        val icon = icon ?: return if (text.isNullOrEmpty()) JBUI.size(MIN, MIN) else BasicGraphicsUtils.getPreferredButtonSize(this, 0)
+        if (text.isNullOrEmpty()) {
+            val side = maxOf(JBUI.scale(MIN), icon.iconWidth + JBUI.scale(PAD), icon.iconHeight + JBUI.scale(PAD))
+            return Dimension(side, side)
+        }
+        return BasicGraphicsUtils.getPreferredButtonSize(this, iconTextGap)
     }
 
     override fun getMinimumSize(): Dimension = preferredSize
