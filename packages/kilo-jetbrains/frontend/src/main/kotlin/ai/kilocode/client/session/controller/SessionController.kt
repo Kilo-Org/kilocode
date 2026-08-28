@@ -418,6 +418,40 @@ class SessionController(
         drainAutoApprove(skip)
     }
 
+    /**
+     * Turns the session's public share link on or off.
+     *
+     * [done] runs on the EDT with the new URL when sharing succeeded, a null URL when unsharing
+     * succeeded, and a non-null error otherwise. The CLI maps every refusal (no Kilo credentials,
+     * `share` disabled by config) to a bare HTTP 500, so the error cannot be classified here.
+     */
+    fun setShare(on: Boolean, done: (String?, Throwable?) -> Unit) {
+        assertEdt()
+        val id = sid ?: return
+        val dir = sessionDirectory
+        cs.launch {
+            try {
+                val session = if (on) sessions.shareSession(id, dir) else sessions.unshareSession(id, dir)
+                capture("Session Share Changed", sessionProps(id) + mapOf("shared" to on.toString()))
+                LOG.info("${ChatLogSummary.sid(id)} kind=share on=$on ok=true")
+                edt {
+                    if (disposed) return@edt
+                    model.setSession(session)
+                    done(session.share?.url, null)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "share", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=share on=$on dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
+                edt {
+                    if (disposed) return@edt
+                    done(null, e)
+                }
+            }
+        }
+    }
+
     fun compact() {
         assertEdt()
         val id = sid ?: return
@@ -488,53 +522,50 @@ class SessionController(
     }
 
     /**
-     * Re-runs the last user turn after it failed, discarding the failed assistant turn first.
+     * Continues a failed turn: re-runs the loop for the last user message, changing nothing else.
      *
-     * Reverting to the failed assistant message restores the workspace when that turn already edited
-     * files (a no-op server-side when it edited nothing), and the prompt that follows is what actually
-     * removes the message: `SessionRevert.cleanup` drops everything at or after the revert target on the
-     * next prompt. The replay reuses the original user message id, so no synthetic message is appended.
+     * The prompt reuses the original user message id and sends no parts, so the CLI rewrites that one
+     * message in place and starts a fresh assistant message under it. Consequences that matter:
+     * - no message is appended, so no synthetic "continue" turn shows up in the chat, and an empty part
+     *   list leaves the original prompt text in place — the CLI only writes the parts it is given;
+     * - the model, agent, and effort currently picked are what the continued turn runs with (see
+     *   [retryPromptCurrent]), so switching model and pressing Retry switches model;
+     * - the failed assistant message stays as history. The CLI removes it itself when it produced
+     *   nothing but turn scaffolding (`KiloSessionPrompt.recoverFailedAssistant`), and keeps it when it
+     *   emitted text or ran tools — that record is what explains file changes still on disk.
      *
-     * A turn that failed before the assistant message existed (model resolution, missing provider
-     * credentials) has nothing to roll back, so that path skips the revert and only replays.
+     * Deliberately no revert: a revert without a partID widens server-side to the *preceding user
+     * message*, and `SessionRevert.cleanup` then drops that message and everything after it on the next
+     * prompt. When the failure hit a session's first turn, that erased the whole transcript and left the
+     * replay with an empty prompt. Continuing gives up the workspace restore the revert used to do, which
+     * is the right trade: rolling a whole run's edits back behind a Retry button is both surprising and
+     * unrecoverable once cleanup clears the revert marker.
      */
     fun retry() {
         assertEdt()
         val id = sid ?: return
         val target = retryTarget() ?: return
         LOG.info("${ChatLogSummary.sid(id)} kind=retry clicked=true message=${target.assistant ?: "none"}")
-        val op = beginReverting(
-            KiloBundle.message("session.status.retrying"),
-            // No rollback marker: the transcript should not paint the failed turn as a revert target,
-            // it is about to be replaced. SessionMessageListPanel only marks when message != null.
-            SessionState.Reverting.Kind.ROLLBACK,
-            message = null,
-        ) ?: return
-        revertJob = cs.launch {
+        capture(
+            "Session Retry",
+            sessionProps(id) + mapOf("tail" to if (target.assistant != null) "assistant" else "user"),
+        )
+        // Hand off to the running turn before the RPC resolves. SessionOutcomeView is bound to the
+        // session state, so this is also what dismisses the error card, and a busy state is what stops a
+        // second click from reaching retryTarget.
+        model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+        cs.launch {
             try {
-                target.assistant?.let {
-                    sessions.revert(id, directory, it, null)
-                    synchronizeFromDisk(id, "retry")
-                }
-                capture("Session Retry", sessionProps(id) + mapOf("rolledBack" to (target.assistant != null).toString()))
-                edt {
-                    if (disposed) return@edt
-                    clearReverting(op)
-                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
-                }
                 sessions.prompt(id, directory, target.prompt)
                 LOG.info("${ChatLogSummary.sid(id)} kind=retry ok=true")
             } catch (e: CancellationException) {
-                edt { cancelReverting(op) }
+                throw e
             } catch (e: Exception) {
                 capture("Session Error", sessionProps(id) + mapOf("context" to "retry", "errorClass" to e::class.java.name))
                 LOG.warn("${ChatLogSummary.sid(id)} kind=retry dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     if (disposed) return@edt
-                    // The revert may already have landed. Leave it applied and surface the failure so the
-                    // user can retry again or redo, rather than silently dropping back to idle.
-                    if (revertOp?.key == op.key) failReverting(op, e)
-                    else model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.prompt")))
+                    model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.prompt")))
                 }
             }
         }
@@ -545,9 +576,9 @@ class SessionController(
     fun canRetry(): Boolean = retryTarget() != null
 
     /**
-     * The failed tail turn to replay, or null when retry does not apply: no session, an operation already
-     * in flight, a busy session, a turn that did not fail, or a tail that is neither the last user message
-     * nor the assistant that failed answering it.
+     * The failed tail turn to continue, or null when retry does not apply: no session, an operation
+     * already in flight, a busy session, a turn that did not fail, or a tail that is neither the last user
+     * message nor the assistant that failed answering it.
      */
     private fun retryTarget(): RetryTarget? {
         assertEdt()
@@ -561,7 +592,7 @@ class SessionController(
             // A user stop also lands an errored tail (MessageAbortedError), and it is not a failure.
             err != null -> !err.aborted
             // A turn that completed cleanly is not retryable even when a session-level error arrives
-            // afterwards: replaying it would revert work the model actually delivered.
+            // afterwards: continuing it would ask the model to redo work it already delivered.
             tail.info.role == "assistant" && tail.info.time.completed != null -> false
             else -> state is SessionState.Error ||
                 (state is SessionState.TurnEnded && state.outcome == Outcome.FAILED)
@@ -569,8 +600,8 @@ class SessionController(
         if (!failed) return null
         val prompt = retryPromptCurrent() ?: return null
         // The failure hit before the assistant message existed — model resolution and provider
-        // credentials are checked ahead of it — so the user turn is the tail and nothing needs rolling
-        // back.
+        // credentials are checked ahead of it — so the user turn is the tail and there is no failed
+        // assistant to continue past.
         if (tail.info.id == prompt.messageID) return RetryTarget(null, prompt)
         if (tail.info.role != "assistant") return null
         if (tail.info.parentID != prompt.messageID) return null
@@ -1455,11 +1486,15 @@ class SessionController(
             // After auto-approve only skill-shell permissions still need a human card; queue those.
             // Otherwise queue the whole pending set so each request is resolved in turn.
             val queue = if (autoApprove) permissions.filter { it.metadata["skillShell"] == "true" } else permissions
+            // An "idle" status is still a status. It means no live work, not "nothing to recover", so it
+            // must not shadow the transcript: a session reopened after a failed turn is idle on the
+            // server and would otherwise recover as if it had never failed.
+            val live = liveStatus(status)
             val branch = when {
                 permissions.isNotEmpty() -> "permission"
                 questions.isNotEmpty() -> "question"
-                status != null -> "status"
-                else -> "idle"
+                live != null -> "status"
+                else -> "outcome"
             }
             LOG.debug {
                 "${ChatLogSummary.sid(id)} kind=recovery permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
@@ -1474,8 +1509,8 @@ class SessionController(
                         promote()
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
-                    } else if (status != null) {
-                        seedStatus(status)
+                    } else if (live != null) {
+                        model.setState(live)
                     } else {
                         seedOutcome()
                     }
@@ -1487,14 +1522,16 @@ class SessionController(
     }
 
     /**
-     * Seed initial session state from a snapshot status value.
+     * The state a snapshot status implies, or null when it reports no live work.
      *
-     * Used only during recovery — does not apply the live-event clobbering guard
-     * for "busy" because no more-specific state has arrived yet.
+     * Used only during recovery — does not apply the live-event clobbering guard for "busy" because no
+     * more-specific state has arrived yet. Returning null for idle/unknown hands the decision to
+     * [seedOutcome], so a reopened session can still show how its last turn ended.
      */
-    private fun seedStatus(dto: SessionStatusDto) {
+    private fun liveStatus(dto: SessionStatusDto?): SessionState? {
+        if (dto == null) return null
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} evt=session.status ${ChatLogSummary.status(dto)}" }
-        val state = when (dto.type) {
+        return when (dto.type) {
             "busy" -> SessionState.Busy(KiloBundle.message("session.status.considering"))
             "retry" -> SessionState.Retry(
                 message = dto.message ?: "",
@@ -1505,13 +1542,18 @@ class SessionController(
                 message = dto.message ?: "",
                 requestId = dto.requestID ?: "",
             )
-            else -> return  // idle or unknown — leave as Idle
+            else -> null  // idle or unknown — the transcript decides
         }
-        model.setState(state)
     }
 
     private fun seedOutcome() {
-        val err = model.messages().lastOrNull { it.info.role == "assistant" }?.info?.error ?: return
+        val tail = model.messages().lastOrNull { it.info.role == "assistant" } ?: return
+        val err = tail.info.error
+        if (err == null) {
+            val ended = TurnOutcome.incomplete(tail.info.finish) ?: return
+            model.setState(SessionState.TurnEnded(ended, tail.info.finish))
+            return
+        }
         if (err.aborted) {
             model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED))
             return
@@ -1598,11 +1640,14 @@ class SessionController(
                 if (current is SessionState.AwaitingPermission) return
                 if (current is SessionState.LoginRequired) return
                 if (current is SessionState.Error && event.reason != "completed") return
-                val ended = TurnOutcome.classify(event.reason)
+                val finish = model.messages().lastOrNull { it.info.role == "assistant" }?.info?.finish
+                val ended = if (current is SessionState.Error) null else TurnOutcome.classify(event.reason, finish)
+                if (event.reason == "completed") {
+                    capture("Task Completed", sessionProps(event.sessionID) + mapOf("finish" to (finish ?: "none")))
+                }
                 when {
-                    ended != null -> model.setState(SessionState.TurnEnded(ended))
+                    ended != null -> model.setState(SessionState.TurnEnded(ended, finish))
                     event.reason == "completed" -> {
-                        capture("Task Completed", sessionProps(event.sessionID))
                         model.setState(SessionState.Idle)
                     }
                     current is SessionState.Busy || current is SessionState.Retry || current is SessionState.Offline -> model.setState(SessionState.Idle)

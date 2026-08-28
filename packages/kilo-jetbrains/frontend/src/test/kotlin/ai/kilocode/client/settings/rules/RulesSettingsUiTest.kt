@@ -270,7 +270,7 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
 
     fun `test content scroll renders an editor field`() {
         edt {
-            val field = ai.kilocode.client.settings.base.SettingsContentField(
+            val field = ai.kilocode.client.ui.CodeViewField(
                 "# Rules",
                 ai.kilocode.client.settings.base.settingsEditorFileType("./RULES.md", "# Rules"),
                 true,

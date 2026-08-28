@@ -17,6 +17,7 @@ data class MessageDto(
     val parentID: String? = null,
     val cost: Double? = null,
     val tokens: TokensDto? = null,
+    val finish: String? = null,
     val error: MessageErrorDto? = null,
     val summary: MessageSummaryDto? = null,
 )

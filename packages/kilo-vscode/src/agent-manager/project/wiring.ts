@@ -70,6 +70,7 @@ export function createProjectWiring(opts: {
     pushState: opts.pushState,
     selected: opts.selected,
     routeSession: opts.routeSession,
+    git: opts.git,
     error: (message) => opts.host.showError(message),
     openSettings: (tab, projectId) => opts.host.openSettings(tab, projectId),
     log: opts.log,

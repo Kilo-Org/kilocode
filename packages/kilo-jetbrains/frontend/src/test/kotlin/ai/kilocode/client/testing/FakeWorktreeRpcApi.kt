@@ -15,6 +15,7 @@ import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -41,6 +42,12 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val adopts = CopyOnWriteArrayList<Triple<String, String, String>>()
     val reorders = CopyOnWriteArrayList<List<String>>()
     var reorderResult = true
+    /** Stored session-list visibility per worktree path, plus the calls that touched it. */
+    val sessionLists = ConcurrentHashMap<String, Boolean>()
+    val sessionListReads = CopyOnWriteArrayList<String>()
+    val sessionListWrites = CopyOnWriteArrayList<Pair<String, Boolean>>()
+    /** When set, both session-list calls throw it instead of answering. */
+    var sessionListThrows: Exception? = null
     val opens = CopyOnWriteArrayList<String>()
     val ghCalls = CopyOnWriteArrayList<String>()
     var beforeCreate: suspend () -> Unit = {}
@@ -152,5 +159,20 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         assertNotEdt("reorder")
         reorders.add(paths)
         return reorderResult
+    }
+
+    override suspend fun sessionList(directory: String): Boolean? {
+        assertNotEdt("sessionList")
+        sessionListReads.add(directory)
+        sessionListThrows?.let { throw it }
+        return sessionLists[directory]
+    }
+
+    override suspend fun setSessionList(directory: String, visible: Boolean): Boolean {
+        assertNotEdt("setSessionList")
+        sessionListWrites.add(directory to visible)
+        sessionListThrows?.let { throw it }
+        sessionLists[directory] = visible
+        return true
     }
 }

@@ -41,7 +41,7 @@ import {
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
   sendReviewComments,
-  type AnnotationLabels,
+  labels,
   type AnnotationMeta,
   type ReviewComposer,
   type ReviewDraft,
@@ -63,7 +63,7 @@ import { VirtualDiffList } from "./VirtualDiffList"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
 import { ImageDiffView } from "./ImageDiffView"
 import { createDiffRows, diffSizeKey } from "./diff-state"
-import { createDiffRequests } from "./diff-requests"
+import { createDiffRequests, createDiffViewport } from "./diff-requests"
 
 type DiffStyle = "unified" | "split"
 
@@ -122,18 +122,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
-  const labels = (): AnnotationLabels => ({
-    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
-    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
-    placeholder: t("agentManager.review.commentPlaceholder"),
-    cancel: t("common.cancel"),
-    comment: t("agentManager.review.commentAction"),
-    send: t("prompt.action.send"),
-    save: t("common.save"),
-    sendToChat: t("agentManager.review.sendToChat"),
-    edit: t("common.edit"),
-    delete: t("common.delete"),
-  })
   const localComposer = createReviewComposer()
   const composer = () => props.composer ?? localComposer
   const [manualOpen, setManualOpen] = createSignal<Record<string, string[]>>({})
@@ -289,6 +277,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     open,
     loading: () => props.loadingFiles,
     send: () => props.onRequestDiff,
+    eager: false,
   })
 
   // --- CRUD ---
@@ -436,7 +425,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       updateComment,
       deleteComment,
       cancelDraft,
-      labels: labels(),
+      labels: labels(t),
       activeTerminalId: props.activeTerminalId,
       speech: reviewSpeech,
     })
@@ -457,16 +446,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const sendAllToChat = () => {
     const all = comments()
     if (all.length === 0) return
-    window.dispatchEvent(
-      new MessageEvent("message", {
-        data: {
-          type: props.activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
-          comments: all,
-          autoSend: true,
-          targetTerminalId: props.activeTerminalId,
-        },
-      }),
-    )
+    sendReviewComments(all, props.activeTerminalId)
     preserveScroll(() => setComments([]))
     props.onSendAll?.()
   }
@@ -489,8 +469,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }
 
   const handleFileSelect = (path: string) => {
-    setActiveFile(path)
     const diff = props.diffs.find((item) => item.file === path)
+    if (diff) request(diff)
+    setActiveFile(path)
     if (diff && isDiffExpandable(diff) && !open().includes(path)) setOpen((prev) => [...prev, path])
     requestAnimationFrame(() => {
       const index = rows().findIndex((diff) => diff.file === path)
@@ -677,13 +658,15 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                     const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                     const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                     const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
+                    const viewport = createDiffViewport(scroller)
 
                     createEffect(() => {
-                      if (diff.kind === "image" && open().includes(diff.file)) request(diff)
+                      if (!viewport.visible() || !open().includes(diff.file)) return
+                      request(diff, viewport.intersects)
                     })
 
                     return (
-                      <Accordion.Item value={diff.file} data-file-path={diff.file}>
+                      <Accordion.Item ref={viewport.ref} value={diff.file} data-file-path={diff.file}>
                         <StickyAccordionHeader>
                           <Accordion.Trigger>
                             <div data-slot="session-review-trigger-content">
@@ -815,6 +798,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                         diffStyle={props.diffStyle}
                                         sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle)}
                                         virtualized={shouldVirtualizeDiff(diff)}
+                                        visible={viewport.visible()}
                                         annotations={annotationsForFile(diff.file)}
                                         renderAnnotation={buildAnnotation}
                                         enableGutterUtility={props.canComment !== false}

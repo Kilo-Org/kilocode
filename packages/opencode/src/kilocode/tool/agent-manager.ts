@@ -409,8 +409,8 @@ export const AgentManagerTool = Tool.define<
               if (result.operation !== "prompt")
                 return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
               return {
-                title: "Prompt delivered",
-                output: `Delivered the prompt to Agent Manager session ${result.sessionID}. The session accepted it asynchronously.`,
+                title: "Prompt accepted",
+                output: `Agent Manager session ${result.sessionID} accepted the prompt. If the session is busy, the prompt is queued behind active work. This does not wait for completion.`,
                 metadata: { action: "prompt", sessionID: result.sessionID },
               }
             }

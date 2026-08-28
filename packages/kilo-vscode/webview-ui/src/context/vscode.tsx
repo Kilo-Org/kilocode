@@ -6,6 +6,7 @@
 import { createContext, useContext, onCleanup, ParentComponent, createSignal } from "solid-js"
 import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messages"
 import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
+import { edge } from "../sidebar-position"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -34,6 +35,7 @@ interface VSCodeContextValue {
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
   getState: <T>() => T | undefined
   setState: <T>(state: T) => void
+  sidebarSide: () => "left" | "right" | undefined
   getModelSelectorExpanded: () => boolean
   setModelSelectorExpanded: (value: boolean) => void
 }
@@ -44,6 +46,23 @@ export const VSCodeProvider: ParentComponent = (props) => {
   const api = getVSCodeAPI()
   const handlers = new Set<(message: ExtensionMessage) => void>()
   const copies = new Map<string, { resolve: () => void; reject: (err: Error) => void }>()
+  const initial = document.documentElement.dataset.sidebar
+  const saved = (api.getState() as { sidebarSide?: unknown } | undefined)?.sidebarSide
+  const [side, setSide] = createSignal<"left" | "right" | undefined>(
+    initial === "left" || initial === "right" ? (saved === "left" || saved === "right" ? saved : initial) : undefined,
+  )
+
+  const position = (event: PointerEvent) => {
+    const next = edge(event, window)
+    if (!next || next === side()) return
+    setSide(next)
+    api.setState({ ...(api.getState() as Record<string, unknown> | undefined), sidebarSide: next })
+  }
+
+  if (side()) {
+    window.addEventListener("pointerover", position, true)
+    window.addEventListener("pointermove", position, true)
+  }
 
   // Model-selector expand/collapse preference. Stored in extension globalState
   // so it is shared across webviews (sidebar + agent-manager panel); a local
@@ -81,6 +100,8 @@ export const VSCodeProvider: ParentComponent = (props) => {
     window.removeEventListener("message", messageListener)
     window.removeEventListener("focus", reportFocus)
     window.removeEventListener("blur", reportFocus)
+    window.removeEventListener("pointerover", position, true)
+    window.removeEventListener("pointermove", position, true)
     handlers.clear()
     copies.clear()
   })
@@ -95,6 +116,7 @@ export const VSCodeProvider: ParentComponent = (props) => {
     },
     getState: <T,>() => api.getState() as T | undefined,
     setState: <T,>(state: T) => api.setState(state),
+    sidebarSide: side,
     getModelSelectorExpanded: expanded,
     setModelSelectorExpanded: (value: boolean) => {
       setExpanded(value)

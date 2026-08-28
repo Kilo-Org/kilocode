@@ -192,3 +192,145 @@ test("keeps a long native scrollbar drag user-controlled", async ({ page }) => {
   await expect.poll(() => distance(page)).toBeGreaterThan(40)
   await expect(page.getByRole("button", { name: "Scroll to bottom" })).toBeVisible()
 })
+
+test("pauses on an upward wheel over the Copy response button", async ({ page }) => {
+  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  const list = page.locator(".message-list")
+  const copy = page.getByRole("button", { name: "Copy response" }).first()
+  await expect(list).toBeVisible()
+  await expect(copy).toBeVisible()
+  await settle(page, 10)
+  await expect.poll(() => distance(page)).toBeLessThanOrEqual(2)
+
+  await copy.hover()
+  await page.mouse.wheel(0, -240)
+
+  await expect.poll(() => distance(page)).toBeGreaterThan(40)
+  await expect(page.getByRole("button", { name: "Scroll to bottom" })).toBeVisible()
+})
+
+test("keeps a one-pixel upward wheel pause through delayed streaming", async ({ page }) => {
+  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  const list = page.locator(".message-list")
+  const copy = page.getByRole("button", { name: "Copy response" }).first()
+  await expect(list).toBeVisible()
+  await expect(copy).toBeVisible()
+  await settle(page, 10)
+  await expect.poll(() => distance(page)).toBeLessThanOrEqual(2)
+
+  await copy.hover()
+  await page.mouse.wheel(0, -1)
+  await expect.poll(() => distance(page)).toBeGreaterThan(0)
+  const before = await state(page)
+
+  await page.waitForTimeout(350)
+  await page.getByTestId("append-stream").click()
+
+  await expect.poll(() => list.evaluate((el) => el.scrollHeight)).toBeGreaterThan(before.height)
+  await settle(page, 10)
+  const after = await state(page)
+  expect(after.top).toBeCloseTo(before.top, 0)
+  expect(after.distance).toBeGreaterThan(40)
+  await expect(page.getByRole("button", { name: "Scroll to bottom" })).toBeVisible()
+})
+
+test("keeps the pause after a pending bottom scroll event", async ({ page }) => {
+  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  const list = page.locator(".message-list")
+  const copy = page.getByRole("button", { name: "Copy response" }).first()
+  const bottom = page.getByRole("button", { name: "Scroll to bottom" })
+  await expect(list).toBeVisible()
+  await expect(copy).toBeVisible()
+  await settle(page, 10)
+  await expect.poll(() => distance(page)).toBeLessThanOrEqual(2)
+
+  await list.evaluate((el) => {
+    const fire = () => {
+      el.dataset.pending = "1"
+      el.dispatchEvent(new Event("scroll"))
+    }
+    const wheel = (event: Event) => {
+      if (event.target !== el && event.target instanceof Element && !el.contains(event.target)) return
+      queueMicrotask(fire)
+      el.ownerDocument.removeEventListener("wheel", wheel, true)
+    }
+    el.dataset.pending = "0"
+    el.ownerDocument.addEventListener("wheel", wheel, true)
+  })
+
+  await copy.hover()
+  await page.mouse.wheel(0, -1)
+  await expect.poll(() => list.getAttribute("data-pending")).toBe("1")
+  await expect.poll(() => distance(page)).toBeGreaterThan(0)
+  await expect(bottom).toBeVisible()
+})
+
+for (const input of ["wheel", "keyboard"] as const) {
+  test(`keeps new upward ${input} input before a pending return-to-bottom scroll`, async ({ page }) => {
+    await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+    const list = page.locator(".message-list")
+    const bottom = page.getByRole("button", { name: "Scroll to bottom" })
+    await expect(list).toBeVisible()
+    await settle(page, 10)
+    await expect.poll(() => distance(page)).toBeLessThanOrEqual(2)
+
+    await list.hover()
+    await page.mouse.wheel(0, -240)
+    await expect.poll(() => distance(page)).toBeGreaterThan(40)
+    await expect(bottom).toBeVisible()
+    await settle(page, 4)
+
+    await list.evaluate((el, input) => {
+      if (input === "keyboard") {
+        el.tabIndex = 0
+        el.focus({ preventScroll: true })
+      }
+      const type = input === "wheel" ? "wheel" : "keydown"
+      const prime = () => {
+        el.scrollTop = el.scrollHeight - el.clientHeight
+      }
+      const pending = () => {
+        el.dispatchEvent(new Event("scroll"))
+        el.dataset.pending = "1"
+      }
+      el.ownerDocument.addEventListener(type, prime, { capture: true, passive: false, once: true })
+      const target = input === "wheel" ? el : el.ownerDocument
+      target.addEventListener(type, pending, { capture: input === "wheel", passive: false, once: true })
+    }, input)
+
+    if (input === "wheel") await page.mouse.wheel(0, -20)
+    if (input === "keyboard") await page.keyboard.press("ArrowUp")
+    await expect.poll(() => list.getAttribute("data-pending")).toBe("1")
+    await expect.poll(() => distance(page)).toBeGreaterThan(10)
+    await expect(bottom).toBeVisible()
+    await settle(page, 20)
+    const before = await state(page)
+
+    await page.waitForTimeout(350)
+    await page.getByTestId("append-stream").click()
+    await expect.poll(() => list.evaluate((el) => el.scrollHeight)).toBeGreaterThan(before.height)
+    await settle(page, 10)
+    expect((await state(page)).top).toBeCloseTo(before.top, 0)
+    await expect(bottom).toBeVisible()
+  })
+}
+
+test("preserves the pause across working status changes", async ({ page }) => {
+  await page.goto(`/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  const list = page.locator(".message-list")
+  const bottom = page.getByRole("button", { name: "Scroll to bottom" })
+  await expect(list).toBeVisible()
+  await settle(page, 10)
+  await expect.poll(() => distance(page)).toBeLessThanOrEqual(2)
+
+  await list.hover()
+  await page.mouse.wheel(0, -240)
+  await expect.poll(() => distance(page)).toBeGreaterThan(40)
+  await expect(bottom).toBeVisible()
+  await page.getByTestId("toggle-status").click()
+  await page.getByTestId("toggle-status").click()
+  await settle(page, 4)
+
+  await expect.poll(() => distance(page)).toBeGreaterThan(40)
+  await expect(bottom).toBeVisible()
+})

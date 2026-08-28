@@ -62,8 +62,6 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otvori Terminal",
   "agentManager.tab.newOptions": "Više opcija nove kartice",
-  "agentManager.tabsMenu.status.waiting": "Čeka",
-  "agentManager.tabsMenu.status.retry": "Pokušaj",
   "agentManager.sidebarSearch.label": "Pretraži Worktree-ove i sesije",
   "agentManager.sidebarSearch.scope": "Pretražuje lokalni radni prostor, lokalne sesije, Worktree-ove i njihove sesije",
   "agentManager.sidebarSearch.contexts": "LOKALNO & WORKTREES",
