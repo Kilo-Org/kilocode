@@ -82,6 +82,10 @@ async function settle(page: Page) {
 // appearance baseline.
 const SKIP = new Set<string>([
   "chat--chat-view-session-dock-stability",
+  "agentmanager--diff-panel-cached-worktree-switch",
+  "agentmanager--diff-panel-viewport-loading",
+  "agentmanager--diff-panel-interrupted-loading",
+  "agentmanager--file-tree-virtualized-large",
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",
   "agentmanager--side-terminal-panel-tabs",

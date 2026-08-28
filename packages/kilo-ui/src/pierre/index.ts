@@ -53,6 +53,7 @@ type DiffShared<T> = FileDiffOptions<T> & {
   commentedLines?: SelectedLineRange[]
   onLineNumberSelectionEnd?: (selection: SelectedLineRange | null) => void
   onRendered?: () => void
+  visible?: boolean
   // When false, render the supplied diff once instead of row-virtualizing it.
   // Callers should supply hunk-bounded `fileDiff`/`patch` data for large source
   // files so eager rendering does not expand full before/after content.

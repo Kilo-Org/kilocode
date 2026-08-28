@@ -130,6 +130,8 @@ export interface ErrorMessage {
   message: string
   code?: string
   sessionID?: string
+  projectId?: string
+  worktreeId?: string
 }
 
 export interface SendMessageFailedMessage {
@@ -141,6 +143,13 @@ export interface SendMessageFailedMessage {
   messageID?: string
   files?: FileAttachment[]
   review?: import("../../../../src/shared/review-comments").ReviewMessageData
+}
+
+export interface SessionResumeResultMessage {
+  type: "sessionResumeResult"
+  sessionID: string
+  requestID: string
+  error?: string
 }
 
 export interface SessionCommandCompletedMessage {
@@ -168,6 +177,7 @@ export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
   reason: SessionCloseReason
+  parentID?: string
 }
 
 export interface SessionErrorMessage {
@@ -228,6 +238,14 @@ export interface MessageRemovedMessage {
   type: "messageRemoved"
   sessionID: string
   messageID: string
+}
+
+export interface DeleteMessageResultMessage {
+  type: "deleteMessageResult"
+  sessionID: string
+  messageID: string
+  requestID?: string
+  success: boolean
 }
 
 export interface MessagesLoadedMessage {
@@ -806,6 +824,11 @@ export interface AgentManagerSessionForkedMessage {
   sessionId: string
   forkedFromId: string
   worktreeId?: string
+}
+
+export interface AgentManagerWorktreeActivityMessage {
+  type: "agentManager.worktreeActivity"
+  active: string[]
 }
 
 export interface AgentManagerSessionClosedMessage {
@@ -1419,6 +1442,7 @@ export type ExtensionMessage =
   | ConnectionStateMessage
   | ErrorMessage
   | SendMessageFailedMessage
+  | SessionResumeResultMessage
   | SessionCommandCompletedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
@@ -1435,6 +1459,7 @@ export type ExtensionMessage =
   | SessionUpdatedMessage
   | SessionDeletedMessage
   | MessageRemovedMessage
+  | DeleteMessageResultMessage
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage
@@ -1504,6 +1529,7 @@ export type ExtensionMessage =
   | AgentManagerSessionAddedMessage
   | AgentManagerSessionForkedMessage
   | AgentManagerSessionClosedMessage
+  | AgentManagerWorktreeActivityMessage
   | AgentManagerStateMessage
   | AgentManagerProjectsMessage
   | AgentManagerSelectionActivatedMessage

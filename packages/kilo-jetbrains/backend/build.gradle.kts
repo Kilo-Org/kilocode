@@ -2,6 +2,7 @@ import normalization.NormalizeOpenApiSpecTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.WriteProperties
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
     alias(libs.plugins.rpc)
@@ -203,6 +204,7 @@ dependencies {
         bundledModule("intellij.platform.kernel.backend")
         bundledModule("intellij.platform.rpc.backend")
         bundledModule("intellij.platform.backend")
+        testFramework(TestFrameworkType.Platform)
     }
 
     implementation(project(":shared"))
@@ -212,10 +214,14 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.okhttp.mockwebserver)
-    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(kotlin("test"))
+    testImplementation(libs.junit)
+    testRuntimeOnly(libs.junit.vintage.engine)
 }
 
 tasks.test {
+    // BasePlatformTestCase uses JUnit 3 test naming (test prefix), discovered by the
+    // vintage engine via JUnit Platform; plain JUnit 5 tests keep running unchanged.
     useJUnitPlatform()
+    jvmArgs("-Didea.force.use.core.classloader=true")
 }

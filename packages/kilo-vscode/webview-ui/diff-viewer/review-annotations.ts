@@ -16,6 +16,21 @@ export interface AnnotationLabels {
   delete: string
 }
 
+export function labels(t: (key: string, params?: Record<string, string | number>) => string): AnnotationLabels {
+  return {
+    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
+    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
+    placeholder: t("agentManager.review.commentPlaceholder"),
+    cancel: t("common.cancel"),
+    comment: t("agentManager.review.commentAction"),
+    send: t("prompt.action.send"),
+    save: t("common.save"),
+    sendToChat: t("agentManager.review.sendToChat"),
+    edit: t("common.edit"),
+    delete: t("common.delete"),
+  }
+}
+
 // A draft is the active unsaved inline comment composer opened from the gutter.
 // It becomes a normal comment only after the user submits the textarea.
 export interface AnnotationMeta {

@@ -274,7 +274,13 @@ export const TaskTool = Tool.define(
             return yield* Effect.fail(new Error(`${errorMessage(result.info.error)}\n${resumeHint(nextSession.id)}`))
           }
           // kilocode_change end
-          return result.parts.findLast((item) => item.type === "text")?.text ?? ""
+          // kilocode_change start - ignore synthetic/ignored/empty text parts (e.g. the memory marker) when picking the task result (#13469)
+          return (
+            result.parts
+              .filter((item): item is MessageV2.TextPart => item.type === "text")
+              .findLast((item) => !item.synthetic && !item.ignored && item.text.length > 0)?.text ?? ""
+          )
+          // kilocode_change end
         },
         Effect.ensuring(KiloTaskBackgroundProcess.finish(nextSession.id)),
       ) // kilocode_change - transfer inherited processes when the child run ends
