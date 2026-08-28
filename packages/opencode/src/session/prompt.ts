@@ -90,6 +90,7 @@ import { LLMEvent } from "@opencode-ai/llm"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
 import { KiloBtw } from "@/kilocode/session/btw" // kilocode_change
+import { isBtwCommand } from "@/kilocode/command/btw" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -2243,195 +2244,6 @@ export const layer = Layer.effect(
 
       return last
     })
-    // kilocode_change start - btw side-question handler (fork with cached context, then delete)
-    const isBtwCommand = (name: string): boolean => name === "btw"
-
-    const handleBtw = Effect.fn("SessionPrompt.handleBtw")(function* (input: { cmdInput: CommandInput }) {
-      const parentID = input.cmdInput.sessionID
-      const trimmed = (input.cmdInput.arguments ?? "").trim()
-      if (trimmed.length === 0) {
-        const entries = yield* KiloBtw.list(parentID)
-        const text = entries.length === 0 ? KiloBtw.formatUsage() : KiloBtw.formatEntry(entries[0]!)
-        const now = Date.now()
-        // Persist usage/last-entry as a real parent message so TUI filtering (!synthetic && !ignored) shows it
-        const info: MessageV2.Assistant = yield* sessions.updateMessage({
-          id: MessageID.ascending(),
-          role: "assistant",
-          sessionID: parentID,
-          parentID: MessageID.ascending(),
-          mode: "code",
-          agent: "code",
-          path: { cwd: "/tmp", root: "/tmp" },
-          cost: 0,
-          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          modelID: "unknown" as any,
-          providerID: "unknown" as any,
-          time: { created: now, completed: now },
-          finish: "stop",
-        })
-        const part: MessageV2.TextPart = yield* sessions.updatePart({
-          id: PartID.ascending(),
-          messageID: info.id,
-          sessionID: parentID,
-          type: "text",
-          text,
-        })
-        const result = { info, parts: [part] }
-        yield* events.publish(Command.Event.Executed, {
-          name: input.cmdInput.command,
-          sessionID: parentID,
-          arguments: input.cmdInput.arguments,
-          messageID: result.info.id,
-        })
-        return result
-      }
-
-      const ctx = yield* InstanceState.context
-      const cmdAgentName = input.cmdInput.agent
-      const agent = cmdAgentName ? yield* agents.get(cmdAgentName) : yield* agents.defaultInfo()
-      if (!agent) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${cmdAgentName}".${hint}` })
-        yield* events.publish(Session.Event.Error, { sessionID: parentID, error: error.toObject() })
-        throw error
-      }
-      const modelRefRaw = yield* Effect.gen(function* () {
-        if (input.cmdInput.model) return Provider.parseModel(input.cmdInput.model)
-        if (agent.model) return agent.model
-        return yield* currentModel(parentID)
-      })
-      const modelProviderID = (modelRefRaw as any).providerID as string
-      const modelModelID = ((modelRefRaw as any).modelID ?? (modelRefRaw as any).id) as string
-      const model = yield* getModel(modelProviderID as any, modelModelID as any, parentID)
-      const variant =
-        input.cmdInput.variant ??
-        (agent.variant && model.variants?.[agent.variant] ? agent.variant : undefined)
-
-      // Ensure fork/remove run with the parent's InstanceState directory (not a stale fork context)
-      const fork = yield* sessions.fork({ sessionID: parentID })
-      KiloBtw.setPromptCacheOverride(fork.id, parentID)
-      const clearOverride = Effect.sync(() => KiloBtw.clearPromptCacheOverride(fork.id))
-
-      let answer = ""
-      let promptResult: MessageV2.WithParts | undefined
-      const promptExit = yield* Effect.exit(
-        prompt({
-          sessionID: fork.id,
-          agent: agent.name,
-          model: { providerID: model.providerID, modelID: model.id },
-          variant,
-          parts: [{ type: "text", text: trimmed }],
-        }),
-      ).pipe(Effect.ensuring(clearOverride))
-      if (Exit.isFailure(promptExit)) {
-        const cause = promptExit.cause
-        const err = Cause.squash(cause)
-        const message = err instanceof Error ? err.message : String(err)
-        yield* Effect.sleep(300).pipe(Effect.ignore)
-        yield* sessions.remove(fork.id).pipe(
-          Effect.catch((e) => Effect.sync(() => console.error("Failed to remove btw fork after failure", fork.id, e))),
-        )
-        yield* Effect.sync(() => KiloSession.clearPlatformOverride(fork.id)).pipe(
-          Effect.catch((e) => Effect.sync(() => console.error("Failed to clear platform override", e))),
-        )
-        const now = Date.now()
-        const info: MessageV2.Assistant = yield* sessions.updateMessage({
-          id: MessageID.ascending(),
-          role: "assistant",
-          sessionID: parentID,
-          parentID: MessageID.ascending(),
-          mode: agent.name,
-          agent: agent.name,
-          variant,
-          path: { cwd: ctx.directory, root: ctx.worktree },
-          cost: 0,
-          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          modelID: model.id,
-          providerID: model.providerID,
-          time: { created: now, completed: now },
-          finish: "error",
-          error: new NamedError.Unknown({ message }).toObject() as any,
-        })
-        const part: MessageV2.TextPart = yield* sessions.updatePart({
-          id: PartID.ascending(),
-          messageID: info.id,
-          sessionID: parentID,
-          type: "text",
-          text: `BTW failed: ${message}`,
-        })
-        const result = { info, parts: [part] }
-        yield* events.publish(Command.Event.Executed, {
-          name: input.cmdInput.command,
-          sessionID: parentID,
-          arguments: input.cmdInput.arguments,
-          messageID: result.info.id,
-        })
-        return result
-      }
-      promptResult = (promptExit as Exit.Success<MessageV2.WithParts>).value
-      answer = promptResult.parts
-        .filter((p): p is MessageV2.TextPart => p.type === "text")
-        .map((p) => p.text)
-        .join("\n\n")
-        .trim()
-      if (!answer) {
-        const toolTexts = promptResult.parts
-          .filter((p) => p.type === "tool" && p.state.status === "completed")
-          .map((p) => (p.state as any).output as string)
-          .filter(Boolean)
-        answer = toolTexts.join("\n\n").trim() || "[No text response]"
-      }
-      yield* KiloBtw.add({
-        parentID,
-        question: trimmed,
-        answer,
-        model: { providerID: model.providerID, modelID: model.id },
-        forkID: fork.id,
-      })
-      // Give fork's loop a moment to settle before deleting (avoid "skipping part update for deleted session" warnings)
-      yield* Effect.sleep(300).pipe(Effect.ignore)
-      yield* sessions.remove(fork.id).pipe(
-        Effect.catch((e) => Effect.sync(() => console.error("Failed to remove btw fork", fork.id, e))),
-      )
-      yield* Effect.sync(() => KiloSession.clearPlatformOverride(fork.id)).pipe(
-        Effect.catch((e) => Effect.sync(() => console.error("Failed to clear platform override", e))),
-      )
-
-      const now = Date.now()
-      const display = `**BTW:** ${trimmed}\n\n${answer}\n\n---\n*Side question – not added to conversation. Run /btw again to ask another, or /btw with no args to see the last one.*`
-      const info: MessageV2.Assistant = yield* sessions.updateMessage({
-        id: MessageID.ascending(),
-        role: "assistant",
-        sessionID: parentID,
-        parentID: MessageID.ascending(),
-        mode: agent.name,
-        agent: agent.name,
-        variant,
-        path: { cwd: ctx.directory, root: ctx.worktree },
-        cost: promptResult.info.cost ?? 0,
-        tokens: promptResult.info.tokens ?? { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-        modelID: model.id,
-        providerID: model.providerID,
-        time: { created: now, completed: now },
-        finish: "stop",
-      })
-      const part: MessageV2.TextPart = yield* sessions.updatePart({
-        id: PartID.ascending(),
-        messageID: info.id,
-        sessionID: parentID,
-        type: "text",
-        text: display,
-      })
-      const result = { info, parts: [part] }
-      yield* events.publish(Command.Event.Executed, {
-        name: input.cmdInput.command,
-        sessionID: parentID,
-        arguments: input.cmdInput.arguments,
-        messageID: result.info.id,
-      })
-      return result
-    })
     // kilocode_change end
 
     const command = Effect.fn("SessionPrompt.command")(function* (input: CommandInput) {
@@ -2457,9 +2269,19 @@ export const layer = Layer.effect(
         return yield* handleResume({ cmdInput: input, format: fmt })
       }
       // kilocode_change end
-      // kilocode_change start - btw side-question (fork with cached context, then delete)
+      // kilocode_change start - /btw side-question command; handler lives in kilocode/session/btw.ts
       if (isBtwCommand(input.command)) {
-        return yield* handleBtw({ cmdInput: input })
+        return yield* KiloBtw.command({
+          cmdInput: input,
+          ops: {
+            sessions,
+            agents,
+            events,
+            status,
+            currentModel: (sessionID) => currentModel(sessionID),
+            runFork: (forkInput) => Effect.exit(prompt(forkInput)),
+          },
+        })
       }
       // kilocode_change end
       // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn
