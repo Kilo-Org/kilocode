@@ -1,5 +1,6 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -30,6 +31,7 @@ import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
 import ai.kilocode.client.session.ui.prompt.MentionAction
+import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
@@ -45,6 +47,7 @@ import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.session.ui.header.BranchDock
+import ai.kilocode.client.session.ui.header.ChatDockKeys
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.selection.SessionContextMenu
 import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
@@ -72,11 +75,14 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.rpc.dto.BranchStatusDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
 import com.intellij.ide.BrowserUtil
@@ -87,6 +93,7 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
@@ -108,6 +115,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.datatransfer.StringSelection
 import java.awt.event.HierarchyEvent
 import java.net.URI
 import java.nio.file.Path
@@ -133,7 +141,7 @@ class SessionUi(
     private val workspaces: KiloWorkspaceService = service(),
     private val migration: MigrationUiController = service<KiloMigrationService>(),
     private val timers: UiTimerSource = UiTimers,
-) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider {
+) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider, SessionActions {
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
@@ -217,7 +225,7 @@ class SessionUi(
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
     private val popup = HeaderPopupController(timers)
-    private val readonly: Boolean get() = manager?.readonly == true
+    override val readonly: Boolean get() = manager?.readonly == true
     private val provider = object : TextCopyProvider() {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
@@ -227,6 +235,9 @@ class SessionUi(
         }
     }
     private var wasBusy = false
+    // Last known branch/PR status for this session's directory. Mirrored here (not only inside the
+    // dock) so the context-menu actions work in hosts that hide the dock.
+    private var branch: BranchStatusDto? = null
     // Kept separate so a background stat refresh (turn end / revert) can supersede another refresh
     // but never cancel an in-flight user-initiated open.
     private var refreshJob: Job? = null
@@ -247,8 +258,8 @@ class SessionUi(
         dock?.let {
             syncDock()
             refreshBranchChanges()
-            refreshBranch()
         }
+        refreshBranch()
         loaded?.let(::finishOpen)
     }
 
@@ -266,14 +277,76 @@ class SessionUi(
 
     internal val blank: Boolean get() = controller.blank
 
-    internal val id: String? get() = controller.id
+    override val id: String? get() = controller.id
 
     internal val cacheKey: String? get() = controller.refKey
 
     internal fun currentStyle() = style
 
+    override val pr: WorktreePrDto? get() = branch?.pr
+
+    override val share: String? get() = controller.model.session?.share?.url
+
+    override val git: Boolean get() = branch.let { it != null && it.availability != GhAvailability.GIT_MISSING }
+
+    override val auto: Boolean get() = controller.autoApprove
+
+    @RequiresEdt
+    override fun setAuto(value: Boolean) {
+        controller.setAutoApprove(value)
+        prompt.setAutoApprove(controller.autoApprove)
+    }
+
+    @RequiresEdt
+    override fun compare() {
+        openBranchChanges()
+    }
+
+    @RequiresEdt
+    override fun startShare() {
+        controller.setShare(true) { url, err -> onShareResult(url, err, on = true) }
+    }
+
+    @RequiresEdt
+    override fun stopShare() {
+        controller.setShare(false) { _, err -> onShareResult(null, err, on = false) }
+    }
+
+    /**
+     * Reports a share toggle. The CLI collapses every refusal into a bare HTTP 500, so the failure
+     * text has to name both plausible causes rather than guessing one.
+     */
+    @RequiresEdt
+    private fun onShareResult(url: String?, err: Throwable?, on: Boolean) {
+        if (err != null) {
+            val key = if (on) "session.share.failed" else "session.unshare.failed"
+            KiloNotifications.error(project, KiloBundle.message(key))
+            return
+        }
+        if (!on) {
+            KiloNotifications.info(project, KiloBundle.message("session.unshare.done"))
+            return
+        }
+        val link = url ?: return
+        CopyPasteManager.getInstance().setContents(StringSelection(link))
+        KiloNotifications.info(
+            project,
+            KiloBundle.message("session.share.done"),
+            link,
+            KiloBundle.message("session.share.open"),
+        ) { BrowserUtil.browse(link) }
+    }
+
     override fun uiDataSnapshot(sink: DataSink) {
         sink[PlatformDataKeys.COPY_PROVIDER] = provider
+        sink[SessionActionsKeys.ACTIONS] = this
+        // The prompt panel and the branch dock are siblings of the transcript, so their own providers
+        // only resolve for clicks inside them. Republish here — SessionUi is an ancestor of the whole
+        // session — so the shared Stop / New Worktree / Move to Worktree actions work from any
+        // right-click. Nearest-provider-wins keeps the local providers authoritative inside those
+        // subtrees, and both publish the same instances anyway.
+        if (this::prompt.isInitialized) sink[PromptDataKeys.SEND] = prompt
+        dock?.let { sink[ChatDockKeys.DOCK] = it }
     }
 
     @RequiresEdt
@@ -540,10 +613,7 @@ class SessionUi(
             prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
             prompt.onReset = { controller.clearModelOverride() }
             prompt.onChange = { scroll.refresh() }
-            prompt.onAutoApproveToggle = { value ->
-                controller.setAutoApprove(value)
-                prompt.setAutoApprove(controller.autoApprove)
-            }
+            prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
             prompt.model.favorites = { app.favorites.value }
             prompt.model.onFavoriteToggle = { item ->
@@ -973,9 +1043,12 @@ class SessionUi(
         }
     }
 
-    /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
+    /**
+     * Opens the branch diff editor. Reached from the changes badge and from the Compare to Base
+     * context-menu action, so it must not depend on [dock] — hosts that hide the dock still offer the
+     * action. Never cancelled by a background refresh.
+     */
     private fun openBranchChanges() {
-        val dock = dock ?: return
         openJob?.cancel()
         openJob = cs.launch {
             val dir = workspace.directory
@@ -988,7 +1061,7 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                dock.setChanges(files)
+                dock?.setChanges(files)
                 openBranchDiff(branch)
             }
         }
@@ -1018,12 +1091,17 @@ class SessionUi(
     private fun showBranchDock(): Boolean = manager?.showsBranchDock != false
 
     /**
-     * Refreshes the branch/PR status feeding the dock. Uses the session's own [workspace] directory
-     * (the resolved backend path) — not `project.basePath`, which is a synthetic frontend path in
-     * split mode — so the PR always matches the branch checked out in this session's directory.
+     * Refreshes the branch/PR status. Uses the session's own [workspace] directory (the resolved
+     * backend path) — not `project.basePath`, which is a synthetic frontend path in split mode — so
+     * the PR always matches the branch checked out in this session's directory.
+     *
+     * Runs regardless of [dock] because the context-menu pull-request actions read [branch] too, and
+     * the hosts that hide the dock (Agent Manager worktree session editors) are exactly the ones most
+     * likely to have a PR. Skipped for readonly hosts, which offer no branch-scoped actions worth the
+     * `gh` round-trip.
      */
     private fun refreshBranch() {
-        val dock = dock ?: return
+        if (readonly) return
         branchJob?.cancel()
         branchJob = cs.launch {
             val status = runCatching { service<KiloWorktreeService>().branchStatus(workspace.directory) }
@@ -1034,7 +1112,8 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                dock.setBranch(status)
+                branch = status
+                dock?.setBranch(status)
             }
         }
     }

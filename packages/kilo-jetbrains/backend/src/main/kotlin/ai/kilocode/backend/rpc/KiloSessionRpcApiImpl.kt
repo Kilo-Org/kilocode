@@ -113,6 +113,12 @@ class KiloSessionRpcApiImpl internal constructor(
         return sessions.rename(id, dir, title)
     }
 
+    override suspend fun share(id: String, directory: String): SessionDto =
+        ready { sessions.share(id, sessions.getDirectory(id, directory)) }
+
+    override suspend fun unshare(id: String, directory: String): SessionDto =
+        ready { sessions.unshare(id, sessions.getDirectory(id, directory)) }
+
     override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
         ready { sessions.cloudSessions(directory, cursor, limit, gitUrl) }
 

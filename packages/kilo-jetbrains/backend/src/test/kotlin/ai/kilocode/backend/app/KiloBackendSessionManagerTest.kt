@@ -400,6 +400,61 @@ class KiloBackendSessionManagerTest {
         }
     }
 
+    // ------ Session share ------
+
+    @Test
+    fun `share posts to share endpoint and returns the share url`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        val session = app.sessions.share("ses_1", "/my dir/project")
+
+        assertEquals("https://app.kilo.ai/s/tok", session.share?.url)
+        assertEquals("POST", mock.lastShareMethod)
+        val path = mock.lastSharePath ?: error("missing share request")
+        assertTrue(path.startsWith("/session/ses_1/share?"), "Expected share path, got $path")
+        assertTrue(path.contains("directory=%2Fmy%20dir%2Fproject"), "Expected encoded directory in $path")
+    }
+
+    @Test
+    fun `unshare deletes the share and clears the url`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        val session = app.sessions.unshare("ses_1", "/test")
+
+        assertNull(session.share)
+        assertEquals("DELETE", mock.lastShareMethod)
+        val path = mock.lastSharePath ?: error("missing unshare request")
+        assertTrue(path.startsWith("/session/ses_1/share?"), "Expected share path, got $path")
+    }
+
+    @Test
+    fun `share surfaces server failure`() = runBlocking {
+        // The CLI collapses "not signed in" and "sharing disabled" into a bare 500; all the UI can do
+        // is report that it failed, so the manager must at least propagate the status.
+        mock.sessionShareStatus = 500
+        mock.sessionShare = """{"error":"boom"}"""
+        val app = setup()
+        ready(app)
+
+        val err = assertFailsWith<RuntimeException> {
+            app.sessions.share("ses_1", "/test")
+        }
+
+        assertTrue(err.message.orEmpty().contains("HTTP 500"))
+        assertTrue(err.message.orEmpty().contains("boom"))
+    }
+
+    @Test
+    fun `share throws before start`() = runBlocking {
+        val app = setup()
+
+        assertFailsWith<IllegalStateException> {
+            app.sessions.share("ses_1", "/test")
+        }
+    }
+
     // ------ Session delete ------
 
     @Test
