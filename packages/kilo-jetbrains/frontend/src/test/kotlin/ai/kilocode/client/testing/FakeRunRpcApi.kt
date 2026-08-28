@@ -30,6 +30,7 @@ class FakeRunRpcApi : KiloRunRpcApi {
     val stops = CopyOnWriteArrayList<Triple<String, String, String>>()
     val focuses = CopyOnWriteArrayList<Triple<String, String, String>>()
     val releases = CopyOnWriteArrayList<Pair<String, String>>()
+    var beforeRelease: suspend () -> Unit = {}
 
     override suspend fun configs(directory: String): RunConfigListDto {
         assertNotEdt("configs")
@@ -70,6 +71,7 @@ class FakeRunRpcApi : KiloRunRpcApi {
         assertNotEdt("release")
         releases.add(directory to worktree)
         fail?.let { throw it }
+        beforeRelease()
         return true
     }
 
