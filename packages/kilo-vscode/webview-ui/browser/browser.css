@@ -216,16 +216,12 @@
   color: var(--syntax-diff-delete, #da3319);
 }
 
-.am-browser-error-overlay {
+[data-component="card"].am-browser-error-overlay {
   position: absolute;
   right: 16px;
   bottom: 16px;
   left: 16px;
-  padding: 10px 12px;
-  color: var(--syntax-diff-delete, #da3319);
-  background: color-mix(in srgb, var(--surface-base) 92%, transparent);
-  border: 1px solid var(--syntax-diff-delete, #da3319);
-  border-radius: 4px;
+  width: auto;
 }
 
 .am-browser-empty {

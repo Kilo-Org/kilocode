@@ -70,7 +70,15 @@ const dispose = render(
 )
 assert.deepEqual(sent[0], { type: "state", scope })
 const state = { scope, browserId: "browser", status: "ready" as const, errors: 0, url: "about:blank" }
+receive?.({ type: "state", value: { ...state, status: "error", error: "Cannot connect to the local server" } })
+const failure = root.querySelector('[role="alert"][data-component="card"][data-variant="error"]')
+assert.ok(failure)
+assert.equal(failure.querySelector(".error-card-message")?.textContent, "Cannot connect to the local server")
+assert.ok(failure.querySelector('[data-component="icon"]'))
+assert.equal(root.querySelector(".am-browser-frame"), null)
+assert.equal(root.querySelector(".am-browser-empty"), null)
 receive?.({ type: "state", value: state })
+assert.equal(root.querySelector('[role="alert"]'), null)
 await window.happyDOM.waitUntilComplete()
 const frame = root.querySelector(".am-browser-frame")
 assert.ok(frame)
@@ -92,7 +100,10 @@ receive?.({
   value: { ...state, navigation: 1, title: "", error: "Developer tools are unavailable" },
 })
 assert.equal(root.querySelector(".am-browser-frame"), refreshed)
-assert.ok(root.textContent?.includes("Developer tools are unavailable"))
+assert.equal(
+  root.querySelector('[role="alert"][data-variant="error"] .error-card-message')?.textContent,
+  "Developer tools are unavailable",
+)
 assert.equal(root.querySelectorAll("button[aria-label=Close]").length, 1)
 ;(root.querySelector("button[aria-label='Select element']") as HTMLButtonElement).click()
 const overlay = root.querySelector(".am-browser-inspect") as HTMLButtonElement

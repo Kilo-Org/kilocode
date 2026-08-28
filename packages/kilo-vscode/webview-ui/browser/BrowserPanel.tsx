@@ -1,4 +1,5 @@
 import { For, Show, type Accessor, type Component } from "solid-js"
+import { Card } from "@kilocode/kilo-ui/card"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -178,9 +179,11 @@ const Viewport: Component<{
         when={identity()}
         keyed
         fallback={
-          <div class="am-browser-empty">
-            <div>{props.session ? props.labels.empty : props.labels.noSession}</div>
-          </div>
+          <Show when={!issue()}>
+            <div class="am-browser-empty">
+              <div>{props.session ? props.labels.empty : props.labels.noSession}</div>
+            </div>
+          </Show>
         }
       >
         {(_key) => (
@@ -200,9 +203,12 @@ const Viewport: Component<{
       />
       <Show when={issue()}>
         {(message) => (
-          <div class="am-browser-error-overlay" role="alert">
-            {message()}
-          </div>
+          <Card variant="error" class="error-card am-browser-error-overlay" role="alert">
+            <div class="error-card-body">
+              <Icon name="warning" size="small" />
+              <div class="error-card-message">{message()}</div>
+            </div>
+          </Card>
         )}
       </Show>
     </div>
