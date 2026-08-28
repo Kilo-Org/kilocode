@@ -1644,4 +1644,36 @@ describe("bash permission migration", () => {
       await disposeAllInstances()
     }
   })
+
+  test("migrates config with trailing commas", async () => {
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = tmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      const file = path.join(tmp.path, "kilo.jsonc")
+      const marker = path.join(tmp.path, ".bash-permission-migrated")
+      await Filesystem.write(
+        file,
+        `{
+  "$schema": "https://app.kilo.ai/config.json",
+  "permission": {
+    "read": "allow",
+  },
+}`,
+      )
+      await KilocodeConfig.migrateBashPermission()
+      expect(await Bun.file(marker).exists()).toBe(true)
+      const text = await Filesystem.readText(file)
+      const parsed = ConfigParse.jsonc(text, file) as Record<string, any>
+      expect(parsed.permission.bash).toBe("allow")
+      expect(text).toContain(`"read": "allow"`)
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
 })

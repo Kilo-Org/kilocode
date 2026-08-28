@@ -487,7 +487,7 @@ export namespace KilocodeConfig {
         continue
       }
       const errors: ParseError[] = []
-      const data = (parseJsonc(text, errors) as Record<string, unknown> | undefined) ?? {}
+      const data = (parseJsonc(text, errors, { allowTrailingComma: true }) as Record<string, unknown> | undefined) ?? {}
       if (errors.length > 0) {
         hasFailure = true
         log.warn("skipping bash permission migration due to malformed config", { file, errors })
