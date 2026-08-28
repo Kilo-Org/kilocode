@@ -3,15 +3,30 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { normalizeHunk } from "@kilocode/kilo-ui/session-diff"
 import { displayHunk } from "../agent-manager/pr/pr-comment-payload"
 
-export function PRCommentDiff(props: { file: string; line?: number; hunk: string; after?: string[] }) {
+export function PRCommentDiff(props: {
+  file: string
+  line?: number
+  side?: "additions" | "deletions"
+  hunk: string
+  after?: string[]
+}) {
   const input = createMemo(
-    () => ({ file: props.file, line: props.line, hunk: props.hunk, after: (props.after ?? []).join("\n") }),
+    () => ({
+      file: props.file,
+      line: props.line,
+      side: props.side,
+      hunk: props.hunk,
+      after: (props.after ?? []).join("\n"),
+    }),
     undefined,
-    { equals: (a, b) => a.file === b.file && a.line === b.line && a.hunk === b.hunk && a.after === b.after },
+    {
+      equals: (a, b) =>
+        a.file === b.file && a.line === b.line && a.side === b.side && a.hunk === b.hunk && a.after === b.after,
+    },
   )
   const view = createMemo(() => {
     const data = input()
-    const hunk = displayHunk(data.hunk, data.line, data.after ? data.after.split("\n") : undefined)
+    const hunk = displayHunk(data.hunk, data.line, data.after ? data.after.split("\n") : undefined, data.side)
     const value = normalizeHunk(data.file, hunk.patch)
     return value ? { hunk, value } : undefined
   })

@@ -47,6 +47,34 @@ function harness(opts: { hasPersisted?: boolean; projectId?: string } = {}) {
 }
 
 describe("PRStatusPoller batched GitHub queries", () => {
+  it("forwards the actual branch for null PR results", async () => {
+    const values: Array<{ pr: PRStatus | null; branch?: string }> = []
+    const branches: string[] = []
+    const poller = new PRStatusPoller({
+      getWorktrees: () => [{ id: "wt1", path: "/repo", branch: "HEAD" }] as never,
+      getWorkspaceRoot: () => "/repo",
+      onStatus: (_id, status, _error, branch) => values.push({ pr: status, branch }),
+      getBranch: async () => "feature/real",
+      log: () => undefined,
+    })
+    const internal = poller as unknown as {
+      target: (id: string) => { id: string; path: string; branch: string }
+      cachedFetchPR: (branch: string) => Promise<null>
+      fetchOne: (id: string) => Promise<void>
+    }
+    internal.target = () => ({ id: "wt1", path: "/repo", branch: "HEAD" })
+    internal.cachedFetchPR = async (branch) => {
+      branches.push(branch)
+      return null
+    }
+
+    await internal.fetchOne("wt1")
+
+    expect(values).toEqual([{ pr: null, branch: "feature/real" }])
+    expect(branches).toEqual(["feature/real"])
+    poller.stop()
+  })
+
   it("loads checks and reviewers with one request and isolates projects and detached worktrees", async () => {
     let root = "/alpha"
     const tree = { id: "wt1", path: "/alpha/feature", branch: "feature" }

@@ -162,9 +162,8 @@ const refreshedRow = [...root.querySelectorAll(".am-pr-comment-head")].find((nod
 assert.equal(refreshedRow?.getAttribute("aria-expanded"), "true")
 assert.match(root.textContent ?? "", /second paragraph only shows when expanded/)
 
-// Send to agent hands the thread over as a structured review comment.
 const send = [...root.querySelectorAll('[data-component="button"]')].find((node) =>
-  /Send to agent/.test(node.textContent ?? ""),
+  /Send to chat/.test(node.textContent ?? ""),
 )
 assert.ok(send, "send button is rendered")
 ;(send as HTMLButtonElement).click()

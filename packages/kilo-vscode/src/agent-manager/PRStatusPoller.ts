@@ -21,11 +21,17 @@ import { withContext } from "./pr/pr-comment-context"
 interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
   getWorkspaceRoot: () => string | undefined
-  onStatus: (worktreeId: string, pr: PRStatus | null, error?: "gh_missing" | "gh_auth" | "fetch_failed") => void
+  onStatus: (
+    worktreeId: string,
+    pr: PRStatus | null,
+    error?: "gh_missing" | "gh_auth" | "fetch_failed",
+    branch?: string,
+  ) => void
   log: (...args: unknown[]) => void
   intervalMs?: number
   /** Shared concurrency gate for child process spawning. */
   semaphore?: Semaphore
+  getBranch?: (worktree: Worktree) => Promise<string | undefined>
 }
 
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
@@ -250,13 +256,15 @@ export class PRStatusPoller {
     if (!wt) return
 
     try {
-      const pr = await this.cachedFetchPR(wt.branch, wt.path)
+      const branch = this.options.getBranch ? await this.options.getBranch(wt) : wt.branch
+      if (this.stale(generation)) return
+      const pr = await this.cachedFetchPR(branch ?? wt.branch, wt.path)
       if (!pr || this.stale(generation)) {
         if (this.stale(generation)) return
-        const hash = `${worktreeId}:${wt.branch}:none`
+        const hash = `${worktreeId}:${branch ?? wt.branch}:none`
         if (this.lastHash.get(worktreeId) === hash) return
         this.lastHash.set(worktreeId, hash)
-        this.options.onStatus(worktreeId, null)
+        this.options.onStatus(worktreeId, null, undefined, branch)
         return
       }
 
@@ -283,17 +291,23 @@ export class PRStatusPoller {
         files: pr.files,
       }
 
-      const reviewersSig = reviewers.map((r) => `${r.login}:${r.state}`).join(",")
-      const hash = `${worktreeId}:${pr.number}:${pr.title}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${reviewersSig}:${pr.body ?? ""}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}:${commentsSig(comments?.comments)}`
+      const hash = this.signature(worktreeId, branch ?? wt.branch, status)
       if (this.lastHash.get(worktreeId) === hash) return
       this.lastHash.set(worktreeId, hash)
 
-      this.options.onStatus(worktreeId, status)
+      this.options.onStatus(worktreeId, status, undefined, branch)
     } catch (err) {
       if (this.stale(generation)) return
       this.handleError(worktreeId, wt.branch, wt.path, err)
       throw err // propagate so fetchAll can track failures for backoff
     }
+  }
+
+  private signature(id: string, branch: string, pr: PRStatus): string {
+    const reviewers = pr.reviewers.map((item) => `${item.login}:${item.state}`).join(",")
+    const checks = pr.checks
+    const comments = pr.comments
+    return `${id}:${branch}:${pr.number}:${pr.title}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${reviewers}:${pr.body ?? ""}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}:${commentsSig(comments?.comments)}`
   }
 
   private extras(pr: PRResult, cwd: string) {
@@ -498,6 +512,13 @@ export class PRStatusPoller {
                 id
                 isResolved
                 isOutdated
+                path
+                diffSide
+                line
+                originalLine
+                startLine
+                originalStartLine
+                startDiffSide
                 comments(first: 10) {
                   nodes {
                     id

@@ -11,8 +11,8 @@ export interface GhComment {
   author?: GhAuthor
   body?: string
   path?: string
-  line?: number
-  originalLine?: number
+  line?: number | null
+  originalLine?: number | null
   url?: string
   createdAt?: string
   diffHunk?: string
@@ -21,6 +21,13 @@ export interface GhThread {
   id?: string
   isResolved?: boolean
   isOutdated?: boolean
+  path?: string
+  diffSide?: "LEFT" | "RIGHT"
+  line?: number | null
+  originalLine?: number | null
+  startLine?: number | null
+  originalStartLine?: number | null
+  startDiffSide?: "LEFT" | "RIGHT" | null
   comments?: { nodes?: GhComment[] }
 }
 export interface GhReviewRequest {

@@ -11,6 +11,7 @@ import {
 } from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
 import { Diff } from "@kilocode/kilo-ui/diff"
+import type { DiffHandle } from "@kilocode/kilo-ui/pierre"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
@@ -72,6 +73,15 @@ import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffVie
 import { ImageDiffView } from "../diff-viewer/ImageDiffView"
 import { createDiffRows, diffSizeKey } from "../diff-viewer/diff-state"
 import { createDiffRequests, createDiffViewport } from "../diff-viewer/diff-requests"
+import "./pr/pr-panel.css"
+import "../diff-viewer/remote-comments.css"
+import {
+  createRemoteCommentController,
+  createRemoteFocus,
+  RemoteCommentsOutside,
+  type DiffAnnotationMeta,
+} from "../diff-viewer/remote-comment-renderer"
+import type { PRComment } from "./pr/pr-types"
 
 // --- Data model ---
 
@@ -110,6 +120,8 @@ interface DiffPanelProps {
   lead?: JSXElement
   /** Defaults to true. Hides the per-file Revert action when false. */
   canRevert?: boolean
+  remoteComments?: PRComment[]
+  focusedComment?: { id: string; file: string }
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
@@ -199,6 +211,35 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // scrolling through the accordion matches the tree grouping.
   const sorted = createMemo(() => treeOrder(props.diffs))
   const rows = createDiffRows(sorted, () => props.sessionKey)
+  const remote = createRemoteCommentController({
+    key: () => props.sessionKey,
+    comments: () => props.remoteComments,
+    loading: () => props.loadingFiles,
+    diffs: () => rows(),
+    active: () => props.active !== false,
+    activeTerminalId: () => props.activeTerminalId,
+    onSendClick: props.onSendClick,
+    onOpenFile: props.onOpenFile,
+    onOpenUrl: (url) => vscode.postMessage({ type: "openExternal", url }),
+  })
+  const handles = new Map<string, DiffHandle>()
+  const reveal = (file: string) => {
+    const diff = props.diffs.find((item) => item.file === file)
+    if (!diff || (props.markdownRender && isMarkdownFile(file)) || !shouldVirtualizeDiff(diff)) return true
+    const target = props.focusedComment
+    const anchor = target
+      ? remote
+          .map()
+          .anchors.get(file)
+          ?.find((item) => item.comments.some((comment) => comment.threadId === target.id))
+      : undefined
+    return anchor ? (handles.get(file)?.scrollToLine(anchor.line, anchor.side) ?? false) : false
+  }
+  const register = (file: string, handle: DiffHandle | undefined) => {
+    if (!handle) return void handles.delete(file)
+    handles.set(file, handle)
+    if (focusFile() === file) reveal(file)
+  }
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -228,6 +269,21 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   let rootRef: HTMLDivElement | undefined
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
+  const [focusFile, setFocusFile] = createSignal<string>()
+  const focus = createRemoteFocus(() => rootRef, setFocusFile, {
+    root: scroller,
+    to: (offset) => virtualizer()?.scrollTo(offset),
+  })
+
+  createEffect(
+    on(
+      () => [props.active, props.sessionKey] as const,
+      ([active]) => {
+        if (active === false) focus.stop()
+      },
+      { defer: true },
+    ),
+  )
 
   const focusRoot = () => {
     requestAnimationFrame(() => {
@@ -293,6 +349,33 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     send: () => (props.active === false ? undefined : props.onRequestDiff),
     eager: false,
   })
+
+  createEffect(
+    on(
+      () => [props.focusedComment, props.active, props.sessionKey, virtualizer()] as const,
+      ([target]) => {
+        if (!target || props.active === false) {
+          focus.stop()
+          return
+        }
+        focus.request(
+          target.id,
+          target.file,
+          () => {
+            remote.open(target.id)
+            const diff = props.diffs.find((item) => item.file === target.file)
+            if (!diff) return
+            if (isDiffExpandable(diff) && !open().includes(target.file)) setOpen((prev) => [...prev, target.file])
+            const index = rows().findIndex((item) => item.file === target.file)
+            if (index >= 0) virtualizer()?.scrollToIndex(index, { offset: -8, smooth: false })
+            request(diff)
+          },
+          () => remote.location(target.file, target.id),
+          () => reveal(target.file),
+        )
+      },
+    ),
+  )
 
   // --- CRUD ---
 
@@ -413,10 +496,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       const comment = comments().find((item) => item.id === edit)
       if (comment) files.add(comment.file)
     }
+    const target = focusFile()
+    if (target) files.add(target)
     return rows().flatMap((diff, index) => (files.has(diff.file) ? [index] : []))
   })
 
-  const annotationsForFile = (file: string): DiffLineAnnotation<AnnotationMeta>[] => {
+  const annotationsForFile = (file: string): DiffLineAnnotation<DiffAnnotationMeta>[] => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
     editMeta = result.editMeta
@@ -424,11 +509,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       composer().draft = draft() ? draftMeta : null
       composer().edit = editing() ? editMeta : null
     }
-    return result.annotations
+    return [...result.annotations, ...remote.annotations(file)]
   }
 
-  const buildAnnotation = (annotation: DiffLineAnnotation<AnnotationMeta>): HTMLElement | undefined => {
-    return buildReviewAnnotation(annotation, {
+  const buildAnnotation = (annotation: DiffLineAnnotation<DiffAnnotationMeta>): HTMLElement | undefined => {
+    if (annotation.metadata?.type === "remote") return remote.render(annotation.metadata)
+    return buildReviewAnnotation(annotation as DiffLineAnnotation<AnnotationMeta>, {
       diffs: props.diffs,
       editing: editing(),
       setEditing: setEditState,
@@ -593,7 +679,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         </div>
       </Show>
 
-      <Show when={props.diffs.length > 0}>
+      <Show when={props.diffs.length > 0} fallback={<RemoteCommentsOutside controller={remote} />}>
         <div class="am-diff-content" data-component="session-review" ref={setScroller}>
           <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
             <VirtualDiffList
@@ -607,7 +693,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 const isDeleted = () => diff.status === "deleted"
                 const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                 const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
-                const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
+                const fileCommentCount = () =>
+                  (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)
                 const viewport = createDiffViewport(scroller)
 
                 createEffect(() => {
@@ -757,7 +844,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                               <Show
                                 when={props.markdownRender && isMarkdownFile(diff.file)}
                                 fallback={
-                                  <Diff<AnnotationMeta>
+                                  <Diff<DiffAnnotationMeta>
                                     before={{ name: diff.file, contents: diff.before }}
                                     after={{ name: diff.file, contents: diff.after }}
                                     patch={diff.patch}
@@ -765,6 +852,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                     sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle ?? "unified")}
                                     virtualized={shouldVirtualizeDiff(diff)}
                                     visible={viewport.visible() && props.active !== false}
+                                    handle={(handle) => register(diff.file, handle)}
+                                    scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
                                     annotations={annotationsForFile(diff.file)}
                                     renderAnnotation={buildAnnotation}
                                     enableGutterUtility={true}
@@ -778,8 +867,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                               >
                                 <MarkdownDiffView
                                   diff={diff}
-                                  annotations={annotationsForFile(diff.file)}
-                                  renderAnnotation={buildAnnotation}
+                                  annotations={annotationsForFile(diff.file) as DiffLineAnnotation<AnnotationMeta>[]}
+                                  renderAnnotation={
+                                    buildAnnotation as (
+                                      annotation: DiffLineAnnotation<AnnotationMeta>,
+                                    ) => HTMLElement | undefined
+                                  }
                                   enableGutterUtility={true}
                                   onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
                                   onLineNumberClick={(event) => {
@@ -803,6 +896,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
             <DiffEndMarker />
           </Show>
+          <RemoteCommentsOutside controller={remote} />
         </div>
 
         <Show when={comments().length > 0}>

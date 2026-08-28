@@ -23,9 +23,26 @@ import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const FULL_SCREEN_DIFF_VIEW = path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx")
-const REQUIRED = ["../agent-manager/agent-manager.css", "../agent-manager/agent-manager-review.css"] as const
+const REQUIRED = [
+  "../agent-manager/agent-manager.css",
+  "../agent-manager/agent-manager-review.css",
+  "../agent-manager/pr/pr-panel.css",
+  "./remote-comments.css",
+] as const
 
 describe("FullScreenDiffView — CSS imports", () => {
+  it("keeps remote review cards within the visible Pierre column", async () => {
+    const css = await Bun.file(path.join(ROOT, "webview-ui/diff-viewer/remote-comments.css")).text()
+    expect(css).toContain("width: var(--diffs-column-content-width, 100%);")
+    expect(css).toContain(
+      "width: var(--diffs-column-content-width, calc(50cqw - var(--diffs-column-number-width, 0px)));",
+    )
+    expect(css).toContain("inline-size: 100%;")
+    expect(css).toContain("min-inline-size: 0;")
+    expect(css).toContain("contain: inline-size;")
+    expect(css).toContain("container-type: inline-size;")
+  })
+
   it("imports every stylesheet required to render correctly", () => {
     const src = fs.readFileSync(FULL_SCREEN_DIFF_VIEW, "utf-8")
     const missing = REQUIRED.filter((css) => !src.includes(`import "${css}"`))

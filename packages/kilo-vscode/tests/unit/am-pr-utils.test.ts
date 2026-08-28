@@ -415,6 +415,84 @@ describe("parseComments", () => {
     ]
     expect(parseComments(threads)[0]?.line).toBe(42)
   })
+
+  it("treats nullable GitHub locations as absent instead of emitting null metadata", () => {
+    const result = parseComments([
+      {
+        id: "file-thread",
+        path: "src/foo.ts",
+        line: null,
+        originalLine: null,
+        startLine: null,
+        diffSide: "RIGHT",
+        startDiffSide: "RIGHT",
+        comments: { nodes: [{ id: "file-comment", line: null, originalLine: null, body: "File-level note" }] },
+      },
+    ])[0]
+    expect(result?.file).toBe("src/foo.ts")
+    expect(result?.line).toBeUndefined()
+    expect(result?.originalLine).toBeUndefined()
+    expect(result?.startLine).toBeUndefined()
+  })
+
+  it("prefers thread location fields and preserves matching multi-line starts", () => {
+    const threads: GhThread[] = [
+      {
+        id: "PRT_left",
+        path: "thread-left.ts",
+        diffSide: "LEFT",
+        line: 12,
+        originalLine: 9,
+        startLine: 10,
+        originalStartLine: 8,
+        startDiffSide: "LEFT",
+        comments: {
+          nodes: [
+            {
+              id: "left",
+              author: { login: "alice", avatarUrl: "https://avatar/alice" },
+              body: "old line",
+              path: "comment-left.ts",
+              line: 4,
+              originalLine: 3,
+            },
+            { id: "left-reply", author: { login: "bob", avatarUrl: "https://avatar/bob" }, body: "reply" },
+          ],
+        },
+      },
+      {
+        id: "PRT_right",
+        path: "thread-right.ts",
+        diffSide: "RIGHT",
+        line: 20,
+        originalLine: 19,
+        startLine: 18,
+        startDiffSide: "LEFT",
+        comments: { nodes: [{ id: "right", body: "new line", path: "comment-right.ts", line: 5 }] },
+      },
+    ]
+
+    const result = parseComments(threads)
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        file: "thread-left.ts",
+        side: "deletions",
+        line: 12,
+        originalLine: 9,
+        startLine: 10,
+        replies: [{ author: "bob", body: "reply", avatar: "https://avatar/bob" }],
+      }),
+    )
+    expect(result[1]).toEqual(
+      expect.objectContaining({
+        file: "thread-right.ts",
+        side: "additions",
+        line: 20,
+        originalLine: 19,
+      }),
+    )
+    expect(result[1]).not.toHaveProperty("startLine")
+  })
 })
 
 // --- commentsSig ---

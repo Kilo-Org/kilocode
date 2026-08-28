@@ -235,6 +235,22 @@
   min-width: 0;
 }
 
+.am-pr-comment-inline .am-pr-comment-head {
+  flex-wrap: wrap;
+}
+
+.am-pr-comment-inline .am-pr-comment-author {
+  min-width: 0;
+  flex-shrink: 1;
+  overflow-wrap: anywhere;
+}
+
+.am-pr-comment-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .am-pr-comment-head:hover {
   background: var(--vscode-list-hoverBackground);
 }
@@ -311,6 +327,14 @@
 
 .am-pr-comment-reply .am-pr-comment-body {
   padding-left: 0;
+}
+
+.am-pr-comment [data-component="avatar"] {
+  border-radius: 50%;
+}
+
+.am-pr-comment-reply-head {
+  gap: 6px;
 }
 
 .am-pr-comment-error {

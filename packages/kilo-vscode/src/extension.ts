@@ -28,6 +28,7 @@ import { markWorkspace } from "./util/spotlight"
 import { createNotebookBridge } from "./services/notebook"
 import { createGitExecutable } from "./util/git-executable"
 import { isCursorHost } from "./utils"
+import { sameDirectory } from "./kilo-provider-utils"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -133,6 +134,21 @@ export async function activate(context: vscode.ExtensionContext) {
     focusContext: "kilo-code.new.sidebarFocused",
   })
   provider.setRemoteService(remoteService)
+
+  const deliver = (comments: unknown[], autoSend: boolean, sessionID?: string, directory?: string): void => {
+    const target = sessionID
+      ? [...tabPanels.values()].find((item) => {
+          if (item.getCurrentSessionId() !== sessionID || !item.canReceiveReviewComments()) return false
+          if (!directory) return true
+          return [item.getSessionDirectories().get(sessionID), item.getSessionGitDirectory(sessionID)]
+            .filter((value): value is string => value !== undefined)
+            .some((value) => sameDirectory(value, directory))
+        })
+      : undefined
+    const destination = target ?? provider
+    void destination.appendReviewComments(comments, autoSend, sessionID)
+  }
+  provider.setReviewCommentsHandler(deliver)
 
   // Register the webview view provider for the sidebar.
   // retainContextWhenHidden keeps the webview alive when switching to other sidebar panels.
@@ -261,6 +277,8 @@ export async function activate(context: vscode.ExtensionContext) {
           agentManagerProvider.createFromSidebar(baseBranch, branchName),
         )
         tabProvider.setDiffVirtualProvider(diffVirtualProvider)
+        tabProvider.setDiffViewerProvider(diffViewerProvider)
+        tabProvider.setReviewCommentsHandler(deliver)
         tabProvider.resolveWebviewPanel(panel)
         tabPanels.set(panel, tabProvider)
         panel.onDidDispose(
@@ -489,13 +507,15 @@ export async function activate(context: vscode.ExtensionContext) {
         agentManagerProvider,
         tabPanels,
         diffVirtualProvider,
+        diffViewerProvider,
         remoteService,
         autoApprove,
+        deliver,
       )
     }),
     vscode.commands.registerCommand(
       "kilo-code.new.showChanges",
-      (arg?: { sessionId?: string; turnId?: string; initialSourceId?: string; directory?: string }) => {
+      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => {
         diffViewerProvider.openFromCommand(arg)
       },
     ),
@@ -656,8 +676,10 @@ function openKiloInNewTab(
   agentManagerProvider: AgentManagerProvider,
   tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
   diffVirtualProvider: DiffVirtualProvider,
+  diffViewerProvider: DiffViewerProvider,
   remoteService: RemoteStatusService,
   autoApprove: ReturnType<typeof registerToggleAutoApprove>,
+  deliver: Parameters<KiloProvider["setReviewCommentsHandler"]>[0],
 ) {
   const panel = vscode.window.createWebviewPanel(
     "kilo-code.new.TabPanel",
@@ -688,6 +710,8 @@ function openKiloInNewTab(
     agentManagerProvider.createFromSidebar(baseBranch, branchName),
   )
   tabProvider.setDiffVirtualProvider(diffVirtualProvider)
+  tabProvider.setDiffViewerProvider(diffViewerProvider)
+  tabProvider.setReviewCommentsHandler(deliver)
   tabProvider.resolveWebviewPanel(panel)
   tabPanels.set(panel, tabProvider)
 

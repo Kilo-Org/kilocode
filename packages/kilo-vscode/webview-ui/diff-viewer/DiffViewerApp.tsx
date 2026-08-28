@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, onCleanup, Show } from "solid-js"
+import { batch, createEffect, createSignal, on, onCleanup, Show } from "solid-js"
 import type { Component } from "solid-js"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
@@ -21,6 +21,7 @@ import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
 import type { BranchInfo, ReviewComment, WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../src/diff/sources/types"
 import type { DiffViewerNotice } from "../src/types/messages/extension-messages"
+import type { PRComment } from "../agent-manager/pr/pr-types"
 import { DiffPickerHeader } from "./DiffPickerHeader"
 import { BaseBranchPicker } from "./BaseBranchPicker"
 import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
@@ -40,6 +41,9 @@ const DiffViewerContent: Component = () => {
   const [diffs, setDiffs] = createSignal<WorktreeFileDiff[]>([])
   const [loading, setLoading] = createSignal(true)
   const [comments, setComments] = createSignal<ReviewComment[]>([])
+  const [context, setContext] = createSignal("")
+  const [remote, setRemote] = createSignal<PRComment[]>([])
+  const [focus, setFocus] = createSignal<{ id: string; file: string }>()
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
   const [markdown, setMarkdown] = createSignal(false)
   const [reverting, setReverting] = createSignal<Set<string>>(new Set())
@@ -105,6 +109,34 @@ const DiffViewerContent: Component = () => {
   }
 
   const unsubscribe = vscode.onMessage((msg) => {
+    if (msg.type === "diffViewer.context") {
+      if (context() === msg.key) return
+      batch(() => {
+        setContext(msg.key)
+        setDiffs([])
+        setComments([])
+        setRemote([])
+        setFocus(undefined)
+        setInitialFile(undefined)
+        setLoadingFiles(new Set<string>())
+        setReverting(new Set<string>())
+        setBranches([])
+        setDefaultBranch("")
+        setAutoBase(undefined)
+        setCurrentBase(undefined)
+        setCurrentBranch(undefined)
+        setIsAuto(true)
+      })
+      return
+    }
+    if (msg.type === "diffViewer.prComments") {
+      setRemote(msg.comments)
+      return
+    }
+    if (msg.type === "diffViewer.focusComment") {
+      setFocus({ id: msg.id, file: msg.file })
+      return
+    }
     if (msg.type === "diffViewer.diffs") {
       // Preserve cached `before`/`after` across polls so summarized polling
       // updates don't clobber loaded detail. Mirrors the agent manager's
@@ -175,6 +207,8 @@ const DiffViewerContent: Component = () => {
 
   const selectSource = (id: string) => {
     if (id === currentSourceId()) return
+    setFocus(undefined)
+    setInitialFile(undefined)
     post({ type: "selectSource", id })
   }
 
@@ -196,11 +230,13 @@ const DiffViewerContent: Component = () => {
   // Fetch branches whenever the active source becomes the workspace one. The
   // extension owns the override state so we ask on every transition rather
   // than caching here.
-  createEffect(() => {
-    if (!isWorkspaceSource()) return
-    setBranchesLoading(true)
-    post({ type: "diffViewer.requestBranches" })
-  })
+  createEffect(
+    on([context, isWorkspaceSource], ([, visible]) => {
+      if (!visible) return
+      setBranchesLoading(true)
+      post({ type: "diffViewer.requestBranches" })
+    }),
+  )
 
   const onBaseBranchSelect = (branch: string | undefined) => {
     // Optimistically reflect the new selection so the trigger label updates
@@ -258,7 +294,9 @@ const DiffViewerContent: Component = () => {
         loading={loading()}
         loadingFiles={loadingFiles()}
         onRequestDiff={requestDiffFile}
-        sessionKey={currentSourceId() ?? "local"}
+        sessionKey={`${context()}\0${currentSourceId() ?? "local"}`}
+        remoteComments={remote()}
+        focusedComment={focus()}
         comments={comments()}
         onCommentsChange={setComments}
         onSendAll={() => {}}
@@ -272,8 +310,8 @@ const DiffViewerContent: Component = () => {
           setMarkdown(render)
           post({ type: "diffViewer.setMarkdownRender", render })
         }}
-        onOpenFile={(relativePath) => {
-          post({ type: "openFile", filePath: relativePath })
+        onOpenFile={(relativePath, line) => {
+          post({ type: "openFile", filePath: relativePath, line })
         }}
         initialFile={initialFile()}
         onRevertFile={(file) => {

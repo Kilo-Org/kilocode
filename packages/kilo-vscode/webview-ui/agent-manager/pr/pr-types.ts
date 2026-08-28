@@ -16,6 +16,7 @@ export interface PRCheck {
 export interface PRCommentReply {
   author: string
   body: string
+  avatar?: string
 }
 
 export interface PRComment {
@@ -25,7 +26,10 @@ export interface PRComment {
   avatar?: string
   body: string
   file?: string
+  side?: "additions" | "deletions"
   line?: number
+  originalLine?: number
+  startLine?: number
   url?: string
   resolved: boolean
   outdated: boolean

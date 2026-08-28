@@ -167,6 +167,7 @@ import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } f
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanelCache } from "./DiffPanelCache"
 import { PRPanelHost } from "./pr/PRPanelHost"
+import { createPRReview } from "./pr/review"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
@@ -1659,23 +1660,21 @@ const AgentManagerContent: Component = () => {
     setReviewCommentsByContext((prev) => setReviewComments(prev, currentProjectId() ?? "single", key, comments))
   }
 
-  const diffScopeControls = (compact: boolean) => (
-    <DiffScopeControls
-      descriptors={review.descriptors()}
-      currentId={review.id()}
-      onSelectScope={review.select}
-      showBase={review.isBranch()}
-      branches={review.branches()}
-      branchesLoading={review.loading()}
-      defaultBranch={review.defaultBranch()}
-      autoBase={review.autoBase()}
-      currentBase={review.currentBase()}
-      isAuto={review.isAuto()}
-      currentBranch={review.currentBranch()}
-      onSelectBase={review.selectBase}
-      compact={compact}
-    />
-  )
+  const diffScopeControls = (compact: boolean) => <DiffScopeControls {...review.controls()} compact={compact} />
+  const remote = createPRReview({
+    context: diffCtx,
+    project: activeProjectId,
+    current: () => session.currentSessionID() ?? activePendingId(),
+    sessions: session.sessions,
+    managed: managedSessions,
+    statuses: prStatuses,
+    select: review.select,
+    show: () => {
+      closeHistory()
+      setReviewActive(false)
+      setSidePanel(SidePanel.Diff)
+    },
+  })
 
   createEffect(() => {
     const panel = diffOpen()
@@ -1731,8 +1730,6 @@ const AgentManagerContent: Component = () => {
     if (!key) return []
     return data[diffDataKey(activeProjectId(), key)] ?? []
   })
-
-  const diffSessionKey = createMemo(() => diffScopeId() ?? "")
 
   const diffNotice = createMemo(() => {
     const key = diffScopeId()
@@ -2636,6 +2633,8 @@ const AgentManagerContent: Component = () => {
                           setReviewComments(prev, currentProjectId() ?? "single", key, comments),
                         )
                       }
+                      remoteComments={remote.comments}
+                      focusedComment={remote.focus}
                       composer={composers.get}
                       lead={() => diffScopeControls(true)}
                       canRevert={scopeCapabilities(review.scope()).revert}
@@ -2672,6 +2671,7 @@ const AgentManagerContent: Component = () => {
                         worktreeId={activePR()!.selected}
                         activeTerminalId={terms.activeId()}
                         sessionId={diffCtx()}
+                        onOpenDiff={remote.open}
                         onClose={() => setSidePanel(null)}
                       />
                     </Show>
@@ -2737,12 +2737,14 @@ const AgentManagerContent: Component = () => {
                   loading={diffLoadingForCurrent()}
                   loadingFiles={diffFileLoadingForCurrent()}
                   sessionId={activeDiffSession()}
-                  sessionKey={diffSessionKey()}
+                  sessionKey={`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`}
                   notice={diffNotice()}
                   lead={diffScopeControls(false)}
                   canRevert={scopeCapabilities(review.scope()).revert}
                   canComment={scopeCapabilities(review.scope()).comments}
                   comments={reviewComments()}
+                  remoteComments={remote.comments()}
+                  focusedComment={reviewActive() ? remote.focus(diffScopeId()) : undefined}
                   onCommentsChange={setReviewCommentsForSelection}
                   composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
                   onSendAll={closeReviewTab}

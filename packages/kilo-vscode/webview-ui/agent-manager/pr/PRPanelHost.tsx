@@ -3,6 +3,7 @@ import { Show } from "solid-js"
 import type { PRStatus, WorktreeState } from "../../src/types/messages"
 import { useVSCode } from "../../src/context/vscode"
 import { PRPanel } from "./PRPanel"
+import type { PRComment } from "./pr-types"
 import { openFile, openUrl } from "./pr-panel-actions"
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   worktreeId: string
   activeTerminalId?: string
   sessionId?: string
+  onOpenDiff?: (comment: PRComment) => void
   onClose: () => void
 }
 
@@ -28,6 +30,7 @@ export function PRPanelHost(props: Props) {
         onClose={props.onClose}
         onOpenExternal={() => openUrl(vscode.postMessage, props.worktreeId, props.pr.url)}
         onOpenFile={(file, line) => openFile(vscode.postMessage, props.sessionId, file, line)}
+        onOpenDiff={props.onOpenDiff}
         onOpenUrl={(url) => openUrl(vscode.postMessage, props.worktreeId, url)}
       />
     </Show>

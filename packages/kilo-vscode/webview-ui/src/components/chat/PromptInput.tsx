@@ -763,6 +763,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "appendReviewComments") {
+      if (message.sessionID && message.sessionID !== sid()) {
+        const key = scopeDraftKey(boxKey(), sessionDraftKey(message.sessionID))
+        reviewDrafts.set(key, mergeReviewComments(reviewDrafts.get(key) ?? [], message.comments))
+        return
+      }
       const empty = !text().trim() && reviewComments().length === 0 && imageAttach.images().length === 0
       const merged = mergeReviewComments(reviewComments(), message.comments)
       replaceReviewComments(merged)
@@ -1324,7 +1329,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           comments={reviewComments()}
           sessionID={sid()}
           onRemove={removeReviewComment}
-          onClear={clearReviewComments}
+          onClear={(ids) => replaceReviewComments(reviewComments().filter((item) => !ids.includes(item.id)))}
         />
       </Show>
       <Show when={mention.showMention()}>

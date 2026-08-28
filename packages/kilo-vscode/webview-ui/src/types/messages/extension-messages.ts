@@ -1,5 +1,6 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
+import type { PRComment } from "../../../agent-manager/pr/pr-types"
 import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
 import type { MarketplaceItem, MarketplaceInstalledMetadata, MarketplaceRelevanceMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
@@ -349,6 +350,7 @@ export interface AppendReviewCommentsMessage {
   type: "appendReviewComments"
   comments: ReviewCommentEntry[]
   autoSend?: boolean
+  sessionID?: string
 }
 
 export interface DocumentResultMessage {
@@ -1219,6 +1221,22 @@ export interface ViewSubAgentSessionMessage {
   sessionID: string
 }
 
+export interface DiffViewerContextMessage {
+  type: "diffViewer.context"
+  key: string
+}
+
+export interface DiffViewerPRCommentsMessage {
+  type: "diffViewer.prComments"
+  comments: PRComment[]
+}
+
+export interface DiffViewerFocusCommentMessage {
+  type: "diffViewer.focusComment"
+  id: string
+  file: string
+}
+
 export interface DiffViewerDiffsMessage {
   type: "diffViewer.diffs"
   diffs: WorktreeFileDiff[]
@@ -1569,6 +1587,9 @@ export type ExtensionMessage =
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
   | ViewSubAgentSessionMessage
+  | DiffViewerContextMessage
+  | DiffViewerPRCommentsMessage
+  | DiffViewerFocusCommentMessage
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage

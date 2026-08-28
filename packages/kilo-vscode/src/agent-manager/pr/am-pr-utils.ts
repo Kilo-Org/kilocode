@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import type { CheckStatus, PRCheck, PRComment, PRReviewer, PRStatus, ReviewerState } from "../types"
-import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
+import type { PRResult, GhComment, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
 export function parsePRResult(json: string): PRResult | null {
   const data = JSON.parse(json)
@@ -110,29 +110,57 @@ const REVIEWER_STATE: Record<string, ReviewerState> = {
   COMMENTED: "commented",
 }
 
+function location(
+  thread: GhThread,
+  first: GhComment,
+): Pick<PRComment, "file" | "side" | "line" | "originalLine" | "startLine"> {
+  const originalLine = thread.originalLine ?? first.originalLine ?? undefined
+  const line = thread.line ?? first.line ?? originalLine
+  const side = thread.diffSide === "LEFT" ? "deletions" : thread.diffSide === "RIGHT" ? "additions" : undefined
+  const startLine = side && thread.startDiffSide === thread.diffSide ? (thread.startLine ?? undefined) : undefined
+  return {
+    file: thread.path ?? first.path,
+    ...(side ? { side } : {}),
+    ...(line === undefined ? {} : { line }),
+    ...(originalLine === undefined ? {} : { originalLine }),
+    ...(startLine === undefined ? {} : { startLine }),
+  }
+}
+
+function parseReplies(nodes: GhComment[]): PRComment["replies"] {
+  const list = nodes.slice(1).map((node) => ({
+    author: node.author?.login ?? "unknown",
+    body: node.body ?? "",
+    ...(node.author?.avatarUrl ? { avatar: node.author.avatarUrl } : {}),
+  }))
+  return list.length > 0 ? list : undefined
+}
+
+function parseThread(thread: GhThread): PRComment | undefined {
+  const nodes = thread.comments?.nodes ?? []
+  const first = nodes[0]
+  if (!first) return undefined
+  return {
+    id: first.id,
+    threadId: thread.id ?? first.id,
+    author: first.author?.login ?? "unknown",
+    avatar: first.author?.avatarUrl,
+    body: first.body ?? "",
+    ...location(thread, first),
+    url: first.url,
+    resolved: thread.isResolved ?? false,
+    outdated: thread.isOutdated ?? false,
+    createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
+    diffHunk: first.diffHunk,
+    replies: parseReplies(nodes),
+  }
+}
+
 export function parseComments(threads: GhThread[]): PRComment[] {
   const items: PRComment[] = []
   for (const thread of threads) {
-    const nodes = thread.comments?.nodes ?? []
-    const first = nodes[0]
-    if (!first) continue
-    const replies = nodes.slice(1).map((node) => ({ author: node.author?.login ?? "unknown", body: node.body ?? "" }))
-    items.push({
-      id: first.id,
-      threadId: thread.id ?? first.id,
-      author: first.author?.login ?? "unknown",
-      avatar: first.author?.avatarUrl,
-      body: first.body ?? "",
-      file: first.path,
-      // An outdated thread has no current line, so fall back to the line it was written against.
-      line: first.line ?? first.originalLine,
-      url: first.url,
-      resolved: thread.isResolved ?? false,
-      outdated: thread.isOutdated ?? false,
-      createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
-      diffHunk: first.diffHunk,
-      replies: replies.length > 0 ? replies : undefined,
-    })
+    const item = parseThread(thread)
+    if (item) items.push(item)
   }
   return items
 }
@@ -177,6 +205,15 @@ export function mergePRStatus(prev: PRStatus | undefined, next: PRStatus): PRSta
   if (next.comments || !prev?.comments) return next
   if (prev.number !== next.number) return next
   return { ...next, comments: prev.comments }
+}
+
+export function retainPRStatus(
+  prev: PRStatus | undefined,
+  prevBranch: string | undefined,
+  branch: string | undefined,
+  next: PRStatus | null,
+): boolean {
+  return !next && prev !== undefined && branch !== undefined && branch === prevBranch
 }
 
 /**

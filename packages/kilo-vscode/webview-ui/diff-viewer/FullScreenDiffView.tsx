@@ -5,7 +5,10 @@ import type { VirtualizerHandle } from "virtua/solid"
 // see tests/unit/diff-viewer-css-arch.test.ts for the invariant.
 import "../agent-manager/agent-manager.css"
 import "../agent-manager/agent-manager-review.css"
+import "../agent-manager/pr/pr-panel.css"
+import "./remote-comments.css"
 import { Diff } from "@kilocode/kilo-ui/diff"
+import type { DiffHandle } from "@kilocode/kilo-ui/pierre"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
@@ -64,6 +67,13 @@ import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
 import { ImageDiffView } from "./ImageDiffView"
 import { createDiffRows, diffSizeKey } from "./diff-state"
 import { createDiffRequests, createDiffViewport } from "./diff-requests"
+import {
+  createRemoteCommentController,
+  createRemoteFocus,
+  RemoteCommentsOutside,
+  type DiffAnnotationMeta,
+} from "./remote-comment-renderer"
+import type { PRComment } from "../agent-manager/pr/pr-types"
 
 type DiffStyle = "unified" | "split"
 
@@ -99,6 +109,8 @@ interface FullScreenDiffViewProps {
   canRevert?: boolean
   /** Defaults to true. Disables comment creation and "Send all" when false. */
   canComment?: boolean
+  remoteComments?: PRComment[]
+  focusedComment?: { id: string; file: string }
   /** Optional leading content rendered first in the toolbar's left group. */
   lead?: JSXElement
   onClose: () => void
@@ -207,12 +219,54 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   let rootRef: HTMLDivElement | undefined
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
+  const [focusFile, setFocusFile] = createSignal<string>()
+  const focus = createRemoteFocus(() => rootRef, setFocusFile, {
+    root: scroller,
+    to: (offset) => virtualizer()?.scrollTo(offset),
+  })
   let syncFrame: number | undefined
+
+  createEffect(
+    on(
+      () => props.sessionKey,
+      () => focus.stop(),
+      { defer: true },
+    ),
+  )
 
   // Reorder diffs to match the file-tree's depth-first visual order so
   // scrolling through the diff panel matches the tree on the left.
   const sorted = createMemo(() => treeOrder(props.diffs))
   const rows = createDiffRows(sorted, () => props.sessionKey)
+  const remote = createRemoteCommentController({
+    key: () => props.sessionKey,
+    comments: () => props.remoteComments,
+    loading: () => props.loadingFiles,
+    diffs: () => rows(),
+    active: () => true,
+    activeTerminalId: () => props.activeTerminalId,
+    onSendClick: props.onSendClick,
+    onOpenFile: props.onOpenFile,
+    onOpenUrl: (url) => vscode.postMessage({ type: "openExternal", url }),
+  })
+  const handles = new Map<string, DiffHandle>()
+  const reveal = (file: string) => {
+    const diff = props.diffs.find((item) => item.file === file)
+    if (!diff || (props.markdownRender && isMarkdownFile(file)) || !shouldVirtualizeDiff(diff)) return true
+    const target = props.focusedComment
+    const anchor = target
+      ? remote
+          .map()
+          .anchors.get(file)
+          ?.find((item) => item.comments.some((comment) => comment.threadId === target.id))
+      : undefined
+    return anchor ? (handles.get(file)?.scrollToLine(anchor.line, anchor.side) ?? false) : false
+  }
+  const register = (file: string, handle: DiffHandle | undefined) => {
+    if (!handle) return void handles.delete(file)
+    handles.set(file, handle)
+    if (focusFile() === file) reveal(file)
+  }
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -291,6 +345,33 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     send: () => props.onRequestDiff,
     eager: false,
   })
+
+  createEffect(
+    on(
+      () => [props.focusedComment, props.sessionKey, virtualizer()] as const,
+      ([target]) => {
+        if (!target) {
+          focus.stop()
+          return
+        }
+        focus.request(
+          target.id,
+          target.file,
+          () => {
+            remote.open(target.id)
+            const diff = props.diffs.find((item) => item.file === target.file)
+            if (!diff) return
+            if (isDiffExpandable(diff) && !open().includes(target.file)) setOpen((prev) => [...prev, target.file])
+            const index = rows().findIndex((item) => item.file === target.file)
+            if (index >= 0) virtualizer()?.scrollToIndex(index, { offset: -8, smooth: false })
+            request(diff)
+          },
+          () => remote.location(target.file, target.id),
+          () => reveal(target.file),
+        )
+      },
+    ),
+  )
 
   // --- CRUD ---
 
@@ -415,20 +496,23 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       const comment = comments().find((item) => item.id === edit)
       if (comment) files.add(comment.file)
     }
+    const target = focusFile()
+    if (target) files.add(target)
     return rows().flatMap((diff, index) => (files.has(diff.file) ? [index] : []))
   })
 
-  const annotationsForFile = (file: string): DiffLineAnnotation<AnnotationMeta>[] => {
+  const annotationsForFile = (file: string): DiffLineAnnotation<DiffAnnotationMeta>[] => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
     editMeta = result.editMeta
     composer().draft = draft() ? draftMeta : null
     composer().edit = editing() ? editMeta : null
-    return result.annotations
+    return [...result.annotations, ...remote.annotations(file)]
   }
 
-  const buildAnnotation = (annotation: DiffLineAnnotation<AnnotationMeta>): HTMLElement | undefined => {
-    return buildReviewAnnotation(annotation, {
+  const buildAnnotation = (annotation: DiffLineAnnotation<DiffAnnotationMeta>): HTMLElement | undefined => {
+    if (annotation.metadata?.type === "remote") return remote.render(annotation.metadata)
+    return buildReviewAnnotation(annotation as DiffLineAnnotation<AnnotationMeta>, {
       diffs: props.diffs,
       editing: editing(),
       setEditing: setEditState,
@@ -678,7 +762,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                     const isDeleted = () => diff.status === "deleted"
                     const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                     const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
-                    const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
+                    const fileCommentCount = () =>
+                      (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)
                     const viewport = createDiffViewport(scroller)
 
                     createEffect(() => {
@@ -812,7 +897,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                   <Show
                                     when={props.markdownRender && isMarkdownFile(diff.file)}
                                     fallback={
-                                      <Diff<AnnotationMeta>
+                                      <Diff<DiffAnnotationMeta>
                                         before={{ name: diff.file, contents: diff.before }}
                                         after={{ name: diff.file, contents: diff.after }}
                                         patch={diff.patch}
@@ -820,6 +905,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                         sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle)}
                                         virtualized={shouldVirtualizeDiff(diff)}
                                         visible={viewport.visible()}
+                                        handle={(handle) => register(diff.file, handle)}
+                                        scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
                                         annotations={annotationsForFile(diff.file)}
                                         renderAnnotation={buildAnnotation}
                                         enableGutterUtility={props.canComment !== false}
@@ -833,8 +920,14 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                   >
                                     <MarkdownDiffView
                                       diff={diff}
-                                      annotations={annotationsForFile(diff.file)}
-                                      renderAnnotation={buildAnnotation}
+                                      annotations={
+                                        annotationsForFile(diff.file) as DiffLineAnnotation<AnnotationMeta>[]
+                                      }
+                                      renderAnnotation={
+                                        buildAnnotation as (
+                                          annotation: DiffLineAnnotation<AnnotationMeta>,
+                                        ) => HTMLElement | undefined
+                                      }
                                       enableGutterUtility={props.canComment !== false}
                                       onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
                                       onLineNumberClick={(event) => {
@@ -860,6 +953,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
               </Show>
             </div>
           </Show>
+          <RemoteCommentsOutside controller={remote} />
         </div>
       </div>
     </div>
