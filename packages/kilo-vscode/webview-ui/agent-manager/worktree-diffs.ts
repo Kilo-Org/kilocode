@@ -8,6 +8,7 @@
  */
 
 import { createSignal, type Accessor } from "solid-js"
+import { zeroID } from "@opencode-ai/core/kilocode/zero-id"
 import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
 import { parseDiffId } from "./diff-scope-state"
 import type { useVSCode } from "../src/context/vscode"
@@ -33,7 +34,7 @@ export function wireDiffId(id: string) {
 }
 
 export function diffDataKey(project: string | undefined, id: string): string {
-  return `${project ?? "single"}\0${id}`
+  return zeroID(project ?? "single", id)
 }
 
 export function createWorktreeDiffs(
@@ -79,7 +80,7 @@ export function createWorktreeDiffs(
   }
 
   const prune = (ids: Set<string>) => {
-    const prefix = `${project() ?? "single"}\0`
+    const prefix = key("")
     const keys = new Set([
       ...Object.keys(diffDatas()),
       ...Object.keys(diffLoadings()),

@@ -78,6 +78,30 @@ describe("explicit abort state", () => {
     expect(state.event(close("interrupted"), "/repo/a")).toBe(false)
   })
 
+  it.each(["", "session"])("removes only the exact session prefix %j across directories", (session) => {
+    const state = new ExplicitAbortState()
+    for (const directory of ["/repo/a", "/repo/b"]) {
+      const id = state.begin(session, directory)
+      state.finish(session, directory, id, true)
+    }
+    const sibling = `${session}-other`
+    const id = state.begin(sibling, "/repo/a")
+    state.finish(sibling, "/repo/a", id, true)
+
+    state.remove(session)
+    expect(state.event(close("interrupted", session), "/repo/a")).toBe(true)
+    expect(state.event(close("interrupted", session), "/repo/b")).toBe(true)
+    expect(state.event(close("interrupted", sibling))).toBe(false)
+  })
+
+  it("normalizes directories before building scope keys", () => {
+    const state = new ExplicitAbortState()
+    const id = state.begin("session", "/repo/nested/..")
+    state.finish("session", "/repo", id, true)
+
+    expect(state.event(close("interrupted"), "/repo/.")).toBe(false)
+  })
+
   it("clears suppression when an idle session becomes busy again", () => {
     const state = new ExplicitAbortState()
     const id = state.begin("session", "/repo")
