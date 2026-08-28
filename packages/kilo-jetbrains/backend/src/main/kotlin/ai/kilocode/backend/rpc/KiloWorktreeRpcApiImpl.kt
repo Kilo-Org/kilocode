@@ -278,7 +278,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             leftover = worktree
             val target = Path.of(worktree.path).normalize()
             emit(MoveProgressDto(MoveStage.TRANSFERRING))
-            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(captured, base, target) }
+            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(captured, target) }
             if (!applied.ok) {
                 leftover = null
                 rollback(directory, worktree, branch, "transfer failure")
