@@ -1,4 +1,5 @@
 import type { Message, Part, SessionInfo, SessionStatusInfo } from "../types/messages"
+import type { useVSCode } from "./vscode"
 
 export type RevertBoundary = Pick<NonNullable<SessionInfo["revert"]>, "messageID" | "partID">
 
@@ -232,4 +233,33 @@ export function partitionTurns(turns: MessageTurn[], ids: ReadonlySet<string>, q
   const idx = visible.findIndex((turn) => ids.has(turn.user.id))
   if (idx === -1) return { virtual: visible, direct: [] as MessageTurn[], queued: waiting }
   return { virtual: visible.slice(0, idx), direct: visible.slice(idx), queued: waiting }
+}
+
+export function removeQueuedMessage(
+  vscode: Pick<ReturnType<typeof useVSCode>, "onMessage" | "postMessage">,
+  sessionID: string,
+  messageID: string,
+  timeout = 10_000,
+) {
+  const requestID = crypto.randomUUID()
+  return new Promise<boolean>((resolve) => {
+    const finish = (success: boolean) => {
+      clearTimeout(timer)
+      unsubscribe()
+      resolve(success)
+    }
+    const unsubscribe = vscode.onMessage((message) => {
+      if (message.type === "connectionState" && (message.state === "disconnected" || message.state === "error")) {
+        finish(false)
+        return
+      }
+      if (message.type === "sessionDeleted" && message.sessionID === sessionID) {
+        finish(false)
+        return
+      }
+      if (message.type === "deleteMessageResult" && message.requestID === requestID) finish(message.success)
+    })
+    const timer = setTimeout(() => finish(false), timeout)
+    vscode.postMessage({ type: "deleteMessage", sessionID, messageID, requestID })
+  })
 }
