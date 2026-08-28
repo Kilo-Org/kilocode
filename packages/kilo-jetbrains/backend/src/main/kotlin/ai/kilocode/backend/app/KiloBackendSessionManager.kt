@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionShareDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -285,6 +286,45 @@ class KiloBackendSessionManager(
         }
     }
 
+    /**
+     * Share session [id] via `POST /session/{id}/share?directory={dir}` with an empty body, returning
+     * the updated session carrying `share.url`.
+     *
+     * Raw HTTP for the same reason as [fork]. The CLI requires Kilo credentials and refuses when
+     * `share` is disabled by config, but it maps every cause to a bare HTTP 500 with no body detail,
+     * so the message thrown here is all the UI can report.
+     */
+    fun share(id: String, dir: String): SessionDto = shareCall(id, dir, on = true)
+
+    /** Revoke a session share via `DELETE /session/{id}/share?directory={dir}`. */
+    fun unshare(id: String, dir: String): SessionDto = shareCall(id, dir, on = false)
+
+    private fun shareCall(id: String, dir: String, on: Boolean): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addPathSegment("share")
+            .addQueryParameter("directory", dir)
+            .build()
+        log.info("Session share: on=$on $target")
+        val builder = Request.Builder().url(target)
+        val request = (if (on) builder.post(ByteArray(0).toRequestBody(null)) else builder.delete()).build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session share failed: on=$on HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session share failed: HTTP ${response.code} — $raw")
+            }
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            log.info("${ChatLogSummary.sid(dto.id)} kind=session share=${dto.share != null} code=${response.code}")
+            owned[dto.id] = dto.directory
+            return dto
+        }
+    }
+
     fun cloudSessions(dir: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
         val h = http ?: throw IllegalStateException("Session manager not started")
         val url = base ?: throw IllegalStateException("Session manager not started")
@@ -370,6 +410,7 @@ class KiloBackendSessionManager(
         archived = s.time.archived,
         summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+        share = s.share?.url,
     )
 
     private fun dto(s: ai.kilocode.jetbrains.api.model.Session1) = dto(
@@ -384,6 +425,7 @@ class KiloBackendSessionManager(
         archived = s.time.archived,
         summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+        share = s.share?.url,
     )
 
     private fun dto(s: GlobalSession) = dto(
@@ -398,6 +440,7 @@ class KiloBackendSessionManager(
         archived = s.time.archived,
         summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+        share = s.share?.url,
     )
 
     private fun dto(
@@ -412,6 +455,7 @@ class KiloBackendSessionManager(
         archived: Double?,
         summary: SessionSummaryDto?,
         revert: SessionRevertDto?,
+        share: String?,
     ): SessionDto {
         owned[id] = dir
         return SessionDto(
@@ -428,6 +472,7 @@ class KiloBackendSessionManager(
             ),
             summary = summary,
             revert = revert,
+            share = share?.takeIf { it.isNotBlank() }?.let(::SessionShareDto),
         )
     }
 

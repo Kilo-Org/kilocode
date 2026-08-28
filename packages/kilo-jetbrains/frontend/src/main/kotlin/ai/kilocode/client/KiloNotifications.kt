@@ -36,10 +36,24 @@ object KiloNotifications {
 
     fun info(title: String, content: String? = null) {
         val project = ProjectManager.getInstance().openProjects.firstOrNull { !it.isDefault }
+        info(project, title, content)
+    }
+
+    fun info(project: Project?, title: String, content: String? = null) {
         val notification = NotificationGroupManager.getInstance()
             .getNotificationGroup(GROUP)
             ?.createNotification(title, content ?: "", NotificationType.INFORMATION)
             ?: Notification(GROUP, title, content ?: "", NotificationType.INFORMATION)
+        notification.notify(project)
+    }
+
+    /** Info notification with a single expiring action (e.g. opening a link that was just copied). */
+    fun info(project: Project?, title: String, content: String?, actionLabel: String, action: () -> Unit) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup(GROUP)
+            ?.createNotification(title, content ?: "", NotificationType.INFORMATION)
+            ?: Notification(GROUP, title, content ?: "", NotificationType.INFORMATION)
+        notification.addAction(NotificationAction.createSimpleExpiring(actionLabel) { action() })
         notification.notify(project)
     }
 

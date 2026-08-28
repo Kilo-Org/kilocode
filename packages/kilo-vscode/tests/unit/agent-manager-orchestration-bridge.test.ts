@@ -153,8 +153,9 @@ describe("AgentManagerOrchestrationBridge", () => {
     prompt: "Continue",
   }
 
-  it("deduplicates prompt delivery and retries only the failed acknowledgement", async () => {
+  it("deduplicates busy-session prompt submission and retries only the failed acknowledgement", async () => {
     const test = harness()
+    test.client.session.status.mockImplementation(async () => ({ data: { ses_target: { type: "busy" } } }))
     test.status.failReply = true
 
     test.request(request)
@@ -163,6 +164,8 @@ describe("AgentManagerOrchestrationBridge", () => {
     test.request(request)
     await waitFor(() => test.replies.length === 2)
 
+    expect(test.client.session.status).not.toHaveBeenCalled()
+    expect(test.rejections).toEqual([])
     expect(test.promptAsync).toHaveBeenCalledTimes(1)
     expect(test.promptAsync).toHaveBeenCalledWith(
       expect.objectContaining({

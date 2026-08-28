@@ -309,8 +309,65 @@
             <reference ref="Kilo.Session.Delete"/>
         </group>
 
+        <!-- Text and descriptions come from KiloBundle via action.<id>.text / .description. -->
+        <action id="Kilo.Session.AutoApprove"
+                class="ai.kilocode.client.actions.SessionAutoApproveAction"/>
+
+        <action id="Kilo.Session.CompareToBase"
+                class="ai.kilocode.client.actions.CompareToBaseAction"/>
+
+        <action id="Kilo.Session.OpenPr"
+                class="ai.kilocode.client.actions.OpenSessionPrAction"/>
+
+        <action id="Kilo.Session.CopyPrRef"
+                class="ai.kilocode.client.actions.CopySessionPrRefAction"/>
+
+        <action id="Kilo.Session.CopyId"
+                class="ai.kilocode.client.actions.CopySessionIdAction"/>
+
+        <action id="Kilo.Session.Share"
+                class="ai.kilocode.client.actions.ShareSessionAction"/>
+
+        <action id="Kilo.Session.CopyShareLink"
+                class="ai.kilocode.client.actions.CopyShareLinkAction"/>
+
+        <!--
+          Right-click menu inside a chat session. Every item resolves its context from
+          SessionActionsKeys.ACTIONS (or PromptDataKeys.SEND) which SessionUi publishes, so the menu
+          works from any point in the session. Items hide rather than disable when they do not apply,
+          which keeps the menu short in the common case. New Worktree / Move to Worktree live only on
+          the branch dock toolbar, not here.
+        -->
         <group id="Kilo.Session.ContextMenu">
+            <reference ref="Kilo.Session.AutoApprove"/>
+            <separator/>
+            <reference ref="Kilo.Session.CompareToBase"/>
+            <reference ref="Kilo.Session.OpenPr"/>
+            <reference ref="Kilo.Session.CopyPrRef"/>
+            <separator/>
             <reference ref="$Copy"/>
+            <separator/>
+            <reference ref="Kilo.Session.CopyId"/>
+            <reference ref="Kilo.Session.Share"/>
+            <reference ref="Kilo.Session.CopyShareLink"/>
+            <separator/>
+            <reference ref="Kilo.StopSession"/>
+        </group>
+
+        <!--
+          Popup shown from the "more" icon in the prompt bar. Same SessionActionsKeys.ACTIONS context
+          as the context menu, with Copy and Stop reserved for the right-click menu.
+        -->
+        <group id="Kilo.Session.PromptMenu">
+            <reference ref="Kilo.Session.AutoApprove"/>
+            <separator/>
+            <reference ref="Kilo.Session.CompareToBase"/>
+            <reference ref="Kilo.Session.OpenPr"/>
+            <reference ref="Kilo.Session.CopyPrRef"/>
+            <separator/>
+            <reference ref="Kilo.Session.CopyId"/>
+            <reference ref="Kilo.Session.Share"/>
+            <reference ref="Kilo.Session.CopyShareLink"/>
         </group>
     </actions>
 </idea-plugin>

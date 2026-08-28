@@ -1,5 +1,48 @@
 # @kilocode/cli
 
+## 7.5.6
+
+### Minor Changes
+
+- [#13498](https://github.com/Kilo-Org/kilocode/pull/13498) [`46bd29d`](https://github.com/Kilo-Org/kilocode/commit/46bd29d733d69545de60a5100997512756ad61b3) - Review all committed and uncommitted Agent Manager worktree changes with `/review worktree`.
+
+### Patch Changes
+
+- [#13482](https://github.com/Kilo-Org/kilocode/pull/13482) [`648fa0a`](https://github.com/Kilo-Org/kilocode/commit/648fa0a6a7b33072a631c6802bdc64ee6e94cd61) - Clear a failed turn that produced no output from the conversation when the next message is sent, so an "An error occurred" placeholder no longer lingers in history. A turn that wrote text or ran a tool before failing is kept, since its record explains changes already made.
+
+- [#13544](https://github.com/Kilo-Org/kilocode/pull/13544) [`f5a7a1d`](https://github.com/Kilo-Org/kilocode/commit/f5a7a1d61bf7eaaa7bc307a976f6f56150fa6264) - Resume interrupted tasks from the empty send button without adding a chat message.
+
+- [#13555](https://github.com/Kilo-Org/kilocode/pull/13555) [`8a8f67f`](https://github.com/Kilo-Org/kilocode/commit/8a8f67f9c72941b227efd419a6146c9dbd109e4e) - Start the CLI faster while preserving available models, session resumption, and configured reference permissions.
+
+- [#13540](https://github.com/Kilo-Org/kilocode/pull/13540) [`bac3043`](https://github.com/Kilo-Org/kilocode/commit/bac3043143dec08557c3b9013f1cec3a7193924c) - Avoid checkpoint cleanup errors when deleting worktrees under protected parent folders.
+
+- [#13484](https://github.com/Kilo-Org/kilocode/pull/13484) [`34b10a6`](https://github.com/Kilo-Org/kilocode/commit/34b10a672b3048ed53477a1019f08832b522db2d) Thanks [@WebReflection](https://github.com/WebReflection)! - Fix ReDoS vulnerabilities in glob matching by upgrading minimatch to 10.2.6.
+
+- [#13219](https://github.com/Kilo-Org/kilocode/pull/13219) [`6299896`](https://github.com/Kilo-Org/kilocode/commit/62998965e9fb0d9ed89011c62498b39801dbbb4f) Thanks [@maphew](https://github.com/maphew)! - Deduplicate the plan/ask/architect permission ruleset so denial messages and permission payloads no longer show stacked copies of the same rule block.
+
+- [#13476](https://github.com/Kilo-Org/kilocode/pull/13476) [`45202c0`](https://github.com/Kilo-Org/kilocode/commit/45202c0764a2b8946a783f3376b2a1bad75a17ff) - Remove deleted worktree checkpoints without losing conversation history and stop showing activity for deleted sessions.
+
+- [#13548](https://github.com/Kilo-Org/kilocode/pull/13548) [`039a235`](https://github.com/Kilo-Org/kilocode/commit/039a235b6ac492d08c079a035a04a49a01cc175d) - Queue Agent Manager follow-up prompts when the target session is busy instead of rejecting them.
+
+- [#13530](https://github.com/Kilo-Org/kilocode/pull/13530) [`5d1313f`](https://github.com/Kilo-Org/kilocode/commit/5d1313f8a23dc5f58ae66fed35c4756bf81913d5) - Search the latest 5,000 chats across the worktree family and display the best 50 matches in the sidebar and Agent Manager. Skip inaccessible folders from unrelated projects when finding past chats.
+
+- [#13509](https://github.com/Kilo-Org/kilocode/pull/13509) [`6e05f48`](https://github.com/Kilo-Org/kilocode/commit/6e05f48fb8d9b4499aeccb0b24be6d5079bd3167) - Prevent automatic indexing of home directories and filesystem roots, and show a warning to open a project folder instead.
+
+- [#13374](https://github.com/Kilo-Org/kilocode/pull/13374) [`8bcd9f4`](https://github.com/Kilo-Org/kilocode/commit/8bcd9f4b8408d3ec298ea721397968c91f714b55) - Resume pending requests after automatic compaction without replaying requests that already completed.
+
+- [#13493](https://github.com/Kilo-Org/kilocode/pull/13493) [`bf7848c`](https://github.com/Kilo-Org/kilocode/commit/bf7848cb48cb30a5005189e10a0a4d4aeffd5aa5) Thanks [@maphew](https://github.com/maphew)! - Fix the task tool intermittently returning an empty result. Subagents that ran with memory context had a synthetic marker part appended after their answer, which was picked up as the final text part and surfaced as an empty `<task_result>` to the parent agent. The task tool now ignores synthetic, ignored, and empty text parts, and background jobs no longer let an empty run overwrite an earlier successful result, so resumed tasks keep their real output.
+
+- Updated dependencies [[`13a9673`](https://github.com/Kilo-Org/kilocode/commit/13a9673d08cfc69eebb89898861a1ee80278f226), [`f5a7a1d`](https://github.com/Kilo-Org/kilocode/commit/f5a7a1d61bf7eaaa7bc307a976f6f56150fa6264), [`f9ddb78`](https://github.com/Kilo-Org/kilocode/commit/f9ddb78b17714075ab4f5d1ccb26f2cdbcd644bf), [`34b10a6`](https://github.com/Kilo-Org/kilocode/commit/34b10a672b3048ed53477a1019f08832b522db2d), [`8cb1931`](https://github.com/Kilo-Org/kilocode/commit/8cb1931275b1df6d145b8a283cef550ae2851e29)]:
+  - @opencode-ai/ui@7.5.6
+  - @kilocode/sdk@7.5.6
+  - @kilocode/kilo-indexing@7.5.6
+  - @opencode-ai/tui@7.5.6
+  - @kilocode/plugin@7.5.6
+  - @opencode-ai/server@7.5.6
+  - @kilocode/kilo-gateway@7.5.6
+  - @kilocode/plugin-atomic-chat@7.5.6
+  - @kilocode/kilo-telemetry@7.5.6
+
 ## 7.5.5
 
 ### Patch Changes

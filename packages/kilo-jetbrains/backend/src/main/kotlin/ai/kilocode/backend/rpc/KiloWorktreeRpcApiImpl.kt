@@ -152,11 +152,41 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     override suspend fun stats(directory: String): WorktreeStatsListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
-        val res = runGit(root, "worktree", "list", "--porcelain")
-        if (!res.ok) return@withContext WorktreeStatsListDto()
-        val items = managedWorktrees(parseWorktreeList(res.stdout))
+        val items = sync(root) ?: return@withContext WorktreeStatsListDto()
         val fallback = baseBranch(items) ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
+    }
+
+    /**
+     * Lists the managed worktrees of [root] after reconciling git's metadata with the disk, so
+     * callers never probe a directory that no longer exists. Returns null when [root] itself is gone
+     * or git cannot list.
+     *
+     * Dropping gone entries from the result is what makes probing safe; the prune is only metadata
+     * hygiene. So the prune runs exclusively when a Kilo-managed worktree is the stale one, and a
+     * mis-parse can at worst skip it — git re-checks every entry on disk and only ever removes
+     * `$GIT_DIR/worktrees` bookkeeping for a checkout it finds missing, never any files, and never a
+     * locked worktree (the documented guard for worktrees on unmounted volumes).
+     */
+    private fun sync(root: Path): List<WorktreeDto>? {
+        if (!Files.isDirectory(root)) {
+            LOG.info("worktree sync skipped, directory does not exist: $root")
+            return null
+        }
+        val res = runGit(root, "worktree", "list", "--porcelain")
+        if (!res.ok) return null
+        val raw = parseWorktreeList(res.stdout)
+        val stale = staleWorktrees(raw)
+        val synced = if (stale.isEmpty()) managedWorktrees(raw) else {
+            LOG.info("worktree sync pruning stale managed worktrees: ${stale.joinToString(", ") { it.path }}")
+            val prune = runGit(root, "worktree", "prune", "-v")
+            if (!prune.ok) LOG.warn("worktree prune during sync failed: exit=${prune.exit} stderr=${snippet(prune.stderr)}")
+            if (prune.ok && prune.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(prune.stdout)}")
+            val again = runGit(root, "worktree", "list", "--porcelain")
+            if (!again.ok) return null
+            managedWorktrees(parseWorktreeList(again.stdout))
+        }
+        return synced.filter { Files.isDirectory(Path.of(it.path)) }
     }
 
     override suspend fun ghStatus(directory: String): GhAvailability = withContext(Dispatchers.IO) {
@@ -167,11 +197,17 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val now = System.currentTimeMillis()
         prs[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
+        // A gone directory reports nothing and is not cached, so a real availability problem found
+        // from a live directory still reaches the UI.
+        if (!Files.isDirectory(root)) {
+            LOG.info("pr status skipped, directory does not exist: $root")
+            return@withContext WorktreePrListDto()
+        }
         val available = ghAvailable(root)
         if (available != GhAvailability.OK) return@withContext WorktreePrListDto(available).also { prs[directory] = Timed(now, it) }
-        val res = runGit(root, "worktree", "list", "--porcelain")
-        if (!res.ok) return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
-        val all = managedWorktrees(parseWorktreeList(res.stdout))
+        // Sync the worktree list before the per-worktree lookups so a worktree that was added and
+        // then deleted on disk is pruned instead of resolved from a directory that no longer exists.
+        val all = sync(root) ?: return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
         val items = prTargets(all)
         val base = baseBranch(all)
         var status = GhAvailability.OK
@@ -192,6 +228,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val now = System.currentTimeMillis()
         branches[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
+        if (!Files.isDirectory(root)) {
+            LOG.info("branch status skipped, directory does not exist: $root")
+            return@withContext BranchStatusDto()
+        }
         val branch = runGit(root, "branch", "--show-current").stdout.trim()
         val worktree = isLinkedWorktree(root)
         val availability = ghAvailable(root)
@@ -632,6 +672,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
     }
 
     private fun ghAvailable(root: Path): GhAvailability {
+        if (!Files.isDirectory(root)) {
+            LOG.info("gh availability skipped dir=$root missing=true")
+            return GhAvailability.OK
+        }
         val status = probeGh(root, "availability")
         if (status != GhAvailability.MISSING) return status
         val now = System.currentTimeMillis()
@@ -643,6 +687,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
     }
 
     private fun probeGh(root: Path, reason: String): GhAvailability = synchronized(ghLock) {
+        // A stale/removed worktree directory makes the process spawn fail, which would be
+        // misreported as GIT_MISSING. Treat a missing directory as "nothing to report" and
+        // don't cache it, so the next probe on a real directory still runs.
+        if (!Files.isDirectory(root)) {
+            LOG.info("gh probe skipped reason=$reason dir=$root missing=true")
+            return@synchronized GhAvailability.OK
+        }
         val now = System.currentTimeMillis()
         ghCache?.takeIf { now - it.time < GH_STATUS_TTL }?.let {
             LOG.info("gh probe cache hit reason=$reason value=${it.value}")
@@ -652,6 +703,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         LOG.info("gh probe start reason=$reason dir=$root")
         val git = runGit(root, "--version")
         if (!git.ok) {
+            // The directory can disappear between the check above and the spawn; a failed working
+            // directory is not evidence that git is uninstalled, so report nothing in that case.
+            if (badDir(git.stderr)) {
+                LOG.info("gh probe skipped reason=$reason dir=$root badDir=true stderr=${snippet(git.stderr)}")
+                return@synchronized GhAvailability.OK
+            }
             val value = GhAvailability.GIT_MISSING
             ghCache = Timed(System.currentTimeMillis(), value)
             LOG.info("gh probe result reason=$reason value=$value exit=${git.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(git.stderr)}")
@@ -668,6 +725,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return text.trim().replace(Regex("\\s+"), " ").take(180)
     }
 
+}
+
+/** True when a process failed because its working directory is gone, not because the tool is absent. */
+internal fun badDir(text: String): Boolean {
+    val msg = text.lowercase()
+    return msg.contains("working directory") && (msg.contains("does not exist") || msg.contains("not a directory"))
 }
 
 internal fun classifyGhError(text: String): GhAvailability {
@@ -838,6 +901,21 @@ internal fun managedWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
         if (item.prunable) return@filter false
         val path = Path.of(item.path).normalize()
         path.parent == storage
+    }
+}
+
+/**
+ * Kilo-managed worktrees under `.kilo/worktrees/` whose checkout is gone. This is the only reason
+ * [KiloWorktreeRpcApiImpl.sync] runs a prune, so a stale worktree the user keeps somewhere else is
+ * never a reason for the plugin to touch git's administrative files on a polling loop.
+ */
+internal fun staleWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
+    val main = items.firstOrNull { it.main } ?: return emptyList()
+    val storage = Path.of(main.path).normalize().resolve(".kilo").resolve("worktrees").normalize()
+    return items.filter { item ->
+        if (item.main) return@filter false
+        if (Path.of(item.path).normalize().parent != storage) return@filter false
+        item.prunable || !Files.isDirectory(Path.of(item.path))
     }
 }
 
