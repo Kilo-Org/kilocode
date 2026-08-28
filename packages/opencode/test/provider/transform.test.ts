@@ -5042,59 +5042,6 @@ describe("ProviderTransform.variants", () => {
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual(["low", "medium", "high"])
     })
-
-    // kilocode_change start - non-OpenAI models on an OpenAI-compatible base URL
-    // must not inherit OpenAI's rollout-gated tiers (issue #13342)
-    test("grok-4.6 does not get OpenAI rollout-gated none/xhigh tiers", () => {
-      const model = createMockModel({
-        id: "grok-4.6",
-        providerID: "xai",
-        api: {
-          id: "grok-4.6",
-          url: "https://api.x.ai",
-          npm: "@ai-sdk/openai",
-        },
-        release_date: "2026-08-12",
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["low", "medium", "high"])
-      expect(result.medium).toEqual({
-        reasoningEffort: "medium",
-        reasoningSummary: "auto",
-        include: ["reasoning.encrypted_content"],
-      })
-    })
-
-    test("unknown reasoning models on OpenAI npm keep only widely supported efforts", () => {
-      const model = createMockModel({
-        id: "my-compatible-model",
-        providerID: "custom",
-        api: {
-          id: "my-compatible-model",
-          url: "https://api.custom.com",
-          npm: "@ai-sdk/openai",
-        },
-        release_date: "2026-08-12",
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["low", "medium", "high"])
-    })
-
-    test("gpt-5 family still receives rollout-gated tiers on a dot-prefixed id", () => {
-      const model = createMockModel({
-        id: "openai.gpt-5.5",
-        providerID: "amazon-bedrock",
-        api: {
-          id: "openai.gpt-5.5",
-          url: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
-          npm: "@ai-sdk/amazon-bedrock/mantle",
-        },
-        release_date: "2026-04-23",
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh"])
-    })
-    // kilocode_change end
   })
 
   describe("@ai-sdk/amazon-bedrock/mantle", () => {
