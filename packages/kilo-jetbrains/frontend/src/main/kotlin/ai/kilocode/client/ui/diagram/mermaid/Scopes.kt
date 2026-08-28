@@ -11,9 +11,22 @@ internal class Scopes {
     private val parents = linkedMapOf<String, String>()
     private val owner = linkedMapOf<String, String>()
 
-    fun open(id: String, parent: String) {
+    /**
+     * Registers a nested scope. Returns false when the nesting would create a cycle — re-opening a
+     * composite inside itself, as in `state A { state A { ... } }`. A cycle here is unrecoverable
+     * rather than ugly: [path] and the recursive scope layout both walk these links outside any
+     * suspend point, so the render timeout could never break the loop.
+     */
+    fun open(id: String, parent: String): Boolean {
+        if (id == parent) return false
+        var cur = parent
+        while (cur != ROOT) {
+            if (cur == id) return false
+            cur = parents[cur] ?: ROOT
+        }
         parents[id] = parent
         claim(id, parent)
+        return true
     }
 
     fun claim(node: String, scope: String) {
@@ -26,21 +39,23 @@ internal class Scopes {
         val fp = path(owner[from] ?: ROOT)
         val tp = path(owner[to] ?: ROOT)
         var common = 0
-        while (common < fp.size && common < tp.size && fp[common] == tp[common]) common++
-        val lca = fp[common - 1]
-        val a = if (common < fp.size) fp[common] else from
-        val b = if (common < tp.size) tp[common] else to
+        while (common < fp.size && common < tp.size && fp.getOrNull(common) == tp.getOrNull(common)) common++
+        val lca = fp.getOrNull(common - 1) ?: ROOT
+        val a = fp.getOrNull(common) ?: from
+        val b = tp.getOrNull(common) ?: to
         return Hop(lca, a, b)
     }
 
     private fun path(scope: String): List<String> {
         val out = ArrayDeque<String>()
+        val seen = mutableSetOf<String>()
         var cur = scope
-        while (true) {
+        while (seen.add(cur)) {
             out.addFirst(cur)
-            if (cur == ROOT) return out.toList()
+            if (cur == ROOT) break
             cur = parents[cur] ?: ROOT
         }
+        return out.toList()
     }
 
     companion object {

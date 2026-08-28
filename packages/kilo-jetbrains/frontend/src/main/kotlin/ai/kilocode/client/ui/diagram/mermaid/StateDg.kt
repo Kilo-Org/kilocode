@@ -106,13 +106,13 @@ internal class StateDg(private val measure: Measure, private val spec: Spec) {
             return null
         }
         val here = stack.lastOrNull() ?: Scopes.ROOT
+        if (!scopes.open(body, here)) return "state $body cannot be nested inside itself"
         if (kinds[body] == null) {
             count++
             members.getValue(here).add(body)
         }
         kinds[body] = Kind.Composite
         labels[body] = Source.label(body)
-        scopes.open(body, here)
         members.getOrPut(body) { mutableListOf() }
         stack.addLast(body)
         return null

@@ -61,7 +61,7 @@ internal class Sankey(private val measure: Measure, private val spec: Spec) {
         return out
     }
 
-    private suspend fun marks(flows: List<Flow>): Out.Ok {
+    private suspend fun marks(flows: List<Flow>): Out {
         val sheet = Sheet(measure, spec)
         val high = sheet.high
         val pad = sheet.pad
@@ -70,7 +70,7 @@ internal class Sankey(private val measure: Measure, private val spec: Spec) {
             nodes.getOrPut(flow.from) { Node(flow.from, nodes.size) }
             nodes.getOrPut(flow.to) { Node(flow.to, nodes.size) }
         }
-        if (nodes.size > spec.limits.nodes) return Out.Ok(sheet.scene(Type.Sankey))
+        if (nodes.size > spec.limits.nodes) return Out.Err(Fault.Limit, "sankey exceeds ${spec.limits.nodes} nodes")
         // Longest-path depth; passes converge for a DAG, and the node-count bound tames cycles.
         var pass = 0
         while (pass++ < nodes.size) {

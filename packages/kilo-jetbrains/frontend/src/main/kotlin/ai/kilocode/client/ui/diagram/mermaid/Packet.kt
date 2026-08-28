@@ -30,8 +30,13 @@ internal class Packet(private val measure: Measure, private val spec: Spec) {
             }
             if (text.substringBefore(' ').lowercase() in setOf("title", "accdescr", "acctitle")) continue
             val match = ROW.find(text) ?: return Out.Err(Fault.Syntax, "malformed packet field", line.at)
-            val start = match.groupValues[1].toInt()
-            val end = match.groupValues[2].ifEmpty { match.groupValues[1] }.toInt()
+            // Bit indexes are bounded before any row math: an unbounded end would both overflow the
+            // row arithmetic below and expand into millions of marks in a phase with no suspend point.
+            val start = match.groupValues[1].toIntOrNull()
+            val end = match.groupValues[2].ifEmpty { match.groupValues[1] }.toIntOrNull()
+            if (start == null || end == null || start > CAP || end > CAP) {
+                return Out.Err(Fault.Limit, "packet bit indexes must stay under $CAP", line.at)
+            }
             if (end < start) return Out.Err(Fault.Syntax, "packet field ends before it starts", line.at)
             fields.add(Field(start, end, Source.unquote(match.groupValues[3].trim())))
             if (fields.size > spec.limits.nodes) return Out.Err(Fault.Limit, "packet exceeds ${spec.limits.nodes} fields")
@@ -40,7 +45,7 @@ internal class Packet(private val measure: Measure, private val spec: Spec) {
         return Out.Ok(marks(fields.sortedBy { it.start }))
     }
 
-    private fun marks(fields: List<Field>): Scene {
+    private suspend fun marks(fields: List<Field>): Scene {
         val sheet = Sheet(measure, spec)
         val high = sheet.high
         val pad = sheet.pad
@@ -50,6 +55,7 @@ internal class Packet(private val measure: Measure, private val spec: Spec) {
         for (field in fields) {
             var start = field.start
             while (start <= field.end) {
+                coroutineContext.ensureActive()
                 val row = start / BITS
                 val stop = minOf(field.end, (row + 1) * BITS - 1)
                 val rect = Rect(
@@ -74,6 +80,10 @@ internal class Packet(private val measure: Measure, private val spec: Spec) {
 
     private companion object {
         const val BITS = 32
+
+        /** Highest bit index accepted; keeps row arithmetic inside `Int` and mark counts bounded. */
+        const val CAP = BITS * 64
+
         val ROW = Regex("""^\+?(\d+)(?:-(\d+))?\s*:\s*(.+)$""")
     }
 }

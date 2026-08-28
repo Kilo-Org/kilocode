@@ -74,11 +74,14 @@ internal class C4Dg(private val measure: Measure, private val spec: Spec) {
             val args = Lex.args(body).map { Source.unquote(it) }
             val id = args.firstOrNull().orEmpty()
             if (id.isEmpty()) return "boundary needs an id"
+            // A repeated id would make the boundary a member of itself; the recursive layout below has
+            // no cycle check and would fail with a StackOverflowError, which never becomes an Out.Err.
+            if (bounds.containsKey(id) || cells.containsKey(id)) return "duplicate boundary id $id"
             val here = stack.lastOrNull() ?: Scopes.ROOT
+            if (!scopes.open(id, here)) return "boundary $id cannot be nested inside itself"
             bounds[id] = args.getOrNull(1) ?: id
             members.getValue(here).add(id)
             members.getOrPut(id) { mutableListOf() }
-            scopes.open(id, here)
             stack.addLast(id)
             return null
         }
@@ -100,6 +103,7 @@ internal class C4Dg(private val measure: Measure, private val spec: Spec) {
         val args = Lex.args(body).map { Source.unquote(it) }
         val id = args.firstOrNull().orEmpty()
         if (id.isEmpty()) return "$word needs an alias"
+        if (cells.containsKey(id) || bounds.containsKey(id)) return "duplicate element id $id"
         val here = stack.lastOrNull() ?: Scopes.ROOT
         val label = args.getOrNull(1) ?: id
         val tech = if (kind.tech) args.getOrNull(2).orEmpty() else ""

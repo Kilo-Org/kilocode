@@ -340,6 +340,71 @@ class EnginesTest {
         assertEquals(Fault.Limit, err(out).fault)
     }
 
+    @Test
+    fun `sankey refuses more unique nodes than the cap allows`() {
+        val rows = (1..30).joinToString("\n") { "s$it,t$it,1" }
+        val out = runBlocking { engine.draw("sankey-beta\n$rows", spec().copy(limits = Limits(nodes = 5))) }
+
+        assertEquals(Fault.Limit, err(out).fault)
+    }
+
+    // --- malformed input that must not hang or crash ---
+
+    /**
+     * Row splitting is `Int` arithmetic with no suspend point, so an unbounded end bit would overflow
+     * into an endless loop that the render timeout cannot interrupt.
+     */
+    @Test
+    fun `packet refuses an out of range bit index instead of looping`() {
+        assertEquals(Fault.Limit, err(draw("packet-beta\n 0-2147483647: \"x\"")).fault)
+        assertEquals(Fault.Limit, err(draw("packet-beta\n 99999999999999: \"x\"")).fault)
+    }
+
+    /** Re-opening a composite inside itself used to make the scope walk spin forever. */
+    @Test
+    fun `state refuses a composite nested inside itself`() {
+        val out = draw("stateDiagram-v2\n state A {\n state A {\n [*] --> B\n }\n }")
+
+        assertEquals(Fault.Syntax, err(out).fault)
+    }
+
+    /** The same shape in C4 made a boundary a member of itself, recursing to a StackOverflowError. */
+    @Test
+    fun `c4 refuses a duplicate boundary id`() {
+        val out = draw("C4Context\n Enterprise_Boundary(a, \"A\") {\n Enterprise_Boundary(a, \"A\") {\n System(s, \"S\")\n }\n }")
+
+        assertEquals(Fault.Syntax, err(out).fault)
+    }
+
+    @Test
+    fun `an empty composite state still renders a frame`() {
+        val scene = scene(draw("stateDiagram-v2\n [*] --> A\n state A {\n }"))
+
+        assertTrue(texts(scene).contains("A"), "expected the composite title")
+    }
+
+    @Test
+    fun `radar handles values below the default minimum`() {
+        val scene = scene(draw("radar-beta\n axis a, b\n curve c{-5, -10}"))
+
+        assertTrue(flatten(scene.marks).filterIsInstance<Mark.Poly>().any { it.soft }, "expected a curve fill")
+    }
+
+    // --- layout order ---
+
+    /** `Circle --|> Shape` points the triangle at Shape, so Shape is the parent and sits on top. */
+    @Test
+    fun `class parents sit above children regardless of declaration order`() {
+        val scene = scene(draw("classDiagram\n Circle --|> Shape"))
+        val boxes = flatten(scene.marks).filterIsInstance<Mark.Box>()
+        val texts = flatten(scene.marks).filterIsInstance<Mark.Text>()
+        val shape = texts.single { it.text == "Shape" }
+        val circle = texts.single { it.text == "Circle" }
+
+        assertEquals(2, boxes.size)
+        assertTrue(shape.at.y < circle.at.y, "Shape should sit above Circle")
+    }
+
     private fun draw(source: String) = runBlocking { engine.draw(source, spec()) }
 
     private fun texts(scene: ai.kilocode.client.ui.diagram.Scene) =

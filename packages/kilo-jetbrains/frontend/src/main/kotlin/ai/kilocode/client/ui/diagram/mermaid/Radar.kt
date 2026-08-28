@@ -123,8 +123,12 @@ internal class Radar(private val measure: Measure, private val spec: Spec) {
         val pad = sheet.pad
         val r = high * 9
         val at = Pt(0.0, 0.0)
-        val roof = max ?: curves.maxOf { it.values.maxOrNull() ?: 0.0 }
-        val span = (roof - min).takeIf { it > 0 } ?: 1.0
+        // `min` defaults to 0, so all-negative data (or an inverted explicit min/max) would otherwise
+        // hand coerceIn an empty range and throw.
+        val top = max ?: curves.maxOf { it.values.maxOrNull() ?: 0.0 }
+        val floor = minOf(min, top)
+        val roof = maxOf(min, top)
+        val span = (roof - floor).takeIf { it > 0 } ?: 1.0
         val count = axes.size
 
         if (title.isNotEmpty()) sheet.texts(listOf(title), at.x, at.y - r - high * 2 - pad, Role.Text, bold = true)
@@ -153,8 +157,8 @@ internal class Radar(private val measure: Measure, private val spec: Spec) {
         }
         curves.forEachIndexed { tone, curve ->
             val points = List(count) { idx ->
-                val value = (curve.values.getOrNull(idx) ?: min).coerceIn(min, roof)
-                spoke(idx, r * (value - min) / span)
+                val value = (curve.values.getOrNull(idx) ?: floor).coerceIn(floor, roof)
+                spoke(idx, r * (value - floor) / span)
             }
             sheet.add(Mark.Poly(points, null, null, tone = tone, soft = true))
             sheet.add(Mark.Edge(points + points.first(), Role.Line, thick = true, tone = tone))

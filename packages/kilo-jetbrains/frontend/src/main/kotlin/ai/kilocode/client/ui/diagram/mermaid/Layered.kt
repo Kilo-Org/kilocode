@@ -21,6 +21,9 @@ internal data class Plan(val rects: Map<String, Rect>, val size: Size)
  */
 internal class Layered(private val spec: Spec) {
     suspend fun run(sizes: Map<String, Size>, rails: List<Rail>): Plan {
+        // An empty scope is valid mermaid (`state Empty { }`), so it lays out as an empty frame rather
+        // than throwing out of the row aggregations below.
+        if (sizes.isEmpty()) return Plan(emptyMap(), Size(0.0, 0.0))
         val gap = spec.metrics.gap
         val step = spec.metrics.rank
         val links = rails.filter { it.from != it.to && sizes.containsKey(it.from) && sizes.containsKey(it.to) }
@@ -37,7 +40,11 @@ internal class Layered(private val spec: Spec) {
         val wide = rows.values.maxOf { row -> row.sumOf { sizes.getValue(it).w } + gap * (row.size - 1) }
         val rects = linkedMapOf<String, Rect>()
         var top = 0.0
-        for (row in rows.values) {
+        // Rows are keyed by rank but filled in declaration order, so layout has to sort them the way
+        // order() does. Otherwise the first-declared rank paints at the top and a parent-on-top
+        // relation like `Circle --|> Shape` comes out upside down.
+        for (key in rows.keys.sorted()) {
+            val row = rows.getValue(key)
             val tall = row.maxOf { sizes.getValue(it).h }
             var x = (wide - (row.sumOf { sizes.getValue(it).w } + gap * (row.size - 1))) / 2
             for (id in row) {

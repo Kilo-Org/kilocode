@@ -127,6 +127,9 @@ internal object ScenePainter : Painter {
         g.color = fill(palette, mark.role, mark.tone, mark.soft) ?: palette.color(mark.role)
         g.stroke = stroke(mark.dash, mark.thick)
         g.draw(path(mark.points, false))
+        // Outline heads keep the line width but never the dash: a dashed triangle or crow's foot reads
+        // as a broken glyph on realization arrows and dashed ER relations.
+        g.stroke = stroke(thick = mark.thick)
         head(g, palette, mark.points[mark.points.lastIndex - 1], mark.points.last(), mark.head)
         head(g, palette, mark.points[1], mark.points.first(), mark.tail)
     }
