@@ -58,6 +58,17 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Rename a session. */
     suspend fun rename(id: String, directory: String, title: String): SessionDto
 
+    /**
+     * Create a public share link for a session.
+     *
+     * Requires Kilo credentials and fails when sharing is disabled by config. The CLI collapses every
+     * cause into a bare HTTP 500, so callers cannot tell those apart.
+     */
+    suspend fun share(id: String, directory: String): SessionDto
+
+    /** Revoke a session's public share link. */
+    suspend fun unshare(id: String, directory: String): SessionDto
+
     /** List cloud-backed sessions. */
     suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto
 

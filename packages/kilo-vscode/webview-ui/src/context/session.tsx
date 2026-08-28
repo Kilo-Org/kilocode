@@ -88,7 +88,7 @@ import { sessionVariantKeys, transferVariants, variantKey } from "./session-vari
 import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
-import { activeUserMessageID, visibleMessages as filterVisibleMessages } from "./session-queue"
+import { activeUserMessageID, removeQueuedMessage, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
 import { continuation } from "./session-continuation"
@@ -283,6 +283,12 @@ export const SessionProvider: ParentComponent = (props) => {
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
   const [hiddenErrors, setHiddenErrors] = createSignal<Set<string>>(new Set())
+  const [dismissals, setDismissals] = createStore<Record<string, ReadonlySet<string>>>({})
+  const dismissedBackgroundJobs = (id: string): ReadonlySet<string> => dismissals[id] ?? new Set<string>()
+  const dismissBackgroundJobs = (id: string, ids: string[]) => {
+    if (!ids.length) return
+    setDismissals(id, (current) => new Set([...(current ?? []), ...ids]))
+  }
 
   // Live worktree diff stats from extension polling
   const [worktreeStats, setWorktreeStats] = createSignal<
@@ -493,6 +499,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selected,
     session: currentSessionID,
     agent: agentForScope,
+    config: (agent) => config().agent?.[agent],
     find: provider.findModel,
     post: vscode.postMessage,
     listen: vscode.onMessage,
@@ -977,6 +984,11 @@ export const SessionProvider: ParentComponent = (props) => {
 
       case "sessionDeleted":
         handleSessionDeleted(message.sessionID)
+        setDismissals(
+          produce((map) => {
+            delete map[message.sessionID]
+          }),
+        )
         break
 
       case "messageRemoved":
@@ -1206,7 +1218,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (prefs.model && !store.sessionOverrides[sessionID]) {
       setStore("sessionOverrides", sessionID, prefs.model)
     }
-    if (prefs.model && prefs.variant) {
+    if (prefs.model && prefs.variant !== undefined) {
       const agent = prefs.agent ?? store.agentSelections[sessionID] ?? defaultAgent()
       const key = variantKey(prefs.model, agent, sessionID)
       if (store.variantSelections[key] === undefined) setStore("variantSelections", key, prefs.variant)
@@ -1794,9 +1806,12 @@ export const SessionProvider: ParentComponent = (props) => {
     return suggestions().filter((item) => family.has(item.sessionID))
   }
 
+  const disconnected = createMemo<boolean>((previous) => {
+    const state = server.connectionState()
+    return state === "connecting" ? previous : state !== "connected"
+  }, false)
   const [activityMap, setActivityMap] = createStore<Record<string, Activity>>({})
   createComputed(() => {
-    const connection = server.connectionState()
     setActivityMap(
       reconcile(
         activities({
@@ -1807,7 +1822,7 @@ export const SessionProvider: ParentComponent = (props) => {
             (item) => item.sessionID,
           ),
           submitting: Object.keys(submissionMap),
-          disconnected: connection !== "connected",
+          disconnected: disconnected(),
         }),
       ),
     )
@@ -1937,6 +1952,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
+    pendingOptimistic.get(sessionID)?.delete(messageID)
+    finishSubmission(messageID)
     optimisticParts.delete(messageID)
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
     dropMessageTools(sessionID, messageID)
@@ -2162,7 +2179,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID,
         modelID,
         agent,
-        variant: currentVariant(scope),
+        variant: variants.request(scope),
         files,
         review,
       })
@@ -2198,7 +2215,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID,
       modelID,
       agent,
-      variant: currentVariant(scope),
+      variant: variants.request(scope),
       files,
       review,
       agentManagerContext: context,
@@ -2260,7 +2277,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID: effectiveProvider,
         modelID: effectiveModel,
         agent,
-        variant: currentVariant(scope),
+        variant: variants.request(scope),
         files,
         command,
         commandArgs: args,
@@ -2296,7 +2313,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID: effectiveProvider,
       modelID: effectiveModel,
       agent,
-      variant: currentVariant(scope),
+      variant: variants.request(scope),
       files,
       agentManagerContext: context,
     })
@@ -2737,13 +2754,11 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
-  // Clear local send bookkeeping and request deletion. The message stays visible
-  // until messageRemoved confirms deletion; a false response leaves it in place.
-  function deleteQueuedMessage(sessionID: string, messageID: string) {
-    if (!server.isConnected()) return
-    pendingOptimistic.get(sessionID)?.delete(messageID)
-    finishSubmission(messageID)
-    vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
+  async function deleteQueuedMessage(sessionID: string, messageID: string) {
+    if (!server.isConnected()) return false
+    const removed = await removeQueuedMessage(vscode, sessionID, messageID)
+    if (removed) handleMessageRemoved(sessionID, messageID)
+    return removed
   }
 
   function syncSession(sessionID: string, parentSessionID = currentSessionID(), scope: "task" | "inspector" = "task") {
@@ -2875,6 +2890,8 @@ export const SessionProvider: ParentComponent = (props) => {
     getParts,
     getSessionToolParts,
     getSessionToolCount,
+    dismissedBackgroundJobs,
+    dismissBackgroundJobs,
     isErrorHidden: (messageID: string) => hiddenErrors().has(messageID),
     hydrateParts,
     todos,

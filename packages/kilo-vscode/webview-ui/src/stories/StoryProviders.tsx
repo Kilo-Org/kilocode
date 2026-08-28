@@ -217,6 +217,8 @@ export function mockSessionValue(overrides?: {
     getParts: () => [],
     getSessionToolParts: () => [],
     getSessionToolCount: () => 0,
+    dismissedBackgroundJobs: () => new Set<string>(),
+    dismissBackgroundJobs: noop,
     isErrorHidden: () => false,
     hydrateParts: noop,
     todos: () => [],

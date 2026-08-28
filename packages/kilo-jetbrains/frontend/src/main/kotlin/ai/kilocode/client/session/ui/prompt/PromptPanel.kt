@@ -33,6 +33,7 @@ import com.intellij.ide.DataManager
 import com.intellij.ide.dnd.DnDEvent
 import com.intellij.ide.dnd.DnDSupport
 import com.intellij.ide.dnd.FileCopyPasteUtil
+import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
@@ -42,6 +43,8 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Document
@@ -247,6 +250,18 @@ class PromptPanel(
         addActionListener { onAutoApproveToggle(!autoApprove) }
     }
 
+    /**
+     * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
+     * DataManager, so it reads live SessionActionsKeys.ACTIONS from the session ancestor chain rather
+     * than needing SessionUi to wire anything through this panel directly.
+     */
+    private val menu = HoverIcon().apply {
+        icon = AllIcons.Actions.More
+        toolTipText = KiloBundle.message("prompt.action.menu")
+        accessibleContext.accessibleName = KiloBundle.message("prompt.action.menu")
+        addActionListener { showMenu() }
+    }
+
     private val enhancingIcon = SpinnerIcon.icon
     private val enhance = HoverIcon().apply {
         icon = WAND_ICON
@@ -321,6 +336,8 @@ class PromptPanel(
         bar.add(reset)
         bar.add(Box.createHorizontalGlue())
         if (approve) {
+            bar.add(menu)
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
             bar.add(auto)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         }
@@ -635,6 +652,20 @@ class PromptPanel(
         commandJob = null
         uninstallCompletionShortcut()
         super.removeNotify()
+    }
+
+    @RequiresEdt
+    private fun showMenu() {
+        val group = ActionManager.getInstance().getAction("Kilo.Session.PromptMenu") as? ActionGroup ?: return
+        val ctx = DataManager.getInstance().getDataContext(menu)
+        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
+            null,
+            group,
+            ctx,
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+            true,
+        )
+        popup.show(PopupShowOptions.aboveComponent(menu))
     }
 
     @RequiresEdt
