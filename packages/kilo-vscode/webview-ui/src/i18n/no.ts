@@ -854,6 +854,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
+  "settings.experimental.taskModelSelection.title": "Valg av Task-underagentmodell",
+  "settings.experimental.taskModelSelection.description":
+    "Tillat eksplisitt valg av modell, leverandør og resonneringsinnsats for Task-underagenter.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",

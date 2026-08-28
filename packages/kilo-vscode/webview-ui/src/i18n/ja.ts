@@ -887,6 +887,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
+  "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
+  "settings.experimental.taskModelSelection.description":
+    "Task サブエージェントに使用するモデル、プロバイダー、推論の労力を明示的に選択できます。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",

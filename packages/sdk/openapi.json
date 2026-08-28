@@ -34780,6 +34780,9 @@
               "native_notebook_tools": {
                 "type": "boolean"
               },
+              "task_model_selection": {
+                "type": "boolean"
+              },
               "speech_to_text_model": {
                 "type": "string"
               },
