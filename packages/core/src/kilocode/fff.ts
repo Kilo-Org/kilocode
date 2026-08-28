@@ -21,7 +21,7 @@ function real(directory: string) {
 export function allowed(directory: string, home = (process.env.KILO_TEST_HOME ?? os.homedir()).trim()) {
   const value = path.win32.normalize(directory)
   const prefix = "\\\\?\\UNC\\"
-  const windows = value.toUpperCase().startsWith(prefix.toUpperCase()) ? `\\\\${value.slice(prefix.length)}` : value
+  const windows = value.toUpperCase().startsWith(prefix) ? `\\\\${value.slice(prefix.length)}` : value
   if (root(directory, path.posix) || root(windows, path.win32)) return false
   const resolved = real(directory)
   if (root(resolved, path)) return false
