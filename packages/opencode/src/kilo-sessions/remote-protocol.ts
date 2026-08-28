@@ -486,6 +486,14 @@ export namespace RemoteProtocol {
             })
             .optional(),
         }),
+        // Read-only history requires proof, not registration or a generation grant.
+        z.strictObject({
+          type: z.literal("provider_status"),
+          requestId: correlation,
+          providerId: BrowserProviderId,
+          providerProof: proof,
+          cursor: BrowserJobId.optional(),
+        }),
         z.strictObject({
           type: z.literal("provider_heartbeat"),
           requestId: correlation,
@@ -522,8 +530,9 @@ export namespace RemoteProtocol {
   )
   export type BrowserProviderOutbound = z.infer<typeof BrowserProviderOutbound>
 
-  // These frames target only the registered provider socket, never ordinary web
-  // subscribers. A snapshot is reconciliation data, not permission to execute.
+  // Provider frames never target ordinary web subscribers. Execution frames require
+  // a registered socket; status results require a proof-authorized request.
+  // A snapshot is reconciliation data, not permission to execute.
   export const BrowserProviderInbound = boundary(
     z
       .discriminatedUnion("type", [
@@ -543,6 +552,18 @@ export namespace RemoteProtocol {
           jobs: z.array(BrowserJobSnapshot).max(BROWSER_PAGE_SIZE),
           nextCursor: BrowserJobId.optional(),
         }),
+        // History grants no execution, lease, approval, or recovery authority.
+        z
+          .strictObject({
+            type: z.literal("provider_status_result"),
+            requestId: correlation,
+            providerId: BrowserProviderId,
+            jobs: z.array(BrowserJobSnapshot).max(BROWSER_PAGE_SIZE),
+            nextCursor: BrowserJobId.optional(),
+          })
+          .refine((message) => message.jobs.every((job) => job.providerId === message.providerId), {
+            message: "History must match the requested provider",
+          }),
         z.strictObject({
           type: z.literal("provider_lease_ack"),
           ...binding,

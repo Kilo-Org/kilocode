@@ -671,7 +671,42 @@ describe("RemoteProtocol browser jobs v1", () => {
     { type: "browser_event", requestId, event: "progress", job },
     { type: "browser_event", requestId, event: "result", result: completed },
   ] satisfies RemoteProtocol.BrowserEvent[]
+  const status = {
+    type: "provider_status",
+    requestId,
+    providerId: handle.providerId,
+    providerProof: registration.providerProof,
+  } as const
+  const interrupted = {
+    ...handle,
+    jobId: "bj_00000000-0000-4000-8000-000000000005",
+    invocationId: `b1.1787875200000.${"e".repeat(64)}`,
+  } as const
+  const history = {
+    type: "provider_status_result",
+    requestId,
+    providerId: handle.providerId,
+    jobs: [
+      finished,
+      {
+        ...finished,
+        ...interrupted,
+        generation: 2,
+        status: "interrupted",
+        result: {
+          ...completed,
+          ...interrupted,
+          status: "interrupted",
+          reason: "effects_uncertain",
+          effectsUncertain: true,
+        },
+      },
+    ],
+    nextCursor: interrupted.jobId,
+  } satisfies RemoteProtocol.BrowserProviderInbound
   const sent = [
+    status,
+    { ...status, cursor: handle.jobId },
     registration,
     {
       ...registration,
@@ -692,7 +727,121 @@ describe("RemoteProtocol browser jobs v1", () => {
     { type: "provider_snapshot", requestId, ...binding, jobs: [job, finished], nextCursor: handle.jobId },
     { type: "provider_snapshot", ...binding, jobs: [] },
     { type: "provider_lease_ack", requestId, ...binding, leaseExpiresAt: "2026-08-28T00:00:15.000Z" },
+    history,
+    { type: "provider_status_result", requestId, providerId: handle.providerId, jobs: [] },
   ] satisfies RemoteProtocol.BrowserProviderInbound[]
+
+  describe("read-only provider status", () => {
+    test("keeps historical generations separate from execution snapshots", () => {
+      expect(RemoteProtocol.BrowserProviderInbound.parse(history)).toEqual(history)
+      for (const generation of [1, 2]) {
+        expect(
+          RemoteProtocol.BrowserProviderInbound.safeParse({
+            ...history,
+            type: "provider_snapshot",
+            generation,
+          }).success,
+        ).toBe(false)
+      }
+    })
+
+    test.each([
+      { requestId: undefined },
+      { requestId: "invalid" },
+      { providerId: undefined },
+      { providerId: handle.jobId },
+      { providerProof: undefined },
+      { providerProof: "d".repeat(63) },
+      { providerProof: "D".repeat(64) },
+      { cursor: handle.providerId },
+      { cursor: "" },
+    ])("rejects malformed status requests: %j", (fields) => {
+      expect(RemoteProtocol.BrowserProviderOutbound.safeParse({ ...status, ...fields }).success).toBe(false)
+    })
+
+    test.each([
+      { requestId: undefined },
+      { requestId: "invalid" },
+      { providerId: undefined },
+      { providerId: handle.jobId },
+      { jobs: undefined },
+      { jobs: null },
+      { jobs: [{ ...job, generation: undefined }] },
+      { jobs: [{ ...job, generation: 0 }] },
+      { jobs: [{ ...finished, result: undefined }] },
+      { jobs: [{ ...finished, result: { ...completed, jobId: interrupted.jobId } }] },
+      { nextCursor: handle.providerId },
+      { nextCursor: "" },
+    ])("rejects malformed provider history: %j", (fields) => {
+      expect(RemoteProtocol.BrowserProviderInbound.safeParse({ ...history, ...fields }).success).toBe(false)
+    })
+
+    test.each([
+      { generation: 1 },
+      { enabled: true },
+      { leaseExpiresAt: "2026-08-28T00:00:15.000Z" },
+      { approval: { decision: "approved", tab } },
+      {
+        recovery: {
+          invocationId: handle.invocationId,
+          tabId: tab.tabId,
+          tabClosed: true,
+          locksDrained: true,
+        },
+      },
+    ])("rejects authority fields on status frames: %j", (fields) => {
+      expect(RemoteProtocol.BrowserProviderOutbound.safeParse({ ...status, ...fields }).success).toBe(false)
+      expect(RemoteProtocol.BrowserProviderInbound.safeParse({ ...history, ...fields }).success).toBe(false)
+    })
+
+    test("rejects otherwise valid history from another provider", () => {
+      const provider = "bp_00000000-0000-4000-8000-000000000006"
+      const foreign = {
+        ...finished,
+        providerId: provider,
+        result: { ...completed, providerId: provider },
+      } satisfies RemoteProtocol.BrowserJobSnapshot
+      expect(RemoteProtocol.BrowserJobSnapshot.parse(foreign)).toEqual(foreign)
+      expect(
+        RemoteProtocol.BrowserProviderInbound.safeParse({ ...history, jobs: [...history.jobs, foreign] }).success,
+      ).toBe(false)
+    })
+
+    test("redacts status proofs and attacker-controlled keys from parse errors", () => {
+      const secret = "private-status-proof-must-not-appear"
+      const cases = [
+        { schema: RemoteProtocol.BrowserProviderOutbound, frame: { ...status, providerProof: secret } },
+        { schema: RemoteProtocol.WebOutboundWithBrowser, frame: { ...status, [secret]: true } },
+        { schema: RemoteProtocol.BrowserProviderInbound, frame: { ...history, [secret]: true } },
+        { schema: RemoteProtocol.WebInboundWithBrowser, frame: { ...history, providerProof: secret } },
+      ]
+      for (const { schema, frame } of cases) {
+        const parsed = schema.safeParse(frame)
+        expect(parsed.success).toBe(false)
+        if (parsed.success) throw new Error("Invalid status frame was accepted")
+        expect(parsed.error.message).not.toContain(secret)
+        expect(JSON.stringify(parsed.error)).not.toContain(secret)
+      }
+    })
+
+    test("accepts 25 historical jobs but rejects a 26th job", () => {
+      const page = { ...history, jobs: Array.from({ length: 25 }, () => job) }
+      expect(RemoteProtocol.BrowserProviderInbound.parse(page)).toEqual(page)
+      expect(RemoteProtocol.BrowserProviderInbound.safeParse({ ...page, jobs: [...page.jobs, job] }).success).toBe(
+        false,
+      )
+    })
+
+    test("bounds historical pages by serialized UTF-8 bytes", () => {
+      const large = { ...finished, result: { ...completed, summary: "\u00e9".repeat(16384) } }
+      const page = { ...history, jobs: Array.from({ length: 3 }, () => large) }
+      expect(RemoteProtocol.BrowserProviderInbound.parse(page)).toEqual(page)
+      expect(RemoteProtocol.BrowserProviderInbound.safeParse({ ...page, jobs: [...page.jobs, large] }).success).toBe(
+        false,
+      )
+    })
+  })
+
   const operations = [
     { operation: "list" },
     { operation: "run", provider_id: handle.providerId, goal: invoke.goal },
@@ -823,13 +972,15 @@ describe("RemoteProtocol browser jobs v1", () => {
     }
   })
 
-  test("keeps private proofs only on owned requests and provider registration", () => {
+  test("keeps proofs on owned requests, registration, and provider status", () => {
     for (const direction of directions) {
       for (const frame of direction.frames) {
         for (const extra of [
           { parentProof: owner.parentProof },
           ...(frame.type === "browser_request" ? [] : [{ owner }]),
-          ...(frame.type === "provider_register" ? [] : [{ providerProof: registration.providerProof }]),
+          ...(frame.type === "provider_register" || frame.type === "provider_status"
+            ? []
+            : [{ providerProof: registration.providerProof }]),
         ]) {
           expect(direction.schema.safeParse({ ...frame, ...extra }).success).toBe(false)
         }
