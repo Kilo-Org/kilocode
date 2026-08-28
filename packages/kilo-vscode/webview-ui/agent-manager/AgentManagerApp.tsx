@@ -23,12 +23,6 @@ import type {
   AgentManagerKeybindingsMessage,
   AgentManagerMultiVersionProgressMessage,
   AgentManagerSendInitialMessage,
-  AgentManagerWorktreeDiffMessage,
-  AgentManagerWorktreeDiffFileMessage,
-  AgentManagerWorktreeDiffLoadingMessage,
-  AgentManagerWorktreeDiffNoticeMessage,
-  AgentManagerDiffBranchesMessage,
-  AgentManagerApplyWorktreeDiffResultMessage,
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
   WorktreeFileDiff,
@@ -97,6 +91,7 @@ import { createWorktreeActivity } from "./project/session-busy"
 import { switchProject } from "./project/switch"
 import { createProjectStateHandlers } from "./project/state-handlers"
 import { ownsParent as ownsParentSession, isCurrent } from "./project/message-ownership"
+import { routeReview } from "./project/review-routing"
 import {
   reviewComments as readReviewComments,
   reviewOpen as isReviewOpen,
@@ -1527,40 +1522,18 @@ const AgentManagerContent: Component = () => {
         }
       }
 
-      if (msg.type === "agentManager.worktreeDiff") {
-        if (!isCurrent(msg, currentProjectId())) return
-        diffs.onWorktreeDiff(msg as AgentManagerWorktreeDiffMessage)
-      }
-
-      if (msg.type === "agentManager.worktreeDiffFile") {
-        if (!isCurrent(msg, currentProjectId())) return
-        diffs.onWorktreeDiffFile(msg as AgentManagerWorktreeDiffFileMessage)
-      }
-
-      if (msg.type === "agentManager.worktreeDiffLoading") {
-        if (!isCurrent(msg, currentProjectId())) return
-        diffs.onWorktreeDiffLoading(msg as AgentManagerWorktreeDiffLoadingMessage)
-      }
-
-      if (msg.type === "agentManager.worktreeDiffNotice") {
-        if (!isCurrent(msg, currentProjectId())) return
-        diffs.onWorktreeDiffNotice(msg as AgentManagerWorktreeDiffNoticeMessage)
-      }
-
-      if (msg.type === "agentManager.diffBranches") {
-        if (!isCurrent(msg, currentProjectId())) return
-        review.onBranches(msg as AgentManagerDiffBranchesMessage)
-      }
-
-      if (msg.type === "agentManager.applyWorktreeDiffResult") {
-        if (!isCurrent(msg, currentProjectId())) return
-        apply.onApplyResult(msg as AgentManagerApplyWorktreeDiffResultMessage)
-      }
-
-      if (msg.type === "agentManager.revertWorktreeFileResult") {
-        if (!isCurrent(msg, currentProjectId())) return
-        revertCtl.onResult(msg as never)
-      }
+      if (
+        routeReview(msg, currentProjectId, {
+          diff: diffs.onWorktreeDiff,
+          file: diffs.onWorktreeDiffFile,
+          loading: diffs.onWorktreeDiffLoading,
+          notice: diffs.onWorktreeDiffNotice,
+          branches: review.onBranches,
+          apply: apply.onApplyResult,
+          revert: revertCtl.onResult,
+        }) === "stale"
+      )
+        return
 
       applyProjectSelection(msg, {
         active: (projectId) => activeProjectId() === projectId,
