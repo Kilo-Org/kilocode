@@ -4,8 +4,8 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.ToolbarButtonAction
+import ai.kilocode.client.ui.hoverIconButton
 import ai.kilocode.client.ui.hoverTextButton
-import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -33,7 +33,7 @@ internal class WorktreePrHeaderView @RequiresEdt constructor(
         tooltip = KiloBundle.message("worktree.session.open.tooltip"),
     )
     // Icon-only: the tooltip text stands in for the visible label and doubles as the accessible name.
-    private val terminal = toolbarButton(
+    private val terminal = hoverIconButton(
         ToolbarButtonAction(TerminalIcons.OpenTerminal_13x13, KiloBundle.message("worktree.session.terminal.tooltip"), openTerminal),
     )
 

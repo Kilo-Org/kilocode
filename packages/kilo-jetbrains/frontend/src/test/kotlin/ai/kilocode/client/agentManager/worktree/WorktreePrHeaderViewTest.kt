@@ -191,6 +191,18 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(0, opened)
     }
 
+    fun `test icon only terminal shares labelled action metrics`() {
+        val view = edt { WorktreePrHeaderView(openDiff = {}) }
+        val open = edt { components(view).filterIsInstance<JButton>().single { it.text == "Open" } }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.icon === TerminalIcons.OpenTerminal_13x13 } }
+
+        assertEquals(edt { open.insets }, edt { terminal.insets })
+        assertEquals(edt { open.preferredSize.height }, edt { terminal.preferredSize.height })
+        // Icon-only stays square: it matches the labelled height without inheriting its wide minimum.
+        assertEquals(edt { terminal.preferredSize.height }, edt { terminal.preferredSize.width })
+        assertTrue(edt { terminal.preferredSize.width < open.preferredSize.width })
+    }
+
     fun `test terminal button is icon-only and triggers callback`() {
         var opened = 0
         val view = edt { WorktreePrHeaderView(openDiff = {}, openTerminal = { opened++ }) }

@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.client.ui.style
 import ai.kilocode.client.util.edtWait
@@ -18,6 +19,8 @@ import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
 import javax.swing.JButton
+import javax.swing.JSeparator
+import javax.swing.SwingUtilities
 
 class PrHeaderViewTest : BasePlatformTestCase() {
     fun `test PR renders state badge title and link`() {
@@ -66,6 +69,44 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         val button = edt { JButton("Move").also { view.addAction(it) } }
 
         assertTrue(edt { components(view).contains(button) })
+    }
+
+    fun `test toolbar separators track actions and visible changes`() {
+        val view = edt { PrHeaderView {} }
+        val separators = edt { components(view).filterIsInstance<JSeparator>() }
+        assertEquals(2, separators.size)
+
+        // Changes alone are not a toolbar: with no actions there is nothing to fence off.
+        edt { view.update(2, 1, 0, null, "feature-x") }
+        assertEquals(listOf(false, false), edt { separators.map { it.isVisible } })
+
+        edt { view.addAction(JButton("Open")) }
+        assertEquals(listOf(true, true), edt { separators.map { it.isVisible } })
+
+        // A clean worktree drops the trailing separator, but the toolbar fence stays.
+        edt { view.update(0, 0, 0, null, "feature-x") }
+        assertEquals(listOf(true, false), edt { separators.map { it.isVisible } })
+    }
+
+    fun `test lead separator precedes changes by standard padding`() {
+        val view = edt { PrHeaderView {} }
+        val button = JButton("Open")
+        edt {
+            view.addAction(button)
+            view.update(2, 1, 0, null, "feature-x")
+            layout(view)
+        }
+        val lead = edt { components(view).filterIsInstance<JSeparator>().first() }
+        val trailing = edt { components(view).filterIsInstance<JSeparator>().last() }
+        val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
+        val row = edt { lead.parent }
+        val wrapper = edt { row.components.single { SwingUtilities.isDescendingFrom(changes, it) } }
+
+        assertEquals(UiStyle.Gap.md(), edt { wrapper.x - (lead.x + lead.width) })
+        // Order is separator, padding, changes, separator, then the actions.
+        assertTrue(edt { lead.x < wrapper.x })
+        assertTrue(edt { wrapper.x + wrapper.width <= trailing.x })
+        assertTrue(edt { trailing.x < SwingUtilities.convertPoint(button, 0, 0, view).x })
     }
 
     fun `test repeated update keeps child instances and bounded count`() {
@@ -141,6 +182,12 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         }
         visit(root)
         return out
+    }
+
+    @RequiresEdt
+    private fun layout(view: PrHeaderView) {
+        view.setSize(view.preferredSize)
+        components(view).forEach { if (it is Container) it.doLayout() }
     }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)

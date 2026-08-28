@@ -41,10 +41,17 @@ internal class PrHeaderView @RequiresEdt constructor(
     private val title = SimpleColoredComponent()
     private val changes = ChangesPanel(mode, onBase = openDiff, onLocal = onLocal)
     private val statusPane = status.align(HAlign.LEFT, VAlign.CENTER)
-    // Hidden until the first action is added: hosts with no trailing actions (e.g. BranchDock) show
-    // just the changes summary, so an always-visible separator would dangle with nothing after it.
+    // Both separators stay hidden until the first action is added: hosts with no trailing actions
+    // (e.g. BranchDock) show a bare changes summary, where a separator would dangle with nothing on
+    // one side of it. [leadSeparator] fences the whole toolbar off from the PR title, so it is
+    // followed by standard padding before the changes summary starts.
+    private val leadSeparator = JSeparator(SwingConstants.VERTICAL).apply { isVisible = false }
     private val actionsSeparator = JSeparator(SwingConstants.VERTICAL).apply { isVisible = false }
     private val actions = Stack.horizontal(UiStyle.Gap.sm())
+        .next(leadSeparator)
+        // A gap rather than a filler: it collapses along with a hidden [leadSeparator], so hosts
+        // without actions keep a flush changes summary instead of stray leading whitespace.
+        .gap(UiStyle.Gap.md())
         .next(changes.align(HAlign.CENTER, VAlign.CENTER))
         .next(actionsSeparator)
     private var style = SessionEditorStyle.current()
@@ -107,6 +114,7 @@ internal class PrHeaderView @RequiresEdt constructor(
 
     @RequiresEdt
     private fun syncSeparator() {
+        if (leadSeparator.isVisible != (actionCount > 0)) leadSeparator.isVisible = actionCount > 0
         val visible = actionCount > 0 && changes.isVisible
         if (actionsSeparator.isVisible != visible) actionsSeparator.isVisible = visible
     }
