@@ -236,6 +236,13 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(html.contains("<a class=\"kilo-file-ref\" href=\"packages/opencode/src/session/prompt.ts\">"))
     }
 
+    fun `test inline code urls stop at characters that cannot appear in a url`() {
+        view.set("See `https://example.com/a<b>`")
+        val html = view.html()
+
+        assertTrue(html.contains("href=\"https://example.com/a\">https://example.com/a</a>&lt;b&gt;"))
+    }
+
     // ---- append ----
 
     fun `test append accumulates source`() {

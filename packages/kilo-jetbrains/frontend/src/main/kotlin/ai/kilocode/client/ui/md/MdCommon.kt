@@ -19,13 +19,11 @@ internal object MdCommon {
     private val code = Regex("<code(\\s[^>]*)?>(.*?)</code>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     private val tag = Regex("<[^>]+>")
     private val ref = Regex("(?<![\\w@:/.-])((?:\\.?[A-Za-z0-9_-]{1,80}/){1,20}[A-Za-z0-9_.-]{1,120}\\.[A-Za-z0-9_-]{1,20}(?::\\d{1,7}(?:-\\d{1,7})?)?|[A-Za-z0-9_.-]{1,120}\\.(?:ts|tsx|js|jsx|mjs|cjs|kt|kts|java|md|mdx|txt|json|jsonc|yaml|yml|toml|xml|html|css|scss|rs|go|py|rb|php|swift|c|h|cpp|hpp|cs|sh|zsh|bash|sql|gradle)(?::\\d{1,7}(?:-\\d{1,7})?)?)")
-    private val url = Regex("https?://[^\\s<>\"'`]+", RegexOption.IGNORE_CASE)
     private val single = setOf("readme.md", "package.json", "tsconfig.json", "jsconfig.json", "kilo.json", "kilo.jsonc")
-    // Entities the markdown renderer emits for characters that cannot appear in a URL; a match that
-    // runs into one of them is cut short so the link stops at the original delimiter.
-    private val entities = listOf("&lt;", "&gt;", "&quot;")
-    private const val TRAIL = ".,;:!?"
     private const val REF_SEGMENT_LIMIT = 16_384
+
+    /** Anchor class [ai.kilocode.client.ui.md.hybrid.MdProjector]'s code-span linkifier tags its links with. */
+    const val URL_REF_CLASS = "kilo-url-ref"
 
     val tags = listOf(
         "body", "p", "div", "span", "ul", "ol", "li", "table", "thead", "tbody", "tr", "th", "td",
@@ -41,7 +39,7 @@ internal object MdCommon {
         .replace("\r", " ")
 
     fun inlineCode(html: String, opts: MdStyle): String {
-        if (!html.contains('<') && !scan(html)) return html
+        if (!html.contains('<') && !html.contains('.')) return html
         val color = hex(opts.inlineCodeFg)
         val styled = if (html.contains("<code", ignoreCase = true)) {
             val out = StringBuilder()
@@ -80,7 +78,7 @@ internal object MdCommon {
         rules.append("em, i { color: ${hex(opts.emphasisFg)} } ")
         rules.append("a { color: ${hex(opts.linkColor)} } ")
         rules.append("a.kilo-file-ref, code a.kilo-file-ref { color: ${hex(SessionUiStyle.View.Markdown.string())}; font-family: '${css(opts.codeFont)}', monospace; text-decoration: underline } ")
-        rules.append("a.kilo-url-ref, code a.kilo-url-ref { color: ${hex(opts.linkColor)}; font-family: '${css(opts.codeFont)}', monospace; text-decoration: underline } ")
+        rules.append("a.$URL_REF_CLASS, code a.$URL_REF_CLASS { color: ${hex(opts.linkColor)}; font-family: '${css(opts.codeFont)}', monospace; text-decoration: underline } ")
         rules.append("ul, ol { color: ${hex(opts.listMarkerFg)} } ")
         rules.append("li { color: ${hex(opts.foreground)} } ")
         rules.append("tt, code, samp, pre, pre code { font-family: '${css(opts.codeFont)}', monospace; border-width: 0 } ")
@@ -142,7 +140,7 @@ internal object MdCommon {
     }
 
     private fun refs(html: String): String {
-        if (!scan(html)) return html
+        if (!html.contains('.')) return html
         val out = StringBuilder()
         var at = 0
         for (match in protect.findAll(html)) {
@@ -155,7 +153,7 @@ internal object MdCommon {
     }
 
     private fun tags(html: String): String {
-        if (!scan(html)) return html
+        if (!html.contains('.')) return html
         val out = StringBuilder()
         var at = 0
         for (match in tag.findAll(html)) {
@@ -167,29 +165,8 @@ internal object MdCommon {
         return out.toString()
     }
 
-    /**
-     * Linkifies plain text between tags: `http(s)` URLs first, then file references in whatever text
-     * is left over. URLs are handled here rather than by the markdown parser because CommonMark's
-     * autolink extension skips code spans, so a URL in backticks would otherwise stay inert text.
-     */
     private fun paths(text: String): String {
-        if (text.length > REF_SEGMENT_LIMIT || !scan(text)) return text
-        if (!text.contains("://")) return files(text)
-        val out = StringBuilder()
-        var at = 0
-        for (match in url.findAll(text)) {
-            out.append(files(text.substring(at, match.range.first)))
-            val link = cut(match.value)
-            at = match.range.first + link.length
-            // The renderer already escaped the source, so the matched text is a valid attribute value.
-            out.append("<a class=\"kilo-url-ref\" href=\"$link\">$link</a>")
-        }
-        out.append(files(text.substring(at)))
-        return out.toString()
-    }
-
-    private fun files(text: String): String {
-        if (!text.contains('.')) return text
+        if (text.length > REF_SEGMENT_LIMIT || !text.contains('.')) return text
         return ref.replace(text) { match ->
             val path = match.value
             if (!pathish(path)) return@replace path
@@ -199,35 +176,6 @@ internal object MdCommon {
             "<a class=\"kilo-file-ref\" href=\"${attr(href)}\">$path</a>"
         }
     }
-
-    /** Trims a raw URL match down to the part that belongs to the link. */
-    private fun cut(value: String): String {
-        var end = value.length
-        for (item in entities) {
-            val at = value.indexOf(item)
-            if (at in 0 until end) end = at
-        }
-        while (end > 0) {
-            val char = value[end - 1]
-            if (char in TRAIL) {
-                end--
-                continue
-            }
-            val open = when (char) {
-                ')' -> '('
-                ']' -> '['
-                '}' -> '{'
-                else -> break
-            }
-            val head = value.substring(0, end)
-            if (head.count { it == open } >= head.count { it == char }) break
-            end--
-        }
-        return value.substring(0, end)
-    }
-
-    /** True when [text] can contain a file reference or a URL worth scanning for. */
-    private fun scan(text: String): Boolean = text.contains('.') || text.contains("://")
 
     private fun pathish(path: String): Boolean {
         if (path.contains('/')) return true
