@@ -21,7 +21,7 @@ export function initialMessage(ev: AgentManagerSendInitialMessage): SendMessageR
 }
 
 export function initialVariant(ev: AgentManagerSendInitialMessage, agent: string) {
-  if (!ev.providerID || !ev.modelID || !ev.variant) return undefined
+  if (!ev.providerID || !ev.modelID || ev.variant === undefined) return undefined
   return {
     sessionID: ev.sessionId,
     providerID: ev.providerID,
