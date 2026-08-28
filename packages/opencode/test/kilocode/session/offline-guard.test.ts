@@ -68,15 +68,17 @@ describe("kilocode.session.offlineGuard", () => {
     })
     const exit = await Effect.runPromiseExit(
       Effect.gen(function* () {
-        yield* Effect.sleep("250 millis")
-        guard.touch()
-      }).pipe(
-        Effect.raceFirst(guard.watch),
-        Effect.raceFirst(Effect.sleep("380 millis")),
-      ),
+        yield* Effect.forkChild(
+          Effect.gen(function* () {
+            yield* Effect.sleep("250 millis") // lands inside the probe window (~200-340)
+            guard.touch()
+          }),
+        )
+        yield* Effect.sleep("380 millis") // outlives the probe so the post-probe check runs
+      }).pipe(Effect.raceFirst(guard.watch)),
     )
     expect(Exit.isSuccess(exit)).toBe(true)
-    expect(asked).toBeGreaterThanOrEqual(1)
+    expect(asked).toBe(1)
   })
 
   test("active tool calls hold the guard back", async () => {
