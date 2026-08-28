@@ -146,10 +146,25 @@
    ============================================ */
 
 [data-component="task-header-agents"] {
-  container: background-agents / inline-size;
+  [data-slot="task-header-agents-content"] {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+
+    > [aria-hidden="true"] {
+      visibility: hidden;
+    }
+  }
+
+  [data-slot="task-header-agents-summary"],
+  [data-slot="task-header-agents-item"] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
   [data-slot="task-header-todos-summary"] {
-    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -157,27 +172,19 @@
   }
 
   [data-slot="task-header-agents-preview"] {
-    display: none;
-    flex: 1;
-    min-width: 0;
-    margin-inline-start: 6px;
-    padding-inline-start: 12px;
-    border-inline-start: 1px solid var(--border-weak-base);
-    overflow: hidden;
-    text-overflow: ellipsis;
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: max-content;
     white-space: nowrap;
     color: var(--text-base);
   }
 
   [data-slot="task-header-todos-trigger"] > [data-component="icon"]:last-child {
-    margin-inline-start: auto;
     flex-shrink: 0;
-  }
-
-  @container background-agents (min-width: 640px) {
-    [data-slot="task-header-agents-preview"] {
-      display: block;
-    }
   }
 
   /* The shared spinner svg has no intrinsic size, so it must be constrained

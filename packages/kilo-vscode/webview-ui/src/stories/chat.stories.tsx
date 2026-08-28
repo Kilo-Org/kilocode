@@ -1203,18 +1203,17 @@ export const TaskHeaderWithTodos: Story = {
 
 export const TaskHeaderBackgroundAgents1280: Story = {
   name: "TaskHeader background agents, wide",
-  render: () => {
-    const tools: ToolPart[] = ["Trace overflow recovery", "Trace outbound request size", "Check request limits"].map(
-      (description, index) => ({
-        id: `task-${index}`,
-        sessionID: SESSION_ID,
-        messageID: headerAssistantID,
-        type: "tool",
-        tool: "task",
-        state: { status: "completed", input: { description }, output: "Started background agent", title: description },
-        metadata: { sessionId: `child-${index}`, background: true },
-      }),
-    )
+  args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
+  render: (args: { names: string[] }) => {
+    const tools: ToolPart[] = args.names.map((description, index) => ({
+      id: `task-${index}`,
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "task",
+      state: { status: "completed", input: { description }, output: "Started background agent", title: description },
+      metadata: { sessionId: `child-${index}`, background: true },
+    }))
     const session = {
       ...mockSessionValue({ id: SESSION_ID }),
       messages: () => headerMessages,
@@ -1240,6 +1239,12 @@ export const TaskHeaderBackgroundAgents1280: Story = {
 export const TaskHeaderBackgroundAgents420: Story = {
   ...TaskHeaderBackgroundAgents1280,
   name: "TaskHeader background agents, narrow",
+}
+
+export const TaskHeaderSingleBackgroundAgent420: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader single background agent, narrow",
+  args: { names: ["Check request limits"] },
 }
 
 export const TaskHeaderWithTodosAllDone: Story = {

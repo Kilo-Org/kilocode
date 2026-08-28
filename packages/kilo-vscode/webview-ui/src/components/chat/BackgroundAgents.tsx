@@ -103,12 +103,26 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
   const label = (agent: BackgroundAgent) =>
     agent.description ?? agent.agent ?? language.t("task.backgroundAgents.untitled")
 
-  const names = createMemo(() =>
-    visible()
-      .filter((agent) => agent.status === "running")
-      .map(label)
-      .join(" · "),
+  const active = createMemo(() =>
+    visible().filter((agent) => agent.status === "running" || agent.permission || agent.question),
   )
+  const [box, setBox] = createSignal<HTMLSpanElement>()
+  const [preview, setPreview] = createSignal<HTMLSpanElement>()
+  const [fits, setFits] = createSignal(false)
+  const detailed = createMemo(() => !open() && active().length > 0 && fits())
+  const caption = createMemo(() => (waiting() > 0 ? language.t("task.backgroundAgents.waiting") : summary()))
+
+  createEffect(() => {
+    const container = box()
+    const content = preview()
+    if (!container || !content || typeof ResizeObserver === "undefined") return
+    const measure = () => setFits(container.clientWidth > 0 && content.scrollWidth <= container.clientWidth)
+    const observer = new ResizeObserver(measure)
+    observer.observe(container)
+    observer.observe(content)
+    onCleanup(() => observer.disconnect())
+    measure()
+  })
 
   const status = (agent: BackgroundAgent) => language.t(`task.backgroundAgents.status.${agent.status}`)
 
@@ -155,30 +169,45 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
               data-slot="task-header-todos-trigger"
               onClick={() => setOpen((value) => !value)}
               aria-expanded={open()}
+              aria-label={detailed() ? `${caption()}: ${active().map(label).join(", ")}` : undefined}
             >
-              <Show
-                when={waiting() > 0}
-                fallback={
+              <span data-slot="task-header-agents-content" ref={setBox}>
+                <span data-slot="task-header-agents-summary" aria-hidden={detailed()}>
                   <Show
-                    when={visible().some((agent) => agent.status === "running")}
-                    fallback={<Icon name="task" size="small" />}
+                    when={waiting() > 0}
+                    fallback={
+                      <Show
+                        when={visible().some((agent) => agent.status === "running")}
+                        fallback={<Icon name="task" size="small" />}
+                      >
+                        <Spinner />
+                      </Show>
+                    }
                   >
-                    <Spinner />
+                    <Icon name="warning" size="small" />
                   </Show>
-                }
-              >
-                <Icon name="warning" size="small" />
-              </Show>
-              <span data-slot="task-header-todos-summary">
-                <Show when={waiting() > 0} fallback={summary()}>
-                  {language.t("task.backgroundAgents.waiting")}
-                </Show>
-              </span>
-              <Show when={!open() && names()}>
-                <span data-slot="task-header-agents-preview" title={names()} dir="auto">
-                  {names()}
+                  <span data-slot="task-header-todos-summary">{caption()}</span>
                 </span>
-              </Show>
+                <span data-slot="task-header-agents-preview" ref={setPreview} aria-hidden={!detailed()}>
+                  <For each={active()}>
+                    {(agent) => (
+                      <span
+                        data-slot="task-header-agents-item"
+                        title={
+                          agent.permission || agent.question
+                            ? language.t("task.backgroundAgents.needsInput")
+                            : undefined
+                        }
+                      >
+                        <Show when={agent.permission || agent.question} fallback={<Spinner />}>
+                          <Icon name="warning" size="small" />
+                        </Show>
+                        <span dir="auto">{label(agent)}</span>
+                      </span>
+                    )}
+                  </For>
+                </span>
+              </span>
               <Icon
                 name="chevron-down"
                 size="small"
