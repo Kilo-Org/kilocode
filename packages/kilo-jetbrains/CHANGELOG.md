@@ -316,6 +316,24 @@
 
 ## [Unreleased]
 
+## [7.1.1-rc.1] - 2026-08-27
+
+### Added
+
+- Open Mermaid diagrams in JetBrains editor tabs with zoom, pan, fit-to-view, source view, and PNG copy support.
+- Add clearer JetBrains worktree session empty states, labeled create actions, and a persisted toggle for showing or hiding the worktree session list.
+
+### Fixed
+
+- Retry failed JetBrains turns by continuing the original request, keeping transcript and workspace context intact instead of rolling back or appending a placeholder prompt.
+- Surface JetBrains failed-turn errors more clearly and hide the failure card as soon as Retry starts.
+- Avoid duplicated plan-mode permission rule stacking in Kilo Core.
+
+### Changed
+
+- Update the pinned Kilo Core CLI used by JetBrains from 7.4.23 to 7.5.5.
+- Improve JetBrains worktree session UX with branch-aware guidance and localized copy updates.
+
 ## [7.1.0] - 2026-08-26
 
 ### Added
