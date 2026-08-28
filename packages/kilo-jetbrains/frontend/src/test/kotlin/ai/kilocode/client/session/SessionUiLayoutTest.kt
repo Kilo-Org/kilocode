@@ -7,6 +7,7 @@ import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
+import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
@@ -284,6 +285,22 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
         workspaceRpc.branchDiffs.clear()
         workspaceRpc.branchDiffs.add(DiffFileDto("src/C.kt", 1, 0))
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.TurnEnded(Outcome.INCOMPLETE, "unknown"))
+        settle()
+
+        assertEquals(1 to 0, badge.stats())
+
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/D.kt", 5, 2))
+        controller().model.setState(SessionState.Busy("running"))
+        controller().model.setState(SessionState.Error("failed"))
+        settle()
+
+        assertEquals(5 to 2, badge.stats())
+
+        workspaceRpc.branchDiffs.clear()
+        workspaceRpc.branchDiffs.add(DiffFileDto("src/E.kt", 1, 0))
         controller().model.setRevert(SessionRevertDto("msg1", "part1", diff = "patch"))
         settle()
 

@@ -11,7 +11,6 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
-import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
@@ -25,7 +24,11 @@ import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.ActiveListWeight
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
@@ -48,7 +51,6 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.wm.IdeFocusManager
@@ -60,6 +62,8 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SideBorder
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBInsets
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import org.jetbrains.plugins.terminal.TerminalToolWindowFactory
@@ -67,9 +71,11 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Frame
 import javax.swing.JComponent
-import javax.swing.Icon
+import javax.swing.JSeparator
 import javax.swing.ListSelectionModel
 import javax.swing.JPanel
+import javax.swing.SwingConstants
+import javax.swing.border.Border
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 
@@ -82,12 +88,19 @@ class WorktreeSessionEditorPanel(
     private val confirm: ((RelativePoint, ActiveListDeleteOptions, () -> Unit) -> Unit)? = null,
     private val edit: ((RelativePoint, ActiveListEditOptions, (String) -> Unit) -> Unit)? = null,
     private val openWorktree: ((String) -> Unit)? = null,
+    // Persisted per-worktree session list visibility; null means the user has not chosen yet.
+    private val load: ((Boolean?) -> Unit) -> Unit = { done ->
+        service<WorktreeSessionListVisibility>().load(worktree.directory, done)
+    },
+    private val save: (Boolean) -> Unit = { value ->
+        service<WorktreeSessionListVisibility>().save(worktree.directory, value)
+    },
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val add = NewAction()
     private val rename = RenameAction()
     private val delete = DeleteAction()
-    private val toggle = ToggleAction()
-    private val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(toggle, add, rename, delete), true)
+    private val toggle = WorktreeSessionListToggle { flip() }
+    private val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(add, rename, delete), true)
     private val group = ActionManager.getInstance().getAction("Kilo.WorktreeSession.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.session.list.empty"),
@@ -112,6 +125,10 @@ class WorktreeSessionEditorPanel(
     private var started = false
     private var stats: WorktreeStatsDto? = null
     private var pr: WorktreePrDto? = null
+    // Last known persisted visibility, and whether it is known at all: until the stored value arrives
+    // (or the user clicks) the list stays hidden and nothing is written.
+    private var pref: Boolean? = null
+    private var ready = false
 
     init {
         Disposer.register(parent, this)
@@ -122,11 +139,11 @@ class WorktreeSessionEditorPanel(
         toolbar.component.isOpaque = false
         syncToolbar()
         list.installPopup(group)
-        splitter.firstComponent = list
+        // The list starts detached: a worktree opens with its sessions hidden until a stored choice or
+        // a second session says otherwise.
         splitter.secondComponent = manager.component
         addToTop(top())
         addToCenter(splitter)
-        syncExpanded(KiloPluginSettings.getWorktreeSessionListExpanded())
         bindModel()
         manager.onPresent = { key -> key?.let { list.select(it) } }
         manager.onListChanged = {
@@ -145,6 +162,7 @@ class WorktreeSessionEditorPanel(
         }
         bindStatus()
         sync()
+        load(::restore)
     }
 
     override fun getBackground(): Color = activeListToolWindowBackground()
@@ -249,17 +267,87 @@ class WorktreeSessionEditorPanel(
     private fun toolbarPanel(): JComponent {
         return object : JPanel(BorderLayout()) {
             override fun getBackground(): Color = activeListToolWindowBackground()
+
+            // The padding and the divider colour both come from the theme, so they are re-read on
+            // Look-and-Feel changes instead of being captured once at construction.
+            override fun updateUI() {
+                super.updateUI()
+                border = toolbarPanelBorder()
+            }
         }.apply {
-            border = IdeBorderFactory.createBorder(SideBorder.RIGHT)
+            // The toggle is centred at its own height instead of tracking the strip, so its hover
+            // box keeps the strip's padding above and below it like a regular toolbar button.
+            add(
+                Stack.horizontal(gap = UiStyle.Gap.sm())
+                    .next(toggle.align(HAlign.LEFT, VAlign.CENTER))
+                    .next(JSeparator(SwingConstants.VERTICAL)),
+                BorderLayout.WEST,
+            )
             add(toolbar.component, BorderLayout.CENTER)
         }
     }
 
-    @RequiresEdt
-    private fun toggleExpanded() {
-        syncExpanded(!expanded())
-        KiloPluginSettings.setWorktreeSessionListExpanded(expanded())
+    /**
+     * Standard horizontal-toolbar padding on the three free sides. The right edge stays flush so the
+     * divider still sits directly against the header content beside it.
+     *
+     * The theme insets arrive pre-scaled while [JBUI.Borders.empty] scales what it is handed, so the
+     * unscaled values are read back to avoid scaling twice on HiDPI.
+     */
+    private fun toolbarPanelBorder(): Border {
+        val ins = (JBUI.CurrentTheme.Toolbar.horizontalToolbarInsets() as? JBInsets)?.unscaled
+        return JBUI.Borders.merge(
+            JBUI.Borders.empty(ins?.top ?: STRIP_PAD, ins?.left ?: STRIP_PAD, ins?.bottom ?: STRIP_PAD, 0),
+            IdeBorderFactory.createBorder(SideBorder.RIGHT),
+            true,
+        )
     }
+
+    @RequiresEdt
+    private fun flip() {
+        syncExpanded(!expanded())
+        ready = true
+        pref = expanded()
+        save(expanded())
+    }
+
+    /**
+     * Applies the stored visibility once the backend answers. A click that landed first already
+     * decided, so a late answer must not overwrite it.
+     */
+    @RequiresEdt
+    private fun restore(value: Boolean?) {
+        if (ready) return
+        ready = true
+        pref = value
+        value?.let(::syncExpanded)
+        resolve()
+    }
+
+    /**
+     * Shows the list the first time this worktree holds more than one session. Only that promotion is
+     * persisted, so a worktree the user never touched keeps writing nothing while it has one session.
+     */
+    @RequiresEdt
+    private fun resolve() {
+        if (!ready || pref != null || count() < AUTO) return
+        syncExpanded(true)
+        pref = true
+        save(true)
+    }
+
+    @RequiresEdt
+    private fun count(): Int {
+        val deleting = manager.deleting()
+        return controller.sessions().count { it.id !in deleting }
+    }
+
+    @RequiresEdt
+    private fun syncToggle() = toggle.update(
+        expanded(),
+        count(),
+        attention(manager.activity(), manager.currentKey(), manager.deleting()),
+    )
 
     @RequiresEdt
     private fun expanded(): Boolean = splitter.firstComponent != null
@@ -281,6 +369,7 @@ class WorktreeSessionEditorPanel(
         val changed = expanded() != value
         if (changed) splitter.firstComponent = if (value) list else null
         syncToolbar()
+        syncToggle()
         if (!changed) return
         splitter.revalidate()
         splitter.repaint()
@@ -413,6 +502,8 @@ class WorktreeSessionEditorPanel(
         // the list hold that key until a refresh brings it in.
         val shown = if (pending) SessionHost.NEW else key
         list.update(rows, shown?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
+        resolve()
+        syncToggle()
     }
 
     @RequiresEdt
@@ -481,20 +572,6 @@ class WorktreeSessionEditorPanel(
         manager.onListChanged = null
     }
 
-    private inner class ToggleAction : AnAction() {
-        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
-
-        override fun update(e: AnActionEvent) {
-            val expanded = expanded()
-            e.presentation.text = KiloBundle.message(if (expanded) "worktree.session.list.collapse" else "worktree.session.list.expand")
-            e.presentation.icon = if (expanded) LAYOUT_FULL else LAYOUT_PARTIAL
-        }
-
-        override fun actionPerformed(e: AnActionEvent) {
-            toggleExpanded()
-        }
-    }
-
     private inner class NewAction : AnAction(
         KiloBundle.message("worktree.session.new.action"),
         null,
@@ -552,8 +629,12 @@ class WorktreeSessionEditorPanel(
     private companion object {
         private val LOG = KiloLog.create(WorktreeSessionEditorPanel::class.java)
         private val TERMINAL_DIR = Key.create<String>("kilo.worktree.terminal.dir")
-        val LAYOUT_PARTIAL: Icon = IconLoader.getIcon("/icons/layout-left-partial.svg", WorktreeSessionEditorPanel::class.java)
-        val LAYOUT_FULL: Icon = IconLoader.getIcon("/icons/layout-left-full.svg", WorktreeSessionEditorPanel::class.java)
+
+        /** Sessions a worktree must hold before the list shows itself without being asked. */
+        private const val AUTO = 2
+
+        /** Classic UI leaves the toolbar inset key unset; matches the platform's own fallback. */
+        private const val STRIP_PAD = 2
     }
 
     private inner class SessionRow(

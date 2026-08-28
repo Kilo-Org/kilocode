@@ -2,7 +2,6 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Outcome
-import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.ui.SessionLayout
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -18,6 +17,7 @@ import java.awt.Dimension
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.Icon
+import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
@@ -86,27 +86,28 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test showOutcome renders interrupted copy and warning icon`() {
+    fun `test showOutcome renders interrupted note without icon`() {
         edt {
             val view = SessionOutcomeView()
-            view.showOutcome(Outcome.INTERRUPTED, OutcomeTone.WARNING)
+            view.showOutcome(Outcome.INTERRUPTED)
 
             assertTrue(view.isVisible)
-            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.title")))
-            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.description")))
-            assertIcons(view, AllIcons.General.Warning)
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.note")))
+            assertTrue(findAll<JBLabel>(view).none { it.icon != null && it.isVisible })
         }
     }
 
     fun `test showOutcome updates without stale text`() {
         edt {
             val view = SessionOutcomeView()
-            view.showOutcome(Outcome.INTERRUPTED, OutcomeTone.WARNING)
-            view.showOutcome(Outcome.FAILED, OutcomeTone.CRITICAL)
+            view.showOutcome(Outcome.INTERRUPTED)
+            view.showOutcome(Outcome.INCOMPLETE, "unknown")
+            view.showOutcome(Outcome.FAILED)
 
             assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.title")))
             assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.description")))
-            assertNull(findText(view, KiloBundle.message("session.outcome.interrupted.description")))
+            assertNull(findText(view, KiloBundle.message("session.outcome.interrupted.note")))
+            assertNull(findText(view, KiloBundle.message("session.outcome.incomplete.title")))
             assertIcons(view, AllIcons.General.Error)
         }
     }
@@ -115,11 +116,194 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
         edt {
             val view = SessionOutcomeView()
             view.showError("Provider balance is too low", "APIError")
-            view.showOutcome(Outcome.INTERRUPTED, OutcomeTone.WARNING)
+            view.showOutcome(Outcome.INTERRUPTED)
 
             assertNull(findText(view, "Provider balance is too low"))
             assertNull(findErrorScroll(view, "Provider balance is too low"))
-            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.description")))
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.note")))
+        }
+    }
+
+    fun `test showError surfaces error kind`() {
+        edt {
+            val view = SessionOutcomeView()
+            view.showError("Provider balance is too low", "APIError")
+
+            assertNotNull(findText(view, "APIError"))
+        }
+    }
+
+    // ------ retry action ------
+
+    fun `test error card offers retry`() {
+        edt {
+            var clicked = 0
+            val view = SessionOutcomeView(retry = { clicked++ })
+            view.showError("Provider balance is too low", "APIError")
+
+            val button = retryButton(view)
+            assertNotNull("Error card should offer Retry", button)
+            button!!.doClick()
+            assertEquals(1, clicked)
+        }
+    }
+
+    fun `test failed outcome offers retry`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showOutcome(Outcome.FAILED)
+
+            assertNotNull("Failed outcome should offer Retry", retryButton(view))
+        }
+    }
+
+    fun `test interrupted note offers no retry`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showOutcome(Outcome.INTERRUPTED)
+
+            assertNull("A user stop is not a failure and must not offer Retry", retryButton(view))
+        }
+    }
+
+    fun `test incomplete outcome shows warning without retry`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showOutcome(Outcome.INCOMPLETE, "unknown")
+
+            assertTrue(view.isVisible)
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.incomplete.title")))
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.incomplete.description")))
+            assertIcons(view, AllIcons.General.Warning)
+            assertTrue(findAll<JBLabel>(view).any {
+                it.icon == AllIcons.General.Warning &&
+                    it.toolTipText == KiloBundle.message("session.outcome.incomplete.reason", "unknown")
+            })
+            assertNull("An incomplete completed message has no Retry action", retryButton(view))
+        }
+    }
+
+    fun `test incomplete outcome falls back to title tooltip`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showOutcome(Outcome.INCOMPLETE)
+
+            assertTrue(findAll<JBLabel>(view).any {
+                it.icon == AllIcons.General.Warning &&
+                    it.toolTipText == KiloBundle.message("session.outcome.incomplete.title")
+            })
+        }
+    }
+
+    fun `test readonly outcome view offers no retry`() {
+        edt {
+            val view = SessionOutcomeView(retry = null)
+            view.showError("Provider balance is too low", "APIError")
+
+            assertNull("Readonly sessions cannot retry", retryButton(view))
+        }
+    }
+
+    fun `test error card hides retry when the transcript has nothing to replay`() {
+        edt {
+            val view = SessionOutcomeView(retry = {}, retryable = { false })
+            view.showError("invalid kilo.json", "UnknownError")
+
+            assertNull("A dead Retry must not be painted", retryButton(view))
+        }
+    }
+
+    fun `test failed outcome hides retry when the transcript has nothing to replay`() {
+        edt {
+            val view = SessionOutcomeView(retry = {}, retryable = { false })
+            view.showOutcome(Outcome.FAILED)
+
+            assertNull(retryButton(view))
+        }
+    }
+
+    fun `test retry appears once the transcript becomes replayable`() {
+        edt {
+            var replayable = false
+            val view = SessionOutcomeView(retry = {}, retryable = { replayable })
+            view.showError("Provider balance is too low", "APIError")
+            assertNull(retryButton(view))
+
+            replayable = true
+            view.showError("Provider balance is too low", "APIError")
+
+            val buttons = findAll<JButton>(view).filter { it.text == KiloBundle.message("session.outcome.retry") }
+            assertEquals("Exactly one live Retry button", 1, buttons.size)
+        }
+    }
+
+    fun `test toggling outcomes does not accumulate retry buttons`() {
+        edt {
+            var clicked = 0
+            val view = SessionOutcomeView(retry = { clicked++ })
+            repeat(3) {
+                view.showOutcome(Outcome.FAILED)
+                view.showOutcome(Outcome.INTERRUPTED)
+            }
+            assertNull("The note detaches the footer entirely", retryButton(view))
+            view.showOutcome(Outcome.FAILED)
+
+            val buttons = findAll<JButton>(view).filter { it.text == KiloBundle.message("session.outcome.retry") }
+            assertEquals("Exactly one live Retry button", 1, buttons.size)
+            buttons.single().doClick()
+            assertEquals("The live button is wired to the current handler", 1, clicked)
+        }
+    }
+
+    private fun retryButton(root: Container) =
+        findAll<JButton>(root).firstOrNull { it.text == KiloBundle.message("session.outcome.retry") }
+
+    // ------ action-only failures (the transcript owns the reason) ------
+
+    fun `test showRetry offers the action with no message of its own`() {
+        edt {
+            var clicked = 0
+            val view = SessionOutcomeView(retry = { clicked++ })
+            view.showRetry()
+
+            assertTrue(view.isVisible)
+            assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.title")))
+            assertNull(
+                "The transcript card carries the reason",
+                findText(view, KiloBundle.message("session.outcome.failed.description")),
+            )
+            retryButton(view)!!.doClick()
+            assertEquals(1, clicked)
+        }
+    }
+
+    fun `test showRetry hides when there is nothing to replay`() {
+        edt {
+            val view = SessionOutcomeView(retry = {}, retryable = { false })
+            view.showRetry()
+
+            assertFalse("A header with no reason and no action says nothing", view.isVisible)
+        }
+    }
+
+    fun `test showRetry hides in a readonly session`() {
+        edt {
+            val view = SessionOutcomeView(retry = null)
+            view.showRetry()
+
+            assertFalse(view.isVisible)
+        }
+    }
+
+    fun `test showRetry drops stale error content`() {
+        edt {
+            val view = SessionOutcomeView(retry = {})
+            view.showError("Provider balance is too low", "APIError")
+            view.showRetry()
+
+            assertNull(findText(view, "Provider balance is too low"))
+            assertNull(findErrorScroll(view, "Provider balance is too low"))
+            assertNotNull(retryButton(view))
         }
     }
 
@@ -294,8 +478,9 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
     private fun <T> findAllCls(root: Container, cls: Class<T>): List<T> {
         val result = mutableListOf<T>()
         if (cls.isInstance(root)) result.add(cls.cast(root))
+        // Only recurse. Matching a child here as well would double-count any hit that is itself a
+        // Container (every Swing component is), because the recursive call re-checks it as its own root.
         for (child in root.components) {
-            if (cls.isInstance(child)) result.add(cls.cast(child))
             if (child is Container) result.addAll(findAllCls(child, cls))
         }
         return result

@@ -39,6 +39,7 @@ export class WorktreeDiffController {
   /** Intended watch mode for the active context; isPolling lags the initial fetch. */
   private poll = false
   private owner: string | undefined
+  private generation = 0
   /** Ephemeral per-context base override, keyed by context id. */
   private baseOverrides = new Map<string, string>()
 
@@ -248,6 +249,7 @@ export class WorktreeDiffController {
   }
 
   public stop(): void {
+    this.generation++
     this.controller.stop()
     this.target = undefined
     this.poll = false
@@ -284,15 +286,16 @@ export class WorktreeDiffController {
   }
 
   private async activate(id: string, poll: boolean, fetch: boolean): Promise<void> {
+    const generation = ++this.generation
     this.target = undefined
     this.poll = poll
     const owner = this.ctx.projectId?.()
     this.owner = owner
     await this.ready("stateReady rejected, continuing diff activate:")
-    if (this.owner !== owner || this.ctx.projectId?.() !== owner) return
+    if (this.generation !== generation || this.owner !== owner || this.ctx.projectId?.() !== owner) return
     const { ctx } = parseDiffId(id)
     const resolved = await this.resolve(ctx)
-    if (this.owner !== owner || this.ctx.projectId?.() !== owner) return
+    if (this.generation !== generation || this.owner !== owner || this.ctx.projectId?.() !== owner) return
     this.target = resolved ? { sessionId: id, ...resolved } : undefined
     // Clear any stale source notice up front; sources only push a notice when
     // one is active, so a swap away from a noticing source must reset it.

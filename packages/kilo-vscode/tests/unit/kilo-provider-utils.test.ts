@@ -376,6 +376,21 @@ describe("mapSSEEventToWebviewMessage", () => {
     expect(msg).toEqual({ type: "sessionTurnClosed", sessionID: "sess-1", reason: "interrupted" })
   })
 
+  it("forwards the parent session ID when a child turn closes", () => {
+    const event: EventSessionTurnClose = {
+      id: "evt-child-turn",
+      type: "session.turn.close",
+      properties: { sessionID: "child", parentID: "parent", reason: "completed" },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "child")).toEqual({
+      type: "sessionTurnClosed",
+      sessionID: "child",
+      reason: "completed",
+      parentID: "parent",
+    })
+  })
+
   it("maps session errors with their event identity and message", () => {
     const event: EventSessionError = {
       id: "evt-error",

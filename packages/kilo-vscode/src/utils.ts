@@ -66,6 +66,7 @@ export function buildWebviewHtml(
     topBar?: boolean
     topBarSurface?: string
     agentManagerSettings?: boolean
+    sidebar?: "left" | "right"
   },
 ): string {
   const nonce = getNonce()
@@ -73,7 +74,7 @@ export function buildWebviewHtml(
   const markdownWorkerUri = opts.workerUri.toString().replace(/shiki-worker\.js$/, "markdown-shiki-worker.js")
 
   return `<!DOCTYPE html>
-<html lang="en" data-theme="kilo-vscode">
+<html lang="en" data-theme="kilo-vscode" data-sidebar="${opts.sidebar ?? ""}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

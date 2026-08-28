@@ -12,6 +12,21 @@ internal fun aggregateWorktreeActivity(
 
 internal fun normalizeWorktreePath(path: String): String = normalize(path)
 
+/**
+ * Activity a collapsed session list should surface: the top-ranked session that needs the user, from
+ * sessions other than [current] (whose state the open chat already shows) and not being deleted.
+ * Running work is not an attention state — it would only put a spinner in the header.
+ */
+internal fun attention(
+    activity: Map<String, SessionActivityKind>,
+    current: String? = null,
+    deleting: Set<String> = emptySet(),
+): SessionActivityKind? = activity
+    .filterKeys { it != current && it !in deleting }
+    .values
+    .filter { it != SessionActivityKind.RUNNING }
+    .minByOrNull(::rank)
+
 private fun normalize(path: String): String = path.trimEnd('/')
 
 /**

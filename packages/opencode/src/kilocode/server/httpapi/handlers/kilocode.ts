@@ -1,4 +1,14 @@
-import { Effect } from "effect"
+import { Cause, Effect, Scope } from "effect"
+import { NamedError } from "@opencode-ai/core/util/error"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { KiloSessionContinuation } from "@/kilocode/session/continuation"
+import { Suggestion } from "@/kilocode/suggestion"
+import { Permission } from "@/permission"
+import { Question } from "@/question"
+import { Session } from "@/session/session"
+import { SessionPrompt } from "@/session/prompt"
+import { SessionStatus } from "@/session/status"
+import { mapStorageNotFound } from "@/server/routes/instance/httpapi/handlers/session-errors"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as KiloAgent from "@/kilocode/agent"
 import { CommandFiles } from "@/kilocode/command-files"
@@ -26,6 +36,11 @@ import { BackgroundJob } from "@/background/job"
 import { SessionRunState } from "@/session/run-state"
 import { SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { KiloSnapshotCleanup } from "@/kilocode/snapshot/cleanup"
+import { Global } from "@opencode-ai/core/global"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import path from "path"
 import {
   AgentManagerRejectPayload,
   AgentManagerReplyPayload,
@@ -34,6 +49,8 @@ import {
   RemoveAgentPayload,
   RemoveCommandPayload,
   RemoveSkillPayload,
+  RemoveSnapshotPayload,
+  ResumeSessionPayload,
   BackgroundJobInfo,
   BackgroundJobsQuery,
 } from "../groups/kilocode"
@@ -51,6 +68,61 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const runState = yield* SessionRunState.Service
     const flags = yield* RuntimeFlags.Service
     const locations = yield* LocationServiceMap.Service
+    const fs = yield* FSUtil.Service
+    const flock = yield* EffectFlock.Service
+    const sessions = yield* Session.Service
+    const prompt = yield* SessionPrompt.Service
+    const status = yield* SessionStatus.Service
+    const permission = yield* Permission.Service
+    const question = yield* Question.Service
+    const events = yield* EventV2Bridge.Service
+    const scope = yield* Scope.Scope
+
+    const resumeSession = Effect.fn("KilocodeHttpApi.resumeSession")(function* (ctx: {
+      params: { sessionID: SessionID }
+      payload: typeof ResumeSessionPayload.Type
+    }) {
+      const id = ctx.params.sessionID
+      const session = yield* mapStorageNotFound(sessions.get(id))
+      const blocked = new InvalidRequestError({ message: "This session cannot be resumed in its current state." })
+      if (session.revert || session.time.archived) return yield* blocked
+      yield* runState.assertNotBusy(id).pipe(Effect.mapError(() => blocked))
+      if ((yield* status.get(id)).type !== "idle") return yield* blocked
+      const pending = [
+        ...(yield* permission.list()),
+        ...(yield* question.list()),
+        ...(yield* Effect.promise(() => Suggestion.list())),
+      ]
+      if (pending.length > 0) {
+        const family = new Set([id])
+        for (const parent of family) {
+          for (const child of yield* sessions.children(parent)) family.add(child.id)
+        }
+        if (pending.some((request) => family.has(request.sessionID))) return yield* blocked
+      }
+      const messages = yield* mapStorageNotFound(sessions.messages({ sessionID: id }))
+      if (KiloSessionContinuation.target(messages) !== ctx.payload.messageID) return yield* blocked
+      yield* prompt
+        .loop({
+          sessionID: id,
+          resume: ctx.payload.messageID,
+          snapshotInitialization: ctx.payload.snapshotInitialization,
+        })
+        .pipe(
+          Effect.catchCause((cause) => {
+            if (Cause.hasInterruptsOnly(cause)) return Effect.void
+            return Effect.gen(function* () {
+              yield* Effect.logError("session resume failed", { sessionID: id, cause })
+              yield* events.publish(Session.Event.Error, {
+                sessionID: id,
+                error: new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
+              })
+            })
+          }),
+          Effect.forkIn(scope, { startImmediately: true }),
+        )
+      return true
+    })
 
     // Location-scoped services, keyed by the request's directory and workspace.
     const located = Effect.fnUntraced(function* <A, E, R>(effect: Effect.Effect<A, E, R>) {
@@ -137,6 +209,20 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       )
       yield* store.dispose(instance)
       return true
+    })
+
+    const removeSnapshot = Effect.fn("KilocodeHttpApi.removeSnapshot")(function* (ctx: {
+      payload: typeof RemoveSnapshotPayload.Type
+    }) {
+      const instance = yield* InstanceState.context
+      return yield* KiloSnapshotCleanup.remove({
+        root: path.join(Global.Path.data, "snapshot"),
+        project: instance.project.id,
+        directory: instance.worktree,
+        worktree: ctx.payload.worktree,
+        fs,
+        flock,
+      }).pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
     })
 
     const providerUsage = Effect.fn("KilocodeHttpApi.providerUsage")(function* () {
@@ -247,11 +333,13 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     })
 
     return handlers
+      .handle("resumeSession", resumeSession)
       .handle("heapSnapshot", heapSnapshot)
       .handle("commandFiles", commandFiles)
       .handle("removeCommand", removeCommand)
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
+      .handle("removeSnapshot", removeSnapshot)
       .handle("providerUsage", providerUsage)
       .handle("providerUsageRefresh", providerUsageRefresh)
       .handle("notebookList", notebookList)

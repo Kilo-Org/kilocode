@@ -28,6 +28,7 @@ import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { showTabStrip } from "../../utils/local-tabs"
+import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
@@ -37,8 +38,10 @@ interface ChatViewProps {
   readonly?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
+  worktree?: boolean
   promptBoxId?: string
   terminalContext?: () => string | undefined
+  worktrees?: () => WorktreeReference[]
   deferFocusToQuestion?: () => boolean
   pendingSessionID?: string
   focusOnDraftChange?: () => boolean
@@ -387,8 +390,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 blocked={blocked}
                 suggesting={suggesting}
                 questioning={questioning}
+                worktree={props.worktree}
                 boxId={props.promptBoxId}
                 terminalContext={props.terminalContext}
+                worktrees={props.worktrees}
                 deferFocusToQuestion={props.deferFocusToQuestion}
                 pendingSessionID={pendingSessionID()}
                 focusOnDraftChange={props.focusOnDraftChange}

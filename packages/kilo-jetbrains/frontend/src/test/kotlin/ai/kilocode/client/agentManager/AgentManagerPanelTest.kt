@@ -134,7 +134,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     fun `test configure creates the worktree only after the dialog closes`() {
         val order = mutableListOf<String>()
-        val plan = NewWorktreePlan("feature/y", "main", PendingPrompt("build it"))
+        val plan = NewWorktreePlan.Create("feature/y", "main", PendingPrompt("build it"))
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
             AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
@@ -164,6 +164,36 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(listOf("show"), order)
         assertEquals(0, edt { controller.model.size })
         assertTrue(rpc.creates.isEmpty())
+    }
+
+    fun `test configure imports an existing branch`() {
+        val order = mutableListOf<String>()
+        val plan = NewWorktreePlan.Branch("feature/x")
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+        }
+
+        edt { panel.configure() }
+        flush()
+
+        val req = rpc.creates.single()
+        assertEquals("feature/x", req.branch)
+        assertTrue("branch import checks out an existing branch", req.existingBranch)
+    }
+
+    fun `test configure imports a pull request`() {
+        val order = mutableListOf<String>()
+        val plan = NewWorktreePlan.Pr("https://github.com/o/r/pull/7")
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+        }
+
+        edt { panel.configure() }
+        flush()
+
+        assertEquals(listOf("https://github.com/o/r/pull/7"), rpc.prImports.toList())
     }
 
     fun `test panel hides worktree search field`() {
@@ -649,6 +679,43 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(edt { panel.canShowRename(item) })
     }
 
+    fun `test current row renders without any linked worktrees`() {
+        rpc.listed += main()
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+
+        edt { controller.reload() }
+        flush()
+
+        // Replacing an empty model with an empty list notifies nobody, so the row has to come from
+        // the reload itself.
+        assertEquals(1, rows(panel))
+        assertEquals("main", row(panel, 0).title)
+    }
+
+    fun `test current row shows the pr badge for the main checkout`() {
+        val main = main()
+        rpc.listed += main
+        rpc.prResult = WorktreePrListDto(
+            GhAvailability.OK,
+            listOf(WorktreePrDto(main.path, 12, GhState.OPEN, "https://example.test/pr/12", "Main work")),
+        )
+        val timers = TestUiTimers()
+        ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        waitUntil { rows(panel) > 0 && row(panel, 0).metrics != null }
+
+        // The current row keeps the branch as its title; the PR arrives as a badge beside it.
+        val current = row(panel, 0)
+        assertEquals("main", current.title)
+        assertEquals("#12", current.metrics?.pr?.text)
+        assertTrue(edt { panel.canOpenPr(main) })
+    }
+
     fun `test pr title replaces row name and tooltip reveals custom name`() {
         val path = "${project.basePath!!}/.kilo/worktrees/feature-x"
         val item = WorktreeDto(path, "Feature Label", "feature/x", path)
@@ -873,6 +940,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private fun row(panel: AgentManagerPanel, idx: Int): ActiveListItem {
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
         return edt { list.model.getElementAt(idx) as ActiveListItem }
+    }
+
+    private fun rows(panel: AgentManagerPanel): Int {
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        return edt { list.model.size }
     }
 
     private fun components(root: Component): List<Component> {

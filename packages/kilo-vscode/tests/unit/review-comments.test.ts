@@ -12,6 +12,7 @@ import {
   buildFileAnnotations,
   clearReviewComposer,
   createReviewComposer,
+  labels,
   reviewAnnotationSpeechKey,
   reviewComposerDraft,
   reviewComposerEdit,
@@ -440,4 +441,20 @@ describe("getFilename", () => {
   it("returns just the filename from a path", () => {
     expect(getFilename("src/components/Button.tsx")).toBe("Button.tsx")
   })
+})
+
+it("shares review action labels and translates line numbers", () => {
+  const value = labels((key, params) => (params ? `${key}:${params.line}` : key))
+  expect(value).toMatchObject({
+    placeholder: "agentManager.review.commentPlaceholder",
+    cancel: "common.cancel",
+    comment: "agentManager.review.commentAction",
+    send: "prompt.action.send",
+    save: "common.save",
+    sendToChat: "agentManager.review.sendToChat",
+    edit: "common.edit",
+    delete: "common.delete",
+  })
+  expect(value.commentOnLine(3)).toBe("agentManager.review.commentOnLine:3")
+  expect(value.editCommentOnLine(7)).toBe("agentManager.review.editCommentOnLine:7")
 })

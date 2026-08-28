@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test"
 import { createProjectStore } from "../../webview-ui/agent-manager/project/store"
-import { clearMultiVersionBusy, markMultiVersionBusy } from "../../webview-ui/agent-manager/project/progress"
+import {
+  clearFailedDelete,
+  clearMultiVersionBusy,
+  markMultiVersionBusy,
+} from "../../webview-ui/agent-manager/project/progress"
+import { createProjectRegistry } from "../../webview-ui/agent-manager/project/registry"
 
 const state = (projectId: string) => ({
   type: "agentManager.state" as const,
@@ -20,6 +25,31 @@ const state = (projectId: string) => ({
 })
 
 describe("multi-project progress state", () => {
+  it.each([undefined, "b"])("clears failed deletion only for the resolved project %s", (projectId) => {
+    const registry = createProjectRegistry({ persisted: {}, activeId: () => "a" })
+    for (const id of ["a", "b"]) {
+      registry.ensure(id).setBusy(
+        new Map([
+          ["same", { reason: "deleting" as const }],
+          ["other", { reason: "deleting" as const }],
+        ]),
+      )
+    }
+
+    const store = registry.ensure(projectId ?? "a")
+    const peer = registry.ensure(projectId ? "a" : "b")
+    clearFailedDelete({ type: "error", message: "failed", code: "unrelated", projectId, worktreeId: "same" }, registry)
+    expect(store.busy().has("same")).toBe(true)
+    clearFailedDelete(
+      { type: "error", message: "failed", code: "agentManager.worktreeDeleteFailed", projectId, worktreeId: "same" },
+      registry,
+    )
+
+    expect(store.busy().has("same")).toBe(false)
+    expect(peer.busy().has("same")).toBe(true)
+    expect(store.busy().has("other")).toBe(true)
+  })
+
   it("updates only the owning project's grouped worktrees", () => {
     const first = createProjectStore("a")
     const second = createProjectStore("b")

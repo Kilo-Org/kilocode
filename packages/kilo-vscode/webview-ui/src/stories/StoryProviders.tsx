@@ -202,6 +202,8 @@ export function mockSessionValue(overrides?: {
     loadingOlderMessages: () => false,
     hasOlderMessages: () => false,
     submitting: () => false,
+    canResume: () => false,
+    resume: noop,
     draftSessionID: () => undefined,
     setDraftSessionID: noop,
     userClearedSession: () => false,
