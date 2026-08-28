@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
+import { APICallError } from "ai"
 import { Effect } from "effect"
 import { ModelNotFoundError, type Provider } from "../../../src/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -14,11 +16,11 @@ import { MemoryModel, MemorySession } from "../../../src/kilocode/memory/ports"
 const pid = ProviderV2.ID.make("test")
 const mid = ModelV2.ID.make("fake-memory-model")
 
-function mdl(id = mid): Provider.Model {
+function mdl(id = mid, npm = "test-provider", providerID = pid): Provider.Model {
   return {
     id,
-    providerID: pid,
-    api: { id, npm: "test-provider", url: "" },
+    providerID,
+    api: { id, npm, url: "" },
     limit: { context: 100_000, output: 4_000 },
     capabilities: {
       toolcall: true,
@@ -31,15 +33,22 @@ function mdl(id = mid): Provider.Model {
   } as unknown as Provider.Model
 }
 
-function lang(outputs = ["{}"]): LanguageModelV3 {
+function lang(outputs: (string | Error)[] = ["{}"], calls?: unknown[], hang?: boolean): LanguageModelV3 {
   let idx = 0
+  const next = () => {
+    const item = outputs[idx++] ?? outputs.at(-1) ?? "{}"
+    if (item instanceof Error) throw item
+    return item
+  }
   return {
     specificationVersion: "v3",
     provider: "test",
     modelId: "fake-memory-model",
     supportedUrls: {},
-    doGenerate: async () => {
-      const text = outputs[idx++] ?? outputs.at(-1) ?? "{}"
+    doGenerate: async (...args: Parameters<LanguageModelV3["doGenerate"]>) => {
+      calls?.push(args[0])
+      if (hang) return new Promise(() => {})
+      const text = next()
       return {
         content: [{ type: "text", text }],
         finishReason: { unified: "stop" },
@@ -57,11 +66,21 @@ function lang(outputs = ["{}"]): LanguageModelV3 {
   } as unknown as LanguageModelV3
 }
 
-function provider(input: { outputs?: string[]; seen?: string[] } = {}): Provider.Interface {
-  const base = mdl()
-  const mem = mdl(ModelV2.ID.make("memory-config-model"))
+function provider(
+  input: {
+    outputs?: (string | Error)[]
+    seen?: string[]
+    calls?: unknown[]
+    hang?: boolean
+    npm?: string
+    providerID?: ProviderV2.ID
+  } = {},
+): Provider.Interface {
+  const providerID = input.providerID ?? pid
+  const base = mdl(mid, input.npm, providerID)
+  const mem = mdl(ModelV2.ID.make("memory-config-model"), input.npm, providerID)
   const info = {
-    id: pid,
+    id: providerID,
     name: "Test",
     source: "config",
     env: [],
@@ -69,7 +88,7 @@ function provider(input: { outputs?: string[]; seen?: string[] } = {}): Provider
     models: { [base.id]: base, [mem.id]: mem },
   } satisfies Provider.Info
   return {
-    list: () => Effect.succeed({ [pid]: info }),
+    list: () => Effect.succeed({ [providerID]: info }),
     getProvider: () => Effect.succeed(info),
     getModel: (providerID, modelID) => {
       const found = info.models[modelID]
@@ -78,7 +97,7 @@ function provider(input: { outputs?: string[]; seen?: string[] } = {}): Provider
     },
     getLanguage: (model) => {
       input.seen?.push(model.id)
-      return Effect.succeed(lang(input.outputs))
+      return Effect.succeed(lang(input.outputs, input.calls, input.hang))
     },
     closest: () => Effect.succeed({ providerID: pid, modelID: base.id }),
     getSmallModel: () => Effect.succeed(mem),
@@ -278,6 +297,123 @@ describe("memory ports", () => {
     expect(configured.fallback).toBeUndefined()
     expect(fallback.fallback).toEqual({ reason: "model unavailable" })
     expect(seen).toEqual(["memory-config-model", "fake-memory-model"])
+  })
+
+  test("model port asks OpenAI-compatible providers for a non-streaming JSON response", async () => {
+    const calls: unknown[] = []
+    const port = MemoryModel.port({ provider: provider({ npm: "@ai-sdk/openai-compatible", calls }) })
+    const resolved = await Effect.runPromise(port.resolve({ session: ref }))
+
+    await port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 30_000 })
+
+    const opts = calls[0] as { providerOptions?: Record<string, { stream?: boolean }> }
+    expect(opts.providerOptions?.test?.stream).toBe(false)
+  })
+
+  test("model port still disables streaming when a compatible model is registered as openai", async () => {
+    const calls: unknown[] = []
+    const port = MemoryModel.port({
+      provider: provider({
+        npm: "@ai-sdk/openai-compatible",
+        providerID: ProviderV2.ID.make("openai"),
+        calls,
+      }),
+    })
+    const resolved = await Effect.runPromise(port.resolve({ session: ref }))
+
+    await port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 30_000 })
+
+    const opts = calls[0] as { providerOptions?: Record<string, { stream?: boolean }> }
+    expect(opts.providerOptions?.openai?.stream).toBe(false)
+  })
+
+  test("model port puts stream:false on the OpenAI-compatible request body", async () => {
+    const seen: unknown[] = []
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        const body = await request.json()
+        seen.push(body)
+        if ((body as { stream?: boolean }).stream !== false) {
+          return new Response(`data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: "The" } }] })}\n\n`, {
+            headers: { "content-type": "text/event-stream" },
+          })
+        }
+        return Response.json({
+          id: "mem",
+          object: "chat.completion",
+          created: 0,
+          model: "fake-memory-model",
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: "assistant",
+                content: '{"topic":"t","summary":"s"}',
+                reasoning_content: "The user just",
+              },
+              finish_reason: "stop",
+            },
+          ],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        })
+      },
+    })
+    try {
+      const sdk = createOpenAICompatible({
+        name: "test",
+        baseURL: `http://127.0.0.1:${server.port}/v1`,
+        apiKey: "unused",
+      })
+      const port = MemoryModel.port({
+        provider: {
+          ...provider({ npm: "@ai-sdk/openai-compatible" }),
+          getLanguage: () => Effect.succeed(sdk.languageModel("fake-memory-model")),
+        },
+      })
+      const resolved = await Effect.runPromise(port.resolve({ session: ref }))
+      const result = await port.run({
+        handle: resolved.handle,
+        system: "system",
+        prompt: "prompt",
+        timeoutMs: 30_000,
+      })
+
+      expect((seen[0] as { stream?: boolean }).stream).toBe(false)
+      expect(result.text).toBe('{"topic":"t","summary":"s"}')
+    } finally {
+      server.stop(true)
+    }
+  })
+
+  test("model port retries a transient provider failure once", async () => {
+    const calls: unknown[] = []
+    const err = new APICallError({
+      message: "temporarily unavailable",
+      url: "https://example.com/v1/generate",
+      requestBodyValues: {},
+      statusCode: 503,
+      responseHeaders: {},
+      responseBody: '{"error":"temporarily unavailable"}',
+      isRetryable: true,
+    })
+    const port = MemoryModel.port({ provider: provider({ outputs: [err, "{}"], calls }) })
+    const resolved = await Effect.runPromise(port.resolve({ session: ref }))
+
+    await port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 30_000 })
+
+    expect(calls).toHaveLength(2)
+    const opts = calls[0] as { providerOptions?: Record<string, { stream?: boolean }> }
+    expect(opts.providerOptions?.test?.stream).toBeUndefined()
+  })
+
+  test("model port emits a structured timeout error", async () => {
+    const port = MemoryModel.port({ provider: provider({ hang: true }) })
+    const resolved = await Effect.runPromise(port.resolve({ session: ref }))
+
+    await expect(
+      port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 1 }),
+    ).rejects.toMatchObject({ name: "TimeoutError", message: "memory model timed out" })
   })
 
   test("model port clears its timeout after successful output", async () => {

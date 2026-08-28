@@ -460,4 +460,105 @@ describe("RemoteProtocol", () => {
       expect(result.data.type).toBe("heartbeat")
     }
   })
+
+  // kilocode_change - PR link advertise (plan 8.4)
+
+  test("session info accepts optional prLink", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "github", prUrl: "https://github.com/o/r/pull/1", prNumber: 1 },
+        },
+      ],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].prLink).toEqual({
+        platform: "github",
+        prUrl: "https://github.com/o/r/pull/1",
+        prNumber: 1,
+      })
+    }
+  })
+
+  test("session info prLink optional (legacy)", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "busy", title: "t" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].prLink).toBeUndefined()
+    }
+  })
+
+  test("session info rejects empty prLink platform", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        { id: "s1", status: "busy", title: "t", prLink: { platform: "", prUrl: "https://x/pull/1", prNumber: 1 } },
+      ],
+    }
+    expect(RemoteProtocol.Heartbeat.safeParse(msg).success).toBe(false)
+  })
+
+  test("session info rejects oversized prLink prUrl", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "github", prUrl: "https://x/" + "a".repeat(2048), prNumber: 1 },
+        },
+      ],
+    }
+    expect(RemoteProtocol.Heartbeat.safeParse(msg).success).toBe(false)
+  })
+
+  test("session info rejects non-positive prLink prNumber", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "github", prUrl: "https://x/pull/0", prNumber: 0 },
+        },
+      ],
+    }
+    expect(RemoteProtocol.Heartbeat.safeParse(msg).success).toBe(false)
+  })
+
+  test("full heartbeat round-trips prLink", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "gitlab", prUrl: "https://gitlab.com/g/p/-/merge_requests/7", prNumber: 7 },
+        },
+      ],
+    }
+    const json = JSON.parse(JSON.stringify(msg))
+    const result = RemoteProtocol.Heartbeat.safeParse(json)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].prLink).toEqual({
+        platform: "gitlab",
+        prUrl: "https://gitlab.com/g/p/-/merge_requests/7",
+        prNumber: 7,
+      })
+    }
+  })
 })

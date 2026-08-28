@@ -15,7 +15,6 @@ import { ProviderProvider } from "./provider"
 import { ConfigProvider } from "./config"
 import { DisplayProvider } from "./display"
 import { IndexingProvider } from "./indexing"
-import { AgentRequirementsProvider } from "./agent-requirements"
 import { MemoryProvider } from "./memory"
 import { SessionProvider } from "./session"
 import { LanguageBridge } from "./language-bridge"
@@ -52,6 +51,8 @@ const Root: ParentComponent = (props) => (
         <MermaidDownloadBridge />
         <ServerProvider>
           <LanguageBridge>
+            {/* MarkedProvider is required here for all markdown consumers in the tree,
+                including PRPanel's PRDescription and PRComments components. Do not remove. */}
             <MarkedProvider>
               <DiffComponentProvider component={Diff}>
                 <CodeComponentProvider component={Code}>
@@ -89,11 +90,9 @@ const Session: ParentComponent = (props) => (
 )
 
 const Chat: ParentComponent = (props) => (
-  <AgentRequirementsProvider>
-    <MemoryProvider>
-      <FeedbackProvider>{props.children}</FeedbackProvider>
-    </MemoryProvider>
-  </AgentRequirementsProvider>
+  <MemoryProvider>
+    <FeedbackProvider>{props.children}</FeedbackProvider>
+  </MemoryProvider>
 )
 
 export const ProviderShell = { Root, Session, Chat }

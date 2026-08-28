@@ -45,6 +45,14 @@ export const CreateInput = Schema.Struct({
   cwd: optional(Schema.String),
   title: optional(Schema.String),
   env: optional(Schema.Record(Schema.String, Schema.String)),
+  // kilocode_change start - spawn with initial terminal dimensions
+  size: optional(
+    Schema.Struct({
+      rows: PositiveInt,
+      cols: PositiveInt,
+    }),
+  ),
+  // kilocode_change end
 })
 export interface CreateInput extends Schema.Schema.Type<typeof CreateInput> {}
 

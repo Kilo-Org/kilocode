@@ -10,7 +10,6 @@ import {
 export { KILO_GATEWAY_ID, PROVIDER_ORDER }
 
 export const KILO_AUTO_SMALL_IDS = new Set(["kilo-auto/small", "auto-small"])
-export const KILO_AUTO_EFFICIENT_ID = "kilo-auto/efficient"
 const AUTO_FALLBACK = "Routes requests automatically."
 
 interface Choice {
@@ -24,15 +23,11 @@ export function isAuto(model: Pick<EnrichedModel, "providerID" | "id">): boolean
   )
 }
 
-export function isAutoEfficient(model: Pick<EnrichedModel, "providerID" | "id">): boolean {
-  return model.providerID === KILO_GATEWAY_ID && model.id === KILO_AUTO_EFFICIENT_ID
-}
-
 export function autoChoices(
   model: Pick<EnrichedModel, "providerID" | "id" | "autoRouting">,
   catalog: readonly Pick<EnrichedModel, "id" | "name">[] = [],
 ): readonly Choice[] {
-  if (!isAutoEfficient(model)) return []
+  if (!isAuto(model)) return []
   const ids = model.autoRouting?.models
   if (!ids?.length) return []
   const names = new Map(catalog.map((item) => [item.id, stripSubProviderPrefix(sanitizeName(item.name))]))
@@ -94,12 +89,13 @@ function tokenScore(token: string, value: string): number {
 }
 
 function matchScore(model: EnrichedModel, query: string): number | undefined {
-  const name = stripSubProviderPrefix(sanitizeName(model.name))
+  const raw = sanitizeName(model.name)
+  const name = stripSubProviderPrefix(raw)
   const tokens = words(query)
   if (tokens.length === 0) return 0
 
   const scores = tokens.map((token) => {
-    const modelScore = Math.max(tokenScore(token, name), tokenScore(token, model.id))
+    const modelScore = Math.max(tokenScore(token, name), tokenScore(token, raw), tokenScore(token, model.id))
     const providerScore = modelScore < 0 ? tokenScore(token, model.providerName) : -1
     return { modelScore, providerScore }
   })
@@ -107,7 +103,8 @@ function matchScore(model: EnrichedModel, query: string): number | undefined {
 
   const modelScore = scores.reduce((sum, score) => sum + Math.max(score.modelScore, 0), 0)
   const providerScore = scores.reduce((sum, score) => sum + Math.max(score.providerScore, 0), 0)
-  const exact = collapse(query) === collapse(name) || collapse(query) === collapse(model.id)
+  const exact =
+    collapse(query) === collapse(name) || collapse(query) === collapse(raw) || collapse(query) === collapse(model.id)
   return modelScore + Math.floor(providerScore / 10) + (exact ? 5000 : 0)
 }
 
@@ -221,7 +218,6 @@ export function stripSubProviderPrefix(name: string): string {
 export function buildTriggerLabel(
   resolvedName: string | undefined,
   providerID: string | undefined,
-  providerName: string | undefined,
   raw: ModelSelection | null,
   allowClear: boolean,
   clearLabel: string,
@@ -230,7 +226,6 @@ export function buildTriggerLabel(
 ): string {
   if (resolvedName) {
     if (providerID === KILO_GATEWAY_ID) return stripSubProviderPrefix(resolvedName)
-    if (providerName) return `${providerName} / ${resolvedName}`
     return resolvedName
   }
   if (raw?.providerID && raw?.modelID) {

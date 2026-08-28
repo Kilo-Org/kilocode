@@ -8,7 +8,7 @@ import ai.kilocode.client.migration.MigrationUiSelections
 import ai.kilocode.client.migration.MigrationUiState
 import ai.kilocode.client.migration.groupStatus
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.DialogView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.LegacyMigrationDetectionDto
@@ -16,10 +16,8 @@ import ai.kilocode.rpc.dto.MigrationItemCategoryDto
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import java.awt.BorderLayout
 import java.awt.Component
 import javax.swing.JComponent
-import javax.swing.JPanel
 
 private const val ACTION_SKIP = "skip"
 private const val ACTION_LATER = "later"
@@ -32,7 +30,7 @@ private const val ACTION_CONTINUE = "continue"
  *
  * Build once; call [update] for every state change. Does not rebuild the component tree.
  */
-class MigrationWizardPanel : JPanel(BorderLayout()) {
+class MigrationWizardPanel : DialogView() {
 
     // ------ Callbacks ------
     var onSkip: (() -> Unit)? = null
@@ -50,7 +48,6 @@ class MigrationWizardPanel : JPanel(BorderLayout()) {
     private val sessionsRow = MigrationItemRow(KiloBundle.message("migration.row.sessions"), MigrationItemCategoryDto.session)
     private val modelRow = MigrationItemRow(KiloBundle.message("migration.row.model"), MigrationItemCategoryDto.defaultModel)
 
-    private val question = BaseQuestionView()
     private val keepBox = JBCheckBox(KiloBundle.message("migration.keep_legacy_settings"), true)
 
     private val emptyLabel = JBLabel(KiloBundle.message("migration.empty")).apply {
@@ -76,33 +73,32 @@ class MigrationWizardPanel : JPanel(BorderLayout()) {
             row.onSelectionChanged = { _ -> updateMigrateButtonEnabled() }
         }
 
-        question.setHeader(
+        setHeader(
             KiloBundle.message("migration.migrate.title"),
             KiloBundle.message("migration.migrate.subtitle"),
         )
-        question.setContent(buildContent())
-        question.setActions(
+        setContent(buildContent())
+        setActions(
             listOf(
-                BaseQuestionView.Action(ACTION_SKIP, KiloBundle.message("migration.button.skip"), primary = false) {
+                DialogView.Action(ACTION_SKIP, KiloBundle.message("migration.button.skip"), primary = false) {
                     onSkip?.invoke()
                 },
-                BaseQuestionView.Action(ACTION_LATER, KiloBundle.message("migration.button.later"), primary = false) {
+                DialogView.Action(ACTION_LATER, KiloBundle.message("migration.button.later"), primary = false) {
                     onLater?.invoke()
                 },
-                BaseQuestionView.Action(ACTION_MIGRATE, KiloBundle.message("migration.button.migrate"), primary = true) {
+                DialogView.Action(ACTION_MIGRATE, KiloBundle.message("migration.button.migrate"), primary = true) {
                     onStart?.invoke(currentSelections())
                 },
-                BaseQuestionView.Action(ACTION_DONE, KiloBundle.message("migration.button.done"), primary = true) {
+                DialogView.Action(ACTION_DONE, KiloBundle.message("migration.button.done"), primary = true) {
                     onDone?.invoke()
                 },
-                BaseQuestionView.Action(ACTION_CONTINUE, KiloBundle.message("migration.button.continue"), primary = true) {
+                DialogView.Action(ACTION_CONTINUE, KiloBundle.message("migration.button.continue"), primary = true) {
                     onContinueFromError?.invoke()
                 },
             ),
         )
-        question.setActionLeft(keepBox)
+        setActionLeft(keepBox)
 
-        add(question, BorderLayout.CENTER)
         updateButtons(MigrationUiPhase.selecting, running = false)
     }
 
@@ -146,14 +142,12 @@ class MigrationWizardPanel : JPanel(BorderLayout()) {
 
         updateButtons(phase, running)
         updateMigrateButtonEnabled()
-        question.revalidate()
-        question.repaint()
         revalidate()
         repaint()
     }
 
     @RequiresEdt
-    fun preferredFocusComponent(): JComponent = question.preferredActionComponent(ACTION_MIGRATE)
+    fun preferredFocusComponent(): JComponent = preferredActionComponent(ACTION_MIGRATE)
 
     internal fun keepLegacySettingsFileSelectedForTest() = keepBox.isSelected
 
@@ -189,21 +183,21 @@ class MigrationWizardPanel : JPanel(BorderLayout()) {
     }
 
     private fun updateButtons(phase: MigrationUiPhase, running: Boolean) {
-        question.setActionVisible(ACTION_SKIP, phase == MigrationUiPhase.selecting)
-        question.setActionVisible(ACTION_LATER, phase == MigrationUiPhase.selecting)
-        question.setActionVisible(ACTION_MIGRATE, phase == MigrationUiPhase.selecting || phase == MigrationUiPhase.migrating)
-        question.setActionText(
+        setActionVisible(ACTION_SKIP, phase == MigrationUiPhase.selecting)
+        setActionVisible(ACTION_LATER, phase == MigrationUiPhase.selecting)
+        setActionVisible(ACTION_MIGRATE, phase == MigrationUiPhase.selecting || phase == MigrationUiPhase.migrating)
+        setActionText(
             ACTION_MIGRATE,
             if (running) KiloBundle.message("migration.button.migrating") else KiloBundle.message("migration.button.migrate"),
         )
-        question.setActionVisible(ACTION_DONE, phase == MigrationUiPhase.done)
-        question.setActionVisible(ACTION_CONTINUE, phase == MigrationUiPhase.error)
+        setActionVisible(ACTION_DONE, phase == MigrationUiPhase.done)
+        setActionVisible(ACTION_CONTINUE, phase == MigrationUiPhase.error)
         keepBox.isVisible = phase == MigrationUiPhase.selecting
     }
 
     private fun updateMigrateButtonEnabled() {
         val any = rows.values.any { it.isVisible && it.selected }
-        question.setActionEnabled(ACTION_MIGRATE, any && phase == MigrationUiPhase.selecting && !running)
+        setActionEnabled(ACTION_MIGRATE, any && phase == MigrationUiPhase.selecting && !running)
     }
 
     private fun currentSelections(): MigrationUiSelections {

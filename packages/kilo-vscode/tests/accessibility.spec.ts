@@ -10,6 +10,9 @@ const STORIES = [
   { id: "profile--not-logged-in", name: "Profile / not logged in" },
   { id: "profile--logged-in-personal", name: "Profile / personal account" },
   { id: "profile--logged-in", name: "Profile / organization account" },
+  { id: "profile--organization-context", name: "Profile / selected organization" },
+  { id: "profile--stale-and-unavailable", name: "Profile / stale usage" },
+  { id: "profile--empty-usage", name: "Profile / empty usage" },
   { id: "settings--providers-configure", name: "Settings / providers empty state" },
   { id: "marketplace--empty-list", name: "Marketplace / empty state" },
   { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
@@ -49,6 +52,26 @@ test.describe("webview accessibility ratchet", () => {
       await scan(page)
     })
   }
+
+  test("Background agent summary and visible agents remain pointer-accessible", async ({ page }) => {
+    await page.setViewportSize({ width: 200, height: 720 })
+    await open(page, "chat--task-header-background-agents-200")
+
+    const agents = page.locator('[data-component="task-header-agents"]')
+    const summary = agents.locator('[data-slot="task-header-agents-summary"]')
+    const list = agents.locator('[data-slot="task-header-todos-list"]')
+    await expect(summary).toHaveAttribute("aria-hidden", "false")
+    await summary.click()
+    await expect(list).toBeVisible()
+    await summary.click()
+    await expect(list).toBeHidden()
+
+    await page.setViewportSize({ width: 1280, height: 720 })
+    const item = agents.locator('[data-slot="task-header-agents-item"]').first()
+    await expect(item).toHaveAttribute("aria-hidden", "false")
+    await item.click()
+    await expect(list).toBeHidden()
+  })
 
   test("Agent Manager keeps virtualized transcript fragments laid out", async ({ page }) => {
     await open(page, "agentmanager--sidebar-search-open")

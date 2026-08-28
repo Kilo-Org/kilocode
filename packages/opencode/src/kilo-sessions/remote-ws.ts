@@ -131,7 +131,12 @@ export namespace RemoteWS {
     let lastGood: SessionInfo[] | undefined
     let outstanding = 0
     let degradedCount = 0
-    type Waiter = { resolve: () => void; reject: (err: unknown) => void; requireSessionId?: string; detachSessionId?: string }
+    type Waiter = {
+      resolve: () => void
+      reject: (err: unknown) => void
+      requireSessionId?: string
+      detachSessionId?: string
+    }
     let waiters: Waiter[] = []
 
     function makeWaiter(): { promise: Promise<void>; waiter: Waiter } {
@@ -151,7 +156,9 @@ export namespace RemoteWS {
     // One bounded gather. Never throws. Returns the fresh session list (and
     // optional instance advertisement), or undefined to signal a degraded
     // cycle (caller sends last known-good).
-    async function gatherOnce(): Promise<{ sessions: SessionInfo[]; instance?: RemoteProtocol.Heartbeat["instance"] } | undefined> {
+    async function gatherOnce(): Promise<
+      { sessions: SessionInfo[]; instance?: RemoteProtocol.Heartbeat["instance"] } | undefined
+    > {
       if (outstanding >= maxOutstandingGathers) {
         degradedCount++
         options.log.warn("remote-ws heartbeat gather cap reached, degraded heartbeat", {
@@ -183,7 +190,9 @@ export namespace RemoteWS {
           },
         )
       const outcome = await new Promise<
-        { kind: "ok"; sessions: SessionInfo[]; instance?: RemoteProtocol.Heartbeat["instance"] } | { kind: "err"; error: unknown } | { kind: "timeout" }
+        | { kind: "ok"; sessions: SessionInfo[]; instance?: RemoteProtocol.Heartbeat["instance"] }
+        | { kind: "err"; error: unknown }
+        | { kind: "timeout" }
       >((resolve) => {
         let done = false
         const t = timers.setTimeout(() => {
@@ -196,9 +205,7 @@ export namespace RemoteWS {
           done = true
           timers.clearTimeout(t)
           resolve(
-            res.ok
-              ? { kind: "ok", sessions: res.sessions, instance: res.instance }
-              : { kind: "err", error: res.error },
+            res.ok ? { kind: "ok", sessions: res.sessions, instance: res.instance } : { kind: "err", error: res.error },
           )
         })
       })
@@ -261,7 +268,7 @@ export namespace RemoteWS {
               send({
                 type: "heartbeat",
                 protocolVersion: InstallationVersion,
-                capabilities: { attachments: true },
+                capabilities: { attachments: true, sessionClone: true },
                 sessions: fresh.sessions,
                 ...(fresh.instance ? { instance: fresh.instance } : {}),
               })
@@ -306,7 +313,7 @@ export namespace RemoteWS {
               send({
                 type: "heartbeat",
                 protocolVersion: InstallationVersion,
-                capabilities: { attachments: true },
+                capabilities: { attachments: true, sessionClone: true },
                 sessions: lastGood ?? [],
               })
               waiters = cycleWaiters.concat(waiters)
@@ -428,7 +435,11 @@ export namespace RemoteWS {
           return
         }
         const endpoint = `${options.url}/api/user/cli?token=${encodeURIComponent(token)}&connectionId=${connectionId}`
-        options.log.info("remote-ws connecting", { connectionId, gen: g.id, endpoint: endpoint.replace(/token=[^&]+/, "token=***") })
+        options.log.info("remote-ws connecting", {
+          connectionId,
+          gen: g.id,
+          endpoint: endpoint.replace(/token=[^&]+/, "token=***"),
+        })
         let socket: WebSocket
         try {
           socket = new WebSocket(endpoint)

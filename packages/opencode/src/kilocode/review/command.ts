@@ -30,7 +30,7 @@ export function parseReviewCommand(prompt: string | undefined): ReviewCommand | 
 export function reviewCommand(): Command.Info {
   return {
     name: "review",
-    description: "review changes [uncommitted|commit|branch|pr]",
+    description: "review changes [uncommitted|staged|unpushed|branch|commit|pr]",
     template: REVIEW,
     hints: ["$ARGUMENTS"],
   }

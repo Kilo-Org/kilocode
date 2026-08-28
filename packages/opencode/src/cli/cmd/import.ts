@@ -26,9 +26,9 @@ export type ShareData =
   | { type: "model"; data: unknown }
 
 // kilocode_change start
-/** Extract share ID from a Kilo share URL like https://app.kilo.ai/s/abc123 */
+/** Extract share token from a Kilo share URL like https://app.kilo.ai/s/<jwt> */
 export function parseShareUrl(url: string): string | null {
-  const match = url.match(/^https?:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)$/)
+  const match = url.match(/^https?:\/\/app\.kilo\.ai\/s\/([A-Za-z0-9_.-]+)$/)
   return match ? match[1] : null
 }
 // kilocode_change end
@@ -39,6 +39,17 @@ export function shouldAttachShareAuthHeaders(shareUrl: string, accountBaseUrl: s
   } catch {
     return false
   }
+}
+
+export function formatImportFileError(file: string, error: FSUtil.Error) {
+  if (error._tag === "PlatformError") {
+    if (error.reason._tag === "NotFound") return `File not found: ${file}`
+    if (error.reason._tag === "PermissionDenied") return `Failed to read file: Permission denied`
+    return `Failed to read file: ${error.message}`
+  }
+
+  const detail = error.cause instanceof Error ? error.cause.message : error.message
+  return `Invalid JSON in ${file}: ${detail}`
 }
 
 /**
@@ -183,14 +194,9 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     exportData = data
     // kilocode_change end
   } else {
-    exportData = (yield* fs.readJson(file).pipe(Effect.orElseSucceed(() => undefined))) as
-      | NonNullable<typeof exportData>
-      | undefined
-    if (!exportData) {
-      process.stdout.write(`File not found: ${file}`)
-      process.stdout.write(EOL)
-      return
-    }
+    exportData = (yield* fs
+      .readJson(file)
+      .pipe(Effect.mapError((error) => new CliError({ message: formatImportFileError(file, error) })))) as ExportData
   }
 
   if (!exportData) {

@@ -91,6 +91,7 @@ describe("ensureSandbox", () => {
 
 describe("Agent Manager sandbox startup", () => {
   const provider = readFileSync(join(__dirname, "..", "..", "src", "agent-manager", "AgentManagerProvider.ts"), "utf8")
+  const discard = readFileSync(join(__dirname, "..", "..", "src", "agent-manager", "discard-worktree.ts"), "utf8")
   const flow = readFileSync(join(__dirname, "..", "..", "src", "agent-manager", "provider-multi-version.ts"), "utf8")
   const dialog = readFileSync(
     join(__dirname, "..", "..", "webview-ui", "agent-manager", "NewWorktreeDialog.tsx"),
@@ -98,8 +99,8 @@ describe("Agent Manager sandbox startup", () => {
   )
 
   test("reconciles before exposing or prompting the session", () => {
-    // In createVersion the sandbox gate runs before the session is exposed.
-    const start = flow.indexOf("async function createVersion")
+    // In provisionVersion the sandbox gate runs before the session is exposed.
+    const start = flow.indexOf("async function provisionVersion")
     const version = flow.slice(start, flow.indexOf("\n/**", start + 1))
     const gate = version.indexOf("await reconcileSandbox")
     const register = version.indexOf("host.register", gate)
@@ -122,14 +123,14 @@ describe("Agent Manager sandbox startup", () => {
     expect(abort).toBeGreaterThan(discard)
 
     // The created sessions feed the initial prompt phase.
-    const prompts = flow.slice(flow.indexOf("async function sendInitialPrompts"))
-    expect(prompts).toContain("buildInitialMessages(created")
+    const prompts = flow.slice(flow.indexOf("function sendInitialPrompt"))
+    expect(prompts).toContain("buildInitialMessages([created]")
     expect(prompts).toContain('type: "agentManager.sendInitialMessage"')
   })
 
   test("deletes the fresh branch when sandbox setup rolls back", () => {
     expect(provider).toContain("private async discardWorktree(id: string, dir: string, branch: string")
-    expect(provider).toContain("removeWorktree(dir, branch)")
+    expect(discard).toContain("removeWorktree(dir, branch)")
     expect(flow).toContain("wt.result.path, wt.result.branch, sessionId")
   })
 

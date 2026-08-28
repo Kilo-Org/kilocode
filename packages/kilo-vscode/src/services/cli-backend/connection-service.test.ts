@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import * as vscode from "vscode"
 import { KiloConnectionService } from "./connection-service"
+import type { SSEPayload } from "./sdk-sse-adapter"
 
 function state(value: boolean) {
   return {
@@ -36,6 +37,58 @@ describe("KiloConnectionService clients", () => {
     } finally {
       workspace.workspaceFolders = folders
     }
+  })
+})
+
+describe("KiloConnectionService explicit aborts", () => {
+  const close = {
+    id: "event-close",
+    type: "session.turn.close",
+    properties: { sessionID: "session", reason: "interrupted" },
+  } as SSEPayload
+
+  function setup() {
+    const service = new KiloConnectionService({} as any)
+    const raw: SSEPayload[] = []
+    const first: SSEPayload[] = []
+    const second: SSEPayload[] = []
+    service.onEvent((event) => raw.push(event))
+    service.onEventFiltered(
+      () => true,
+      (event) => first.push(event),
+    )
+    service.onEventFiltered(
+      () => true,
+      (event) => second.push(event),
+    )
+    return { service, raw, first, second }
+  }
+
+  test("suppresses a successful explicit abort for filtered subscribers", async () => {
+    const state = setup()
+
+    await state.service.runExplicitAbort("session", "/repo", async () => {
+      ;(state.service as any).broadcast(close, "/repo")
+    })
+
+    expect(state.first).toEqual([])
+    expect(state.second).toEqual([])
+    expect(state.raw).toEqual([close])
+  })
+
+  test("replays a failed explicit abort for filtered subscribers", async () => {
+    const state = setup()
+
+    await expect(
+      state.service.runExplicitAbort("session", "/repo", async () => {
+        ;(state.service as any).broadcast(close, "/repo")
+        throw new Error("abort failed")
+      }),
+    ).rejects.toThrow("abort failed")
+
+    expect(state.first).toEqual([close])
+    expect(state.second).toEqual([close])
+    expect(state.raw).toEqual([close])
   })
 })
 
@@ -280,5 +333,27 @@ describe("KiloConnectionService drainPendingPrompts", () => {
     await expect(pending).rejects.toThrow(`Failed to list permissions for ${dirs[1]}`)
     expect(calls).not.toContain(dirs[4])
     expect(cleared).toBe(0)
+  })
+})
+
+describe("KiloConnectionService server exit handling", () => {
+  test("reports signal name when process is killed by signal", () => {
+    const service = new KiloConnectionService({} as any)
+    let stateErr: Error | undefined
+    service.onStateChange((state, err) => {
+      if (state === "error") stateErr = err
+    })
+    ;(service as any).handleServerExit(null, "SIGSEGV")
+    expect(stateErr?.message).toBe("CLI background process exited with signal SIGSEGV. Retry to reconnect.")
+  })
+
+  test("reports exit code when process exits normally with code", () => {
+    const service = new KiloConnectionService({} as any)
+    let stateErr: Error | undefined
+    service.onStateChange((state, err) => {
+      if (state === "error") stateErr = err
+    })
+    ;(service as any).handleServerExit(1, null)
+    expect(stateErr?.message).toBe("CLI background process exited with code 1. Retry to reconnect.")
   })
 })

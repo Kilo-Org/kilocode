@@ -5,6 +5,8 @@ description: "Use KiloClaw with Discord: setup, DM access control, and channel c
 
 # Discord
 
+{% partial file="kiloclaw-eol.md" /%}
+
 This page covers everything you need to use KiloClaw with Discord: connecting your bot, controlling who can DM it, and adding it to specific channels.
 
 ## Connecting KiloClaw to Discord

@@ -3,11 +3,9 @@
  *
  * Extracted from AgentManagerApp.tsx to keep that file under the
  * `max-lines` lint cap. Owns the destination preference plus the toggle
- * semantics of the toolbar button / `Cmd/Ctrl+/` shortcut, so the
- * embedded terminal behaves like the diff panel: press once to reveal,
- * press again while focused to hide, and press while visible but unfocused
- * to return focus to the shell. Hiding never kills the terminal — only the
- * explicit close action does.
+ * semantics: the toolbar button toggles visibility, while `Cmd/Ctrl+/`
+ * reveals, focuses when unfocused, and hides when focused.
+ * Hiding never kills the terminal — only the explicit close action does.
  *
  * ## Destination state ownership
  *
@@ -109,14 +107,15 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     if (wasFocused) deps.refocus()
   }
 
-  const toggle = () => {
+  const toggle = (trigger: "keyboard_shortcut" | "tab_toolbar" = "keyboard_shortcut") => {
     if (deps.visible()) {
-      if (!deps.focusedId()) {
+      if (trigger === "keyboard_shortcut" && !deps.focusedId()) {
         deps.handlers.requestSide()
         return
       }
+      const was = deps.focusedId() !== undefined
       deps.hide()
-      handoff(true)
+      handoff(was)
       return
     }
     deps.handlers.requestSide()
@@ -149,7 +148,7 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     const target = destination()
     deps.track("terminal", trigger, { destination: target })
     if (target === "agentManager") {
-      toggle()
+      toggle(trigger)
       return
     }
     deps.openVscode()

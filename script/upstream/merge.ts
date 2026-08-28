@@ -13,7 +13,7 @@
  *   --base-branch <name> Base branch to merge into, or HEAD for current branch (default: main)
  *   --dry-run            Preview changes without applying them
  *   --no-push            Don't push branches to remote
- *   --no-worktrees       Don't create reference worktrees for manual resolution
+ *   --no-worktrees       Don't create auxiliary worktrees
  *   --report-only        Only generate conflict report, don't merge
  *   --verbose            Enable verbose logging
  *   --author <name>      Author name for branch prefix (default: from git config)
@@ -42,6 +42,7 @@ import {
 import { transformConflictedScripts, transformAllScripts } from "./transforms/transform-scripts"
 import { transformConflictedExtensions, transformAllExtensions } from "./transforms/transform-extensions"
 import { transformConflictedWeb, transformAllWeb } from "./transforms/transform-web"
+import { transformKiloWeb } from "./transforms/remove-kilo-web"
 import { resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
 import { writeVersion } from "./utils/upstream"
 
@@ -291,12 +292,18 @@ async function main() {
     // historical convention used by older upstream merges ("[Rr]esolve merge conflicts").
     // Without the lowercase alternative, ~70 past merges are dropped from training on
     // this repo, since most older resolution commits use a lowercase "resolve".
-    logger.info("Training rerere cache from past merge history...")
-    const learned = await git.trainRerere("merge: upstream\\|[Rr]esolve merge conflict")
-    if (learned > 0) {
-      logger.success(`Learned ${learned} conflict resolution(s) from history`)
-    } else {
-      logger.info("No new resolutions to learn from history (cache already up to date)")
+    if (options.worktrees) {
+      logger.info("Training rerere cache from past merge history...")
+      const learned = await git.trainRerere("merge: upstream\\|[Rr]esolve merge conflict")
+      if (learned > 0) {
+        logger.success(`Learned ${learned} conflict resolution(s) from history`)
+      }
+      if (learned === 0) {
+        logger.info("No new resolutions to learn from history (cache already up to date)")
+      }
+    }
+    if (!options.worktrees) {
+      logger.info("Skipping rerere history training because --no-worktrees was requested")
     }
   }
 
@@ -413,6 +420,8 @@ async function main() {
   const author = options.author || (await getAuthor())
   const kiloVersion = await version.getCurrentKiloVersion()
   const dirs = ["packages/ui/src/assets/icons/provider", "packages/ui/src/components/provider-icons"]
+  const kiloBranch = `${author}/kilo-opencode-${targetVersion.tag}`
+  const inplace = options.baseBranch === "HEAD" && currentBranch === kiloBranch
 
   logger.info("Resetting generated provider icons before checkout...")
   await git.restoreDirectories(dirs)
@@ -420,18 +429,27 @@ async function main() {
 
   // Create backup branch
   await git.checkout(config.baseBranch)
-  await git.pull(config.originRemote)
+  if (options.baseBranch !== "HEAD") {
+    await git.pull(config.originRemote)
+  }
+  if (options.baseBranch === "HEAD") {
+    logger.info("Using the checked-out HEAD as the merge base without pulling")
+  }
   const baseSha = await git.getCommitHash("HEAD")
   const backupBranch = await createBackupBranch(config.baseBranch)
   logger.info(`Created backup branch: ${backupBranch}`)
 
   // Create Kilo merge branch
-  const kiloBranch = `${author}/kilo-opencode-${targetVersion.tag}`
-  const kiloBackup = await git.backupAndDeleteBranch(kiloBranch)
-  if (kiloBackup) {
-    logger.info(`Backed up existing branch to: ${kiloBackup}`)
+  if (inplace) {
+    logger.info(`Using the checked-out target branch in place: ${kiloBranch}`)
   }
-  await git.createBranch(kiloBranch)
+  if (!inplace) {
+    const kiloBackup = await git.backupAndDeleteBranch(kiloBranch)
+    if (kiloBackup) {
+      logger.info(`Backed up existing branch to: ${kiloBackup}`)
+    }
+    await git.createBranch(kiloBranch)
+  }
 
   if (options.push) {
     await git.push(config.originRemote, kiloBranch, true)
@@ -466,6 +484,14 @@ async function main() {
   const count = skips.filter((r) => r.action === "removed").length
   if (count > 0) {
     logger.success(`Removed ${count} skipped file(s) from opencode branch`)
+  }
+
+  // Kilo does not ship upstream's embedded web UI command. Remove the known
+  // registration before merging so upstream updates cannot restore it silently.
+  logger.info("Removing unsupported Kilo web command...")
+  const webCommand = await transformKiloWeb({ dryRun: false, verbose: options.verbose })
+  if (webCommand.removals > 0) {
+    logger.success("Removed unsupported Kilo web command registration")
   }
 
   // 6a. Transform package names (opencode-ai -> @kilocode/cli)

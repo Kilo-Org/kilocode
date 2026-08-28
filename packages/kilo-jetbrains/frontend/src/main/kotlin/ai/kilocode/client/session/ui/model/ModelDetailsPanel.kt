@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui.model
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -32,10 +33,10 @@ internal class ModelDetailsPanel(
     private val toggle: (ModelPicker.Item) -> Unit,
 ) : JPanel(BorderLayout()), Disposable {
     private val empty = JBLabel(KiloBundle.message("model.picker.details.empty")).apply {
-        foreground = UIUtil.getContextHelpForeground()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
     }
     private val title = JBLabel().apply { font = UiStyle.Fonts.bold() }
-    private val provider = JBLabel().apply { foreground = UIUtil.getContextHelpForeground() }
+    private val provider = JBLabel().apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     private val star = JBLabel().apply {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         horizontalAlignment = JBLabel.CENTER
@@ -157,14 +158,14 @@ internal class ModelDetailsPanel(
         return buildList {
             item.releaseDate?.let { add(KiloBundle.message("model.picker.details.released") to date(it)) }
             if (!item.free) {
-                item.cost?.let { cost ->
+                item.cost?.takeIf { it.input > 0.0 || it.output > 0.0 }?.let { cost ->
                     add(KiloBundle.message("model.picker.details.input") to price(cost.input))
                     add(KiloBundle.message("model.picker.details.output") to price(cost.output))
                     add(KiloBundle.message("model.picker.details.cached") to cached(cost.input, cost.cache?.read))
                     add(KiloBundle.message("model.picker.details.average") to price(average(cost.input, cost.output, cost.cache?.read)))
                 } ?: run {
-                    item.inputPrice?.let { add(KiloBundle.message("model.picker.details.input") to price(it)) }
-                    item.outputPrice?.let { add(KiloBundle.message("model.picker.details.output") to price(it)) }
+                    item.inputPrice?.takeIf { it > 0.0 }?.let { add(KiloBundle.message("model.picker.details.input") to price(it)) }
+                    item.outputPrice?.takeIf { it > 0.0 }?.let { add(KiloBundle.message("model.picker.details.output") to price(it)) }
                 }
             }
             ctx?.let { add(KiloBundle.message("model.picker.details.context") to context(it)) }
@@ -241,8 +242,8 @@ private class RowsSection(title: String) {
 }
 
 private class DetailRow : JPanel(BorderLayout()) {
-    private val name = JBLabel().apply { foreground = UIUtil.getContextHelpForeground() }
-    private val value = JBLabel().apply { foreground = UIUtil.getLabelForeground() }
+    private val name = JBLabel().apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+    private val value = JBLabel().apply { foreground = SessionUiStyle.Colors.foreground() }
 
     init {
         add(name, BorderLayout.WEST)
@@ -372,13 +373,13 @@ private fun descriptionText(value: String): String = value
 private class TagStyle(private val bg: Color) : UiStyle.Badge.Style {
     override fun bg() = bg
 
-    override fun fg() = UiStyle.Colors.fg()
+    override fun fg() = SessionUiStyle.Colors.foreground()
 }
 
 private fun tagStyle(index: Int): UiStyle.Badge.Style {
     if (index % 4 == 0) return UiStyle.Badge.Secondary
     val bg = when (index % 4) {
-        1 -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), UiStyle.Colors.fg(), 0.12f)
+        1 -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), SessionUiStyle.Colors.foreground(), 0.12f)
         2 -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), JBUI.CurrentTheme.Link.Foreground.ENABLED, 0.18f)
         else -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), UiStyle.Badge.Primary.bg(), 0.18f)
     }

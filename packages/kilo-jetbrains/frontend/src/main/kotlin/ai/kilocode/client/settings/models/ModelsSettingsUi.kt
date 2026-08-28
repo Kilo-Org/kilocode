@@ -5,7 +5,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.model.ModelPicker
-import ai.kilocode.client.session.ui.model.ModelText
+import ai.kilocode.client.session.ui.model.modelItems
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.BaseSettingsUi
 import ai.kilocode.client.settings.base.SettingsBannerKind
@@ -168,41 +168,7 @@ internal class ModelsSettingsUi(
         }
     }
 
-    private fun items(includeSmall: Boolean): List<ModelPicker.Item> {
-        val cfg = providers ?: return emptyList()
-        return cfg.providers
-            .filter { it.id == KILO_PROVIDER || it.id in cfg.connected }
-            .flatMap { provider ->
-                provider.models.mapNotNull { (id, model) ->
-                    val item = ModelPicker.Item(
-                        id = id,
-                        display = model.name,
-                        provider = provider.id,
-                        providerName = provider.name,
-                        inputPrice = model.inputPrice,
-                        outputPrice = model.outputPrice,
-                        contextLength = model.contextLength,
-                        releaseDate = model.releaseDate,
-                        latest = model.latest,
-                        recommendedIndex = model.recommendedIndex,
-                        free = model.free,
-                        byok = model.byok,
-                        variants = model.variants,
-                        limit = model.limit,
-                        cost = model.cost,
-                        capabilities = model.capabilities,
-                        options = model.options,
-                        autoRouting = model.autoRouting,
-                        terminalBench = model.terminalBench,
-                        reasoning = model.reasoning,
-                        attachment = model.attachment,
-                        mayTrainOnYourPrompts = model.mayTrainOnYourPrompts,
-                    )
-                    if (!includeSmall && ModelText.small(item)) return@mapNotNull null
-                    item
-                }
-            }
-    }
+    private fun items(includeSmall: Boolean): List<ModelPicker.Item> = modelItems(providers, includeSmall)
 
     @RequiresEdt
     private fun syncVariant(ready: Boolean): Boolean {
@@ -257,8 +223,6 @@ internal class ModelsSettingsUi(
         updateDraft { copy(subagent = item.key, variant = variant) }
     }
 }
-
-private const val KILO_PROVIDER = "kilo"
 
 private fun summary(patch: ConfigPatchDto): String {
     val values = patch.values.keys.sorted().joinToString(",").ifEmpty { "none" }

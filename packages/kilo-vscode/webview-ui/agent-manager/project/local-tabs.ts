@@ -1,5 +1,6 @@
 import { createEffect, createMemo, onCleanup } from "solid-js"
-import type { SessionInfo } from "../../src/types/messages/sessions"
+import type { ProjectSessionInfo, SessionInfo } from "../../src/types/messages/sessions"
+import type { AgentManagerStateMessage } from "../../src/types/messages"
 
 /**
  * Persist open tabs and panel widths to webview state for recovery.
@@ -56,4 +57,22 @@ export function createLocalSessions(opts: {
     }
     return result
   })
+}
+
+export function projectLocalIds(state: AgentManagerStateMessage | undefined): string[] {
+  return state?.sessions.filter((item) => item.worktreeId === null).map((item) => item.id) ?? []
+}
+
+export function projectLocalSessions(
+  live: ProjectSessionInfo[],
+  ids: string[],
+  isPending: (id: string) => boolean,
+): SessionInfo[] {
+  const now = new Date().toISOString()
+  const known = new Map(live.filter((item) => item.worktreeId === null).map((item) => [item.id, item]))
+  for (const id of ids) {
+    if (isPending(id) || known.has(id)) continue
+    known.set(id, { id, parentID: null, createdAt: now, updatedAt: now, worktreeId: null })
+  }
+  return [...known.values()]
 }

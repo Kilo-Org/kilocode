@@ -4,7 +4,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Config } from "@/config/config"
 import { generateCommitMessage, NoChangesError } from "@/kilocode/commit-message"
-import { CommitMessageNoChangesError, CommitMessagePayload } from "../groups/commit-message"
+import { CommitMessageFailedError, CommitMessageNoChangesError, CommitMessagePayload } from "../groups/commit-message"
 
 export const commitMessageHandlers = HttpApiBuilder.group(InstanceHttpApi, "commit-message", (handlers) =>
   Effect.gen(function* () {
@@ -27,6 +27,9 @@ export const commitMessageHandlers = HttpApiBuilder.group(InstanceHttpApi, "comm
         Effect.catchDefect((defect) => {
           if (defect instanceof NoChangesError) {
             return Effect.fail(new CommitMessageNoChangesError({ message: defect.message }))
+          }
+          if (defect instanceof Error) {
+            return Effect.fail(new CommitMessageFailedError({ message: defect.message }))
           }
           return Effect.die(defect)
         }),

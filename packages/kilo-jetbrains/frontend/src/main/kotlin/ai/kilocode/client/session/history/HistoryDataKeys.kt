@@ -13,4 +13,11 @@ data class HistorySelection(
 object HistoryDataKeys {
     val SELECTION: DataKey<HistorySelection> = DataKey.create("ai.kilocode.client.session.history.HistorySelection")
     val CONTROLLER: DataKey<HistoryController> = DataKey.create("ai.kilocode.client.session.history.HistoryController")
+
+    /**
+     * Opens the inline rename popover anchored to a local session row. Provided by [HistoryPanel] so
+     * the context-menu and RenameElement-shortcut rename share the same balloon as the hover pencil
+     * instead of a modal dialog.
+     */
+    val RENAME: DataKey<(LocalHistoryItem) -> Unit> = DataKey.create("ai.kilocode.client.session.history.HistoryRename")
 }

@@ -4,9 +4,10 @@ import type { SSEPayload } from "../services/cli-backend/sdk-sse-adapter"
 import { sameDirectory } from "../kilo-provider-utils"
 import type { LocalStats, WorktreeStats } from "./GitStatsPoller"
 import type { PRStatus } from "./types"
-import type { WorktreeStateManager } from "./WorktreeStateManager"
+import type { ManagedSession, WorktreeStateManager } from "./WorktreeStateManager"
 import {
   OrchestrationError,
+  answer,
   move,
   overview,
   prompt,
@@ -28,12 +29,14 @@ type Request =
   | (RequestBase & { operation: "prompt"; targetSessionID: string; prompt: string })
   | (RequestBase & { operation: "stop"; targetSessionID: string })
   | (RequestBase & { operation: "move"; targetSessionID: string; sectionID: string | null })
+  | (RequestBase & { operation: "answer"; targetSessionID: string; questionID?: string; answers: string[][] })
 
 type Result =
   | { operation: "overview"; overview: Overview }
   | { operation: "prompt"; sessionID: string; delivered: true }
   | { operation: "stop"; sessionID: string; stopped: true }
   | { operation: "move"; sessionID: string; sectionID: string | null; moved: true }
+  | { operation: "answer"; sessionID: string; questionID: string; resolved: true }
 
 interface Failure {
   code: FailureCode | "cancelled" | "disconnected" | "timeout"
@@ -41,14 +44,16 @@ interface Failure {
 }
 
 interface Options {
-  root(): string | undefined
-  ready(): Promise<WorktreeStateManager | undefined>
-  state(): WorktreeStateManager | undefined
-  stats(): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
-  prs(): Map<string, PRStatus>
-  push(): void
-  managed(sessionID: string): boolean
-  close(sessionID: string): Promise<void>
+  root(directory?: string): string | undefined
+  ready(directory?: string): Promise<WorktreeStateManager | undefined>
+  state(directory?: string): WorktreeStateManager | undefined
+  stats(directory?: string): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
+  prs(directory?: string): Map<string, PRStatus>
+  push(directory?: string): void
+  resolve?(sessionID: string, directory?: string): ManagedSession | undefined
+  managed(sessionID: string, directory?: string): boolean
+  close(sessionID: string, directory?: string): Promise<void>
+  directories?(): string[]
   log(...args: unknown[]): void
 }
 
@@ -108,6 +113,7 @@ export class AgentManagerOrchestrationBridge {
       })
     })
     this.unsubscribeDirectories = connection.registerDirectoryProvider(() => {
+      if (this.options.directories) return this.options.directories()
       const root = this.options.root()
       const dirs =
         this.options
@@ -181,8 +187,8 @@ export class AgentManagerOrchestrationBridge {
   }
 
   private async admit(request: Request, directory: string): Promise<void> {
-    const state = await this.options.ready()
-    const root = this.options.root()
+    const state = await this.options.ready(directory)
+    const root = this.options.root(directory)
     if (this.disposed || this.settled.has(request.id)) return
     if (!state || !root) {
       const accepted = await this.reject(request.id, directory, {
@@ -232,7 +238,7 @@ export class AgentManagerOrchestrationBridge {
 
   private async run(request: Request, origin: Origin, active: Active): Promise<void> {
     try {
-      const outcome = this.outcomes.get(request.id) ?? (await this.execute(request, active))
+      const outcome = this.outcomes.get(request.id) ?? (await this.execute(request, origin, active))
       if (!outcome || this.disposed || active.cancelled) return
       this.rememberOutcome(request.id, outcome)
       const accepted =
@@ -248,10 +254,10 @@ export class AgentManagerOrchestrationBridge {
     }
   }
 
-  private async execute(request: Request, active: Active): Promise<Outcome | undefined> {
+  private async execute(request: Request, origin: Origin, active: Active): Promise<Outcome | undefined> {
     try {
-      const state = await this.options.ready()
-      const root = this.options.root()
+      const state = await this.options.ready(origin.directory)
+      const root = this.options.root(origin.directory)
       if (!state || !root)
         throw new OrchestrationError("workspace_unavailable", "Agent Manager requires an open workspace")
       if (this.disposed || active.cancelled) return
@@ -260,7 +266,7 @@ export class AgentManagerOrchestrationBridge {
         // Git stats are refreshed by the poller independently. A forced refresh
         // here can spawn one diff/ahead-behind pair per worktree and exceed the
         // host request timeout before the overview can return its IDs.
-        const stats = await this.options.stats()
+        const stats = await this.options.stats(origin.directory)
         if (this.disposed || active.cancelled) return
         const result = await overview({
           client,
@@ -269,7 +275,7 @@ export class AgentManagerOrchestrationBridge {
           titles: this.titles,
           filter: request.filter,
           stats,
-          prs: this.options.prs(),
+          prs: this.options.prs(origin.directory),
         })
         return { result: { operation: "overview", overview: result } }
       }
@@ -282,13 +288,22 @@ export class AgentManagerOrchestrationBridge {
           text: request.prompt,
           messageID: request.id,
           signal: active.controller.signal,
+          managed: this.options.resolve?.(request.targetSessionID, origin.directory),
         })
         if (this.disposed || active.cancelled) return
         return { result: { operation: "prompt", sessionID: request.targetSessionID, delivered: true } }
       }
+      if (request.operation === "answer") {
+        return await this.resolveQuestion(client, root, state, request, origin, active)
+      }
       if (request.operation === "move") {
-        move({ state, sessionID: request.targetSessionID, sectionID: request.sectionID })
-        this.options.push()
+        move({
+          state,
+          sessionID: request.targetSessionID,
+          sectionID: request.sectionID,
+          managed: this.options.resolve?.(request.targetSessionID, origin.directory),
+        })
+        this.options.push(origin.directory)
         if (this.disposed || active.cancelled) return
         return {
           result: {
@@ -299,15 +314,47 @@ export class AgentManagerOrchestrationBridge {
           },
         }
       }
-      if (!this.options.managed(request.targetSessionID)) {
-        throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
-      }
-      await this.options.close(request.targetSessionID)
-      if (this.disposed || active.cancelled) return
-      return { result: { operation: "stop", sessionID: request.targetSessionID, stopped: true } }
+      return await this.deactivate(request.targetSessionID, origin.directory, active)
     } catch (error) {
       if (this.disposed || active.cancelled) return
       return { error: failure(error) }
+    }
+  }
+
+  private async deactivate(sessionID: string, originDirectory: string, active: Active): Promise<Outcome | undefined> {
+    if (!this.options.managed(sessionID, originDirectory)) {
+      throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
+    }
+    await this.options.close(sessionID, originDirectory)
+    if (this.disposed || active.cancelled) return
+    return { result: { operation: "stop", sessionID, stopped: true } }
+  }
+
+  private async resolveQuestion(
+    client: KiloClient,
+    root: string,
+    state: WorktreeStateManager,
+    request: Extract<Request, { operation: "answer" }>,
+    origin: Origin,
+    active: Active,
+  ): Promise<Outcome | undefined> {
+    const resolved = await answer({
+      client,
+      root,
+      state,
+      sessionID: request.targetSessionID,
+      questionID: request.questionID,
+      answers: request.answers,
+      managed: this.options.resolve?.(request.targetSessionID, origin.directory),
+    })
+    if (this.disposed || active.cancelled) return
+    return {
+      result: {
+        operation: "answer",
+        sessionID: request.targetSessionID,
+        questionID: resolved.questionID,
+        resolved: true,
+      },
     }
   }
 

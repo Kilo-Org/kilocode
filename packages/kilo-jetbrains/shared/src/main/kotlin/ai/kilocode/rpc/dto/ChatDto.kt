@@ -17,6 +17,7 @@ data class MessageDto(
     val parentID: String? = null,
     val cost: Double? = null,
     val tokens: TokensDto? = null,
+    val finish: String? = null,
     val error: MessageErrorDto? = null,
     val summary: MessageSummaryDto? = null,
 )
@@ -49,7 +50,13 @@ data class MessageErrorDto(
     val responseBody: String? = null,
     val dataKeys: List<String> = emptyList(),
     val ref: String? = null,
-)
+) {
+    val aborted: Boolean get() = type == ABORTED
+
+    companion object {
+        const val ABORTED = "MessageAbortedError"
+    }
+}
 
 @Serializable
 data class MessageWithPartsDto(
@@ -72,6 +79,7 @@ data class PartDto(
     val title: String? = null,
     val input: Map<String, String> = emptyMap(),
     val metadata: Map<String, String> = emptyMap(),
+    val approval: ToolApprovalDto? = null,
     val output: String? = null,
     val error: String? = null,
     val time: PartTimeDto? = null,
@@ -85,6 +93,17 @@ data class PartDto(
     val filename: String? = null,
     val synthetic: Boolean? = null,
     val source: PartSourceDto? = null,
+)
+
+@Serializable
+data class ToolApprovalDto(
+    val source: String,
+    val agent: String? = null,
+    val rulePermission: String? = null,
+    val rulePattern: String? = null,
+    val ruleAction: String? = null,
+    val outsideWorkspace: Boolean = false,
+    val outsideWorkspacePath: String? = null,
 )
 
 @Serializable
@@ -122,6 +141,17 @@ data class PromptDto(
     val agent: String? = null,
     val variant: String? = null,
     val noReply: Boolean? = null,
+    val editorContext: EditorContextDto? = null,
+)
+
+@Serializable
+data class EditorContextDto(
+    val directory: String? = null,
+    val worktree: String? = null,
+    val visibleFiles: List<String>? = null,
+    val openTabs: List<String>? = null,
+    val activeFile: String? = null,
+    val shell: String? = null,
 )
 
 @Serializable

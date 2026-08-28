@@ -1,7 +1,10 @@
 package ai.kilocode.client.settings.context
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsToggle
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.testing.FakeAppRpcApi
@@ -11,7 +14,6 @@ import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.WatcherConfigDto
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBTextField
@@ -69,6 +71,7 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
             ui = null
             uiScope.cancel()
             appScope.cancel()
+            KiloPluginSettings.unsetAutoEditorContext()
         } finally {
             super.tearDown()
         }
@@ -253,19 +256,41 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test controls are disabled during pending save`() {
+    fun `test controls are disabled during pending save except local editor toggle`() {
         val panel = requireUi()
         rpc.configUpdateGate = CompletableDeferred()
 
         edt {
             threshold(panel).text = "80"
             panel.applyDraft()
-            assertTrue(components(panel).filterIsInstance<SettingsToggle>().all { !it.isEnabled })
+            val editor = editorToggle(panel)
+            val cli = components(panel).filterIsInstance<SettingsToggle>().filter { it !== editor }
+            assertTrue(cli.all { !it.isEnabled })
             assertFalse(threshold(panel).isEnabled)
+            assertTrue(editor.isEnabled)
         }
 
         rpc.configUpdateGate?.complete(Unit)
         flushUntil { rpc.configPatches.isNotEmpty() }
+    }
+
+    fun `test editor context toggle marks modified and applies without a config patch`() {
+        val panel = requireUi()
+        assertTrue(KiloPluginSettings.getAutoEditorContext())
+
+        edt {
+            val editor = editorToggle(panel)
+            assertTrue(editor.isEnabled)
+            editor.doClick()
+            assertTrue(panel.modified())
+        }
+
+        assertTrue(KiloPluginSettings.getAutoEditorContext())
+        edt { panel.applyDraft() }
+        assertFalse(KiloPluginSettings.getAutoEditorContext())
+        edt { UIUtil.dispatchAllInvocationEvents() }
+        assertFalse(edt { panel.modified() })
+        assertTrue(rpc.configPatches.isEmpty())
     }
 
     private fun requireUi(): ContextSettingsUi = requireNotNull(ui)
@@ -284,12 +309,15 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
         .filterIsInstance<HoverIcon>()
         .single { it.toolTipText == tip }
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
+    private fun editorToggle(panel: ContextSettingsUi): SettingsToggle {
+        val label = components(panel).filterIsInstance<JLabel>()
+            .first { it.text == "Auto-Include Editor Context" }
+        var row: Container? = label.parent
+        while (row != null && row !is SettingsRow) row = row.parent
+        return components(requireNotNull(row)).filterIsInstance<SettingsToggle>().single()
     }
+
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
         repeat(200) {

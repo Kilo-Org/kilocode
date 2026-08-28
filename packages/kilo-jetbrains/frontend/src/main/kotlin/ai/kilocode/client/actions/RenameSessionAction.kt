@@ -1,28 +1,12 @@
 package ai.kilocode.client.actions
 
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.history.HistoryDataKeys
-import ai.kilocode.client.session.history.title
 import ai.kilocode.client.session.SessionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 
 class RenameSessionAction : AnAction() {
-    /** Overridable in tests to avoid showing a real modal dialog. */
-    internal var input: (project: Project?, current: String) -> String? = { project, current ->
-        Messages.showInputDialog(
-            project,
-            KiloBundle.message("history.rename.prompt"),
-            KiloBundle.message("history.rename.title"),
-            null,
-            current,
-            null,
-        )
-    }
-
     override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
     override fun update(e: AnActionEvent) {
@@ -35,26 +19,8 @@ class RenameSessionAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val selection = e.getData(HistoryDataKeys.SELECTION) ?: return
-        val controller = e.getData(HistoryDataKeys.CONTROLLER) ?: return
+        val rename = e.getData(HistoryDataKeys.RENAME) ?: return
         val item = selection.selectedLocal.singleOrNull() ?: return
-
-        val current = title(item)
-        controller.requestRename()
-        val raw = input(e.project, current)
-        if (raw == null) {
-            controller.cancelRename("cancelled")
-            return
-        }
-        val newTitle = raw.trim()
-
-        if (newTitle.isBlank()) {
-            controller.cancelRename("blank")
-            return
-        }
-        if (newTitle == current) {
-            controller.cancelRename("unchanged")
-            return
-        }
-        controller.rename(item, newTitle)
+        rename(item)
     }
 }

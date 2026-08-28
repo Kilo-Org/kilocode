@@ -23,6 +23,7 @@ export interface StatusSnapshot {
 export interface RefSnapshot {
   oids: Map<string, string>
   upstreams: Map<string, string>
+  worktreePaths?: Map<string, string>
 }
 
 export interface GitStatsSource {
@@ -44,6 +45,27 @@ function tail(record: string, fields: number): string | undefined {
     offset = next + 1
   }
   return record.slice(offset)
+}
+
+function parse(raw: Buffer, linked: boolean): RefSnapshot {
+  const fields = raw.toString("utf8").split("\0")
+  const oids = new Map<string, string>()
+  const upstreams = new Map<string, string>()
+  const paths = linked ? new Map<string, string>() : undefined
+  const size = linked ? 4 : 3
+
+  for (let i = 0; i + size - 1 < fields.length; i += size) {
+    const ref = fields[i]?.replace(/^\n/, "")
+    const oid = fields[i + 1]
+    const upstream = fields[i + 2]
+    const worktree = linked ? fields[i + 3] : undefined
+    if (!ref || !oid) continue
+    oids.set(ref, oid)
+    if (upstream) upstreams.set(ref, upstream)
+    if (worktree && ref.startsWith("refs/heads/")) paths?.set(worktree, ref.slice(11))
+  }
+
+  return { oids, upstreams, ...(paths ? { worktreePaths: paths } : {}) }
 }
 
 function records(raw: Buffer): { branch: string; head: string; paths: PathState[]; untracked: string[] } {
@@ -150,6 +172,8 @@ export function shortRef(ref: string): string {
 }
 
 export class GitStatsSnapshot implements GitStatsSource {
+  private supported: boolean | undefined
+
   constructor(private readonly git: GitOps) {}
 
   async status(dir: string): Promise<StatusSnapshot> {
@@ -181,21 +205,30 @@ export class GitStatsSnapshot implements GitStatsSource {
   }
 
   async refs(root: string): Promise<RefSnapshot> {
+    if (this.supported !== false) {
+      const result = await this.git.execGitBuffer(
+        [
+          "for-each-ref",
+          "--format=%(refname)%00%(objectname)%00%(upstream)%00%(worktreepath)%00",
+          "refs/heads",
+          "refs/remotes",
+        ],
+        root,
+      )
+      if (result.code === 0) {
+        this.supported = true
+        return parse(result.stdout, true)
+      }
+      const error = result.stderr.toLowerCase()
+      if (error.includes("unknown field") || error.includes("unknown atom")) this.supported = false
+    }
+
     const result = await this.git.execGitBuffer(
       ["for-each-ref", "--format=%(refname)%00%(objectname)%00%(upstream)%00", "refs/heads", "refs/remotes"],
       root,
     )
     if (result.code !== 0) throw new Error(result.stderr.trim() || "git for-each-ref failed")
-    const oids = new Map<string, string>()
-    const upstreams = new Map<string, string>()
-    for (const line of result.stdout.toString("utf8").split("\n")) {
-      if (!line) continue
-      const [ref, oid, upstream] = line.split("\0")
-      if (!ref || !oid) continue
-      oids.set(ref, oid)
-      if (upstream) upstreams.set(ref, upstream)
-    }
-    return { oids, upstreams }
+    return parse(result.stdout, false)
   }
 
   async diff(dir: string, base: string, untracked: string[]): Promise<DiffStats> {

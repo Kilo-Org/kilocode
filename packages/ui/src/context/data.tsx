@@ -42,7 +42,11 @@ export type NavigateToSessionFn = (sessionID: string) => void
 export type SessionHrefFn = (sessionID: string) => string
 
 // kilocode_change start
-export type OpenFileFn = (filePath: string, line?: number, column?: number) => void
+// The optional trailing sessionID scopes the open to the session the file
+// reference was rendered for, so the extension resolves its workspace directory
+// from that explicit id instead of whatever session is current when the click
+// is processed (avoids opening the wrong worktree during a session switch).
+export type OpenFileFn = (filePath: string, line?: number, column?: number, sessionID?: string) => void
 
 export type OpenDiffFn = (diff: {
   file: string
@@ -51,13 +55,28 @@ export type OpenDiffFn = (diff: {
   patch?: string // kilocode_change
   additions: number
   deletions: number
+  status?: "added" | "deleted" | "modified" // kilocode_change
+  // kilocode_change start - multi-file patch preview payload
+  files?: Array<{
+    file: string
+    before?: string
+    after?: string
+    patch?: string
+    additions: number
+    deletions: number
+    status?: "added" | "deleted" | "modified" // kilocode_change
+  }>
+  // kilocode_change end
 }) => void
 
 export type OpenUrlFn = (url: string) => void
 
 export type OpenContentFn = (content: string, language?: string) => void // kilocode_change
 
-export type ValidateFilesFn = (paths: string[]) => Promise<string[]> // kilocode_change
+// kilocode_change start: sessionID scopes validation to the session the
+// candidates were rendered for, so the extension resolves its workspace
+// directory from that explicit id instead of whatever session is current.
+export type ValidateFilesFn = (sessionID: string, paths: string[]) => Promise<string[]>
 // kilocode_change end
 
 export const { use: useData, provider: DataProvider } = createSimpleContext({

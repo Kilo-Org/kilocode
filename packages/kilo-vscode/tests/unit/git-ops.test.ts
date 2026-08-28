@@ -57,6 +57,39 @@ describe("GitOps", () => {
     })
   })
 
+  it("passes stdin to binary Git commands without decoding their output", async () => {
+    await withRepo(async (cwd) => {
+      const git = new GitOps({ log: () => undefined, binary: async () => "git" })
+      const value = "before\u0000after"
+      const object = await git.execGit(["hash-object", "-w", "--stdin"], cwd, { stdin: value })
+      const result = await git.execGitBuffer(["cat-file", "--batch"], cwd, {
+        stdin: `${object.stdout.trim()}\n`,
+      })
+      expect(result.code).toBe(0)
+      expect(result.stdout.includes(Buffer.from(value))).toBe(true)
+      git.dispose()
+    })
+  })
+
+  it("uses an explicit Git executable path with spaces", async () => {
+    await withRepo(async (cwd) => {
+      const real = Bun.which("git")
+      if (!real) throw new Error("Git is required for this test")
+
+      const dir = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-gitops executable-"))
+      const binary = process.platform === "win32" ? real : nodePath.join(dir, "git")
+      try {
+        if (process.platform !== "win32") await fs.symlink(real, binary)
+
+        const git = new GitOps({ log: () => undefined, binary })
+        expect(git.path).toBe(binary)
+        expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      } finally {
+        await fs.rm(dir, { recursive: true, force: true })
+      }
+    })
+  })
+
   it("does not hold a semaphore slot while resolving Git", async () => {
     const semaphore = new Semaphore(1)
     let resolve!: (value: string) => void
@@ -228,26 +261,60 @@ describe("GitOps", () => {
   })
 
   describe("resolveDefaultBranch", () => {
-    it("returns <remote>/HEAD symbolic ref", async () => {
+    it("uses the remote's advertised HEAD instead of stale local metadata", async () => {
+      const commands: string[][] = []
       const git = ops(async (args) => {
+        commands.push(args)
         // resolveRemote: upstream is configured
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "upstream/main"
-        // symbolic-ref for upstream/HEAD
-        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/upstream/HEAD") return "upstream/develop"
+        if (args[0] === "ls-remote") return "ref: refs/heads/develop\tHEAD\nabc123\tHEAD"
+        if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/upstream/HEAD") return "upstream/master"
         return ""
       })
       expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("upstream/develop")
+      expect(commands.some((args) => args[0] === "symbolic-ref")).toBe(false)
     })
 
-    it("falls back to origin/HEAD when remote is origin", async () => {
+    it("falls back to local origin/HEAD when the remote is unavailable", async () => {
       const git = ops(async (args) => {
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
         if (args[0] === "config") throw new Error("no config")
         if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") throw new Error("offline")
         if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/origin/HEAD") return "origin/main"
         return ""
       })
       expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+    })
+
+    it("keeps master when the remote still advertises master", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") return "ref: refs/heads/master\tHEAD\nabc123\tHEAD"
+        return ""
+      })
+
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/master")
+    })
+
+    it("caches the advertised remote HEAD", async () => {
+      let calls = 0
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse") throw new Error("no upstream")
+        if (args[0] === "config") throw new Error("no config")
+        if (args[0] === "branch") return "feature"
+        if (args[0] === "ls-remote") {
+          calls++
+          return "ref: refs/heads/main\tHEAD\nabc123\tHEAD"
+        }
+        return ""
+      })
+
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+      expect(await git.resolveDefaultBranch("/repo", "feature")).toBe("origin/main")
+      expect(calls).toBe(1)
     })
 
     it("returns undefined when <remote>/HEAD is not set", async () => {
@@ -255,6 +322,7 @@ describe("GitOps", () => {
         if (args[0] === "rev-parse") throw new Error("no upstream")
         if (args[0] === "config") throw new Error("no config")
         if (args[0] === "branch") return ""
+        if (args[0] === "ls-remote") throw new Error("no remote")
         if (args[0] === "symbolic-ref") throw new Error("no symbolic ref")
         return ""
       })
@@ -632,11 +700,40 @@ describe("GitOps", () => {
       })
     })
 
+    it("kills an in-flight exec when its request signal aborts", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined, binary: async () => process.execPath })
+        const ctl = new AbortController()
+        const pending = git.execGit(["-e", "setTimeout(() => {}, 5000)"], cwd, { signal: ctl.signal })
+        await sleep(25)
+        ctl.abort()
+
+        const result = await pending
+        expect(result.code).not.toBe(0)
+        git.dispose()
+      })
+    })
+
     it("is safe to call multiple times", () => {
       const git = ops(async () => "ok")
       git.dispose()
       git.dispose()
       expect(git.disposed).toBe(true)
+    })
+
+    it("stops waiting for executable discovery when its request signal aborts", async () => {
+      let release!: (value: string) => void
+      const gate = new Promise<string>((resolve) => {
+        release = resolve
+      })
+      const git = new GitOps({ log: () => undefined, binary: () => gate })
+      const ctl = new AbortController()
+      const pending = git.execGit(["status"], "/repo", { signal: ctl.signal })
+      ctl.abort()
+      const result = await pending
+      expect(result.code).not.toBe(0)
+      release("git")
+      git.dispose()
     })
   })
 

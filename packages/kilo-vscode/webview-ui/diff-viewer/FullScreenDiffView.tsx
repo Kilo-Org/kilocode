@@ -41,7 +41,7 @@ import {
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
   sendReviewComments,
-  type AnnotationLabels,
+  labels,
   type AnnotationMeta,
   type ReviewComposer,
   type ReviewDraft,
@@ -53,6 +53,7 @@ import {
   initialOpenFiles,
   isDiffExpandable,
   isLargeDiffFile,
+  reconcileOpenFiles,
   sanitizeOpenFiles,
   shouldVirtualizeDiff,
   toggleOpenFiles,
@@ -61,8 +62,8 @@ import { DiffEndMarker } from "./DiffEndMarker"
 import { VirtualDiffList } from "./VirtualDiffList"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
 import { ImageDiffView } from "./ImageDiffView"
-import { createDiffRows } from "./diff-state"
-import { createDiffRequests } from "./diff-requests"
+import { createDiffRows, diffSizeKey } from "./diff-state"
+import { createDiffRequests, createDiffViewport } from "./diff-requests"
 
 type DiffStyle = "unified" | "split"
 
@@ -90,6 +91,7 @@ interface FullScreenDiffViewProps {
   onMarkdownRenderChange?: (render: boolean) => void
   onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string, line?: number) => void
+  initialFile?: string
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
   activeTerminalId?: string
@@ -120,21 +122,54 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
-  const labels = (): AnnotationLabels => ({
-    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
-    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
-    placeholder: t("agentManager.review.commentPlaceholder"),
-    cancel: t("common.cancel"),
-    comment: t("agentManager.review.commentAction"),
-    send: t("prompt.action.send"),
-    save: t("common.save"),
-    sendToChat: t("agentManager.review.sendToChat"),
-    edit: t("common.edit"),
-    delete: t("common.delete"),
-  })
   const localComposer = createReviewComposer()
   const composer = () => props.composer ?? localComposer
-  const [open, setOpen] = createSignal<string[]>([])
+  const [manualOpen, setManualOpen] = createSignal<Record<string, string[]>>({})
+  const [knownFiles, setKnownFiles] = createSignal<Record<string, string[]>>({})
+  const open = createMemo(() => {
+    const key = props.sessionKey ?? ""
+    const diffs = props.diffs
+    if (diffs.length === 0) return []
+    const manual = manualOpen()[key]
+    if (manual) return sanitizeOpenFiles(diffs, manual)
+    return initialOpenFiles(diffs)
+  })
+  createEffect(
+    on(
+      () => [props.sessionKey, props.diffs] as const,
+      ([key, diffs]) => {
+        if (diffs.length === 0) return
+        const id = key ?? ""
+        const manual = manualOpen()[id]
+        const result = reconcileOpenFiles(diffs, manual, knownFiles()[id] ?? [])
+        setKnownFiles((prev) => ({ ...prev, [id]: result.known }))
+        if (!manual || !result.open) return
+        if (result.open.length === manual.length && result.open.every((file, index) => file === manual[index])) return
+        setManualOpen((prev) => ({ ...prev, [id]: result.open! }))
+      },
+    ),
+  )
+  const setOpen = (files: string[] | ((prev: string[]) => string[])) => {
+    const key = props.sessionKey ?? ""
+    const current = open()
+    const next = typeof files === "function" ? files(current) : files
+    setManualOpen((prev) => ({ ...prev, [key]: sanitizeOpenFiles(props.diffs, next) }))
+  }
+
+  const [manualActiveFile, setManualActiveFile] = createSignal<Record<string, string | null>>({})
+  const activeFile = createMemo(() => {
+    const key = props.sessionKey ?? ""
+    const diffs = props.diffs
+    if (diffs.length === 0) return null
+    const manual = manualActiveFile()[key]
+    if (manual && diffs.some((d) => d.file === manual)) return manual
+    return diffs[0]?.file ?? null
+  })
+  const setActiveFile = (file: string | null) => {
+    const key = props.sessionKey ?? ""
+    setManualActiveFile((prev) => ({ ...prev, [key]: file }))
+  }
+
   const [draft, setDraft] = createSignal<ReviewDraft | null>(reviewComposerDraft(composer()))
   const [editing, setEditing] = createSignal<string | null>(reviewComposerEdit(composer()))
   const speechKeys = createMemo(() => {
@@ -152,15 +187,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     label: t,
     keys: speechKeys,
   })
-  const [activeFile, setActiveFile] = createSignal<string | null>(null)
   const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
   let draftMeta: AnnotationMeta | null = composer().draft
   let editMeta: AnnotationMeta | null = composer().edit
-  // Initialize each worktree with every file expanded, then preserve manual
-  // collapse state while adding and removing files from live summaries.
-  let initializedKey: string | undefined
-  let known = new Set<string>()
+  let initialFileKey: string | undefined
   let rootRef: HTMLDivElement | undefined
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
@@ -214,50 +245,18 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     focusRoot()
   }
 
-  // Unified open-state effect: tracks both sessionKey and diffs in a single effect
-  // to eliminate the race condition between the old separate sessionKey-reset and
-  // diffs-watch effects. Uses the session key to decide when initialization is needed
-  // vs when we just prune stale entries from the open list.
   createEffect(
     on(
-      () => [props.sessionKey, props.diffs] as const,
-      ([key, diffs]) => {
-        if (diffs.length === 0) {
-          // No diffs yet — clear active file only for a new key; keep current
-          // selection for transient empty updates in the same key.
-          if (key !== initializedKey) setActiveFile(null)
-          return
-        }
-
-        const fileSet = new Set(diffs.map((diff) => diff.file))
-
-        // Keep active file in sync — pick first if current is stale
-        const current = activeFile()
-        if (!current || !diffs.some((d) => d.file === current)) {
-          setActiveFile(diffs[0]!.file)
-        }
-
-        // New context: initialize open state from the diff policy.
-        if (key !== initializedKey) {
-          initializedKey = key
-          known = fileSet
-          setOpen(initialOpenFiles(diffs))
-          return
-        }
-
-        // Preserve manual collapse state for known files, while keeping newly
-        // arriving files expanded when a live summary grows.
-        const added = diffs.filter((diff) => !known.has(diff.file)).map((diff) => diff.file)
-        known = fileSet
-        setOpen((prev) => {
-          const next = sanitizeOpenFiles(diffs, [...prev.filter((file) => fileSet.has(file)), ...added])
-          if (next.length === prev.length && next.every((file, index) => file === prev[index])) return prev
-          return next
-        })
+      () => [props.sessionKey, props.diffs, props.initialFile] as const,
+      ([key, diffs, initial]) => {
+        if (!initial || !diffs.some((diff) => diff.file === initial)) return
+        const next = `${key ?? ""}:${initial}`
+        if (initialFileKey === next) return
+        initialFileKey = next
+        setActiveFile(initial)
       },
     ),
   )
-
   createEffect(
     on(
       () => props.sessionKey,
@@ -278,6 +277,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     open,
     loading: () => props.loadingFiles,
     send: () => props.onRequestDiff,
+    eager: false,
   })
 
   // --- CRUD ---
@@ -425,7 +425,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       updateComment,
       deleteComment,
       cancelDraft,
-      labels: labels(),
+      labels: labels(t),
       activeTerminalId: props.activeTerminalId,
       speech: reviewSpeech,
     })
@@ -446,16 +446,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const sendAllToChat = () => {
     const all = comments()
     if (all.length === 0) return
-    window.dispatchEvent(
-      new MessageEvent("message", {
-        data: {
-          type: props.activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
-          comments: all,
-          autoSend: true,
-          targetTerminalId: props.activeTerminalId,
-        },
-      }),
-    )
+    sendReviewComments(all, props.activeTerminalId)
     preserveScroll(() => setComments([]))
     props.onSendAll?.()
   }
@@ -478,8 +469,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }
 
   const handleFileSelect = (path: string) => {
-    setActiveFile(path)
     const diff = props.diffs.find((item) => item.file === path)
+    if (diff) request(diff)
+    setActiveFile(path)
     if (diff && isDiffExpandable(diff) && !open().includes(path)) setOpen((prev) => [...prev, path])
     requestAnimationFrame(() => {
       const index = rows().findIndex((diff) => diff.file === path)
@@ -666,13 +658,15 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                     const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                     const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                     const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
+                    const viewport = createDiffViewport(scroller)
 
                     createEffect(() => {
-                      if (diff.kind === "image" && open().includes(diff.file)) request(diff)
+                      if (!viewport.visible() || !open().includes(diff.file)) return
+                      request(diff, viewport.intersects)
                     })
 
                     return (
-                      <Accordion.Item value={diff.file} data-file-path={diff.file}>
+                      <Accordion.Item ref={viewport.ref} value={diff.file} data-file-path={diff.file}>
                         <StickyAccordionHeader>
                           <Accordion.Trigger>
                             <div data-slot="session-review-trigger-content">
@@ -802,7 +796,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                         after={{ name: diff.file, contents: diff.after }}
                                         patch={diff.patch}
                                         diffStyle={props.diffStyle}
+                                        sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle)}
                                         virtualized={shouldVirtualizeDiff(diff)}
+                                        visible={viewport.visible()}
                                         annotations={annotationsForFile(diff.file)}
                                         renderAnnotation={buildAnnotation}
                                         enableGutterUtility={props.canComment !== false}

@@ -12,6 +12,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "./shell/id"
 
@@ -25,6 +26,8 @@ import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
 import { BashArity } from "@/permission/arity"
+import { mutates as mutatesGit } from "@/kilocode/sandbox/git" // kilocode_change
+import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 
 export { Parameters } from "./shell/prompt"
 
@@ -326,6 +329,7 @@ type PermissionInput = {
   cwd: string
   shell: string
   description?: string
+  escalate?: boolean // kilocode_change
 }
 
 export const ShellPermission = Effect.gen(function* () {
@@ -429,6 +433,19 @@ export const ShellPermission = Effect.gen(function* () {
           scan.access = "unknown"
         }
         yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
+        const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
+        if (input.escalate && gitMutation) {
+          yield* ctx.ask({
+            permission: "sandbox_escalation", // kilocode_change
+            patterns: [input.command],
+            always: [],
+            metadata: {
+              command: normalizeUrls(input.command),
+              ...(input.description ? { description: input.description } : {}),
+              sandboxEscalation: true,
+            },
+          })
+        }
       }),
     )
   })
@@ -522,10 +539,7 @@ export const ShellTool = Tool.define(
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      return {
-        ...process.env,
-        ...extra.env,
-      }
+      return modelEnv(extra.env) // kilocode_change - model shells must not inherit backend credentials
     })
 
     const run = Effect.fn("ShellTool.run")(function* (
@@ -731,18 +745,29 @@ export const ShellTool = Tool.define(
                 throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
               }
               const timeout = CommandTimeout.clamp(params.timeout ?? defaultTimeoutMs).timeout // kilocode_change
-              yield* permission.ask(ctx, { command: params.command, cwd, shell, description: params.description }) // kilocode_change
-
-              return yield* run(
-                {
-                  shell,
-                  command: params.command,
-                  cwd,
-                  env: yield* shellEnv(ctx, cwd),
-                  timeout,
-                  description: params.description ?? params.command, // kilocode_change
-                },
-                ctx,
+              const sandboxed = ctx.extra?.["sandboxed"] === true
+              yield* permission.ask(ctx, {
+                command: params.command,
+                cwd,
+                shell,
+                description: params.description,
+                escalate: sandboxed, // kilocode_change
+              }) // kilocode_change
+              const approved = ctx.extra?.["sandboxEscalation"] === true
+              if (ctx.extra) ctx.extra["sandboxEscalation"] = false
+              return yield* SandboxPolicy.executeEscalated(
+                approved,
+                run(
+                  {
+                    shell,
+                    command: params.command,
+                    cwd,
+                    env: yield* shellEnv(ctx, cwd),
+                    timeout,
+                    description: params.description ?? params.command, // kilocode_change
+                  },
+                  ctx,
+                ),
               )
             }),
         }

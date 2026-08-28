@@ -23,9 +23,17 @@ Before using Cloud Agents:
 
 ## Cost
 
-- **Compute is free during limited beta**
-  - Please provide any feedback in our Cloud Agents beta Discord channel: [Kilo Discord](https://kilo.ai/discord)
-- **Kilo Code credits are still used** when the agent performs work (model usage, operations, etc.).
+Cloud Agent compute is billed per second while the container is awake. Compute and model inference draw from the same Kilo credit balance, but they are charged separately.
+
+| Cloud Agent size | Hourly rate |
+|---|---|
+| Docker | $0.60 |
+| Small | $0.60 |
+| Standard | $1.20 |
+
+Usage is measured in whole seconds, with no rounding up to a longer billing interval and no minimum usage charge. Your balance must contain at least $5 to launch a container, but this is not an extra charge or minimum spend. BYOK users still pay for cloud compute because their provider keys cover inference only.
+
+See [Kilo Code pricing](https://kilo.ai/pricing) for current rates and pricing for other cloud products.
 
 ## How to Use
 
@@ -95,21 +103,21 @@ You can customize each Cloud Agent session by also defining env vars and startup
   - Bootstrapping tooling
   - Running setup scripts
 
-### Setup Commands vs `.kilocode/setup-script`
+### Setup Commands vs `.kilo/setup-script`
 
 - Cloud Agent executes **Setup Commands** configured in the Cloud UI/profile.
-- Cloud Agent does **not** automatically discover or run `.kilocode/setup-script`.
-- If you want to use `.kilocode/setup-script` in Cloud Agent, call it explicitly from Setup Commands, for example: `bash .kilocode/setup-script`.
+- Cloud Agent does **not** automatically discover or run `.kilo/setup-script`.
+- If you want to use `.kilo/setup-script` in Cloud Agent, call it explicitly from Setup Commands, for example: `bash .kilo/setup-script`.
 - If both are present, execution order is:
   1. Setup Commands (in the order you define them)
-  2. Anything those commands invoke (such as `.kilocode/setup-script`)
+  2. Anything those commands invoke (such as `.kilo/setup-script`)
 
 ## Skills
 
-Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilocode/skills/` are automatically available. Skill folders are uploaded as `.zip` archives, with up to 40 companion files per skill.
+Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilo/skills/` (or the legacy `.kilocode/skills/`) are automatically available. Skill folders are uploaded as `.zip` archives, with up to 40 companion files per skill.
 
 {% callout type="note" %}
-Global skills (`~/.kilocode/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
+Global skills (`~/.kilo/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
 {% /callout %}
 
 ## Remote Connections
@@ -125,6 +133,7 @@ When remote mode is enabled in the CLI, your active local sessions appear in the
 - **Permission requests** route to your active connection
 - **Full editing capabilities** work remotely
 - **Session renames** sync in both directions between the CLI and the web or mobile app
+- **File attachments** sync with the mobile app — send files from your phone to the CLI, and receive files the agent delivers back. See [Attachments in remote sessions](/docs/code-with-ai/platforms/mobile#attachments-in-remote-sessions)
 
 ### Enabling Remote Mode
 
@@ -158,11 +167,8 @@ Triggers allow you to initiate cloud agent sessions automatically, either via HT
 Triggers are currently in beta and subject to change.
 {% /callout %}
 
-Webhook triggers and scheduled triggers use the same trigger concepts across Cloud
-Agent and KiloClaw, but target different agents. Use Cloud Agent triggers when an
-HTTP event or schedule should start a Cloud Agent session against a repository.
-Use KiloClaw triggers when the event should deliver a chat message to a KiloClaw
-instance.
+Use Cloud Agent triggers when an HTTP event or schedule should start a Cloud Agent
+session against a repository.
 
 ### Accessing Triggers
 
