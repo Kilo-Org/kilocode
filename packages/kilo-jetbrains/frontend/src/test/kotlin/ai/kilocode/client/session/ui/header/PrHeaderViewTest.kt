@@ -71,24 +71,23 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         assertTrue(edt { components(view).contains(button) })
     }
 
-    fun `test toolbar separators track actions and visible changes`() {
+    fun `test action separator tracks actions and visible changes`() {
         val view = edt { PrHeaderView {} }
-        val separators = edt { components(view).filterIsInstance<JSeparator>() }
-        assertEquals(2, separators.size)
+        val separator = edt { components(view).filterIsInstance<JSeparator>().single() }
 
-        // Changes alone are not a toolbar: with no actions there is nothing to fence off.
+        // Changes alone are not a toolbar: with no actions there is nothing to separate them from.
         edt { view.update(2, 1, 0, null, "feature-x") }
-        assertEquals(listOf(false, false), edt { separators.map { it.isVisible } })
+        assertFalse(edt { separator.isVisible })
 
         edt { view.addAction(JButton("Open")) }
-        assertEquals(listOf(true, true), edt { separators.map { it.isVisible } })
+        assertTrue(edt { separator.isVisible })
 
-        // A clean worktree drops the trailing separator, but the toolbar fence stays.
+        // A clean worktree leaves the separator with nothing on its left, so it goes away too.
         edt { view.update(0, 0, 0, null, "feature-x") }
-        assertEquals(listOf(true, false), edt { separators.map { it.isVisible } })
+        assertFalse(edt { separator.isVisible })
     }
 
-    fun `test lead separator precedes changes by standard padding`() {
+    fun `test toolbar keeps standard left padding before the changes summary`() {
         val view = edt { PrHeaderView {} }
         val button = JButton("Open")
         edt {
@@ -96,17 +95,17 @@ class PrHeaderViewTest : BasePlatformTestCase() {
             view.update(2, 1, 0, null, "feature-x")
             layout(view)
         }
-        val lead = edt { components(view).filterIsInstance<JSeparator>().first() }
-        val trailing = edt { components(view).filterIsInstance<JSeparator>().last() }
+        val separator = edt { components(view).filterIsInstance<JSeparator>().single() }
         val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
-        val row = edt { lead.parent }
+        val row = edt { separator.parent }
         val wrapper = edt { row.components.single { SwingUtilities.isDescendingFrom(changes, it) } }
 
-        assertEquals(UiStyle.Gap.md(), edt { wrapper.x - (lead.x + lead.width) })
-        // Order is separator, padding, changes, separator, then the actions.
-        assertTrue(edt { lead.x < wrapper.x })
-        assertTrue(edt { wrapper.x + wrapper.width <= trailing.x })
-        assertTrue(edt { trailing.x < SwingUtilities.convertPoint(button, 0, 0, view).x })
+        // The row's left inset pads the summary off the PR title without a leading separator.
+        assertEquals(UiStyle.Gap.md(), edt { wrapper.x })
+        assertTrue(edt { components(view).filterIsInstance<JSeparator>().none { it.x < wrapper.x } })
+        // Order is padding, changes, separator, then the actions.
+        assertTrue(edt { wrapper.x + wrapper.width <= separator.x })
+        assertTrue(edt { separator.x < SwingUtilities.convertPoint(button, 0, 0, view).x })
     }
 
     fun `test repeated update keeps child instances and bounded count`() {
