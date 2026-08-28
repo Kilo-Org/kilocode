@@ -17,6 +17,7 @@ import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
+import org.jetbrains.plugins.terminal.TerminalIcons
 import java.awt.Container
 import java.awt.Cursor
 import java.awt.Point
@@ -74,6 +75,7 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         val view = edt { WorktreePrHeaderView {} }
         val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
         val open = edt { components(view).filterIsInstance<JButton>().single { it.text == "Open" } }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.icon === TerminalIcons.OpenTerminal_13x13 } }
 
         edt {
             view.update(WorktreeStatsDto("/repo", additions = 2, files = 1), null, "feature-x")
@@ -84,11 +86,14 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
 
         val changesX = edt { SwingUtilities.convertPoint(changes, Point(0, 0), view).x }
         val openX = edt { SwingUtilities.convertPoint(open, Point(0, 0), view).x }
-        val openRight = edt { openX + open.width }
+        val terminalX = edt { SwingUtilities.convertPoint(terminal, Point(0, 0), view).x }
+        val terminalRight = edt { terminalX + terminal.width }
         assertTrue(edt { changes.isVisible })
-        // Changes badge precedes the Open button, and the whole action cluster hugs the right edge.
+        // Changes badge precedes Open, which precedes the icon-only Terminal button, and the whole
+        // action cluster hugs the right edge.
         assertTrue(changesX < openX)
-        assertTrue(400 - openRight <= 20)
+        assertTrue(openX < terminalX)
+        assertTrue(400 - terminalRight <= 20)
     }
 
     fun `test changes view visibility follows stats`() {
@@ -170,7 +175,9 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(listOf("2"), edt { labels(changes) })
         edt { view.update(null, null, "feature-x") }
         assertFalse(edt { changes.isVisible })
-        assertEquals(listOf("Terminal", "Open"), edt { components(view).filterIsInstance<HoverIcon>().filter { it.isVisible }.map { it.text } })
+        val icons = edt { components(view).filterIsInstance<HoverIcon>().filter { it.isVisible } }
+        assertEquals(listOf("Open"), edt { icons.map { it.text }.filterNot { it.isNullOrEmpty() } })
+        assertTrue(edt { icons.any { it.icon === TerminalIcons.OpenTerminal_13x13 } })
     }
 
     fun `test open and terminal controls remain disabled for unavailable worktrees`() {
@@ -184,10 +191,13 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(0, opened)
     }
 
-    fun `test terminal button triggers callback`() {
+    fun `test terminal button is icon-only and triggers callback`() {
         var opened = 0
         val view = edt { WorktreePrHeaderView(openDiff = {}, openTerminal = { opened++ }) }
-        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.text == "Terminal" } }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.icon === TerminalIcons.OpenTerminal_13x13 } }
+
+        assertTrue(edt { terminal.text.isNullOrEmpty() })
+        assertEquals(KiloBundle.message("worktree.session.terminal.tooltip"), edt { terminal.toolTipText })
 
         edt { click(terminal) }
 
