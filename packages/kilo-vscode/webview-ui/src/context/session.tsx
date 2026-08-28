@@ -186,7 +186,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const [pages, setPages] = createStore<Record<string, MessagePageState>>({})
 
   // Parts stash: holds parts from messagesLoaded outside the reactive store
-  // until a VscodeSessionTurn is rendered by the virtualizer and calls
+  // until a TranscriptRowView is rendered by the virtualizer and calls
   // hydrateParts(). This avoids writing parts for off-screen messages into
   // the store, which would trigger expensive DOM work for invisible content.
   const stash = new PartStash()

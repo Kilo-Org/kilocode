@@ -360,7 +360,7 @@ describe("Agent Manager Model Picker", () => {
 
 describe("Agent Manager Worktree Actions", () => {
   it("opens the configuration dialog from the primary plus action", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"), "utf-8")
     const start = source.indexOf('<div class="am-split-button">')
     const end = source.indexOf("</div>", start)
     const actions = source.slice(start, end)
