@@ -1,7 +1,7 @@
 import { createMemo } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { SectionState, SessionInfo, WorktreeState } from "../src/types/messages"
-import { strongest, type Activity } from "../src/utils/session-activity"
+import { score, strongest, type Activity } from "../src/utils/session-activity"
 import { LOCAL } from "./navigate"
 
 export type SidebarSearchState = Activity
@@ -59,18 +59,6 @@ interface SidebarSearchInput {
 
 const root = (item: SessionInfo) => !item.parentID
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
-const score = (state: SidebarSearchState) =>
-  state === "waiting"
-    ? 5
-    : state === "error"
-      ? 4
-      : state === "retry"
-        ? 3
-        : state === "busy"
-          ? 2
-          : state === "done"
-            ? 1
-            : 0
 const newest = (items: SessionInfo[], fallback: string) =>
   items.reduce((latest, item) => (item.updatedAt > latest ? item.updatedAt : latest), fallback)
 

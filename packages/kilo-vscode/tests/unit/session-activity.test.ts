@@ -5,6 +5,7 @@ import {
   isActivity,
   label,
   running,
+  score,
   strongest,
   type Activity,
 } from "../../webview-ui/src/utils/session-activity"
@@ -130,6 +131,7 @@ describe("isActivity", () => {
   it("accepts only known presentation states", () => {
     expect(isActivity("waiting")).toBe(true)
     expect(isActivity("done")).toBe(true)
+    expect(isActivity("idle")).toBe(true)
     expect(isActivity("unknown")).toBe(false)
     expect(isActivity({ state: "waiting" })).toBe(false)
     expect(isActivity(undefined)).toBe(false)
@@ -142,6 +144,19 @@ describe("running", () => {
     expect(running("retry")).toBe(true)
     expect(running("waiting")).toBe(false)
     expect(running("done")).toBe(false)
+  })
+})
+
+describe("score", () => {
+  it("preserves every activity priority with idle scoring zero", () => {
+    const states: Activity[] = ["idle", "done", "busy", "retry", "error", "waiting"]
+    expect(states.map(score)).toEqual([0, 1, 2, 3, 4, 5])
+    for (const [index, state] of states.entries()) {
+      for (const lower of states.slice(0, index + 1)) {
+        expect(strongest([state, lower])).toBe(state)
+        expect(strongest([lower, state])).toBe(state)
+      }
+    }
   })
 })
 

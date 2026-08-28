@@ -58,17 +58,18 @@ export function running(state: Activity): boolean {
   return state === "busy" || state === "retry"
 }
 
-const ORDER: Activity[] = ["waiting", "error", "retry", "busy", "done", "idle"]
+const STATES: Activity[] = ["done", "busy", "retry", "error", "waiting"]
+
+export function score(state: Activity): number {
+  return STATES.indexOf(state) + 1
+}
 
 export function isActivity(value: unknown): value is Activity {
-  return typeof value === "string" && ORDER.includes(value as Activity)
+  return value === "idle" || (typeof value === "string" && STATES.includes(value as Activity))
 }
 
 export function strongest(states: Activity[]): Activity {
-  for (const state of ORDER) {
-    if (states.includes(state)) return state
-  }
-  return "idle"
+  return states.reduce((best, state) => (score(state) > score(best) ? state : best), "idle")
 }
 
 const LABELS: Record<Activity, string> = {
