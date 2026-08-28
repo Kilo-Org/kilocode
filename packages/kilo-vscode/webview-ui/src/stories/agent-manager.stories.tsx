@@ -12,6 +12,7 @@ import { DiffPanelCache } from "../../agent-manager/DiffPanelCache"
 import { createReviewComposers } from "../../agent-manager/review-composers"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import { SessionTab } from "../components/chat/SessionTab"
 import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
@@ -31,7 +32,7 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
 import { PRComments } from "../../agent-manager/pr/PRComments"
-import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
+import { For, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
   WorktreeFileDiff,
@@ -775,7 +776,7 @@ const defaultProps = {
   active: false,
   pendingDelete: false,
   busy: false,
-  working: false,
+  activity: "idle" as const,
   stale: false,
   shortcut: 2,
   sessions: 1,
@@ -801,6 +802,81 @@ const defaultProps = {
 // ---------------------------------------------------------------------------
 // WorktreeItem stories
 // ---------------------------------------------------------------------------
+
+const activityStates = [
+  ["busy", "Running"],
+  ["waiting", "Needs input"],
+  ["done", "Completed"],
+  ["retry", "Retrying"],
+  ["error", "Error"],
+  ["idle", "Idle"],
+] as const
+
+export const WorktreeActivityStates: Story = {
+  name: "Worktree cards - all activity states",
+  render: (args: { active?: boolean }) => (
+    <StoryProviders noPadding>
+      <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
+        <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+        <For each={activityStates}>
+          {([state, title]) => (
+            <WorktreeItem
+              {...defaultProps}
+              worktree={{
+                ...baseWorktree,
+                id: `wt-${state}`,
+                branch: `feature/${state}`,
+                createdAt: "2026-01-01T00:00:00.000Z",
+              }}
+              label={title}
+              subtitle={`feature/${state}`}
+              active={args.active === true}
+              activity={state}
+              stats={{ ...baseStats, worktreeId: `wt-${state}` }}
+              shortcut={0}
+            />
+          )}
+        </For>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const WorktreeActivityStatesActive: Story = {
+  ...WorktreeActivityStates,
+  name: "Worktree cards - selected activity states",
+  args: { active: true },
+}
+
+export const SessionTabActivityStates: Story = {
+  name: "Agent Manager session tabs - activity states",
+  render: () => (
+    <StoryProviders noPadding>
+      <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
+        <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+        <For each={activityStates}>
+          {([state, title]) => (
+            <div class="am-tab-bar" role="tablist" aria-label={title}>
+              <SessionTab
+                title={title}
+                active
+                state={state}
+                stateLabel={title}
+                closeTitle="Close tab"
+                closeLabel="Close tab"
+                role="tab"
+                selected
+                onSelect={noop}
+                onMiddleClick={noop}
+                onClose={noop}
+              />
+            </div>
+          )}
+        </For>
+      </div>
+    </StoryProviders>
+  ),
+}
 
 export const WorktreeItemDefault: Story = {
   name: "WorktreeItem — default",
@@ -1613,8 +1689,7 @@ export const SidebarSearchOpen: Story = {
                   scope: "Searches the local workspace, local sessions, worktrees, and their sessions",
                   contexts: "LOCAL & WORKTREES",
                   sessions: "SESSIONS",
-                  waiting: "Wait",
-                  retry: "Retry",
+                  state: (value) => value,
                 }}
                 onSelect={(item) => setSelected(item.key)}
                 defaultOpen
@@ -1773,6 +1848,8 @@ export const MultiProjectSidebar: Story = {
               [projectB.id]: storyLocal("master", 0, 0, 0, 2),
             }}
             prs={{ [projectA.id]: {}, [projectB.id]: {} }}
+            busy={() => false}
+            blocked={() => false}
             sessions={{
               [projectA.id]: [
                 projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
@@ -1782,6 +1859,8 @@ export const MultiProjectSidebar: Story = {
             }}
             selectedProject={projectA.id}
             selection="local"
+            activityFor={() => "idle"}
+            sessionActivity={() => "idle"}
             bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
             t={t}
             onSearchRef={() => {}}

@@ -43,6 +43,17 @@ describe("routeEarlyMessage clipboard handling", () => {
   })
 })
 
+describe("routeEarlyMessage activity", () => {
+  it("forwards authoritative webview presentation state without interpreting session events", async () => {
+    const calls: unknown[] = []
+    const ctx = { activity: (state: unknown) => calls.push(state) } as Ctx
+    for (const state of ["busy", "waiting", "done", "error", "idle"]) {
+      expect(await routeEarlyMessage({ type: "sessionActivity", state }, ctx)).toBe(true)
+    }
+    expect(calls).toEqual(["busy", "waiting", "done", "error", "idle"])
+  })
+})
+
 describe("routeEarlyMessage background jobs", () => {
   it("forwards list request correlation", async () => {
     const calls: unknown[] = []

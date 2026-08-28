@@ -93,7 +93,7 @@ import { createProjectRegistry, type PersistedProjectTabs } from "./project/regi
 import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
-import { createWorktreeBusy } from "./project/session-busy"
+import { createWorktreeActivity } from "./project/session-busy"
 import { switchProject } from "./project/switch"
 import { createProjectStateHandlers } from "./project/state-handlers"
 import { ownsParent as ownsParentSession, isCurrent } from "./project/message-ownership"
@@ -118,6 +118,7 @@ import { DataBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
 import { useLanguage } from "../src/context/language"
 import { createTabFocus } from "../src/utils/tab-navigation"
+import { label, strongest } from "../src/utils/session-activity"
 import {
   canOpenRootSession,
   isKnownRootSession,
@@ -877,37 +878,37 @@ const AgentManagerContent: Component = () => {
     ),
   )
   reportVisibleSession(vscode, visibleSession)
-  const worktreeLabel = (wt: WorktreeState): string => {
-    if (wt.label) return wt.label
-    return firstOrderedTitle(sessionsForWorktree(wt.id), worktreeTabOrder()[wt.id], wt.branch)
-  }
-
+  const worktreeLabel = (wt: WorktreeState): string =>
+    wt.label || firstOrderedTitle(sessionsForWorktree(wt.id), worktreeTabOrder()[wt.id], wt.branch)
   const worktreeSubtitle = (wt: WorktreeState): string | undefined => {
     const label = worktreeLabel(wt)
     return label !== wt.branch ? wt.branch : undefined
   }
-
-  const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
-
-  const busy = createWorktreeBusy({
-    statuses: session.allStatusMap,
-    permissions: session.permissions,
-    questions: session.questions,
+  const activity = createWorktreeActivity({
     managed: managedSessions,
     local: localSessionIDs,
     projects: projectSessionsLive,
     active: activeProjectId,
+    activityFor: session.activityFor,
+    inUseFor: session.inUseFor,
     worktrees: (id) => (id ? registry.ensure(id) : registry.active()).worktrees(),
     subscribe: vscode.onMessage,
   })
-  const isAgentBusy = busy.agent
-  const isLocalBusy = busy.local
-  const projectBusy = busy.project
-  const isSessionBusy = busy.session
-
+  const sessionActivity = createMemo(() =>
+    strongest(
+      multiProject()
+        ? projectList()
+            .filter((project) => projectStates()[project.id])
+            .flatMap((project) => [
+              activity.project(project.id, null),
+              ...projectStates()[project.id]!.worktrees.map((worktree) => activity.project(project.id, worktree.id)),
+            ])
+        : [activity.local(), ...worktrees().map((worktree) => activity.agent(worktree.id))],
+    ),
+  )
+  createEffect(() => vscode.postMessage({ type: "sessionActivity", state: sessionActivity() }))
   /** Worktrees sorted so that grouped items are always adjacent, respecting custom order if set. */
   const sortedWorktrees = createMemo(() => sortWorktrees(worktrees(), sidebarWorktreeOrder()))
-
   const worktreesInSection = (id: string) => sortedWorktrees().filter((wt) => wt.sectionId === id)
   const ungrouped = createMemo(() => sortedWorktrees().filter((wt) => !wt.sectionId))
   const topLevelItems = createMemo((): TopLevelItem[] =>
@@ -1041,14 +1042,11 @@ const AgentManagerContent: Component = () => {
     localBranch: repoBranch,
     selection,
     sessionId: session.currentSessionID,
-    statuses: session.allStatusMap,
-    permissions: session.permissions,
-    questions: session.questions,
+    activityFor: session.activityFor,
     label: worktreeLabel,
     sessions: sessionsForWorktree,
     pending: isPending,
     busy: (id) => busyWorktrees().has(id) || (runStatuses()[id]?.state ?? "idle") !== "idle",
-    localBusy: isLocalBusy,
     t,
   })
   const focusSidebarSearchItem = (item: SidebarSearchItem) => {
@@ -1814,7 +1812,7 @@ const AgentManagerContent: Component = () => {
   const confirmDeleteWorktree = (worktreeId: string) => {
     const wt = worktrees().find((w) => w.id === worktreeId)
     const run = runStatuses()[worktreeId]?.state
-    if (!wt || busyWorktrees().has(worktreeId) || isAgentBusy(worktreeId, true) || (run && run !== "idle")) return
+    if (!wt || busyWorktrees().has(worktreeId) || activity.blocked(worktreeId) || (run && run !== "idle")) return
     // Second press/click: execute the delete
     if (pendingDelete() === worktreeId) {
       cancelPendingDelete()
@@ -2248,7 +2246,8 @@ const AgentManagerContent: Component = () => {
       activePendingId,
       visibleTabId,
       isPending,
-      isBusy: isSessionBusy,
+      activityFor: (id) => session.activityFor(id),
+      stateLabel: (state) => t(label(state)),
       tabLookup,
       adjacentHint,
       activateTerminal: termHandlers.activate,
@@ -2312,8 +2311,7 @@ const AgentManagerContent: Component = () => {
             states={projectStates()}
             store={(id) => registry.ensure(id)}
             busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
-            working={(projectId, id, waiting) => projectBusy(projectId, id, waiting)}
-            localBusy={(projectId) => projectBusy(projectId, null)}
+            blocked={(projectId, id) => activity.blocked(id, projectId)}
             stats={projectLive.stats()}
             local={projectLive.local()}
             prs={projectLive.prs()}
@@ -2330,6 +2328,8 @@ const AgentManagerContent: Component = () => {
             onShortcuts={handleShowKeyboardShortcuts}
             onHistory={openHistory}
             shortcutMap={projectShortcutMap}
+            activityFor={activity.project}
+            sessionActivity={session.activityFor}
           />
         </Show>
         <Show when={!multiProject()}>
@@ -2339,7 +2339,7 @@ const AgentManagerContent: Component = () => {
             currentSessionID={session.currentSessionID}
             selectLocal={selectLocal}
             selectWorktree={selectWorktree}
-            isLocalBusy={isLocalBusy}
+            activityFor={(id) => (id === null ? activity.local() : activity.agent(id))}
             repoBranch={repoBranch}
             localStats={localStats}
             search={{ items: sidebarSearch.items, current: sidebarSearch.current }}
@@ -2377,8 +2377,8 @@ const AgentManagerContent: Component = () => {
             worktreeSubtitle={worktreeSubtitle}
             pendingDelete={pendingDelete}
             busy={(id) => busyWorktrees().has(id)}
-            isAgentBusy={isAgentBusy}
-            isStaleWorktree={isStaleWorktree}
+            blocked={activity.blocked}
+            isStaleWorktree={(id) => staleWorktreeIds().has(id)}
             shortcutMap={shortcutMap}
             worktreeStats={worktreeStats}
             prStatuses={prStatuses}
