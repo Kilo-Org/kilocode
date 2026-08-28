@@ -41,6 +41,7 @@ const { ConfigContext } = await import("../../webview-ui/src/context/config")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
 const { ProviderContext } = await import("../../webview-ui/src/context/provider")
 const { SessionProvider, useSession } = await import("../../webview-ui/src/context/session")
+const { terminal } = await import("../../webview-ui/src/context/session-outcome")
 
 const provider = {
   providers: () => ({}),
@@ -371,6 +372,7 @@ try {
   await emit({ type: "sessionError", eventID: "root-error", error: { name: "ProviderError" } })
   await check("root", "error")
   assert.equal(value.inUseFor("root"), false)
+  await emit({ type: "sessionError", eventID: "later-overflow", error: { name: "ContextOverflowError" } })
   await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
   await check("root", "error")
 
@@ -379,6 +381,79 @@ try {
   await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await check("root", "idle")
 
+  for (const order of ["before", "after"]) {
+    await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+    await emit({
+      type: "sessionError",
+      sessionID: "root",
+      eventID: `overflow-${order}`,
+      error: { name: "ContextOverflowError", data: { message: "Request Entity Too Large" } },
+    })
+    await check("root", "busy")
+    await emit({
+      type: "sessionError",
+      sessionID: "root",
+      eventID: `retry-${order}`,
+      error: { name: "ContextOverflowError", data: { message: "Request Entity Too Large" } },
+    })
+    await emit({
+      type: "messageCreated",
+      message: {
+        id: `recovered-${order}`,
+        sessionID: "root",
+        role: "assistant",
+        createdAt: new Date().toISOString(),
+        finish: "stop",
+      },
+    })
+    if (order === "before") await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+    await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
+    if (order === "after") await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+    await check("root", "done")
+    assert.equal(value.closeReason(), "completed")
+    assert.equal(
+      value.messages().some((message) => message.sessionErrorID === `overflow-${order}`),
+      false,
+    )
+    assert.equal(
+      value.messages().some((message) => message.sessionErrorID === `retry-${order}`),
+      false,
+    )
+    assert.equal(terminal({ reason: value.closeReason(), messages: value.visibleMessages(), todos: [] }), undefined)
+    assert.equal(
+      value.messages().some((message) => message.sessionErrorID === "root-error"),
+      true,
+    )
+    assert.equal(
+      value.messages().some((message) => message.sessionErrorID === "later-overflow"),
+      true,
+    )
+  }
+
+  for (const reason of ["error", "completed"]) {
+    await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+    await emit({
+      type: "sessionError",
+      sessionID: "root",
+      eventID: `unrecovered-${reason}`,
+      error: { name: "ContextOverflowError", data: { message: "Context limit reached" } },
+    })
+    if (reason === "completed") {
+      await emit({ type: "sessionError", sessionID: "root", eventID: "terminal-error", error: { name: "APIError" } })
+    }
+    await emit({ type: "sessionTurnClosed", sessionID: "root", reason })
+    await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+    await emit({ type: "sessionTurnClosed", sessionID: "root", reason: "completed" })
+    await check("root", "error")
+    assert.equal(value.closeReason(), "error")
+    assert.equal(
+      value.messages().some((message) => message.sessionErrorID === `unrecovered-${reason}`),
+      true,
+    )
+  }
+
+  await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
   await emit({
     type: "questionRequest",
     question: {

@@ -150,6 +150,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
   const [submissionMap, setSubmissionMap] = createStore<Record<string, number>>({})
   const pendingSubmissions = new Map<string, string>()
+  const recoveries = new Map<string, Set<string>>()
   const removedSessions = new Set<string>()
   const aborts = createAbortState()
 
@@ -165,12 +166,14 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     return id ? closeMap[id]?.reason : undefined
   }
-  const clearClose = (id: string) =>
+  const clearClose = (id: string) => {
+    recoveries.delete(id)
     setCloseMap(
       produce((map) => {
         delete map[id]
       }),
     )
+  }
   const busySince = () => {
     const id = currentSessionID() ?? draftSessionID()
     return id ? busySinceMap[id] : undefined
@@ -816,10 +819,22 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function closed(message: Extract<ExtensionMessage, { type: "sessionTurnClosed" }>) {
     if (message.reason === "completed" && closeMap[message.sessionID]?.reason === "error") return
+    const ids = recoveries.get(message.sessionID)
+    if (message.reason === "completed" && ids) {
+      setStore("messages", message.sessionID, (msgs = []) => msgs.filter((msg) => !ids.has(msg.id)))
+    }
+    recoveries.delete(message.sessionID)
     setCloseMap(message.sessionID, { reason: message.reason, parentID: message.parentID })
   }
 
-  function failed(id: string) {
+  function failed(id: string, message: Message) {
+    if (message.error?.name === "ContextOverflowError" && closeMap[id]?.reason !== "error") {
+      const ids = recoveries.get(id) ?? new Set<string>()
+      ids.add(message.id)
+      recoveries.set(id, ids)
+      return
+    }
+    recoveries.delete(id)
     setCloseMap(id, { reason: "error", parentID: store.sessions[id]?.parentID ?? undefined })
   }
 
@@ -970,7 +985,6 @@ export const SessionProvider: ParentComponent = (props) => {
         if (!message.error || message.error.name === "MessageAbortedError") break
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
-        failed(sid)
         // Find the last user message in this session to use as parentID
         const msgs = store.messages[sid] ?? []
         const parent = [...msgs].reverse().find((m) => m.role === "user")
@@ -983,6 +997,7 @@ export const SessionProvider: ParentComponent = (props) => {
           error: message.error,
           sessionErrorID: message.eventID,
         }
+        failed(sid, errorMsg)
         handleMessageCreated(errorMsg)
         break
       }
