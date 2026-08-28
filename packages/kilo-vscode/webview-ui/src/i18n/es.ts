@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Conectar proveedor",
 
+  "session.activity.waiting": "Esperando una respuesta o aprobación.",
+  "session.activity.error": "Error o conexión perdida.",
+  "session.activity.retry": "Reintentando automáticamente.",
+  "session.activity.busy": "En curso.",
+  "session.activity.done": "Turno completado.",
+  "session.activity.idle": "No está en ejecución.",
+
   "command.session.new": "Nueva sesión",
   "command.session.show.changes": "Mostrar cambios",
   "command.review.toggle": "Alternar revisión",
@@ -175,8 +182,11 @@ export const dict = {
   "common.saving": "Guardando...",
   "common.default": "Predeterminado",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Buscar Worktrees",
   "prompt.thinking.tooltip": "Esfuerzo de razonamiento",
   "prompt.action.send": "Enviar",
+  "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
   "prompt.action.send.recording": "Transcribir y enviar",
   "prompt.action.stop": "Detener",
@@ -1074,6 +1084,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Compactación automática",
   "settings.context.autoCompaction.description": "Compactar automáticamente el contexto antes de que alcance el límite",
   "settings.context.compaction.title": "Compactación",
+  "settings.context.compactionModel.title": "Modelo de compactación",
+  "settings.context.compactionModel.description":
+    "Modelo utilizado para la compactación automática y manual. Déjalo sin configurar para usar el modelo de chat. El coste, la velocidad y la calidad del resumen dependen del modelo.",
+  "settings.context.compactionModel.useChatModel": "Usar modelo de chat",
   "settings.context.compactionLimit.title": "Límite de compactación automática",
   "settings.context.compactionLimit.description":
     "Compactar cuando el contexto alcance este porcentaje de la ventana del modelo. Déjalo en blanco para usar solo el búfer de seguridad.",
@@ -1262,6 +1276,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} tareas completadas",
   "task.backgroundAgents.running.one": "1 agente en segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes en segundo plano",
+  "task.backgroundAgents.more": "+{{count}} más",
   "task.backgroundAgents.open": "Abrir agente en segundo plano",
   "task.backgroundAgents.cancel": "Detener",
   "task.backgroundAgents.continueInBackground": "Continuar en segundo plano",

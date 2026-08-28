@@ -111,9 +111,25 @@ describe("promptItems", () => {
   it("marks queued rows", () => {
     const u1 = user("u1")
     const u2 = user("u2")
-    const rows = transcriptRows(messageTurns([u1, u2]), lookup({}), { queued: new Set(["u2"]) })
+    const parts = { u1: [text("up1", "u1", "Start")], u2: [text("up2", "u2", "Follow up")] }
+    const rows = transcriptRows(messageTurns([u1, u2]), lookup(parts), { queued: new Set(["u2"]) })
 
     expect(promptItems(rows).map((item) => item.queued)).toEqual([false, true])
+  })
+
+  it("omits empty and internal queued prompt markers", () => {
+    const messages = [user("u1"), user("u2"), user("u3"), user("u4")]
+    const parts = {
+      u1: [text("up1", "u1", "Start")],
+      u3: [text("context", "u3", "Internal context", { synthetic: true })],
+      u4: [text("up4", "u4", "Follow up")],
+    }
+    const rows = transcriptRows(messageTurns(messages), lookup(parts), { queued: new Set(["u2", "u3", "u4"]) })
+
+    expect(promptItems(rows).map((item) => ({ turn: item.turn, queued: item.queued, prompt: item.prompt }))).toEqual([
+      { turn: "u1", queued: false, prompt: "Start" },
+      { turn: "u4", queued: true, prompt: "Follow up" },
+    ])
   })
 
   it("truncates long prompts and answers", () => {

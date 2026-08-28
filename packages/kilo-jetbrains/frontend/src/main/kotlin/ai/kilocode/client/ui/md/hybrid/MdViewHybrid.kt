@@ -5,6 +5,17 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.diagram.Fault
+import ai.kilocode.client.ui.diagram.Out
+import ai.kilocode.client.ui.diagram.ui.DiagramBlock
+import ai.kilocode.client.ui.diagram.ui.DiagramPanel
+import ai.kilocode.client.ui.diagram.ui.Diagrams
+import ai.kilocode.client.ui.diagram.ui.diagramPalette
+import ai.kilocode.client.ui.diagram.ui.diagramSpec
+import ai.kilocode.client.ui.diagram.ui.openDiagramWindow
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCommon
@@ -15,6 +26,7 @@ import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.markup.HighlighterLayer
@@ -23,14 +35,17 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBHtmlPaneConfiguration
 import com.intellij.ui.components.JBHtmlPaneStyleConfiguration
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import java.awt.Color
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
 import java.awt.Graphics
@@ -38,6 +53,7 @@ import java.awt.Graphics2D
 import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.event.HierarchyEvent
+import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.Box
 import javax.swing.BoxLayout
@@ -324,6 +340,7 @@ internal open class MdViewHybrid(
             is Desc.Code -> when (val kind = desc.kind) {
                 is Kind.Source -> CodeView(desc, codeBlock(desc.text, kind, disposable), disposable)
                 is Kind.Terminal -> TermView(desc, terminalBlock(desc.text, kind, disposable), disposable)
+                is Kind.Diagram -> DiagramView(desc, kind, disposable)
             }
         }
     }
@@ -500,6 +517,10 @@ internal open class MdViewHybrid(
         applyTerm(field, term, kind.mode, value)
         return pane
     }
+
+    private fun palette(opts: MdStyle) = diagramPalette(style, opts)
+
+    private fun spec() = diagramSpec(style)
 
     private fun styleCodePane(pane: JBScrollPane, opts: MdStyle) {
         pane.apply {
@@ -941,6 +962,167 @@ internal open class MdViewHybrid(
                 sizeCodePane(pane, view)
             }
             overlay()
+        }
+    }
+
+    private inner class DiagramView(desc: Desc.Code, kind: Kind.Diagram, disposable: Disposable) :
+        View(desc, DiagramBlock(), disposable) {
+        private val root = component as DiagramBlock
+        private val codePane = codeBlock(desc.text, Kind.Source(kind.file), disposable)
+        private val panel = DiagramPanel(palette(opts()))
+        private val label = JBLabel(KiloBundle.message("diagram.rendering")).apply {
+            foreground = SessionUiStyle.Text.Secondary.foreground()
+        }
+        private var hash = 0
+        private var gen = 0
+        private var font = spec().font
+        private val click = object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.button != MouseEvent.BUTTON1 || e.clickCount != 1) return
+                if (!panel.isVisible) return
+                openDiagramWindow(panel, (this@DiagramView.desc as Desc.Code).text)
+            }
+        }
+
+        init {
+            panel.background = opts().preBg
+            panel.isVisible = false
+            panel.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            panel.toolTipText = KiloBundle.message("diagram.viewer.hint")
+            panel.addMouseListener(click)
+            panel.onFault = { fail(KiloBundle.message("diagram.paint")) }
+            Disposer.register(disposable) { panel.removeMouseListener(click) }
+            root.next(panel).next(codePane).next(label)
+            root.text = { (this.desc as Desc.Code).text }
+            // Only offer the picture while the rendered diagram is the thing on screen, so copying the
+            // streaming or failed source still copies that source.
+            root.image = { panel.takeIf { it.isVisible }?.image() }
+            kick()
+        }
+
+        override fun compatible(desc: Desc) = desc is Desc.Code && desc.kind is Kind.Diagram
+
+        override fun update(desc: Desc) {
+            if (this.desc == desc) return
+            this.desc = desc
+            updateCode((desc as Desc.Code).text)
+            kick()
+        }
+
+        override fun grow(delta: String) {
+            val item = desc as Desc.Code
+            update(item.copy(text = item.text + delta, open = true))
+        }
+
+        override fun style(opts: MdStyle) {
+            styleCodePane(codePane, opts)
+            val view = codePane.viewport.view
+            when (view) {
+                is CodeField -> {
+                    view.font = style.editorFont
+                    view.background = opts.preBg
+                    view.getEditor(false)?.let { ed -> applyEditorChrome(ed, opts, view.soft) }
+                }
+                is JBTextArea -> styleTextArea(view, opts)
+            }
+            if (view is JComponent) {
+                sizeCodeField(view, fieldText(view))
+                sizeCodePane(codePane, view)
+            }
+            panel.background = opts.preBg
+            panel.palette(palette(opts))
+            val next = spec().font
+            if (font == next) return
+            font = next
+            hash = 0
+            kick()
+        }
+
+        private fun kick() {
+            val item = desc as Desc.Code
+            if (!Registry.`is`("kilo.diagram.inline.enabled", true)) {
+                status("")
+                showSource()
+                return
+            }
+            if (item.open) {
+                showSource()
+                status(KiloBundle.message("diagram.rendering"))
+                return
+            }
+            val code = item.text.hashCode()
+            if (hash == code) return
+            hash = code
+            status(KiloBundle.message("diagram.rendering"))
+            val seq = ++gen
+            service<Diagrams>().render(item.text, spec(), disposable) { out ->
+                if (seq != gen) return@render
+                when (out) {
+                    is Out.Ok -> ok(out)
+                    is Out.Err -> fail(out)
+                }
+            }
+        }
+
+        private fun ok(out: Out.Ok) {
+            panel.art(out.art)
+            showDiagram()
+            status("")
+            root.revalidate()
+            root.repaint()
+        }
+
+        /**
+         * A diagram type this engine does not draw is not a broken diagram, so it reads as a note rather
+         * than an error. `classDiagram`, `stateDiagram` and friends are common in model output and marking
+         * every one of them red would report working markdown as a failure.
+         */
+        private fun fail(out: Out.Err) {
+            if (out.fault == Fault.Unsupported) {
+                status(KiloBundle.message("diagram.unsupported"))
+                showSource()
+                root.revalidate()
+                root.repaint()
+                return
+            }
+            fail(out.message)
+        }
+
+        private fun fail(message: String) {
+            val text = message.ifBlank { KiloBundle.message("diagram.rendering") }
+            status(KiloBundle.message("diagram.error", text), true)
+            showSource()
+            root.revalidate()
+            root.repaint()
+        }
+
+        private fun showDiagram() {
+            panel.isVisible = true
+            codePane.isVisible = false
+        }
+
+        private fun showSource() {
+            panel.isVisible = false
+            codePane.isVisible = true
+        }
+
+        private fun status(text: String, error: Boolean = false) {
+            label.text = text
+            label.foreground = if (error) UiStyle.Colors.errorLabelForeground() else SessionUiStyle.Text.Secondary.foreground()
+            label.isVisible = text.isNotEmpty()
+        }
+
+        private fun updateCode(text: String) {
+            val value = text.trimEnd('\n')
+            val view = codePane.viewport.view
+            when (view) {
+                is CodeField -> view.text = value
+                is JBTextArea -> view.text = value
+            }
+            if (view is JComponent) {
+                sizeCodeField(view, value)
+                sizeCodePane(codePane, view)
+            }
         }
     }
 

@@ -210,6 +210,43 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         )
     }
 
+    fun `test TurnClose completed with unknown finish shows incomplete outcome`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg_assistant", "ses_test", "assistant").copy(finish = "unknown")))
+        emit(ChatEventDto.TurnClose("ses_test", "completed"))
+
+        assertSession(
+            """
+            assistant#msg_assistant
+
+            [code] [kilo/gpt-5] [incomplete]
+            """,
+            m,
+        )
+        assertTrue(appRpc.telemetry.any {
+            it.event == "Task Completed" && it.properties["finish"] == "unknown"
+        })
+    }
+
+    fun `test TurnClose completed with length finish stays idle`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg_assistant", "ses_test", "assistant").copy(finish = "length")))
+        emit(ChatEventDto.TurnClose("ses_test", "completed"))
+
+        assertSession(
+            """
+            assistant#msg_assistant
+
+            [code] [kilo/gpt-5] [idle]
+            """,
+            m,
+        )
+    }
+
     fun `test abort error waits for interrupted outcome`() {
         val (m, _, _) = prompted()
 
@@ -244,11 +281,14 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         val (m, _, _) = prompted()
 
         emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "timeout", message = "Timed out")))
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg_assistant", "ses_test", "assistant").copy(finish = "unknown")))
         emit(ChatEventDto.TurnClose("ses_test", "completed"))
 
         // "completed" always wins over error
         assertSession(
             """
+            assistant#msg_assistant
+
             [code] [kilo/gpt-5] [idle]
             """,
             m,
@@ -271,10 +311,17 @@ class TurnLifecycleTest : SessionControllerTestBase() {
     }
 
     fun `test turn outcome classifier`() {
+        assertEquals(Outcome.INCOMPLETE, TurnOutcome.classify("completed", "unknown"))
+        assertEquals(Outcome.INCOMPLETE, TurnOutcome.classify("completed", "other"))
+        assertNull(TurnOutcome.classify("completed", "stop"))
+        assertNull(TurnOutcome.classify("completed", "length"))
+        assertNull(TurnOutcome.classify("completed", "tool-calls"))
         assertNull(TurnOutcome.classify("completed"))
-        assertNull(TurnOutcome.classify("superseded"))
+        assertNull(TurnOutcome.classify("superseded", "unknown"))
         assertEquals(Outcome.INTERRUPTED, TurnOutcome.classify("interrupted"))
+        assertEquals(Outcome.INTERRUPTED, TurnOutcome.classify("interrupted", "unknown"))
         assertEquals(Outcome.FAILED, TurnOutcome.classify("error"))
+        assertEquals(Outcome.FAILED, TurnOutcome.classify("error", "unknown"))
     }
 
     fun `test TurnClose completed preserves AwaitingQuestion state`() {

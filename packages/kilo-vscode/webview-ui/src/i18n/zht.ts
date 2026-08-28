@@ -60,6 +60,13 @@ export const dict = {
 
   "command.provider.connect": "連接供應商",
 
+  "session.activity.waiting": "正在等待回覆或核准。",
+  "session.activity.error": "錯誤或連線已中斷。",
+  "session.activity.retry": "正在自動重試。",
+  "session.activity.busy": "進行中。",
+  "session.activity.done": "回合已完成。",
+  "session.activity.idle": "未執行。",
+
   "command.session.new": "新增工作階段",
   "command.session.show.changes": "顯示變更",
   "command.review.toggle": "切換審查",
@@ -169,8 +176,11 @@ export const dict = {
   "common.saving": "儲存中...",
   "common.default": "預設",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "搜尋 Worktree",
   "prompt.thinking.tooltip": "推理強度",
   "prompt.action.send": "傳送",
+  "prompt.action.continue": "繼續",
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",
@@ -966,6 +976,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "自動壓縮",
   "settings.context.autoCompaction.description": "在上下文達到限制前自動壓縮",
   "settings.context.compaction.title": "壓縮",
+  "settings.context.compactionModel.title": "壓縮模型",
+  "settings.context.compactionModel.description":
+    "用於自動和手動壓縮的模型。留空以使用聊天模型。成本、速度和摘要品質取決於模型。",
+  "settings.context.compactionModel.useChatModel": "使用聊天模型",
   "settings.context.compactionLimit.title": "自動壓縮限制",
   "settings.context.compactionLimit.description": "當上下文達到模型視窗的此百分比時進行壓縮。留空則僅使用安全緩衝區。",
   "settings.context.prune.title": "修剪舊輸出",
@@ -1185,6 +1199,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} 個待辦已完成",
   "task.backgroundAgents.running.one": "1 個背景 Agent",
   "task.backgroundAgents.running.many": "{{count}} 個背景 Agent",
+  "task.backgroundAgents.more": "+{{count}} 個",
   "task.backgroundAgents.open": "開啟背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",

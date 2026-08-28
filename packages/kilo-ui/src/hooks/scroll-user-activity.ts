@@ -1,6 +1,6 @@
 interface UserActivityOptions {
   grace: number
-  onWheelUp: () => void
+  onUp: () => void
 }
 
 type Kind = "pointer" | "mouse" | "touch"
@@ -94,19 +94,22 @@ export const createUserActivity = (options: UserActivityOptions) => {
     gestures.delete(doc)
   }
 
-  const reset = () => {
-    if (doc && scroll && gestures.get(doc) === scroll) gestures.delete(doc)
+  const clear = () => {
     marked = false
     time = 0
+  }
+
+  const reset = () => {
+    if (doc && scroll && gestures.get(doc) === scroll) gestures.delete(doc)
+    clear()
     gesture = undefined
   }
 
   const wheel = (event: WheelEvent) => {
-    if (!isPotentialScrollInput(event)) return
     if (!scroll || scroll.scrollHeight - scroll.clientHeight <= 1) return
     if (event.deltaY >= 0 || scroll.scrollTop <= 0) return
-    mark(event)
-    options.onWheelUp()
+    mark()
+    options.onUp()
   }
 
   const key = (event: KeyboardEvent) => {
@@ -125,6 +128,7 @@ export const createUserActivity = (options: UserActivityOptions) => {
     })
     if (deepest(matches) !== scroll) return
     mark(event)
+    if (up) options.onUp()
   }
 
   return {
@@ -179,6 +183,7 @@ export const createUserActivity = (options: UserActivityOptions) => {
       return value
     },
     isRecent: () => gesture !== undefined || (time > 0 && performance.now() - time < options.grace),
+    clear,
     reset,
   }
 }

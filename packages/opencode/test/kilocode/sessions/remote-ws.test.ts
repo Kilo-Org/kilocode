@@ -252,7 +252,7 @@ describe("RemoteWS", () => {
     await settled()
     const raw = await msg
     const parsed = JSON.parse(raw)
-    expect(parsed.capabilities).toEqual({ attachments: true })
+    expect(parsed.capabilities).toEqual({ attachments: true, sessionClone: true })
   })
 
   test("serializes concurrent heartbeat snapshots", async () => {

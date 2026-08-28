@@ -52,7 +52,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
-import { TestLLMServer } from "../lib/llm-server"
+import { reply, TestLLMServer } from "../lib/llm-server"
 
 Log.init({ print: false })
 
@@ -254,7 +254,7 @@ const user = Effect.fn("prompt-safety.user")(function* (
 const assistant = Effect.fn("prompt-safety.assistant")(function* (
   sessionID: SessionID,
   parentID: MessageID,
-  input?: { text?: string; summary?: boolean },
+  input?: { text?: string; summary?: boolean; tokens?: MessageV2.Assistant["tokens"]; finish?: string },
 ) {
   const sessions = yield* Session.Service
   const msg = yield* sessions.updateMessage({
@@ -266,11 +266,11 @@ const assistant = Effect.fn("prompt-safety.assistant")(function* (
     agent: "code",
     path: { cwd: "/tmp", root: "/tmp" },
     cost: 0,
-    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    tokens: input?.tokens ?? { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
     modelID: ref.modelID,
     providerID: ref.providerID,
     time: { created: Date.now() },
-    finish: "end_turn",
+    finish: input?.finish ?? "end_turn",
     summary: input?.summary,
   } satisfies MessageV2.Assistant)
   yield* sessions.updatePart({
@@ -361,6 +361,127 @@ describe("SessionPrompt compaction safety", () => {
         }),
       },
     ),
+  )
+
+  it.live(
+    "answers a pending request once after prior usage triggers compaction",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const chat = yield* sessions.create({})
+          const old = yield* user(chat.id, "old request")
+          yield* assistant(chat.id, old.id, {
+            tokens: { input: 95_000, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+          })
+          const editor = { activeFile: "src/app.ts", openTabs: ["src/app.ts"] }
+          const pending = yield* user(chat.id, "pending request", { editorContext: editor })
+          yield* file(chat.id, pending.id, { mime: "image/png", name: "pending.png", body: "PENDINGIMAGE" })
+          yield* llm.text("summary")
+          yield* llm.text("answer")
+
+          const result = yield* prompt.loop({ sessionID: chat.id })
+
+          expect(yield* llm.calls).toBe(2)
+          expect(result.parts.some((part) => part.type === "text" && part.text === "answer")).toBe(true)
+          const body = JSON.stringify((yield* llm.inputs).at(-1)?.messages)
+          expect(body.match(/pending request/g)).toHaveLength(1)
+          expect(body).toContain("PENDINGIMAGE")
+          const messages = yield* sessions.messages({ sessionID: chat.id })
+          const resumed = messages.findLast((msg) => msg.info.role === "user")
+          expect(resumed?.info.role === "user" ? resumed.info.editorContext : undefined).toEqual(editor)
+          expect(
+            messages
+              .flatMap((msg) => msg.parts)
+              .filter((part) => part.type === "text" && part.text === "pending request" && !part.synthetic),
+          ).toHaveLength(1)
+        }),
+        { git: true, config: providerCfg },
+      ),
+    30_000,
+  )
+
+  for (const finish of ["stop", "tool_calls", "length"] as const) {
+    it.live(
+      `does not replay completed work after a ${finish} response exceeds the budget`,
+      () =>
+        provideTmpdirServer(
+          Effect.fnUntraced(function* ({ llm }) {
+            const prompt = yield* SessionPrompt.Service
+            const sessions = yield* Session.Service
+            const tools = finish !== "stop"
+            const chat = yield* sessions.create({ permission: [{ permission: "*", pattern: "*", action: "allow" }] })
+            yield* llm.push(
+              (tools ? reply().tool("glob", { pattern: "*.txt" }) : reply().text("answer"))
+                .finish(finish)
+                .usage({ input: 95_000, output: 100 }),
+            )
+            if (tools) {
+              yield* llm.text("tool progress summary")
+              yield* llm.text("answer")
+            }
+            yield* user(chat.id, "perform this once")
+
+            const result = yield* prompt.loop({ sessionID: chat.id })
+
+            expect(yield* llm.calls).toBe(tools ? 3 : 1)
+            expect(result.parts.some((part) => part.type === "text" && part.text === "answer")).toBe(true)
+            const parts = (yield* sessions.messages({ sessionID: chat.id })).flatMap((msg) => msg.parts)
+            expect(parts.filter((part) => part.type === "text" && part.text === "perform this once")).toHaveLength(1)
+            expect(parts.filter((part) => part.type === "tool")).toHaveLength(tools ? 1 : 0)
+          }),
+          { git: true, config: providerCfg },
+        ),
+      30_000,
+    )
+  }
+
+  it.live(
+    "includes completed tool progress when a saved marker requests replay",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const compaction = yield* SessionCompaction.Service
+          const chat = yield* sessions.create({})
+          const old = yield* user(chat.id, "old request")
+          yield* assistant(chat.id, old.id)
+          const request = yield* user(chat.id, "run the tool")
+          const response = yield* assistant(chat.id, request.id, { finish: "tool-calls" })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            sessionID: chat.id,
+            messageID: response.id,
+            type: "tool",
+            callID: "call_glob",
+            tool: "glob",
+            state: {
+              status: "completed",
+              input: { pattern: "*.txt" },
+              output: "already ran glob",
+              title: "glob",
+              metadata: {},
+              time: { start: Date.now(), end: Date.now() },
+            },
+          })
+          yield* compaction.create({ sessionID: chat.id, agent: "code", model: ref, auto: true, overflow: false })
+          yield* llm.text("tool progress summary")
+          yield* llm.text("answer")
+
+          yield* prompt.loop({ sessionID: chat.id })
+
+          expect(yield* llm.calls).toBe(2)
+          expect(JSON.stringify((yield* llm.inputs)[0]?.messages)).toContain("already ran glob")
+          const messages = yield* sessions.messages({ sessionID: chat.id })
+          expect(
+            messages.flatMap((msg) => msg.parts).filter((part) => part.type === "text" && part.text === "run the tool"),
+          ).toHaveLength(1)
+        }),
+        { git: true, config: providerCfg },
+      ),
+    30_000,
   )
 
   it.live("trims plain-text summary history before provider request", () =>

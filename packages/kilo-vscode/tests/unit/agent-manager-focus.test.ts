@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { Window } from "happy-dom"
 import {
   agentManagerFocusTarget,
+  createChatFocus,
   focusQuestionOption,
   hasQuestionOption,
   preservesTextFocus,
@@ -9,6 +10,61 @@ import {
 import { isTextControl } from "../../webview-ui/src/utils/focus"
 
 describe("Agent Manager focus", () => {
+  it("preserves composer focus through retries unless focus is explicitly requested", async () => {
+    const window = new Window()
+    const document = window.document
+    const frames: FrameRequestCallback[] = []
+    const original = {
+      document: Object.getOwnPropertyDescriptor(globalThis, "document"),
+      requestAnimationFrame: Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame"),
+    }
+    document.hasFocus = () => true
+    Object.assign(globalThis, {
+      document,
+      requestAnimationFrame: (callback: FrameRequestCallback) => frames.push(callback),
+    })
+    const prompt = document.createElement("textarea")
+    prompt.className = "prompt-input"
+    const dock = document.createElement("div")
+    dock.setAttribute("data-component", "question-dock")
+    const option = document.createElement("button")
+    option.setAttribute("data-slot", "question-option")
+    dock.append(option)
+    document.body.append(prompt, dock)
+    const focus = createChatFocus({ term: () => undefined, history: () => false, review: () => false })
+    const flush = () => {
+      while (frames.length) frames.shift()?.(0)
+    }
+
+    try {
+      prompt.focus()
+      focus()
+      await Promise.resolve()
+      expect(document.activeElement).toBe(prompt)
+      flush()
+      expect(document.activeElement).toBe(prompt)
+
+      prompt.blur()
+      focus()
+      await Promise.resolve()
+      expect(document.activeElement).toBe(option)
+      prompt.focus()
+      flush()
+      expect(document.activeElement).toBe(prompt)
+
+      focus(true)
+      await Promise.resolve()
+      flush()
+      expect(document.activeElement).toBe(option)
+    } finally {
+      for (const [key, descriptor] of Object.entries(original)) {
+        if (descriptor) Object.defineProperty(globalThis, key, descriptor)
+        else Reflect.deleteProperty(globalThis, key)
+      }
+      await window.happyDOM.close()
+    }
+  })
+
   it("focuses the first enabled question option", () => {
     const window = new Window()
     const root = window.document.createElement("div")

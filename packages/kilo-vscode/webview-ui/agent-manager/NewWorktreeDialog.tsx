@@ -23,7 +23,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
-import { cycleVariant, preserveVariant } from "../src/context/session-variant-store"
+import { DEFAULT_VARIANT, cycleVariant, preserveVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -184,9 +184,7 @@ export const NewWorktreeDialog: Component<{
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(
-    fallback(saved.variant, () => session.variantForAgent(initialAgent, initialModel)),
-  )
+  const [variant, setVariant] = createSignal<string | undefined>(saved.variant)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -211,7 +209,7 @@ export const NewWorktreeDialog: Component<{
     setAgent(name)
     const sel = session.modelForAgent(name)
     setModel(sel)
-    setVariant(session.variantForAgent(name, sel))
+    setVariant(undefined)
   }
 
   const cycle = (direction: 1 | -1) => {
@@ -238,11 +236,10 @@ export const NewWorktreeDialog: Component<{
     return Object.keys(found.variants)
   })
 
-  // Current effective variant — an absent or invalid selection uses the model default.
   const effectiveVariant = createMemo(() => {
     const list = variants()
     if (list.length === 0) return undefined
-    const stored = variant()
+    const stored = variant() ?? session.variantForAgent(agent(), model())
     return stored && list.includes(stored) ? stored : undefined
   })
 
@@ -460,7 +457,7 @@ export const NewWorktreeDialog: Component<{
       providerID: sel?.providerID,
       modelID: sel?.modelID,
       agent: selectedAgent,
-      variant: isCompare ? undefined : effectiveVariant(),
+      variant: isCompare ? undefined : (effectiveVariant() ?? (variants().length > 0 ? DEFAULT_VARIANT : undefined)),
       baseBranch: effectiveBaseBranch(),
       branchName: customBranch,
       modelAllocations: allocations,
@@ -513,7 +510,7 @@ export const NewWorktreeDialog: Component<{
       if (list.length === 0) return
       const next = cycleVariant(effectiveVariant(), list)
       e.preventDefault()
-      setVariant(next)
+      setVariant(next ?? DEFAULT_VARIANT)
       return
     }
     undo(e)
@@ -860,7 +857,7 @@ export const NewWorktreeDialog: Component<{
                         const next = { providerID: pid, modelID: mid }
                         const list = Object.keys(provider.findModel(next)?.variants ?? {})
                         setModel(next)
-                        setVariant(preserveVariant(current, list))
+                        setVariant(preserveVariant(current, list) ?? DEFAULT_VARIANT)
                       }}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}
@@ -873,7 +870,7 @@ export const NewWorktreeDialog: Component<{
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
-                      onClear={() => setVariant(undefined)}
+                      onClear={() => setVariant(DEFAULT_VARIANT)}
                       allowClear
                       clearLabel={t("common.default")}
                       trigger={WORKTREE_PROMPT_SCOPE}

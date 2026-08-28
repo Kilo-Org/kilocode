@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { createRoot } from "solid-js"
+import { createRoot, createSignal } from "solid-js"
 import { useSlashCommand } from "../../webview-ui/src/hooks/useSlashCommand"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
@@ -211,6 +211,7 @@ describe("useSlashCommand sandbox action", () => {
     expect(ctx.slash.results()).toContainEqual(
       expect.objectContaining({ name: "review", description: expect.stringContaining("Review code changes") }),
     )
+    expect(ctx.slash.results().find((command) => command.name === "review")?.description).not.toContain("worktree")
     ctx.slash.select(ctx.slash.results().find((c) => c.name === "review")!, textarea, (text) => (state.text = text))
     expect(state.text).toBe("/review ")
     expect(ctx.slash.results().map((command) => command.name)).toEqual([
@@ -218,6 +219,7 @@ describe("useSlashCommand sandbox action", () => {
       "review staged",
       "review unpushed",
       "review branch",
+      "review worktree",
       "review quick",
     ])
     ctx.dispose()
@@ -239,6 +241,31 @@ describe("useSlashCommand sandbox action", () => {
 
     ctx.slash.onInput("/review focus on auth", 20)
     expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
+  it("reactively re-includes worktree review without changing nested ordering", () => {
+    const [allowed, setAllowed] = createSignal(false)
+    const ctx = setup(() => {}, { exclude: () => (allowed() ? new Set() : new Set(["review worktree"])) })
+
+    ctx.slash.onInput("/review ", 8)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review quick",
+    ])
+
+    setAllowed(true)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review worktree",
+      "review quick",
+    ])
     ctx.dispose()
   })
 
