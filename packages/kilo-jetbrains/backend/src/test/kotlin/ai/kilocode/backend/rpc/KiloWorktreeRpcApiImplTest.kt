@@ -73,6 +73,36 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `stats leaves a gone worktree outside the kilo storage registered`() = runBlocking {
+        initRepo()
+        val outside = remote.resolve("elsewhere")
+        git(repo, "worktree", "add", "-b", "feature/outside", outside.toString())
+        delete(outside)
+
+        // The gone entry is excluded from the probe targets, but pruning someone else's worktree
+        // metadata is not the plugin's business, so git's bookkeeping is left untouched.
+        assertTrue(api.stats(repo.toString()).items.none { it.path == outside.toString() })
+        val listed = output(repo, "worktree", "list", "--porcelain")
+        assertTrue(listed.contains(outside.toString()), "unmanaged worktree must not be pruned: $listed")
+    }
+
+    @Test
+    fun `staleWorktrees only reports gone worktrees inside the kilo storage`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val managed = WorktreeDto(
+            "/repo/.kilo/worktrees/gone",
+            "gone",
+            "feature/gone",
+            "/repo/.kilo/worktrees/gone",
+            prunable = true,
+        )
+        val outside = WorktreeDto("/elsewhere/gone", "gone", "feature/other", "/elsewhere/gone", prunable = true)
+
+        assertEquals(listOf(managed.path), staleWorktrees(listOf(main, managed, outside)).map { it.path })
+        assertTrue(staleWorktrees(listOf(main, outside)).isEmpty())
+    }
+
+    @Test
     fun `badDir detects a missing working directory spawn failure`() {
         assertTrue(badDir("Cannot start a process, the working directory '/tmp/gone' does not exist"))
         assertFalse(badDir("Cannot run program \"git\": error=2, No such file or directory"))

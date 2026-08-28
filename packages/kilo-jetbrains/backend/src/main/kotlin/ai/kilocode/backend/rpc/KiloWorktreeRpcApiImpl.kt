@@ -158,9 +158,15 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
     }
 
     /**
-     * Lists the managed worktrees of [root] after reconciling git's metadata with the disk: stale
-     * entries are pruned and entries whose checkout is gone are dropped, so callers never probe a
-     * directory that no longer exists. Returns null when [root] itself is gone or git cannot list.
+     * Lists the managed worktrees of [root] after reconciling git's metadata with the disk, so
+     * callers never probe a directory that no longer exists. Returns null when [root] itself is gone
+     * or git cannot list.
+     *
+     * Dropping gone entries from the result is what makes probing safe; the prune is only metadata
+     * hygiene. So the prune runs exclusively when a Kilo-managed worktree is the stale one, and a
+     * mis-parse can at worst skip it — git re-checks every entry on disk and only ever removes
+     * `$GIT_DIR/worktrees` bookkeeping for a checkout it finds missing, never any files, and never a
+     * locked worktree (the documented guard for worktrees on unmounted volumes).
      */
     private fun sync(root: Path): List<WorktreeDto>? {
         if (!Files.isDirectory(root)) {
@@ -170,10 +176,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val res = runGit(root, "worktree", "list", "--porcelain")
         if (!res.ok) return null
         val raw = parseWorktreeList(res.stdout)
-        val gone = raw.any { !it.main && (it.prunable || !Files.isDirectory(Path.of(it.path))) }
-        val synced = if (!gone) managedWorktrees(raw) else {
-            val prune = runGit(root, "worktree", "prune")
+        val stale = staleWorktrees(raw)
+        val synced = if (stale.isEmpty()) managedWorktrees(raw) else {
+            LOG.info("worktree sync pruning stale managed worktrees: ${stale.joinToString(", ") { it.path }}")
+            val prune = runGit(root, "worktree", "prune", "-v")
             if (!prune.ok) LOG.warn("worktree prune during sync failed: exit=${prune.exit} stderr=${snippet(prune.stderr)}")
+            if (prune.ok && prune.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(prune.stdout)}")
             val again = runGit(root, "worktree", "list", "--porcelain")
             if (!again.ok) return null
             managedWorktrees(parseWorktreeList(again.stdout))
@@ -855,6 +863,21 @@ internal fun managedWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
         if (item.prunable) return@filter false
         val path = Path.of(item.path).normalize()
         path.parent == storage
+    }
+}
+
+/**
+ * Kilo-managed worktrees under `.kilo/worktrees/` whose checkout is gone. This is the only reason
+ * [KiloWorktreeRpcApiImpl.sync] runs a prune, so a stale worktree the user keeps somewhere else is
+ * never a reason for the plugin to touch git's administrative files on a polling loop.
+ */
+internal fun staleWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
+    val main = items.firstOrNull { it.main } ?: return emptyList()
+    val storage = Path.of(main.path).normalize().resolve(".kilo").resolve("worktrees").normalize()
+    return items.filter { item ->
+        if (item.main) return@filter false
+        if (Path.of(item.path).normalize().parent != storage) return@filter false
+        item.prunable || !Files.isDirectory(Path.of(item.path))
     }
 }
 
