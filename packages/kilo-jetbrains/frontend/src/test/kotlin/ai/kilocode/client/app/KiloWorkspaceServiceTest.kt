@@ -2,6 +2,7 @@ package ai.kilocode.client.app
 
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.WorkspaceFileDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
@@ -108,6 +109,52 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         assertEquals(listOf("/test"), rpc.refreshedConfigs.toList())
         assertEquals(0, rpc.localConfigPathCalls)
         assertEquals(0, rpc.globalConfigPathCalls)
+    }
+
+    fun `test comparison wrappers preserve contents and patches flags`() = runBlocking {
+        val base = DiffFileDto("src/Base.kt", 1, 1, before = "base", after = "head")
+        val local = DiffFileDto("src/Local.kt", 2, 1, before = "head", after = "working")
+        rpc.branchDiffs.add(base)
+        rpc.localDiffs.add(local)
+
+        withContext(Dispatchers.Default) {
+            assertEquals(listOf(base), service.branchDiff("/test"))
+            assertEquals(listOf(base), service.branchDiff("/test", patches = false))
+            assertEquals(listOf(local), service.localDiff("/other"))
+            assertEquals(listOf(local), service.localDiff("/other", patches = false))
+        }
+
+        assertEquals(listOf("/test", "/test"), rpc.branchDiffCalls)
+        assertEquals(listOf("/other", "/other"), rpc.localDiffCalls)
+        assertEquals(listOf(true, false), rpc.branchDiffPatchCalls)
+        assertEquals(listOf(true, false), rpc.localDiffPatchCalls)
+    }
+
+    fun `test comparison failures and cancellation propagate`() = runBlocking {
+        for (err in listOf(IllegalStateException("unavailable"), CancellationException("cancelled"))) {
+            rpc.beforeBranchDiff = { throw err }
+            rpc.beforeLocalDiff = { throw err }
+            for (local in listOf(false, true)) {
+                val failure = withContext(Dispatchers.Default) {
+                    runCatching {
+                        if (local) service.localDiff("/test") else service.branchDiff("/test")
+                    }.exceptionOrNull()
+                }
+                assertSame(err, failure)
+            }
+        }
+    }
+
+    fun `test branch lookup preserves detached SHA and cancellation`() = runBlocking {
+        rpc.branchName = "a1b2c3d"
+        val name = withContext(Dispatchers.Default) { service.branchName("/test") }
+        assertEquals("a1b2c3d", name)
+
+        val err = CancellationException("cancelled")
+        rpc.beforeBranchName = { throw err }
+        val failure = withContext(Dispatchers.Default) { runCatching { service.branchName("/test") }.exceptionOrNull() }
+        assertSame(err, failure)
+        assertEquals(listOf("/test", "/test"), rpc.branchNameCalls)
     }
 
     fun `test searchFiles sends query to RPC`() = runBlocking {

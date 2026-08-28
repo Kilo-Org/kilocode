@@ -55,13 +55,9 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
     /** Current uncommitted git changes as a unified diff for @git-changes mentions. */
     suspend fun gitChanges(directory: String): String?
 
-    /**
-     * Committed branch changes compared with the default branch merge-base.
-     *
-     * [patches] = false returns file stats only (additions/deletions/status) and skips materializing
-     * the full patch text — used by the header badge, which only needs counts.
-     */
     suspend fun branchDiff(directory: String, patches: Boolean = true): List<DiffFileDto>
+
+    suspend fun localDiff(directory: String, patches: Boolean = true): List<DiffFileDto>
 
     /** Current git branch name for branch-scoped UI labels. */
     suspend fun branchName(directory: String): String?

@@ -30,7 +30,6 @@ import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
-import ai.kilocode.client.ui.list.ACTIVE_LIST_DIRTY_CELL
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloPath
@@ -633,7 +632,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     fun `test worktree row shows metrics from status service`() {
         val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
         rpc.listed += item
-        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(item.path, additions = 5, deletions = 2, ahead = 1, behind = 3)))
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(item.path, additions = 5, deletions = 2, ahead = 1, behind = 3, files = 2, base = "origin/main")))
         val timers = TestUiTimers()
         ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
         project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
@@ -646,26 +645,27 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val metrics: ActiveListMetrics = row(panel, 0).metrics ?: error("expected metrics")
         assertEquals(5, metrics.additions)
         assertEquals(2, metrics.deletions)
-        assertEquals(1, metrics.ahead)
-        assertEquals(3, metrics.behind)
+        assertEquals(2, metrics.files)
+        assertEquals("origin/main", metrics.base)
     }
 
-    fun `test worktree row shows metrics for stats-only dirty-only and both`() {
-        val statsOnly = worktree("stats-only")
-        val dirtyOnly = worktree("dirty-only")
+    fun `test worktree rows show only base files and ignore local changes and commit counters`() {
+        val committed = worktree("committed")
+        val local = worktree("local")
         val both = worktree("both")
-        rpc.listed += statsOnly
-        rpc.listed += dirtyOnly
-        rpc.listed += both
+        val renamed = worktree("renamed")
+        rpc.listed += listOf(committed, local, both, renamed)
         rpc.statsResult = WorktreeStatsListDto(
             listOf(
-                WorktreeStatsDto(statsOnly.path, additions = 5, deletions = 1),
-                WorktreeStatsDto(both.path, additions = 3, deletions = 0),
+                WorktreeStatsDto(committed.path, additions = 5, deletions = 1, files = 2),
+                WorktreeStatsDto(local.path, ahead = 3, behind = 2),
+                WorktreeStatsDto(both.path, additions = 3, files = 1),
+                WorktreeStatsDto(renamed.path, files = 1),
             ),
         )
         rpc.dirtyResult = WorktreeDirtyListDto(
             listOf(
-                WorktreeDirtyDto(dirtyOnly.path, additions = 2, files = 1),
+                WorktreeDirtyDto(local.path, additions = 2, files = 1),
                 WorktreeDirtyDto(both.path, additions = 4, files = 2),
             ),
         )
@@ -675,21 +675,30 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         timers.advanceBy(300)
-        waitUntil { row(panel, 0).metrics != null && row(panel, 1).metrics != null && row(panel, 2).metrics != null }
+        flush()
 
-        val statsOnlyMetrics = row(panel, 0).metrics ?: error("expected metrics for stats-only row")
-        assertEquals(5, statsOnlyMetrics.additions)
-        assertEquals(0, statsOnlyMetrics.dirtyFiles)
+        val first = row(panel, 0).metrics ?: error("expected committed changes")
+        assertEquals(5, first.additions)
+        assertEquals(2, first.files)
+        assertNull(row(panel, 1).metrics)
+        val mixed = row(panel, 2).metrics ?: error("expected base changes only")
+        assertEquals(3, mixed.additions)
+        assertEquals(1, mixed.files)
+        val move = row(panel, 3).metrics ?: error("expected file-only changes")
+        assertEquals(1, move.files)
+        assertEquals(0, move.additions)
+        assertEquals(0, move.deletions)
 
-        val dirtyOnlyMetrics = row(panel, 1).metrics ?: error("expected metrics for dirty-only row")
-        assertEquals(0, dirtyOnlyMetrics.additions)
-        assertEquals(2, dirtyOnlyMetrics.dirtyAdditions)
-        assertEquals(1, dirtyOnlyMetrics.dirtyFiles)
-
-        val bothMetrics = row(panel, 2).metrics ?: error("expected metrics for both row")
-        assertEquals(3, bothMetrics.additions)
-        assertEquals(4, bothMetrics.dirtyAdditions)
-        assertEquals(2, bothMetrics.dirtyFiles)
+        edt {
+            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
+            view.list.setSize(480, 400)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            for (index in listOf(0, 2, 3)) {
+                assertTrue(activeListCellBounds(view.list, index, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
+            }
+            assertFalse(activeListCellBounds(view.list, 1, selected = false).containsKey(ACTIVE_LIST_CHANGES_CELL))
+        }
     }
 
     fun `test open diff opens the branch diff editor`() {
@@ -706,6 +715,62 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
         assertEquals(KiloDiffEditorKind.ID, file.path.kind)
         assertEquals(item.path, file.path.params["directory"])
+        assertEquals("branch", file.path.params["source"])
+        assertEquals(item.branch, file.path.params["branch"])
+        assertEquals(KiloBundle.message("diff.editor.branch.title.named", item.branch), file.name)
+    }
+
+    fun `test worktree changes clicks use the correct branch after equal-count rows render`() {
+        val first = worktree("first").copy(name = "Custom title")
+        val second = worktree("second")
+        rpc.listed += listOf(first, second)
+        rpc.statsResult = WorktreeStatsListDto(listOf(
+            WorktreeStatsDto(first.path, additions = 5, deletions = 1, files = 2, base = "origin/main"),
+            WorktreeStatsDto(second.path, additions = 5, deletions = 1, files = 2, base = "origin/main"),
+        ))
+        val timers = TestUiTimers()
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        edt {
+            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
+            val list = view.list
+            list.setSize(480, 320)
+            list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            val areas = (0..1).associateWith { activeListCellBounds(list, it, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL) }
+            activeListCellBounds(list, 0, selected = true)
+            for (index in listOf(1, 0, 1)) {
+                val point = center(areas.getValue(index))
+                for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+                    fire(list, MouseEvent(
+                        list,
+                        id,
+                        System.currentTimeMillis(),
+                        if (id == MouseEvent.MOUSE_PRESSED) InputEvent.BUTTON1_DOWN_MASK else 0,
+                        point.x,
+                        point.y,
+                        1,
+                        false,
+                        MouseEvent.BUTTON1,
+                    ))
+                }
+                val item = if (index == 0) first else second
+                val file = FileEditorManager.getInstance(project).selectedFiles.single() as KiloVirtualFile
+                assertEquals(KiloDiffEditorKind.ID, file.path.kind)
+                assertEquals(item.path, file.path.params["directory"])
+                assertEquals("branch", file.path.params["source"])
+                assertEquals(item.branch, file.path.params["branch"])
+                assertEquals(KiloBundle.message("diff.editor.branch.title.named", item.branch), file.name)
+            }
+            val files = FileEditorManager.getInstance(project).openFiles.filterIsInstance<KiloVirtualFile>()
+            assertEquals(2, files.size)
+            assertTrue(files.all { it.path.kind == KiloDiffEditorKind.ID })
+        }
     }
 
     fun `test open pr availability reflects pr status`() {
@@ -823,7 +888,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val url = "https://example.test/pr/7"
         rpc.listed += item
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(item.path, 7, GhState.OPEN, url, "Feature title")))
-        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(item.path, additions = 5, deletions = 2, ahead = 1)))
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(item.path, additions = 5, deletions = 2, ahead = 1, files = 2)))
         rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(item.path, additions = 3, files = 1)))
         val timers = TestUiTimers()
         project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
@@ -848,7 +913,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val areas = activeListCellBounds(list, 0, selected = false)
             val badge = areas.getValue("pull-request")
             val changes = areas.getValue(ACTIVE_LIST_CHANGES_CELL)
-            val dirty = areas.getValue(ACTIVE_LIST_DIRTY_CELL)
+            assertEquals(setOf("pull-request", ACTIVE_LIST_CHANGES_CELL), areas.keys)
             val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
             renderer.setSize(list.width, list.getCellBounds(0, 0).height)
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
@@ -858,10 +923,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val header = SwingUtilities.convertPoint(title, 0, 0, renderer)
             val bounds = list.getCellBounds(0, 0)
             assertTrue(origin.x + desc.width + bounds.x <= changes.x)
-            assertTrue(changes.x + changes.width <= dirty.x)
-            assertTrue(dirty.x + dirty.width <= badge.x)
+            assertTrue(changes.x + changes.width <= badge.x)
             assertTrue(kotlin.math.abs(center(badge).y - center(changes).y) <= 1)
-            assertTrue(kotlin.math.abs(center(badge).y - center(dirty).y) <= 1)
             assertTrue(kotlin.math.abs(center(badge).y - (bounds.y + origin.y + desc.height / 2)) <= 1)
             assertTrue(badge.y >= bounds.y + header.y + title.height)
             assertTrue(bounds.contains(badge))

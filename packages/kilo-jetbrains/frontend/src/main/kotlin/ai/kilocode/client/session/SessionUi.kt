@@ -4,7 +4,9 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.diff.KiloInlineDiffStore
 import ai.kilocode.client.diff.diffParams
 import ai.kilocode.client.diff.ensureDiffEditorKind
@@ -234,10 +236,7 @@ class SessionUi(
         }
     }
     private var wasBusy = false
-    // Kept separate so a background stat refresh (turn end / revert) can supersede another refresh
-    // but never cancel an in-flight user-initiated open.
     private var refreshJob: Job? = null
-    private var openJob: Job? = null
     private var branchJob: Job? = null
     private var disposed = false
 
@@ -963,43 +962,45 @@ class SessionUi(
         Telemetry.send("Subagent Session Opened", mapOf("sessionId" to sessionId))
     }
 
-    /** Badge-only refresh: fetches stats (no patch text) and updates the dock's changes badge. */
+    @RequiresEdt
     private fun refreshBranchChanges() {
         val dock = dock ?: return
+        if (disposed || project.isDisposed) return
+        val local = manager?.supportsMoveToWorktree == true || manager?.supportsNewWorktree == true
         refreshJob?.cancel()
         refreshJob = cs.launch {
-            val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
-                .getOrElse {
-                    if (it is CancellationException) throw it
-                    LOG.warn("branch changes badge refresh failed dir=${workspace.directory}", it)
-                    return@launch
+            launch {
+                val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
+                    .getOrElse {
+                        if (it is CancellationException) throw it
+                        LOG.warn("branch changes badge refresh failed dir=${workspace.directory}", it)
+                        emptyList()
+                    }
+                withContext(Dispatchers.Main) {
+                    if (disposed || project.isDisposed) return@withContext
+                    dock.setChanges(files)
                 }
-            withContext(Dispatchers.Main) {
-                if (disposed || project.isDisposed) return@withContext
-                dock.setChanges(files)
+            }
+            if (local) launch {
+                val files = runCatching { workspaces.localDiff(workspace.directory, patches = false) }
+                    .getOrElse {
+                        if (it is CancellationException) throw it
+                        LOG.warn("local changes refresh failed dir=${workspace.directory}", it)
+                        emptyList()
+                    }
+                withContext(Dispatchers.Main) {
+                    if (disposed || project.isDisposed) return@withContext
+                    dock.setLocal(files)
+                }
             }
         }
     }
 
-    /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
+    @RequiresEdt
     private fun openBranchChanges() {
-        val dock = dock ?: return
-        openJob?.cancel()
-        openJob = cs.launch {
-            val dir = workspace.directory
-            val branch = workspaces.branchName(dir)
-            val files = runCatching { workspaces.branchDiff(dir, patches = false) }
-                .getOrElse {
-                    if (it is CancellationException) throw it
-                    LOG.warn("branch changes open failed dir=$dir", it)
-                    emptyList()
-                }
-            withContext(Dispatchers.Main) {
-                if (disposed || project.isDisposed) return@withContext
-                dock.setChanges(files)
-                openBranchDiff(branch)
-            }
-        }
+        if (disposed || project.isDisposed || dock == null) return
+        refreshBranchChanges()
+        openBranchDiff()
     }
 
     /** Starts the Move to Worktree flow for the current session through the side-panel manager. */
@@ -1009,18 +1010,8 @@ class SessionUi(
     }
 
     @RequiresEdt
-    private fun openBranchDiff(branch: String?) {
-        // No store seeding: the diff editor's fetch recomputes branchDiff authoritatively, so a
-        // re-open or Refresh always reflects the current worktree (and nothing is retained for its life).
-        ensureDiffEditorKind()
-        val dir = workspace.directory
-        val title = branch?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
-            ?: KiloBundle.message("diff.editor.branch.title")
-        project.service<KiloVfsManager>().open(
-            KiloDiffEditorKind.ID,
-            diffParams("branch", dir, null, title, branch),
-        )
-        Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
+    private fun openBranchDiff() {
+        openKiloDiff(project, workspace.directory, KiloDiffComparison.BASE, parent = this)
     }
 
     private fun showBranchDock(): Boolean = manager?.showsBranchDock != false
@@ -1179,7 +1170,6 @@ class SessionUi(
     override fun dispose() {
         disposed = true
         refreshJob?.cancel()
-        openJob?.cancel()
         branchJob?.cancel()
         hide.stop()
         popup.hideAll()

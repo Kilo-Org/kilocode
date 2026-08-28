@@ -1,17 +1,18 @@
 package ai.kilocode.client.session.ui.header
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.client.ui.style
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
-import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
@@ -50,14 +51,13 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         assertFalse(edt { title(view).isVisible })
     }
 
-    fun `test changes aggregate from stats overload`() {
+    fun `test changes default to compact aggregate presentation`() {
         val view = edt { PrHeaderView {} }
-        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
+        val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
 
-        edt { view.update(WorktreeStatsDto("/repo", additions = 7, deletions = 4, files = 3), null, "feature-x") }
+        edt { view.update(3, 7, 4, null, "feature-x", ahead = 2, localFiles = 1, localAdditions = 8) }
 
-        assertEquals("3 files", edt { changes.countText() })
-        assertEquals(7 to 4, edt { changes.stats() })
+        assertEquals(listOf("3 files", "-4", "+7"), edt { components(changes).filterIsInstance<JBLabel>().filter { it.isVisible }.map { it.text } })
         assertTrue(edt { changes.isVisible })
     }
 
@@ -70,20 +70,19 @@ class PrHeaderViewTest : BasePlatformTestCase() {
 
     fun `test repeated update keeps child instances and bounded count`() {
         val view = edt { PrHeaderView {} }
-        val stats = WorktreeStatsDto("/repo", additions = 2, files = 1)
         val pull = pull(GhState.DRAFT)
 
-        edt { view.update(stats, pull, "feature-x") }
+        edt { view.update(1, 2, 0, pull, "feature-x") }
         val labels = edt { components(view).filterIsInstance<JBLabel>() }
         val title = edt { title(view) }
-        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
+        val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
         val count = edt { components(view).size }
 
-        repeat(20) { edt { view.update(stats, pull, "feature-x") } }
+        repeat(20) { edt { view.update(1, 2, 0, pull, "feature-x") } }
 
         assertEquals(labels, edt { components(view).filterIsInstance<JBLabel>() })
         assertSame(title, edt { title(view) })
-        assertSame(changes, edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java) })
+        assertSame(changes, edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java) })
         assertEquals(count, edt { components(view).size })
     }
 
@@ -106,12 +105,15 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         title = "Implement header",
     )
 
+    @RequiresEdt
     private fun badge(view: PrHeaderView): JBLabel =
         components(view).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
 
+    @RequiresEdt
     private fun title(view: PrHeaderView): SimpleColoredComponent =
         components(view).filterIsInstance<SimpleColoredComponent>().single()
 
+    @RequiresEdt
     private fun fragments(title: SimpleColoredComponent): List<String> {
         val out = mutableListOf<String>()
         val iter = title.iterator()
@@ -122,6 +124,7 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         return out
     }
 
+    @RequiresEdt
     private fun firstAttrs(title: SimpleColoredComponent): SimpleTextAttributes {
         val iter = title.iterator()
         check(iter.hasNext()) { "missing title fragment" }
@@ -129,6 +132,7 @@ class PrHeaderViewTest : BasePlatformTestCase() {
         return iter.textAttributes
     }
 
+    @RequiresEdt
     private fun components(root: Component): List<Component> {
         val out = mutableListOf<Component>()
         fun visit(item: Component) {

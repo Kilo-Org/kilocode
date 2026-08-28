@@ -4,6 +4,7 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
+import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
@@ -713,7 +714,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val key = DataKey.create<ActiveListItem>("test.activeList.menu.edge")
             val menu = ActiveListMenu(key, DefaultActionGroup(), element = { it })
             val view = ActiveListView("Empty", menu = menu) { _, _ -> }
-            view.update(listOf(metricsItem("with", "Alpha", ActiveListMetrics(additions = 5, onChanges = {}))))
+            view.update(listOf(metricsItem("with", "Alpha", ActiveListMetrics(files = 1, additions = 5, onChanges = {}))))
             layout(view)
 
             hover(view, center(view.list.getCellBounds(0, 0)))
@@ -1069,13 +1070,13 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val calls = mutableListOf<String>()
             val onCellCalls = mutableListOf<String>()
             val view = ActiveListView("Empty") { key, id -> onCellCalls += "$key:$id" }
-            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(additions = 3, deletions = 2, onChanges = { calls += "changes" }))))
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(files = 1, additions = 3, deletions = 2, onChanges = { calls += "changes" }))))
             view.list.size = Dimension(360, 80)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
 
             val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_CHANGES_CELL)
-            assertEquals(KiloBundle.message("worktree.stats.tooltip", 0, 0, 3, 2), view.list.getToolTipText(event(view.list, center(area))))
+            assertEquals(KiloBundle.message("worktree.stats.tooltip", 1, 3, 2), view.list.getToolTipText(event(view.list, center(area))))
 
             hover(view, center(area))
             assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
@@ -1083,6 +1084,107 @@ class SettingsListViewTest : BasePlatformTestCase() {
             click(view, center(area))
             assertEquals(listOf("changes"), calls)
             assertTrue(onCellCalls.isEmpty())
+        }
+    }
+
+    fun `test compact file-only changes reuse the shared panel and open from the count or padding`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val opened = mutableListOf<String>()
+            val view = ActiveListView("Empty", onOpen = { row, _ -> opened += row.key }) { _, _ -> calls += "fallback" }
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(files = 1, onChanges = { calls += "base" }))))
+            layout(view)
+
+            val area = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+            val renderer = rendered(view)
+            val panel = components(renderer).filterIsInstance<ChangesPanel>().single()
+            val count = components(panel).filterIsInstance<JBLabel>().single { it.text == "1 file" }
+            val point = SwingUtilities.convertPoint(count, count.width / 2, count.height / 2, renderer)
+            val bounds = view.list.getCellBounds(0, 0)
+            point.translate(bounds.x, bounds.y)
+            assertTrue(panel.isVisible)
+            assertTrue(area.contains(point))
+            for (target in listOf(point, Point(area.x + area.width - 1, center(area).y))) {
+                click(view, target)
+                fire(view.list, mouse(view, MouseEvent.MOUSE_CLICKED, target))
+            }
+
+            assertEquals(listOf("base", "base"), calls)
+            assertTrue(opened.isEmpty())
+        }
+    }
+
+    fun `test equal compact summaries keep row actions after renderer reuse and width changes`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val opened = mutableListOf<String>()
+            val view = ActiveListView("Empty", onOpen = { row, _ -> opened += row.key }) { _, _ -> calls += "fallback" }
+            view.update(listOf(
+                metricsItem("first", "Alpha", ActiveListMetrics(files = 2, additions = 5, deletions = 1, base = "origin/main", onChanges = { calls += "first" })),
+                metricsItem("second", "Beta", ActiveListMetrics(files = 2, additions = 5, deletions = 1, base = "origin/main", onChanges = { calls += "second" })),
+                metricsItem("wide", "Gamma", ActiveListMetrics(files = 123, additions = 4567, base = "origin/develop", onChanges = { calls += "wide" })),
+                item("plain", "Delta", null),
+            ))
+            layout(view)
+            val renderer = rendered(view)
+            val panel = components(renderer).filterIsInstance<ChangesPanel>().single()
+            val retained = components(panel)
+
+            for (width in listOf(260, 480, 320)) {
+                calls.clear()
+                view.list.size = Dimension(width, 320)
+                view.list.doLayout()
+                UIUtil.dispatchAllInvocationEvents()
+                val first = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+                val second = activeListCellBounds(view.list, 1, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+                activeListCellBounds(view.list, 2, selected = true)
+                assertTrue(activeListCellBounds(view.list, 3, selected = false).isEmpty())
+                paint(view.list)
+
+                assertEquals(first, activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL))
+                assertEquals(second, activeListCellBounds(view.list, 1, selected = true).getValue(ACTIVE_LIST_CHANGES_CELL))
+                assertTrue(view.list.getCellBounds(0, 0).contains(first))
+                assertTrue(view.list.getCellBounds(1, 1).contains(second))
+                assertEquals(KiloBundle.message("worktree.stats.base.tooltip", 2, 5, 1, "origin/main"), view.list.getToolTipText(event(view.list, center(second))))
+                hover(view, center(second))
+                assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
+                for (point in listOf(center(second), center(first))) {
+                    click(view, point)
+                    fire(view.list, mouse(view, MouseEvent.MOUSE_CLICKED, point))
+                }
+                assertEquals(listOf("second", "first"), calls)
+                assertTrue(opened.isEmpty())
+                assertSame(panel, components(renderer).filterIsInstance<ChangesPanel>().single())
+                assertEquals(retained, components(panel))
+            }
+        }
+    }
+
+    fun `test compact summary clears hit regions for zero files and disables actions with the row`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { _, _ -> calls += "fallback" }
+            val row = metricsItem("wt", "Alpha", ActiveListMetrics(files = 1, onChanges = { calls += "base" }))
+            view.update(listOf(row))
+            layout(view)
+            val area = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_CHANGES_CELL)
+
+            view.update(listOf(object : ActiveListItem by row {
+                override val disabled = true
+            }))
+            layout(view)
+            assertNull(activeListCellAt(view.list, 0, center(area), selected = false))
+            hover(view, center(area))
+            assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+            click(view, center(area))
+            assertTrue(calls.isEmpty())
+
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(onChanges = { calls += "base" }))))
+            layout(view)
+            assertTrue(activeListCellBounds(view.list, 0, selected = false).isEmpty())
+            assertNull(activeListCellAt(view.list, 0, center(area), selected = false))
+            click(view, center(area))
+            assertTrue(calls.isEmpty())
         }
     }
 
@@ -1145,7 +1247,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
     fun `test inert changes badge is not hit tested`() {
         edt {
             val view = ActiveListView("Empty") { _, _ -> }
-            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(additions = 3, deletions = 2))))
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(files = 1, additions = 3, deletions = 2))))
             view.list.size = Dimension(360, 80)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
@@ -1237,7 +1339,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
                 override val leading = listOf(ActiveListBadge("Local", id = "leading", action = { calls += "leading" }))
                 override val badges = listOf(ActiveListBadge("Ready", id = "trailing", action = { calls += "trailing" }))
                 override val secondaryBadges = listOf(ActiveListBadge("Details", id = "badge", action = { calls += "badge" }))
-                override val metrics = ActiveListMetrics(additions = 5, deletions = 2, ahead = 1, onChanges = { calls += "changes" })
+                override val metrics = ActiveListMetrics(files = 1, additions = 5, deletions = 2, onChanges = { calls += "changes" })
             }
             val view = ActiveListView("Empty") { _, _ -> }
             view.update(listOf(row))
@@ -1286,7 +1388,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             assertTrue(plain.secondaryBadges.isEmpty())
             view.update(listOf(
                 object : ActiveListItem by secondaryItem("wide", "Alpha", ActiveListBadge("Available", id = "badge", tooltip = "Wide", action = { calls += "wide" })) {
-                    override val metrics = ActiveListMetrics(additions = 123, deletions = 9, ahead = 2)
+                    override val metrics = ActiveListMetrics(files = 123, additions = 123, deletions = 9)
                 },
                 secondaryItem("narrow", "Beta", ActiveListBadge("On", id = "badge", tooltip = "Narrow", action = { calls += "narrow" })),
                 plain,
@@ -1341,7 +1443,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
                 override val leading = listOf(ActiveListBadge("Local", id = "leading", action = { calls += "leading" }))
                 override val badges = listOf(ActiveListBadge("Ready", id = "trailing", action = { calls += "trailing" }))
                 override val secondaryBadges = listOf(ActiveListBadge("Details", id = "badge", tooltip = "Badge details", action = { calls += "badge" }))
-                override val metrics = ActiveListMetrics(additions = 5, onChanges = { calls += "changes" })
+                override val metrics = ActiveListMetrics(files = 1, additions = 5, onChanges = { calls += "changes" })
             }
             val pending = object : ActiveListItem by row {
                 override val progress = "Working"

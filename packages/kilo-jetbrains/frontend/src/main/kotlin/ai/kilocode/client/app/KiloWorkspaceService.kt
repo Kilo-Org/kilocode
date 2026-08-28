@@ -15,6 +15,7 @@ import com.intellij.ide.ActivityTracker
 import com.intellij.openapi.components.Service
 import ai.kilocode.log.KiloLog
 import com.intellij.platform.project.ProjectId
+import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
@@ -165,9 +166,15 @@ class KiloWorkspaceService internal constructor(
      * can surface a retry (a swallowed failure is indistinguishable from "no changes"); pass
      * [patches] = false on the badge path to fetch stats only and skip materializing patch text.
      */
+    @RequiresBackgroundThread
     suspend fun branchDiff(directory: String, patches: Boolean = true): List<DiffFileDto> =
         call { branchDiff(directory, patches) }
 
+    @RequiresBackgroundThread
+    suspend fun localDiff(directory: String, patches: Boolean = true): List<DiffFileDto> =
+        call { localDiff(directory, patches) }
+
+    @RequiresBackgroundThread
     suspend fun branchName(directory: String): String? {
         return try {
             call { branchName(directory) }

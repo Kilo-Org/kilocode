@@ -38,7 +38,14 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     val branchDiffs = mutableListOf<DiffFileDto>()
     val branchDiffCalls = CopyOnWriteArrayList<String>()
     val branchDiffPatchCalls = CopyOnWriteArrayList<Boolean>()
+    val localDiffs = mutableListOf<DiffFileDto>()
+    val localDiffCalls = CopyOnWriteArrayList<String>()
+    val localDiffPatchCalls = CopyOnWriteArrayList<Boolean>()
+    var beforeBranchDiff: (suspend () -> Unit)? = null
+    var beforeLocalDiff: (suspend () -> Unit)? = null
     var branchName: String? = null
+    val branchNameCalls = CopyOnWriteArrayList<String>()
+    var beforeBranchName: (suspend () -> Unit)? = null
     var openResult = true
     var localConfigPath = "/test/.kilo/kilo.jsonc"
     var globalConfigPath = "/config/kilo.jsonc"
@@ -103,11 +110,22 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         assertNotEdt("branchDiff")
         branchDiffCalls.add(directory)
         branchDiffPatchCalls.add(patches)
+        beforeBranchDiff?.invoke()
         return branchDiffs.toList()
+    }
+
+    override suspend fun localDiff(directory: String, patches: Boolean): List<DiffFileDto> {
+        assertNotEdt("localDiff")
+        localDiffCalls.add(directory)
+        localDiffPatchCalls.add(patches)
+        beforeLocalDiff?.invoke()
+        return localDiffs.toList()
     }
 
     override suspend fun branchName(directory: String): String? {
         assertNotEdt("branchName")
+        branchNameCalls.add(directory)
+        beforeBranchName?.invoke()
         return branchName
     }
 

@@ -22,9 +22,8 @@ import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.ui.prTooltip
 import ai.kilocode.client.ui.style
-import ai.kilocode.client.diff.KiloDiffEditorKind
-import ai.kilocode.client.diff.diffParams
-import ai.kilocode.client.diff.ensureDiffEditorKind
+import ai.kilocode.client.diff.KiloDiffComparison
+import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.telemetry.Telemetry
@@ -43,7 +42,6 @@ import ai.kilocode.client.ui.list.ActiveListWeight
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
-import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -122,7 +120,6 @@ class AgentManagerPanel(
         ),
     )
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
-    private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
 
     init {
@@ -274,8 +271,11 @@ class AgentManagerPanel(
         return controller.progress(item.id) == null
     }
 
+    @RequiresEdt
     internal fun openDiff(item: WorktreeDto) {
-        if (canOpenDiff(item)) openBranchDiff(item.path)
+        val target = project ?: return
+        if (!canOpenDiff(item)) return
+        openKiloDiff(target, item.path, KiloDiffComparison.BASE, item.branch.takeUnless { it == "(detached)" })
     }
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
@@ -404,8 +404,6 @@ class AgentManagerPanel(
                 stats = null,
                 // The main checkout can sit on a PR branch just like a worktree can.
                 pr = prs[normalizeWorktreePath(item.path)],
-                // Neither stats() nor dirty() compute the main checkout; both RPCs filter it out.
-                dirty = null,
                 current = true,
             )
         }
@@ -421,7 +419,6 @@ class AgentManagerPanel(
                     controller.kind(item.path),
                     stats[key],
                     pull,
-                    dirty[key],
                 )
             },
             ActiveListSelection.Preserve,
@@ -461,7 +458,6 @@ class AgentManagerPanel(
             this,
             onStats = { value -> stats = value; sync() },
             onPr = { value -> prs = value; sync() },
-            onDirty = { value -> dirty = value; sync() },
         )
     }
 
@@ -514,19 +510,12 @@ class AgentManagerPanel(
         }
     }
 
-    /**
-     * Inner (not data) class so [metrics] can bind each row's changes/dirty handlers to the
-     * panel. Value equality is over the data fields only — the derived handlers are intentionally
-     * excluded so a stats/PR/dirty refresh that produced identical rows still skips the model
-     * rebuild in [ActiveListView].
-     */
     private inner class WorktreeRow(
         val dto: WorktreeDto,
         override val progress: String?,
         val kind: SessionActivityKind?,
         val stats: WorktreeStatsDto?,
         val pr: WorktreePrDto?,
-        val dirty: WorktreeDirtyDto? = null,
         val current: Boolean = false,
     ) : ActiveListItem {
         override val key: String get() = dto.id
@@ -556,21 +545,13 @@ class AgentManagerPanel(
         override val metrics: ActiveListMetrics?
             get() {
                 if (progress != null) return null
-                val s = stats
-                val d = dirty
-                if (s == null && d == null) return null
+                val s = stats?.takeIf { it.files > 0 } ?: return null
                 return ActiveListMetrics(
-                    additions = s?.additions ?: 0,
-                    deletions = s?.deletions ?: 0,
-                    ahead = s?.ahead ?: 0,
-                    behind = s?.behind ?: 0,
-                    onChanges = s?.let { { openBranchDiff(dto.path) } },
-                    dirtyAdditions = d?.additions ?: 0,
-                    dirtyDeletions = d?.deletions ?: 0,
-                    dirtyFiles = d?.files ?: 0,
-                    // Reuses the branch diff editor for now, which already diffs the working tree
-                    // against the merge-base, so it contains the uncommitted work this badge reports.
-                    onDirty = d?.let { { openBranchDiff(dto.path) } },
+                    files = s.files,
+                    additions = s.additions,
+                    deletions = s.deletions,
+                    base = s.base,
+                    onChanges = { openDiff(dto) },
                 )
             }
 
@@ -581,7 +562,6 @@ class AgentManagerPanel(
                 kind == row.kind &&
                 stats == row.stats &&
                 pr == row.pr &&
-                dirty == row.dirty &&
                 current == row.current
         }
 
@@ -591,20 +571,9 @@ class AgentManagerPanel(
             result = 31 * result + (kind?.hashCode() ?: 0)
             result = 31 * result + (stats?.hashCode() ?: 0)
             result = 31 * result + (pr?.hashCode() ?: 0)
-            result = 31 * result + (dirty?.hashCode() ?: 0)
             result = 31 * result + current.hashCode()
             return result
         }
-    }
-
-    @RequiresEdt
-    private fun openBranchDiff(path: String) {
-        val target = project ?: return
-        ensureDiffEditorKind()
-        target.service<KiloVfsManager>().open(
-            KiloDiffEditorKind.ID,
-            diffParams("branch", path, null, KiloBundle.message("diff.editor.branch.title")),
-        )
     }
 }
 

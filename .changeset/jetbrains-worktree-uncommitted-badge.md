@@ -2,4 +2,4 @@
 "@kilocode/kilo-jetbrains": minor
 ---
 
-Show uncommitted changes as a separate badge on Agent Manager worktree rows
+Show committed changes against the base branch on Agent Manager worktree rows, and split uncommitted changes into their own comparison in the worktree session editor header

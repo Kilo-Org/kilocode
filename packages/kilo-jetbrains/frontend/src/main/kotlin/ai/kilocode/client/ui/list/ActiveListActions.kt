@@ -15,7 +15,6 @@ internal const val ACTIVE_LIST_MENU_CELL = "__menu__"
 
 /** Well-known ids for rich badges hit-tested in place. */
 internal const val ACTIVE_LIST_CHANGES_CELL = "__changes__"
-internal const val ACTIVE_LIST_DIRTY_CELL = "__dirty__"
 
 internal fun activeListRegions(item: ActiveListItem): Map<String, () -> Unit> {
     if (item.progress != null) return emptyMap()
@@ -25,9 +24,7 @@ internal fun activeListRegions(item: ActiveListItem): Map<String, () -> Unit> {
         val act = badge.action
         if (!id.isNullOrBlank() && act != null) out[id] = act
     }
-    val data = item.metrics
-    data?.onChanges?.let { out[ACTIVE_LIST_CHANGES_CELL] = it }
-    data?.onDirty?.let { out[ACTIVE_LIST_DIRTY_CELL] = it }
+    item.metrics?.onChanges?.let { out[ACTIVE_LIST_CHANGES_CELL] = it }
     return out
 }
 

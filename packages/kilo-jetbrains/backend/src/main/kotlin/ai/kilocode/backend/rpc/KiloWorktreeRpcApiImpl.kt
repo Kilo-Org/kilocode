@@ -1,6 +1,8 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.diff.GitComparison
+import ai.kilocode.backend.diff.runGitCommand
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.parsePrUrl
@@ -58,33 +60,16 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.io.path.fileSize
-import kotlin.io.path.inputStream
-import kotlin.io.path.isRegularFile
 
 class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     companion object {
         internal val LOG = KiloLog.create(KiloWorktreeRpcApiImpl::class.java)
-        private const val BASE_TTL = 60_000L
         private const val GH_PROBE_TTL = 300_000L
         private const val GH_STATUS_TTL = 3_000L
         private const val PR_TTL = 90_000L
-
-        /**
-         * Base-branch candidates in preference order, as (verify ref, diff ref). Fully-qualified on
-         * the left so a tag named "main" cannot be mistaken for the branch. Mirrors
-         * `KiloWorkspaceRpcApiImpl.defaultBranch`, which the branch-diff editor already uses.
-         */
-        private val BASE_CANDIDATES = listOf(
-            "refs/remotes/origin/main" to "origin/main",
-            "refs/remotes/origin/master" to "origin/master",
-            "refs/heads/main" to "main",
-            "refs/heads/master" to "master",
-        )
     }
 
-    private val bases = ConcurrentHashMap<String, Timed<String>>()
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
     private val resolver = PrResolver(gh = ::runGh, git = ::runGit)
@@ -603,15 +588,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     private fun runGit(base: Path, vararg args: String): CmdOut = runGit(base, args.toList())
 
-    private fun runGit(base: Path, args: List<String>): CmdOut {
-        return try {
-            val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(base.toFile())
-            val out = CapturingProcessHandler(cmd).runProcess(30_000)
-            CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
-        } catch (e: Exception) {
-            CmdOut(-1, "", e.message ?: "git failed")
-        }
-    }
+    private fun runGit(base: Path, args: List<String>): CmdOut = runGitCommand(base, args)
 
     private fun runGh(base: Path, vararg args: String): CmdOut = runGh(base, args.toList())
 
@@ -646,104 +623,34 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         items.map { item -> async { sem.withPermit { block(item) } } }.map { it.await() }
     }
 
-    /**
-     * Committed changes this worktree introduces relative to the base branch, i.e. what GitHub shows
-     * under "Files changed" for a pull request. The trailing `HEAD` on the diff is load-bearing:
-     * without it git diffs the working tree and mixes uncommitted edits into the PR number. Untracked
-     * files are excluded for the same reason — they are not in a PR. Both live in [dirty] instead.
-     *
-     * Rename detection is left on (no `--no-renames`) so a pure file move counts 0/0 like GitHub
-     * does. `parseNumstat` only consumes the two count columns, so the `{old => new}` path form in
-     * rename output is harmless here.
-     */
     private fun stats(item: WorktreeDto, fallback: String): WorktreeStatsDto {
         val dir = Path.of(item.path).normalize()
-        return runCatching {
-            val base = base(item, fallback)
-            val anc = runGit(dir, "merge-base", "HEAD", base).stdout.trim().takeIf { it.isNotBlank() } ?: base
-            val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", anc, "HEAD")
-            val tracked = if (diff.ok) parseNumstat(diff.stdout) else emptyList()
-            val counts = aheadBehind(dir, base)
-            WorktreeStatsDto(
-                item.path,
-                tracked.sumOf { it.additions },
-                tracked.sumOf { it.deletions },
-                counts.second,
-                counts.first,
-                files = tracked.size,
-                base = base,
-            )
-        }.getOrElse { err ->
-            LOG.warn("worktree stats failed: path=${item.path} message=${err.message}", err)
-            WorktreeStatsDto(item.path)
-        }
+        val comparison = GitComparison.open(dir, GitComparison.Mode.Base, fallback) ?: return WorktreeStatsDto(item.path)
+        val files = comparison.files(false)
+        val counts = comparison.counts()
+        return WorktreeStatsDto(
+            item.path,
+            additions = files.sumOf { it.additions },
+            deletions = files.sumOf { it.deletions },
+            ahead = counts.second,
+            behind = counts.first,
+            files = files.size,
+            base = comparison.base,
+        )
     }
 
-    /**
-     * Diff/commit baseline for a worktree: the branch a pull request would target. Prefers the
-     * remote's declared default (origin HEAD), then the common origin and local main/master names,
-     * then [fallback] (the branch checked out in the main working tree) for repos that have none of
-     * those.
-     *
-     * Never the worktree's own `@{upstream}`: once a branch is pushed, its upstream contains every
-     * commit, so the merge-base is HEAD and the diff reports zero changes.
-     */
-    private fun base(item: WorktreeDto, fallback: String): String {
-        val now = System.currentTimeMillis()
-        bases[item.path]?.takeIf { now - it.time < BASE_TTL }?.let { return it.value }
-        val dir = Path.of(item.path).normalize()
-        val value = defaultBase(dir) ?: fallback
-        bases[item.path] = Timed(now, value)
-        return value
-    }
-
-    private fun defaultBase(dir: Path): String? {
-        val head = runGit(dir, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
-        head.stdout.trim().removePrefix("refs/remotes/").takeIf { head.ok && it.isNotBlank() }?.let { return it }
-        return BASE_CANDIDATES.firstOrNull { runGit(dir, "rev-parse", "--verify", "--quiet", it.first).ok }?.second
-    }
-
-    /**
-     * Everything not yet committed in [item]: `diff --numstat HEAD` covers the index and the working
-     * tree in one call, then untracked files are line-counted the same way [stats] used to. An unborn
-     * branch makes the diff exit non-zero; untracked files are still reported.
-     */
     private fun dirty(item: WorktreeDto): WorktreeDirtyDto {
         val dir = Path.of(item.path).normalize()
-        return runCatching {
-            val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", "HEAD")
-            val tracked = if (diff.ok) parseNumstat(diff.stdout) else emptyList()
-            val others = runGit(dir, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
-                .stdout
-                .lineSequence()
-                .filter { it.isNotBlank() }
-                .toList()
-            WorktreeDirtyDto(
-                item.path,
-                additions = tracked.sumOf { it.additions } + others.sumOf { countUntracked(dir, it) },
-                deletions = tracked.sumOf { it.deletions },
-                files = tracked.size + others.size,
-                untracked = others.size,
-                unpushed = unpushed(dir),
-            )
-        }.getOrElse { err ->
-            LOG.warn("worktree dirty failed: path=${item.path} message=${err.message}", err)
-            WorktreeDirtyDto(item.path)
-        }
-    }
-
-    /** Commits on HEAD that the branch's upstream does not have. 0 when there is no upstream. */
-    private fun unpushed(dir: Path): Int {
-        val out = runGit(dir, "rev-list", "--count", "@{upstream}..HEAD")
-        if (!out.ok) return 0
-        return out.stdout.trim().toIntOrNull() ?: 0
-    }
-
-    private fun aheadBehind(dir: Path, base: String): Pair<Int, Int> {
-        val out = runGit(dir, "rev-list", "--left-right", "--count", "$base...HEAD")
-        if (!out.ok) return 0 to 0
-        val parts = out.stdout.trim().split(Regex("\\s+"))
-        return (parts.getOrNull(0)?.toIntOrNull() ?: 0) to (parts.getOrNull(1)?.toIntOrNull() ?: 0)
+        val comparison = GitComparison.open(dir, GitComparison.Mode.Local) ?: return WorktreeDirtyDto(item.path)
+        val files = comparison.files(false)
+        return WorktreeDirtyDto(
+            item.path,
+            additions = files.sumOf { it.additions },
+            deletions = files.sumOf { it.deletions },
+            files = files.size,
+            untracked = files.count { it.status == "untracked" },
+            unpushed = comparison.unpushed(),
+        )
     }
 
     private fun ghAvailable(root: Path): GhAvailability {
@@ -1124,37 +1031,4 @@ private fun samePath(a: String, b: String): Boolean {
 private fun realPath(path: String): Path {
     val file = Path.of(path).normalize()
     return if (Files.exists(file)) file.toRealPath() else file
-}
-
-private fun countUntracked(base: Path, rel: String): Int {
-    return runCatching {
-        val path = base.resolve(rel).normalize()
-        if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > 2 * 1024 * 1024L) return@runCatching 0
-        countLines(path) ?: 0
-    }.getOrElse { err ->
-        KiloWorktreeRpcApiImpl.LOG.debug { "worktree stats untracked read failed: path=$rel message=${err.message}" }
-        0
-    }
-}
-
-private fun countLines(path: Path): Int? {
-    var newlines = 0
-    var last = 0
-    var any = false
-    path.inputStream().buffered().use { input ->
-        val buf = ByteArray(8192)
-        while (true) {
-            val n = input.read(buf)
-            if (n <= 0) break
-            any = true
-            for (i in 0 until n) {
-                val b = buf[i].toInt()
-                if (b == 0) return null
-                if (b == '\n'.code) newlines++
-            }
-            last = buf[n - 1].toInt()
-        }
-    }
-    if (!any) return 0
-    return if (last == '\n'.code) newlines else newlines + 1
 }

@@ -28,18 +28,11 @@ internal data class ActiveListBadge(
 )
 
 internal data class ActiveListMetrics(
+    val files: Int = 0,
     val additions: Int = 0,
     val deletions: Int = 0,
-    val ahead: Int = 0,
-    val behind: Int = 0,
-    /** Click handler for the changes badge, e.g. open the branch diff. Null leaves it inert. */
+    val base: String = "",
     val onChanges: (() -> Unit)? = null,
-    /** Uncommitted counts, measured against HEAD rather than the base branch. */
-    val dirtyAdditions: Int = 0,
-    val dirtyDeletions: Int = 0,
-    val dirtyFiles: Int = 0,
-    /** Click handler for the uncommitted badge. Null leaves it inert. */
-    val onDirty: (() -> Unit)? = null,
 )
 
 internal enum class ActiveListRowHeight { EQUAL, PREFERRED }

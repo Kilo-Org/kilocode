@@ -1,7 +1,7 @@
 package ai.kilocode.client.ui.list
 
-import ai.kilocode.client.agentManager.worktree.WorktreeStatsView
 import ai.kilocode.client.session.ui.PickerRow
+import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
@@ -17,10 +17,10 @@ import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.IconUtil
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import ai.kilocode.rpc.dto.WorktreeStatsDto
 import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.BorderLayout
@@ -97,7 +97,7 @@ internal class ActiveListRenderer(
     // instead of drifting to the far right of the row.
     private val header = titleGroup.align(HAlign.LEFT, VAlign.CENTER)
     private val desc = JBLabel()
-    private val metrics = WorktreeStatsView()
+    private val metrics = ActiveListChangesCell()
     private val details = Stack.horizontal(UiStyle.Gap.md()).next(metrics).next(secondary)
     private val detailsPane = details.align(HAlign.RIGHT, VAlign.CENTER)
     private val descLine = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
@@ -188,6 +188,7 @@ internal class ActiveListRenderer(
         add(wrap, BorderLayout.CENTER)
     }
 
+    @RequiresEdt
     override fun getListCellRendererComponent(
         list: JList<out ActiveListItem>,
         value: ActiveListItem,
@@ -243,13 +244,8 @@ internal class ActiveListRenderer(
         }
         desc.foreground = weak
         val data = if (value.progress != null) null else value.metrics
-        metrics.update(
-            data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) },
-            data?.dirtyAdditions ?: 0,
-            data?.dirtyDeletions ?: 0,
-            data?.dirtyFiles ?: 0,
-        )
-        metrics.setActions(data?.onChanges, data?.onDirty)
+        metrics.isEnabled = list.isEnabled && !value.disabled
+        metrics.update(data)
         val end = value.progress ?: value.trailing.orEmpty()
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
@@ -404,6 +400,37 @@ internal interface ActiveListActive {
     fun active(): Boolean
 
     fun hoveredIndex(): Int = -1
+}
+
+internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderLayout()), ActiveListHitCell {
+    private val panel = ChangesPanel(ChangesPanel.Mode.COMPACT)
+    private var data: ActiveListMetrics? = null
+
+    override val cellId = ACTIVE_LIST_CHANGES_CELL
+
+    init {
+        UiStyle.Components.transparent(this)
+        add(panel, BorderLayout.CENTER)
+    }
+
+    @RequiresEdt
+    fun update(data: ActiveListMetrics?) {
+        this.data = data
+        panel.update(data?.files ?: 0, data?.additions ?: 0, data?.deletions ?: 0, base = data?.base.orEmpty())
+        panel.setActions(data?.onChanges.takeIf { isEnabled })
+        isVisible = panel.isVisible
+        toolTipText = panel.toolTipText
+    }
+
+    @RequiresEdt
+    override fun cellEnabled(): Boolean = isVisible && isEnabled && data?.onChanges != null
+
+    override fun cellCursor(): Int = Cursor.HAND_CURSOR
+
+    @RequiresEdt
+    override fun cellTooltip(): String? = toolTipText
+
+    override fun cellAction(): (() -> Unit)? = data?.onChanges
 }
 
 internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {
