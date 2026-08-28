@@ -95,15 +95,14 @@ internal class ChangesPanel @RequiresEdt constructor(
         }
         if (state == next) return
         state = next
-        val caption = if (base.isBlank()) KiloBundle.message("changes.base.label") else KiloBundle.message("changes.base.named", base)
         val tip = if (base.isBlank()) {
             KiloBundle.message("worktree.stats.tooltip", files, additions, deletions)
         } else {
             KiloBundle.message("worktree.stats.base.tooltip", files, additions, deletions, base)
         }
-        this.base.update(files, additions, deletions, caption.takeIf { mode == Mode.FULL }, tip)
+        this.base.update(files, additions, deletions, tip)
         local?.update(
-            localFiles, localAdditions, localDeletions, KiloBundle.message("changes.local.label"),
+            localFiles, localAdditions, localDeletions,
             KiloBundle.message("worktree.dirty.tooltip", localFiles, localAdditions, localDeletions),
         )
         this.ahead?.let { counter(it, ahead) }
@@ -174,7 +173,6 @@ internal class ChangesPanel @RequiresEdt constructor(
     }
 
     private inner class Group @RequiresEdt constructor(fill: Boolean) : JPanel(BorderLayout()) {
-        private val caption = JBLabel().apply { foreground = JBColor.lazy { UiStyle.Colors.weak() } }
         private val count = JBLabel().apply { foreground = JBColor.lazy { UiStyle.Colors.weak() } }
         private val stat = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT, fill = fill)
         private var over = false
@@ -205,8 +203,7 @@ internal class ChangesPanel @RequiresEdt constructor(
             isOpaque = false
             isVisible = false
             stat.isVisible = false
-            caption.isVisible = false
-            add(Stack.horizontal(UiStyle.Gap.sm()).next(caption).next(count).next(stat).align(HAlign.LEFT, VAlign.CENTER))
+            add(Stack.horizontal(UiStyle.Gap.sm()).next(count).next(stat).align(HAlign.LEFT, VAlign.CENTER))
             visit(this) {
                 it.isFocusable = false
                 it.addMouseListener(listener)
@@ -238,12 +235,10 @@ internal class ChangesPanel @RequiresEdt constructor(
         }
 
         @RequiresEdt
-        fun update(files: Int, additions: Int, deletions: Int, label: String?, tip: String) {
+        fun update(files: Int, additions: Int, deletions: Int, tip: String) {
             val text = KiloBundle.message(if (files == 1) "session.changes.count.one" else "session.changes.count.other", files)
             if (count.text != text) count.text = text
             if (count.isVisible != (files > 0)) count.isVisible = files > 0
-            if (caption.text != label) caption.text = label
-            if (caption.isVisible != (label != null && files > 0)) caption.isVisible = label != null && files > 0
             stat.update(additions, deletions)
             val lines = files > 0 && (additions > 0 || deletions > 0)
             if (stat.isVisible != lines) stat.isVisible = lines

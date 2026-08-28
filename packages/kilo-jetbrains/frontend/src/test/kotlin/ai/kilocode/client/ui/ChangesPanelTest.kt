@@ -36,12 +36,12 @@ class ChangesPanelTest : BasePlatformTestCase() {
         assertEquals(view.toolTipText, groups(view).single().toolTipText)
     }
 
-    fun `test full orders local separator ahead behind and labelled base`() = edt {
+    fun `test full orders local separator ahead behind and base`() = edt {
         val view = ChangesPanel(ChangesPanel.Mode.FULL)
         view.update(3, 10, 7, ahead = 4, behind = 5, localFiles = 2, localAdditions = 9, localDeletions = 3, base = "origin/main")
         layout(view)
 
-        assertEquals(listOf("Uncommitted", "2 files", "-3", "+9", "4", "5", "vs origin/main", "3 files", "-7", "+10"), labels(view))
+        assertEquals(listOf("2 files", "-3", "+9", "4", "5", "3 files", "-7", "+10"), labels(view))
         val row = view.components.single() as Container
         val order = row.components.toList()
         assertEquals(5, order.size)
@@ -58,7 +58,7 @@ class ChangesPanelTest : BasePlatformTestCase() {
         val view = ChangesPanel(ChangesPanel.Mode.FULL, onBase = {}, onLocal = {})
         view.update(1, 0, 0, localFiles = 2)
 
-        assertEquals(listOf("Uncommitted", "2 files", "vs base", "1 file"), labels(view))
+        assertEquals(listOf("2 files", "1 file"), labels(view))
         assertTrue(groups(view).all { it.isVisible && it.isFocusable })
         assertTrue(components(view).filterIsInstance<DiffStatBadge>().all { !it.isVisible })
         assertTrue(separator(view).isVisible)
@@ -88,15 +88,15 @@ class ChangesPanelTest : BasePlatformTestCase() {
         assertFalse(separator(view).isVisible)
 
         view.update(0, 0, 0, behind = 4, localFiles = 1)
-        assertEquals(listOf("Uncommitted", "1 file", "4"), labels(view))
+        assertEquals(listOf("1 file", "4"), labels(view))
         assertTrue(separator(view).isVisible)
 
         view.update(0, 0, 0, localFiles = 1)
-        assertEquals(listOf("Uncommitted", "1 file"), labels(view))
+        assertEquals(listOf("1 file"), labels(view))
         assertFalse(separator(view).isVisible)
 
         view.update(1, 0, 0)
-        assertEquals(listOf("vs base", "1 file"), labels(view))
+        assertEquals(listOf("1 file"), labels(view))
         assertFalse(separator(view).isVisible)
     }
 
@@ -106,12 +106,11 @@ class ChangesPanelTest : BasePlatformTestCase() {
         val groups = groups(view)
 
         view.update(2, 5, 1, localFiles = 3, localDeletions = 4, base = "origin/main")
-        assertEquals(listOf("Uncommitted", "3 files", "-4", "vs origin/main", "2 files", "-1", "+5"), labels(view))
+        assertEquals(listOf("3 files", "-4", "2 files", "-1", "+5"), labels(view))
         assertEquals(KiloBundle.message("worktree.dirty.tooltip", 3, 0, 4), groups.first().toolTipText)
 
         view.update(2, 5, 1, localFiles = 3, localDeletions = 4, base = "origin/trunk")
         assertEquals(KiloBundle.message("worktree.stats.base.tooltip", 2, 5, 1, "origin/trunk"), groups.last().toolTipText)
-        assertTrue(labels(view).contains("vs origin/trunk"))
         assertEquals(groups, groups(view))
     }
 

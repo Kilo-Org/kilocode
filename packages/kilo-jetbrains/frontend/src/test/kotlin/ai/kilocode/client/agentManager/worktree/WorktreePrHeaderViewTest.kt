@@ -134,7 +134,7 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         assertSame(changes, edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java) })
     }
 
-    fun `test full changes retain local and base labels with and without a PR`() {
+    fun `test full changes retain local and base counts with and without a PR`() {
         val view = edt { WorktreePrHeaderView {} }
         val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
         val stats = WorktreeStatsDto("/repo", additions = 10, deletions = 4, ahead = 3, behind = 2, files = 5, base = "origin/main")
@@ -143,7 +143,7 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         listOf(null, pull(GhState.OPEN)).forEach { pull ->
             edt { view.update(stats, pull, "feature-x", dirty) }
             assertEquals(
-                listOf("Uncommitted", "1 file", "-1", "+6", "3", "2", "vs origin/main", "5 files", "-4", "+10"),
+                listOf("1 file", "-1", "+6", "3", "2", "5 files", "-4", "+10"),
                 edt { labels(changes) },
             )
             assertTrue(edt { changes.isVisible })
@@ -170,7 +170,7 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         val changes = edt { UIUtil.findComponentOfType(view, ChangesPanel::class.java)!! }
         val dirty = WorktreeDirtyDto("/repo", files = 1)
         edt { view.update(null, null, "feature-x", dirty) }
-        assertEquals(listOf("Uncommitted", "1 file"), edt { labels(changes) })
+        assertEquals(listOf("1 file"), edt { labels(changes) })
         edt { view.update(WorktreeStatsDto("/repo", ahead = 2), null, "feature-x") }
         assertEquals(listOf("2"), edt { labels(changes) })
         edt { view.update(null, null, "feature-x") }

@@ -781,21 +781,21 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         try {
             timers.advanceBy(300)
             stats.trySend(WorktreeStatsListDto(listOf(WorktreeStatsDto(DIR, files = 2, additions = 5, base = "origin/main")))).getOrThrow()
-            await(summary, listOf("vs origin/main", "2 files", "+5"))
+            await(summary, listOf("2 files", "+5"))
             dirty.trySend(WorktreeDirtyListDto(listOf(WorktreeDirtyDto(DIR, files = 1, additions = 7)))).getOrThrow()
-            await(summary, listOf("Uncommitted", "1 file", "+7", "vs origin/main", "2 files", "+5"))
+            await(summary, listOf("1 file", "+7", "2 files", "+5"))
 
             edt { status.refreshStats() }
             timers.advanceBy(300)
             dirty.trySend(WorktreeDirtyListDto(listOf(WorktreeDirtyDto(DIR, files = 3, deletions = 4)))).getOrThrow()
-            await(summary, listOf("Uncommitted", "3 files", "-4", "vs origin/main", "2 files", "+5"))
+            await(summary, listOf("3 files", "-4", "2 files", "+5"))
             stats.trySend(WorktreeStatsListDto(listOf(WorktreeStatsDto(DIR, files = 1, behind = 2, base = "origin/trunk")))).getOrThrow()
-            await(summary, listOf("Uncommitted", "3 files", "-4", "2", "vs origin/trunk", "1 file"))
+            await(summary, listOf("3 files", "-4", "2", "1 file"))
 
             edt { status.refreshStats() }
             timers.advanceBy(300)
             dirty.trySend(WorktreeDirtyListDto()).getOrThrow()
-            await(summary, listOf("2", "vs origin/trunk", "1 file"))
+            await(summary, listOf("2", "1 file"))
             stats.trySend(WorktreeStatsListDto()).getOrThrow()
             await(summary, emptyList())
             edt {
@@ -838,7 +838,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val editors = FileEditorManager.getInstance(project)
         try {
             timers.advanceBy(300)
-            await(summary, listOf("Uncommitted", "1 file", "vs base", "2 files"))
+            await(summary, listOf("1 file", "2 files"))
             edt {
                 click(components(summary).filterIsInstance<JBLabel>().single { it.text == "1 file" })
                 click(components(summary).filterIsInstance<JBLabel>().single { it.text == "2 files" })
