@@ -1055,6 +1055,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
   "settings.context.compaction.title": "圧縮",
+  "settings.context.compactionModel.title": "圧縮モデル",
+  "settings.context.compactionModel.description":
+    "自動および手動の圧縮に使用するモデル。チャットモデルを使用するには未設定のままにしてください。コスト、速度、要約の品質はモデルによって異なります。",
+  "settings.context.compactionModel.useChatModel": "チャットモデルを使用",
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",

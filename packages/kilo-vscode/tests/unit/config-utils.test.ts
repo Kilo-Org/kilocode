@@ -392,6 +392,27 @@ describe("ConfigState", () => {
     })
   })
 
+  it("sets and clears the compaction model without changing other settings", () => {
+    const s = new ConfigState()
+    const cfg: Config = {
+      model: "kilo/openai/gpt-4.1",
+      agent: { compaction: { prompt: "Keep task details" }, code: { model: "kilo/openai/gpt-4.1" } },
+    }
+    const model = "kilo/anthropic/claude-haiku-4-5"
+    s.handleConfigLoaded(cfg)
+    s.updateConfig({ agent: { compaction: { model } } })
+
+    expect(s.config).toEqual({
+      ...cfg,
+      agent: { ...cfg.agent, compaction: { prompt: "Keep task details", model } },
+    })
+    s.updateConfig({ agent: { compaction: { model: null } } })
+
+    expect(s.config).toEqual(cfg)
+    expect(s.draft.agent?.compaction?.model).toBeNull()
+    expect(configUnsetPaths(s.draft)).toEqual([["agent", "compaction", "model"]])
+  })
+
   describe("agent permission patches", () => {
     it("merges nested per-agent permission patches into existing rules", () => {
       const s = new ConfigState()
