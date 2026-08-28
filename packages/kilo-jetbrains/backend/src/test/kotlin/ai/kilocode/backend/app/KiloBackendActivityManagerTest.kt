@@ -115,6 +115,54 @@ class KiloBackendActivityManagerTest {
         assertFalse("ses_1" in manager.activity.value)
     }
 
+    /**
+     * A provider that ends the response in error writes the failure onto the message and reports it
+     * only through the close reason, so the badge cannot depend on a session error event.
+     */
+    @Test
+    fun `turn closing in error badges the session without an error event`() = runBlocking {
+        directories["ses_1"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+
+        events.emit(ChatEventDto.TurnClose("ses_1", "error"))
+        statuses.value = mapOf("ses_1" to SessionStatusDto("idle"))
+        events.emit(ChatEventDto.SessionIdle("ses_1"))
+
+        val snap = await("ses_1", SessionActivityKindDto.ERROR)
+        assertEquals("/repo/wt", snap["ses_1"]?.directory)
+    }
+
+    @Test
+    fun `turn closing without a failure leaves the session unbadged`() = runBlocking {
+        directories["ses_1"] = "/repo/wt"
+        statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
+        start()
+
+        for (reason in listOf("completed", "interrupted", "aborted")) {
+            events.emit(ChatEventDto.TurnClose("ses_1", reason))
+        }
+        statuses.value = mapOf("ses_1" to SessionStatusDto("idle"))
+        events.emit(ChatEventDto.SessionIdle("ses_1"))
+
+        withTimeout(5_000) { manager.activity.first { "ses_1" !in it } }
+        assertFalse("ses_1" in manager.activity.value)
+    }
+
+    @Test
+    fun `a turn closed in error clears once the session is retried`() = runBlocking {
+        directories["ses_1"] = "/repo/wt"
+        start()
+
+        events.emit(ChatEventDto.TurnClose("ses_1", "error"))
+        await("ses_1", SessionActivityKindDto.ERROR)
+
+        events.emit(ChatEventDto.TurnOpen("ses_1"))
+
+        withTimeout(5_000) { manager.activity.first { "ses_1" !in it } }
+        assertFalse("ses_1" in manager.activity.value)
+    }
+
     @Test
     fun `aborted error does not badge the session`() = runBlocking {
         directories["ses_1"] = "/repo/wt"

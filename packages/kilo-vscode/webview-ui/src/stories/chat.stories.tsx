@@ -18,10 +18,15 @@ import { TaskUsage } from "../components/chat/TaskUsage"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
+import { PromptRail } from "../components/chat/PromptRail"
+import { promptItems, railEntries } from "../components/chat/prompt-rail"
+import { messageTurns } from "../context/session-queue"
+import { transcriptRows } from "../context/transcript-rows"
 import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
+import type { SessionContextValue } from "../context/session-types"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
@@ -34,6 +39,7 @@ import type {
   SessionModelUsage,
   SuggestionRequest,
   TodoItem,
+  ToolPart,
 } from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { reviewMetadata } from "../../../src/shared/review-comments"
@@ -565,7 +571,6 @@ export const ChatViewReadable420: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// PromptRail — the left-edge tick rail and its hover card
 // Several turns so the rail and card are populated: a long prompt, a short
 // low-signal follow-up, a tool-only answer (empty preview), and a queued one.
 // ---------------------------------------------------------------------------
@@ -668,6 +673,55 @@ export const PromptRailSidebar: Story = {
   render: () => renderRailChat("busy"),
 }
 
+const rail = (side: "left" | "right") => {
+  const items = promptItems(transcriptRows(messageTurns(railMessages), (id) => railParts[id] ?? []))
+  const [active, setActive] = createSignal<string | undefined>(items[0]?.key)
+  const [wheel, setWheel] = createSignal(0)
+  return (
+    <StoryProviders noPadding>
+      <div
+        class="message-list-container"
+        data-testid="prompt-rail-host"
+        data-selected={active()}
+        data-wheel={wheel()}
+        style={{ height: "100vh" }}
+      >
+        <div class="message-list">
+          <p data-testid="prompt-rail-content" tabIndex={0}>
+            {items.find((item) => item.key === active())?.prompt}
+          </p>
+        </div>
+        <PromptRail
+          side={side}
+          entries={() => railEntries(items, items.length)}
+          items={() => items}
+          active={active}
+          onSelect={(item) => setActive(item.key)}
+          onFirst={() => setActive(items[0]?.key)}
+          onLatest={() => setActive(items.at(-1)?.key)}
+          onLoadOlder={() => undefined}
+          onWheel={(delta) => setWheel(delta)}
+          height={() => window.innerHeight}
+          hasOlder={() => false}
+          loadingOlder={() => false}
+          prepending={() => false}
+          seeking={() => false}
+        />
+      </div>
+    </StoryProviders>
+  )
+}
+
+export const PromptRailLeft: Story = {
+  name: "PromptRail - left outer edge",
+  render: () => rail("left"),
+}
+
+export const PromptRailRight: Story = {
+  name: "PromptRail - right outer edge",
+  render: () => rail("right"),
+}
+
 // Long session: more prompts than fit the transcript height, so the rail and
 // the card both cap to the newest ones that fit.
 const manyTurns = Array.from({ length: 80 }, (_, i) =>
@@ -747,8 +801,13 @@ export const MessageListLayoutCorrection: Story = {
   name: "MessageList - follow after layout correction",
   render: () => {
     const [output, setOutput] = createSignal("Initial streamed response.")
+    const [status, setStatus] = createSignal<"idle" | "busy">("busy")
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
+      status,
+      statusInfo: () => ({ type: status() }),
+      statusText: () => (status() === "busy" ? "Thinking…" : undefined),
+      busySince: () => (status() === "busy" ? Date.now() - 2000 : undefined),
       messages: () => correctionMessages,
       userMessages: () => correctionMessages.filter((msg) => msg.role === "user"),
       getParts: (id: string) => {
@@ -769,6 +828,8 @@ export const MessageListLayoutCorrection: Story = {
                 position: fixed;
                 inset: 8px 8px auto auto;
                 z-index: 10;
+                display: flex;
+                gap: 8px;
               }
             `}</style>
             <div class="auto-scroll-correction-controls">
@@ -778,6 +839,13 @@ export const MessageListLayoutCorrection: Story = {
                 onClick={() => setOutput((value) => `${value}\n\n${"More streamed output. ".repeat(30)}`)}
               >
                 Append stream
+              </button>
+              <button
+                type="button"
+                data-testid="toggle-status"
+                onClick={() => setStatus((value) => (value === "busy" ? "idle" : "busy"))}
+              >
+                Toggle status
               </button>
             </div>
             <ChatView />
@@ -1131,6 +1199,57 @@ export const TaskHeaderWithTodos: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const TaskHeaderBackgroundAgents1280: Story = {
+  name: "TaskHeader background agents, wide",
+  args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
+  render: (args: { names: string[] }) => {
+    const tools: ToolPart[] = args.names.map((description, index) => ({
+      id: `task-${index}`,
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "task",
+      state: { status: "completed", input: { description }, output: "Started background agent", title: description },
+      metadata: { sessionId: `child-${index}`, background: true },
+    }))
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID }),
+      messages: () => headerMessages,
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Investigate request size limits",
+        createdAt: new Date(headerNow).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
+      }),
+      getSessionToolParts: () => tools,
+      allStatusMap: () => Object.fromEntries(tools.map((_, index) => [`child-${index}`, { type: "busy" as const }])),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} noPadding>
+        <SessionContext.Provider value={session as unknown as SessionContextValue}>
+          <TaskHeader />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TaskHeaderBackgroundAgents420: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader background agents, narrow",
+}
+
+export const TaskHeaderBackgroundAgents200: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader background agents, compact",
+}
+
+export const TaskHeaderSingleBackgroundAgent420: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader single background agent, narrow",
+  args: { names: ["Check request limits"] },
 }
 
 export const TaskHeaderWithTodosAllDone: Story = {

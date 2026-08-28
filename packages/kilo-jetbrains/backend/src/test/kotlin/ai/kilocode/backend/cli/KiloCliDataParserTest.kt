@@ -1610,6 +1610,7 @@ class KiloCliDataParserTest {
                 "info": {
                     "id": "m1", "sessionID": "s1", "role": "assistant",
                     "time": { "created": 1.0, "completed": 2.0 },
+                    "finish": "unknown",
                     "tokens": { "input": 100, "output": 50, "reasoning": 10, "cache": { "read": 20, "write": 5 } },
                     "cost": 0.005
                 },
@@ -1624,6 +1625,7 @@ class KiloCliDataParserTest {
             assertEquals(10L, info.tokens?.reasoning)
             assertEquals(20L, info.tokens?.cacheRead)
             assertEquals(5L, info.tokens?.cacheWrite)
+            assertEquals("unknown", info.finish)
             assertEquals(0.005, info.cost)
             assertEquals(2.0, info.time.completed)
         }

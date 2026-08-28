@@ -226,6 +226,7 @@ type ProviderInternals = {
   sessionDirectories: Map<string, string>
   sessionStatusMap: Map<string, string>
   trackedSessionIds: Set<string>
+  removedSessionIds: Set<string>
   openSessionIds: Set<string>
   draftSessions: Map<string, { sid: string; dir: string; expires: number }>
   checkpoints: Map<string, Promise<void>>
@@ -1135,6 +1136,26 @@ describe("KiloProvider.handleDeleteSession / background processes", () => {
     await internal.handleDeleteSession("s1")
 
     expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/worktree" }])
+  })
+
+  it("ignores late activity updates after a session is deleted", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    const event = {
+      type: "session.status",
+      properties: { sessionID: "s1", status: { type: "busy" } },
+    }
+
+    internal.handleEvent(event, "/repo")
+    expect(internal.sessionStatusMap.get("s1")).toBe("busy")
+    await internal.handleDeleteSession("s1")
+    const count = sent.length
+
+    internal.handleEvent(event, "/repo")
+
+    expect(internal.removedSessionIds.has("s1")).toBe(true)
+    expect(internal.sessionStatusMap.has("s1")).toBe(false)
+    expect(sent).toHaveLength(count)
   })
 })
 

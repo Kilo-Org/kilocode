@@ -27,7 +27,7 @@ import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
-import type { MentionResult } from "../../hooks/file-mention-utils"
+import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
@@ -40,6 +40,7 @@ import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
+import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
@@ -51,12 +52,12 @@ import {
   insertSpacedText,
   isPromptBusy,
   isPathMention,
-  applySandboxStates,
   memoryRest,
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
-import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
+import { sandboxMessages } from "./prompt-sandbox-messages"
+import type { ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
@@ -120,6 +121,7 @@ interface PromptInputProps {
   worktree?: boolean
   boxId?: string
   terminalContext?: () => string | undefined
+  worktrees?: () => WorktreeReference[]
   pendingSessionID?: string
   /** Agent Manager can suppress automatic prompt focus when this session last
    *  used its side terminal instead. Other callers retain the old behavior. */
@@ -130,6 +132,7 @@ interface PromptInputProps {
 
 function MentionItemContent(props: { item: MentionResult }) {
   const item = props.item
+  const language = useLanguage()
   if (item.type === "terminal")
     return (
       <>
@@ -138,12 +141,16 @@ function MentionItemContent(props: { item: MentionResult }) {
         <span class="file-mention-dir">{item.description}</span>
       </>
     )
-  if (item.type === "git-changes")
+  if (item.type === "git-changes" || item.type === "worktrees")
     return (
       <>
         <Icon name="branch" class="file-mention-icon" />
-        <span class="file-mention-name">{item.label}</span>
-        <span class="file-mention-dir">{item.description}</span>
+        <span class="file-mention-name">
+          {item.type === "worktrees" ? language.t("prompt.worktrees.title") : item.label}
+        </span>
+        <span class="file-mention-dir">
+          {item.type === "worktrees" ? language.t("prompt.worktrees.search") : item.description}
+        </span>
       </>
     )
   if (item.type === "past-chats")
@@ -194,7 +201,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return rest === "unassigned" ? undefined : rest
   }
   const hasGit = () => server.gitInstalled()
-  const mention = useFileMention(vscode, sid, hasGit)
+  const mention = useFileMention(vscode, sid, hasGit, props.worktrees)
   const terminal = useTerminalContext(props.resolveEmbeddedTerminal)
   const git = useGitChangesContext(vscode, ctx, hasGit)
   const imageAttach = useImageAttachments()
@@ -391,6 +398,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const pending = reviewDrafts.get(key) ?? []
       const scroll = scrollDrafts.get(key) ?? 0
       setText(draft)
+      mention.seedFromText(draft)
       setReviewComments(pending)
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
@@ -536,15 +544,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const sendReady = () => !isDisabled() && !terminal.pending() && !git.pending() && !props.blocked?.()
+  const canContinue = () => speech.state() === "idle" && !hasInput() && session.canResume()
   const canSend = () =>
-    !isDisabled() &&
-    !terminal.pending() &&
-    !git.pending() &&
-    !props.blocked?.() &&
-    (speech.state() === "recording" || (hasInput() && !speech.active()))
+    sendReady() && (speech.state() === "recording" || (!speech.active() && (hasInput() || canContinue())))
+  const canSendContinue = () => sendReady() && !speech.active() && canContinue()
   const sendLabel = () => {
     if (props.blocked?.()) return language.t("prompt.action.send.blocked")
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
+    if (canSendContinue()) return language.t("prompt.action.continue")
     return language.t("prompt.action.send")
   }
   const showStop = () => isBusy() && !hasInput() && speech.state() !== "recording"
@@ -624,91 +632,29 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imageDrafts.set(target, images)
   }
 
-  const handleSandboxMessage = (message: ExtensionMessage) => {
-    if (message.type === "sandboxDefaultStatus") {
-      const matching = message.requestID !== undefined && message.requestID === sandboxRequest(undefined)
-      if (sandboxID() && !matching) return false
-      if (!server.isConnected()) return true
-      if (matching) clearSandboxRequest(undefined, message.requestID!)
-      const current = sandboxDefault()
-      if (!current || current.revision <= message.revision) {
-        setSandboxDefault({
-          desired: message.desired,
-          enabled: message.enabled,
-          available: message.available,
-          reason: message.reason,
-          revision: message.revision,
-        })
-      }
-      if (matching && !message.available) {
-        showToast({
-          variant: "error",
-          title: language.t("common.requestFailed"),
-          description: message.reason,
-        })
-      }
-      return true
-    }
-
-    if (message.type === "sandboxStatus") {
-      const matching = message.requestID !== undefined && message.requestID === sandboxRequest(message.sessionID)
-      if (!server.isConnected()) return true
-      const current = sandboxes()
-      if (matching) clearSandboxRequest(message.sessionID, message.requestID!)
-      const next = applySandboxStates(current, message)
-      if (next !== current) setSandboxes(next)
-      const state = next[message.sessionID]
-      if (message.sessionID === sandboxID()) {
-        sandboxAttempts = 0
-        if (sandboxRetry) clearTimeout(sandboxRetry)
-        sandboxRetry = undefined
-      }
-      if (matching && !state.available) {
-        showToast({
-          variant: "error",
-          title: language.t("common.requestFailed"),
-          description: state.reason,
-        })
-      }
-      return true
-    }
-
-    if (message.type === "sandboxStatusError") {
-      const matching = message.requestID !== undefined && message.requestID === sandboxRequest(message.sessionID)
-      if (!server.isConnected()) return true
-      const current = sandboxes()
-      const state = current[message.sessionID]
-      if (matching) clearSandboxRequest(message.sessionID, message.requestID!)
-      if ((state?.revision ?? -1) > message.revision) return true
-      if (!message.requestID) {
-        const same = state?.directory === message.directory
-        setSandboxes(
-          applySandboxStates(current, {
-            sessionID: message.sessionID,
-            directory: message.directory,
-            enabled: same ? state.enabled : false,
-            available: false,
-            reason: message.message,
-            version: same ? state.version : 0,
-            revision: message.revision,
-          }),
-        )
-        if (message.sessionID === sandboxID()) retrySandbox(message.sessionID)
-      }
-      if (matching) {
-        showToast({
-          variant: "error",
-          title: language.t("common.requestFailed"),
-          description: message.message,
-        })
-      }
-      return true
-    }
-
-    if (message.type !== "configUpdated") return false
-    requestSandbox()
-    return true
-  }
+  const handleSandboxMessage = sandboxMessages({
+    connected: server.isConnected,
+    session: sandboxID,
+    pending: sandboxRequest,
+    clear: clearSandboxRequest,
+    defaults: sandboxDefault,
+    setDefault: setSandboxDefault,
+    states: sandboxes,
+    setStates: setSandboxes,
+    reset: () => {
+      sandboxAttempts = 0
+      if (sandboxRetry) clearTimeout(sandboxRetry)
+      sandboxRetry = undefined
+    },
+    retry: retrySandbox,
+    refresh: requestSandbox,
+    error: (reason) =>
+      showToast({
+        variant: "error",
+        title: language.t("common.requestFailed"),
+        description: reason,
+      }),
+  })
 
   const unsubscribe = vscode.onMessage((message) => {
     if (handleSandboxMessage(message)) return
@@ -1209,17 +1155,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const imgs = imageAttach.images()
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
+    if (canSendContinue()) {
+      session.resume()
+      return
+    }
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
     const data = review ? { version: 1 as const, comments: pending } : undefined
-    if (
-      (!message && imgs.length === 0) ||
-      isDisabled() ||
-      speech.active() ||
-      terminal.pending() ||
-      git.pending() ||
-      props.blocked?.()
-    )
-      return
+    if ((!message && imgs.length === 0) || !sendReady() || speech.active()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
@@ -1337,14 +1279,31 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             }
           >
             <Show
-              when={mention.mentionResults().length > 0}
-              fallback={<div class="file-mention-empty">No files or folders found</div>}
+              when={!mention.worktreePicker() && mention.mentionResults().length > 0}
+              fallback={
+                <Show
+                  when={mention.worktreePicker()}
+                  fallback={<div class="file-mention-empty">No files or folders found</div>}
+                >
+                  <WorktreeMentionPicker
+                    worktrees={mention.worktreeCandidates()}
+                    onSelect={(picked) => {
+                      if (textareaRef) mention.selectWorktree(picked, textareaRef, setText, adjustHeight)
+                    }}
+                    onClose={() => {
+                      mention.closeMention()
+                      textareaRef?.focus()
+                    }}
+                  />
+                </Show>
+              }
             >
               <For each={mention.mentionResults()}>
                 {(item, index) => (
                   <>
                     <div
                       class="file-mention-item"
+                      data-type={item.type}
                       classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
                       onMouseDown={(e) => {
                         e.preventDefault()

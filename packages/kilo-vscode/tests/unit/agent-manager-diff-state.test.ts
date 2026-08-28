@@ -195,4 +195,11 @@ describe("diff line virtualization", () => {
       ),
     ).toBe(true)
   })
+
+  it("virtualizes small patches when either source file exceeds the eager byte limit", () => {
+    const patch = "@@ -1 +1 @@\n-old\n+new\n"
+    expect(shouldVirtualizeDiff(diff({ patch, before: "x".repeat(256 * 1024 + 1), after: "new\n" }))).toBe(true)
+    expect(shouldVirtualizeDiff(diff({ patch, before: "old\n", after: "x".repeat(256 * 1024 + 1) }))).toBe(true)
+    expect(shouldVirtualizeDiff(diff({ patch, before: "x".repeat(256 * 1024), after: "new\n" }))).toBe(false)
+  })
 })

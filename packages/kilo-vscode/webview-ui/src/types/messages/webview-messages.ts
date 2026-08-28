@@ -17,6 +17,7 @@ import type {
   StartMigrationMessage,
 } from "./migration"
 import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
+import type { Activity } from "../../utils/session-activity"
 
 // ============================================
 // Messages FROM webview TO extension
@@ -37,6 +38,13 @@ export interface SendMessageRequest {
   review?: ReviewMessageData
   agentManagerContext?: string
   contextDirectory?: string
+}
+
+export interface ResumeSessionRequest {
+  type: "resumeSession"
+  sessionID: string
+  messageID: string
+  requestID: string
 }
 
 export interface AbortRequest {
@@ -1490,11 +1498,13 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | { type: "sessionActivity"; state: Activity }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCloseMessage
   | DocumentSendCommentsMessage
   | SendMessageRequest
+  | ResumeSessionRequest
   | AbortRequest
   | RequestBackgroundJobsMessage
   | CancelBackgroundJobMessage

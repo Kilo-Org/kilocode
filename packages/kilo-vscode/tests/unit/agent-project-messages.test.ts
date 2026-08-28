@@ -3,6 +3,7 @@ import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 import { execFileSync } from "child_process"
+import { GitOps } from "../../src/agent-manager/GitOps"
 import { handleProjectMessage, type ProjectMessageDeps } from "../../src/agent-manager/project/messages"
 import { ProjectRegistry, type RegistryStorage } from "../../src/agent-manager/project/registry"
 import { ProjectContexts } from "../../src/agent-manager/project/contexts"
@@ -17,7 +18,7 @@ function gitRepo(): string {
   return fs.realpathSync(dir)
 }
 
-function setup(opts: { enabled?: boolean; workspace?: string } = {}) {
+function setup(opts: { enabled?: boolean; workspace?: string; git?: GitOps } = {}) {
   let stored: unknown
   let pickResult: string | undefined
   const storage: RegistryStorage = {
@@ -58,6 +59,7 @@ function setup(opts: { enabled?: boolean; workspace?: string } = {}) {
       calls.ready.push(ctx.id)
       return calls.readyResult
     },
+    git: opts.git,
     log: () => {},
   }
   const pick = (dir: string | undefined) => {
@@ -114,6 +116,19 @@ describe("handleProjectMessage", () => {
     const { deps, calls, registry, pick } = setup()
     pick(dir)
     await handleProjectMessage(msg("agentManager.addProject"), deps)
+    expect(registry.list()).toEqual([])
+    expect(calls.error).toEqual(["The selected folder is not inside a Git repository."])
+  })
+
+  it("uses the configured Git executable when adding a project", async () => {
+    const repo = gitRepo()
+    const git = new GitOps({ log: () => {}, binary: path.join(repo, "missing-git") })
+    const { deps, calls, registry, pick } = setup({ git })
+    pick(repo)
+
+    await handleProjectMessage(msg("agentManager.addProject"), deps)
+    git.dispose()
+
     expect(registry.list()).toEqual([])
     expect(calls.error).toEqual(["The selected folder is not inside a Git repository."])
   })

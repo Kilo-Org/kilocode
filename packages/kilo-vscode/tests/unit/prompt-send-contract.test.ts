@@ -1,8 +1,8 @@
 /**
  * Source contract tests for prompt send paths.
  *
- * Static analysis — reads session.tsx source and verifies that sendMessage and
- * sendCommand still dismiss suggestions and reject questions before dispatching.
+ * Static analysis — reads the session context source and verifies that sendMessage
+ * and sendCommand still dismiss suggestions and reject questions before dispatching.
  * Also reads ChatView.tsx and asserts the prompt-block predicate is fed only
  * permission counts, never question counts — guarantees that a pending question
  * cannot re-block the prompt input.
@@ -17,6 +17,7 @@ import { clearIfOn } from "../../webview-ui/src/context/session-cloud-prune"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const SESSION_FILE = path.join(ROOT, "webview-ui/src/context/session.tsx")
+const SESSION_TYPES_FILE = path.join(ROOT, "webview-ui/src/context/session-types.ts")
 const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.tsx")
 const AGENT_MANAGER_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
@@ -230,6 +231,18 @@ describe("handleSessionDeleted draft cleanup contract", () => {
     const body = extractFunctionBody(source, "handleSessionDeleted")
     expect(body).toContain("setRespondingPermissions")
   })
+
+  it("prevents late status and attention events from reviving a deleted session", () => {
+    expect(extractFunctionBody(source, "handleSessionDeleted")).toContain("removedSessions.add(sessionID)")
+    expect(extractFunctionBody(source, "handleSessionStatus")).toContain("removedSessions.has(sessionID)")
+    expect(extractFunctionBody(source, "handlePermissionRequest")).toContain(
+      "removedSessions.has(permission.sessionID)",
+    )
+    expect(extractFunctionBody(source, "handleQuestionRequest")).toContain("removedSessions.has(question.sessionID)")
+    expect(extractFunctionBody(source, "handleSuggestionRequest")).toContain(
+      "removedSessions.has(suggestion.sessionID)",
+    )
+  })
 })
 
 describe("KiloProvider pruneDeletedSession contract", () => {
@@ -243,7 +256,9 @@ describe("KiloProvider pruneDeletedSession contract", () => {
     // warning for the new current session.
     const match = source.match(/pruneDeletedSession\(sessionID: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
+    expect(match![1]).toContain("this.removedSessionIds.add(sessionID)")
     expect(match![1]).toContain("this.sessionStatusMap.delete(sessionID)")
+    expect(source).toContain("if (this.removedSessionIds.has(sid)) return")
   })
 
   it("clears currentSession and contextSessionID when the deleted id matches", () => {
@@ -413,7 +428,7 @@ describe("SessionContext userClearedSession contract", () => {
     // restoreFailed uses session.userClearedSession() to decide whether :new
     // is a legitimate restore target after the user clicks New Task or
     // deletes their current/draft session. The accessor must be exposed.
-    expect(source).toMatch(/userClearedSession:\s*Accessor<boolean>/)
+    expect(readFile(SESSION_TYPES_FILE)).toMatch(/userClearedSession:\s*Accessor<boolean>/)
   })
 
   it("clearCurrentSession sets the flag", () => {

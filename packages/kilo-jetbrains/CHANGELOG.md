@@ -316,6 +316,45 @@
 
 ## [Unreleased]
 
+## [7.1.1] - 2026-08-28
+
+### Added
+
+- Render Mermaid diagrams directly in JetBrains chat, with editor-tab viewing, zoom, pan, fit-to-view, source view, and PNG copy support.
+- Add clearer JetBrains worktree session empty states, labeled create actions, and a persisted toggle for showing or hiding the worktree session list.
+
+### Fixed
+
+- Retry failed JetBrains turns by continuing the original request, keeping transcript and workspace context intact instead of rolling back or appending a placeholder prompt.
+- Surface JetBrains failed-turn errors more clearly and hide the failure card as soon as Retry starts.
+- Prevent compaction recovery from replaying requests incorrectly, looping, or dropping pending tool progress in Kilo Core.
+- Avoid unsafe indexing and checkpoint cleanup behavior in filesystem roots, home directories, and protected parent directories.
+- Return real subagent results instead of empty task responses in Kilo Core.
+- Avoid duplicated plan-mode permission rule stacking.
+
+### Changed
+
+- Update the pinned Kilo Core CLI used by JetBrains from 7.4.23 to 7.5.5.
+- Improve JetBrains worktree session guidance with branch-aware copy and localized empty-state text.
+
+## [7.1.1-rc.1] - 2026-08-27
+
+### Added
+
+- Open Mermaid diagrams in JetBrains editor tabs with zoom, pan, fit-to-view, source view, and PNG copy support.
+- Add clearer JetBrains worktree session empty states, labeled create actions, and a persisted toggle for showing or hiding the worktree session list.
+
+### Fixed
+
+- Retry failed JetBrains turns by continuing the original request, keeping transcript and workspace context intact instead of rolling back or appending a placeholder prompt.
+- Surface JetBrains failed-turn errors more clearly and hide the failure card as soon as Retry starts.
+- Avoid duplicated plan-mode permission rule stacking in Kilo Core.
+
+### Changed
+
+- Update the pinned Kilo Core CLI used by JetBrains from 7.4.23 to 7.5.5.
+- Improve JetBrains worktree session UX with branch-aware guidance and localized copy updates.
+
 ## [7.1.0] - 2026-08-26
 
 ### Added
