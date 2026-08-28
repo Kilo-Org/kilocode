@@ -83,10 +83,13 @@ internal class ActiveListRenderer(
     private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
     private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
     private val title = SimpleColoredComponent()
-    private val badges = Stack.horizontal()
-    // Title in CENTER clips when the group is narrow; trailing tags in EAST keep their full
-    // preferred width. A squeezed row sacrifices the title text but never drops the tags.
+    private val leading = Stack.horizontal(JBUI.CurrentTheme.ActionsList.elementIconGap())
+    private val badges = Stack.horizontal(JBUI.CurrentTheme.ActionsList.elementIconGap())
+    private val secondary = Stack.horizontal(UiStyle.Gap.md())
+    // Title in CENTER clips when the group is narrow; tags in WEST/EAST keep their full preferred
+    // width. A squeezed row sacrifices the title text but never drops the tags.
     private val titleGroup = JPanel(BorderLayout(UiStyle.Gap.xs(), 0)).apply {
+        add(leading, BorderLayout.WEST)
         add(title, BorderLayout.CENTER)
         add(badges, BorderLayout.EAST)
     }
@@ -95,12 +98,11 @@ internal class ActiveListRenderer(
     private val header = titleGroup.align(HAlign.LEFT, VAlign.CENTER)
     private val desc = JBLabel()
     private val metrics = WorktreeStatsView()
-    private val metricsPane = metrics.align(HAlign.RIGHT, VAlign.CENTER)
-    // The description (branch) line carries the changes/PR metrics on its trailing edge so they sit
-    // on the branch row instead of spanning the full row height.
+    private val details = Stack.horizontal(UiStyle.Gap.md()).next(metrics).next(secondary)
+    private val detailsPane = details.align(HAlign.RIGHT, VAlign.CENTER)
     private val descLine = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(desc, BorderLayout.CENTER)
-        add(metricsPane, BorderLayout.EAST)
+        add(detailsPane, BorderLayout.EAST)
     }
     private val text = Stack.vertical().next(header).next(descLine)
     private val textPane = text.align(HAlign.TRACK, VAlign.CENTER)
@@ -145,6 +147,7 @@ internal class ActiveListRenderer(
             mark,
             icon,
             title,
+            leading,
             badges,
             titleGroup,
             header,
@@ -153,7 +156,9 @@ internal class ActiveListRenderer(
             desc,
             descLine,
             metrics,
-            metricsPane,
+            secondary,
+            details,
+            detailsPane,
             trail,
             trailPane,
             endPane,
@@ -240,22 +245,16 @@ internal class ActiveListRenderer(
         val data = if (value.progress != null) null else value.metrics
         metrics.update(
             data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) },
-            data?.pr,
-            data?.prTooltip ?: data?.pr?.text,
             data?.dirtyAdditions ?: 0,
             data?.dirtyDeletions ?: 0,
             data?.dirtyFiles ?: 0,
         )
-        metrics.setActions(data?.onChanges, data?.onPr, data?.onDirty)
+        metrics.setActions(data?.onChanges, data?.onDirty)
         val end = value.progress ?: value.trailing.orEmpty()
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
-        metrics.isVisible = data != null
-        // Hide the wrapper too so a metrics-less row does not reserve the trailing gap on its
-        // description, and collapse the whole second row when it would be empty so title-only rows
-        // stay vertically centered.
-        metricsPane.isVisible = metrics.isVisible
-        descLine.isVisible = desc.isVisible || metrics.isVisible
+        detailsPane.isVisible = metrics.isVisible || secondary.isVisible
+        descLine.isVisible = desc.isVisible || detailsPane.isVisible
         trail.foreground = weak
 
         val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
@@ -372,21 +371,21 @@ internal class ActiveListRenderer(
     }
 
     private fun syncBadges(item: ActiveListItem) {
-        val items = if (item.progress != null) emptyList() else item.badges
-        while (badges.componentCount > items.size) badges.remove(badges.componentCount - 1)
-        while (badges.componentCount < items.size) {
-            badges.add(JBLabel().apply {
-                border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
-            })
-        }
-        badges.isVisible = items.isNotEmpty()
+        val hidden = item.progress != null
+        val gap = JBUI.CurrentTheme.ActionsList.elementIconGap()
+        leading.border = JBUI.Borders.emptyRight(gap)
+        badges.border = JBUI.Borders.emptyLeft(gap)
+        syncBadges(leading, if (hidden) emptyList() else item.leading)
+        syncBadges(badges, if (hidden) emptyList() else item.badges)
+        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges)
+    }
+
+    private fun syncBadges(stack: JPanel, items: List<ActiveListBadge>) {
+        while (stack.componentCount > items.size) stack.remove(stack.componentCount - 1)
+        while (stack.componentCount < items.size) stack.add(ActiveListBadgeCell())
+        stack.isVisible = items.isNotEmpty()
         for (i in items.indices) {
-            val badge = items[i]
-            val label = badges.getComponent(i) as JBLabel
-            val current = label.icon as? FilledBadgeIcon
-            if (current?.text != badge.text || current.style != badge.style) {
-                label.icon = FilledBadgeIcon(badge.text, badge.style)
-            }
+            (stack.getComponent(i) as ActiveListBadgeCell).update(items[i])
         }
     }
 
@@ -436,4 +435,30 @@ internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {
         super.setEnabled(enabled)
         if (text.isNotBlank()) UiStyle.Components.actionLabel(this, enabled)
     }
+}
+
+/** A retained badge pill that opts into list hit-testing when its model carries an id. */
+internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
+    private var badge: ActiveListBadge? = null
+
+    override var cellId: String = ""
+        private set
+
+    fun update(badge: ActiveListBadge) {
+        this.badge = badge
+        cellId = badge.id.orEmpty()
+        val current = icon as? FilledBadgeIcon
+        if (current?.text != badge.text || current.style != badge.style) {
+            icon = FilledBadgeIcon(badge.text, badge.style)
+        }
+        toolTipText = cellTooltip()
+    }
+
+    override fun cellEnabled(): Boolean = badge?.action != null
+
+    override fun cellCursor(): Int = Cursor.HAND_CURSOR
+
+    override fun cellTooltip(): String? = badge?.tooltip?.takeIf { it.isNotBlank() }
+
+    override fun cellAction(): (() -> Unit)? = badge?.action
 }

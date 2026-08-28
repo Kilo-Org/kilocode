@@ -515,7 +515,7 @@ class AgentManagerPanel(
     }
 
     /**
-     * Inner (not data) class so [metrics] can bind each row's changes/dirty/PR handlers to the
+     * Inner (not data) class so [metrics] can bind each row's changes/dirty handlers to the
      * panel. Value equality is over the data fields only — the derived handlers are intentionally
      * excluded so a stats/PR/dirty refresh that produced identical rows still skips the model
      * rebuild in [ActiveListView].
@@ -539,22 +539,32 @@ class AgentManagerPanel(
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)
+        override val secondaryBadges: List<ActiveListBadge>
+            get() {
+                if (progress != null) return emptyList()
+                val p = pr ?: return emptyList()
+                return listOf(
+                    ActiveListBadge(
+                        "#${p.number}",
+                        style(p.state),
+                        id = "pull-request",
+                        tooltip = prTooltip(p, customName),
+                        action = { BrowserUtil.browse(p.url) },
+                    ),
+                )
+            }
         override val metrics: ActiveListMetrics?
             get() {
                 if (progress != null) return null
                 val s = stats
-                val p = pr
                 val d = dirty
-                if (s == null && p == null && d == null) return null
+                if (s == null && d == null) return null
                 return ActiveListMetrics(
                     additions = s?.additions ?: 0,
                     deletions = s?.deletions ?: 0,
                     ahead = s?.ahead ?: 0,
                     behind = s?.behind ?: 0,
-                    pr = p?.let { ActiveListBadge("#${it.number}", style(it.state)) },
-                    prTooltip = p?.let { prTooltip(it, customName) },
                     onChanges = s?.let { { openBranchDiff(dto.path) } },
-                    onPr = p?.url?.let { url -> { BrowserUtil.browse(url) } },
                     dirtyAdditions = d?.additions ?: 0,
                     dirtyDeletions = d?.deletions ?: 0,
                     dirtyFiles = d?.files ?: 0,

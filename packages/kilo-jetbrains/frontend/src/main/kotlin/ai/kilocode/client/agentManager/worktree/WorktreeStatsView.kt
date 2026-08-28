@@ -2,19 +2,12 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.DiffStatBadge
-import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
 import ai.kilocode.client.ui.list.ACTIVE_LIST_DIRTY_CELL
-import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
-import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListHitCell
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.prTooltip
-import ai.kilocode.client.ui.style
-import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
-import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBFont
@@ -29,7 +22,7 @@ import javax.swing.Icon
 import javax.swing.JPanel
 
 /**
- * The trailing ahead/behind/diff and PR badges of a worktree row.
+ * The trailing ahead/behind/diff badges of a worktree row.
  *
  * Uses a real layout manager on purpose: a `null` layout resolves min/preferred size through the
  * peer, which reports the component's *current* size. Inside the list this view is a single render
@@ -51,25 +44,19 @@ internal class WorktreeStatsView(
     private val diff = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT, fill = fill)
     // Muted and unfilled so it reads as a different baseline than the committed-diff badge above.
     private val dirty = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT, fill = false)
-    private val pr = JBLabel()
     private val change = Stack.horizontal(UiStyle.Gap.sm()).next(behind).next(ahead).next(diff)
-    // The change, dirty, and PR badges are hit regions so the list can drive their clicks: inside
+    // The change and dirty badges are hit regions so the list can drive their clicks: inside
     // the list the view is a render stamp whose own mouse listeners never fire, so the ActiveList
     // reads these ids back and routes the click. Standalone (toolbar) usage keeps its own listeners
     // below.
     private val changeHit = HitRegion(ACTIVE_LIST_CHANGES_CELL).apply { add(change, BorderLayout.CENTER) }
     private val dirtyHit = HitRegion(ACTIVE_LIST_DIRTY_CELL).apply { add(dirty, BorderLayout.CENTER) }
-    private val prHit = HitRegion(ACTIVE_LIST_PR_CELL).apply { add(pr, BorderLayout.CENTER) }
-    // The changes badge trails first, the uncommitted badge next, and the PR link is pinned last so
-    // it is always the rightmost element.
-    private val row = Stack.horizontal(UiStyle.Gap.md()).next(changeHit).next(dirtyHit).next(prHit)
-    private var url: String? = null
+    private val row = Stack.horizontal(UiStyle.Gap.md()).next(changeHit).next(dirtyHit)
     private var state: State? = null
 
     init {
         add(row, BorderLayout.CENTER)
         changeHit.act = openDiff
-        prHit.act = { url?.let(BrowserUtil::browse) }
         diff.toolTipText = KiloBundle.message("worktree.stats.tooltip", 0, 0, 0, 0)
         installClick(changeHit, object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
@@ -81,28 +68,21 @@ internal class WorktreeStatsView(
                 dirtyHit.act?.invoke()
             }
         })
-        installClick(prHit, object : MouseAdapter() {
-            override fun mouseClicked(event: MouseEvent) {
-                prHit.act?.invoke()
-            }
-        })
         applyCursors()
     }
 
     /**
-     * Replaces the click handlers, used by the list renderer to bind each row's changes/dirty/PR
+     * Replaces the click handlers, used by the list renderer to bind each row's changes/dirty
      * actions to the single reused stamp. Standalone usage leaves the constructor defaults in place.
      */
-    fun setActions(onChanges: (() -> Unit)?, onPr: (() -> Unit)?, onDirty: (() -> Unit)? = null) {
+    fun setActions(onChanges: (() -> Unit)?, onDirty: (() -> Unit)? = null) {
         changeHit.act = onChanges
-        prHit.act = onPr
         dirtyHit.act = onDirty
         applyCursors()
     }
 
     fun update(
         stats: WorktreeStatsDto?,
-        pull: WorktreePrDto?,
         dirtyAdd: Int = 0,
         dirtyDel: Int = 0,
         dirtyFiles: Int = 0,
@@ -110,25 +90,11 @@ internal class WorktreeStatsView(
         sync(
             State(
                 stats,
-                pull?.let { ActiveListBadge("#${it.number}", style(it.state)) },
-                pull?.url,
-                pull?.let(::prTooltip),
                 dirtyAdd,
                 dirtyDel,
                 dirtyFiles,
             ),
         )
-    }
-
-    fun update(
-        stats: WorktreeStatsDto?,
-        badge: ActiveListBadge?,
-        prTip: String? = badge?.text,
-        dirtyAdd: Int = 0,
-        dirtyDel: Int = 0,
-        dirtyFiles: Int = 0,
-    ) {
-        sync(State(stats, badge, null, prTip, dirtyAdd, dirtyDel, dirtyFiles))
     }
 
     /**
@@ -161,16 +127,9 @@ internal class WorktreeStatsView(
         dirtyHit.tip = dirtyTip
         dirtyHit.toolTipText = dirtyTip
         dirtyHit.isVisible = dirty.isVisible
-        url = next.link
-        pr.icon = next.badge?.let { FilledBadgeIcon(it.text, it.style) }
-        pr.toolTipText = next.tip
-        prHit.tip = next.tip
-        prHit.toolTipText = next.tip
-        pr.isVisible = next.badge != null
         val changesVisible = behind.isVisible || ahead.isVisible || diff.isVisible
         changeHit.isVisible = changesVisible
-        prHit.isVisible = pr.isVisible
-        isVisible = changesVisible || dirtyHit.isVisible || pr.isVisible
+        isVisible = changesVisible || dirtyHit.isVisible
         applyCursors()
         revalidate()
         repaint()
@@ -179,7 +138,6 @@ internal class WorktreeStatsView(
     private fun applyCursors() {
         applyCursor(changeHit, changeHit.act != null)
         applyCursor(dirtyHit, dirtyHit.act != null)
-        applyCursor(prHit, prHit.act != null)
     }
 
     private fun actionCursor(active: Boolean) =
@@ -210,9 +168,6 @@ internal class WorktreeStatsView(
     /** Everything [sync] renders, so a repeated row can be skipped without leaking stale state. */
     private data class State(
         val stats: WorktreeStatsDto?,
-        val badge: ActiveListBadge?,
-        val link: String?,
-        val tip: String?,
         val dirtyAdd: Int,
         val dirtyDel: Int,
         val dirtyFiles: Int,

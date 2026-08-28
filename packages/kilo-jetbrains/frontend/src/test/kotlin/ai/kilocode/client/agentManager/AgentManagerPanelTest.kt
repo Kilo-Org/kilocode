@@ -29,7 +29,8 @@ import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.ActiveListView
-import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_DIRTY_CELL
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloPath
@@ -56,11 +57,14 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
+import java.awt.Cursor
+import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
 import java.awt.Point
 import javax.swing.JComponent
@@ -751,12 +755,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
         timers.advanceBy(300)
-        waitUntil { rows(panel) > 0 && row(panel, 0).metrics != null }
+        waitUntil { rows(panel) > 0 && row(panel, 0).secondaryBadges.isNotEmpty() }
 
-        // The current row keeps the branch as its title; the PR arrives as a badge beside it.
         val current = row(panel, 0)
         assertEquals("main", current.title)
-        assertEquals("#12", current.metrics?.pr?.text)
+        assertTrue(current.leading.isEmpty())
+        assertTrue(current.badges.isEmpty())
+        assertEquals("#12", current.secondaryBadges.single().text)
+        assertEquals("pull-request", current.secondaryBadges.single().id)
         assertTrue(edt { panel.canOpenPr(main) })
     }
 
@@ -776,7 +782,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         val row = row(panel, 0)
         assertEquals("Fix <login> bug", row.title)
-        val tip = row.metrics?.prTooltip ?: error("expected PR tooltip")
+        assertTrue(row.leading.isEmpty())
+        assertTrue(row.badges.isEmpty())
+        val tip = row.secondaryBadges.single().tooltip ?: error("expected PR tooltip")
         assertEquals("<html>Draft #7 Fix &lt;login&gt; bug<br>(Feature Label)<br>Click to open the pull request in your browser.</html>", tip)
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
         edt {
@@ -784,7 +792,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
         }
-        val area = edt { activeListCellBounds(list, 0, selected = false).getValue(ACTIVE_LIST_PR_CELL) }
+        val area = edt { activeListCellBounds(list, 0, selected = false).getValue("pull-request") }
 
         assertEquals(tip, edt { list.getToolTipText(MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, center(area).x, center(area).y, 0, false)) })
     }
@@ -805,7 +813,81 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         val row = row(panel, 0)
         assertEquals("Feature Label", row.title)
-        assertEquals("<html>Open #8<br>Click to open the pull request in your browser.</html>", row.metrics?.prTooltip)
+        assertTrue(row.leading.isEmpty())
+        assertEquals("<html>Open #8<br>Click to open the pull request in your browser.</html>", row.secondaryBadges.single().tooltip)
+    }
+
+    fun `test pr badge follows stats on the description line and opens the browser without opening an editor`() {
+        val browser = installBrowser()
+        val item = worktree("feature-x")
+        val url = "https://example.test/pr/7"
+        rpc.listed += item
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(item.path, 7, GhState.OPEN, url, "Feature title")))
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(item.path, additions = 5, deletions = 2, ahead = 1)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(item.path, additions = 3, files = 1)))
+        val timers = TestUiTimers()
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        edt {
+            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
+            val list = view.list
+            list.setSize(560, 160)
+            list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            list.clearSelection()
+            val row = list.model.getElementAt(0)
+            assertTrue(row.leading.isEmpty())
+            assertTrue(row.badges.isEmpty())
+            assertEquals("#7", row.secondaryBadges.single().text)
+            assertEquals("pull-request", row.secondaryBadges.single().id)
+            val areas = activeListCellBounds(list, 0, selected = false)
+            val badge = areas.getValue("pull-request")
+            val changes = areas.getValue(ACTIVE_LIST_CHANGES_CELL)
+            val dirty = areas.getValue(ACTIVE_LIST_DIRTY_CELL)
+            val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
+            renderer.setSize(list.width, list.getCellBounds(0, 0).height)
+            components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
+            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == row.description }
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val origin = SwingUtilities.convertPoint(desc, 0, 0, renderer)
+            val header = SwingUtilities.convertPoint(title, 0, 0, renderer)
+            val bounds = list.getCellBounds(0, 0)
+            assertTrue(origin.x + desc.width + bounds.x <= changes.x)
+            assertTrue(changes.x + changes.width <= dirty.x)
+            assertTrue(dirty.x + dirty.width <= badge.x)
+            assertTrue(kotlin.math.abs(center(badge).y - center(changes).y) <= 1)
+            assertTrue(kotlin.math.abs(center(badge).y - center(dirty).y) <= 1)
+            assertTrue(kotlin.math.abs(center(badge).y - (bounds.y + origin.y + desc.height / 2)) <= 1)
+            assertTrue(badge.y >= bounds.y + header.y + title.height)
+            assertTrue(bounds.contains(badge))
+            assertTrue(browser.urls.isEmpty())
+
+            val point = center(badge)
+            val hover = MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, point.x, point.y, 0, false)
+            list.mouseMotionListeners.forEach { it.mouseMoved(hover) }
+            assertEquals(Cursor.HAND_CURSOR, list.cursor.type)
+            assertEquals(row.secondaryBadges.single().tooltip, list.getToolTipText(hover))
+            for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+                fire(list, MouseEvent(
+                    list,
+                    id,
+                    System.currentTimeMillis(),
+                    if (id == MouseEvent.MOUSE_PRESSED) InputEvent.BUTTON1_DOWN_MASK else 0,
+                    point.x,
+                    point.y,
+                    1,
+                    false,
+                    MouseEvent.BUTTON1,
+                ))
+            }
+            assertEquals(listOf(url), browser.urls)
+            assertTrue(FileEditorManager.getInstance(project).openFiles.isEmpty())
+        }
     }
 
     fun `test worktree row hides badge while in progress`() {
@@ -824,7 +906,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val pending = row(panel, 0)
         assertSame(WorktreeIcons.spinner, pending.icon)
         assertEquals(KiloBundle.message("worktree.progress.creating"), pending.progress)
+        assertEquals(emptyList<ActiveListBadge>(), pending.leading)
         assertEquals(emptyList<ActiveListBadge>(), pending.badges)
+        assertEquals(emptyList<ActiveListBadge>(), pending.secondaryBadges)
         assertNull(pending.metrics)
         gate.complete(Unit)
         flush()

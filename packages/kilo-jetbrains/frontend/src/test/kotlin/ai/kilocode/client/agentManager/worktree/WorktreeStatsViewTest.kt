@@ -14,12 +14,12 @@ class WorktreeStatsViewTest : BasePlatformTestCase() {
         val view = edt { WorktreeStatsView() }
         val stats = WorktreeStatsDto("/repo", additions = 5, deletions = 1)
 
-        edt { view.update(stats, badge = null, dirtyAdd = 1, dirtyDel = 0, dirtyFiles = 1) }
+        edt { view.update(stats, dirtyAdd = 1, dirtyDel = 0, dirtyFiles = 1) }
         assertTrue(edt { view.dirtyHitForTest().isVisible })
         assertEquals("+1", edt { view.dirtyBadgeForTest().addedLabelForTest().text })
 
         // Same stats DTO, different dirty counts: the State memo key must not skip this update.
-        edt { view.update(stats, badge = null, dirtyAdd = 3, dirtyDel = 2, dirtyFiles = 2) }
+        edt { view.update(stats, dirtyAdd = 3, dirtyDel = 2, dirtyFiles = 2) }
 
         assertTrue(edt { view.dirtyHitForTest().isVisible })
         assertEquals("+3", edt { view.dirtyBadgeForTest().addedLabelForTest().text })
@@ -30,10 +30,10 @@ class WorktreeStatsViewTest : BasePlatformTestCase() {
         val view = edt { WorktreeStatsView() }
         val stats = WorktreeStatsDto("/repo", additions = 5, deletions = 1)
 
-        edt { view.update(stats, badge = null, dirtyAdd = 2, dirtyDel = 0, dirtyFiles = 1) }
+        edt { view.update(stats, dirtyAdd = 2, dirtyDel = 0, dirtyFiles = 1) }
         assertTrue(edt { view.dirtyHitForTest().isVisible })
 
-        edt { view.update(stats, badge = null, dirtyAdd = 0, dirtyDel = 0, dirtyFiles = 0) }
+        edt { view.update(stats, dirtyAdd = 0, dirtyDel = 0, dirtyFiles = 0) }
         assertFalse(edt { view.dirtyHitForTest().isVisible })
     }
 
