@@ -316,6 +316,62 @@
 
 ## [Unreleased]
 
+## [7.1.1] - 2026-08-28
+
+### Added
+- feat(agent-manager): scope worktree reviews by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13498
+- feat(cli): import cloud transcript on create_session by @iscekic in https://github.com/Kilo-Org/kilocode/pull/13483
+- feat(vscode): add searchable worktree references by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13512
+- feat(remote): add directory listing and create_session directory by @iscekic in https://github.com/Kilo-Org/kilocode/pull/13497
+- feat(jetbrains): render Mermaid diagrams in chat by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13396
+- feat(jetbrains): improve worktree session UX by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13521
+- feat(vscode): add compaction model setting by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13533
+- feat(vscode): resume interrupted tasks from the send button by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13544
+- feat(remote-sender): forward messageID and drop queued prompts by @iscekic in https://github.com/Kilo-Org/kilocode/pull/13496
+
+### Fixed
+- fix(cli): handle tool progress during compaction by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13424
+- fix(vscode): handle fragmented CLI startup output by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13466
+- fix(agent-manager): resolve live managed worktree sessions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13422
+- fix(security): nanoid updated due dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13477
+- fix(security): minimatch updated due dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13484
+- fix(security): @hey-api/openapi-ts updated due dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13487
+- fix(cli): return the real subagent answer instead of an empty task result by @maphew in https://github.com/Kilo-Org/kilocode/pull/13493
+- fix(vscode): preserve streaming scroll intent by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13500
+- fix(vscode): reduce prompt navigator interruptions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13499
+- fix(vscode): honor configured Git executable for worktrees by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13475
+- fix(agent-manager): show background worktree activity by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13502
+- fix(agent-manager): safely clean up deleted worktree snapshots by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13476
+- fix(vscode): open files from read tool headers by @thomasboom in https://github.com/Kilo-Org/kilocode/pull/12830
+- fix(cli): dedupe plan-mode permission ruleset stacking by @maphew in https://github.com/Kilo-Org/kilocode/pull/13219
+- fix(jetbrains): continue failed turns on retry by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13520
+- fix(vscode): keep large worktree reviews responsive by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13505
+- fix(vscode): prevent empty queued messages by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13528
+- fix(cli): prevent compaction request replay loops by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13374
+- fix(vscode): show consistent session activity indicators by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13504
+- fix: reduce offscreen animation and transcript memory overhead by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13529
+- fix(vscode): restore past session references by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13530
+- fix(vscode): prevent questions from stealing typing focus by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13531
+- fix(vscode): fix pipeline test and lint failures by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13534
+- fix(cli): guard indexing in home and filesystem roots by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13509
+- fix(cli): avoid protected parent access during checkpoint cleanup by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13540
+- fix(vscode): clear failure banners after overflow recovery by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13545
+- fix(vscode): show background agents inline with overflow and direct access by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13542
+- fix(agent-manager): correct activity indicators after recovery by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13543
+- fix(vscode): prevent drained questions from reappearing by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13547
+
+### Changed
+- release(jetbrains): v7.1.0 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13492
+- docs: Use `Array.prototype.at(index)` instead of out-of-bounds accesses by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13506
+- chore(deps-dev): bump @babel/core from 7.28.4 to 7.29.6 in /packages/opencode by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13503
+- chore(jetbrains): bump CLI pin to v7.5.5 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13490
+- release(jetbrains): v7.1.1-rc.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13524
+- refactor: centralize NUL-delimited composite keys by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13532
+- refactor(vscode): remove duplicate and unused UI code by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13536
+- refactor(agent-manager): extract project-scoped diff/review routing by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13538
+- refactor(vscode): extract prompt sandbox response handling by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13537
+
+
 ## [7.1.1-rc.1] - 2026-08-27
 
 ### Added
