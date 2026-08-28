@@ -1093,6 +1093,10 @@ export const dict = {
   "settings.context.autoCompaction.description":
     "Compacter automatiquement le contexte avant qu'il n'atteigne la limite",
   "settings.context.compaction.title": "Compactage",
+  "settings.context.compactionModel.title": "Modèle de compactage",
+  "settings.context.compactionModel.description":
+    "Modèle utilisé pour le compactage automatique et manuel. Laissez ce champ vide pour utiliser le modèle de chat. Le coût, la vitesse et la qualité du résumé dépendent du modèle.",
+  "settings.context.compactionModel.useChatModel": "Utiliser le modèle de chat",
   "settings.context.compactionLimit.title": "Limite de compactage automatique",
   "settings.context.compactionLimit.description":
     "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
