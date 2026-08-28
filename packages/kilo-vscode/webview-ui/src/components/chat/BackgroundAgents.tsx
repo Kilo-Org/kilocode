@@ -103,6 +103,13 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
   const label = (agent: BackgroundAgent) =>
     agent.description ?? agent.agent ?? language.t("task.backgroundAgents.untitled")
 
+  const names = createMemo(() =>
+    visible()
+      .filter((agent) => agent.status === "running")
+      .map(label)
+      .join(" · "),
+  )
+
   const status = (agent: BackgroundAgent) => language.t(`task.backgroundAgents.status.${agent.status}`)
 
   const icon = (agent: BackgroundAgent) => {
@@ -148,7 +155,6 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
               data-slot="task-header-todos-trigger"
               onClick={() => setOpen((value) => !value)}
               aria-expanded={open()}
-              aria-label={waiting() > 0 ? language.t("task.backgroundAgents.waiting") : undefined}
             >
               <Show
                 when={waiting() > 0}
@@ -168,6 +174,11 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
                   {language.t("task.backgroundAgents.waiting")}
                 </Show>
               </span>
+              <Show when={!open() && names()}>
+                <span data-slot="task-header-agents-preview" title={names()} dir="auto">
+                  {names()}
+                </span>
+              </Show>
               <Icon
                 name="chevron-down"
                 size="small"
