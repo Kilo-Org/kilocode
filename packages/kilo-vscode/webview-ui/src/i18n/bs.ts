@@ -1066,6 +1066,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
   "settings.context.compaction.title": "Kompresija",
+  "settings.context.compactionModel.title": "Model za kompresiju",
+  "settings.context.compactionModel.description":
+    "Model koji se koristi za automatsku i ručnu kompresiju. Ostavite nepostavljeno da biste koristili model za chat. Trošak, brzina i kvalitet sažetka zavise od modela.",
+  "settings.context.compactionModel.useChatModel": "Koristi model za chat",
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",

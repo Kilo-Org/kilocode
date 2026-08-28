@@ -117,6 +117,45 @@ export function childID(part: TaskPart): string | undefined {
   return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
 }
 
+export function inUse(
+  family: ReadonlySet<string>,
+  statuses: Record<string, { type: string }>,
+  prompts: readonly { sessionID: string }[],
+): boolean {
+  return (
+    [...family].some((id) => !!statuses[id] && statuses[id].type !== "idle") ||
+    prompts.some((item) => family.has(item.sessionID))
+  )
+}
+
+export function ancestry(
+  sessions: Record<string, ParentSession>,
+  tools: Record<string, readonly TaskPart[]>,
+  outcomes: Record<string, ParentSession | undefined>,
+) {
+  const parents = new Map<string, string>()
+  for (const [id, parts] of Object.entries(tools)) {
+    for (const part of parts) {
+      const child = childID(part)
+      if (child) parents.set(child, id)
+    }
+  }
+  for (const [id, close] of Object.entries(outcomes)) {
+    if (close?.parentID) parents.set(id, close.parentID)
+  }
+  for (const [id, session] of Object.entries(sessions)) {
+    if (session.parentID === null) parents.delete(id)
+    if (session.parentID) parents.set(id, session.parentID)
+  }
+  const children = new Map<string, string[]>()
+  for (const [child, parent] of parents) {
+    const ids = children.get(parent) ?? []
+    ids.push(child)
+    children.set(parent, ids)
+  }
+  return { parents, children }
+}
+
 export function latestTaskPart(partID: string | undefined, child: string | undefined, parts: readonly TaskPart[]) {
   if (!partID || !child) return false
   return parts.findLast((part) => childID(part) === child)?.id === partID

@@ -7,6 +7,7 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { WorktreeCreate, type WorktreeCreateProps } from "./ProjectActions"
 import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import type { SidebarSearchItem } from "./sidebar-search"
+import { label } from "../src/utils/session-activity"
 
 interface WorktreeSectionActionsProps extends WorktreeCreateProps {
   items: Accessor<SidebarSearchItem[]>
@@ -31,8 +32,7 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
         scope: props.t("agentManager.sidebarSearch.scope"),
         sessions: props.t("agentManager.section.sessions"),
         contexts: props.t("agentManager.sidebarSearch.contexts"),
-        waiting: props.t("agentManager.tabsMenu.status.waiting"),
-        retry: props.t("agentManager.tabsMenu.status.retry"),
+        state: (value) => props.t(label(value)),
       }}
       onSelect={props.onSelect}
     />

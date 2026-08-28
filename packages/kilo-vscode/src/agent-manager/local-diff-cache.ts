@@ -1,3 +1,4 @@
+import { zeroID } from "@opencode-ai/core/kilocode/zero-id"
 import { imageMime } from "../diff/shared/image"
 import type { Batch, Meta } from "./local-diff-batch"
 import type { WorktreeDiffEntry } from "./types"
@@ -58,7 +59,7 @@ export function createDiffCache(load: Loader) {
   }
 
   const identity = (dir: string, base: string, anc: string, meta: Meta) =>
-    [
+    zeroID(
       dir,
       base,
       anc,
@@ -69,7 +70,7 @@ export function createDiffCache(load: Loader) {
       meta.deletions,
       meta.binary,
       meta.stamp,
-    ].join("\0")
+    )
 
   const cached = (id: string) => {
     const value = details.get(id)
@@ -236,8 +237,8 @@ export function createDiffCache(load: Loader) {
   }
 
   const queued = (id: string, dir: string, base: string, anc: string, meta: Meta, signal?: AbortSignal) => {
-    const scope = `${dir}\0${base}`
-    const key = `${scope}\0${anc}`
+    const scope = zeroID(dir, base)
+    const key = zeroID(scope, anc)
     let queue = queues.get(key)
     if (!queue) {
       queue = new Map()
@@ -270,7 +271,7 @@ export function createDiffCache(load: Loader) {
 
   const file = (dir: string, base: string, path: string, signal?: AbortSignal): Promise<Value> => {
     if (signal?.aborted) return Promise.reject(new Error("Diff detail aborted"))
-    const state = states.get(`${dir}\0${base}`)
+    const state = states.get(zeroID(dir, base))
     if (!state) return load.file(dir, base, path, signal)
     const meta = state.metas.get(path)
     if (!meta) return Promise.resolve(null)
@@ -292,7 +293,7 @@ export function createDiffCache(load: Loader) {
 
   return {
     summary: async (dir: string, base: string): Promise<WorktreeDiffEntry[]> => {
-      const id = `${dir}\0${base}`
+      const id = zeroID(dir, base)
       const generation = (generations.get(id) ?? 0) + 1
       generations.set(id, generation)
       const result = await load.summary(dir, base)

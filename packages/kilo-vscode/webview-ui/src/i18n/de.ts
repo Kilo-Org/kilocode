@@ -1086,6 +1086,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
   "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
   "settings.context.compaction.title": "Komprimierung",
+  "settings.context.compactionModel.title": "Komprimierungsmodell",
+  "settings.context.compactionModel.description":
+    "Modell für die automatische und manuelle Komprimierung. Leer lassen, um das Chatmodell zu verwenden. Kosten, Geschwindigkeit und Zusammenfassungsqualität hängen vom Modell ab.",
+  "settings.context.compactionModel.useChatModel": "Chatmodell verwenden",
   "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
   "settings.context.compactionLimit.description":
     "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",

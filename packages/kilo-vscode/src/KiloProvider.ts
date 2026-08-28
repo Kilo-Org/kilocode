@@ -142,6 +142,7 @@ import {
 } from "./kilo-provider/handlers/question"
 import { fetchAndSendPendingSuggestions } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
+import { isActivity, type Activity } from "../webview-ui/src/utils/session-activity"
 import { parseReview, reviewMetadata, type ReviewMessageData } from "./shared/review-comments"
 import { completesWithoutStatus } from "./kilo-provider/command-completion"
 import { KiloProviderMemory } from "./kilo-provider/memory"
@@ -392,6 +393,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly refreshes = new Map<string, number>()
   private readonly anacondaDesktop = new AnacondaDesktopBridge()
   private sessionStatusMap = new Map<string, SessionStatus["type"]>() // Latest status used for destructive config warnings.
+  private activity: Activity = "idle"
+  private caption: string | undefined
   private readonly epochs = new Map<string, Map<string, number>>()
   private readonly requests = new Map<string, number>()
   private epoch = 0
@@ -509,7 +512,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (id) this.refreshes.set(id, (this.refreshes.get(id) ?? 0) + 1)
     }
     this.currentSession = session
-    this.opts.tabTitle?.(nativeTitle(session))
+    this.updateTitle()
+  }
+
+  private updateTitle(): void {
+    if (!this.opts.tabTitle) return
+    const title = nativeTitle(this.currentSession, this.activity, this.opts.tabLabel)
+    if (this.caption === title) return
+    this.caption = title
+    this.opts.tabTitle(title)
   }
 
   private checkpoint(sid: string, run: () => Promise<void>): void {
@@ -1037,6 +1048,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
+          activity: (state) => {
+            if (!isActivity(state)) return
+            this.activity = state
+            this.updateTitle()
+          },
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
           modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
           backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),

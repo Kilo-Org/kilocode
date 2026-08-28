@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot } from "solid-js"
-import { createWorktreeDiffs } from "../../webview-ui/agent-manager/worktree-diffs"
+import { createWorktreeDiffs, diffDataKey } from "../../webview-ui/agent-manager/worktree-diffs"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 
 const diff = (file: string, additions = 1): WorktreeFileDiff => ({
@@ -30,7 +30,37 @@ const withDiffs = (fn: (diffs: ReturnType<typeof createWorktreeDiffs>, sent: Sen
   })
 }
 
+describe("diffDataKey", () => {
+  it("preserves the nullish fallback without replacing an empty project", () => {
+    expect(diffDataKey(undefined, "s1")).toBe("single\0s1")
+    expect(diffDataKey("single", "s1")).toBe("single\0s1")
+    expect(diffDataKey("", "s1")).toBe("\0s1")
+    expect(diffDataKey("project", "")).toBe("project\0")
+    expect(diffDataKey("project", "s1\0file.ts")).toBe("project\0s1\0file.ts")
+  })
+})
+
 describe("createWorktreeDiffs", () => {
+  it.each([undefined, "", "project"])("prunes only the complete project namespace %j", (project) => {
+    createRoot((dispose) => {
+      const store = createWorktreeDiffs(vscode([]), () => project)
+      const sibling = `${project ?? "single"}-other`
+      for (const owner of [project, sibling]) {
+        store.onWorktreeDiff({
+          type: "agentManager.worktreeDiff",
+          projectId: owner,
+          sessionId: "gone#branch",
+          diffs: [diff("a.ts")],
+        })
+      }
+
+      store.prune(new Set())
+      expect(store.diffDatas()[`${project ?? "single"}\0gone#branch`]).toBeUndefined()
+      expect(store.diffDatas()[`${sibling}\0gone#branch`]).toHaveLength(1)
+      dispose()
+    })
+  })
+
   it("stores full diffs per session", () => {
     withDiffs((diffs) => {
       diffs.onWorktreeDiff({ type: "agentManager.worktreeDiff", sessionId: "s1", diffs: [diff("a.ts")] })

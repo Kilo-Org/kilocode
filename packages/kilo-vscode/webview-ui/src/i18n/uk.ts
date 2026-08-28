@@ -1020,6 +1020,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
   "settings.context.compaction.title": "Стискання",
+  "settings.context.compactionModel.title": "Модель стискання",
+  "settings.context.compactionModel.description":
+    "Модель, що використовується для автоматичного та ручного стискання. Залиште поле порожнім, щоб використовувати модель чату. Вартість, швидкість і якість підсумку залежать від моделі.",
+  "settings.context.compactionModel.useChatModel": "Використовувати модель чату",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
