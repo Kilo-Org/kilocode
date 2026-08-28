@@ -14,7 +14,7 @@ import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
-import { SessionID } from "@/session/schema"
+import { MessageID, SessionID } from "@/session/schema"
 import { QuestionID } from "@/question/schema"
 import { Provider } from "@/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -50,6 +50,10 @@ const PermissionData = z.object({
 const SuggestionData = z.object({
   requestID: z.string(),
   index: z.number().int().nonnegative(),
+})
+
+const DropQueuedMessageData = z.object({
+  messageID: z.string().startsWith("msg"),
 })
 
 // kilocode_change start - create_session: strict v1 request with optional inheritance fields
@@ -162,6 +166,10 @@ function normalizeModel(model: string | RemoteModelCatalog.ModelRef | undefined)
 }
 
 function normalizePrompt(input: RemotePromptInput): SessionPrompt.PromptInput {
+  // messageID passes through unchanged: new clients send it, old ones omit it.
+  // Leave the field unset when absent so SessionPrompt assigns the CLI-side ID
+  // via `input.messageID ?? MessageID.ascending()`. Remove this implicit
+  // fallback once every client sends messageID.
   return {
     ...input,
     model: normalizeModel(input.model),
@@ -1198,6 +1206,30 @@ export namespace RemoteSender {
         dispatchQuick(msg, directoryFor(session.value), () => cancel(session.value))
         return
       }
+      // kilocode_change start - drop a queued (not yet running) remote message
+      if (msg.command === "drop_queued_message") {
+        const parsed = DropQueuedMessageData.safeParse(msg.data)
+        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(session)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid drop_queued_message command",
+          })
+          return
+        }
+        const messageID = MessageID.make(parsed.data.messageID)
+        // drop() publishes queue.changed itself. A false result means the ID
+        // is unknown or the actively running prompt, so leave the active run
+        // unchanged and never cancel the prompt.
+        dispatchQuick(msg, directoryFor(session.value), async () => {
+          if (!Effect.runSync(KiloSessionPromptQueue.drop(session.value, messageID))) {
+            throw new Error("message not queued")
+          }
+        })
+        return
+      }
+      // kilocode_change end
       if (msg.command === "question_reply") {
         const parsed = QuestionData.safeParse(msg.data)
         if (!parsed.success) {
