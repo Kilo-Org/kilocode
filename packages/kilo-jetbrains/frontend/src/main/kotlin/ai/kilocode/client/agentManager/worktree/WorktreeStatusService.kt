@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.app.kiloRoot
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
@@ -84,8 +85,8 @@ class WorktreeStatusService internal constructor(
     }
 
     private fun loadStats() {
-        val dir = project.basePath ?: return
         cs.launch {
+            val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().stats(dir) }
                 .onSuccess { dto -> statsFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) } }
                 .onFailure { err -> LOG.warn("worktree stats refresh failed dir=$dir", err) }
@@ -93,8 +94,8 @@ class WorktreeStatusService internal constructor(
     }
 
     private fun loadPr() {
-        val dir = project.basePath ?: return
         cs.launch {
+            val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().prStatus(dir) }
                 .onSuccess { dto ->
                     prFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) }

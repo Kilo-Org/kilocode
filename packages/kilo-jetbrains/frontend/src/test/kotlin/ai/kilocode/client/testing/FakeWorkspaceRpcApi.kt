@@ -26,6 +26,8 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
 
     var directory = "/test"
     val state = MutableStateFlow(KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING))
+    var resolveCalls = 0
+        private set
     var reloads = 0
         private set
     var models = ModelsWorkspaceDto()
@@ -63,6 +65,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
 
     override suspend fun resolveProjectDirectory(projectId: ProjectId?, hint: String): String {
         assertNotEdt("resolveProjectDirectory")
+        resolveCalls++
         return directory
     }
 
