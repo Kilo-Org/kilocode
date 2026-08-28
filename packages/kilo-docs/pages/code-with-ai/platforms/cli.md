@@ -670,6 +670,11 @@ Add to `~/.config/kilo/config.json`:
 
 Once enabled, start a CLI session and open [Cloud Agents](https://app.kilo.ai/cloud). Your local session appears in the dashboard. See [Cloud Agent Remote Connections](/docs/code-with-ai/platforms/cloud-agent#remote-connections) for details.
 
+A connected client can also start new sessions on your CLI. When it does, it can:
+
+- **Choose a child folder** of the CLI's launch directory as the session workspace. The CLI resolves the requested folder under the launch directory and rejects absolute paths and paths that escape it.
+- **Continue one of your existing cloud sessions locally.** The CLI downloads the cloud session and opens it instead of starting a new empty session.
+
 ### Requirements
 
 - Connection to Kilo Gateway

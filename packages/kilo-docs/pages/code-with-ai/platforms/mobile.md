@@ -25,6 +25,10 @@ The mobile app lets you:
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
+## Agents tab and session history
+
+The **Agents** tab lists only your running sessions. Tap **See all** on the Agents tab to open the history page, which lists past sessions with search, platform and project filters, and sorting, and loads more history as you scroll. A session that finishes while you are away appears in history the next time you open or return to the history page — no manual refresh needed. On the Home screen, **See all** opens the running-sessions list instead of the history page.
+
 ## Language and region
 
 The app renders in 87 languages. It follows your device language by default and falls back to English when the device language is not supported.
@@ -74,7 +78,18 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
 
+When you start a session on a connected CLI instance, a **Folder** field lets you pick a child folder of the instance's launch directory as the session workspace. You can drill down any number of levels, and **Start** opens the session in the chosen folder. A connected instance running an older CLI version that cannot list folders shows a message instead, and **Start** opens the session in the instance's launch folder.
+
 For Cloud Agent sessions, you pick the repository the agent works on. The repository picker groups your repositories into **Recently used** and per-provider sections — GitHub, GitLab, and, for organizations, Bitbucket — and shows each repository's provider next to its name. Each provider shows its own connect prompt or error message, so a problem with one provider does not hide the repositories of another.
+
+## Continuing a finished session
+
+Open a finished session and tap **Continue** to carry the conversation into a new session. The Continue form starts pre-filled from the source session — repository, agent mode, model, and variant — and you pick where the new session runs:
+
+- **Cloud Agent** — copies the source conversation into a new Cloud Agent session and opens it once it is ready.
+- **A connected CLI instance** — imports the source conversation into the CLI. A CLI that cannot import sessions is refused before anything runs, with the reason shown and **Start** disabled.
+
+**Start** also stays disabled when the selected model or repository is no longer available.
 
 ## Queueing follow-up messages
 

@@ -194,6 +194,8 @@ When creating a trigger, you choose an **activation mode** that cannot be change
 
 Triggers utilize [agent environment profiles](#agent-environment-profiles) to configure the execution environment for triggered sessions. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
 
+Both webhook and scheduled triggers can optionally set a **reasoning effort** for models that support it. The effort picker sits next to the model selector and starts at **Default**, which leaves the model's own behavior unchanged. Choosing a specific effort stores it on the trigger and applies it to every session the trigger starts; existing triggers keep working without one.
+
 Triggers do not support manual env var or setup command overrides at this time.
 
 ### Scheduled Triggers
