@@ -104,7 +104,8 @@ export namespace KiloBtw {
   export interface ForkInput {
     sessionID: SessionID
     agent: string
-    model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
+    model: { providerID: ProviderV2.ID; modelID: ModelV2.ID; variant?: string }
+    variant?: string
     tools: Record<string, boolean>
     parts: Array<{ type: "text"; text: string }>
   }
@@ -118,18 +119,19 @@ export namespace KiloBtw {
     runFork: (input: ForkInput) => Effect.Effect<Exit.Exit<MessageV2.WithParts, unknown>>
   }
 
-  // Deny every mutating or interactive tool so a side question can never touch
-  // the workspace or stall on a permission/question prompt the client cannot see.
-  const DENY_ALL_MUTATING: Record<string, boolean> = {
-    bash: false,
-    edit: false,
-    write: false,
-    patch: false,
-    task: false,
-    question: false,
-    interactive_terminal: false,
-    background_process: false,
-    browser: false,
+  // Explicit allowlist: deny every tool (including MCP servers like Gmail)
+  // first, then re-allow only read/research tools. evaluate() takes the last
+  // matching rule, so the allows after the "*" deny win for those tools.
+  const FORK_TOOLS: Record<string, boolean> = {
+    "*": false,
+    read: true,
+    grep: true,
+    glob: true,
+    list: true,
+    skill: true,
+    webfetch: true,
+    websearch: true,
+    semantic_search: true,
   }
 
   const waitForIdle = Effect.fn("KiloBtw.waitForIdle")(function* (status: Ops["status"], sessionID: SessionID) {
@@ -144,6 +146,8 @@ export namespace KiloBtw {
     sessionID: SessionID,
     command: Schema.String,
     arguments: Schema.String,
+    messageID: Schema.optional(MessageID),
+    variant: Schema.optional(Schema.String),
   })
   export type CommandInput = Schema.Schema.Type<typeof commandInput>
 
@@ -200,12 +204,13 @@ export namespace KiloBtw {
   const userMessage = Effect.fn("KiloBtw.userMessage")(function* (input: {
     ops: Ops
     sessionID: SessionID
+    messageID?: MessageID
     agent: string
     model: ModelRef
     text: string
   }) {
     const info: SessionV1.User = yield* input.ops.sessions.updateMessage({
-      id: MessageID.ascending(),
+      id: input.messageID ?? MessageID.ascending(),
       role: "user",
       sessionID: input.sessionID,
       time: { created: Date.now() },
@@ -237,18 +242,30 @@ export namespace KiloBtw {
       const entries = yield* list(parent)
       const body = entries.length > 0 ? formatEntry(entries[0]) : formatUsage()
       const text = entries.length > 0 ? `**BTW** — last side question\n\n${body}` : body
-      const user = yield* userMessage({ ops, sessionID: parent, agent, model, text: "/btw" })
+      const user = yield* userMessage({
+        ops,
+        sessionID: parent,
+        messageID: cmdInput.messageID,
+        agent,
+        model,
+        text: "/btw",
+      })
       return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text })
     }
 
-    const user = yield* userMessage({ ops, sessionID: parent, agent, model, text: `/btw ${question}` })
+    const user = yield* userMessage({
+      ops,
+      sessionID: parent,
+      messageID: cmdInput.messageID,
+      agent,
+      model,
+      text: `/btw ${question}`,
+    })
 
     const listed = yield* ops.agents.list()
     const ask = listed.find((a) => a.name === "ask" && !a.hidden)
     const forkAgent = ask ? "ask" : agent
-    // Hard denies on top of the ask agent so a user-modified ask config can
-    // never reopen mutating or interactive tools for a side question.
-    const forkTools = { ...DENY_ALL_MUTATING }
+    const variant = model.variant ?? cmdInput.variant
 
     const fork = yield* ops.sessions.fork({ sessionID: parent }).pipe(Effect.orDie)
     setPromptCacheKey(fork.id, parent)
@@ -265,8 +282,9 @@ export namespace KiloBtw {
       .runFork({
         sessionID: fork.id,
         agent: forkAgent,
-        model: { providerID: model.providerID, modelID: model.modelID },
-        tools: forkTools,
+        model: { providerID: model.providerID, modelID: model.modelID, variant },
+        variant,
+        tools: { ...FORK_TOOLS },
         parts: [{ type: "text", text: question }],
       })
       .pipe(Effect.ensuring(cleanup))
