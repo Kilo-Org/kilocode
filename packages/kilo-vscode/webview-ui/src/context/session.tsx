@@ -493,6 +493,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selected,
     session: currentSessionID,
     agent: agentForScope,
+    config: (agent) => config().agent?.[agent],
     find: provider.findModel,
     post: vscode.postMessage,
     listen: vscode.onMessage,
@@ -1206,7 +1207,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (prefs.model && !store.sessionOverrides[sessionID]) {
       setStore("sessionOverrides", sessionID, prefs.model)
     }
-    if (prefs.model && prefs.variant) {
+    if (prefs.model && prefs.variant !== undefined) {
       const agent = prefs.agent ?? store.agentSelections[sessionID] ?? defaultAgent()
       const key = variantKey(prefs.model, agent, sessionID)
       if (store.variantSelections[key] === undefined) setStore("variantSelections", key, prefs.variant)
@@ -2162,7 +2163,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID,
         modelID,
         agent,
-        variant: currentVariant(scope),
+        variant: variants.request(scope),
         files,
         review,
       })
@@ -2198,7 +2199,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID,
       modelID,
       agent,
-      variant: currentVariant(scope),
+      variant: variants.request(scope),
       files,
       review,
       agentManagerContext: context,
@@ -2260,7 +2261,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID: effectiveProvider,
         modelID: effectiveModel,
         agent,
-        variant: currentVariant(scope),
+        variant: variants.request(scope),
         files,
         command,
         commandArgs: args,
@@ -2296,7 +2297,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID: effectiveProvider,
       modelID: effectiveModel,
       agent,
-      variant: currentVariant(scope),
+      variant: variants.request(scope),
       files,
       agentManagerContext: context,
     })
