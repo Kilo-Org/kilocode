@@ -181,12 +181,16 @@ describe("browser controller", () => {
     view.dispose()
   })
 
-  test("allows retrying a failed selection and emits only the successful reference", () => {
+  test.each(["error", "empty", "selectorless"] as const)("recovers from %s selection responses", (mode) => {
     const view = setup()
     const scope = { sessionId: "session-a", projectId: "project-a" }
     view.controller.toggleSelecting()
     view.controller.select(point(0.2))
-    view.emit({ type: "inspection", value: { ...inspection("1", scope, "Navigation interrupted"), hover: false } })
+    expect(view.controller.selecting()).toBe(false)
+    const value = inspection("1", scope, mode === "error" ? "Navigation interrupted" : undefined)
+    if (mode === "empty") value.element = undefined
+    if (mode === "selectorless") value.element = { tag: "button", selector: "" }
+    view.emit({ type: "inspection", value: { ...value, hover: false } })
     expect(view.controller.selecting()).toBe(true)
     expect(view.references).toEqual([])
     view.controller.select(point(0.3))

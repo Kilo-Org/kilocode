@@ -151,12 +151,11 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     }
     if (value.requestId !== selected) return
     selected = undefined
-    if (value.error) {
+    const element = value.element
+    if (value.error || !element?.selector) {
       setSelecting(true)
       return
     }
-    const element = value.element
-    if (!element?.selector) return
     props.onReference({
       id: crypto.randomUUID(),
       sessionId: current.sessionId,

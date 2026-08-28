@@ -87,6 +87,12 @@ assert.equal(refreshed.getAttribute("src"), state.url)
 assert.equal(refreshed.getAttribute("sandbox"), "allow-scripts allow-forms allow-same-origin")
 receive?.({ type: "state", value: { ...state, navigation: 1, errors: 1 } })
 assert.equal(root.querySelector(".am-browser-frame"), refreshed)
+receive?.({
+  type: "state",
+  value: { ...state, navigation: 1, title: "", error: "Developer tools are unavailable" },
+})
+assert.equal(root.querySelector(".am-browser-frame"), refreshed)
+assert.ok(root.textContent?.includes("Developer tools are unavailable"))
 assert.equal(root.querySelectorAll("button[aria-label=Close]").length, 1)
 ;(root.querySelector("button[aria-label='Select element']") as HTMLButtonElement).click()
 const overlay = root.querySelector(".am-browser-inspect") as HTMLButtonElement
@@ -96,9 +102,23 @@ overlay.dispatchEvent(new window.MouseEvent("click", { bubbles: true, clientX: 2
 const request = sent.at(-1)
 assert.equal(request?.type, "inspect")
 if (request?.type !== "inspect") throw new Error("Selection command was not emitted")
+receive?.({ type: "inspection", value: { scope, requestId: request.requestId, hover: false, logs: [] } })
+assert.equal(references.length, 0)
+const retry = root.querySelector(".am-browser-inspect") as HTMLButtonElement
+assert.ok(retry)
+retry.getBoundingClientRect = overlay.getBoundingClientRect
+retry.dispatchEvent(new window.MouseEvent("click", { bubbles: true, clientX: 200, clientY: 100 }))
+const selected = sent.at(-1)
+if (selected?.type !== "inspect") throw new Error("Retry selection command was not emitted")
 receive?.({
   type: "inspection",
-  value: { scope, requestId: request.requestId, hover: false, logs: [], element: { tag: "button", selector: "#save" } },
+  value: {
+    scope,
+    requestId: selected.requestId,
+    hover: false,
+    logs: [],
+    element: { tag: "button", selector: "#save" },
+  },
 })
 assert.equal(references[0]?.selector, "#save")
 update((value) => ({ ...value, close: "Fermer" }))

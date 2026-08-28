@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { handleBrowserMessage } from "../../src/agent-manager/browser-message"
+import { browserMessage, handleBrowserMessage } from "../../src/agent-manager/browser-message"
 import type { Host } from "../../src/agent-manager/host"
 import type { ProjectContexts } from "../../src/agent-manager/project/contexts"
 import type { AgentManagerInMessage, AgentManagerOutMessage } from "../../src/agent-manager/types"
@@ -16,7 +16,7 @@ async function fixture() {
   const state = { trusted: true, enabled: true }
   const page = {
     url: () => "http://localhost:3000/",
-    title: async () => "Fixture",
+    title: async () => "",
     screenshot: async () => Buffer.from("jpeg"),
     on: () => undefined,
     mainFrame: () => undefined,
@@ -40,7 +40,10 @@ async function fixture() {
     }),
   })
   brokers.push(broker)
-  await broker.open({ projectId: "project", sessionId: "session", directory: "/fixture" }, "http://localhost:3000/")
+  const current = await broker.open(
+    { projectId: "project", sessionId: "session", directory: "/fixture" },
+    "http://localhost:3000/",
+  )
   const context = { id: "project", root: "/fixture", peekState: () => undefined, sessions: () => [{ id: "session" }] }
   const contexts = {
     resolve: (id: string) => (id === "project" ? context : undefined),
@@ -53,7 +56,7 @@ async function fixture() {
         true,
       )
     })
-  return { send, state, broker }
+  return { send, state, broker, current }
 }
 
 const request = (id: string): AgentManagerInMessage => ({
@@ -114,7 +117,17 @@ describe("browser inspection responses", () => {
     })
   })
 
-  test("surfaces native picker input failures instead of only logging them", async () => {
+  test("preserves the active project's untitled preview when DevTools fail", async () => {
+    const test = await fixture()
+    await test.broker.open({ projectId: "other", sessionId: "session", directory: "/other" }, "http://localhost:3000/")
+    expect(await test.send({ type: "agentManager.browser.devtools", sessionId: "session" })).toEqual({
+      ...browserMessage(test.current),
+      error: "Browser developer tools are unavailable for this browser session",
+    })
+    expect(test.broker.get("session", "project")?.error).toBeUndefined()
+  })
+
+  test("preserves an untitled preview when native picker input fails", async () => {
     const test = await fixture()
     test.broker.input = async () => {
       throw new Error("Pointer target is unavailable")
@@ -130,6 +143,10 @@ describe("browser inspection responses", () => {
         height: 300,
         click: true,
       }),
-    ).toMatchObject({ type: "agentManager.browserState", status: "error", error: "Pointer target is unavailable" })
+    ).toEqual({ ...browserMessage(test.current), error: "Pointer target is unavailable" })
+    expect(await test.send({ type: "agentManager.browser.input", projectId: "project", sessionId: "session" })).toEqual(
+      { ...browserMessage(test.current), error: "Browser element coordinates are required." },
+    )
+    expect(test.broker.get("session", "project")?.error).toBeUndefined()
   })
 })

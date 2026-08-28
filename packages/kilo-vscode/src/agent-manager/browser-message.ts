@@ -17,7 +17,12 @@ function position(message: BrowserMessage): { x: number; y: number; width: numbe
   return { x: message.x, y: message.y, width: message.width, height: message.height }
 }
 
-function fail(deps: { post: (message: AgentManagerOutMessage) => void }, m: BrowserMessage, error: string): void {
+function fail(
+  deps: { post: (message: AgentManagerOutMessage) => void },
+  m: BrowserMessage,
+  error: string,
+  state?: BrowserState,
+): void {
   if (m.type === "agentManager.browser.inspect") {
     deps.post({
       type: "agentManager.browserInspection",
@@ -28,6 +33,10 @@ function fail(deps: { post: (message: AgentManagerOutMessage) => void }, m: Brow
       logs: [],
       error,
     })
+    return
+  }
+  if (state) {
+    deps.post(browserMessage({ ...state, error }))
     return
   }
   deps.post({
@@ -86,7 +95,7 @@ function action(
       )
       .catch((error: unknown) => {
         deps.log("Browser developer tools failed:", error)
-        fail(deps, m, diagnostic(error))
+        fail(deps, m, diagnostic(error), deps.browser.get(m.sessionId, scope.project))
       })
     return true
   }
@@ -116,13 +125,13 @@ function action(
   if (m.type === "agentManager.browser.inspect" || m.type === "agentManager.browser.input") {
     const point = position(m)
     if (!point) {
-      fail(deps, m, "Browser element coordinates are required.")
+      fail(deps, m, "Browser element coordinates are required.", deps.browser.get(m.sessionId, scope.project))
       return true
     }
     if (m.type === "agentManager.browser.input") {
       void deps.browser.input(m.sessionId, scope.project, point, m.click === true).catch((error: unknown) => {
         deps.log("Browser developer tools input failed:", error)
-        fail(deps, { ...m, projectId: scope.project }, diagnostic(error))
+        fail(deps, { ...m, projectId: scope.project }, diagnostic(error), deps.browser.get(m.sessionId, scope.project))
       })
       return true
     }
