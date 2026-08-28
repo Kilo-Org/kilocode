@@ -40,6 +40,10 @@ Before connecting:
 
 Go to your **Personal** or **Organization Dashboard**, and navigate to the [Integrations](https://app.kilo.ai/integrations) tab.
 
+{% callout type="note" %}
+For organizations, only Owners and Admins can add a GitHub integration. If you have another role, ask an Owner or Admin to complete the installation.
+{% /callout %}
+
 ### 2. Start the Connection Flow
 
 1. Click **Configure** on the GitHub panel.
@@ -163,13 +167,17 @@ Once your integrations are connected, the following features are enabled in Kilo
 
 ### Upcoming:
 
-- **Bitbucket Integration**
+- **Bitbucket Integration** — currently available only for organizations when starting [Cloud Agent](/docs/code-with-ai/platforms/cloud-agent) sessions; full integration support is upcoming
 
 ---
 
 ## Managing or Removing the Integration
 
 ### GitHub
+
+For organizations, the GitHub integration page lists each installation with its connection health, repository scope (all or only selected repositories), the selected repositories, and per-installation actions. Personal accounts keep the single GitHub identity connection.
+
+An organization can connect more than one GitHub organization. Click **Add organization** on the GitHub panel and repeat the installation flow for each GitHub organization; each one appears as a separate installation with its own repository scope and actions. Adding installations requires the Owner or Admin role.
 
 From the **Integrations** page, click "Manage on GitHub" to:
 

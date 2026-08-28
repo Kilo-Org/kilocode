@@ -26,6 +26,7 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 | **Terminal** | In the sidebar, include the active VS Code terminal output. In Agent Manager, include the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. | `@terminal` |
 | **Git Changes** | Attach uncommitted working-tree diffs and new files | `@git-changes` |
 | **Past chats** | Add a previous session's chat history as context | `@` → **Past chats** → pick a session |
+| **Worktrees** | In Agent Manager, reference another worktree — inserts its path with its branch, base branch, and session IDs as context | `@` → **Worktrees** → pick a worktree |
 
 Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
 
@@ -36,6 +37,12 @@ Terminal context is limited to 500 lines or 50,000 characters. Longer output is 
 Choosing **Past chats** from the `@` menu opens a searchable picker of sessions in the current workspace and related Git worktrees, including Agent Manager worktrees, ordered by recency. Search matches session titles and worktree names. Selecting a session inserts a highlighted mention token; when you send the message, that session's current chat history is added as context so the agent can build on the earlier conversation. Clicking the mention token opens the referenced session.
 
 Very long chat histories are truncated, keeping the beginning and end, so a single mention cannot fill the context window.
+
+### Referencing Agent Manager Worktrees
+
+In Agent Manager, choosing **Worktrees** from the `@` menu opens a searchable picker of the project's worktrees. Search matches worktree names, branches, and session titles. Recently opened worktrees sort first, then worktrees with the most recent activity.
+
+Selecting a worktree inserts an `@` mention of its absolute path and attaches a small text record with the worktree's branch, base branch, and session IDs and titles. The mention is metadata only — it does not attach the worktree's files, diffs, or chat history, and it does not change the agent's working directory. The worktree you are currently working in is not offered as a reference.
 
 ### Drag and Drop
 

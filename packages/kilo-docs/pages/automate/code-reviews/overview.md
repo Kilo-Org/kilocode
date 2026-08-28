@@ -124,6 +124,7 @@ Use `/review` for all local code reviews:
 - **`/review`** — Review uncommitted changes (staged, unstaged, and untracked) when run without arguments
 - **`/review uncommitted [guidance]`** — Review uncommitted changes with optional guidance
 - **`/review branch [base] [guidance]`** — Review your current branch vs. its detected or specified base, with optional guidance
+- **`/review worktree [guidance]`** — Review every committed, staged, unstaged, and untracked change in an Agent Manager worktree against its recorded parent branch (offered only in Agent Manager worktree sessions)
 - **`/review <commit-hash>`** — Review a specific commit
 - **`/review <PR URL or number>`** — Review a pull request
 

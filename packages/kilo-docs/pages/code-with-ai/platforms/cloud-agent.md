@@ -5,7 +5,7 @@ description: "Using Kilo Code in the browser"
 
 # {% $markdoc.frontmatter.title %}
 
-Cloud Agents let you run Kilo Code in the cloud from any device, without relying on your local machine. They provide a remote development environment that can read and modify your GitHub and GitLab repositories, run commands, and auto-commit changes as work progresses.
+Cloud Agents let you run Kilo Code in the cloud from any device, without relying on your local machine. They provide a remote development environment that can read and modify your GitHub, GitLab, or Bitbucket repositories, run commands, and auto-commit changes as work progresses. Bitbucket repositories are available for organizations only, not personal accounts.
 
 ## What Cloud Agents Enable
 
@@ -18,8 +18,8 @@ Cloud Agents let you run Kilo Code in the cloud from any device, without relying
 
 Before using Cloud Agents:
 
-- **GitHub or GitLab Integration must be configured**
-  Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories.
+- **A GitHub, GitLab, or Bitbucket integration must be configured**
+  Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories. Bitbucket is available for organizations only.
 
 ## Cost
 
@@ -35,14 +35,23 @@ Usage is measured in whole seconds, with no rounding up to a longer billing inte
 
 See [Kilo Code pricing](https://kilo.ai/pricing) for current rates and pricing for other cloud products.
 
+### Session cost display
+
+The session header shows two separate entries:
+
+- **Token Usage** — the session's inference spend (model usage), paid in Kilo credits.
+- **Compute** — a server-provided estimate for the session's container: an estimated hourly rate while idle, a shared interval estimate while active, and **Not currently charged** in shadow mode. Stopping and unavailable states are shown when no estimate is available.
+
+If a compute billing check fails — for example, when the paying account has insufficient credits — the error appears next to the composer with recovery actions appropriate to the paying account (personal or organization) and your role in it. Your prompt text is preserved so you can retry after resolving the billing issue.
+
 ## How to Use
 
-1. **Connect your GitHub or GitLab account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard.
-2. **Select a repository** to use as your workspace.
+1. **Connect your GitHub, GitLab, or Bitbucket account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard. Bitbucket is available for organizations only.
+2. **Select a repository** to use as your workspace. The repository picker groups your repositories into Recently used and per-provider sections.
 3. **Add environment variables** (secrets supported) and set optional startup commands.
 4. **Start chatting with Kilo Code.**
 
-Your work is always pushed to GitHub, ensuring nothing is lost.
+Your work is always pushed to your repository, ensuring nothing is lost.
 
 ## Starting Tasks from the CLI
 
@@ -184,6 +193,8 @@ When creating a trigger, you choose an **activation mode** that cannot be change
 ### Configuration
 
 Triggers utilize [agent environment profiles](#agent-environment-profiles) to configure the execution environment for triggered sessions. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
+
+Both webhook and scheduled triggers can optionally set a **reasoning effort** for models that support it. The effort picker sits next to the model selector and starts at **Default**, which leaves the model's own behavior unchanged. Choosing a specific effort stores it on the trigger and applies it to every session the trigger starts; existing triggers keep working without one.
 
 Triggers do not support manual env var or setup command overrides at this time.
 

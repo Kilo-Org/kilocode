@@ -25,11 +25,33 @@ The mobile app lets you:
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
+## Agents tab and session history
+
+The **Agents** tab lists only your running sessions. Tap **See all** on the Agents tab to open the history page, which lists past sessions with search, platform and project filters, and sorting, and loads more history as you scroll. A session that finishes while you are away appears in history the next time you open or return to the history page — no manual refresh needed. On the Home screen, **See all** opens the running-sessions list instead of the history page.
+
+## Language and region
+
+The app renders in 87 languages. It follows your device language by default and falls back to English when the device language is not supported.
+
+To override the device language, use the language picker on the login screen or in **Preferences**. The picker supports search and shows each language in its own script. Dates, times, and currency formatting follow the active language.
+
+Choosing a language with a different layout direction (such as Arabic or Hebrew) restarts the app into a mirrored, right-to-left layout; a same-direction change applies in place. A restart keeps the email you typed on the login screen.
+
+Push notifications arrive in the language the device had when it registered, so each device gets its own language.
+
 ## Privacy and telemetry
 
 On first launch, the app asks for your consent before enabling optional telemetry — product analytics, attribution, and performance tracing. Optional telemetry is pre-selected during onboarding; you can turn it off before accepting. No optional analytics starts before you make a choice.
 
 You can review or change your decision at any time in **Settings**. Declining optional telemetry keeps you signed in, and optional telemetry state stored on the device is stopped and discarded when you revoke consent or sign out.
+
+## Links and images in chat
+
+Model replies can contain links and images, and the app asks before anything loads or opens:
+
+- **Images stay hidden until you tap Load.** Each image shows its host and a **Load** button, and nothing is fetched until you tap it. Only HTTPS images can load — `http` and `data:` images show a static "HTTPS images only" chip instead.
+- **Links confirm their destination host** in a native alert before they open in the browser. Choose **Trust this host** to open that host's links directly from then on.
+- **Preferences → Trusted hosts** lists every host you have trusted, and you can revoke any of them. Trusted hosts are cleared when you sign out.
 
 ## Kilo Pass and Billing
 
@@ -55,6 +77,19 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 - **A connected CLI instance** — a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
 
 Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
+
+When you start a session on a connected CLI instance, a **Folder** field lets you pick a child folder of the instance's launch directory as the session workspace. You can drill down any number of levels, and **Start** opens the session in the chosen folder. A connected instance running an older CLI version that cannot list folders shows a message instead, and **Start** opens the session in the instance's launch folder.
+
+For Cloud Agent sessions, you pick the repository the agent works on. The repository picker groups your repositories into **Recently used** and per-provider sections — GitHub, GitLab, and, for organizations, Bitbucket — and shows each repository's provider next to its name. Each provider shows its own connect prompt or error message, so a problem with one provider does not hide the repositories of another.
+
+## Continuing a finished session
+
+Open a finished session and tap **Continue** to carry the conversation into a new session. The Continue form starts pre-filled from the source session — repository, agent mode, model, and variant — and you pick where the new session runs:
+
+- **Cloud Agent** — copies the source conversation into a new Cloud Agent session and opens it once it is ready.
+- **A connected CLI instance** — imports the source conversation into the CLI. A CLI that cannot import sessions is refused before anything runs, with the reason shown and **Start** disabled.
+
+**Start** also stays disabled when the selected model or repository is no longer available.
 
 ## Queueing follow-up messages
 

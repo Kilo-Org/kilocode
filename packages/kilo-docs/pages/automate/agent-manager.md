@@ -189,7 +189,8 @@ Imported work stays associated with its branch or worktree and can be continued 
 
 - Create a worktree session to start a new agent in an isolated branch
 - Press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux) to start another session in the selected worktree
-- Use session history to reopen local sessions or preview cloud sessions
+- Use session history to reopen local sessions or preview cloud sessions. Open it with the history button in the **WORKTREES** header; in multi-project mode, each project row has its own history button, including collapsed projects. Opening a project's button activates that project and filters the Local history tab to that project's sessions.
+- Hover a session in the history list for direct actions: open the session in a newly created worktree, or move it to the project root and open it in the project's local tabs.
 - When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
@@ -218,9 +219,11 @@ Each request can include 1-20 tasks. Each task must include at least one of `pro
 
 The companion `agent_manager_models` tool searches models and their supported reasoning variants on demand. Results are grouped by model name (with the offering providers listed for reference) and limited to 20 per call, so the full catalog is never added to the conversation context.
 
-The same tool also manages existing sessions. It can return an overview of sections, worktrees, and local sessions, send a prompt to one managed session, stop a managed session, or move a session's worktree into a section. The overview includes section IDs, each section's assigned worktrees, worktree IDs, and session IDs. Use those exact IDs for a subsequent move. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
+The same tool also manages existing sessions. It can return an overview of sections, worktrees, and local sessions, send a prompt to one managed session, stop a managed session, move a session's worktree into a section, or answer a managed session's pending question. The overview includes section IDs, each section's assigned worktrees, worktree IDs, and session IDs. Use those exact IDs for a subsequent move. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
 
-The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping a session likewise requires an explicit `stop` approval, and moving a worktree requires an explicit `move` approval.
+A session waiting on a question refuses prompts. The failed prompt names the session ID, the pending question's ID and text, and its option labels, so a follow-up `answer` call can resolve the question with the exact labels shown. Answering resolves questions only — a session blocked on a permission request must be approved in the Agent Manager UI instead.
+
+The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping a session likewise requires an explicit `stop` approval, moving a worktree requires an explicit `move` approval, and answering a pending question requires an explicit `answer` approval.
 
 ## Sections
 
