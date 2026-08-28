@@ -1,8 +1,10 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.actions.CopyShareLinkAction
 import ai.kilocode.client.actions.ShareSessionAction
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.SessionShareDto
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
@@ -16,6 +18,28 @@ import java.awt.datatransfer.DataFlavor
  */
 @Suppress("UnstableApiUsage")
 class SessionShareTest : SessionUiTestBase() {
+
+    fun `test reopening a shared session exposes sharing actions before any update`() {
+        rpc.session = rpc.session.copy(share = SessionShareDto(rpc.shareUrl))
+        open()
+
+        val action = ShareSessionAction()
+        val shared = event(action)
+        ActionUtil.updateAction(action, shared)
+
+        assertEquals(rpc.shareUrl, actions().share)
+        assertTrue(shared.presentation.isEnabledAndVisible)
+        assertEquals("Stop Sharing", shared.presentation.text)
+
+        val copy = CopyShareLinkAction()
+        val link = event(copy)
+        ActionUtil.updateAction(copy, link)
+        assertTrue(link.presentation.isEnabledAndVisible)
+        copy.actionPerformed(link)
+
+        assertEquals(rpc.shareUrl, clipboard())
+        assertTrue(rpc.shares.isEmpty())
+    }
 
     fun `test share calls the backend and copies the link`() {
         open()
@@ -93,7 +117,7 @@ class SessionShareTest : SessionUiTestBase() {
 
     private fun actions(): SessionActions = ui
 
-    private fun event(action: ShareSessionAction): AnActionEvent {
+    private fun event(action: AnAction): AnActionEvent {
         val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
         val context = DataContext { id ->
             if (SessionActionsKeys.ACTIONS.`is`(id)) actions() else null

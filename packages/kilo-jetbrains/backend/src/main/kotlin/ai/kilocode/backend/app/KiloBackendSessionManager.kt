@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionShareDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -409,6 +410,7 @@ class KiloBackendSessionManager(
         archived = s.time.archived,
         summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+        share = s.share?.url,
     )
 
     private fun dto(s: ai.kilocode.jetbrains.api.model.Session1) = dto(
@@ -423,6 +425,7 @@ class KiloBackendSessionManager(
         archived = s.time.archived,
         summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+        share = s.share?.url,
     )
 
     private fun dto(s: GlobalSession) = dto(
@@ -437,6 +440,7 @@ class KiloBackendSessionManager(
         archived = s.time.archived,
         summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+        share = s.share?.url,
     )
 
     private fun dto(
@@ -451,6 +455,7 @@ class KiloBackendSessionManager(
         archived: Double?,
         summary: SessionSummaryDto?,
         revert: SessionRevertDto?,
+        share: String?,
     ): SessionDto {
         owned[id] = dir
         return SessionDto(
@@ -467,6 +472,7 @@ class KiloBackendSessionManager(
             ),
             summary = summary,
             revert = revert,
+            share = share?.takeIf { it.isNotBlank() }?.let(::SessionShareDto),
         )
     }
 
