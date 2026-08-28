@@ -1241,6 +1241,11 @@ export const TaskHeaderBackgroundAgents420: Story = {
   name: "TaskHeader background agents, narrow",
 }
 
+export const TaskHeaderBackgroundAgents200: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader background agents, compact",
+}
+
 export const TaskHeaderSingleBackgroundAgent420: Story = {
   ...TaskHeaderBackgroundAgents1280,
   name: "TaskHeader single background agent, narrow",

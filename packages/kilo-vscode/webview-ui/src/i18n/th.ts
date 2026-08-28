@@ -1228,6 +1228,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
   "task.backgroundAgents.running.one": "เอเจนต์เบื้องหลัง 1 ตัว",
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
+  "task.backgroundAgents.more": "+{{count}} เพิ่มเติม",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",

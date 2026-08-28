@@ -1281,6 +1281,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} Aufgaben erledigt",
   "task.backgroundAgents.running.one": "1 Hintergrund-Agent",
   "task.backgroundAgents.running.many": "{{count}} Hintergrund-Agenten",
+  "task.backgroundAgents.more": "+{{count}} weitere",
   "task.backgroundAgents.open": "Hintergrund-Agent öffnen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Im Hintergrund fortsetzen",

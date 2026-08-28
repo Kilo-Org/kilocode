@@ -1187,6 +1187,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} 个待办已完成",
   "task.backgroundAgents.running.one": "1 个后台智能体",
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
+  "task.backgroundAgents.more": "+{{count}} 个",
   "task.backgroundAgents.open": "打开后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",

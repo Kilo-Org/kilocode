@@ -146,10 +146,22 @@
    ============================================ */
 
 [data-component="task-header-agents"] {
+  [data-slot="task-header-agents-toolbar"] {
+    min-height: 31px;
+    padding: 3px 8px 3px 12px;
+    gap: 4px;
+    box-sizing: border-box;
+
+    > [data-component="button"] {
+      margin: 0;
+    }
+  }
+
   [data-slot="task-header-agents-content"] {
     position: relative;
     flex: 1;
     min-width: 0;
+    height: 24px;
     overflow: hidden;
 
     > [aria-hidden="true"] {
@@ -158,10 +170,21 @@
   }
 
   [data-slot="task-header-agents-summary"],
-  [data-slot="task-header-agents-item"] {
-    display: flex;
-    align-items: center;
+  [data-slot="task-header-agents-item"],
+  [data-slot="task-header-agents-overflow"] {
+    padding: 0 4px;
     gap: 6px;
+    font-size: var(--kilo-font-size-12);
+
+    &:focus-visible {
+      outline-offset: -2px;
+    }
+  }
+
+  [data-slot="task-header-agents-summary"] {
+    width: 100%;
+    justify-content: flex-start;
+    color: var(--text-weak);
   }
 
   [data-slot="task-header-todos-summary"] {
@@ -169,6 +192,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: start;
   }
 
   [data-slot="task-header-agents-preview"] {
@@ -177,14 +201,32 @@
     top: 0;
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 6px;
     width: max-content;
     white-space: nowrap;
     color: var(--text-base);
+
+    > [aria-hidden="true"] {
+      visibility: hidden;
+    }
   }
 
-  [data-slot="task-header-todos-trigger"] > [data-component="icon"]:last-child {
-    flex-shrink: 0;
+  [data-slot="task-header-agents-overflow"] {
+    position: absolute;
+    top: 0;
+    color: var(--text-weak);
+  }
+
+  [data-slot="task-header-agents-overflow-label"] {
+    display: grid;
+
+    > span {
+      grid-area: 1 / 1;
+    }
+
+    > [aria-hidden="true"] {
+      visibility: hidden;
+    }
   }
 
   /* The shared spinner svg has no intrinsic size, so it must be constrained

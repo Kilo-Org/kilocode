@@ -1244,6 +1244,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} タスク完了",
   "task.backgroundAgents.running.one": "バックグラウンドエージェント 1 件",
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
+  "task.backgroundAgents.more": "+{{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",

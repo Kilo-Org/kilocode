@@ -1238,6 +1238,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} to-do's voltooid",
   "task.backgroundAgents.running.one": "1 achtergrondagent",
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
+  "task.backgroundAgents.more": "+{{count}} meer",
   "task.backgroundAgents.open": "Achtergrondagent openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",

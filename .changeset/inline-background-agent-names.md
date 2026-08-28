@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Show each running background agent with its own status indicator, and switch to a count when the header has too little space.
+Open running background agents directly from the header and show an overflow count for agents that do not fit.
