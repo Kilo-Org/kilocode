@@ -1,7 +1,13 @@
 import { reconcile } from "solid-js/store"
-import type { Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
-import { partFeedback, type BrowserReference } from "../../../src/shared/browser-feedback"
-import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
+import type { FileAttachment, Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
+import { Identifier } from "../utils/id"
+import {
+  feedbackMetadata,
+  partFeedback,
+  type BrowserFeedbackData,
+  type BrowserReference,
+} from "../../../src/shared/browser-feedback"
+import type { ReviewCommentEntry, ReviewMessageData } from "../../../src/shared/review-comments"
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
@@ -32,6 +38,37 @@ export function messageParts(messages: Message[]): Record<string, Part[]> {
   const parts: Record<string, Part[]> = {}
   for (const msg of messages) {
     if (msg.parts && msg.parts.length > 0) parts[msg.id] = msg.parts
+  }
+  return parts
+}
+
+export function optimistic(
+  id: string,
+  text: string,
+  files?: FileAttachment[],
+  review?: ReviewMessageData,
+  browser?: BrowserFeedbackData,
+): Part[] {
+  const parts: Part[] = []
+  if (text) {
+    parts.push({
+      type: "text",
+      id: Identifier.ascending("part"),
+      messageID: id,
+      text,
+      metadata: feedbackMetadata(review, browser),
+    })
+  }
+  for (const file of files ?? []) {
+    parts.push({
+      type: "file",
+      id: Identifier.ascending("part"),
+      messageID: id,
+      mime: file.mime,
+      url: file.url,
+      filename: file.filename,
+      source: file.source,
+    })
   }
   return parts
 }
@@ -128,6 +165,45 @@ type TaskPart = {
 export function childID(part: TaskPart): string | undefined {
   if (part.type !== "tool" || part.tool !== "task") return undefined
   return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
+}
+
+export function inUse(
+  family: ReadonlySet<string>,
+  statuses: Record<string, { type: string }>,
+  prompts: readonly { sessionID: string }[],
+): boolean {
+  return (
+    [...family].some((id) => !!statuses[id] && statuses[id].type !== "idle") ||
+    prompts.some((item) => family.has(item.sessionID))
+  )
+}
+
+export function ancestry(
+  sessions: Record<string, ParentSession>,
+  tools: Record<string, readonly TaskPart[]>,
+  outcomes: Record<string, ParentSession | undefined>,
+) {
+  const parents = new Map<string, string>()
+  for (const [id, parts] of Object.entries(tools)) {
+    for (const part of parts) {
+      const child = childID(part)
+      if (child) parents.set(child, id)
+    }
+  }
+  for (const [id, close] of Object.entries(outcomes)) {
+    if (close?.parentID) parents.set(id, close.parentID)
+  }
+  for (const [id, session] of Object.entries(sessions)) {
+    if (session.parentID === null) parents.delete(id)
+    if (session.parentID) parents.set(id, session.parentID)
+  }
+  const children = new Map<string, string[]>()
+  for (const [child, parent] of parents) {
+    const ids = children.get(parent) ?? []
+    ids.push(child)
+    children.set(parent, ids)
+  }
+  return { parents, children }
 }
 
 export function latestTaskPart(partID: string | undefined, child: string | undefined, parts: readonly TaskPart[]) {

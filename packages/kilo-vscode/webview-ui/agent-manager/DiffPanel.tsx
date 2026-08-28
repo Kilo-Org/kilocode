@@ -6,6 +6,7 @@ import {
   createEffect,
   createRenderEffect,
   on,
+  untrack,
   type JSXElement,
 } from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
@@ -70,7 +71,7 @@ import { treeOrder } from "../diff-viewer/file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
 import { ImageDiffView } from "../diff-viewer/ImageDiffView"
 import { createDiffRows, diffSizeKey } from "../diff-viewer/diff-state"
-import { createDiffRequests } from "../diff-viewer/diff-requests"
+import { createDiffRequests, createDiffViewport } from "../diff-viewer/diff-requests"
 
 // --- Data model ---
 
@@ -290,6 +291,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     open,
     loading: () => props.loadingFiles,
     send: () => (props.active === false ? undefined : props.onRequestDiff),
+    eager: false,
   })
 
   // --- CRUD ---
@@ -418,7 +420,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
     editMeta = result.editMeta
-    if (props.active !== false) {
+    if (untrack(() => props.active) !== false) {
       composer().draft = draft() ? draftMeta : null
       composer().edit = editing() ? editMeta : null
     }
@@ -597,13 +599,16 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                 const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
+                const viewport = createDiffViewport(scroller)
 
                 createEffect(() => {
-                  if (diff.kind === "image" && open().includes(diff.file)) request(diff)
+                  if (props.active === false || !viewport.visible() || !open().includes(diff.file)) return
+                  request(diff, viewport.intersects)
                 })
 
                 return (
                   <Accordion.Item
+                    ref={viewport.ref}
                     value={diff.file}
                     data-slot="session-review-accordion-item"
                     data-file-path={diff.file}
@@ -750,6 +755,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                     diffStyle={props.diffStyle ?? "unified"}
                                     sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle ?? "unified")}
                                     virtualized={shouldVirtualizeDiff(diff)}
+                                    visible={viewport.visible() && props.active !== false}
                                     annotations={annotationsForFile(diff.file)}
                                     renderAnnotation={buildAnnotation}
                                     enableGutterUtility={true}

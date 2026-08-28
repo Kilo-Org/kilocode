@@ -67,8 +67,6 @@ export const dict = {
   "agentManager.tab.terminal": "ترمینال",
   "agentManager.tab.openTerminal": "باز کردن ترمینال",
   "agentManager.tab.newOptions": "گزینه‌های بیشتر برای تب جدید",
-  "agentManager.tabsMenu.status.waiting": "انتظار",
-  "agentManager.tabsMenu.status.retry": "تلاش مجدد",
   "agentManager.sidebarSearch.label": "جستجوی worktree‌ها و جلسات",
   "agentManager.sidebarSearch.scope": "جستجو در فضای کاری محلی، جلسات محلی، worktree‌ها و جلسات آن‌ها",
   "agentManager.sidebarSearch.contexts": "محلی و WORKTREE‌ها",

@@ -108,6 +108,10 @@ export class VscodeHost implements Host {
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      tabTitle: (title) => {
+        panel.title = title
+      },
+      tabLabel: "Agent Manager",
       platform: PLATFORM,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,

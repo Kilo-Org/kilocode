@@ -44,7 +44,7 @@ export async function handleSessionSearch(input: Input): Promise<void> {
 
   try {
     const res = await client.experimental.session.list(
-      { worktrees: true, roots: true, directory: dir, limit: 50 },
+      { worktrees: true, roots: true, directory: dir, limit: 5_000 },
       { throwOnError: true },
     )
     const sessions: Item[] = res.data

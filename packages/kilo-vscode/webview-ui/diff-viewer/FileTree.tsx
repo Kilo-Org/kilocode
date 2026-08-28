@@ -1,4 +1,5 @@
 import { type Component, createSignal, createMemo, For, Show } from "solid-js"
+import { Virtualizer } from "virtua/solid"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -20,71 +21,7 @@ interface FileTreeProps {
   showSummary?: boolean
 }
 
-const DirectoryNode: Component<{
-  node: FileTreeNode
-  activeFile: string | null
-  onFileSelect: (path: string) => void
-  depth: number
-  commentsByFile?: Map<string, number>
-  selectedFiles?: Set<string>
-  onFileToggle?: (path: string, checked: boolean) => void
-  onRevertFile?: (path: string) => void
-  revertingFiles?: Set<string>
-}> = (props) => {
-  const [expanded, setExpanded] = createSignal(true)
-  const hasActiveDescendant = createMemo(() => {
-    if (!props.activeFile) return false
-    return props.activeFile.startsWith(props.node.path + "/")
-  })
-
-  return (
-    <div class="am-file-tree-group">
-      <button
-        class={`am-file-tree-dir ${hasActiveDescendant() ? "am-file-tree-dir-highlight" : ""}`}
-        style={{ "padding-left": `${8 + props.depth * 12}px` }}
-        onClick={() => setExpanded((p) => !p)}
-      >
-        <Icon name={expanded() ? "chevron-down" : "chevron-right"} size="small" />
-        <Icon name="folder" size="small" />
-        <span class="am-file-tree-name">{props.node.name}</span>
-      </button>
-      <Show when={expanded()}>
-        <For each={props.node.children ?? []}>
-          {(child) => (
-            <Show
-              when={child.children}
-              fallback={
-                <FileNode
-                  node={child}
-                  activeFile={props.activeFile}
-                  onFileSelect={props.onFileSelect}
-                  depth={props.depth + 1}
-                  commentsByFile={props.commentsByFile}
-                  selectedFiles={props.selectedFiles}
-                  onFileToggle={props.onFileToggle}
-                  onRevertFile={props.onRevertFile}
-                  revertingFiles={props.revertingFiles}
-                />
-              }
-            >
-              <DirectoryNode
-                node={child}
-                activeFile={props.activeFile}
-                onFileSelect={props.onFileSelect}
-                depth={props.depth + 1}
-                commentsByFile={props.commentsByFile}
-                selectedFiles={props.selectedFiles}
-                onFileToggle={props.onFileToggle}
-                onRevertFile={props.onRevertFile}
-                revertingFiles={props.revertingFiles}
-              />
-            </Show>
-          )}
-        </For>
-      </Show>
-    </div>
-  )
-}
+type Row = { node: FileTreeNode; depth: number }
 
 const FileNode: Component<{
   node: FileTreeNode
@@ -183,7 +120,44 @@ const FileNode: Component<{
 
 export const FileTree: Component<FileTreeProps> = (props) => {
   const { t } = useLanguage()
-  const tree = createMemo(() => flatten(buildFileTree(props.diffs)))
+  const cache = new Map<string, Row>()
+  let signature = ""
+  const tree = createMemo<FileTreeNode[]>((previous) => {
+    const key = props.diffs
+      .map((diff) => `${diff.file}\0${diff.status}\0${diff.additions}\0${diff.deletions}`)
+      .join("\n")
+    if (key === signature) return previous
+    signature = key
+    cache.clear()
+    return flatten(buildFileTree(props.diffs))
+  }, [])
+  const [collapsed, setCollapsed] = createSignal(new Set<string>())
+  const [scroller, setScroller] = createSignal<HTMLDivElement>()
+  const rows = createMemo(() => {
+    const result: Row[] = []
+    const hidden = collapsed()
+    const visit = (nodes: FileTreeNode[], depth: number) => {
+      for (const node of nodes) {
+        const item = cache.get(node.path) ?? { node, depth }
+        cache.set(node.path, item)
+        result.push(item)
+        if (node.children && !hidden.has(node.path)) visit(node.children, depth + 1)
+      }
+    }
+    visit(tree(), 0)
+    return result
+  })
+  const toggle = (path: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(path)) {
+        next.delete(path)
+        return next
+      }
+      next.add(path)
+      return next
+    })
+  }
   const commentsByFile = createMemo(() => {
     const map = new Map<string, number>()
     for (const comment of props.comments ?? []) {
@@ -197,41 +171,47 @@ export const FileTree: Component<FileTreeProps> = (props) => {
     return { files: props.diffs.length, additions: adds, deletions: dels }
   })
 
+  const row = (item: Row) => (
+    <Show
+      when={item.node.children}
+      fallback={
+        <FileNode
+          node={item.node}
+          activeFile={props.activeFile}
+          onFileSelect={props.onFileSelect}
+          depth={item.depth}
+          commentsByFile={commentsByFile()}
+          selectedFiles={props.selectedFiles}
+          onFileToggle={props.onFileToggle}
+          onRevertFile={props.onRevertFile}
+          revertingFiles={props.revertingFiles}
+        />
+      }
+    >
+      <button
+        class={`am-file-tree-dir ${props.activeFile?.startsWith(item.node.path + "/") ? "am-file-tree-dir-highlight" : ""}`}
+        style={{ "padding-left": `${8 + item.depth * 12}px` }}
+        onClick={() => toggle(item.node.path)}
+      >
+        <Icon name={collapsed().has(item.node.path) ? "chevron-right" : "chevron-down"} size="small" />
+        <Icon name="folder" size="small" />
+        <span class="am-file-tree-name">{item.node.name}</span>
+      </button>
+    </Show>
+  )
+
   return (
     <div class="am-file-tree">
-      <div class="am-file-tree-list">
-        <For each={tree()}>
-          {(node) => (
-            <Show
-              when={node.children}
-              fallback={
-                <FileNode
-                  node={node}
-                  activeFile={props.activeFile}
-                  onFileSelect={props.onFileSelect}
-                  depth={0}
-                  commentsByFile={commentsByFile()}
-                  selectedFiles={props.selectedFiles}
-                  onFileToggle={props.onFileToggle}
-                  onRevertFile={props.onRevertFile}
-                  revertingFiles={props.revertingFiles}
-                />
-              }
-            >
-              <DirectoryNode
-                node={node}
-                activeFile={props.activeFile}
-                onFileSelect={props.onFileSelect}
-                depth={0}
-                commentsByFile={commentsByFile()}
-                selectedFiles={props.selectedFiles}
-                onFileToggle={props.onFileToggle}
-                onRevertFile={props.onRevertFile}
-                revertingFiles={props.revertingFiles}
-              />
-            </Show>
-          )}
-        </For>
+      <div ref={setScroller} class="am-file-tree-list">
+        <Show when={props.diffs.length > 100} fallback={<For each={rows()}>{row}</For>}>
+          <Show when={scroller()}>
+            {(root) => (
+              <Virtualizer data={rows()} scrollRef={root()} itemSize={28} bufferSize={280}>
+                {row}
+              </Virtualizer>
+            )}
+          </Show>
+        </Show>
       </div>
       <Show when={props.showSummary !== false}>
         <div class="am-file-tree-summary">

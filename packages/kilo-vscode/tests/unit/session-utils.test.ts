@@ -23,6 +23,7 @@ import {
   removeSessionToolPartsForMessage,
   upsertSessionToolPart,
   recentSessions,
+  optimistic,
   revertPromptState,
 } from "../../webview-ui/src/context/session-utils"
 import type { Message, Part, ToolPart } from "../../webview-ui/src/types/messages"
@@ -986,6 +987,24 @@ describe("sessionThroughput", () => {
   })
 })
 
+describe("optimistic parts", () => {
+  it("preserves attachments and message ownership with unique part IDs", () => {
+    const file = {
+      mime: "image/png",
+      url: "data:image/png;base64,abc",
+      filename: "shot.png",
+      source: { type: "file" as const, path: "shot.png", text: { value: "@shot.png", start: 0, end: 9 } },
+    }
+    const parts = optimistic("message", "Hello", [file])
+    expect(parts).toMatchObject([
+      { type: "text", id: expect.any(String), messageID: "message", text: "Hello" },
+      { type: "file", id: expect.any(String), messageID: "message", ...file },
+    ])
+    expect(parts.at(0)?.id).not.toBe(parts.at(1)?.id)
+    expect(optimistic("empty", "")).toEqual([])
+  })
+})
+
 describe("revertPromptState", () => {
   const text = (value: string, synthetic = false) =>
     ({ type: "text", id: `t-${value}`, text: value, synthetic }) as Part
@@ -1040,13 +1059,8 @@ describe("revertPromptState", () => {
       references: [{ id: "b", sessionId: "s1", selector: "#save", text: "Save" }],
     }
     const content = `${formatBrowserFeedback(browser.references)}\n\nPlease update it`
-    const part: Part = {
-      type: "text",
-      id: "t1",
-      text: content,
-      metadata: { kilo: { browserFeedback: browser } },
-    }
-    expect(revertPromptState([part])).toMatchObject({
+    const parts = optimistic("message", content, undefined, undefined, browser)
+    expect(revertPromptState(parts)).toMatchObject({
       text: "Please update it",
       browser: browser.references,
     })

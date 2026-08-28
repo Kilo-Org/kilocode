@@ -1,4 +1,5 @@
 import path from "node:path"
+import { zeroID } from "@opencode-ai/core/kilocode/zero-id"
 import type { SSEPayload } from "./sdk-sse-adapter"
 
 type Buffered = { event: SSEPayload; directory?: string }
@@ -75,12 +76,12 @@ export class ExplicitAbortState {
       const key = scope(sessionID, directory)
       return this.states.has(key) ? [key] : []
     }
-    const prefix = `${sessionID}\0`
+    const prefix = zeroID(sessionID, "")
     return [...this.states.keys()].filter((key) => key.startsWith(prefix))
   }
 }
 
 function scope(sessionID: string, directory: string) {
   const dir = path.resolve(directory)
-  return `${sessionID}\0${process.platform === "win32" ? dir.toLowerCase() : dir}`
+  return zeroID(sessionID, process.platform === "win32" ? dir.toLowerCase() : dir)
 }

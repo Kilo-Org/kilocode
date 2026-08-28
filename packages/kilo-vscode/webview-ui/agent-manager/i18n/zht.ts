@@ -62,8 +62,6 @@ export const dict = {
   "agentManager.tab.terminal": "終端機",
   "agentManager.tab.openTerminal": "開啟終端機",
   "agentManager.tab.newOptions": "更多新增分頁選項",
-  "agentManager.tabsMenu.status.waiting": "等待",
-  "agentManager.tabsMenu.status.retry": "重試",
   "agentManager.sidebarSearch.label": "搜尋 Worktree 與工作階段",
   "agentManager.sidebarSearch.scope": "搜尋本機工作區、本機工作階段、Worktree 及其工作階段",
   "agentManager.sidebarSearch.contexts": "本機 & WORKTREES",

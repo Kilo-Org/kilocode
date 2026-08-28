@@ -175,6 +175,8 @@ export const dict = {
   "common.saving": "Guardando...",
   "common.default": "Predeterminado",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Buscar Worktrees",
   "prompt.thinking.tooltip": "Esfuerzo de razonamiento",
   "prompt.action.send": "Enviar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
@@ -1074,6 +1076,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Compactación automática",
   "settings.context.autoCompaction.description": "Compactar automáticamente el contexto antes de que alcance el límite",
   "settings.context.compaction.title": "Compactación",
+  "settings.context.compactionModel.title": "Modelo de compactación",
+  "settings.context.compactionModel.description":
+    "Modelo utilizado para la compactación automática y manual. Déjalo sin configurar para usar el modelo de chat. El coste, la velocidad y la calidad del resumen dependen del modelo.",
+  "settings.context.compactionModel.useChatModel": "Usar modelo de chat",
   "settings.context.compactionLimit.title": "Límite de compactación automática",
   "settings.context.compactionLimit.description":
     "Compactar cuando el contexto alcance este porcentaje de la ventana del modelo. Déjalo en blanco para usar solo el búfer de seguridad.",

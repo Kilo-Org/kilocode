@@ -63,8 +63,6 @@ export const dict = {
   "agentManager.tab.openTerminal": "Åbn Terminal",
   "agentManager.tab.newOptions": "Flere nye faneindstillinger",
 
-  "agentManager.tabsMenu.status.waiting": "Venter",
-  "agentManager.tabsMenu.status.retry": "Igen",
   "agentManager.sidebarSearch.label": "Søg i Worktrees og sessioner",
   "agentManager.sidebarSearch.scope":
     "Søger i det lokale arbejdsområde, lokale sessioner, Worktrees og deres sessioner",

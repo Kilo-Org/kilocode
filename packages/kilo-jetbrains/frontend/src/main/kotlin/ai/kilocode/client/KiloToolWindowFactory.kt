@@ -19,6 +19,7 @@ import ai.kilocode.log.KiloLog
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DataProvider
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
@@ -178,6 +179,7 @@ internal class KiloToolWindowSetupService(
             val actions = listOfNotNull(
                 ActionManager.getInstance().getAction("Kilo.NewSession"),
                 ActionManager.getInstance().getAction("Kilo.NewWorktree"),
+                Separator.create(),
                 ActionManager.getInstance().getAction("Kilo.History"),
             )
             toolWindow.setTitleActions(actions)

@@ -27,7 +27,7 @@ import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
-import type { MentionResult } from "../../hooks/file-mention-utils"
+import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
@@ -40,6 +40,7 @@ import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
+import { WorktreeMentionPicker } from "./WorktreeMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
@@ -129,6 +130,7 @@ interface PromptInputProps {
   worktree?: boolean
   boxId?: string
   terminalContext?: () => string | undefined
+  worktrees?: () => WorktreeReference[]
   pendingSessionID?: string
   /** Agent Manager can suppress automatic prompt focus when this session last
    *  used its side terminal instead. Other callers retain the old behavior. */
@@ -139,6 +141,7 @@ interface PromptInputProps {
 
 function MentionItemContent(props: { item: MentionResult }) {
   const item = props.item
+  const language = useLanguage()
   if (item.type === "terminal")
     return (
       <>
@@ -147,12 +150,16 @@ function MentionItemContent(props: { item: MentionResult }) {
         <span class="file-mention-dir">{item.description}</span>
       </>
     )
-  if (item.type === "git-changes")
+  if (item.type === "git-changes" || item.type === "worktrees")
     return (
       <>
         <Icon name="branch" class="file-mention-icon" />
-        <span class="file-mention-name">{item.label}</span>
-        <span class="file-mention-dir">{item.description}</span>
+        <span class="file-mention-name">
+          {item.type === "worktrees" ? language.t("prompt.worktrees.title") : item.label}
+        </span>
+        <span class="file-mention-dir">
+          {item.type === "worktrees" ? language.t("prompt.worktrees.search") : item.description}
+        </span>
       </>
     )
   if (item.type === "past-chats")
@@ -203,7 +210,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return rest === "unassigned" ? undefined : rest
   }
   const hasGit = () => server.gitInstalled()
-  const mention = useFileMention(vscode, sid, hasGit)
+  const mention = useFileMention(vscode, sid, hasGit, props.worktrees)
   const terminal = useTerminalContext(props.resolveEmbeddedTerminal)
   const git = useGitChangesContext(vscode, ctx, hasGit)
   const imageAttach = useImageAttachments()
@@ -416,6 +423,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const pending = reviewDrafts.get(key) ?? []
       const scroll = scrollDrafts.get(key) ?? 0
       setText(draft)
+      mention.seedFromText(draft)
       setReviewComments(pending)
       setBrowsers(references.get(key) ?? [])
       imageAttach.replace(imageDrafts.get(key) ?? [])
@@ -1414,14 +1422,31 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             }
           >
             <Show
-              when={mention.mentionResults().length > 0}
-              fallback={<div class="file-mention-empty">No files or folders found</div>}
+              when={!mention.worktreePicker() && mention.mentionResults().length > 0}
+              fallback={
+                <Show
+                  when={mention.worktreePicker()}
+                  fallback={<div class="file-mention-empty">No files or folders found</div>}
+                >
+                  <WorktreeMentionPicker
+                    worktrees={mention.worktreeCandidates()}
+                    onSelect={(picked) => {
+                      if (textareaRef) mention.selectWorktree(picked, textareaRef, setText, adjustHeight)
+                    }}
+                    onClose={() => {
+                      mention.closeMention()
+                      textareaRef?.focus()
+                    }}
+                  />
+                </Show>
+              }
             >
               <For each={mention.mentionResults()}>
                 {(item, index) => (
                   <>
                     <div
                       class="file-mention-item"
+                      data-type={item.type}
                       classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
                       onMouseDown={(e) => {
                         e.preventDefault()

@@ -169,6 +169,8 @@ export const dict = {
   "common.saving": "保存中...",
   "common.default": "默认",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "搜索 Worktree",
   "prompt.thinking.tooltip": "推理强度",
   "prompt.action.indexing": "索引设置",
   "prompt.action.autoApprove.enable": "启用自动审批",
@@ -1003,6 +1005,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
   "settings.context.compaction.title": "压缩",
+  "settings.context.compactionModel.title": "压缩模型",
+  "settings.context.compactionModel.description":
+    "用于自动和手动压缩的模型。留空以使用聊天模型。成本、速度和摘要质量取决于模型。",
+  "settings.context.compactionModel.useChatModel": "使用聊天模型",
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
   "settings.context.prune.title": "修剪旧输出",

@@ -62,8 +62,6 @@ export const dict = {
   "agentManager.tab.terminal": "เทอร์มินัล",
   "agentManager.tab.openTerminal": "เปิดเทอร์มินัล",
   "agentManager.tab.newOptions": "ตัวเลือกแท็บใหม่เพิ่มเติม",
-  "agentManager.tabsMenu.status.waiting": "รอ",
-  "agentManager.tabsMenu.status.retry": "ลองใหม่",
   "agentManager.sidebarSearch.label": "ค้นหา Worktree และเซสชัน",
   "agentManager.sidebarSearch.scope": "ค้นหาพื้นที่ทำงานในเครื่อง เซสชันในเครื่อง Worktree และเซสชันของ Worktree",
   "agentManager.sidebarSearch.contexts": "ในเครื่อง & WORKTREES",

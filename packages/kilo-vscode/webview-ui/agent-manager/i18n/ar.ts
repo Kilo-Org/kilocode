@@ -62,8 +62,6 @@ export const dict = {
   "agentManager.tab.terminal": "الطرفية",
   "agentManager.tab.openTerminal": "فتح الطرفية",
   "agentManager.tab.newOptions": "المزيد من خيارات علامات التبويب الجديدة",
-  "agentManager.tabsMenu.status.waiting": "انتظار",
-  "agentManager.tabsMenu.status.retry": "إعادة",
   "agentManager.sidebarSearch.label": "البحث في Worktrees والجلسات",
   "agentManager.sidebarSearch.scope": "يبحث في مساحة العمل المحلية والجلسات المحلية وWorktrees وجلساتها",
   "agentManager.sidebarSearch.contexts": "محلي & WORKTREES",

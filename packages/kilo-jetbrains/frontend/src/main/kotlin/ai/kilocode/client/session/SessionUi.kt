@@ -72,6 +72,7 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PromptDto
@@ -213,6 +214,12 @@ class SessionUi(
     private lateinit var load: LoadingPanel
     private lateinit var migrationWizard: MigrationWizardPanel
     private var empty: EmptySessionPanel? = null
+
+    /**
+     * Last observed branch/worktree status. Retained so an empty panel created after the fetch shows
+     * its tip immediately instead of waiting for the next refresh.
+     */
+    private var branch: BranchStatusDto? = null
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
@@ -247,8 +254,8 @@ class SessionUi(
         dock?.let {
             syncDock()
             refreshBranchChanges()
-            refreshBranch()
         }
+        refreshBranch()
         loaded?.let(::finishOpen)
     }
 
@@ -613,6 +620,7 @@ class SessionUi(
                     val panel = manager?.emptyPanel(this, controller)
                         ?: EmptySessionPanel(this, controller, controller.recents(), timers = timers)
                     empty = panel
+                    panel.setBranch(branch)
                     scroll.show(panel.view)
                 }
 
@@ -1023,7 +1031,9 @@ class SessionUi(
      * split mode — so the PR always matches the branch checked out in this session's directory.
      */
     private fun refreshBranch() {
-        val dock = dock ?: return
+        // Also feeds the empty panel's branch/worktree tip, so this runs even on surfaces without a
+        // dock (worktree editor tabs). Read-only surfaces show no tip and get no fetch.
+        if (readonly) return
         branchJob?.cancel()
         branchJob = cs.launch {
             val status = runCatching { service<KiloWorktreeService>().branchStatus(workspace.directory) }
@@ -1034,7 +1044,9 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                dock.setBranch(status)
+                branch = status
+                dock?.setBranch(status)
+                empty?.setBranch(status)
             }
         }
     }
@@ -1099,7 +1111,7 @@ class SessionUi(
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         val busy = state.isBusy()
-        if (wasBusy && state is SessionState.Idle) {
+        if (wasBusy && !busy) {
             refreshBranchChanges()
             refreshBranch()
         }

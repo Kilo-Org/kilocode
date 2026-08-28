@@ -25,10 +25,15 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
         })
     }
 
-    // Icon-only buttons keep a fixed 24x24 hit target; labelled buttons size to their content plus
-    // their (symmetric) border so the hover pill has equal padding on every side.
-    override fun getPreferredSize(): Dimension =
-        if (text.isNullOrEmpty()) JBUI.size(24, 24) else super.getPreferredSize()
+    // Icon-only buttons are square: a 24x24 hit target for the usual 16px icon, growing with the icon
+    // so a larger one keeps the same padding inside the hover pill. Labelled buttons size to their
+    // content plus their (symmetric) border, which already gives equal padding on every side.
+    override fun getPreferredSize(): Dimension {
+        if (!text.isNullOrEmpty()) return super.getPreferredSize()
+        val icon = icon ?: return JBUI.size(MIN, MIN)
+        val side = maxOf(JBUI.scale(MIN), icon.iconWidth + JBUI.scale(PAD), icon.iconHeight + JBUI.scale(PAD))
+        return Dimension(side, side)
+    }
 
     override fun getMinimumSize(): Dimension = preferredSize
 
@@ -65,6 +70,11 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
         if (over == value) return
         over = value
         repaint()
+    }
+
+    private companion object {
+        const val MIN = 24
+        const val PAD = 8
     }
 }
 

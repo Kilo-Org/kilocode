@@ -174,6 +174,8 @@ export const dict = {
   "common.saving": "Gemmer...",
   "common.default": "Standard",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Søg i Worktrees",
   "prompt.thinking.tooltip": "Ræsonnementsindsats",
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
@@ -1059,6 +1061,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, før den når grænsen",
   "settings.context.compaction.title": "Komprimering",
+  "settings.context.compactionModel.title": "Komprimeringsmodel",
+  "settings.context.compactionModel.description":
+    "Model, der bruges til automatisk og manuel komprimering. Lad feltet være tomt for at bruge chatmodellen. Omkostninger, hastighed og kvaliteten af opsummeringen afhænger af modellen.",
+  "settings.context.compactionModel.useChatModel": "Brug chatmodel",
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",

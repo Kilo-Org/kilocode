@@ -62,8 +62,6 @@ export const dict = {
   "agentManager.tab.terminal": "터미널",
   "agentManager.tab.openTerminal": "터미널 열기",
   "agentManager.tab.newOptions": "더 많은 새 탭 옵션",
-  "agentManager.tabsMenu.status.waiting": "대기",
-  "agentManager.tabsMenu.status.retry": "재시도",
   "agentManager.sidebarSearch.label": "Worktree 및 세션 검색",
   "agentManager.sidebarSearch.scope": "로컬 워크스페이스, 로컬 세션, Worktree 및 각 Worktree의 세션 검색",
   "agentManager.sidebarSearch.contexts": "로컬 & WORKTREES",

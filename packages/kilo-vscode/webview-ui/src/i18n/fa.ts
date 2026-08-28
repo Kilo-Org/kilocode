@@ -175,6 +175,8 @@ export const dict = {
   "common.saving": "در حال ذخیره...",
   "common.default": "پیش‌فرض",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "جستجوی worktree‌ها",
   "prompt.thinking.tooltip": "میزان استدلال",
   "prompt.action.send": "ارسال",
   "prompt.action.send.blocked": "ابتدا به سؤال در انتظار پاسخ دهید یا آن را رد کنید",
@@ -1046,6 +1048,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "فشرده‌سازی خودکار",
   "settings.context.autoCompaction.description": "قبل از رسیدن به محدودیت، زمینه را به‌طور خودکار فشرده کنید",
   "settings.context.compaction.title": "فشرده‌سازی",
+  "settings.context.compactionModel.title": "مدل فشرده‌سازی",
+  "settings.context.compactionModel.description":
+    "مدل مورد استفاده برای فشرده‌سازی خودکار و دستی. برای استفاده از مدل چت، خالی بگذارید. هزینه، سرعت و کیفیت خلاصه به مدل بستگی دارند.",
+  "settings.context.compactionModel.useChatModel": "استفاده از مدل چت",
   "settings.context.compactionLimit.title": "محدودیت فشرده‌سازی خودکار",
   "settings.context.compactionLimit.description":
     "زمانی فشرده‌سازی انجام شود که زمینه به این درصد از پنجره مدل برسد. برای استفاده تنها از بافر ایمنی، خالی بگذارید.",

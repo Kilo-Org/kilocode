@@ -62,8 +62,6 @@ export const dict = {
   "agentManager.tab.terminal": "终端",
   "agentManager.tab.openTerminal": "打开终端",
   "agentManager.tab.newOptions": "更多新建标签页选项",
-  "agentManager.tabsMenu.status.waiting": "等待",
-  "agentManager.tabsMenu.status.retry": "重试",
   "agentManager.sidebarSearch.label": "搜索 Worktree 和会话",
   "agentManager.sidebarSearch.scope": "搜索本地工作区、本地会话、Worktree 及其会话",
   "agentManager.sidebarSearch.contexts": "本地 & WORKTREES",
