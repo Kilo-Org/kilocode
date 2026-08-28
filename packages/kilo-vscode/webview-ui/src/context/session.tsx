@@ -88,7 +88,7 @@ import { sessionVariantKeys, transferVariants, variantKey } from "./session-vari
 import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
-import { activeUserMessageID, visibleMessages as filterVisibleMessages } from "./session-queue"
+import { activeUserMessageID, removeQueuedMessage, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
 import { continuation } from "./session-continuation"
@@ -2743,23 +2743,11 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
-  function deleteQueuedMessage(sessionID: string, messageID: string) {
-    if (!server.isConnected()) return Promise.resolve(false)
-    const requestID = crypto.randomUUID()
-    return new Promise<boolean>((resolve) => {
-      const unsubscribe = vscode.onMessage((message) => {
-        if (message.type === "sessionDeleted" && message.sessionID === sessionID) {
-          unsubscribe()
-          resolve(false)
-          return
-        }
-        if (message.type !== "deleteMessageResult" || message.requestID !== requestID) return
-        unsubscribe()
-        if (message.success) handleMessageRemoved(sessionID, messageID)
-        resolve(message.success)
-      })
-      vscode.postMessage({ type: "deleteMessage", sessionID, messageID, requestID })
-    })
+  async function deleteQueuedMessage(sessionID: string, messageID: string) {
+    if (!server.isConnected()) return false
+    const removed = await removeQueuedMessage(vscode, sessionID, messageID)
+    if (removed) handleMessageRemoved(sessionID, messageID)
+    return removed
   }
 
   function syncSession(sessionID: string, parentSessionID = currentSessionID(), scope: "task" | "inspector" = "task") {
