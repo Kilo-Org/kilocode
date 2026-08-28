@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { Window } from "happy-dom"
 
 const window = new Window({ url: "http://localhost" })
+Object.defineProperty(window, "origin", { value: window.location.origin })
 const sent: unknown[] = []
 const api = {
   postMessage: (message: unknown) => sent.push(message),
@@ -20,6 +21,7 @@ Object.assign(globalThis, {
   HTMLTextAreaElement: window.HTMLTextAreaElement,
   SVGElement: window.SVGElement,
   MutationObserver: window.MutationObserver,
+  IntersectionObserver: window.IntersectionObserver,
   ResizeObserver: window.ResizeObserver,
   CustomEvent: window.CustomEvent,
   Event: window.Event,
@@ -40,6 +42,7 @@ const { ConfigContext } = await import("../../webview-ui/src/context/config")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
 const { ProviderContext } = await import("../../webview-ui/src/context/provider")
 const { SessionProvider, useSession } = await import("../../webview-ui/src/context/session")
+const { post } = await import("../../webview-ui/src/utils/webview-message")
 
 const provider = {
   providers: () => ({}),
@@ -136,7 +139,7 @@ const settle = async () => {
   await window.happyDOM.waitUntilComplete()
 }
 const emit = async (data: unknown) => {
-  window.dispatchEvent(new MessageEvent("message", { data }))
+  post(data)
   await settle()
 }
 const state = (id: string) => {
@@ -406,9 +409,7 @@ try {
 } finally {
   const before = state("background")
   dispose()
-  window.dispatchEvent(
-    new MessageEvent("message", { data: { type: "sessionStatus", sessionID: "background", status: "retry" } }),
-  )
+  post({ type: "sessionStatus", sessionID: "background", status: "retry" })
   assert.equal(state("background"), before)
   await window.happyDOM.cancelAsync()
   await window.happyDOM.close()
