@@ -1795,9 +1795,12 @@ export const SessionProvider: ParentComponent = (props) => {
     return suggestions().filter((item) => family.has(item.sessionID))
   }
 
+  const disconnected = createMemo<boolean>((previous) => {
+    const state = server.connectionState()
+    return state === "connecting" ? previous : state !== "connected"
+  }, false)
   const [activityMap, setActivityMap] = createStore<Record<string, Activity>>({})
   createComputed(() => {
-    const connection = server.connectionState()
     setActivityMap(
       reconcile(
         activities({
@@ -1808,7 +1811,7 @@ export const SessionProvider: ParentComponent = (props) => {
             (item) => item.sessionID,
           ),
           submitting: Object.keys(submissionMap),
-          disconnected: connection !== "connected",
+          disconnected: disconnected(),
         }),
       ),
     )

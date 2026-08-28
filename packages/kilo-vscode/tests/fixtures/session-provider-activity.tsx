@@ -403,6 +403,10 @@ try {
   value.setCurrentSessionID("background")
   await emit({ type: "sessionStatus", sessionID: "background", status: "busy" })
   await check("background", "busy")
+  await emit({ type: "connectionState", state: "connecting" })
+  await check("background", "busy")
+  await emit({ type: "connectionState", state: "connected" })
+  await check("background", "busy")
   await emit({ type: "sessionError", eventID: "background-aborted", error: { name: "MessageAbortedError" } })
   await check("background", "busy")
   await emit({ type: "connectionState", state: "disconnected", error: "offline" })
@@ -420,6 +424,10 @@ try {
       questions: [{ question: "Reconnect?", header: "Confirm", options: [] }],
     },
   })
+  await check("background", "waiting")
+  await emit({ type: "connectionState", state: "connecting" })
+  await check("background", "waiting")
+  await emit({ type: "connectionState", state: "connected" })
   await check("background", "waiting")
   await emit({ type: "connectionState", state: "error", error: "failed" })
   await check("background", "error")
