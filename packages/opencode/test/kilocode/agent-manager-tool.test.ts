@@ -491,7 +491,9 @@ describe("agent_manager tool", () => {
         prompt: "Continue the fix",
       },
     ])
-    expect(result.output).toContain("accepted it asynchronously")
+    expect(result.title).toBe("Prompt accepted")
+    expect(result.output).toContain("queued behind active work")
+    expect(result.output).toContain("does not wait for completion")
     expect(result.metadata).toEqual(expect.objectContaining({ action: "prompt", sessionID: "ses_target" }))
     await rt.dispose()
   })
