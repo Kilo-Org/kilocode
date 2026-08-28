@@ -79,7 +79,7 @@ import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { isolate, mergeOptimisticPart, mergeParts } from "./session-parts"
+import { isolate, mergeOptimisticPart, mergeOptimisticParts, mergeParts } from "./session-parts"
 import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { state as todoState } from "./todo-revert"
 import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
@@ -1467,13 +1467,18 @@ export const SessionProvider: ParentComponent = (props) => {
           continue
         }
         if (parts.length > 0) {
-          optimisticParts.delete(msg.id)
-          loadedParts[msg.id] = parts
+          const pending = optimisticParts.get(msg.id)
+          const next = pending
+            ? mergeOptimisticParts(store.parts[msg.id] ?? stash.peek(msg.id) ?? [], pending, parts)
+            : { parts, pending: undefined }
+          if (next.pending?.size) optimisticParts.set(msg.id, next.pending)
+          if (next.pending?.size === 0) optimisticParts.delete(msg.id)
+          loadedParts[msg.id] = next.parts
           if (i >= cutoff) {
-            setStore("parts", msg.id, parts)
+            setStore("parts", msg.id, next.parts)
             stash.remove(msg.id)
           } else {
-            stash.put(msg.id, parts)
+            stash.put(msg.id, next.parts)
           }
           continue
         }
@@ -2730,7 +2735,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Keep off-screen history in the non-reactive stash, but track live parts so
   // newly streamed messages invalidate the transcript.
-  const getParts = (messageID: string) => stash.peek(messageID) ?? store.parts[messageID] ?? []
+  const getParts = (messageID: string) => stash.read(messageID, store.parts)
 
   const getSessionToolParts = (sessionID: string) => store.toolParts[sessionID] ?? []
 
