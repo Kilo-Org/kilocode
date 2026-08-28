@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Provider verbinden",
 
+  "session.activity.waiting": "Wachten op een antwoord of goedkeuring.",
+  "session.activity.error": "Fout of verbinding verbroken.",
+  "session.activity.retry": "Automatisch opnieuw proberen.",
+  "session.activity.busy": "In uitvoering.",
+  "session.activity.done": "Beurt voltooid.",
+  "session.activity.idle": "Niet actief.",
+
   "command.session.new": "Nieuwe sessie",
   "command.session.show.changes": "Wijzigingen tonen",
   "command.review.toggle": "Review in-/uitschakelen",

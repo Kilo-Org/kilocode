@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Conectar provedor",
 
+  "session.activity.waiting": "Aguardando uma resposta ou aprovação.",
+  "session.activity.error": "Erro ou conexão perdida.",
+  "session.activity.retry": "Tentando novamente automaticamente.",
+  "session.activity.busy": "Em andamento.",
+  "session.activity.done": "Turno concluído.",
+  "session.activity.idle": "Não está em execução.",
+
   "command.session.new": "Nova sessão",
   "command.session.show.changes": "Mostrar alterações",
   "command.review.toggle": "Alternar revisão",

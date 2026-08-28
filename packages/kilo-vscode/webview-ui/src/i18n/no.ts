@@ -62,6 +62,13 @@ export const dict = {
 
   "command.provider.connect": "Koble til leverandør",
 
+  "session.activity.waiting": "Venter på et svar eller en godkjenning.",
+  "session.activity.error": "Feil eller tilkobling brutt.",
+  "session.activity.retry": "Prøver automatisk på nytt.",
+  "session.activity.busy": "Pågår.",
+  "session.activity.done": "Runde fullført.",
+  "session.activity.idle": "Kjører ikke.",
+
   "command.session.new": "Ny sesjon",
   "command.session.show.changes": "Vis endringer",
   "command.review.toggle": "Veksle gjennomgang",

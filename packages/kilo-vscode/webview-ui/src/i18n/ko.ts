@@ -63,6 +63,13 @@ export const dict = {
 
   "command.provider.connect": "공급자 연결",
 
+  "session.activity.waiting": "답변 또는 승인을 기다리는 중입니다.",
+  "session.activity.error": "오류 또는 연결 끊김.",
+  "session.activity.retry": "자동으로 재시도하는 중입니다.",
+  "session.activity.busy": "진행 중입니다.",
+  "session.activity.done": "턴이 완료되었습니다.",
+  "session.activity.idle": "실행 중이 아닙니다.",
+
   "command.session.new": "새 세션",
   "command.session.show.changes": "변경 사항 보기",
   "command.review.toggle": "검토 토글",

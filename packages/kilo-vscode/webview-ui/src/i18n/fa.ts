@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "اتصال به ارائه‌دهنده",
 
+  "session.activity.waiting": "در انتظار پاسخ یا تأیید.",
+  "session.activity.error": "خطا یا قطع اتصال.",
+  "session.activity.retry": "تلاش مجدد خودکار.",
+  "session.activity.busy": "در حال انجام.",
+  "session.activity.done": "نوبت به پایان رسید.",
+  "session.activity.idle": "در حال اجرا نیست.",
+
   "command.session.new": "جلسه جدید",
   "command.session.show.changes": "نمایش تغییرات",
   "command.review.toggle": "نمایش/پنهان کردن بررسی",

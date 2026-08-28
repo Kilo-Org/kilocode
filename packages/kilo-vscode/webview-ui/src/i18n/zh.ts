@@ -60,6 +60,13 @@ export const dict = {
 
   "command.provider.connect": "连接提供商",
 
+  "session.activity.waiting": "正在等待回复或批准。",
+  "session.activity.error": "错误或连接已断开。",
+  "session.activity.retry": "正在自动重试。",
+  "session.activity.busy": "进行中。",
+  "session.activity.done": "回合已完成。",
+  "session.activity.idle": "未运行。",
+
   "command.session.new": "新建会话",
   "command.session.show.changes": "显示更改",
   "command.review.toggle": "切换审查",

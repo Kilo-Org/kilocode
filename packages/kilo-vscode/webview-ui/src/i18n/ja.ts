@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "プロバイダーに接続",
 
+  "session.activity.waiting": "回答または承認を待っています。",
+  "session.activity.error": "エラーまたは接続切断。",
+  "session.activity.retry": "自動的に再試行中。",
+  "session.activity.busy": "進行中。",
+  "session.activity.done": "ターン完了。",
+  "session.activity.idle": "実行されていません。",
+
   "command.session.new": "新しいセッション",
   "command.session.show.changes": "変更を表示",
   "command.review.toggle": "レビューの切り替え",

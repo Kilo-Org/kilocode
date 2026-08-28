@@ -1533,9 +1533,8 @@ export const SessionProvider: ParentComponent = (props) => {
           ? { type: "offline", message: message ?? "" }
           : { type: newStatus }
     setStatusMap(sessionID, info)
-    // Track busy start time and discard the previous turn's terminal state.
+    if (newStatus === "busy" || newStatus === "retry") clearClose(sessionID)
     if (prev === "idle" && newStatus !== "idle") {
-      clearClose(sessionID)
       if (!busySinceMap[sessionID]) setBusySinceMap(sessionID, Date.now())
     }
     if (newStatus === "idle") {
@@ -1796,7 +1795,7 @@ export const SessionProvider: ParentComponent = (props) => {
           parents: lineage().parents,
           statuses: statusMap,
           outcomes: closeMap,
-          blocked: [...permissions(), ...questions().filter((item) => item.blocking !== false), ...suggestions()].map(
+          blocked: [...permissions(), ...questions().filter((item) => item.blocking !== false)].map(
             (item) => item.sessionID,
           ),
           submitting: Object.keys(submissionMap),
