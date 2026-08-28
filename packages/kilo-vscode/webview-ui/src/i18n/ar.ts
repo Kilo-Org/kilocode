@@ -181,6 +181,7 @@ export const dict = {
   "prompt.worktrees.search": "البحث في Worktrees",
   "prompt.thinking.tooltip": "جهد الاستدلال",
   "prompt.action.send": "إرسال",
+  "prompt.action.continue": "متابعة",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
   "prompt.action.send.recording": "تفريغ وإرسال",
   "prompt.action.stop": "توقف",

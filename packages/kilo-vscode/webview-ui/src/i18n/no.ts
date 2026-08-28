@@ -188,6 +188,7 @@ export const dict = {
   "prompt.worktrees.search": "Søk i Worktrees",
   "prompt.thinking.tooltip": "Resonnementsinnsats",
   "prompt.action.send": "Send",
+  "prompt.action.continue": "Fortsett",
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.send.recording": "Transkriber og send",
   "prompt.action.stop": "Stopp",

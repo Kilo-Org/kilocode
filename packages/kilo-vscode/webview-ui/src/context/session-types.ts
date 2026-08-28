@@ -40,6 +40,8 @@ export interface SessionContextValue {
   statusText: Accessor<string | undefined>
   busySince: Accessor<number | undefined>
   submitting: Accessor<boolean>
+  canResume: Accessor<boolean>
+  resume: () => void
   isSubmitting: (id: string) => boolean
   loading: Accessor<boolean>
   loadingOlderMessages: Accessor<boolean>

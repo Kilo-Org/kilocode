@@ -15082,6 +15082,108 @@
         ]
       }
     },
+    "/kilocode/session/{sessionID}/resume": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.resumeSession",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session continuation accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Session continuation accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Resume the specified unfinished assistant turn without adding a user message. Active, completed, reverted, and blocked sessions cannot be resumed.",
+        "summary": "Resume an interrupted session",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messageID": {
+                    "type": "string",
+                    "pattern": "^msg"
+                  },
+                  "snapshotInitialization": {
+                    "type": "string",
+                    "enum": ["wait"]
+                  }
+                },
+                "required": ["messageID"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.resumeSession({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/heap/snapshot": {
       "post": {
         "tags": ["kilocode"],
@@ -16527,6 +16629,79 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.backgroundJob.cancel({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/background-jobs/{jobID}/promote": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.backgroundJob.promote",
+        "parameters": [
+          {
+            "name": "jobID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Background job promoted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Background job promoted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Continue one foreground subagent in the background.",
+        "summary": "Promote background job",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.backgroundJob.promote({\n  ...\n})"
           }
         ]
       }
@@ -26537,9 +26712,6 @@
             "$ref": "#/components/schemas/EventSandboxStatusChanged"
           },
           {
-            "$ref": "#/components/schemas/EventLspClientDiagnostics"
-          },
-          {
             "$ref": "#/components/schemas/EventSuggestionShown"
           },
           {
@@ -26565,6 +26737,9 @@
           },
           {
             "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+          },
+          {
+            "$ref": "#/components/schemas/EventLspClientDiagnostics"
           },
           {
             "$ref": "#/components/schemas/EventMemoryStatus1"
@@ -29734,9 +29909,6 @@
                 "$ref": "#/components/schemas/EventSandboxStatusChanged"
               },
               {
-                "$ref": "#/components/schemas/EventLspClientDiagnostics"
-              },
-              {
                 "$ref": "#/components/schemas/EventSuggestionShown"
               },
               {
@@ -29762,6 +29934,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+              },
+              {
+                "$ref": "#/components/schemas/EventLspClientDiagnostics"
               },
               {
                 "$ref": "#/components/schemas/EventMemoryStatus"
@@ -41555,33 +41730,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventLspClientDiagnostics": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["lsp.client.diagnostics"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "serverID": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": ["serverID", "path"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "EventSuggestionShown": {
         "type": "object",
         "properties": {
@@ -41872,6 +42020,33 @@
               }
             },
             "required": ["enabled", "connected"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventLspClientDiagnostics": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["lsp.client.diagnostics"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "serverID": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": ["serverID", "path"],
             "additionalProperties": false
           }
         },

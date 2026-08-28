@@ -186,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "جستجوی worktree‌ها",
   "prompt.thinking.tooltip": "میزان استدلال",
   "prompt.action.send": "ارسال",
+  "prompt.action.continue": "ادامه",
   "prompt.action.send.blocked": "ابتدا به سؤال در انتظار پاسخ دهید یا آن را رد کنید",
   "prompt.action.send.recording": "رونویسی و ارسال",
   "prompt.action.stop": "توقف",

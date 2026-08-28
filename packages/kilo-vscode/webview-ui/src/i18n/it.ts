@@ -164,6 +164,7 @@ export const dict = {
   "prompt.worktrees.search": "Cerca worktree",
   "prompt.thinking.tooltip": "Sforzo di ragionamento",
   "prompt.action.send": "Invia",
+  "prompt.action.continue": "Continua",
   "prompt.action.send.blocked": "Rispondi alla domanda in sospeso o ignorala prima di continuare",
   "prompt.action.stop": "Ferma",
   "prompt.action.enhance": "Migliora prompt",

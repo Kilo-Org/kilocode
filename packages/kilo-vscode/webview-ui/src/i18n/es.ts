@@ -186,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "Buscar Worktrees",
   "prompt.thinking.tooltip": "Esfuerzo de razonamiento",
   "prompt.action.send": "Enviar",
+  "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
   "prompt.action.send.recording": "Transcribir y enviar",
   "prompt.action.stop": "Detener",
