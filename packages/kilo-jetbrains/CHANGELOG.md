@@ -316,38 +316,23 @@
 
 ## [Unreleased]
 
-## [7.1.1-rc.1] - 2026-08-28
+## [7.1.1-rc.1] - 2026-08-27
 
 ### Added
-- feat(agent-manager): scope worktree reviews by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13498
-- feat(cli): import cloud transcript on create_session by @iscekic in https://github.com/Kilo-Org/kilocode/pull/13483
-- feat(vscode): add searchable worktree references by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13512
-- feat(remote): add directory listing and create_session directory by @iscekic in https://github.com/Kilo-Org/kilocode/pull/13497
-- feat(jetbrains): render Mermaid diagrams in chat by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13396
-- feat(jetbrains): improve worktree session UX by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13521
+
+- Open Mermaid diagrams in JetBrains editor tabs with zoom, pan, fit-to-view, source view, and PNG copy support.
+- Add clearer JetBrains worktree session empty states, labeled create actions, and a persisted toggle for showing or hiding the worktree session list.
 
 ### Fixed
-- fix(vscode): handle fragmented CLI startup output by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13466
-- fix(agent-manager): resolve live managed worktree sessions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13422
-- fix(security): nanoid updated due dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13477
-- fix(security): minimatch updated due dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13484
-- fix(security): @hey-api/openapi-ts updated due dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13487
-- fix(cli): return the real subagent answer instead of an empty task result by @maphew in https://github.com/Kilo-Org/kilocode/pull/13493
-- fix(vscode): preserve streaming scroll intent by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13500
-- fix(vscode): reduce prompt navigator interruptions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13499
-- fix(vscode): honor configured Git executable for worktrees by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13475
-- fix(agent-manager): show background worktree activity by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13502
-- fix(agent-manager): safely clean up deleted worktree snapshots by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13476
-- fix(vscode): open files from read tool headers by @thomasboom in https://github.com/Kilo-Org/kilocode/pull/12830
-- fix(cli): dedupe plan-mode permission ruleset stacking by @maphew in https://github.com/Kilo-Org/kilocode/pull/13219
-- fix(jetbrains): continue failed turns on retry by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13520
+
+- Retry failed JetBrains turns by continuing the original request, keeping transcript and workspace context intact instead of rolling back or appending a placeholder prompt.
+- Surface JetBrains failed-turn errors more clearly and hide the failure card as soon as Retry starts.
+- Avoid duplicated plan-mode permission rule stacking in Kilo Core.
 
 ### Changed
-- release(jetbrains): v7.1.0 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13492
-- docs: Use `Array.prototype.at(index)` instead of out-of-bounds accesses by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13506
-- chore(deps-dev): bump @babel/core from 7.28.4 to 7.29.6 in /packages/opencode by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/13503
-- chore(jetbrains): bump CLI pin to v7.5.5 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13490
 
+- Update the pinned Kilo Core CLI used by JetBrains from 7.4.23 to 7.5.5.
+- Improve JetBrains worktree session UX with branch-aware guidance and localized copy updates.
 
 ## [7.1.0] - 2026-08-26
 
