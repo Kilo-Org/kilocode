@@ -235,7 +235,8 @@ export namespace KiloBtw {
 
     if (!question) {
       const entries = yield* list(parent)
-      const text = entries.length > 0 ? formatEntry(entries[0]) : formatUsage()
+      const body = entries.length > 0 ? formatEntry(entries[0]) : formatUsage()
+      const text = entries.length > 0 ? `**BTW** — last side question\n\n${body}` : body
       const user = yield* userMessage({ ops, sessionID: parent, agent, model, text: "/btw" })
       return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text })
     }
@@ -245,7 +246,9 @@ export namespace KiloBtw {
     const listed = yield* ops.agents.list()
     const ask = listed.find((a) => a.name === "ask" && !a.hidden)
     const forkAgent = ask ? "ask" : agent
-    const forkTools = ask ? { bash: false, question: false } : DENY_ALL_MUTATING
+    // Hard denies on top of the ask agent so a user-modified ask config can
+    // never reopen mutating or interactive tools for a side question.
+    const forkTools = { ...DENY_ALL_MUTATING }
 
     const fork = yield* ops.sessions.fork({ sessionID: parent }).pipe(Effect.orDie)
     setPromptCacheKey(fork.id, parent)
@@ -310,6 +313,14 @@ export namespace KiloBtw {
       model: { providerID: model.providerID, modelID: model.modelID },
     })
 
-    return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text: answer })
+    const text = [
+      `**BTW** — side question (read-only, not added to the conversation)`,
+      ``,
+      `**Q:** ${question}`,
+      ``,
+      answer,
+    ].join("\n")
+
+    return yield* emit({ ops, cmdInput, userID: user.id, agent, model, text })
   })
 }
