@@ -87,6 +87,7 @@ export interface DeleteMessageRequest {
   type: "deleteMessage"
   sessionID: string
   messageID: string
+  requestID?: string
 }
 
 export interface PermissionResponseRequest {

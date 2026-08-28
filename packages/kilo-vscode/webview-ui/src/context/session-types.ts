@@ -161,7 +161,7 @@ export interface SessionContextValue {
   // Actions
   revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
-  deleteQueuedMessage: (sessionID: string, messageID: string) => void
+  deleteQueuedMessage: (sessionID: string, messageID: string) => Promise<boolean>
   sendMessage: (
     text: string,
     providerID?: string,

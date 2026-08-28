@@ -88,7 +88,7 @@ import { sessionVariantKeys, transferVariants, variantKey } from "./session-vari
 import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
-import { activeUserMessageID, visibleMessages as filterVisibleMessages } from "./session-queue"
+import { activeUserMessageID, removeQueuedMessage, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
 import { continuation } from "./session-continuation"
@@ -1952,6 +1952,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
+    pendingOptimistic.get(sessionID)?.delete(messageID)
+    finishSubmission(messageID)
     optimisticParts.delete(messageID)
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
     dropMessageTools(sessionID, messageID)
@@ -2752,13 +2754,11 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
-  // Clear local send bookkeeping and request deletion. The message stays visible
-  // until messageRemoved confirms deletion; a false response leaves it in place.
-  function deleteQueuedMessage(sessionID: string, messageID: string) {
-    if (!server.isConnected()) return
-    pendingOptimistic.get(sessionID)?.delete(messageID)
-    finishSubmission(messageID)
-    vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
+  async function deleteQueuedMessage(sessionID: string, messageID: string) {
+    if (!server.isConnected()) return false
+    const removed = await removeQueuedMessage(vscode, sessionID, messageID)
+    if (removed) handleMessageRemoved(sessionID, messageID)
+    return removed
   }
 
   function syncSession(sessionID: string, parentSessionID = currentSessionID(), scope: "task" | "inspector" = "task") {
