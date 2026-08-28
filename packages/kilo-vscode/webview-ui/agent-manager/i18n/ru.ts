@@ -256,13 +256,9 @@ export const dict = {
   "agentManager.browser.refresh": "Обновить браузер",
   "agentManager.browser.close": "Закрыть браузер",
   "agentManager.browser.inspect": "Выбрать элемент",
-  "agentManager.browser.devtools": "Открыть инструменты разработчика",
   "agentManager.browser.devtoolsTitle": "Инструменты разработчика",
-  "agentManager.browser.hide": "Скрыть",
   "agentManager.browser.empty": "Откройте локальное приложение, чтобы просмотреть его здесь.",
   "agentManager.browser.noSession": "Сначала выберите сеанс Agent Manager.",
-  "agentManager.browser.notStarted": "не запущен",
-  "agentManager.browser.localOnly": "Только loopback-URL через HTTP; внешние запросы заблокированы",
   "agentManager.browser.screenshotAlt": "Текущая страница браузера",
   "agentManager.browser.errors": "{{count}} ошибок в консоли",
 

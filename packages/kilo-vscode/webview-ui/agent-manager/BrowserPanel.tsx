@@ -142,7 +142,6 @@ function BrowserAdapter(props: {
     refresh: language.t("agentManager.browser.refresh"),
     close: language.t("agentManager.browser.close"),
     inspect: language.t("agentManager.browser.inspect"),
-    devtools: language.t("agentManager.browser.devtools"),
     devtoolsTitle: language.t("agentManager.browser.devtoolsTitle"),
     empty: language.t("agentManager.browser.empty"),
     noSession: language.t("agentManager.browser.noSession"),

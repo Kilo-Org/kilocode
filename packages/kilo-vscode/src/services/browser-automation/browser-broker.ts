@@ -156,7 +156,7 @@ function framing(headers: Record<string, string> | undefined): string | undefine
 }
 
 function loopback(url: URL): boolean {
-  return url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]", "::1"].includes(url.hostname)
+  return url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)
 }
 
 function json(res: ServerResponse, status: number, value: unknown): void {
@@ -355,15 +355,6 @@ export class BrowserBroker {
         browserId: entry.browserId,
         url: this.tools.open(entry.browserId, info.targetInfo.targetId, port, theme),
       }
-    })
-  }
-
-  screenshot(sessionId: string, projectId?: string): Promise<BrowserState> {
-    return this.serial(this.key(sessionId, projectId), async () => {
-      this.available()
-      const entry = this.require(sessionId, undefined, projectId)
-      await this.capture(entry)
-      return this.copy(entry.state)
     })
   }
 
@@ -689,7 +680,9 @@ export class BrowserBroker {
       throw new Error("Browser URL is invalid")
     }
     if (!loopback(url) || url.username || url.password) {
-      throw new Error("Browser URLs must use an HTTP loopback origin without credentials")
+      throw new Error(
+        "Browser URLs must use HTTP localhost or 127.0.0.1 without credentials. Use localhost for IPv6 loopback servers.",
+      )
     }
     return url
   }
@@ -744,9 +737,8 @@ export class BrowserBroker {
       if (typeof body.url !== "string") throw new Error("A local application URL is required")
       return this.open({ projectId: project, sessionId: body.sessionID, directory: body.directory }, body.url)
     }
-    if (!["/browser/screenshot", "/browser/refresh", "/browser/close"].includes(path)) return undefined
+    if (!["/browser/refresh", "/browser/close"].includes(path)) return undefined
     const entry = this.require(body.sessionID, body.directory, project)
-    if (path === "/browser/screenshot") return this.screenshot(entry.route.sessionId, entry.route.projectId)
     if (path === "/browser/refresh") return this.refresh(entry.route.sessionId, entry.route.projectId)
     await this.close(entry.route.sessionId, entry.route.projectId)
     return { sessionId: entry.route.sessionId, status: "closed" as const }

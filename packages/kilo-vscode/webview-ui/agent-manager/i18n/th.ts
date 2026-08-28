@@ -249,13 +249,9 @@ export const dict = {
   "agentManager.browser.refresh": "รีเฟรชเบราว์เซอร์",
   "agentManager.browser.close": "ปิดเบราว์เซอร์",
   "agentManager.browser.inspect": "เลือกองค์ประกอบ",
-  "agentManager.browser.devtools": "เปิดเครื่องมือสำหรับนักพัฒนา",
   "agentManager.browser.devtoolsTitle": "เครื่องมือสำหรับนักพัฒนา",
-  "agentManager.browser.hide": "ซ่อน",
   "agentManager.browser.empty": "เปิดแอปพลิเคชันในเครื่องเพื่อดูตัวอย่างที่นี่",
   "agentManager.browser.noSession": "เลือกเซสชัน Agent Manager ก่อน",
-  "agentManager.browser.notStarted": "ยังไม่เริ่ม",
-  "agentManager.browser.localOnly": "URL แบบลูปแบ็กผ่าน HTTP เท่านั้น คำขอภายนอกจะถูกบล็อก",
   "agentManager.browser.screenshotAlt": "หน้าปัจจุบันของเบราว์เซอร์",
   "agentManager.browser.errors": "{{count}} ข้อผิดพลาดในคอนโซล",
 

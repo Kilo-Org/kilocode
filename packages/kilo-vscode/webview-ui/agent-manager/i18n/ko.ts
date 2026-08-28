@@ -253,13 +253,9 @@ export const dict = {
   "agentManager.browser.refresh": "브라우저 새로 고침",
   "agentManager.browser.close": "브라우저 닫기",
   "agentManager.browser.inspect": "요소 선택",
-  "agentManager.browser.devtools": "개발자 도구 열기",
   "agentManager.browser.devtoolsTitle": "개발자 도구",
-  "agentManager.browser.hide": "숨기기",
   "agentManager.browser.empty": "로컬 애플리케이션을 열어 여기에서 미리 보세요.",
   "agentManager.browser.noSession": "먼저 Agent Manager 세션을 선택하세요.",
-  "agentManager.browser.notStarted": "시작되지 않음",
-  "agentManager.browser.localOnly": "HTTP 루프백 URL만 허용되며 외부 요청은 차단됩니다",
   "agentManager.browser.screenshotAlt": "현재 브라우저 페이지",
   "agentManager.browser.errors": "{{count}}개 콘솔 오류",
 

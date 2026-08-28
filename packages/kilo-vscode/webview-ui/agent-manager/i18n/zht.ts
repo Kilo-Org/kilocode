@@ -247,13 +247,9 @@ export const dict = {
   "agentManager.browser.refresh": "重新整理瀏覽器",
   "agentManager.browser.close": "關閉瀏覽器",
   "agentManager.browser.inspect": "選取元素",
-  "agentManager.browser.devtools": "開啟開發人員工具",
   "agentManager.browser.devtoolsTitle": "開發人員工具",
-  "agentManager.browser.hide": "隱藏",
   "agentManager.browser.empty": "開啟本機應用程式，即可在此處預覽。",
   "agentManager.browser.noSession": "請先選取 Agent Manager 工作階段。",
-  "agentManager.browser.notStarted": "尚未啟動",
-  "agentManager.browser.localOnly": "僅允許 HTTP 迴送 URL；外部要求會遭到封鎖",
   "agentManager.browser.screenshotAlt": "目前的瀏覽器頁面",
   "agentManager.browser.errors": "{{count}} 個主控台錯誤",
 

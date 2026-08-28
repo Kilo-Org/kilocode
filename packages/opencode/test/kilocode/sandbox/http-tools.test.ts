@@ -242,7 +242,13 @@ describe("model HTTP tool network policy", () => {
       yield* env.set("KILO_BROWSER_BROKER_TOKEN", "browser-secret")
       const info = yield* BrowserOpenTool
       const browser = yield* info.init()
-      for (const url of ["https://localhost:3018/", "http://example.com/", "http://user:secret@localhost:3018/"]) {
+      for (const url of [
+        "https://localhost:3018/",
+        "http://example.com/",
+        "http://user:secret@localhost:3018/",
+        "http://[::1]:3018/",
+        "http://0.0.0.0:3018/",
+      ]) {
         const result = yield* run(
           profile("deny"),
           ToolNetwork.tool(

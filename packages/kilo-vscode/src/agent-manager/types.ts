@@ -480,12 +480,7 @@ interface BrowserInspectionMessage {
   sessionId: string
   url?: string
   title?: string
-  element?: BrowserElement & {
-    hierarchy?: string[]
-    html?: string
-    styles?: { color?: string; backgroundColor?: string }
-    source?: { file: string; line?: number; column?: number }
-  }
+  element?: BrowserElement
   logs: string[]
   hover?: boolean
 }

@@ -41,7 +41,6 @@ const [labels, update] = createSignal<BrowserLabels>({
   refresh: "Reload",
   close: "Close",
   inspect: "Select element",
-  devtools: "Developer tools",
   devtoolsTitle: "Developer tools",
   empty: "Open a local page",
   noSession: "Choose a session",
@@ -70,9 +69,24 @@ const dispose = render(
   root,
 )
 assert.deepEqual(sent[0], { type: "state", scope })
-receive?.({ type: "state", value: { scope, browserId: "browser", status: "ready", errors: 0, url: "about:blank" } })
+const state = { scope, browserId: "browser", status: "ready" as const, errors: 0, url: "about:blank" }
+receive?.({ type: "state", value: state })
 await window.happyDOM.waitUntilComplete()
-assert.ok(root.querySelector("iframe"))
+const frame = root.querySelector(".am-browser-frame")
+assert.ok(frame)
+receive?.({ type: "state", value: { ...state, logs: ["[info] Updated"] } })
+assert.equal(root.querySelector(".am-browser-frame"), frame)
+;(root.querySelector("button[aria-label=Reload]") as HTMLButtonElement).click()
+assert.deepEqual(sent.at(-1), { type: "refresh", scope })
+receive?.({ type: "state", value: { ...state, navigation: 1 } })
+await window.happyDOM.waitUntilComplete()
+assert.equal(frame.isConnected, false)
+const refreshed = root.querySelector(".am-browser-frame")
+assert.ok(refreshed)
+assert.equal(refreshed.getAttribute("src"), state.url)
+assert.equal(refreshed.getAttribute("sandbox"), "allow-scripts allow-forms allow-same-origin")
+receive?.({ type: "state", value: { ...state, navigation: 1, errors: 1 } })
+assert.equal(root.querySelector(".am-browser-frame"), refreshed)
 assert.equal(root.querySelectorAll("button[aria-label=Close]").length, 1)
 ;(root.querySelector("button[aria-label='Select element']") as HTMLButtonElement).click()
 const overlay = root.querySelector(".am-browser-inspect") as HTMLButtonElement

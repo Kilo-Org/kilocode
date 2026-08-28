@@ -2,11 +2,29 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { createServer, request, type IncomingMessage } from "node:http"
 import { connect } from "node:net"
 import { PassThrough } from "node:stream"
+import { runInNewContext } from "node:vm"
 import WebSocket, { WebSocketServer } from "ws"
 import { BrowserBroker, diagnostic } from "../../src/services/browser-automation/browser-broker"
 import { BrowserDevtools } from "../../src/services/browser-automation/browser-devtools"
 
 const brokers: BrowserBroker[] = []
+
+function fixture<T>(page: T) {
+  const broker = new BrowserBroker({
+    log: () => {},
+    launch: async () => ({
+      newContext: async () => ({
+        close: async () => undefined,
+        route: async () => undefined,
+        routeWebSocket: async () => undefined,
+        newPage: async () => page,
+      }),
+      close: async () => undefined,
+    }),
+  })
+  brokers.push(broker)
+  return broker
+}
 
 afterEach(async () => {
   await Promise.all(brokers.splice(0).map((broker) => broker.disposeAsync()))
@@ -18,6 +36,8 @@ describe("BrowserBroker", () => {
     expect(broker.validate("http://localhost:3000/path").origin).toBe("http://localhost:3000")
     expect(() => broker.validate("https://localhost:3000")).toThrow()
     expect(() => broker.validate("http://127.0.0.1:3000")).not.toThrow()
+    expect(() => broker.validate("http://[::1]:3000")).toThrow("Use localhost for IPv6 loopback servers")
+    expect(() => broker.validate("http://0.0.0.0:3000")).toThrow()
     expect(() => broker.validate("http://example.com")).toThrow()
     expect(() => broker.validate("http://username:password@localhost:3000")).toThrow()
     expect(() => broker.validate("file:///tmp/example.html")).toThrow()
@@ -49,17 +69,7 @@ describe("BrowserBroker", () => {
         throw new Error("page.goto: net::ERR_CONNECTION_REFUSED\nCall log:\n\u001b[2m- navigating\u001b[22m")
       },
     }
-    const browser = {
-      newContext: async () => ({
-        close: async () => undefined,
-        route: async () => undefined,
-        routeWebSocket: async () => undefined,
-        newPage: async () => page,
-      }),
-      close: async () => undefined,
-    }
-    const broker = new BrowserBroker({ log: () => {}, launch: async () => browser })
-    brokers.push(broker)
+    const broker = fixture(page)
     const env = await broker.env()
     const response = await fetch(`${env.KILO_BROWSER_BROKER_URL}/browser/open`, {
       method: "POST",
@@ -95,17 +105,7 @@ describe("BrowserBroker", () => {
         listeners.get("console")?.({ type: () => "error", text: () => "STARTUP_VERSION_2" })
       },
     }
-    const browser = {
-      newContext: async () => ({
-        close: async () => undefined,
-        route: async () => undefined,
-        routeWebSocket: async () => undefined,
-        newPage: async () => page,
-      }),
-      close: async () => undefined,
-    }
-    const broker = new BrowserBroker({ log: () => {}, launch: async () => browser })
-    brokers.push(broker)
+    const broker = fixture(page)
     broker.subscribe((state) => {
       if (state.status === "loading" && loading.at(-1) !== state.navigation) loading.push(state.navigation)
     })
@@ -281,15 +281,25 @@ describe("BrowserBroker", () => {
         "http://localhost:3000",
       )
       const first = await broker.devtools("first", "project")
-      const second = await broker.devtools("second", "project")
+      const second = await broker.devtools("second", "project", "light")
       expect(first.browserId).not.toBe(second.browserId)
       expect(first.url).not.toContain(env.KILO_BROWSER_BROKER_TOKEN)
       const frontend = await fetch(first.url)
       expect(frontend.status).toBe(200)
       expect(await frontend.text()).toContain('<script src="./kilo-bootstrap.js"></script>')
-      const bootstrap = await fetch(new URL("./kilo-bootstrap.js", first.url))
-      expect(bootstrap.status).toBe(200)
-      expect(await bootstrap.text()).toContain('localStorage.setItem("ui-theme","\\\"dark\\\"")')
+      for (const [entry, theme] of [
+        [first, "dark"],
+        [second, "light"],
+      ] as const) {
+        const bootstrap = await fetch(new URL("./kilo-bootstrap.js", entry.url))
+        expect(bootstrap.status).toBe(200)
+        const storage = new Map<string, string>()
+        runInNewContext(await bootstrap.text(), {
+          localStorage: { setItem: (key: string, value: string) => storage.set(key, value) },
+        })
+        expect(storage.get("ui-theme")).toBe(JSON.stringify(theme))
+        expect(storage.get("currentDockState")).toBe(JSON.stringify("undocked"))
+      }
       expect((await fetch(new URL("./entrypoints/inspector.js", first.url))).status).toBe(200)
 
       const invalid = new URL(first.url)
@@ -511,17 +521,7 @@ describe("BrowserBroker", () => {
         return { status: () => status }
       },
     }
-    const browser = {
-      newContext: async () => ({
-        close: async () => undefined,
-        route: async () => undefined,
-        routeWebSocket: async () => undefined,
-        newPage: async () => page,
-      }),
-      close: async () => undefined,
-    }
-    const broker = new BrowserBroker({ log: () => {}, launch: async () => browser })
-    brokers.push(broker)
+    const broker = fixture(page)
     broker.bind((route) => (route.sessionId === "session" && route.directory === "/tmp/project" ? route : undefined))
     const route = { projectId: "project-one", sessionId: "session", directory: "/tmp/project" }
     const opened = await broker.open(route, "http://localhost:3000/")
@@ -572,17 +572,7 @@ describe("BrowserBroker", () => {
         return { status: () => 200, headers: () => headers }
       },
     }
-    const browser = {
-      newContext: async () => ({
-        close: async () => undefined,
-        route: async () => undefined,
-        routeWebSocket: async () => undefined,
-        newPage: async () => page,
-      }),
-      close: async () => undefined,
-    }
-    const broker = new BrowserBroker({ log: () => {}, launch: async () => browser })
-    brokers.push(broker)
+    const broker = fixture(page)
     const route = { sessionId: "framed", directory: "/tmp/project" }
     expect((await broker.open(route, "http://localhost:3000/open")).frameError).toBeUndefined()
     headers = { "x-frame-options": "DENY" }
@@ -709,17 +699,7 @@ describe("BrowserBroker", () => {
         selector: "#feature-card",
       }),
     }
-    const browser = {
-      newContext: async () => ({
-        close: async () => undefined,
-        route: async () => undefined,
-        routeWebSocket: async () => undefined,
-        newPage: async () => page,
-      }),
-      close: async () => undefined,
-    }
-    const broker = new BrowserBroker({ log: () => {}, launch: async () => browser })
-    brokers.push(broker)
+    const broker = fixture(page)
     await broker.open(
       { projectId: "project", sessionId: "feedback", directory: "/tmp/project" },
       "http://localhost:3000/",
@@ -776,17 +756,7 @@ describe("BrowserBroker", () => {
       mainFrame: () => undefined,
       goto: async () => undefined,
     }
-    const browser = {
-      newContext: async () => ({
-        close: async () => undefined,
-        route: async () => undefined,
-        routeWebSocket: async () => undefined,
-        newPage: async () => page,
-      }),
-      close: async () => undefined,
-    }
-    const broker = new BrowserBroker({ log: () => {}, launch: async () => browser })
-    brokers.push(broker)
+    const broker = fixture(page)
     await broker.open({ sessionId: "popup", directory: "/tmp/project" }, "http://localhost:3000/")
     let closed = false
     listeners.get("popup")!({ close: async () => void (closed = true) } as never)

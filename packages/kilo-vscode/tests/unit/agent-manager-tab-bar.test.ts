@@ -30,7 +30,7 @@ describe("Agent Manager diff toggle", () => {
     const source = fs.readFileSync(BROWSER_PANEL, "utf-8")
     expect(source).toContain("props.state?.navigation")
     expect(source).toContain("when={identity()}")
-    expect(source).toContain("frame?.contentWindow?.location.replace(props.url)")
+    expect(source).not.toContain("contentWindow")
     expect(source).toContain("onMouseMove={(event) => props.controller.move(position(event))}")
     expect(fs.readFileSync(BROWSER_ADAPTER, "utf-8")).toContain('type: "agentManager.browser.input"')
   })

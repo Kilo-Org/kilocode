@@ -119,7 +119,7 @@ export class BrowserDevtools {
     }
     if (scope.path === "kilo-bootstrap.js") {
       const script = [
-        `localStorage.setItem("ui-theme",${JSON.stringify(JSON.stringify(scope.target.theme))})`,
+        `localStorage.setItem("ui-theme",JSON.stringify(${JSON.stringify(scope.target.theme)}))`,
         'localStorage.setItem("currentDockState",JSON.stringify("undocked"))',
       ].join(";")
       res.writeHead(200, {

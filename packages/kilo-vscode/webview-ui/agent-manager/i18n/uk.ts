@@ -264,13 +264,9 @@ export const dict = {
   "agentManager.browser.refresh": "Оновити браузер",
   "agentManager.browser.close": "Закрити браузер",
   "agentManager.browser.inspect": "Вибрати елемент",
-  "agentManager.browser.devtools": "Відкрити інструменти розробника",
   "agentManager.browser.devtoolsTitle": "Інструменти розробника",
-  "agentManager.browser.hide": "Сховати",
   "agentManager.browser.empty": "Відкрийте локальну програму, щоб переглянути її тут.",
   "agentManager.browser.noSession": "Спочатку виберіть сесію Agent Manager.",
-  "agentManager.browser.notStarted": "не запущено",
-  "agentManager.browser.localOnly": "Лише loopback-URL через HTTP; зовнішні запити заблоковано",
   "agentManager.browser.screenshotAlt": "Поточна сторінка браузера",
   "agentManager.browser.errors": "{{count}} помилок консолі",
 

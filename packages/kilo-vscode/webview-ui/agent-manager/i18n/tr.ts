@@ -263,13 +263,9 @@ export const dict = {
   "agentManager.browser.refresh": "Tarayıcıyı yenile",
   "agentManager.browser.close": "Tarayıcıyı kapat",
   "agentManager.browser.inspect": "Öğeyi seç",
-  "agentManager.browser.devtools": "Geliştirici araçlarını aç",
   "agentManager.browser.devtoolsTitle": "Geliştirici araçları",
-  "agentManager.browser.hide": "Gizle",
   "agentManager.browser.empty": "Burada önizlemek için yerel bir uygulama açın.",
   "agentManager.browser.noSession": "Önce bir Agent Manager oturumu seçin.",
-  "agentManager.browser.notStarted": "başlatılmadı",
-  "agentManager.browser.localOnly": "Yalnızca HTTP loopback URL'leri; harici istekler engellenir",
   "agentManager.browser.screenshotAlt": "Geçerli tarayıcı sayfası",
   "agentManager.browser.errors": "{{count}} konsol hatası",
 

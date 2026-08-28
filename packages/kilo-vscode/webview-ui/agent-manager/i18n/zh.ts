@@ -248,13 +248,9 @@ export const dict = {
   "agentManager.browser.refresh": "刷新浏览器",
   "agentManager.browser.close": "关闭浏览器",
   "agentManager.browser.inspect": "选择元素",
-  "agentManager.browser.devtools": "打开开发者工具",
   "agentManager.browser.devtoolsTitle": "开发者工具",
-  "agentManager.browser.hide": "隐藏",
   "agentManager.browser.empty": "打开本地应用以在此处预览。",
   "agentManager.browser.noSession": "请先选择 Agent Manager 会话。",
-  "agentManager.browser.notStarted": "未启动",
-  "agentManager.browser.localOnly": "仅允许 HTTP 回环 URL，外部请求将被阻止",
   "agentManager.browser.screenshotAlt": "当前浏览器页面",
   "agentManager.browser.errors": "{{count}} 个控制台错误",
 

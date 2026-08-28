@@ -1,4 +1,4 @@
-import { createEffect, on, For, Show, type Accessor, type Component } from "solid-js"
+import { For, Show, type Accessor, type Component } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -156,29 +156,6 @@ const Picker: Component<{
   )
 }
 
-const Preview: Component<{ url: string; navigation: number; labels: BrowserLabels }> = (props) => {
-  let frame: HTMLIFrameElement | undefined
-  createEffect(
-    on(
-      () => props.navigation,
-      (value, previous) => {
-        if (previous === undefined || value === previous) return
-        frame?.contentWindow?.location.replace(props.url)
-      },
-    ),
-  )
-  return (
-    <iframe
-      ref={frame}
-      class="am-browser-frame"
-      src={props.url}
-      title={props.labels.screenshotAlt}
-      sandbox="allow-scripts allow-forms allow-same-origin"
-      referrerpolicy="no-referrer"
-    />
-  )
-}
-
 const Viewport: Component<{
   state?: BrowserState
   session?: string
@@ -193,7 +170,7 @@ const Viewport: Component<{
     props.state.url
   const identity = () => {
     const url = page()
-    return url ? `${props.state?.browserId}:${url}` : undefined
+    return url ? `${props.state?.browserId}:${props.state?.navigation ?? 0}:${url}` : undefined
   }
   return (
     <div class="am-browser-viewport" aria-live="polite">
@@ -207,7 +184,13 @@ const Viewport: Component<{
         }
       >
         {(_key) => (
-          <Preview url={props.state?.url ?? ""} navigation={props.state?.navigation ?? 0} labels={props.labels} />
+          <iframe
+            class="am-browser-frame"
+            src={props.state?.url}
+            title={props.labels.screenshotAlt}
+            sandbox="allow-scripts allow-forms allow-same-origin"
+            referrerpolicy="no-referrer"
+          />
         )}
       </Show>
       <Picker

@@ -251,13 +251,9 @@ export const dict = {
   "agentManager.browser.refresh": "تحديث المتصفح",
   "agentManager.browser.close": "إغلاق المتصفح",
   "agentManager.browser.inspect": "تحديد عنصر",
-  "agentManager.browser.devtools": "فتح أدوات المطوّرين",
   "agentManager.browser.devtoolsTitle": "أدوات المطوّرين",
-  "agentManager.browser.hide": "إخفاء",
   "agentManager.browser.empty": "افتح تطبيقًا محليًا لمعاينته هنا.",
   "agentManager.browser.noSession": "اختر جلسة Agent Manager أولًا.",
-  "agentManager.browser.notStarted": "لم يبدأ بعد",
-  "agentManager.browser.localOnly": "عناوين loopback عبر HTTP فقط؛ الطلبات الخارجية محظورة",
   "agentManager.browser.screenshotAlt": "صفحة المتصفح الحالية",
   "agentManager.browser.errors": "{{count}} أخطاء في وحدة التحكم",
 

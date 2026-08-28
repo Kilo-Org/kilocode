@@ -81,7 +81,6 @@ export interface BrowserLabels {
   refresh: string
   close: string
   inspect: string
-  devtools: string
   devtoolsTitle: string
   empty: string
   noSession: string

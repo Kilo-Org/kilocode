@@ -255,13 +255,9 @@ export const dict = {
   "agentManager.browser.refresh": "ブラウザーを更新",
   "agentManager.browser.close": "ブラウザーを閉じる",
   "agentManager.browser.inspect": "要素を選択",
-  "agentManager.browser.devtools": "開発者ツールを開く",
   "agentManager.browser.devtoolsTitle": "開発者ツール",
-  "agentManager.browser.hide": "非表示",
   "agentManager.browser.empty": "ローカルアプリケーションを開くと、ここでプレビューできます。",
   "agentManager.browser.noSession": "先に Agent Manager セッションを選択してください。",
-  "agentManager.browser.notStarted": "未開始",
-  "agentManager.browser.localOnly": "HTTP ループバック URL のみ。外部リクエストはブロックされます",
   "agentManager.browser.screenshotAlt": "現在のブラウザーページ",
   "agentManager.browser.errors": "{{count}} 件のコンソールエラー",
 

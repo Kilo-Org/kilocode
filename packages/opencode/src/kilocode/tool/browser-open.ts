@@ -84,13 +84,13 @@ export const BrowserOpenTool = Tool.define<
           }
           if (
             url.protocol !== "http:" ||
-            !["localhost", "127.0.0.1", "[::1]", "::1"].includes(url.hostname) ||
+            !["localhost", "127.0.0.1"].includes(url.hostname) ||
             url.username ||
             url.password
           ) {
             return {
               title: "Browser URL blocked",
-              output: "Only HTTP loopback URLs are supported in the first browser iteration.",
+              output: "Use an HTTP URL on localhost or 127.0.0.1. Use localhost for IPv6 loopback servers.",
               metadata: { status: "error", errors: 0 } satisfies Meta,
             }
           }

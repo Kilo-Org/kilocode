@@ -259,13 +259,9 @@ export const dict = {
   "agentManager.browser.refresh": "بازخوانی مرورگر",
   "agentManager.browser.close": "بستن مرورگر",
   "agentManager.browser.inspect": "انتخاب عنصر",
-  "agentManager.browser.devtools": "باز کردن ابزارهای توسعه",
   "agentManager.browser.devtoolsTitle": "ابزارهای توسعه",
-  "agentManager.browser.hide": "پنهان کردن",
   "agentManager.browser.empty": "برای پیش‌نمایش، یک برنامه محلی را باز کنید.",
   "agentManager.browser.noSession": "ابتدا یک جلسه Agent Manager را انتخاب کنید.",
-  "agentManager.browser.notStarted": "شروع نشده",
-  "agentManager.browser.localOnly": "فقط URLهای loopback با HTTP؛ درخواست‌های خارجی مسدود هستند",
   "agentManager.browser.screenshotAlt": "صفحه فعلی مرورگر",
   "agentManager.browser.errors": "{{count}} خطای کنسول",
 
