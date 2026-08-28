@@ -20,6 +20,7 @@ Object.assign(globalThis, {
   HTMLTextAreaElement: window.HTMLTextAreaElement,
   SVGElement: window.SVGElement,
   MutationObserver: window.MutationObserver,
+  IntersectionObserver: window.IntersectionObserver,
   ResizeObserver: window.ResizeObserver,
   CustomEvent: window.CustomEvent,
   Event: window.Event,
