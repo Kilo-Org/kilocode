@@ -652,6 +652,11 @@ const OPENAI_XHIGH_EFFORT_RELEASE_DATE = "2025-12-04"
 //   "gpt-5", "gpt-5-nano", "gpt-5.4", "openai/gpt-5.4-codex".
 // Anchored to start-of-string or "/" so it doesn't false-match "gpt-50" or "gpt-5o".
 const GPT5_FAMILY_RE = /(?:^|\/)gpt-5(?:[.-]|$)/
+// kilocode_change start - like GPT5_FAMILY_RE, but also accepts a "." prefix so
+// provider-prefixed ids like Bedrock Mantle's "openai.gpt-5.5" count as gpt-5
+// family. Still excludes lookalikes such as "gpt-50" and "gpt-5o".
+const GPT5_FAMILY_PREFIX_RE = /(?:^|\/|\.)gpt-5(?:[.-]|$)/
+// kilocode_change end
 const GPT5_VERSION_RE = /(?:^|\/)gpt-5[.-](\d+)(?:[.-]|$)/
 const GPT5_PRO_RE = /(?:^|\/)gpt-5[.-]?pro(?:[.-]|$)/
 const GPT5_VERSIONED_PRO_RE = /(?:^|\/)gpt-5[.-]\d+[.-]pro(?:[.-]|$)/
@@ -696,6 +701,13 @@ function openaiReasoningEfforts(apiId: string, releaseDate: string) {
   // GPT-5.1 replaced GPT-5's `minimal` effort with `none`; GPT-5.2+
   // additionally accepts `xhigh`. Model pages list the supported subset.
   if (versionedEfforts) return versionedEfforts
+  // kilocode_change start - `none` and `xhigh` are OpenAI tiers gated on
+  // OpenAI's rollout dates. They apply only to gpt-5-family models: non-OpenAI
+  // models routed through @ai-sdk/openai on a compatible base URL (e.g. Grok
+  // via api.x.ai) reject them, which surfaced as offering an unusable `xhigh`
+  // variant (issue #13342).
+  if (!GPT5_FAMILY_PREFIX_RE.test(id)) return WIDELY_SUPPORTED_EFFORTS
+  // kilocode_change end
   const efforts = [...WIDELY_SUPPORTED_EFFORTS]
   if (GPT5_FAMILY_RE.test(id)) efforts.unshift("minimal")
   if (releaseDate >= OPENAI_NONE_EFFORT_RELEASE_DATE) efforts.unshift("none")
