@@ -48,7 +48,7 @@ import {
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
   sendReviewComments,
-  type AnnotationLabels,
+  labels,
   type AnnotationMeta,
   type ReviewComposer,
   type ReviewDraft,
@@ -130,18 +130,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
-  const labels = (): AnnotationLabels => ({
-    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
-    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
-    placeholder: t("agentManager.review.commentPlaceholder"),
-    cancel: t("common.cancel"),
-    comment: t("agentManager.review.commentAction"),
-    send: t("prompt.action.send"),
-    save: t("common.save"),
-    sendToChat: t("agentManager.review.sendToChat"),
-    edit: t("common.edit"),
-    delete: t("common.delete"),
-  })
   const localComposer = createReviewComposer()
   const composer = () => props.composer ?? localComposer
   const [manualOpen, setManualOpen] = createSignal<Record<string, string[]>>({})
@@ -437,7 +425,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       updateComment,
       deleteComment,
       cancelDraft,
-      labels: labels(),
+      labels: labels(t),
       activeTerminalId: props.activeTerminalId,
       speech: reviewSpeech,
     })
@@ -465,16 +453,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const sendAllToChat = () => {
     const all = comments()
     if (all.length === 0) return
-    window.dispatchEvent(
-      new MessageEvent("message", {
-        data: {
-          type: props.activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
-          comments: all,
-          autoSend: true,
-          targetTerminalId: props.activeTerminalId,
-        },
-      }),
-    )
+    sendReviewComments(all, props.activeTerminalId)
     preserveScroll(() => setComments([]))
     props.onSendAll?.()
   }

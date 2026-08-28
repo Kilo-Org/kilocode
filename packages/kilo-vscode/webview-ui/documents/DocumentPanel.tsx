@@ -18,12 +18,12 @@ import {
   buildReviewAnnotation,
   createReviewComposer,
   sendReviewComments,
-  type AnnotationLabels,
+  labels,
   type AnnotationMeta,
   type ReviewComposer,
   type ReviewDraft,
 } from "../diff-viewer/review-annotations"
-import { lineCount } from "../diff-viewer/review-comments"
+import { getFilename, lineCount } from "../diff-viewer/review-comments"
 import { useLanguage } from "../src/context/language"
 
 export interface DocumentPanelProps {
@@ -41,10 +41,6 @@ export interface DocumentPanelProps {
   onSendAll?: () => void
   activeTerminalId?: string
   visible: Accessor<boolean>
-}
-
-function pathName(file: string): string {
-  return file.slice(file.lastIndexOf("/") + 1)
 }
 
 function virtualDiff(file: string, content: string): WorktreeFileDiff {
@@ -98,18 +94,6 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   const file = () => selected()?.file ?? ""
   const content = () => data()?.content ?? ""
   const diff = () => virtualDiff(file(), content())
-  const labels = (): AnnotationLabels => ({
-    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
-    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
-    placeholder: t("agentManager.review.commentPlaceholder"),
-    cancel: t("common.cancel"),
-    comment: t("agentManager.review.commentAction"),
-    send: t("prompt.action.send"),
-    save: t("common.save"),
-    sendToChat: t("agentManager.review.sendToChat"),
-    edit: t("common.edit"),
-    delete: t("common.delete"),
-  })
 
   const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const comments = () => props.comments.filter((item) => item.file === file())
@@ -176,7 +160,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
       updateComment,
       deleteComment,
       cancelDraft,
-      labels: labels(),
+      labels: labels(t),
       activeTerminalId: props.activeTerminalId,
     })
   const gutter = (range: SelectedLineRange) => {
@@ -293,7 +277,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
             <SortableClosableTab
               id={id}
               class="am-document-tab"
-              label={pathName(tab.file)}
+              label={getFilename(tab.file)}
               tooltip={tab.file}
               icon="open-file"
               iconNode={<FileIcon node={{ path: tab.file, type: "file" }} class="am-document-tab-icon" />}
