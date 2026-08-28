@@ -189,6 +189,22 @@ class KiloSessionService internal constructor(
         return session
     }
 
+    /** Create a public share link. Throws when the CLI refuses (no credentials, sharing disabled). */
+    suspend fun shareSession(id: String, dir: String): SessionDto {
+        log.info("${ChatLogSummary.sid(id)} kind=session share=true dir=${ChatLogSummary.dir(dir)}")
+        val session = call { share(id, dir) }
+        _sessions.value = _sessions.value.map { if (it.id == id) session else it }
+        return session
+    }
+
+    /** Revoke a public share link. */
+    suspend fun unshareSession(id: String, dir: String): SessionDto {
+        log.info("${ChatLogSummary.sid(id)} kind=session unshare=true dir=${ChatLogSummary.dir(dir)}")
+        val session = call { unshare(id, dir) }
+        _sessions.value = _sessions.value.map { if (it.id == id) session else it }
+        return session
+    }
+
     suspend fun cloudSessions(dir: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
         call { cloudSessions(dir, cursor, limit, gitUrl) }
 

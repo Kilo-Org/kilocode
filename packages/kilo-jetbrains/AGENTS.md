@@ -238,6 +238,12 @@ For the full release process (resolve version, pin verification, prepare, change
 - **Corrupt IDE extraction**: if `runIdeBackend` or `runIdeSplitMode` fails before startup with `coroutinesJavaAgentFile` / `Collection contains no element matching the predicate`, the extracted IDE under `.intellijPlatform/ides/` is likely incomplete. Health check: `ls .intellijPlatform/ides/*/lib/*.jar | wc -l` should be in the hundreds. Repair by removing `.intellijPlatform/ides`, `.intellijPlatform/localPlatformArtifacts`, `.intellijPlatform/layoutIndex`, and `.intellijPlatform/coroutines-javaagent.jar`, then rerun the Gradle task.
 - **Run in monolithic sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does not build or bundle CLI binaries; the backend downloads the pinned release at connect time.
 
+### Stopping a Sandbox Run
+
+Quit the sandbox IDE from inside it (File → Exit) instead of pressing Stop on the Gradle run tab. Stop on an external-system configuration only calls `CancellationTokenSource.cancel()` through the Gradle tooling API — the IDE never learns the forked JVM's pid, sends it no signal, and `ExternalSystemProcessHandler` does not implement `KillableProcess`, so there is no force-kill escalation either. Quitting the sandbox IDE lets it run its real shutdown sequence and the `JavaExec` task then completes on its own. Cancelling the build instead is what leaves the orphaned Java processes noted above.
+
+Do not start a second `runIde*` task for a checkout while a sandbox IDE launched from that same checkout is still running. All `runIde*` tasks share one sandbox container per checkout (`.intellijPlatform/sandbox/kilo.jetbrains/<ide>/plugins_runIde*`), and `prepareSandbox` rewrites the running IDE's own plugin jars. The IDE then attempts a hot reload that cannot succeed and reports `Failed to unload modified plugins: Kilo Code`.
+
 ### CLI/SDK Change Awareness
 
 - JetBrains runtime behavior normally depends on the downloaded CLI release pinned by `packages/kilo-jetbrains/package.json`; local `packages/opencode/` changes are used only with `kilo.cli.pinned=false` repo CLI mode.

@@ -418,6 +418,40 @@ class SessionController(
         drainAutoApprove(skip)
     }
 
+    /**
+     * Turns the session's public share link on or off.
+     *
+     * [done] runs on the EDT with the new URL when sharing succeeded, a null URL when unsharing
+     * succeeded, and a non-null error otherwise. The CLI maps every refusal (no Kilo credentials,
+     * `share` disabled by config) to a bare HTTP 500, so the error cannot be classified here.
+     */
+    fun setShare(on: Boolean, done: (String?, Throwable?) -> Unit) {
+        assertEdt()
+        val id = sid ?: return
+        val dir = sessionDirectory
+        cs.launch {
+            try {
+                val session = if (on) sessions.shareSession(id, dir) else sessions.unshareSession(id, dir)
+                capture("Session Share Changed", sessionProps(id) + mapOf("shared" to on.toString()))
+                LOG.info("${ChatLogSummary.sid(id)} kind=share on=$on ok=true")
+                edt {
+                    if (disposed) return@edt
+                    model.setSession(session)
+                    done(session.share?.url, null)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "share", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=share on=$on dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
+                edt {
+                    if (disposed) return@edt
+                    done(null, e)
+                }
+            }
+        }
+    }
+
     fun compact() {
         assertEdt()
         val id = sid ?: return

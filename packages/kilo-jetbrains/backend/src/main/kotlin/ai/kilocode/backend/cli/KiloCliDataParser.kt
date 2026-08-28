@@ -72,6 +72,7 @@ import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionShareDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -1616,6 +1617,7 @@ object KiloCliDataParser {
                 )
             },
             revert = parseRevert(obj["revert"].obj()),
+            share = obj["share"].obj()?.str("url")?.takeIf { it.isNotBlank() }?.let(::SessionShareDto),
         )
     }
 

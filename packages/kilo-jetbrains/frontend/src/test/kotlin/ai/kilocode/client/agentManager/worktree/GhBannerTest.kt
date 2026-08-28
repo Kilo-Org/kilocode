@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.installBrowser
@@ -29,6 +30,7 @@ class GhBannerTest : BasePlatformTestCase() {
         timers = TestUiTimers()
         ApplicationManager.getApplication()
             .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(coroutines.scope, rpc), testRootDisposable)
+        fakeRoot(project, coroutines.scope, testRootDisposable, project.basePath!!)
         service = GhStatusCoordinator(coroutines.scope, timers)
         ApplicationManager.getApplication().replaceService(GhStatusCoordinator::class.java, service, testRootDisposable)
     }
