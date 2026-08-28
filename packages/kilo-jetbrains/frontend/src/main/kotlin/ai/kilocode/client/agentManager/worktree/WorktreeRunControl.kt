@@ -51,8 +51,10 @@ internal class WorktreeRunControl(
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var states: List<RunStateDto> = emptyList() // EDT-only
 
+    // The trailing "▾" marks the button as a dropdown -- matches the arrow suffix convention used
+    // by the other pickers (ModelPicker, ReasoningPicker, SessionAccountOverlay).
     val button = hoverTextButton(
-        ToolbarButtonAction(AllIcons.Actions.Execute, KiloBundle.message("worktree.run.action")) { open() },
+        ToolbarButtonAction(AllIcons.Actions.Execute, "${KiloBundle.message("worktree.run.action")} ▾") { open() },
         tooltip = KiloBundle.message("worktree.run.tooltip"),
     )
 

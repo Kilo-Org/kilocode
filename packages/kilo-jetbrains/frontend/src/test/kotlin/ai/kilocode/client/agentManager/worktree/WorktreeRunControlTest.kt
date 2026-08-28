@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.FakeRunRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fakeRoot
@@ -31,6 +32,12 @@ class WorktreeRunControlTest : BasePlatformTestCase() {
         } finally {
             super.tearDown()
         }
+    }
+
+    fun `test button is labeled Build Run with a dropdown arrow`() {
+        val control = control()
+
+        assertEquals("${KiloBundle.message("worktree.run.action")} ▾", edtWait { control.button.text })
     }
 
     fun `test run states subscribe with the resolved backend root`() {

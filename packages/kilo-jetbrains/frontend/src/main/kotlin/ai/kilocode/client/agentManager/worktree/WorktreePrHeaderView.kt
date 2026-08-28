@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.hoverTextButton
+import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.ide.ui.ProductIcons
@@ -14,7 +15,7 @@ import javax.swing.JComponent
 
 /**
  * Worktree session editor header. A thin wrapper over the shared [PrHeaderView] that adds the
- * optional Run control plus Terminal and Open-in-window actions into the header's trailing slot.
+ * optional Run control plus Open-in-window and Terminal actions into the header's trailing slot.
  */
 internal class WorktreePrHeaderView(
     openWorktree: () -> Unit = {},
@@ -24,13 +25,13 @@ internal class WorktreePrHeaderView(
     openDiff: () -> Unit,
 ) : BorderLayoutPanel() {
     private val core = PrHeaderView(openDiff = openDiff)
-    private val terminal = hoverTextButton(
-        ToolbarButtonAction(TerminalIcons.OpenTerminal_13x13, KiloBundle.message("worktree.session.terminal.action"), openTerminal),
-        tooltip = KiloBundle.message("worktree.session.terminal.tooltip"),
-    )
     private val open = hoverTextButton(
         ToolbarButtonAction(ProductIcons.getInstance().productIcon, KiloBundle.message("worktree.session.open.action"), openWorktree),
         tooltip = KiloBundle.message("worktree.session.open.tooltip"),
+    )
+    // Icon-only: the tooltip text stands in for the visible label and doubles as the accessible name.
+    private val terminal = toolbarButton(
+        ToolbarButtonAction(TerminalIcons.OpenTerminal_13x13, KiloBundle.message("worktree.session.terminal.tooltip"), openTerminal),
     )
 
     init {
@@ -38,8 +39,8 @@ internal class WorktreePrHeaderView(
         open.isEnabled = openEnabled
         terminal.isEnabled = openEnabled
         run?.let { core.addAction(it) }
-        core.addAction(terminal)
         core.addAction(open)
+        core.addAction(terminal)
         addToCenter(core)
     }
 
