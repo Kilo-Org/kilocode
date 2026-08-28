@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup } from "solid-js"
+import { Component, createSignal, createMemo, createEffect, Switch, Match, Show, onMount, onCleanup } from "solid-js"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
@@ -17,6 +17,7 @@ import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrid
 import { useWorktreeMode } from "./context/worktree-mode"
 import { useDiffStyle } from "./context/diff-style"
 import { dispatchAgentManagerEditPreview } from "./utils/agent-manager-events"
+import { strongest } from "./utils/session-activity"
 import type { PermissionFileDiff } from "./types/messages"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
@@ -229,6 +230,10 @@ const AppContent: Component = () => {
   const tabs = useLocalTabs()
   const server = useServer()
   const vscode = useVSCode()
+  const activity = createMemo(() =>
+    strongest([session.currentSessionID(), ...(tabs?.ids() ?? [])].map(session.activityFor)),
+  )
+  createEffect(() => vscode.postMessage({ type: "sessionActivity", state: activity() }))
 
   const handleViewAction = (action: string) => {
     switch (action) {

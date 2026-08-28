@@ -58,7 +58,7 @@ const wtProps = {
   active: false,
   pendingDelete: false,
   busy: false,
-  working: false,
+  activity: "idle" as const,
   stale: false,
   sessions: 1,
   grouped: false,
@@ -402,7 +402,7 @@ export const WithBusyWorktree: Story = {
         <DndWrap>
           <SectionHeader section={sec("s1", 0, { name: "Running", color: "Yellow" })} count={2} {...sectionProps}>
             <div class="am-section-group-body">
-              <WorktreeItem {...wtProps} worktree={wt("wt-1", "feat/generate")} label="feat/generate" working />
+              <WorktreeItem {...wtProps} worktree={wt("wt-1", "feat/generate")} label="feat/generate" activity="busy" />
               <WorktreeItem
                 {...wtProps}
                 worktree={wt("wt-2", "feat/refactor")}
@@ -517,7 +517,7 @@ export const DenseSidebar: Story = {
 
           <SectionHeader section={sec("s3", 2, { name: "Infra", color: "Orange" })} count={1} {...sectionProps}>
             <div class="am-section-group-body">
-              <WorktreeItem {...wtProps} worktree={wt("wt-i1", "chore/docker")} label="chore/docker" working />
+              <WorktreeItem {...wtProps} worktree={wt("wt-i1", "chore/docker")} label="chore/docker" activity="busy" />
             </div>
           </SectionHeader>
 

@@ -1,0 +1,16 @@
+sequenceDiagram
+    title Checkout flow
+    participant U as User
+    participant A as Api
+    participant D as Db
+    U->>+A: POST /order
+    alt in stock
+        A->>D: reserve
+        D-->>A: ok
+    else sold out
+        A-->>U: 409 Conflict
+    end
+    loop retry twice
+        A->>D: charge
+    end
+    A-->>-U: 201 Created

@@ -10,6 +10,7 @@ import z from "zod"
 
 export namespace RemoteCommand {
   export const MAX_COMMANDS = 256
+  export const MAX_DIRECTORIES = 256
   export const MAX_STRING_LENGTH = 2_000
   export const MAX_ARGUMENTS_LENGTH = 32_768
   export const MAX_HINTS = 32
@@ -20,6 +21,31 @@ export namespace RemoteCommand {
       protocolVersion: z.literal(1),
     })
     .strict()
+
+  export const ListDirectoriesRequest = z
+    .object({
+      protocolVersion: z.literal(1),
+      path: z.string().min(1).max(MAX_STRING_LENGTH).optional(),
+    })
+    .strict()
+  export type ListDirectoriesRequest = z.infer<typeof ListDirectoriesRequest>
+
+  export const ListDirectoriesEntry = z
+    .object({
+      name: z.string().min(1).max(MAX_STRING_LENGTH),
+      path: z.string().min(1).max(MAX_STRING_LENGTH),
+    })
+    .strict()
+  export type ListDirectoriesEntry = z.infer<typeof ListDirectoriesEntry>
+
+  export const ListDirectoriesResponse = z
+    .object({
+      protocolVersion: z.literal(1),
+      path: z.string(),
+      directories: z.array(ListDirectoriesEntry).max(MAX_DIRECTORIES),
+    })
+    .strict()
+  export type ListDirectoriesResponse = z.infer<typeof ListDirectoriesResponse>
 
   export const ExitRequest = z
     .object({

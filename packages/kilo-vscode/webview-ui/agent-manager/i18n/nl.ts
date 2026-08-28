@@ -67,8 +67,6 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal openen",
   "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",
-  "agentManager.tabsMenu.status.waiting": "Wacht",
-  "agentManager.tabsMenu.status.retry": "Opnieuw",
   "agentManager.sidebarSearch.label": "Worktrees en sessies doorzoeken",
   "agentManager.sidebarSearch.scope": "Doorzoekt de lokale werkruimte, lokale sessies, Worktrees en hun sessies",
   "agentManager.sidebarSearch.contexts": "LOKAAL & WORKTREES",
