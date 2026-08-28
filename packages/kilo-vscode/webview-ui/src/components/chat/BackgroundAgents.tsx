@@ -30,14 +30,13 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
   const [open, setOpen] = createSignal(false)
   const [jobs, setJobs] = createSignal<BackgroundJobInfo[]>([])
   const [loaded, setLoaded] = createSignal(false)
-  const [hidden, setHidden] = createSignal<Set<string>>(new Set())
+  const [hidden, setHidden] = createSignal<Map<string, ReadonlySet<string>>>(new Map())
   const [mounted, setMounted] = createSignal(false)
   let pending: string | undefined
   let revision = 0
 
   createEffect(
     on(session.currentSessionID, () => {
-      setHidden(new Set<string>())
       setLoaded(false)
       setJobs([])
       pending = undefined
@@ -89,7 +88,11 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     return fallback()
   })
 
-  const visible = createMemo(() => agents().filter((agent) => showBackgroundAgent(agent, hidden())))
+  const visible = createMemo(() => {
+    const id = session.currentSessionID()
+    if (!id) return agents()
+    return agents().filter((agent) => showBackgroundAgent(agent, hidden(), id))
+  })
   const summary = createMemo(() => {
     const running = visible().filter((agent) => agent.status === "running").length
     const total = visible().length
@@ -130,13 +133,23 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     vscode.postMessage({ type: "cancelBackgroundJob", jobID: agent.jobID, sessionID: id, requestID: pending })
   }
 
+  const hide = (ids: Iterable<string>) => {
+    const id = session.currentSessionID()
+    if (!id) return
+    setHidden((current) => {
+      const next = new Map(current)
+      const jobs = new Set(next.get(id))
+      for (const jobID of ids) jobs.add(jobID)
+      next.set(id, jobs)
+      return next
+    })
+  }
+
   const hideFinished = () =>
-    setHidden(
-      new Set(
-        agents()
-          .filter((agent) => agent.status !== "running")
-          .map((agent) => agent.jobID),
-      ),
+    hide(
+      agents()
+        .filter((agent) => agent.status !== "running")
+        .map((agent) => agent.jobID),
     )
 
   return (
@@ -241,7 +254,7 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
                       aria-label={`${language.t("task.backgroundAgents.dismiss")}: ${label(agent)}`}
                       onClick={(event: MouseEvent) => {
                         event.stopPropagation()
-                        setHidden((current) => new Set(current).add(agent.jobID))
+                        hide([agent.jobID])
                       }}
                     >
                       <span data-slot="task-header-agent-action-label">

@@ -37,8 +37,22 @@ export interface BackgroundAgent {
   question?: QuestionRequest
 }
 
-export function showBackgroundAgent(agent: BackgroundAgent, hidden: ReadonlySet<string>): boolean {
-  return agent.status === "running" || !hidden.has(agent.jobID)
+export function showBackgroundAgent(agent: BackgroundAgent, hidden: ReadonlySet<string>): boolean
+export function showBackgroundAgent(
+  agent: BackgroundAgent,
+  hidden: ReadonlyMap<string, ReadonlySet<string>>,
+  sessionID: string,
+): boolean
+export function showBackgroundAgent(
+  agent: BackgroundAgent,
+  hidden: ReadonlySet<string> | ReadonlyMap<string, ReadonlySet<string>>,
+  sessionID?: string,
+): boolean {
+  const jobs =
+    sessionID === undefined
+      ? (hidden as ReadonlySet<string>)
+      : (hidden as ReadonlyMap<string, ReadonlySet<string>>).get(sessionID)
+  return agent.status === "running" || !jobs?.has(agent.jobID)
 }
 
 function text(value: unknown): string | undefined {
