@@ -22,6 +22,7 @@ Object.assign(globalThis, {
   MutationObserver: window.MutationObserver,
   IntersectionObserver: window.IntersectionObserver,
   ResizeObserver: window.ResizeObserver,
+  IntersectionObserver: window.IntersectionObserver,
   CustomEvent: window.CustomEvent,
   Event: window.Event,
   MessageEvent: window.MessageEvent,

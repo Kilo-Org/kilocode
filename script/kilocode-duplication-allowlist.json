@@ -1,0 +1,960 @@
+{
+  "version": 1,
+  "scanner": "jscpd@5.0.16",
+  "exceptions": [
+    {
+      "files": [
+        "packages/kilo-console/src/components/app-header/OmniSearch.tsx",
+        "packages/kilo-console/src/components/app-sidebar/AppSidebar.tsx"
+      ],
+      "fingerprint": "4d9a3ec7cfd2029a",
+      "maxMatches": 1,
+      "maxTokens": 187,
+      "kind": "legacy",
+      "owner": "kilo-console",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-console/src/components/app-header/OmniSearch.tsx",
+        "packages/kilo-console/src/components/app-sidebar/AppSidebar.tsx"
+      ],
+      "fingerprint": "efd52fea0edba460",
+      "maxMatches": 1,
+      "maxTokens": 102,
+      "kind": "legacy",
+      "owner": "kilo-console",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-console/src/components/app-header/OmniSearch.tsx",
+        "packages/kilo-console/src/routes/profile/server.ts"
+      ],
+      "fingerprint": "52cd8ba8418743c4",
+      "maxMatches": 1,
+      "maxTokens": 101,
+      "kind": "legacy",
+      "owner": "kilo-console",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-console/src/components/app-header/OmniSearch.tsx",
+        "packages/kilo-console/src/routes/projects/ProjectsRoute.tsx"
+      ],
+      "fingerprint": "cb4ef004cc2151c4",
+      "maxMatches": 1,
+      "maxTokens": 155,
+      "kind": "legacy",
+      "owner": "kilo-console",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-console/src/routes/config/AgentsRoute.tsx",
+        "packages/kilo-console/src/routes/config/IndexingRoute.tsx"
+      ],
+      "fingerprint": "1642f96ca061cdcf",
+      "maxMatches": 1,
+      "maxTokens": 112,
+      "kind": "legacy",
+      "owner": "kilo-console",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-console/src/routes/config/CliNotificationsRoute.tsx",
+        "packages/kilo-console/src/routes/config/CliUiRoute.tsx"
+      ],
+      "fingerprint": "3d8c2a788d682c4e",
+      "maxMatches": 1,
+      "maxTokens": 143,
+      "kind": "legacy",
+      "owner": "kilo-console",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-console/src/routes/config/state/agents.ts",
+        "packages/kilo-console/src/routes/config/state/models.ts"
+      ],
+      "fingerprint": "1da5f78ab9ff1975",
+      "maxMatches": 1,
+      "maxTokens": 164,
+      "kind": "legacy",
+      "owner": "kilo-console",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-console/src/routes/config/state/agents.ts",
+        "packages/kilo-console/src/routes/config/state/models.ts"
+      ],
+      "fingerprint": "f0f56e89b4d2ff59",
+      "maxMatches": 1,
+      "maxTokens": 171,
+      "kind": "legacy",
+      "owner": "kilo-console",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-console/src/routes/config/state/mcp.ts",
+        "packages/kilo-console/src/routes/config/state/mcp.ts"
+      ],
+      "fingerprint": "64494aa992cccc8d",
+      "maxMatches": 1,
+      "maxTokens": 129,
+      "kind": "legacy",
+      "owner": "kilo-console",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-gateway/src/auth/device-auth-tui.ts", "packages/kilo-gateway/src/auth/device-auth.ts"],
+      "fingerprint": "e6ac9a2221c1deb4",
+      "maxMatches": 1,
+      "maxTokens": 194,
+      "kind": "legacy",
+      "owner": "kilo-gateway",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-indexing/src/indexing/embedders/openai-compatible.ts",
+        "packages/kilo-indexing/src/indexing/embedders/openrouter.ts"
+      ],
+      "fingerprint": "45840c5da8273cfe",
+      "maxMatches": 1,
+      "maxTokens": 168,
+      "kind": "legacy",
+      "owner": "kilo-indexing",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/app/KiloBackendSessionManager.kt",
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/app/KiloBackendSessionManager.kt"
+      ],
+      "fingerprint": "8785de60f9d8997a",
+      "maxMatches": 1,
+      "maxTokens": 103,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/app/KiloBackendSessionManager.kt",
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/app/KiloBackendSessionManager.kt"
+      ],
+      "fingerprint": "cf74d689a64abbd2",
+      "maxMatches": 1,
+      "maxTokens": 105,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloCliDownloader.kt",
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloRepoCli.kt"
+      ],
+      "fingerprint": "b19588ac32686d1a",
+      "maxMatches": 1,
+      "maxTokens": 103,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloCliDownloader.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/GenerateOpenApiSpecTask.kt"
+      ],
+      "fingerprint": "05c8c8a650fe6dcd",
+      "maxMatches": 1,
+      "maxTokens": 125,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloCliDownloader.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/GenerateOpenApiSpecTask.kt"
+      ],
+      "fingerprint": "bac931856f5d70b3",
+      "maxMatches": 1,
+      "maxTokens": 225,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloCliDownloader.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/StageBundledCliTask.kt"
+      ],
+      "fingerprint": "230834ae94e1bdf9",
+      "maxMatches": 1,
+      "maxTokens": 116,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/migration/LegacyMigrationConverters.kt",
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/migration/LegacyMigrationConverters.kt"
+      ],
+      "fingerprint": "e61e3556f8972a38",
+      "maxMatches": 1,
+      "maxTokens": 123,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/provider/KiloBackendProviderSettingsManager.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/app/KiloProviderService.kt"
+      ],
+      "fingerprint": "8eddf146178c10ba",
+      "maxMatches": 1,
+      "maxTokens": 101,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloProviderRpcApiImpl.kt",
+        "packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/KiloProviderRpcApi.kt"
+      ],
+      "fingerprint": "a99c672b436bbd9e",
+      "maxMatches": 1,
+      "maxTokens": 115,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloSessionRpcApiImpl.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/app/KiloSessionService.kt"
+      ],
+      "fingerprint": "2a0e21791bb10e09",
+      "maxMatches": 1,
+      "maxTokens": 139,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloSessionRpcApiImpl.kt",
+        "packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/KiloSessionRpcApi.kt"
+      ],
+      "fingerprint": "a7a17138d319676b",
+      "maxMatches": 1,
+      "maxTokens": 185,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloWorkspaceRpcApiImpl.kt",
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloWorktreeRpcApiImpl.kt"
+      ],
+      "fingerprint": "dd5490a22f91c32b",
+      "maxMatches": 1,
+      "maxTokens": 151,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloWorktreeRpcApiImpl.kt",
+        "packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloWorktreeRpcApiImpl.kt"
+      ],
+      "fingerprint": "93af05cd3e742478",
+      "maxMatches": 1,
+      "maxTokens": 148,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/FixGeneratedApiTask.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/FixGeneratedApiTask.kt"
+      ],
+      "fingerprint": "c3232c8eb9a08ead",
+      "maxMatches": 1,
+      "maxTokens": 115,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/GenerateOpenApiSpecTask.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/StageBundledCliTask.kt"
+      ],
+      "fingerprint": "89c4f899570ecdf6",
+      "maxMatches": 1,
+      "maxTokens": 155,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/GenerateOpenApiSpecTask.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/StageBundledCliTask.kt"
+      ],
+      "fingerprint": "ba979cc1db897f99",
+      "maxMatches": 1,
+      "maxTokens": 106,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/GenerateOpenApiSpecTask.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/StageRepoCliTask.kt"
+      ],
+      "fingerprint": "514a7faceed4d922",
+      "maxMatches": 1,
+      "maxTokens": 119,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/StageBundledCliTask.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/WriteCliChecksumsTask.kt"
+      ],
+      "fingerprint": "3a4de464ec9334c1",
+      "maxMatches": 1,
+      "maxTokens": 160,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/StageBundledCliTask.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/WriteCliChecksumsTask.kt"
+      ],
+      "fingerprint": "41b75b6c004e87e2",
+      "maxMatches": 1,
+      "maxTokens": 179,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/StageBundledCliTask.kt",
+        "packages/kilo-jetbrains/build-tasks/src/main/kotlin/WriteCliChecksumsTask.kt"
+      ],
+      "fingerprint": "44d7384de3b2be6d",
+      "maxMatches": 1,
+      "maxTokens": 133,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/agentManager/worktree/KiloWorktreeService.kt",
+        "packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/KiloWorktreeRpcApi.kt"
+      ],
+      "fingerprint": "4b2726614c9c8770",
+      "maxMatches": 1,
+      "maxTokens": 115,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/agentManager/worktree/WorktreeSessionListToggle.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/BranchChangesBadge.kt"
+      ],
+      "fingerprint": "09aebb0f9e029bea",
+      "maxMatches": 1,
+      "maxTokens": 111,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/history/HistoryPanel.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/empty/EmptySessionPanel.kt"
+      ],
+      "fingerprint": "c5400e01c299153e",
+      "maxMatches": 1,
+      "maxTokens": 186,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/model/ModelPicker.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/ui/list/ActiveListView.kt"
+      ],
+      "fingerprint": "516b27fbb4086626",
+      "maxMatches": 1,
+      "maxTokens": 108,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionMessageListPanel.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionMessageListPanel.kt"
+      ],
+      "fingerprint": "b7b600e48193f8a8",
+      "maxMatches": 1,
+      "maxTokens": 112,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/AttachmentView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/PromptAttachmentView.kt"
+      ],
+      "fingerprint": "1e17965e9ae5867b",
+      "maxMatches": 1,
+      "maxTokens": 103,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/base/DialogView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/permission/PermissionView.kt"
+      ],
+      "fingerprint": "6d680ef39343238f",
+      "maxMatches": 1,
+      "maxTokens": 188,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/base/DialogView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/question/QuestionResultView.kt"
+      ],
+      "fingerprint": "bacd1e3d15e6623c",
+      "maxMatches": 1,
+      "maxTokens": 102,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/MessageView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/TurnView.kt"
+      ],
+      "fingerprint": "d7732636b7631348",
+      "maxMatches": 1,
+      "maxTokens": 140,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/question/QuestionResultView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/question/QuestionView.kt"
+      ],
+      "fingerprint": "636513e3153419dc",
+      "maxMatches": 1,
+      "maxTokens": 297,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/BaseSearchToolView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/ToolView.kt"
+      ],
+      "fingerprint": "003a004f4ba3de07",
+      "maxMatches": 1,
+      "maxTokens": 137,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/BaseSearchToolView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/ToolView.kt"
+      ],
+      "fingerprint": "399c34c895629e98",
+      "maxMatches": 1,
+      "maxTokens": 112,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/BaseSearchToolView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/ToolView.kt"
+      ],
+      "fingerprint": "4e1954ebf51efa9a",
+      "maxMatches": 1,
+      "maxTokens": 135,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/BaseSearchToolView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/ToolView.kt"
+      ],
+      "fingerprint": "e8af81b39a51efd5",
+      "maxMatches": 1,
+      "maxTokens": 117,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/ShellToolView.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/tool/ToolView.kt"
+      ],
+      "fingerprint": "bcbb813709525760",
+      "maxMatches": 1,
+      "maxTokens": 101,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/agents/AgentCreateDialog.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/agents/AgentEditDialog.kt"
+      ],
+      "fingerprint": "3b2719dc703c2e2a",
+      "maxMatches": 1,
+      "maxTokens": 150,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/agents/AgentCreateDialog.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/agents/AgentEditDialog.kt"
+      ],
+      "fingerprint": "b6b0498d20608a76",
+      "maxMatches": 1,
+      "maxTokens": 125,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/agents/AgentCreateDialog.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/agents/McpEditDialog.kt"
+      ],
+      "fingerprint": "182f5d4212a54002",
+      "maxMatches": 1,
+      "maxTokens": 134,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/agents/AgentEditDialog.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/context/ContextSettingsUi.kt"
+      ],
+      "fingerprint": "798762edd934cf40",
+      "maxMatches": 1,
+      "maxTokens": 152,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/agents/SkillsConfigurable.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/agents/WorkflowsConfigurable.kt"
+      ],
+      "fingerprint": "6a0a61ed994a1440",
+      "maxMatches": 1,
+      "maxTokens": 104,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/base/SettingsInlineListPanel.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/base/SettingsListPanel.kt"
+      ],
+      "fingerprint": "7f1d00dee6941d7a",
+      "maxMatches": 1,
+      "maxTokens": 128,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/base/SettingsInlineListPanel.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/ui/list/ActiveList.kt"
+      ],
+      "fingerprint": "35bd87a9583941c9",
+      "maxMatches": 1,
+      "maxTokens": 130,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/base/SettingsListPanel.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/settings/providers/ProvidersSettingsUi.kt"
+      ],
+      "fingerprint": "eee092f7fd1a16b5",
+      "maxMatches": 1,
+      "maxTokens": 135,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/ui/diagram/mermaid/FlowMarks.kt",
+        "packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/ui/diagram/mermaid/SeqLayout.kt"
+      ],
+      "fingerprint": "9885d82e15495d73",
+      "maxMatches": 1,
+      "maxTokens": 152,
+      "kind": "legacy",
+      "owner": "kilo-jetbrains",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-memory/src/effect/capture.ts", "packages/kilo-memory/src/effect/capture.ts"],
+      "fingerprint": "fc721da29f556180",
+      "maxMatches": 1,
+      "maxTokens": 144,
+      "kind": "legacy",
+      "owner": "kilo-memory",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui/src/components/basic-tool.css", "packages/kilo-ui/src/components/message-part.css"],
+      "fingerprint": "2bcd290f6a1dfcff",
+      "maxMatches": 1,
+      "maxTokens": 138,
+      "kind": "legacy",
+      "owner": "kilo-ui",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui/src/components/list.css", "packages/kilo-ui/src/components/model-selector.css"],
+      "fingerprint": "8c547d9472640a65",
+      "maxMatches": 1,
+      "maxTokens": 109,
+      "kind": "legacy",
+      "owner": "kilo-ui",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-ui/src/components/message-part.tsx", "packages/kilo-ui/src/components/message-part.tsx"],
+      "fingerprint": "e4dd50a081850b7d",
+      "maxMatches": 1,
+      "maxTokens": 214,
+      "kind": "legacy",
+      "owner": "kilo-ui",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-ui/src/components/message-part.tsx",
+        "packages/kilo-vscode/webview-ui/src/components/chat/MessageList.tsx"
+      ],
+      "fingerprint": "16e0edc3d99b9858",
+      "maxMatches": 1,
+      "maxTokens": 111,
+      "kind": "legacy",
+      "owner": "kilo-ui",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/src/agent-manager/diff-scope.ts",
+        "packages/kilo-vscode/webview-ui/agent-manager/diff-scope-state.ts"
+      ],
+      "fingerprint": "b4d0b555891237a8",
+      "maxMatches": 1,
+      "maxTokens": 233,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/src/agent-manager/orchestration-bridge.ts",
+        "packages/kilo-vscode/src/services/notebook/bridge.ts"
+      ],
+      "fingerprint": "17677ff47d3bf883",
+      "maxMatches": 1,
+      "maxTokens": 134,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/src/agent-manager/ScriptTerminalManager.ts",
+        "packages/kilo-vscode/src/agent-manager/terminal-manager.ts"
+      ],
+      "fingerprint": "83aaa96c32fb3894",
+      "maxMatches": 1,
+      "maxTokens": 127,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/src/agent-manager/types.ts",
+        "packages/kilo-vscode/webview-ui/agent-manager/pr/pr-types.ts"
+      ],
+      "fingerprint": "01014e9610c0c91c",
+      "maxMatches": 1,
+      "maxTokens": 159,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-vscode/src/diff/sources/staged.ts", "packages/kilo-vscode/src/diff/sources/unstaged.ts"],
+      "fingerprint": "2aad5496387de63a",
+      "maxMatches": 1,
+      "maxTokens": 131,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/kilo-vscode/src/extension.ts", "packages/kilo-vscode/src/extension.ts"],
+      "fingerprint": "acf42b6bbd0b3d17",
+      "maxMatches": 1,
+      "maxTokens": 112,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/src/kilo-provider/handlers/permission-handler.ts",
+        "packages/kilo-vscode/src/kilo-provider/handlers/question.ts"
+      ],
+      "fingerprint": "edde84a63bcdb8a0",
+      "maxMatches": 1,
+      "maxTokens": 108,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/src/services/marketplace/types.ts",
+        "packages/kilo-vscode/webview-ui/src/types/marketplace.ts"
+      ],
+      "fingerprint": "96a848236212dea1",
+      "maxMatches": 1,
+      "maxTokens": 171,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
+        "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
+      ],
+      "fingerprint": "73d7672dd2e6cd26",
+      "maxMatches": 1,
+      "maxTokens": 155,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/webview-ui/agent-manager/agent-manager.css",
+        "packages/kilo-vscode/webview-ui/src/styles/session-tabs.css"
+      ],
+      "fingerprint": "9020d3c20123ef72",
+      "maxMatches": 1,
+      "maxTokens": 104,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/webview-ui/agent-manager/NewWorktreeDialog.tsx",
+        "packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx"
+      ],
+      "fingerprint": "0772e382c935aa93",
+      "maxMatches": 1,
+      "maxTokens": 122,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/webview-ui/agent-manager/ProjectSidebarBody.tsx",
+        "packages/kilo-vscode/webview-ui/agent-manager/SidebarBody.tsx"
+      ],
+      "fingerprint": "94761ffc9ac99167",
+      "maxMatches": 1,
+      "maxTokens": 155,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/webview-ui/src/context/session-variant-store.ts",
+        "packages/opencode/src/kilocode/cli/cmd/run/variant.ts"
+      ],
+      "fingerprint": "ea48f1bd59216acd",
+      "maxMatches": 1,
+      "maxTokens": 143,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/webview-ui/src/hooks/useGitChangesContext.ts",
+        "packages/kilo-vscode/webview-ui/src/hooks/useTerminalContext.ts"
+      ],
+      "fingerprint": "3474d577ea4814b0",
+      "maxMatches": 1,
+      "maxTokens": 105,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/kilo-vscode/webview-ui/src/styles/prompt-dropdowns.css",
+        "packages/kilo-vscode/webview-ui/src/styles/prompt-dropdowns.css"
+      ],
+      "fingerprint": "aee459acfb62435f",
+      "maxMatches": 1,
+      "maxTokens": 109,
+      "kind": "legacy",
+      "owner": "kilo-vscode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/opencode/src/kilocode/agent/index.ts", "packages/opencode/src/kilocode/agent/index.ts"],
+      "fingerprint": "9044b540f896a694",
+      "maxMatches": 1,
+      "maxTokens": 113,
+      "kind": "legacy",
+      "owner": "opencode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-memory.tsx",
+        "packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-memory.tsx"
+      ],
+      "fingerprint": "8f8743c15cedec86",
+      "maxMatches": 1,
+      "maxTokens": 115,
+      "kind": "legacy",
+      "owner": "opencode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/opencode/src/kilocode/components/dialog-claw-setup.tsx",
+        "packages/opencode/src/kilocode/components/dialog-claw-upgrade.tsx"
+      ],
+      "fingerprint": "89ef84cc3499824c",
+      "maxMatches": 1,
+      "maxTokens": 100,
+      "kind": "legacy",
+      "owner": "opencode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/opencode/src/kilocode/server/httpapi/handlers/config-console.ts",
+        "packages/opencode/src/kilocode/server/httpapi/handlers/config-console.ts"
+      ],
+      "fingerprint": "ec31254ab83e4a2a",
+      "maxMatches": 1,
+      "maxTokens": 133,
+      "kind": "legacy",
+      "owner": "opencode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/opencode/src/kilocode/session/prompt.ts", "packages/opencode/src/kilocode/session/prompt.ts"],
+      "fingerprint": "b985f7708c9b4632",
+      "maxMatches": 1,
+      "maxTokens": 109,
+      "kind": "legacy",
+      "owner": "opencode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": ["packages/opencode/src/kilocode/session/prompt.ts", "packages/opencode/src/kilocode/session/prompt.ts"],
+      "fingerprint": "dda23e2fc1e7c4f3",
+      "maxMatches": 1,
+      "maxTokens": 111,
+      "kind": "legacy",
+      "owner": "opencode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    },
+    {
+      "files": [
+        "packages/opencode/src/kilocode/tool/agent-manager.ts",
+        "packages/opencode/src/kilocode/tool/notebook-host.ts"
+      ],
+      "fingerprint": "a1b1dcac57a91162",
+      "maxMatches": 1,
+      "maxTokens": 110,
+      "kind": "legacy",
+      "owner": "opencode",
+      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
+    }
+  ]
+}

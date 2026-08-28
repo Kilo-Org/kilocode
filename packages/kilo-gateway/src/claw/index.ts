@@ -1,8 +1,10 @@
+export { KiloChatApiError, KiloChatClient } from "./kilo-chat-client.js"
+export type { KiloChatClientConfig } from "./kilo-chat-client.js"
 export type {
   ActionDeliveryFailedEvent,
   ActionExecutedEvent,
-  ActionItem,
   ActionsBlock,
+  ActionItem,
   BotStatusEvent,
   BotStatusRecord,
   ChatToken,
@@ -10,8 +12,10 @@ export type {
   ContentBlock,
   ConversationActivityEvent,
   ConversationCreatedEvent,
+  ConversationDetail,
   ConversationLeftEvent,
   ConversationListItem,
+  ConversationMember,
   ConversationReadEvent,
   ConversationRenamedEvent,
   ConversationStatusEvent,
@@ -32,12 +36,4 @@ export type {
   TypingEvent,
   TypingMember,
   TypingStopEvent,
-} from "@kilocode/kilo-gateway/claw"
-
-export type ChatMessage = {
-  id: string
-  text: string
-  user: string
-  created: Date
-  bot: boolean
-}
+} from "./types.js"

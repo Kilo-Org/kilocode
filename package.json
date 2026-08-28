@@ -11,6 +11,7 @@
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "lint": "oxlint",
     "check:architecture": "bun run script/check-architecture.ts",
+    "check:duplication": "bun run script/check-kilocode-duplication.ts",
     "typecheck": "bun turbo typecheck",
     "upgrade-opentui": "bun run script/upgrade-opentui.ts",
     "postinstall": "bun run --cwd packages/core fix-node-pty && bun run script/setup-git.ts",
