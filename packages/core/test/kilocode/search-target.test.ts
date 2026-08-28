@@ -72,6 +72,9 @@ describe("search target confinement", () => {
         const results = yield* Effect.all([Fiber.join(first), Fiber.join(second)])
         expect(calls).toBe(1)
         expect(results.map((items) => String(items[0].path))).toEqual(["scan-1.ts", "scan-1.ts"])
+        const replaced = { ...target, ino: target.ino === 0 ? 1 : 0 }
+        expect(Exit.isFailure(yield* list(replaced).pipe(Effect.scoped, Effect.exit))).toBe(true)
+        expect(calls).toBe(1)
         yield* Scope.close(one, Exit.void)
         yield* Scope.close(two, Exit.void)
         const fresh = yield* list(target).pipe(Effect.scoped)
@@ -105,37 +108,6 @@ describe("search target confinement", () => {
         yield* Deferred.await(started)
         yield* Fiber.interrupt(pending)
         yield* Deferred.await(stopped).pipe(Effect.timeout("5 seconds"))
-      }),
-    ),
-  )
-
-  it.live("does not start a second listing for a replaced directory while one is active", () =>
-    withTmp((tmp) =>
-      Effect.gen(function* () {
-        const fsys = yield* FSUtil.Service
-        const ripgrep = yield* Ripgrep.Service
-        const target = yield* SearchTarget.inspect(fsys, tmp)
-        let calls = 0
-        const list = yield* SearchTarget.listing(
-          fsys,
-          {
-            ...ripgrep,
-            find: () =>
-              Effect.sync(() => {
-                calls++
-                return []
-              }),
-          },
-          100_000,
-        )
-        const scope = yield* Scope.make()
-        yield* Scope.provide(scope)(list(target))
-        const replaced = { ...target, ino: target.ino === 0 ? 1 : 0 }
-        expect(replaced.ino).not.toBe(target.ino)
-        const changed = yield* list(replaced).pipe(Effect.scoped, Effect.exit)
-        expect(Exit.isFailure(changed)).toBe(true)
-        expect(calls).toBe(1)
-        yield* Scope.close(scope, Exit.void)
       }),
     ),
   )

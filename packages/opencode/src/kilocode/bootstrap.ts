@@ -19,11 +19,8 @@ import { MemoryEvents } from "@/kilocode/memory/events"
 import { installMemoryRuntime } from "@/kilocode/memory/runtime"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { Location } from "@opencode-ai/core/location"
-import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
-import { AbsolutePath } from "@opencode-ai/core/schema"
-import { registerDisposer } from "@/effect/instance-registry"
-import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { KilocodeWatcher } from "@/kilocode/watcher"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 const log = Log.create({ service: "kilocode-bootstrap" })
 
@@ -45,21 +42,10 @@ export namespace KilocodeBootstrap {
       const summary = yield* SessionSummary.Service
       const provider = yield* Provider.Service
       const memory = yield* MemoryService.Service
-      const locations = yield* LocationServiceMap.Service
-      const off = registerDisposer((directory) =>
-        Effect.runPromise(
-          locations
-            .invalidate(Location.Ref.make({ directory: AbsolutePath.make(directory) }))
-            .pipe(
-              Effect.catchCause((cause) =>
-                Effect.sync(() => log.warn("location cleanup failed", { directory, err: Cause.squash(cause) })),
-              ),
-            ),
-        ),
-      )
-      yield* Effect.addFinalizer(() => Effect.sync(off))
+      const watcher = yield* KilocodeWatcher.Service
 
       const init = Effect.fn("KilocodeBootstrap.init")(function* () {
+        yield* watcher.init()
         yield* kilo.init()
         yield* MemoryLifecycle.subscribe({ bus, sessions, summary, provider, memory })
         // Invalidate enabled cache on every memory state mutation (properties.directory holds the memory root).
@@ -108,17 +94,17 @@ export namespace KilocodeBootstrap {
       AppNodeBuilder.build(Provider.node),
       MemoryService.layer,
       Bus.defaultLayer,
-      locationServiceMapLayer,
+      KilocodeWatcher.defaultLayer,
     ]),
   )
 
   const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
-  const locations = LayerNode.make({ service: LocationServiceMap.Service, layer: locationServiceMapLayer, deps: [] })
+  const watcher = LayerNode.make({ service: KilocodeWatcher.Service, layer: KilocodeWatcher.defaultLayer, deps: [] })
   export const node = LayerNode.suspend(() =>
     LayerNode.make({
       service: Service,
       layer,
-      deps: [KiloSessions.node, Session.node, SessionSummary.node, Provider.node, memory, Bus.node, locations],
+      deps: [KiloSessions.node, Session.node, SessionSummary.node, Provider.node, memory, Bus.node, watcher],
     }),
   )
 }

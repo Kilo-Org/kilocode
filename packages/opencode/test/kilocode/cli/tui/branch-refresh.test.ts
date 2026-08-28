@@ -2,41 +2,31 @@ import { describe, expect, test } from "bun:test"
 import type { VcsInfo } from "@kilocode/sdk/v2"
 import { create } from "../../../../src/kilocode/cli/cmd/tui/branch-refresh"
 
-function setup(input: {
-  workspace?: string
-  directory: string
-  project: string
-  branch?: string
-  bootstrap?: boolean
-}) {
+function setup(workspace?: string) {
   const state = {
-    scope: { workspace: input.workspace, directory: input.directory, project: input.project },
-    vcs: input.bootstrap === false ? undefined : ({ branch: input.branch, default_branch: "main" } as VcsInfo),
+    scope: { workspace, directory: "/repo", project: "project" },
+    vcs: { branch: "main", default_branch: "main" } as VcsInfo | undefined,
   }
   const calls: Array<{ workspace?: string; directory?: string }> = []
-  const updates: VcsInfo[] = []
   const pending = Promise.withResolvers<{ data?: VcsInfo }>()
   const refresh = create({
     get: async (route) => {
       calls.push(route)
       return pending.promise
     },
-    apply: (data) => {
-      updates.push(data)
-      state.vcs = data
-    },
+    apply: (data) => (state.vcs = data),
     scope: () => state.scope,
     ready: () => state.vcs !== undefined,
   })
-  return { state, calls, updates, pending, refresh }
+  return { state, calls, pending, refresh }
 }
 
 describe("TUI branch refresh", () => {
   test("waits for bootstrap and then applies the complete VCS snapshot", async () => {
-    const value = setup({ directory: "/repo", project: "project", bootstrap: false })
+    const value = setup()
+    value.state.vcs = undefined
     await value.refresh.refresh()
     expect(value.calls).toEqual([])
-    expect(value.updates).toEqual([])
 
     value.state.vcs = { branch: "main", default_branch: "main" }
     const run = value.refresh.refresh()
@@ -45,64 +35,43 @@ describe("TUI branch refresh", () => {
     expect(value.state.vcs).toEqual({ branch: "feature", default_branch: "main" })
   })
 
-  test("routes workspace refreshes and preserves the default branch", async () => {
-    const value = setup({ workspace: "ws", directory: "/repo/ws", project: "project" })
-    const run = value.refresh.refresh()
-    expect(value.calls).toEqual([{ workspace: "ws" }])
-    value.pending.resolve({ data: { branch: "feature", default_branch: "main" } })
-    await run
-
-    expect(value.updates).toEqual([{ branch: "feature", default_branch: "main" }])
-  })
-
-  test("routes directory refreshes without a workspace", async () => {
-    const value = setup({ directory: "/repo", project: "project" })
-    const run = value.refresh.refresh()
-    expect(value.calls).toEqual([{ directory: "/repo" }])
-    value.pending.resolve({ data: { branch: "feature", default_branch: "main" } })
-    await run
-
-    expect(value.updates).toHaveLength(1)
-  })
-
-  test("updates default branch metadata even when the current branch is unchanged", async () => {
-    const value = setup({ directory: "/repo", project: "project", branch: "feature" })
-    const run = value.refresh.refresh()
-    value.pending.resolve({ data: { branch: "feature", default_branch: "develop" } })
-    await run
-
-    expect(value.state.vcs).toEqual({ branch: "feature", default_branch: "develop" })
-  })
+  test.each(["ws", undefined])(
+    "routes %s refreshes and updates metadata when the branch is unchanged",
+    async (workspace) => {
+      const value = setup(workspace)
+      const run = value.refresh.refresh()
+      expect(value.calls).toEqual([workspace ? { workspace } : { directory: "/repo" }])
+      value.pending.resolve({ data: { branch: "main", default_branch: "develop" } })
+      await run
+      expect(value.state.vcs).toEqual({ branch: "main", default_branch: "develop" })
+    },
+  )
 
   test("ignores responses after the scope changes", async () => {
-    const value = setup({ workspace: "ws-a", directory: "/repo/a", project: "project" })
+    const value = setup("ws-a")
     const run = value.refresh.refresh()
     value.state.scope = { workspace: "ws-b", directory: "/repo/b", project: "project" }
     value.pending.resolve({ data: { branch: "stale", default_branch: "main" } })
     await run
-
-    expect(value.updates).toEqual([])
+    expect(value.state.vcs).toEqual({ branch: "main", default_branch: "main" })
   })
 
   test("ignores responses after disposal", async () => {
-    const value = setup({ directory: "/repo", project: "project" })
+    const value = setup()
     const run = value.refresh.refresh()
     value.refresh.dispose()
     value.pending.resolve({ data: { branch: "stale", default_branch: "main" } })
     await run
     await value.refresh.refresh()
-
     expect(value.calls).toHaveLength(1)
-    expect(value.updates).toEqual([])
+    expect(value.state.vcs).toEqual({ branch: "main", default_branch: "main" })
   })
 
   test("keeps the current VCS snapshot when the response has no data", async () => {
-    const value = setup({ directory: "/repo", project: "project", branch: "main" })
+    const value = setup()
     const run = value.refresh.refresh()
     value.pending.resolve({})
     await run
-
     expect(value.state.vcs).toEqual({ branch: "main", default_branch: "main" })
-    expect(value.updates).toEqual([])
   })
 })
