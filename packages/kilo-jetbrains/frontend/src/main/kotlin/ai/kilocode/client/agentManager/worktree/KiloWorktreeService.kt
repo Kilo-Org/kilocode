@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
@@ -84,6 +85,13 @@ class KiloWorktreeService internal constructor(
     } catch (e: Exception) {
         LOG.warn("worktree stats failed for $directory", e)
         WorktreeStatsListDto()
+    }
+
+    suspend fun dirty(directory: String): WorktreeDirtyListDto = try {
+        call { dirty(directory) }
+    } catch (e: Exception) {
+        LOG.warn("worktree dirty failed for $directory", e)
+        WorktreeDirtyListDto()
     }
 
     /**

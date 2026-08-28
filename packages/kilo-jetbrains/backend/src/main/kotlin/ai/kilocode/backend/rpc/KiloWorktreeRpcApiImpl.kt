@@ -14,6 +14,8 @@ import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -68,6 +70,18 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         private const val GH_PROBE_TTL = 300_000L
         private const val GH_STATUS_TTL = 3_000L
         private const val PR_TTL = 90_000L
+
+        /**
+         * Base-branch candidates in preference order, as (verify ref, diff ref). Fully-qualified on
+         * the left so a tag named "main" cannot be mistaken for the branch. Mirrors
+         * `KiloWorkspaceRpcApiImpl.defaultBranch`, which the branch-diff editor already uses.
+         */
+        private val BASE_CANDIDATES = listOf(
+            "refs/remotes/origin/main" to "origin/main",
+            "refs/remotes/origin/master" to "origin/master",
+            "refs/heads/main" to "main",
+            "refs/heads/master" to "master",
+        )
     }
 
     private val bases = ConcurrentHashMap<String, Timed<String>>()
@@ -155,6 +169,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val items = sync(root) ?: return@withContext WorktreeStatsListDto()
         val fallback = baseBranch(items) ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
+    }
+
+    override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
+        val root = Path.of(directory).normalize()
+        val items = sync(root) ?: return@withContext WorktreeDirtyListDto()
+        WorktreeDirtyListDto(parallel(items.filter { !it.main }) { item -> dirty(item) })
     }
 
     /**
@@ -626,27 +646,32 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         items.map { item -> async { sem.withPermit { block(item) } } }.map { it.await() }
     }
 
+    /**
+     * Committed changes this worktree introduces relative to the base branch, i.e. what GitHub shows
+     * under "Files changed" for a pull request. The trailing `HEAD` on the diff is load-bearing:
+     * without it git diffs the working tree and mixes uncommitted edits into the PR number. Untracked
+     * files are excluded for the same reason — they are not in a PR. Both live in [dirty] instead.
+     *
+     * Rename detection is left on (no `--no-renames`) so a pure file move counts 0/0 like GitHub
+     * does. `parseNumstat` only consumes the two count columns, so the `{old => new}` path form in
+     * rename output is harmless here.
+     */
     private fun stats(item: WorktreeDto, fallback: String): WorktreeStatsDto {
         val dir = Path.of(item.path).normalize()
         return runCatching {
             val base = base(item, fallback)
             val anc = runGit(dir, "merge-base", "HEAD", base).stdout.trim().takeIf { it.isNotBlank() } ?: base
-            val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc)
+            val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", anc, "HEAD")
             val tracked = if (diff.ok) parseNumstat(diff.stdout) else emptyList()
-            val untrackedFiles = runGit(dir, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
-                .stdout
-                .lineSequence()
-                .filter { it.isNotBlank() }
-                .toList()
-            val untracked = untrackedFiles.sumOf { countUntracked(dir, it) }
             val counts = aheadBehind(dir, base)
             WorktreeStatsDto(
                 item.path,
-                tracked.sumOf { it.additions } + untracked,
+                tracked.sumOf { it.additions },
                 tracked.sumOf { it.deletions },
                 counts.second,
                 counts.first,
-                files = tracked.size + untrackedFiles.size,
+                files = tracked.size,
+                base = base,
             )
         }.getOrElse { err ->
             LOG.warn("worktree stats failed: path=${item.path} message=${err.message}", err)
@@ -654,14 +679,64 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         }
     }
 
+    /**
+     * Diff/commit baseline for a worktree: the branch a pull request would target. Prefers the
+     * remote's declared default (origin HEAD), then the common origin and local main/master names,
+     * then [fallback] (the branch checked out in the main working tree) for repos that have none of
+     * those.
+     *
+     * Never the worktree's own `@{upstream}`: once a branch is pushed, its upstream contains every
+     * commit, so the merge-base is HEAD and the diff reports zero changes.
+     */
     private fun base(item: WorktreeDto, fallback: String): String {
         val now = System.currentTimeMillis()
         bases[item.path]?.takeIf { now - it.time < BASE_TTL }?.let { return it.value }
         val dir = Path.of(item.path).normalize()
-        val upstream = runGit(dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
-        val value = upstream.stdout.trim().takeIf { upstream.ok && it.isNotBlank() } ?: fallback
+        val value = defaultBase(dir) ?: fallback
         bases[item.path] = Timed(now, value)
         return value
+    }
+
+    private fun defaultBase(dir: Path): String? {
+        val head = runGit(dir, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
+        head.stdout.trim().removePrefix("refs/remotes/").takeIf { head.ok && it.isNotBlank() }?.let { return it }
+        return BASE_CANDIDATES.firstOrNull { runGit(dir, "rev-parse", "--verify", "--quiet", it.first).ok }?.second
+    }
+
+    /**
+     * Everything not yet committed in [item]: `diff --numstat HEAD` covers the index and the working
+     * tree in one call, then untracked files are line-counted the same way [stats] used to. An unborn
+     * branch makes the diff exit non-zero; untracked files are still reported.
+     */
+    private fun dirty(item: WorktreeDto): WorktreeDirtyDto {
+        val dir = Path.of(item.path).normalize()
+        return runCatching {
+            val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", "HEAD")
+            val tracked = if (diff.ok) parseNumstat(diff.stdout) else emptyList()
+            val others = runGit(dir, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
+                .stdout
+                .lineSequence()
+                .filter { it.isNotBlank() }
+                .toList()
+            WorktreeDirtyDto(
+                item.path,
+                additions = tracked.sumOf { it.additions } + others.sumOf { countUntracked(dir, it) },
+                deletions = tracked.sumOf { it.deletions },
+                files = tracked.size + others.size,
+                untracked = others.size,
+                unpushed = unpushed(dir),
+            )
+        }.getOrElse { err ->
+            LOG.warn("worktree dirty failed: path=${item.path} message=${err.message}", err)
+            WorktreeDirtyDto(item.path)
+        }
+    }
+
+    /** Commits on HEAD that the branch's upstream does not have. 0 when there is no upstream. */
+    private fun unpushed(dir: Path): Int {
+        val out = runGit(dir, "rev-list", "--count", "@{upstream}..HEAD")
+        if (!out.ok) return 0
+        return out.stdout.trim().toIntOrNull() ?: 0
     }
 
     private fun aheadBehind(dir: Path, base: String): Pair<Int, Int> {

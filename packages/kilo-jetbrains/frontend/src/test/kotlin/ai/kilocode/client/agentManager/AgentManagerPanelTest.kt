@@ -38,6 +38,8 @@ import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
@@ -642,6 +644,48 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(2, metrics.deletions)
         assertEquals(1, metrics.ahead)
         assertEquals(3, metrics.behind)
+    }
+
+    fun `test worktree row shows metrics for stats-only dirty-only and both`() {
+        val statsOnly = worktree("stats-only")
+        val dirtyOnly = worktree("dirty-only")
+        val both = worktree("both")
+        rpc.listed += statsOnly
+        rpc.listed += dirtyOnly
+        rpc.listed += both
+        rpc.statsResult = WorktreeStatsListDto(
+            listOf(
+                WorktreeStatsDto(statsOnly.path, additions = 5, deletions = 1),
+                WorktreeStatsDto(both.path, additions = 3, deletions = 0),
+            ),
+        )
+        rpc.dirtyResult = WorktreeDirtyListDto(
+            listOf(
+                WorktreeDirtyDto(dirtyOnly.path, additions = 2, files = 1),
+                WorktreeDirtyDto(both.path, additions = 4, files = 2),
+            ),
+        )
+        val timers = TestUiTimers()
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        waitUntil { row(panel, 0).metrics != null && row(panel, 1).metrics != null && row(panel, 2).metrics != null }
+
+        val statsOnlyMetrics = row(panel, 0).metrics ?: error("expected metrics for stats-only row")
+        assertEquals(5, statsOnlyMetrics.additions)
+        assertEquals(0, statsOnlyMetrics.dirtyFiles)
+
+        val dirtyOnlyMetrics = row(panel, 1).metrics ?: error("expected metrics for dirty-only row")
+        assertEquals(0, dirtyOnlyMetrics.additions)
+        assertEquals(2, dirtyOnlyMetrics.dirtyAdditions)
+        assertEquals(1, dirtyOnlyMetrics.dirtyFiles)
+
+        val bothMetrics = row(panel, 2).metrics ?: error("expected metrics for both row")
+        assertEquals(3, bothMetrics.additions)
+        assertEquals(4, bothMetrics.dirtyAdditions)
+        assertEquals(2, bothMetrics.dirtyFiles)
     }
 
     fun `test open diff opens the branch diff editor`() {

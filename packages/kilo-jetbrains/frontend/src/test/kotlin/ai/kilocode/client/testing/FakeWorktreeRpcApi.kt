@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
@@ -26,6 +27,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val listed = CopyOnWriteArrayList<WorktreeDto>()
     val branchesList = CopyOnWriteArrayList<String>()
     var statsResult = WorktreeStatsListDto()
+    var dirtyResult = WorktreeDirtyListDto()
     var ghResult = GhAvailability.OK
     var prResult = WorktreePrListDto()
     var branchResult = BranchStatusDto()
@@ -88,6 +90,11 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     override suspend fun stats(directory: String): WorktreeStatsListDto {
         assertNotEdt("stats")
         return statsResult
+    }
+
+    override suspend fun dirty(directory: String): WorktreeDirtyListDto {
+        assertNotEdt("dirty")
+        return dirtyResult
     }
 
     override suspend fun ghStatus(directory: String): GhAvailability {

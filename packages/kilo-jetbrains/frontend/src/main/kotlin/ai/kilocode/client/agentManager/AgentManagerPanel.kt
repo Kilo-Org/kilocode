@@ -43,6 +43,7 @@ import ai.kilocode.client.ui.list.ActiveListWeight
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -121,6 +122,7 @@ class AgentManagerPanel(
         ),
     )
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
+    private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
 
     init {
@@ -402,6 +404,8 @@ class AgentManagerPanel(
                 stats = null,
                 // The main checkout can sit on a PR branch just like a worktree can.
                 pr = prs[normalizeWorktreePath(item.path)],
+                // Neither stats() nor dirty() compute the main checkout; both RPCs filter it out.
+                dirty = null,
                 current = true,
             )
         }
@@ -417,6 +421,7 @@ class AgentManagerPanel(
                     controller.kind(item.path),
                     stats[key],
                     pull,
+                    dirty[key],
                 )
             },
             ActiveListSelection.Preserve,
@@ -456,6 +461,7 @@ class AgentManagerPanel(
             this,
             onStats = { value -> stats = value; sync() },
             onPr = { value -> prs = value; sync() },
+            onDirty = { value -> dirty = value; sync() },
         )
     }
 
@@ -509,10 +515,10 @@ class AgentManagerPanel(
     }
 
     /**
-     * Inner (not data) class so [metrics] can bind each row's changes/PR handlers to the panel.
-     * Value equality is over the data fields only — the derived handlers are intentionally excluded
-     * so a stats/PR refresh that produced identical rows still skips the model rebuild in
-     * [ActiveListView].
+     * Inner (not data) class so [metrics] can bind each row's changes/dirty/PR handlers to the
+     * panel. Value equality is over the data fields only — the derived handlers are intentionally
+     * excluded so a stats/PR/dirty refresh that produced identical rows still skips the model
+     * rebuild in [ActiveListView].
      */
     private inner class WorktreeRow(
         val dto: WorktreeDto,
@@ -520,6 +526,7 @@ class AgentManagerPanel(
         val kind: SessionActivityKind?,
         val stats: WorktreeStatsDto?,
         val pr: WorktreePrDto?,
+        val dirty: WorktreeDirtyDto? = null,
         val current: Boolean = false,
     ) : ActiveListItem {
         override val key: String get() = dto.id
@@ -537,7 +544,8 @@ class AgentManagerPanel(
                 if (progress != null) return null
                 val s = stats
                 val p = pr
-                if (s == null && p == null) return null
+                val d = dirty
+                if (s == null && p == null && d == null) return null
                 return ActiveListMetrics(
                     additions = s?.additions ?: 0,
                     deletions = s?.deletions ?: 0,
@@ -547,6 +555,12 @@ class AgentManagerPanel(
                     prTooltip = p?.let { prTooltip(it, customName) },
                     onChanges = s?.let { { openBranchDiff(dto.path) } },
                     onPr = p?.url?.let { url -> { BrowserUtil.browse(url) } },
+                    dirtyAdditions = d?.additions ?: 0,
+                    dirtyDeletions = d?.deletions ?: 0,
+                    dirtyFiles = d?.files ?: 0,
+                    // Reuses the branch diff editor for now, which already diffs the working tree
+                    // against the merge-base, so it contains the uncommitted work this badge reports.
+                    onDirty = d?.let { { openBranchDiff(dto.path) } },
                 )
             }
 
@@ -557,6 +571,7 @@ class AgentManagerPanel(
                 kind == row.kind &&
                 stats == row.stats &&
                 pr == row.pr &&
+                dirty == row.dirty &&
                 current == row.current
         }
 
@@ -566,6 +581,7 @@ class AgentManagerPanel(
             result = 31 * result + (kind?.hashCode() ?: 0)
             result = 31 * result + (stats?.hashCode() ?: 0)
             result = 31 * result + (pr?.hashCode() ?: 0)
+            result = 31 * result + (dirty?.hashCode() ?: 0)
             result = 31 * result + current.hashCode()
             return result
         }

@@ -238,8 +238,15 @@ internal class ActiveListRenderer(
         }
         desc.foreground = weak
         val data = if (value.progress != null) null else value.metrics
-        metrics.update(data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) }, data?.pr, data?.prTooltip ?: data?.pr?.text)
-        metrics.setActions(data?.onChanges, data?.onPr)
+        metrics.update(
+            data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) },
+            data?.pr,
+            data?.prTooltip ?: data?.pr?.text,
+            data?.dirtyAdditions ?: 0,
+            data?.dirtyDeletions ?: 0,
+            data?.dirtyFiles ?: 0,
+        )
+        metrics.setActions(data?.onChanges, data?.onPr, data?.onDirty)
         val end = value.progress ?: value.trailing.orEmpty()
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null

@@ -28,6 +28,12 @@ internal data class ActiveListMetrics(
     val onChanges: (() -> Unit)? = null,
     /** Click handler for the PR badge, e.g. open the pull request. Null leaves it inert. */
     val onPr: (() -> Unit)? = null,
+    /** Uncommitted counts, measured against HEAD rather than the base branch. */
+    val dirtyAdditions: Int = 0,
+    val dirtyDeletions: Int = 0,
+    val dirtyFiles: Int = 0,
+    /** Click handler for the uncommitted badge. Null leaves it inert. */
+    val onDirty: (() -> Unit)? = null,
 )
 
 internal enum class ActiveListRowHeight { EQUAL, PREFERRED }

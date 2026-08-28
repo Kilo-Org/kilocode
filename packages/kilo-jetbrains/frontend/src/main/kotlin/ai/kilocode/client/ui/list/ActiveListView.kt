@@ -590,6 +590,10 @@ internal class ActiveListView(
                 item.metrics?.onChanges?.invoke()
                 return
             }
+            ACTIVE_LIST_DIRTY_CELL -> {
+                item.metrics?.onDirty?.invoke()
+                return
+            }
             ACTIVE_LIST_PR_CELL -> {
                 item.metrics?.onPr?.invoke()
                 return

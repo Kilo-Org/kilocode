@@ -16,6 +16,7 @@ internal const val ACTIVE_LIST_MENU_CELL = "__menu__"
 /** Ids for the trailing metrics badges hit-tested in place (see [ActiveListMetrics]). */
 internal const val ACTIVE_LIST_CHANGES_CELL = "__changes__"
 internal const val ACTIVE_LIST_PR_CELL = "__pr__"
+internal const val ACTIVE_LIST_DIRTY_CELL = "__dirty__"
 
 internal fun activeListRenameCell(label: String = KiloBundle.message("common.rename")) = ActiveListCell(
     ACTIVE_LIST_RENAME_CELL,

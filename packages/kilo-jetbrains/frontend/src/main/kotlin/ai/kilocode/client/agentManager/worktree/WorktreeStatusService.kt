@@ -5,6 +5,7 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.openapi.components.Service
@@ -32,6 +33,7 @@ class WorktreeStatusService internal constructor(
     }
 
     private val statsFlow = MutableStateFlow<Map<String, WorktreeStatsDto>>(emptyMap())
+    private val dirtyFlow = MutableStateFlow<Map<String, WorktreeDirtyDto>>(emptyMap())
     private val prFlow = MutableStateFlow<Map<String, WorktreePrDto>>(emptyMap())
     private val ghFlow = MutableStateFlow(GhAvailability.OK)
     private var debounce: UiTimer? = null
@@ -41,6 +43,7 @@ class WorktreeStatusService internal constructor(
     private var lastPr = 0L
 
     val stats: StateFlow<Map<String, WorktreeStatsDto>> get() = statsFlow
+    val dirty: StateFlow<Map<String, WorktreeDirtyDto>> get() = dirtyFlow
     val pr: StateFlow<Map<String, WorktreePrDto>> get() = prFlow
     val gh: StateFlow<GhAvailability> get() = ghFlow
 
@@ -55,7 +58,7 @@ class WorktreeStatusService internal constructor(
 
     fun refreshStats() {
         if (project.isDisposed || refs == 0) return
-        val timer = debounce ?: timers.timer(STATS_DEBOUNCE, repeats = false) { loadStats() }.also { debounce = it }
+        val timer = debounce ?: timers.timer(STATS_DEBOUNCE, repeats = false) { loadStats(); loadDirty() }.also { debounce = it }
         timer.restart()
     }
 
@@ -89,6 +92,15 @@ class WorktreeStatusService internal constructor(
             runCatching { service<KiloWorktreeService>().stats(dir) }
                 .onSuccess { dto -> statsFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) } }
                 .onFailure { err -> LOG.warn("worktree stats refresh failed dir=$dir", err) }
+        }
+    }
+
+    private fun loadDirty() {
+        val dir = project.basePath ?: return
+        cs.launch {
+            runCatching { service<KiloWorktreeService>().dirty(dir) }
+                .onSuccess { dto -> dirtyFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) } }
+                .onFailure { err -> LOG.warn("worktree dirty refresh failed dir=$dir", err) }
         }
     }
 

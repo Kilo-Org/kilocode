@@ -694,23 +694,110 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
-    fun `stats reports managed worktree diff and ahead counts`() = runBlocking {
+    fun `stats reports committed diff against the base branch`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
         val dir = Path.of(created.path)
         Files.writeString(dir.resolve("tracked.txt"), "one\n")
         git(dir, "add", "tracked.txt")
         git(dir, "commit", "-m", "feature")
+        // Working-tree noise a pull request would not contain.
         Files.writeString(dir.resolve("notes.txt"), "two\nthree\n")
 
         val item = api.stats(repo.toString()).items.single { it.path == created.path }
 
-        assertEquals(3, item.additions)
+        assertEquals(1, item.additions, "only the committed line belongs in the PR number")
         assertEquals(0, item.deletions)
+        assertEquals(1, item.files, "untracked notes.txt must not count")
         assertEquals(1, item.ahead)
         assertEquals(0, item.behind)
-        // tracked.txt (committed ahead of base) + notes.txt (untracked) = 2 changed files.
-        assertEquals(2, item.files)
+    }
+
+    @Test
+    fun `stats ignores the branch upstream and uses the base branch`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val dir = Path.of(created.path)
+        Files.writeString(dir.resolve("tracked.txt"), "one\n")
+        git(dir, "add", "tracked.txt")
+        git(dir, "commit", "-m", "feature")
+        // Emulate a fully pushed branch: an upstream that already contains the commit.
+        git(repo, "branch", "shadow", "feature/x")
+        git(dir, "branch", "--set-upstream-to=shadow", "feature/x")
+
+        val item = api.stats(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(1, item.additions, "an in-sync upstream must not zero out the diff")
+        assertEquals(1, item.ahead)
+    }
+
+    @Test
+    fun `stats is unchanged by uncommitted edits`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val dir = Path.of(created.path)
+        Files.writeString(dir.resolve("tracked.txt"), "one\n")
+        git(dir, "add", "tracked.txt")
+        git(dir, "commit", "-m", "feature")
+        val before = api.stats(repo.toString()).items.single { it.path == created.path }
+
+        Files.writeString(dir.resolve("tracked.txt"), "one\ntwo\n")
+        Files.writeString(dir.resolve("untracked.txt"), "three\n")
+
+        val after = api.stats(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(before.additions, after.additions)
+        assertEquals(before.files, after.files)
+    }
+
+    @Test
+    fun `dirty reports staged unstaged and untracked changes`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val dir = Path.of(created.path)
+        Files.writeString(dir.resolve("tracked.txt"), "one\n")
+        git(dir, "add", "tracked.txt")
+        git(dir, "commit", "-m", "feature")
+        // Staged edit, unstaged edit, and an untracked file.
+        Files.writeString(dir.resolve("staged.txt"), "s\n")
+        git(dir, "add", "staged.txt")
+        Files.writeString(dir.resolve("tracked.txt"), "one\ntwo\n")
+        Files.writeString(dir.resolve("untracked.txt"), "u\n")
+
+        val item = api.dirty(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(3, item.additions, "staged + unstaged + untracked lines")
+        assertEquals(0, item.deletions)
+        assertEquals(3, item.files)
+        assertEquals(1, item.untracked)
+    }
+
+    @Test
+    fun `dirty reports zero for a clean worktree`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+
+        val item = api.dirty(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(0, item.files)
+        assertEquals(0, item.unpushed, "no upstream means no unpushed count")
+    }
+
+    @Test
+    fun `dirty counts commits missing from the upstream`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val dir = Path.of(created.path)
+        git(repo, "branch", "shadow", "feature/x")
+        git(dir, "branch", "--set-upstream-to=shadow", "feature/x")
+        Files.writeString(dir.resolve("tracked.txt"), "one\n")
+        git(dir, "add", "tracked.txt")
+        git(dir, "commit", "-m", "feature")
+
+        val item = api.dirty(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(1, item.unpushed)
+        assertEquals(0, item.files, "committed work is not uncommitted")
     }
 
     @Test
