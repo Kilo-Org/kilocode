@@ -216,7 +216,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     comments: () => props.remoteComments,
     loading: () => props.loadingFiles,
     diffs: () => rows(),
-    active: () => props.active !== false,
+    active: () => true,
     activeTerminalId: () => props.activeTerminalId,
     onSendClick: props.onSendClick,
     onOpenFile: props.onOpenFile,
