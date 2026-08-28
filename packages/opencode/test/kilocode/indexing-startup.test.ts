@@ -8,6 +8,8 @@ import { normalizeIndexingStatus } from "@kilocode/kilo-indexing/status"
 import type { Config } from "../../src/config/config"
 import { GlobalBus } from "../../src/bus/global"
 import { WorkspaceV2 } from "@opencode-ai/core/workspace"
+import { Global } from "@opencode-ai/core/global"
+import { message } from "@opencode-ai/core/kilocode/fff"
 import { WorkspaceContext } from "../../src/control-plane/workspace-context"
 import { KiloIndexing, IndexingModelError } from "../../src/kilocode/indexing"
 import { indexingWarningKey } from "../../src/kilocode/indexing-warning"
@@ -533,35 +535,37 @@ describe("indexing startup degradation", () => {
     })
   })
 
-  test("does not allocate an indexing worker for a filesystem root", async () => {
+  test("warns for home/root workspaces and aliases without allocating an indexing worker", async () => {
     const created: string[] = []
-    IndexingWorker.override((directory, root, hooks) => {
+    IndexingWorker.override((directory) => {
       created.push(directory)
-      return inline(directory, root, hooks)
+      throw new Error("unsafe workspaces must not allocate an indexing worker")
     })
 
-    const root = path.parse(process.cwd()).root
     await using tmp = await tmpdir()
-    const link = process.platform === "win32" ? undefined : path.join(tmp.path, "root")
-    if (link) await fs.symlink(root, link)
-
-    for (const directory of [root, link].filter((item): item is string => item !== undefined)) {
-      await provideTestInstance({
-        directory,
-        fn: async () => {
-          const status = await KiloIndexing.current()
-
-          expect(status).toMatchObject({
-            state: "Disabled",
-            message: "Codebase indexing is disabled for filesystem roots.",
-          })
-          expect(await KiloIndexing.available()).toBe(false)
-          expect(KiloIndexing.ready()).toBe(false)
-          expect(await KiloIndexing.search("filesystem root")).toEqual([])
-          expect(created).toEqual([])
-        },
-      })
+    const app = Server.Default().app
+    for (const target of [path.parse(process.cwd()).root, Global.Path.home]) {
+      const link = path.join(tmp.path, target === Global.Path.home ? "home" : "root")
+      await fs.symlink(target, link, process.platform === "win32" ? "junction" : "dir")
+      for (const directory of [target, link]) {
+        await provideTestInstance({
+          directory,
+          fn: async () => {
+            expect(await KiloIndexing.current()).toMatchObject({ state: "Disabled", message })
+            expect(await KiloIndexing.available()).toBe(false)
+            expect(KiloIndexing.ready()).toBe(false)
+            expect(await KiloIndexing.search("filesystem root")).toEqual([])
+            const warnings = await app.request("/config/warnings", { headers: { "x-kilo-directory": directory } })
+            expect(warnings.status).toBe(200)
+            expect(await warnings.json()).toContainEqual(expect.objectContaining({ message }))
+            expect(created).toEqual([])
+          },
+        })
+      }
     }
+    const warnings = await app.request("/config/warnings", { headers: { "x-kilo-directory": tmp.path } })
+    expect(warnings.status).toBe(200)
+    expect(await warnings.json()).not.toContainEqual(expect.objectContaining({ message }))
   })
 
   test.each([false, true])("handles removed directories with no-workspace flag %s", async (disabled) => {

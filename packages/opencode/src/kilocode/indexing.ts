@@ -8,7 +8,7 @@ import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { IndexingStatus, disabledIndexingStatus } from "@kilocode/kilo-indexing/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
-import { allowed } from "@opencode-ai/core/kilocode/fff"
+import { allowed, message } from "@opencode-ai/core/kilocode/fff"
 import { Instance } from "@/kilocode/instance"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
@@ -34,7 +34,7 @@ const consent = new Map<string, boolean>()
 const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for this workspace.")
 const noWorkspace = () =>
   disabledIndexingStatus("Codebase indexing is disabled because no workspace folder is open in VS Code.")
-const unsafeRoot = () => disabledIndexingStatus("Codebase indexing is disabled for filesystem roots.")
+const unsafeRoot = () => disabledIndexingStatus(message)
 const noConsent = () =>
   disabledIndexingStatus("Codebase indexing is disabled until you enable it for this project in Kilo Settings.")
 

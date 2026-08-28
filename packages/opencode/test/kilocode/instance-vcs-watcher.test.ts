@@ -1,5 +1,4 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
-import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ConfigProvider, Context, Deferred, Effect, Fiber, Layer, LayerMap } from "effect"
@@ -8,13 +7,11 @@ import { GlobalBus, type GlobalEvent } from "../../src/bus/global"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { disposeInstance } from "../../src/effect/instance-registry"
 import { Git } from "../../src/git"
-import { EventV2Bridge } from "../../src/event-v2-bridge"
-import { Vcs } from "../../src/project/vcs"
 import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { InstanceStore } from "../../src/project/instance-store"
 import { KilocodeWatcher } from "../../src/kilocode/watcher"
 import type { InstanceContext } from "../../src/project/instance-context"
-import { TestInstance, tmpdirScoped } from "../fixture/fixture"
+import { tmpdirScoped } from "../fixture/fixture"
 import { awaitWithTimeout, testEffect } from "../lib/effect"
 import { Location } from "@opencode-ai/core/location"
 import { LocationServiceMap, type LocationServices } from "@opencode-ai/core/location-services"
@@ -28,9 +25,6 @@ const config = ConfigProvider.layerAdd(ConfigProvider.fromUnknown({ KILO_EXPERIM
   asPrimary: true,
 })
 const it = testEffect(layer.pipe(Layer.provideMerge(config)))
-const direct = testEffect(
-  LayerNode.compile(LayerNode.group([Vcs.node, Git.node, EventV2Bridge.node, CrossSpawnSpawner.node])),
-)
 
 // The watcher is unreliable on Windows CI, so this test only runs on unix.
 const live = process.platform === "win32" ? it.live.skip : it.live
@@ -97,43 +91,6 @@ live(
   20_000,
 )
 
-direct.instance(
-  "refreshes branch reads, events, and diffs without native watchers",
-  () =>
-    Effect.gen(function* () {
-      const test = yield* TestInstance
-      const vcs = yield* Vcs.Service
-      const events = yield* EventV2Bridge.Service
-      const git = Effect.fn(function* (args: string[]) {
-        const result = yield* Git.Service.use((git) => git.run(args, { cwd: test.directory }))
-        expect(result.exitCode).toBe(0)
-      })
-      yield* git(["branch", "-M", "main"])
-      expect(yield* vcs.branch()).toBe("main")
-
-      const updated = yield* Deferred.make<string | undefined>()
-      const off = yield* events.listen((event) => {
-        if (event.type === Vcs.Event.BranchUpdated.type)
-          Deferred.doneUnsafe(updated, Effect.succeed((event.data as typeof Vcs.Event.BranchUpdated.data.Type).branch))
-        return Effect.void
-      })
-      yield* Effect.addFinalizer(() => off)
-      yield* git(["switch", "-c", "feature"])
-      expect(yield* vcs.branch()).toBe("feature")
-      expect(yield* awaitWithTimeout(Deferred.await(updated), "timed out waiting for branch update")).toBe("feature")
-
-      yield* git(["switch", "main"])
-      expect(yield* vcs.branch()).toBe("main")
-      yield* git(["switch", "feature"])
-      yield* Effect.promise(() => Bun.write(`${test.directory}/branch.txt`, "branch\n"))
-      yield* git(["add", "branch.txt"])
-      yield* git(["commit", "--no-gpg-sign", "-m", "branch change"])
-      const diff = yield* vcs.diff("branch")
-      expect(diff.find((item) => item.file === "branch.txt")).toMatchObject({ status: "added" })
-    }),
-  { git: true },
-)
-
 test.serial(
   "isolates location lifetimes between instances",
   async () => {
@@ -166,12 +123,6 @@ test.serial(
             } as InstanceContext),
           )
 
-        yield* init(one).pipe(
-          Effect.provide(
-            ConfigProvider.layer(ConfigProvider.fromUnknown({ KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" })),
-          ),
-        )
-        expect(warmed.size).toBe(0)
         yield* init(one)
         yield* init(one)
         yield* init(two)
@@ -188,7 +139,7 @@ test.serial(
         expect(invalidated).toEqual([one, two])
       }).pipe(
         Effect.scoped,
-        Effect.provide(Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), TestConsole.layer, config)),
+        Effect.provide(Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), TestConsole.layer)),
       ),
     )
   },

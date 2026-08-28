@@ -13,7 +13,7 @@ import { RelativePath } from "../schema"
 import { Flag } from "../flag/flag"
 // kilocode_change start
 import * as SearchTarget from "../kilocode/search-target"
-import { allowed } from "../kilocode/fff"
+import { allowed, message } from "../kilocode/fff"
 // kilocode_change end
 
 export interface Interface {
@@ -30,6 +30,7 @@ export const ripgrepLayer = Layer.effect(
     const fs = yield* FSUtil.Service
     const location = yield* Location.Service
     const ripgrep = yield* Ripgrep.Service
+    const scope = yield* Scope.Scope
     // kilocode_change start - confine every search to the canonical active Location.
     const inspect = Effect.fnUntraced(function* (input?: string) {
       const root = yield* SearchTarget.inspect(fs, location.directory).pipe(Effect.orDie)
@@ -39,15 +40,38 @@ export const ripgrepLayer = Layer.effect(
       const target = yield* SearchTarget.inspect(fs, requested).pipe(Effect.orDie)
       if (root.type !== "directory" || !FSUtil.contains(root.path, target.path))
         return yield* Effect.die(new Error("Path escapes the location"))
-      return { root, target }
+      return target
     })
-    const list = yield* SearchTarget.listing(fs, ripgrep, location.vcs ? Number.MAX_SAFE_INTEGER : 100_000)
+    // kilocode_change end
+    const state = {
+      files: [] as string[],
+      directories: [] as string[],
+    }
+    const directories = new Set<string>()
+    // kilocode_change start - never eagerly enumerate a filesystem root.
+    const real = yield* fs.realPath(location.directory).pipe(Effect.catch(() => Effect.succeed(undefined)))
+    if (real && allowed(real)) {
+      yield* ripgrep
+        .find({
+          cwd: real,
+          pattern: "*",
+          limit: location.vcs ? Number.MAX_SAFE_INTEGER : 100_000,
+          onEntry: (entry) =>
+            Effect.sync(() => {
+              state.files.push(entry.path)
+              const parts = entry.path.split("/")
+              parts.slice(0, -1).forEach((_, index) => directories.add(parts.slice(0, index + 1).join("/") + path.sep))
+              state.directories = Array.from(directories)
+            }),
+        })
+        .pipe(Effect.orDie, Effect.asVoid, Effect.forkIn(scope))
+    }
     // kilocode_change end
     return Service.of({
       glob: (input) =>
         Effect.gen(function* () {
           // kilocode_change start
-          const { root, target } = yield* inspect(input.path)
+          const target = yield* inspect(input.path)
           const cwd = target.type === "file" ? path.dirname(target.path) : target.path
           // kilocode_change end
           return yield* ripgrep
@@ -64,7 +88,7 @@ export const ripgrepLayer = Layer.effect(
                   (entry) =>
                     FileSystem.Entry.make({
                       ...entry,
-                      path: RelativePath.make(path.relative(root.path, path.resolve(cwd, entry.path))), // kilocode_change
+                      path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, entry.path))),
                     }),
                 ),
               ),
@@ -74,7 +98,7 @@ export const ripgrepLayer = Layer.effect(
       grep: (input) =>
         Effect.gen(function* () {
           // kilocode_change start
-          const { root, target } = yield* inspect(input.path)
+          const target = yield* inspect(input.path)
           const cwd = target.type === "file" ? path.dirname(target.path) : target.path
           // kilocode_change end
           return yield* ripgrep
@@ -95,7 +119,7 @@ export const ripgrepLayer = Layer.effect(
                       ...match,
                       entry: FileSystem.Entry.make({
                         ...match.entry,
-                        path: RelativePath.make(path.relative(root.path, path.resolve(cwd, match.entry.path))), // kilocode_change
+                        path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, match.entry.path))),
                       }),
                     }),
                 ),
@@ -105,22 +129,13 @@ export const ripgrepLayer = Layer.effect(
         }),
       find: (input) =>
         Effect.gen(function* () {
-          // kilocode_change start
-          const { target } = yield* inspect()
-          if (!allowed(target.path)) return []
-          const found = yield* list(target)
-          const files = found.map((entry) => entry.path)
-          const directories = new Set<string>()
-          if (input.type !== "file") {
-            for (const file of files) {
-              const parts = file.split("/")
-              parts.slice(0, -1).forEach((_, index) => directories.add(parts.slice(0, index + 1).join("/") + path.sep))
-            }
-          }
           const items =
-            input.type === "file" ? files : input.type === "directory" ? [...directories] : [...files, ...directories]
-          return fuzzysort.go(input.query.trim(), items, { all: true, limit: input.limit ?? 50 }).map((item) => {
-            // kilocode_change end
+            input.type === "file"
+              ? state.files
+              : input.type === "directory"
+                ? state.directories
+                : [...state.files, ...state.directories]
+          return fuzzysort.go(input.query, items, { limit: input.limit ?? 50 }).map((item) => {
             const relative = item.target
             const type = relative.endsWith(path.sep) ? ("directory" as const) : ("file" as const)
             return FileSystem.Entry.make({
@@ -128,7 +143,7 @@ export const ripgrepLayer = Layer.effect(
               type,
             })
           })
-        }).pipe(Effect.scoped), // kilocode_change
+        }),
     })
   }),
 )
@@ -167,7 +182,7 @@ export const fffLayer = Layer.effect(
     const make = Effect.uninterruptible(
       Effect.gen(function* () {
         const real = yield* fs.realPath(location.directory).pipe(Effect.orDie)
-        if (!allowed(real)) return yield* Effect.die(new Error("FFF indexing is disabled for filesystem roots."))
+        if (!allowed(real)) return yield* Effect.die(new Error(message))
         const result = yield* Effect.try({
           try: () =>
             Fff.create({
@@ -327,7 +342,7 @@ const layer = Layer.unwrap(
     const location = yield* Location.Service
     const fs = yield* FSUtil.Service
     const real = yield* fs.realPath(location.directory).pipe(Effect.catch(() => Effect.succeed(undefined)))
-    return real !== undefined && allowed(real) ? fffLayer : ripgrepLayer
+    return real && allowed(real) ? fffLayer : ripgrepLayer
   }),
 )
 // kilocode_change end

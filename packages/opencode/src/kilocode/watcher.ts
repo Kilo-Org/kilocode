@@ -57,8 +57,6 @@ export namespace KilocodeWatcher {
 
       return Service.of({
         init: Effect.fn("KilocodeWatcher.init")(function* () {
-          if (!eager() || (yield* Flag.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER.pipe(Effect.orElseSucceed(() => true))))
-            return
           const ctx = yield* InstanceState.context
           if (ctx.project.vcs !== "git" || active.has(ctx.directory)) return
 
@@ -79,5 +77,12 @@ export namespace KilocodeWatcher {
     }),
   )
 
-  export const defaultLayer = layer.pipe(Layer.provide(locationServiceMapLayer))
+  // Gate the whole layer so LocationServiceMap is only warmed for clients that consume branch-update events.
+  export const defaultLayer = Layer.unwrap(
+    Effect.gen(function* () {
+      if (!eager() || (yield* Flag.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER.pipe(Effect.orElseSucceed(() => false))))
+        return Layer.succeed(Service, Service.of({ init: () => Effect.void }))
+      return layer.pipe(Layer.provide(locationServiceMapLayer))
+    }),
+  )
 }

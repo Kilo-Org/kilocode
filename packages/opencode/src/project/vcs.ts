@@ -302,23 +302,15 @@ const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = 
     const events = yield* EventV2Bridge.Service
     const scope = yield* Scope.Scope
 
-    // kilocode_change start
-    const refresh = Effect.fnUntraced(function* (value: State, directory: string) {
-      const next = yield* git.branch(directory)
-      if (next !== value.current) {
-        value.current = next
-        yield* events.publish(Event.BranchUpdated, { branch: next })
-      }
-      return next
-    })
-    // kilocode_change end
-
     const state = yield* InstanceState.make<State>(
       Effect.fn("Vcs.state")(function* (ctx) {
         if (ctx.project.vcs !== "git") {
           return { current: undefined, root: undefined }
         }
 
+        const get = Effect.fnUntraced(function* () {
+          return yield* git.branch(ctx.directory)
+        })
         const [current, root] = yield* Effect.all([git.branch(ctx.directory), git.defaultBranch(ctx.directory)], {
           concurrency: 2,
         })
@@ -329,7 +321,13 @@ const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = 
             return Effect.void
           const data = event.data as EventV2.Data<typeof Watcher.Event.Updated>
           if (!data.file.endsWith("HEAD")) return Effect.void
-          return refresh(value, ctx.directory) // kilocode_change
+          return Effect.gen(function* () {
+            const next = yield* get()
+            if (next !== value.current) {
+              value.current = next
+              yield* events.publish(Event.BranchUpdated, { branch: next })
+            }
+          })
         })
         yield* Effect.addFinalizer(() => unsubscribe)
 
@@ -341,14 +339,9 @@ const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = 
       init: Effect.fn("Vcs.init")(function* () {
         yield* InstanceState.get(state).pipe(Effect.forkIn(scope))
       }),
-      // kilocode_change start
       branch: Effect.fn("Vcs.branch")(function* () {
-        const value = yield* InstanceState.get(state)
-        const ctx = yield* InstanceState.context
-        if (ctx.project.vcs !== "git") return
-        return yield* refresh(value, ctx.directory)
+        return yield* InstanceState.use(state, (x) => x.current)
       }),
-      // kilocode_change end
       defaultBranch: Effect.fn("Vcs.defaultBranch")(function* () {
         return yield* InstanceState.use(state, (x) => x.root?.name)
       }),
@@ -386,8 +379,7 @@ const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Service> = 
         }
 
         if (!value.root) return []
-        const current = yield* refresh(value, ctx.directory) // kilocode_change
-        if (current && current === value.root.name) return [] // kilocode_change
+        if (value.current && value.current === value.root.name) return []
         const ref = yield* git.mergeBase(ctx.directory, value.root.ref)
         if (!ref) return []
         return yield* diffAgainstRef(git, ctx.directory, ref, options)

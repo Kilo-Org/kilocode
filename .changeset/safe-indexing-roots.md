@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Use on-demand file search and disable background filesystem watchers by default while preserving explicit codebase indexing.
+Prevent automatic indexing of home directories and filesystem roots, and show a warning to open a project folder instead.

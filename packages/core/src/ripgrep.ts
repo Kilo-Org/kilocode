@@ -59,7 +59,6 @@ export interface FindInput {
   readonly follow?: boolean
   readonly signal?: AbortSignal
   readonly onEntry?: (entry: Entry) => Effect.Effect<void>
-  readonly validate?: Effect.Effect<void, unknown> // kilocode_change
 }
 
 export interface GlobInput {
@@ -229,7 +228,6 @@ const layer = Layer.effect(
           cwd: input.cwd,
           limit: input.limit,
           signal: input.signal,
-          validate: input.validate, // kilocode_change
           args: [
             "--no-config",
             "--files",
