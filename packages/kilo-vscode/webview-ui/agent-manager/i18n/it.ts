@@ -68,8 +68,6 @@ export const dict = {
   "agentManager.tab.terminal": "Terminale",
   "agentManager.tab.openTerminal": "Apri terminale",
   "agentManager.tab.newOptions": "Altre opzioni nuova scheda",
-  "agentManager.tabsMenu.status.waiting": "Attendi",
-  "agentManager.tabsMenu.status.retry": "Riprova",
   "agentManager.sidebarSearch.label": "Cerca Worktree e sessioni",
   "agentManager.sidebarSearch.scope":
     "Cerca nell'area di lavoro locale, nelle sessioni locali, nei Worktree e nelle relative sessioni",

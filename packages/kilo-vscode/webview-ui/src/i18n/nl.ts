@@ -175,6 +175,8 @@ export const dict = {
   "common.saving": "Bezig met opslaan...",
   "common.default": "Standaard",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Worktrees doorzoeken",
   "prompt.thinking.tooltip": "Redeneringsinspanning",
   "prompt.action.send": "Verzenden",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
@@ -1031,6 +1033,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
   "settings.context.compaction.title": "Compactie",
+  "settings.context.compactionModel.title": "Compactiemodel",
+  "settings.context.compactionModel.description":
+    "Model dat wordt gebruikt voor automatische en handmatige compactie. Laat dit leeg om het chatmodel te gebruiken. Kosten, snelheid en de kwaliteit van de samenvatting hangen af van het model.",
+  "settings.context.compactionModel.useChatModel": "Chatmodel gebruiken",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",

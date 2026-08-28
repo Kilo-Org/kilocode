@@ -1,12 +1,14 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Show, type Component, type JSX } from "solid-js"
+import { ActivityIcon } from "../shared/ActivityIcon"
+import type { Activity } from "../../utils/session-activity"
 
 export const SessionTab: Component<{
   title: string
   active: boolean
-  busy: boolean
+  state: Activity
+  stateLabel: string
   closeTitle: string
   closeLabel: string
   keybind?: string
@@ -21,7 +23,7 @@ export const SessionTab: Component<{
   onKeyDown?: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent>
   onClose: () => void
 }> = (props) => (
-  <div class={`am-tab ${props.active ? "am-tab-active" : ""}`}>
+  <div class={`am-tab ${props.active ? "am-tab-active" : ""}`} data-activity={props.state}>
     <div
       class="am-tab-target"
       role={props.role}
@@ -41,9 +43,9 @@ export const SessionTab: Component<{
         openDelay={0}
       >
         <span class="am-tab-title">
-          <Show when={props.busy}>
-            <span class="am-tab-icon">
-              <Spinner class="am-worktree-spinner" />
+          <Show when={props.state !== "idle"}>
+            <span class="am-tab-icon" data-activity={props.state} aria-label={props.stateLabel}>
+              <ActivityIcon state={props.state} />
             </span>
           </Show>
           <span class="am-tab-label">{props.title}</span>

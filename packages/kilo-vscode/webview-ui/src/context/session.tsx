@@ -9,6 +9,7 @@ import {
   useContext,
   createSignal,
   createMemo,
+  createComputed,
   createEffect,
   on,
   onMount,
@@ -62,6 +63,8 @@ import {
   buildCostBreakdown,
   buildSessionToolParts,
   childID,
+  ancestry,
+  inUse,
   dropSet,
   emptyPageState,
   messageParts,
@@ -79,7 +82,7 @@ import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { isolate, mergeOptimisticPart, mergeParts } from "./session-parts"
+import { isolate, mergeOptimisticPart, mergeOptimisticParts, mergeParts } from "./session-parts"
 import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { state as todoState } from "./todo-revert"
 import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
@@ -93,6 +96,7 @@ import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
 import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
+import { activities, type Activity } from "../utils/session-activity"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
@@ -112,6 +116,11 @@ interface SessionStore {
   favoriteModels: ModelSelection[]
   modelUsageHistory: ModelUsageMap
   modelUsage: Record<string, { requestID: string; data?: SessionModelUsage }>
+}
+
+interface CloseState {
+  reason: SessionCloseReason
+  parentID?: string
 }
 
 interface SessionContextValue {
@@ -153,6 +162,9 @@ interface SessionContextValue {
 
   // All session statuses keyed by sessionID (for DataBridge)
   allStatusMap: () => Record<string, SessionStatusInfo>
+
+  activityFor: (sessionID: string | undefined) => Activity
+  inUseFor: (sessionID: string) => boolean
 
   // Parts for a specific message
   getParts: (messageID: string) => Part[]
@@ -323,10 +335,11 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Per-session status map — keyed by sessionID
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
-  const [closeMap, setCloseMap] = createStore<Record<string, SessionCloseReason | undefined>>({})
+  const [closeMap, setCloseMap] = createStore<Record<string, CloseState | undefined>>({})
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
   const [submissionMap, setSubmissionMap] = createStore<Record<string, number>>({})
   const pendingSubmissions = new Map<string, string>()
+  const removedSessions = new Set<string>()
   const aborts = createAbortState()
 
   const idle: SessionStatusInfo = { type: "idle" }
@@ -339,7 +352,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const status = () => statusInfo().type as SessionStatus
   const closeReason = () => {
     const id = currentSessionID()
-    return id ? closeMap[id] : undefined
+    return id ? closeMap[id]?.reason : undefined
   }
   const clearClose = (id: string) =>
     setCloseMap(
@@ -990,6 +1003,15 @@ export const SessionProvider: ParentComponent = (props) => {
     if (message.sessionID) patchPage(message.sessionID, { loadingInitial: false, loadingOlder: false })
   }
 
+  function closed(message: Extract<ExtensionMessage, { type: "sessionTurnClosed" }>) {
+    if (message.reason === "completed" && closeMap[message.sessionID]?.reason === "error") return
+    setCloseMap(message.sessionID, { reason: message.reason, parentID: message.parentID })
+  }
+
+  function failed(id: string) {
+    setCloseMap(id, { reason: "error", parentID: store.sessions[id]?.parentID ?? undefined })
+  }
+
   function toggleFavorite(providerID: string, modelID: string) {
     const key = `${providerID}/${modelID}`
     const idx = store.favoriteModels.findIndex((f) => `${f.providerID}/${f.modelID}` === key)
@@ -1089,7 +1111,7 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionTurnClosed":
-        setCloseMap(message.sessionID, message.reason)
+        closed(message)
         break
 
       case "todoUpdated":
@@ -1137,6 +1159,7 @@ export const SessionProvider: ParentComponent = (props) => {
         if (!message.error || message.error.name === "MessageAbortedError") break
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
+        failed(sid)
         // Find the last user message in this session to use as parentID
         const msgs = store.messages[sid] ?? []
         const parent = [...msgs].reverse().find((m) => m.role === "user")
@@ -1226,6 +1249,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Event handlers
   function handleSessionCreated(session: SessionInfo, draftID?: string) {
+    removedSessions.delete(session.id)
     freshSessions.add(session.id)
     if (draftID) aborts.move(draftID, session.id)
     batch(() => {
@@ -1449,6 +1473,19 @@ export const SessionProvider: ParentComponent = (props) => {
       // proxy creation for each message object dominated the trace (~900ms).
       // "prepend" / "reconcile": reconcile to preserve existing proxies.
       if (mode === "replace") {
+        const keep = new Set(merged.map((message) => message.id))
+        const removed = current.filter((message) => !keep.has(message.id)).map((message) => message.id)
+        clearHiddenErrors(removed)
+        setStore(
+          "parts",
+          produce((parts) => {
+            for (const id of removed) {
+              stash.remove(id)
+              optimisticParts.delete(id)
+              delete parts[id]
+            }
+          }),
+        )
         setStore("messages", sessionID, merged)
       } else {
         setStore("messages", sessionID, reconcile(merged, { key: "id" }))
@@ -1465,13 +1502,18 @@ export const SessionProvider: ParentComponent = (props) => {
           continue
         }
         if (parts.length > 0) {
-          optimisticParts.delete(msg.id)
-          loadedParts[msg.id] = parts
+          const pending = optimisticParts.get(msg.id)
+          const next = pending
+            ? mergeOptimisticParts(store.parts[msg.id] ?? stash.peek(msg.id) ?? [], pending, parts)
+            : { parts, pending: undefined }
+          if (next.pending?.size) optimisticParts.set(msg.id, next.pending)
+          if (next.pending?.size === 0) optimisticParts.delete(msg.id)
+          loadedParts[msg.id] = next.parts
           if (i >= cutoff) {
-            setStore("parts", msg.id, parts)
+            setStore("parts", msg.id, next.parts)
             stash.remove(msg.id)
           } else {
-            stash.put(msg.id, parts)
+            stash.put(msg.id, next.parts)
           }
           continue
         }
@@ -1654,9 +1696,10 @@ export const SessionProvider: ParentComponent = (props) => {
     message?: string,
     next?: number,
   ) {
+    if (removedSessions.has(sessionID)) return
     const shouldAbort = aborts.update(sessionID, newStatus)
     confirmSubmissions(sessionID)
-    const prev = statusMap[sessionID] ?? { type: "idle" }
+    const prev = statusMap[sessionID]?.type ?? "idle"
     const info: SessionStatusInfo =
       newStatus === "retry"
         ? { type: "retry", attempt: attempt ?? 0, message: message ?? "", next: next ?? 0 }
@@ -1665,7 +1708,7 @@ export const SessionProvider: ParentComponent = (props) => {
           : { type: newStatus }
     setStatusMap(sessionID, info)
     // Track busy start time and discard the previous turn's terminal state.
-    if (prev.type === "idle" && newStatus !== "idle") {
+    if (prev === "idle" && newStatus !== "idle") {
       clearClose(sessionID)
       if (!busySinceMap[sessionID]) setBusySinceMap(sessionID, Date.now())
     }
@@ -1686,6 +1729,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
+    if (removedSessions.has(permission.sessionID)) return
     setPermissions((prev) => upsertPermission(prev, permission))
   }
 
@@ -1717,6 +1761,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleQuestionRequest(question: QuestionRequest) {
+    if (removedSessions.has(question.sessionID)) return
     setQuestions((prev) => {
       const idx = prev.findIndex((q) => q.id === question.id)
       if (idx === -1) return [...prev, question]
@@ -1740,6 +1785,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSuggestionRequest(suggestion: SuggestionRequest) {
+    if (removedSessions.has(suggestion.sessionID)) return
     setSuggestions((prev) => {
       const idx = prev.findIndex((item) => item.id === suggestion.id)
       if (idx === -1) return [...prev, suggestion]
@@ -1866,8 +1912,14 @@ export const SessionProvider: ParentComponent = (props) => {
     return ids
   }
 
+  const lineage = createMemo(() => ancestry(store.sessions, store.toolParts, closeMap))
+
   function sessionFamily(rootID: string): Set<string> {
-    return sessionIDs(rootID, (sid) => store.messages[sid] ?? [])
+    const ids = new Set([rootID])
+    for (const id of ids) {
+      for (const child of lineage().children.get(id) ?? []) ids.add(child)
+    }
+    return ids
   }
 
   function modelUsageRelated(sessionID: string, parentID?: string | null): boolean {
@@ -1908,6 +1960,27 @@ export const SessionProvider: ParentComponent = (props) => {
     const family = sessionFamily(sessionID)
     return suggestions().filter((item) => family.has(item.sessionID))
   }
+
+  const [activityMap, setActivityMap] = createStore<Record<string, Activity>>({})
+  createComputed(() => {
+    const connection = server.connectionState()
+    setActivityMap(
+      reconcile(
+        activities({
+          parents: lineage().parents,
+          statuses: statusMap,
+          outcomes: closeMap,
+          blocked: [...permissions(), ...questions().filter((item) => item.blocking !== false), ...suggestions()].map(
+            (item) => item.sessionID,
+          ),
+          submitting: Object.keys(submissionMap),
+          disconnected: connection !== "connected",
+        }),
+      ),
+    )
+  })
+  const activityFor = (id: string | undefined): Activity => (id ? (activityMap[id] ?? "idle") : "idle")
+  const inUseFor = (id: string) => inUse(sessionFamily(id), statusMap, [...permissions(), ...questions()])
 
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
     setStore("todos", sessionID, items)
@@ -1958,6 +2031,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function handleSessionDeleted(sessionID: string) {
+    removedSessions.add(sessionID)
     pendingOptimistic.delete(sessionID)
     freshSessions.delete(sessionID)
     aborts.clear(sessionID)
@@ -2723,7 +2797,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Keep off-screen history in the non-reactive stash, but track live parts so
   // newly streamed messages invalidate the transcript.
-  const getParts = (messageID: string) => stash.peek(messageID) ?? store.parts[messageID] ?? []
+  const getParts = (messageID: string) => stash.read(messageID, store.parts)
 
   const getSessionToolParts = (sessionID: string) => store.toolParts[sessionID] ?? []
 
@@ -2986,6 +3060,8 @@ export const SessionProvider: ParentComponent = (props) => {
     allMessages,
     allParts,
     allStatusMap,
+    activityFor,
+    inUseFor,
     recentModels: () => store.recentModels,
     modelUsageHistory: () => store.modelUsageHistory,
     favoriteModels: () => store.favoriteModels,

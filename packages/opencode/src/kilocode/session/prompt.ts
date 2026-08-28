@@ -225,6 +225,41 @@ export namespace KiloSessionPrompt {
     },
   )
 
+  /**
+   * Removes a failed assistant tail that produced nothing the user can see, so the next prompt does not
+   * append after an "An error occurred" shell. The error itself has already been surfaced to clients via
+   * `session.error` and the outcome card.
+   *
+   * Distinct from [recoverProviderFinishError], which handles a `finish === "error"` tail carrying no
+   * `info.error`. This one is the inverse: `info.error` is set.
+   *
+   * The parts guard is an allowlist of turn scaffolding on purpose. A turn that emitted text or
+   * reasoning, or ran a tool, keeps its message: that record is what explains file changes which are
+   * still applied on disk. Any part type not listed here blocks removal, so a new part type fails safe.
+   */
+  export const recoverFailedAssistant = Effect.fn("KiloSessionPrompt.recoverFailedAssistant")(function* (input: {
+    sessionID: SessionID
+    status: Pick<SessionStatus.Interface, "get">
+    sessions: Pick<Session.Interface, "messages" | "removeMessage">
+  }) {
+    const state = yield* input.status.get(input.sessionID)
+    if (state.type !== "idle") return
+
+    const msgs = yield* input.sessions.messages({ sessionID: input.sessionID, limit: 2 })
+    const tail = msgs.at(-1)
+    if (!tail || tail.info.role !== "assistant") return
+    if (!tail.info.error) return
+    // A user Stop is not a failure. Its record is what clients read back to show "Stopped", so it stays.
+    if (MessageV2.AbortedError.isInstance(tail.info.error)) return
+    if (!tail.parts.every((part) => part.type === "step-start" || part.type === "step-finish")) return
+
+    const prev = msgs.at(-2)
+    if (!prev || prev.info.role !== "user") return
+    if (tail.info.parentID !== prev.info.id) return
+
+    yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
+  })
+
   export function guardPermissions(input: {
     agent: { name: string; permission: Permission.Ruleset }
     session: Pick<Session.Info, "permission">
@@ -248,6 +283,53 @@ export namespace KiloSessionPrompt {
     return [...input.existing.filter((rule) => !names.has(rule.permission)), ...input.toggles]
   }
 
+  /**
+   * Collapse duplicate rules keeping the last occurrence of each distinct one.
+   *
+   * `guardPermissions` re-appends agent rules for ask/plan/architect modes and the plan
+   * agent definition itself merges its edit guard several times, so the assembled ruleset
+   * can carry the same rule block multiple times. Evaluation (`findLast`) and provenance
+   * (the tagged last copy wins) are unchanged by collapsing, but denial messages and
+   * pending-permission payloads stop showing stacked copies of the same block.
+   */
+  export function dedupeRuleset(rules: Permission.Ruleset): Permission.Ruleset {
+    const seen = new Set<string>()
+    const kept: Permission.Rule[] = []
+    for (let i = rules.length - 1; i >= 0; i--) {
+      const rule = rules[i] as PermissionProvenance.SourcedRule
+      const key = `${rule.permission}\u0000${rule.pattern}\u0000${rule.action}\u0000${rule.source ?? ""}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      kept.push(rule)
+    }
+    return kept.reverse()
+  }
+
+  /** Assemble the ruleset and hard ruleset for a permission ask, deduped. */
+  export function buildAskRuleset(input: {
+    agent: Pick<Agent.Info, "name" | "permission">
+    session: Pick<Session.Info, "permission">
+    origins?: PermissionProvenance.Origins
+  }): { ruleset: Permission.Ruleset; hardRuleset?: Permission.Ruleset } {
+    // Tag every rule with its true origin before merging, so the winning rule (chosen by
+    // findLast) reports the correct source instead of classify() having to guess.
+    // guardPermissions re-appends agent.permission for ask/plan/architect modes and prepends
+    // session.permission, so tag those inputs up front rather than the outer copy alone.
+    const taggedAgent = PermissionProvenance.tagAgent(input.agent.permission, input.origins)
+    const taggedSession = PermissionProvenance.tagSession(input.session.permission ?? [])
+    const ruleset = dedupeRuleset(
+      Permission.merge(
+        taggedAgent,
+        guardPermissions({
+          agent: { name: input.agent.name, permission: taggedAgent },
+          session: { permission: taggedSession },
+        }),
+      ),
+    )
+    const hardRuleset = hardPermissions({ agent: { name: input.agent.name, permission: input.agent.permission } })
+    return { ruleset, hardRuleset: hardRuleset ? dedupeRuleset(hardRuleset) : undefined }
+  }
+
   export const askPermission = Effect.fn("KiloSessionPrompt.askPermission")(function* (input: {
     permission: Pick<Permission.Interface, "ask">
     agents: Pick<Agent.Interface, "get">
@@ -262,23 +344,15 @@ export namespace KiloSessionPrompt {
       .get(input.session.id)
       .pipe(Effect.catchCause(() => Effect.succeed(input.session)))
 
-    // kilocode_change start - tag every rule with its true origin before merging, so the winning
-    // rule (chosen by findLast) reports the correct source instead of classify() having to guess.
-    // guardPermissions re-appends agent.permission for ask/plan/architect modes and prepends
-    // session.permission, so tag those inputs up front rather than the outer copy alone.
-    const taggedAgent = PermissionProvenance.tagAgent(agent.permission, input.origins)
-    const taggedSession = PermissionProvenance.tagSession(session.permission ?? [])
-    const ruleset = Permission.merge(
-      taggedAgent,
-      guardPermissions({
-        agent: { name: agent.name, permission: taggedAgent },
-        session: { permission: taggedSession },
-      }),
-    )
-    const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset: hardPermissions({ agent }) })
+    const { ruleset, hardRuleset } = buildAskRuleset({
+      agent,
+      session,
+      origins: input.origins,
+    })
+    const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset })
+
     if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
     return PermissionProvenance.classify({ rule: outcome.rule, agent: agent.name, origins: input.origins })
-    // kilocode_change end
   })
 
   /** Mutable per-turn cache for deterministic environment detail blocks. */

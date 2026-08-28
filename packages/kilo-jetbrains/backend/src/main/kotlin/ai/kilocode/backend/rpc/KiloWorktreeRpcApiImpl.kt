@@ -3,6 +3,7 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
+import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
@@ -72,6 +73,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
     private val bases = ConcurrentHashMap<String, Timed<String>>()
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
+    private val resolver = PrResolver(gh = ::runGh, git = ::runGit)
     private val ghLock = Any()
     @Volatile
     private var ghProbe: Timed<GhAvailability>? = null
@@ -85,7 +87,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val items = managedWorktrees(parseWorktreeList(res.stdout))
         val alive = items.filter { it.main || Files.isDirectory(Path.of(it.path)) }
         val store = worktreeNameStore(alive)
-        val state = store?.let { syncWorktreeState(it, worktreePaths(alive)) } ?: WorktreeState()
+        val state = store?.let { syncWorktreeState(it, worktreePaths(alive), livePaths(alive)) } ?: WorktreeState()
         val named = overlayWorktreeNames(alive, state.names)
         WorktreeListDto(orderWorktrees(named, state.worktreeOrder))
     }
@@ -153,8 +155,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val res = runGit(root, "worktree", "list", "--porcelain")
         if (!res.ok) return@withContext WorktreeStatsListDto()
         val items = managedWorktrees(parseWorktreeList(res.stdout))
-        val main = items.firstOrNull { it.main }
-        val fallback = main?.branch?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "HEAD"
+        val fallback = baseBranch(items) ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
     }
 
@@ -170,18 +171,17 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         if (available != GhAvailability.OK) return@withContext WorktreePrListDto(available).also { prs[directory] = Timed(now, it) }
         val res = runGit(root, "worktree", "list", "--porcelain")
         if (!res.ok) return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
-        val items = managedWorktrees(parseWorktreeList(res.stdout)).filter { !it.main && it.branch != "(detached)" }
+        val all = managedWorktrees(parseWorktreeList(res.stdout))
+        val items = prTargets(all)
+        val base = baseBranch(all)
         var status = GhAvailability.OK
         val data = parallel(items) { item ->
             if (status != GhAvailability.OK) return@parallel null
-            val out = runGh(Path.of(item.path).normalize(), "pr", "view", item.branch, "--json", "number,state,isDraft,url,title")
-            if (!out.ok) {
-                // prError only ever returns UNAUTH or OK; a missing gh/git binary is already caught
-                // by the upfront ghAvailable() check before this loop runs.
-                if (prError(out.stderr) == GhAvailability.UNAUTH) status = GhAvailability.UNAUTH
-                return@parallel null
-            }
-            parsePr(item.path, out.stdout)
+            val lookup = resolver.resolve(item.path, item.branch, base)
+            // The resolver only ever reports UNAUTH or OK; a missing gh/git binary is already
+            // caught by the upfront ghAvailable() check before this loop runs.
+            if (lookup.availability != GhAvailability.OK) status = lookup.availability
+            lookup.pr
         }.filterNotNull()
         val dto = WorktreePrListDto(status, if (status == GhAvailability.OK) data else emptyList())
         prs[directory] = Timed(System.currentTimeMillis(), dto)
@@ -195,15 +195,18 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val branch = runGit(root, "branch", "--show-current").stdout.trim()
         val worktree = isLinkedWorktree(root)
         val availability = ghAvailable(root)
-        val pr = if (availability == GhAvailability.OK && branch.isNotBlank()) {
-            val out = runGh(root, "pr", "view", branch, "--json", "number,state,isDraft,url,title,headRefName")
-            // Only accept a PR whose head branch matches the current branch. Guards against gh
-            // resolving a PR via upstream/remote configuration that isn't for this branch.
-            if (out.ok && parsePrHeadRef(out.stdout) == branch) parsePr(directory, out.stdout) else null
+        val lookup = if (availability == GhAvailability.OK && branch.isNotBlank()) {
+            resolver.resolve(directory, branch, baseBranch(root))
         } else {
-            null
+            PrLookup()
         }
-        val dto = BranchStatusDto(branch = branch, worktree = worktree, availability = availability, pr = pr)
+        val dto = BranchStatusDto(
+            branch = branch,
+            worktree = worktree,
+            // A PR lookup that hits an auth failure must not be reported as a branch without a PR.
+            availability = if (availability == GhAvailability.OK) lookup.availability else availability,
+            pr = lookup.pr,
+        )
         branches[directory] = Timed(System.currentTimeMillis(), dto)
         dto
     }
@@ -285,6 +288,23 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return Path.of(main.path).normalize()
     }
 
+    /** Branch checked out in the main working tree of the repo containing [root]. */
+    private fun baseBranch(root: Path): String? {
+        val res = runGit(root, "worktree", "list", "--porcelain")
+        if (!res.ok) return null
+        return baseBranch(parseWorktreeList(res.stdout))
+    }
+
+    /**
+     * Drops the PR and branch caches so the next poll reflects a mutation immediately. Entries are
+     * keyed by the requesting directory and a mutation can change any repository the backend has
+     * answered for, so clear wholesale rather than by key.
+     */
+    private fun invalidate() {
+        prs.clear()
+        branches.clear()
+    }
+
     override suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto =
         withContext(Dispatchers.IO) {
             val base = Path.of(directory).normalize()
@@ -303,18 +323,18 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 GhAvailability.UNAUTH -> return@withContext CreateWorktreeResultDto(error = "GitHub CLI (gh) is not authorized")
                 GhAvailability.OK -> Unit
             }
-            val view = runGh(base, "pr", "view", ref.number.toString(), "--repo", "${ref.owner}/${ref.repo}", "--json", "headRefName,title")
+            val fields = "headRefName,title,isCrossRepository,headRepositoryOwner"
+            val view = runGh(base, "pr", "view", ref.number.toString(), "--repo", "${ref.owner}/${ref.repo}", "--json", fields)
             if (!view.ok) {
                 LOG.warn("pr import view failed: url=$url exit=${view.exit} stderr=${view.stderr.trim()}")
                 return@withContext CreateWorktreeResultDto(error = view.stderr.ifBlank { "gh pr view failed" })
             }
-            val branch = parsePrHeadRef(view.stdout).ifBlank { "pr-${ref.number}" }
-            // The pull ref works for both same-repo and fork PRs without adding a fork remote; the
-            // leading '+' force-updates a stale local branch from a previous import attempt.
-            val fetch = runGit(base, "fetch", "origin", "+refs/pull/${ref.number}/head:$branch")
-            if (!fetch.ok) {
-                LOG.warn("pr import fetch failed: url=$url exit=${fetch.exit} stderr=${fetch.stderr.trim()}")
-                return@withContext CreateWorktreeResultDto(error = fetch.stderr.ifBlank { "git fetch failed" })
+            val head = parsePrHead(view.stdout)
+            val branch = prBranchName(head, ref.number)
+            val failure = fetchPrBranch({ args -> runGit(base, args) }, ref.number, head, branch)
+            if (failure != null) {
+                LOG.warn("pr import fetch failed: url=$url exit=${failure.exit} stderr=${failure.stderr.trim()}")
+                return@withContext CreateWorktreeResultDto(error = failure.stderr.ifBlank { "Failed to check out the pull request branch" })
             }
             addWorktree(base, branch, existing = true, baseRef = null)
         }
@@ -347,6 +367,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             return CreateWorktreeResultDto(error = res.stderr.ifBlank { "git worktree add failed" })
         }
         LOG.info("worktree created: branch=$branch dir=$dir")
+        invalidate()
         val path = dir.toRealPath().toString()
         val list = runGit(base, "worktree", "list", "--porcelain")
         val items = if (list.ok) managedWorktrees(parseWorktreeList(list.stdout)) else emptyList()
@@ -393,7 +414,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             // worktree prunable when its admin metadata is stale while the files remain; those must still
             // be deleted so a later create of the same slug is not blocked by leftovers.
             val res = if (!Files.isDirectory(Path.of(target.path))) {
-                GitResult(0, "", "")
+                CmdOut(0, "", "")
             } else {
                 runGit(base, "worktree", "remove", "--force", target.path)
             }
@@ -411,6 +432,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 if (!del.ok) LOG.warn("worktree branch delete failed: branch=$it exit=${del.exit} stderr=${del.stderr.trim()}")
             }
             LOG.info("worktree removed: path=$path branch=${branch ?: "(none)"}")
+            invalidate()
             removeWorktreeState(store, target.path)
             val prune = runGit(base, "worktree", "prune")
             if (!prune.ok) LOG.warn("worktree prune failed: exit=${prune.exit} stderr=${prune.stderr.trim()}")
@@ -432,7 +454,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                 ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
             return@withContext try {
-                val state = readWorktreeState(store).reconcile(worktreePaths(items))
+                val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
                 val names = state.names.toMutableMap()
                 names[target.path] = title
                 writeWorktreeState(store, state.copy(names = names))
@@ -456,7 +478,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                 ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
             return@withContext try {
-                val state = readWorktreeState(store).reconcile(worktreePaths(items))
+                val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
                 val names = state.names.toMutableMap()
                 // Only adopt while the worktree is still default. A recorded name means the user (or a
                 // prior adoption) already titled it, so leave it untouched and report a no-op.
@@ -480,7 +502,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val store = worktreeNameStore(items) ?: return@withContext false
             return@withContext try {
                 val state = readWorktreeState(store)
-                writeWorktreeState(store, state.copy(worktreeOrder = paths).reconcile(worktreePaths(items)))
+                writeWorktreeState(store, state.copy(worktreeOrder = paths).reconcile(worktreePaths(items), livePaths(items)))
                 true
             } catch (e: Exception) {
                 LOG.warn("worktree reorder failed: dir=$directory message=${e.message}", e)
@@ -488,35 +510,64 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             }
         }
 
-    private data class GitResult(val exit: Int, val stdout: String, val stderr: String) {
-        val ok get() = exit == 0
-    }
+    override suspend fun sessionList(directory: String): Boolean? =
+        withContext(Dispatchers.IO) {
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext null
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items) ?: return@withContext null
+            val target = items.firstOrNull { samePath(it.path, directory) } ?: return@withContext null
+            readWorktreeState(store).sessionList[target.path]
+        }
+
+    override suspend fun setSessionList(directory: String, visible: Boolean): Boolean =
+        withContext(Dispatchers.IO) {
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext false
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items) ?: return@withContext false
+            val target = items.firstOrNull { samePath(it.path, directory) } ?: return@withContext false
+            return@withContext try {
+                val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
+                writeWorktreeState(store, state.copy(sessionList = state.sessionList + (target.path to visible)))
+                true
+            } catch (e: Exception) {
+                LOG.warn("worktree session list state failed: dir=$directory message=${e.message}", e)
+                false
+            }
+        }
 
     private data class Timed<T>(val time: Long, val value: T)
 
-    private fun runGit(base: Path, vararg args: String): GitResult {
+    private fun runGit(base: Path, vararg args: String): CmdOut = runGit(base, args.toList())
+
+    private fun runGit(base: Path, args: List<String>): CmdOut {
         return try {
             val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(base.toFile())
             val out = CapturingProcessHandler(cmd).runProcess(30_000)
-            GitResult(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
+            CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
         } catch (e: Exception) {
-            GitResult(-1, "", e.message ?: "git failed")
+            CmdOut(-1, "", e.message ?: "git failed")
         }
     }
 
-    private fun runGh(base: Path, vararg args: String): GitResult {
+    private fun runGh(base: Path, vararg args: String): CmdOut = runGh(base, args.toList())
+
+    private fun runGh(base: Path, args: List<String>): CmdOut {
         return try {
             val cmd = GeneralCommandLine(listOf("gh") + args)
                 .withWorkDirectory(base.toFile())
                 .withParentEnvironmentType(ParentEnvironmentType.CONSOLE)
             val out = CapturingProcessHandler(cmd).runProcess(30_000)
-            GitResult(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
+            CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
         } catch (e: Exception) {
-            GitResult(-1, "", e.message ?: "gh failed")
+            CmdOut(-1, "", e.message ?: "gh failed")
         }
     }
 
-    private fun add(base: Path, args: List<String>): GitResult {
+    private fun add(base: Path, args: List<String>): CmdOut {
         val first = runGit(base, *args.toTypedArray())
         if (first.ok || !stale(first.stderr)) return first
         val prune = runGit(base, "worktree", "prune")
@@ -613,13 +664,6 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         value
     }
 
-    private fun prError(stderr: String): GhAvailability {
-        val text = stderr.lowercase()
-        if (text.contains("not logged") || text.contains("gh auth login") || text.contains("authentication")) return GhAvailability.UNAUTH
-        if (text.contains("not found") || text.contains("no pull requests found")) return GhAvailability.OK
-        return GhAvailability.OK
-    }
-
     private fun snippet(text: String): String {
         return text.trim().replace(Regex("\\s+"), " ").take(180)
     }
@@ -650,21 +694,72 @@ internal fun parsePr(path: String, raw: String): WorktreePrDto? {
     return WorktreePrDto(path, number, state, url, title)
 }
 
-internal data class PrRef(val owner: String, val repo: String, val number: Int)
+/** Head of a pull request being imported. */
+internal data class PrHead(val ref: String = "", val cross: Boolean = false, val owner: String = "")
 
-private val PR_URL = Regex("github\\.com[/:]([^/]+)/([^/]+?)(?:\\.git)?/pull/(\\d+)")
-
-/** Parses `https://github.com/<owner>/<repo>/pull/<n>` (and ssh-style hosts) into its parts. */
-internal fun parsePrUrl(url: String): PrRef? {
-    val match = PR_URL.find(url.trim()) ?: return null
-    val number = match.groupValues[3].toIntOrNull() ?: return null
-    return PrRef(match.groupValues[1], match.groupValues[2], number)
+/** Reads the head branch and its repository out of a `gh pr view --json` payload. */
+internal fun parsePrHead(raw: String): PrHead {
+    val obj = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return PrHead()
+    val ref = obj["headRefName"]?.jsonPrimitive?.content?.trim().orEmpty()
+    val cross = obj["isCrossRepository"]?.jsonPrimitive?.booleanOrNull == true
+    val owner = (obj["headRepositoryOwner"] as? JsonObject)?.get("login")?.jsonPrimitive?.content?.trim().orEmpty()
+    return PrHead(ref, cross, owner)
 }
 
-/** Reads `headRefName` out of a `gh pr view --json` payload. */
-internal fun parsePrHeadRef(raw: String): String {
-    val obj = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return ""
-    return obj["headRefName"]?.jsonPrimitive?.content?.trim().orEmpty()
+/**
+ * Local branch name for an imported PR. Fork PRs are prefixed with their owner so two PRs sharing a
+ * head branch name — `patch-1` is common — can be imported side by side.
+ */
+internal fun prBranchName(head: PrHead, number: Int): String {
+    if (head.ref.isBlank()) return "pr-$number"
+    val owner = head.owner.lowercase()
+    return if (head.cross && owner.isNotEmpty()) "$owner/${head.ref}" else head.ref
+}
+
+/**
+ * Fetches the PR head into [branch] and records which PR it belongs to, mirroring `gh pr checkout`:
+ * a same-repo PR gets an ordinary upstream (so `git push`/`git pull` work in the imported worktree),
+ * while a fork PR is tracked through `refs/pull/<number>/head`, which `gh` resolves back to the PR
+ * by number. [run] executes git in the repository. Returns the failing command, or null on success.
+ */
+internal fun fetchPrBranch(run: (List<String>) -> CmdOut, number: Int, head: PrHead, branch: String): CmdOut? {
+    val pull = "refs/pull/$number/head"
+    // A fork head lives in a repository we may have no remote for. The pull ref reaches it without
+    // adding one, and '+' force-updates a stale branch left by an earlier import attempt.
+    if (head.cross || head.ref.isBlank()) {
+        val fetch = run(listOf("fetch", "origin", "+$pull:$branch"))
+        if (!fetch.ok) return fetch
+        recordPrBranch(run, branch, pull)
+        return null
+    }
+    val tracking = "refs/remotes/origin/${head.ref}"
+    val direct = run(listOf("fetch", "origin", "+refs/heads/${head.ref}:$tracking"))
+    if (!direct.ok) {
+        // The head branch is gone — merged PR, or the author deleted it — but the pull ref survives.
+        val fallback = run(listOf("fetch", "origin", "+$pull:$tracking"))
+        if (!fallback.ok) return fallback
+    }
+    val point = run(listOf("branch", "--force", branch, tracking))
+    if (!point.ok) return point
+    recordPrBranch(run, branch, if (direct.ok) "refs/heads/${head.ref}" else pull)
+    return null
+}
+
+/**
+ * Records the branch's remote and merge ref. This is what lets a PR be recognised later without
+ * guessing from the branch name, so a failure only degrades PR detection to slower lookups and must
+ * never fail the import.
+ */
+private fun recordPrBranch(run: (List<String>) -> CmdOut, branch: String, merge: String) {
+    listOf(
+        listOf("config", "branch.$branch.remote", "origin"),
+        listOf("config", "branch.$branch.merge", merge),
+    ).forEach { args ->
+        val res = run(args)
+        if (!res.ok) {
+            KiloWorktreeRpcApiImpl.LOG.warn("pr import config failed: args=$args exit=${res.exit} stderr=${res.stderr.trim()}")
+        }
+    }
 }
 
 private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
@@ -675,17 +770,26 @@ private const val WORKTREE_NAMES_FILE = "jetbrains.json"
 private data class WorktreeNamesFile(
     val names: Map<String, String> = emptyMap(),
     val worktreeOrder: List<String> = emptyList(),
+    val sessionList: Map<String, Boolean> = emptyMap(),
 )
 
 internal data class WorktreeState(
     val names: Map<String, String> = emptyMap(),
     val worktreeOrder: List<String> = emptyList(),
+    val sessionList: Map<String, Boolean> = emptyMap(),
 ) {
-    fun reconcile(paths: List<String>): WorktreeState {
+    /**
+     * Drops state for worktrees git no longer reports. Names and order cover linked worktrees only
+     * ([paths]), while the session list is also kept for the main working tree, which has a worktree
+     * editor of its own — hence the wider [live] set.
+     */
+    fun reconcile(paths: List<String>, live: List<String>): WorktreeState {
         val set = paths.toSet()
+        val all = live.toSet()
         val order = (worktreeOrder.filter { it in set } + paths.filter { it !in worktreeOrder }).distinct()
         val next = names.filterKeys { it in set }
-        return WorktreeState(next, order)
+        val visible = sessionList.filterKeys { it in all }
+        return WorktreeState(next, order, visible)
     }
 }
 
@@ -737,6 +841,20 @@ internal fun managedWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
     }
 }
 
+/**
+ * Worktrees eligible for a PR lookup. The main working tree is included — it can sit on a PR branch
+ * just like a linked worktree — while detached heads have no branch to resolve and prunable entries
+ * have no checkout left.
+ */
+internal fun prTargets(items: List<WorktreeDto>): List<WorktreeDto> {
+    return items.filter { !it.prunable && it.branch != "(detached)" }
+}
+
+/** Branch checked out in the main working tree, or null when it is missing or detached. */
+internal fun baseBranch(items: List<WorktreeDto>): String? {
+    return items.firstOrNull { it.main }?.branch?.takeIf { it.isNotBlank() && it != "(detached)" }
+}
+
 internal fun overlayWorktreeNames(items: List<WorktreeDto>, names: Map<String, String>): List<WorktreeDto> {
     if (names.isEmpty()) return items
     return items.map { item ->
@@ -763,9 +881,13 @@ internal fun readWorktreeState(file: Path): WorktreeState {
     return try {
         val raw = Files.readString(file)
         val element = json.parseToJsonElement(raw)
-        if (element is JsonObject && ("names" in element || "worktreeOrder" in element)) {
+        if (element is JsonObject && ("names" in element || "worktreeOrder" in element || "sessionList" in element)) {
             val data = json.decodeFromJsonElement<WorktreeNamesFile>(element)
-            return WorktreeState(data.names.filterValues { it.isNotBlank() }, data.worktreeOrder.filter { it.isNotBlank() })
+            return WorktreeState(
+                data.names.filterValues { it.isNotBlank() },
+                data.worktreeOrder.filter { it.isNotBlank() },
+                data.sessionList.filterKeys { it.isNotBlank() },
+            )
         }
         val names = json.decodeFromJsonElement(codec, element).filterValues { it.isNotBlank() }
         WorktreeState(names, names.keys.toList())
@@ -776,8 +898,8 @@ internal fun readWorktreeState(file: Path): WorktreeState {
 }
 
 internal fun writeWorktreeNames(file: Path, names: Map<String, String>) {
-    val order = readWorktreeState(file).worktreeOrder
-    writeWorktreeState(file, WorktreeState(names, order))
+    val state = readWorktreeState(file)
+    writeWorktreeState(file, state.copy(names = names))
 }
 
 internal fun writeWorktreeState(file: Path, state: WorktreeState) {
@@ -785,6 +907,7 @@ internal fun writeWorktreeState(file: Path, state: WorktreeState) {
     val data = WorktreeNamesFile(
         names = state.names.filterValues { it.isNotBlank() },
         worktreeOrder = state.worktreeOrder.filter { it.isNotBlank() }.distinct(),
+        sessionList = state.sessionList.filterKeys { it.isNotBlank() },
     )
     val tmp = Files.createTempFile(file.parent, ".worktree-names", ".tmp")
     try {
@@ -799,9 +922,9 @@ internal fun writeWorktreeState(file: Path, state: WorktreeState) {
     }
 }
 
-private fun syncWorktreeState(file: Path, paths: List<String>): WorktreeState {
+private fun syncWorktreeState(file: Path, paths: List<String>, live: List<String>): WorktreeState {
     val state = readWorktreeState(file)
-    val next = state.reconcile(paths)
+    val next = state.reconcile(paths, live)
     if (next == state) return next
     try {
         writeWorktreeState(file, next)
@@ -823,12 +946,17 @@ private fun removeWorktreeState(file: Path, path: String) {
     val state = readWorktreeState(file)
     val names = state.names.filterKeys { !samePath(it, path) }
     val order = state.worktreeOrder.filter { !samePath(it, path) }
-    if (names == state.names && order == state.worktreeOrder) return
-    writeWorktreeState(file, state.copy(names = names, worktreeOrder = order))
+    val visible = state.sessionList.filterKeys { !samePath(it, path) }
+    if (names == state.names && order == state.worktreeOrder && visible == state.sessionList) return
+    writeWorktreeState(file, state.copy(names = names, worktreeOrder = order, sessionList = visible))
 }
 
 private fun worktreePaths(items: List<WorktreeDto>): List<String> {
     return items.filter { !it.main }.map { it.path }
+}
+
+private fun livePaths(items: List<WorktreeDto>): List<String> {
+    return items.map { it.path }
 }
 
 private fun worktreeNameStore(items: List<WorktreeDto>): Path? {

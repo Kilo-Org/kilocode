@@ -177,6 +177,8 @@ export const dict = {
   "common.saving": "저장 중...",
   "common.default": "기본값",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Worktree 검색",
   "prompt.thinking.tooltip": "추론 강도",
   "prompt.action.send": "전송",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
@@ -1042,6 +1044,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",
+  "settings.context.compactionModel.title": "압축 모델",
+  "settings.context.compactionModel.description":
+    "자동 및 수동 압축에 사용하는 모델입니다. 채팅 모델을 사용하려면 설정하지 않은 상태로 두세요. 비용, 속도 및 요약 품질은 모델에 따라 달라집니다.",
+  "settings.context.compactionModel.useChatModel": "채팅 모델 사용",
   "settings.context.compactionLimit.title": "자동 압축 한도",
   "settings.context.compactionLimit.description":
     "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",

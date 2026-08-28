@@ -1919,12 +1919,17 @@ function TaskLink(props: { href: string; text: string; onClick: (e: MouseEvent) 
   )
 }
 
-function ToolText(props: { text: string; delay?: number; animate?: boolean }) {
+function ToolText(props: { text: string; delay?: number; animate?: boolean; onClick?: (event: MouseEvent) => void }) {
   let ref: HTMLSpanElement | undefined
   useToolFade(() => ref, { delay: props.delay, wipe: true, animate: props.animate })
 
   return (
-    <span ref={ref} data-slot="basic-tool-tool-subtitle">
+    <span
+      ref={ref}
+      data-slot="basic-tool-tool-subtitle"
+      classList={{ clickable: !!props.onClick }}
+      onClick={props.onClick}
+    >
       {props.text}
     </span>
   )
@@ -1957,6 +1962,7 @@ function ToolTriggerRow(props: {
   action?: JSX.Element
   animate?: boolean
   revealOnMount?: boolean
+  onClick?: (event: MouseEvent) => void
 }) {
   const reveal = useToolReveal(
     () => props.pending,
@@ -1976,7 +1982,9 @@ function ToolTriggerRow(props: {
         <span data-slot="basic-tool-tool-title">
           <TextShimmer text={props.title} active={props.pending} />
         </span>
-        <Show when={detail()}>{(text) => <ToolText text={text()} animate={detailAnimate()} />}</Show>
+        <Show when={detail()}>
+          {(text) => <ToolText text={text()} animate={detailAnimate()} onClick={props.onClick} />}
+        </Show>
       </div>
       <Show when={props.action}>{props.action}</Show>
     </div>
@@ -2070,9 +2078,6 @@ ToolRegistry.register({
           hideDetails={!approval()?.approval.outsideWorkspace}
           {...props}
           icon="glasses"
-          onSubtitleClick={
-            data.openFile && props.input.filePath ? () => data.openFile!(props.input.filePath) : undefined
-          }
           trigger={
             <ToolTriggerRow
               title={i18n.t("ui.tool.read")}
@@ -2080,6 +2085,14 @@ ToolRegistry.register({
               subtitle={props.input.filePath ? getFilename(props.input.filePath) : ""}
               args={args}
               animate={props.reveal}
+              onClick={
+                data.openFile && props.input.filePath
+                  ? (event) => {
+                      event.stopPropagation()
+                      data.openFile!(props.input.filePath)
+                    }
+                  : undefined
+              }
             />
           }
         />

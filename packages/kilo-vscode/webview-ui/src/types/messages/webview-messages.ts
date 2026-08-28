@@ -17,6 +17,7 @@ import type {
   StartMigrationMessage,
 } from "./migration"
 import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
+import type { Activity } from "../../utils/session-activity"
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1490,6 +1491,7 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | { type: "sessionActivity"; state: Activity }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCloseMessage

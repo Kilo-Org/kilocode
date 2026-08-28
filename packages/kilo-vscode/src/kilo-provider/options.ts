@@ -17,6 +17,7 @@ export type KiloProviderOptions = {
   snapshotInitialization?: "wait"
   slimEditMetadata?: boolean
   tabTitle?: (title: string) => void
+  tabLabel?: string
   worktreeDirectories?: () => string[]
   /**
    * Dynamic root directory override. When present, it replaces the

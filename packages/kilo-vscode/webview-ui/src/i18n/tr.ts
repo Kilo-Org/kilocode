@@ -174,6 +174,8 @@ export const dict = {
   "common.saving": "Kaydediliyor...",
   "common.default": "Varsayılan",
 
+  "prompt.worktrees.title": "Worktree'ler",
+  "prompt.worktrees.search": "Worktree'leri ara",
   "prompt.thinking.tooltip": "Akıl yürütme eforu",
   "prompt.action.send": "Gönder",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
@@ -1019,6 +1021,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
   "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",
   "settings.context.compaction.title": "Sıkıştırma",
+  "settings.context.compactionModel.title": "Sıkıştırma modeli",
+  "settings.context.compactionModel.description":
+    "Otomatik ve manuel sıkıştırma için kullanılan model. Sohbet modelini kullanmak için boş bırakın. Maliyet, hız ve özet kalitesi modele bağlıdır.",
+  "settings.context.compactionModel.useChatModel": "Sohbet modelini kullan",
   "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
   "settings.context.compactionLimit.description":
     "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",

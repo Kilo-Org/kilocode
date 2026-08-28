@@ -3,8 +3,10 @@ import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 import type { KiloClient, QuestionRequest, Session } from "@kilocode/sdk/v2/client"
-import { OrchestrationError, answer, overview, prompt } from "../../src/agent-manager/orchestration-domain"
+import { OrchestrationError, answer, move, overview, prompt } from "../../src/agent-manager/orchestration-domain"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+import { ProjectContext } from "../../src/agent-manager/project/context"
+import { collectProjectSessions } from "../../src/agent-manager/project/init"
 import type { PRStatus as AgentManagerPRStatus } from "../../src/agent-manager/types"
 
 const noQuestions: QuestionRequest[] = []
@@ -210,6 +212,96 @@ describe("Agent Manager orchestration domain", () => {
     )
   })
 
+  it("prompts, answers, and moves a session discovered in a managed worktree", async () => {
+    const wt = state.addWorktree({ branch: "fix/discovered", path: worktree, parentBranch: "main" })
+    const section = state.addSection("Review", null)
+    const session = {
+      id: "ses_discovered",
+      slug: "discovered",
+      projectID: "prj-test",
+      directory: worktree,
+      title: "Discovered",
+      version: "1",
+      time: { created: 1, updated: 1 },
+    } satisfies Session
+    const ctx = new ProjectContext("prj-test", root, true, { log: () => undefined, state: () => state })
+    ctx.stateManager()
+    const views = await collectProjectSessions(ctx, {
+      listSessions: async (dir) => (dir === worktree ? [session] : []),
+      setSessionDirectory: () => undefined,
+    })
+    expect(views).toEqual([expect.objectContaining({ id: session.id, worktreeId: wt.id })])
+    ctx.setSessions(views)
+    expect(state.getSession(session.id)).toBeUndefined()
+    const managed = { id: session.id, worktreeId: views[0]!.worktreeId, createdAt: views[0]!.createdAt }
+
+    const questions: QuestionRequest[] = []
+    const delivered = mock(async () => ({ data: undefined }))
+    const replied = mock(async () => ({ data: true }))
+    const client = {
+      session: {
+        get: mock(async () => ({ data: session })),
+        status: mock(async () => ({ data: {} })),
+        promptAsync: delivered,
+      },
+      permission: { list: mock(async () => ({ data: [] })) },
+      question: { list: mock(async () => ({ data: questions })), reply: replied },
+    } as unknown as KiloClient
+
+    await prompt({ client, root, state, sessionID: session.id, text: "Continue", messageID: "amr_discovered", managed })
+    expect(delivered).toHaveBeenCalledWith(expect.objectContaining({ sessionID: session.id, directory: worktree }), {
+      throwOnError: true,
+    })
+
+    questions.push({
+      id: "que_discovered",
+      sessionID: session.id,
+      questions: [{ header: "Approve", question: "Proceed?", options: [{ label: "Yes", description: "Continue" }] }],
+    })
+    await answer({ client, root, state, sessionID: session.id, answers: [["Yes"]], managed })
+    expect(replied).toHaveBeenCalledWith(
+      { requestID: "que_discovered", answers: [["Yes"]], directory: worktree },
+      { throwOnError: true },
+    )
+
+    move({ state, sessionID: session.id, sectionID: section.id, managed })
+    expect(state.getWorktree(wt.id)?.sectionId).toBe(section.id)
+    expect(state.getSession(session.id)).toBeUndefined()
+  })
+
+  it("recognizes a worktree session received through a live lifecycle event", async () => {
+    const wt = state.addWorktree({ branch: "fix/live", path: worktree, parentBranch: "main" })
+    const ctx = new ProjectContext("prj-test", root, true, { log: () => undefined, state: () => state })
+    ctx.stateManager()
+    ctx.upsertSession({
+      id: "ses_live",
+      parentID: null,
+      title: "Live",
+      createdAt: "",
+      updatedAt: "",
+      revert: null,
+      summary: null,
+      worktreeId: wt.id,
+    })
+
+    expect(ctx.hasLiveSession("ses_live")).toBe(true)
+    expect(state.getSession("ses_live")).toBeUndefined()
+    const managed = { id: "ses_live", worktreeId: wt.id, createdAt: "" }
+    const delivered = mock(async () => ({ data: undefined }))
+    const client = {
+      session: {
+        get: mock(async () => ({ data: { id: "ses_live", directory: worktree, title: "Live" } as Session })),
+        status: mock(async () => ({ data: {} })),
+        promptAsync: delivered,
+      },
+      permission: { list: mock(async () => ({ data: [] })) },
+      question: { list: mock(async () => ({ data: [] })) },
+    } as unknown as KiloClient
+
+    await prompt({ client, root, state, sessionID: "ses_live", text: "Continue", messageID: "amr_live", managed })
+    expect(delivered).toHaveBeenCalledWith(expect.objectContaining({ directory: worktree }), { throwOnError: true })
+  })
+
   it("waits for a busy managed session to become idle before prompting", async () => {
     const managed = state.addWorktree({ branch: "fix/wait", path: worktree, parentBranch: "main" })
     state.addSession("ses_wait", managed.id)
@@ -352,6 +444,28 @@ describe("Agent Manager orchestration domain", () => {
     ).rejects.toMatchObject({
       code: "unknown_session",
     } satisfies Partial<OrchestrationError>)
+    await expect(
+      prompt({
+        client,
+        root,
+        state,
+        sessionID: "ses_unknown",
+        text: "Continue",
+        messageID: "amr_mismatch",
+        managed: { id: "ses_target", worktreeId: managed.id, createdAt: "" },
+      }),
+    ).rejects.toMatchObject({ code: "unknown_session" } satisfies Partial<OrchestrationError>)
+    await expect(
+      prompt({
+        client,
+        root,
+        state,
+        sessionID: "ses_foreign",
+        text: "Continue",
+        messageID: "amr_foreign",
+        managed: { id: "ses_foreign", worktreeId: "wt_foreign", createdAt: "" },
+      }),
+    ).rejects.toMatchObject({ code: "stale_session" } satisfies Partial<OrchestrationError>)
     await expect(
       prompt({ client, root, state, sessionID: "ses_target", text: "Continue", messageID: "amr_cross" }),
     ).rejects.toMatchObject({

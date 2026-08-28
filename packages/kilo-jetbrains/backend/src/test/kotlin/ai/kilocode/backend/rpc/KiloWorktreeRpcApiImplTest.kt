@@ -1,5 +1,6 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
@@ -22,11 +23,13 @@ import kotlin.test.assertTrue
 
 class KiloWorktreeRpcApiImplTest {
     private val repo: Path = Files.createTempDirectory("kilo-worktree")
+    private val remote: Path = Files.createTempDirectory("kilo-origin")
     private val api = KiloWorktreeRpcApiImpl()
 
     @AfterTest
     fun tearDown() {
         delete(repo)
+        delete(remote)
     }
 
     @Test
@@ -382,6 +385,88 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `session list visibility round trips beside names and order`() {
+        val file = repo.resolve(".kilo").resolve("jetbrains.json")
+        val path = "/repo/.kilo/worktrees/feature-x"
+
+        writeWorktreeState(file, WorktreeState(mapOf(path to "Feature"), listOf(path), mapOf(path to true, "/repo" to false)))
+
+        val state = readWorktreeState(file)
+        assertEquals(mapOf(path to true, "/repo" to false), state.sessionList)
+        assertEquals(mapOf(path to "Feature"), state.names)
+        assertEquals(listOf(path), state.worktreeOrder)
+
+        // A file that only ever recorded visibility must not be mistaken for the legacy name map.
+        Files.writeString(file, """{"sessionList":{"$path":true}}""")
+        assertEquals(mapOf(path to true), readWorktreeState(file).sessionList)
+        assertTrue(readWorktreeState(file).names.isEmpty())
+    }
+
+    @Test
+    fun `reconcile drops visibility for vanished worktrees but keeps the main tree`() {
+        val main = "/repo"
+        val live = "/repo/.kilo/worktrees/live"
+        val dead = "/repo/.kilo/worktrees/dead"
+        val state = WorktreeState(sessionList = mapOf(main to true, live to false, dead to true))
+
+        val next = state.reconcile(listOf(live), listOf(main, live))
+
+        assertEquals(mapOf(main to true, live to false), next.sessionList)
+    }
+
+    @Test
+    fun `session list visibility is unknown until set and then persists per worktree`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val main = api.list(repo.toString()).worktrees.single { it.main }
+
+        assertNull(api.sessionList(created.path), "a fresh worktree has no stored choice")
+        assertNull(api.sessionList(main.path))
+
+        assertTrue(api.setSessionList(created.path, true))
+        assertTrue(api.setSessionList(main.path, false))
+
+        assertEquals(true, api.sessionList(created.path))
+        assertEquals(false, api.sessionList(main.path))
+        // The main working tree keeps its entry across a list, which reconciles the file.
+        api.list(repo.toString())
+        assertEquals(false, api.sessionList(main.path))
+    }
+
+    @Test
+    fun `create and list never record session list visibility`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+
+        api.list(repo.toString())
+
+        assertTrue(readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).sessionList.isEmpty())
+        assertNull(api.sessionList(created.path))
+    }
+
+    @Test
+    fun `remove prunes session list visibility`() = runBlocking {
+        initRepo()
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
+        val second = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("alpha")).worktree)
+        assertTrue(api.setSessionList(first.path, true))
+        assertTrue(api.setSessionList(second.path, true))
+
+        assertTrue(api.remove(repo.toString(), first.path, first.branch).ok)
+
+        assertEquals(
+            mapOf(second.path to true),
+            readWorktreeState(repo.resolve(".kilo").resolve("jetbrains.json")).sessionList,
+        )
+    }
+
+    @Test
+    fun `session list visibility reports nothing outside a repo`() = runBlocking {
+        assertNull(api.sessionList(repo.toString()))
+        assertFalse(api.setSessionList(repo.toString(), true))
+    }
+
+    @Test
     fun `rename persists a custom worktree name and list overlays it`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
@@ -593,9 +678,118 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
-    fun `parsePrHeadRef reads headRefName`() {
-        assertEquals("feature/login", parsePrHeadRef("""{"headRefName":"feature/login","title":"x"}"""))
-        assertEquals("", parsePrHeadRef("not json"))
+    fun `parsePrHead reads head branch and repository`() {
+        val same = parsePrHead("""{"headRefName":"feature/login","title":"x","isCrossRepository":false}""")
+        assertEquals("feature/login", same.ref)
+        assertFalse(same.cross)
+
+        val fork = parsePrHead(
+            """{"headRefName":"patch-1","isCrossRepository":true,"headRepositoryOwner":{"login":"Contributor"}}""",
+        )
+        assertEquals("patch-1", fork.ref)
+        assertTrue(fork.cross)
+        assertEquals("Contributor", fork.owner)
+
+        assertEquals(PrHead(), parsePrHead("not json"))
+    }
+
+    @Test
+    fun `prBranchName prefixes fork heads and falls back to the pr number`() {
+        assertEquals("feature/login", prBranchName(PrHead("feature/login"), 7))
+        assertEquals("contributor/patch-1", prBranchName(PrHead("patch-1", cross = true, owner = "Contributor"), 7))
+        // A cross-repo PR whose owner gh did not report still needs a usable branch name.
+        assertEquals("patch-1", prBranchName(PrHead("patch-1", cross = true), 7))
+        assertEquals("pr-7", prBranchName(PrHead(), 7))
+    }
+
+    @Test
+    fun `prTargets keeps the main tree and drops detached and prunable entries`() {
+        val items = listOf(
+            WorktreeDto("/repo", "repo", "main", "/repo", main = true),
+            WorktreeDto("/repo/.kilo/worktrees/a", "a", "feature/a", "/repo/.kilo/worktrees/a"),
+            WorktreeDto("/repo/.kilo/worktrees/detached", "detached", "(detached)", "/repo/.kilo/worktrees/detached"),
+            WorktreeDto("/repo/.kilo/worktrees/gone", "gone", "feature/gone", "/repo/.kilo/worktrees/gone", prunable = true),
+        )
+
+        assertEquals(listOf("/repo", "/repo/.kilo/worktrees/a"), prTargets(items).map { it.path })
+    }
+
+    @Test
+    fun `baseBranch reads the main tree branch and ignores a detached one`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val linked = WorktreeDto("/repo/.kilo/worktrees/a", "a", "feature/a", "/repo/.kilo/worktrees/a")
+
+        assertEquals("main", baseBranch(listOf(main, linked)))
+        assertNull(baseBranch(listOf(main.copy(branch = "(detached)"), linked)))
+        assertNull(baseBranch(listOf(linked)))
+    }
+
+    @Test
+    fun `fetchPrBranch tracks the head branch for a same-repo pull request`() {
+        initRepo()
+        val origin = originWith(pull = 7, head = "feature/login")
+
+        val failure = fetchPrBranch(runner(repo), 7, PrHead("feature/login"), "feature/login")
+
+        assertNull(failure, "same-repo import should succeed")
+        assertEquals("origin", config("branch.feature/login.remote"))
+        assertEquals("refs/heads/feature/login", config("branch.feature/login.merge"))
+        assertEquals(
+            head(origin, "refs/heads/feature/login"),
+            head(repo, "refs/heads/feature/login"),
+            "local branch should point at the fetched head",
+        )
+    }
+
+    @Test
+    fun `fetchPrBranch falls back to the pull ref when the head branch is gone`() {
+        initRepo()
+        val origin = originWith(pull = 7, head = "feature/login")
+        git(origin, "update-ref", "-d", "refs/heads/feature/login")
+
+        val failure = fetchPrBranch(runner(repo), 7, PrHead("feature/login"), "feature/login")
+
+        assertNull(failure, "import should fall back to the pull ref")
+        assertEquals("refs/pull/7/head", config("branch.feature/login.merge"))
+        assertEquals(head(origin, "refs/pull/7/head"), head(repo, "refs/heads/feature/login"))
+    }
+
+    @Test
+    fun `fetchPrBranch tracks the pull ref for a fork pull request`() {
+        initRepo()
+        val origin = originWith(pull = 7, head = "patch-1")
+        // A fork head is not on origin at all; only the pull ref can reach it.
+        git(origin, "update-ref", "-d", "refs/heads/patch-1")
+        val fork = PrHead("patch-1", cross = true, owner = "contributor")
+
+        val failure = fetchPrBranch(runner(repo), 7, fork, prBranchName(fork, 7))
+
+        assertNull(failure, "fork import should succeed")
+        assertEquals("origin", config("branch.contributor/patch-1.remote"))
+        assertEquals("refs/pull/7/head", config("branch.contributor/patch-1.merge"))
+        assertEquals(head(origin, "refs/pull/7/head"), head(repo, "refs/heads/contributor/patch-1"))
+    }
+
+    @Test
+    fun `fetchPrBranch force updates a branch left by an earlier import`() {
+        initRepo()
+        val origin = originWith(pull = 7, head = "feature/login")
+        git(repo, "branch", "feature/login")
+
+        val failure = fetchPrBranch(runner(repo), 7, PrHead("feature/login"), "feature/login")
+
+        assertNull(failure, "re-import should refresh the stale branch")
+        assertEquals(head(origin, "refs/heads/feature/login"), head(repo, "refs/heads/feature/login"))
+    }
+
+    @Test
+    fun `fetchPrBranch reports the failing command`() {
+        initRepo()
+
+        val failure = fetchPrBranch(runner(repo), 7, PrHead("feature/login"), "feature/login")
+
+        assertNotNull(failure, "a repo without origin cannot fetch a pull request")
+        assertFalse(failure.ok)
     }
 
     @Test
@@ -751,6 +945,39 @@ class KiloWorktreeRpcApiImplTest {
         git(repo, "add", "README.md")
         git(repo, "commit", "-m", "init")
     }
+
+    /**
+     * Builds an "origin" repository holding [head] plus a `refs/pull/<pull>/head` ref pointing at it,
+     * the shape GitHub exposes for a pull request, and registers it as [repo]'s origin.
+     */
+    private fun originWith(pull: Int, head: String): Path {
+        git(remote, "init")
+        git(remote, "config", "user.email", "test@kilo.ai")
+        git(remote, "config", "user.name", "Kilo Test")
+        Files.writeString(remote.resolve("README.md"), "origin")
+        git(remote, "add", "README.md")
+        git(remote, "commit", "-m", "init")
+        val base = output(remote, "branch", "--show-current").trim()
+        git(remote, "checkout", "-b", head)
+        Files.writeString(remote.resolve("pr.txt"), "pr work\n")
+        git(remote, "add", "pr.txt")
+        git(remote, "commit", "-m", "pr work")
+        git(remote, "update-ref", "refs/pull/$pull/head", "refs/heads/$head")
+        // Leave the PR head unchecked out so tests can delete it to emulate a deleted branch.
+        git(remote, "checkout", base)
+        git(repo, "remote", "add", "origin", remote.toString())
+        return remote
+    }
+
+    private fun runner(dir: Path): (List<String>) -> CmdOut = { args ->
+        val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(dir.toFile())
+        val out = CapturingProcessHandler(cmd).runProcess(30_000)
+        CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
+    }
+
+    private fun config(key: String): String = output(repo, "config", "--get", key).trim()
+
+    private fun head(dir: Path, ref: String): String = output(dir, "rev-parse", ref).trim()
 
     private fun git(dir: Path, vararg args: String) {
         val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(dir.toFile())
