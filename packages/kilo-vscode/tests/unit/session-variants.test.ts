@@ -86,6 +86,15 @@ describe("session variants", () => {
     expect(state.variants.request("session-b")).toBe("max")
   })
 
+  it.each(["sidebar-pending:new", "pending:new"])("keeps a pre-submit Default choice scoped to %s", (id) => {
+    const state = setup(undefined, "max")
+    state.variants.select(undefined, id)
+    expect(state.variants.current(id)).toBeUndefined()
+    expect(state.variants.request(id)).toBe("")
+    expect(state.variants.current("another-draft")).toBe("max")
+    expect(state.messages).toEqual([])
+  })
+
   it("persists global selections but keeps session selections local", () => {
     const global = setup()
     global.variants.select("high")
