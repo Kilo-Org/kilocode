@@ -7,6 +7,7 @@ import {
   deleteDraftsForSession,
   drafts,
   imageDrafts,
+  mentionDrafts,
   reviewDrafts,
 } from "../../webview-ui/src/utils/draft-store"
 import {
@@ -23,6 +24,7 @@ beforeEach(() => {
   browserDrafts.clear()
   reviewDrafts.clear()
   imageDrafts.clear()
+  mentionDrafts.clear()
 })
 
 describe("failedPrompt", () => {
@@ -80,6 +82,7 @@ describe("deleteDraftsForSession", () => {
     ])
     reviewDrafts.set("prompt:default:session:a", [])
     imageDrafts.set("prompt:default:session:a", [])
+    mentionDrafts.set("prompt:default:session:a", { paths: ["file with spaces.ts"], sessions: [] })
 
     deleteDraftsForSession("a")
 
@@ -90,6 +93,7 @@ describe("deleteDraftsForSession", () => {
     expect(browserDrafts.get("prompt:default:session:b")?.[0]?.selector).toBe("#other")
     expect(reviewDrafts.has("prompt:default:session:a")).toBe(false)
     expect(imageDrafts.has("prompt:default:session:a")).toBe(false)
+    expect(mentionDrafts.has("prompt:default:session:a")).toBe(false)
   })
 
   it("is a no-op when given an empty id", () => {

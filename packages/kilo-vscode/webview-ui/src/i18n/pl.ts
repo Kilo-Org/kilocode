@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Połącz dostawcę",
 
+  "session.activity.waiting": "Oczekiwanie na odpowiedź lub zatwierdzenie.",
+  "session.activity.error": "Błąd lub utrata połączenia.",
+  "session.activity.retry": "Automatyczne ponawianie próby.",
+  "session.activity.busy": "W toku.",
+  "session.activity.done": "Tura zakończona.",
+  "session.activity.idle": "Nie działa.",
+
   "command.session.new": "Nowa sesja",
   "command.session.show.changes": "Pokaż zmiany",
   "command.review.toggle": "Przełącz przegląd",
@@ -178,6 +185,7 @@ export const dict = {
   "prompt.worktrees.search": "Wyszukaj Worktree",
   "prompt.thinking.tooltip": "Wysiłek rozumowania",
   "prompt.action.send": "Wyślij",
+  "prompt.action.continue": "Kontynuuj",
   "prompt.action.send.blocked": "Najpierw odpowiedz na oczekujące pytanie lub je odrzuć",
   "prompt.action.send.recording": "Transkrybuj i wyślij",
   "prompt.action.stop": "Zatrzymaj",
@@ -1257,6 +1265,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} zadań ukończono",
   "task.backgroundAgents.running.one": "1 agent w tle",
   "task.backgroundAgents.running.many": "{{count}} agentów w tle",
+  "task.backgroundAgents.more": "+{{count}} więcej",
   "task.backgroundAgents.open": "Otwórz agenta w tle",
   "task.backgroundAgents.cancel": "Zatrzymaj",
   "task.backgroundAgents.continueInBackground": "Kontynuuj w tle",

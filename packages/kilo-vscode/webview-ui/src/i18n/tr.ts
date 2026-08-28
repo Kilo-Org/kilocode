@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Sağlayıcı bağla",
 
+  "session.activity.waiting": "Yanıt veya onay bekleniyor.",
+  "session.activity.error": "Hata veya bağlantı kaybı.",
+  "session.activity.retry": "Otomatik olarak yeniden deneniyor.",
+  "session.activity.busy": "Devam ediyor.",
+  "session.activity.done": "Tur tamamlandı.",
+  "session.activity.idle": "Çalışmıyor.",
+
   "command.session.new": "Yeni oturum",
   "command.session.show.changes": "Değişiklikleri Göster",
   "command.review.toggle": "İncelemeyi aç/kapat",
@@ -178,6 +185,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktree'leri ara",
   "prompt.thinking.tooltip": "Akıl yürütme eforu",
   "prompt.action.send": "Gönder",
+  "prompt.action.continue": "Devam et",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
@@ -1225,6 +1233,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} görev tamamlandı",
   "task.backgroundAgents.running.one": "1 arka plan ajanı",
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
+  "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",

@@ -58,6 +58,13 @@ export const dict = {
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 
+  "session.activity.waiting": "กำลังรอคำตอบหรือการอนุมัติ",
+  "session.activity.error": "เกิดข้อผิดพลาดหรือการเชื่อมต่อขาดหาย",
+  "session.activity.retry": "กำลังลองใหม่โดยอัตโนมัติ",
+  "session.activity.busy": "กำลังดำเนินการ",
+  "session.activity.done": "จบรอบการทำงานแล้ว",
+  "session.activity.idle": "ไม่ได้ทำงานอยู่",
+
   "command.session.new": "เซสชันใหม่",
   "command.session.show.changes": "แสดงการเปลี่ยนแปลง",
   "command.review.toggle": "สลับการตรวจสอบ",
@@ -177,6 +184,7 @@ export const dict = {
   "prompt.worktrees.search": "ค้นหา Worktree",
   "prompt.thinking.tooltip": "ความพยายามในการให้เหตุผล",
   "prompt.action.send": "ส่ง",
+  "prompt.action.continue": "ดำเนินการต่อ",
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.send.recording": "ถอดเสียงและส่ง",
   "prompt.action.stop": "หยุด",
@@ -1228,6 +1236,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
   "task.backgroundAgents.running.one": "เอเจนต์เบื้องหลัง 1 ตัว",
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
+  "task.backgroundAgents.more": "+{{count}} เพิ่มเติม",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",

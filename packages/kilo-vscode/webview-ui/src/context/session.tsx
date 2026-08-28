@@ -90,9 +90,10 @@ import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { type ReviewMessageData } from "../../../src/shared/review-comments"
 import type { BrowserFeedbackData } from "../../../src/shared/browser-feedback"
-import { activeUserMessageID, visibleMessages as filterVisibleMessages } from "./session-queue"
+import { activeUserMessageID, removeQueuedMessage, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
+import { continuation } from "./session-continuation"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
 import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
@@ -152,6 +153,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
   const [submissionMap, setSubmissionMap] = createStore<Record<string, number>>({})
   const pendingSubmissions = new Map<string, string>()
+  const recoveries = new Map<string, Set<string>>()
   const removedSessions = new Set<string>()
   const aborts = createAbortState()
 
@@ -167,12 +169,14 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     return id ? closeMap[id]?.reason : undefined
   }
-  const clearClose = (id: string) =>
+  const clearClose = (id: string) => {
+    recoveries.delete(id)
     setCloseMap(
       produce((map) => {
         delete map[id]
       }),
     )
+  }
   const busySince = () => {
     const id = currentSessionID() ?? draftSessionID()
     return id ? busySinceMap[id] : undefined
@@ -281,6 +285,12 @@ export const SessionProvider: ParentComponent = (props) => {
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
   const [hiddenErrors, setHiddenErrors] = createSignal<Set<string>>(new Set())
+  const [dismissals, setDismissals] = createStore<Record<string, ReadonlySet<string>>>({})
+  const dismissedBackgroundJobs = (id: string): ReadonlySet<string> => dismissals[id] ?? new Set<string>()
+  const dismissBackgroundJobs = (id: string, ids: string[]) => {
+    if (!ids.length) return
+    setDismissals(id, (current) => new Set([...(current ?? []), ...ids]))
+  }
 
   // Live worktree diff stats from extension polling
   const [worktreeStats, setWorktreeStats] = createSignal<
@@ -491,6 +501,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selected,
     session: currentSessionID,
     agent: agentForScope,
+    config: (agent) => config().agent?.[agent],
     find: provider.findModel,
     post: vscode.postMessage,
     listen: vscode.onMessage,
@@ -818,10 +829,22 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function closed(message: Extract<ExtensionMessage, { type: "sessionTurnClosed" }>) {
     if (message.reason === "completed" && closeMap[message.sessionID]?.reason === "error") return
+    const ids = recoveries.get(message.sessionID)
+    if (message.reason === "completed" && ids) {
+      setStore("messages", message.sessionID, (msgs = []) => msgs.filter((msg) => !ids.has(msg.id)))
+    }
+    recoveries.delete(message.sessionID)
     setCloseMap(message.sessionID, { reason: message.reason, parentID: message.parentID })
   }
 
-  function failed(id: string) {
+  function failed(id: string, message: Message) {
+    if (message.error?.name === "ContextOverflowError" && closeMap[id]?.reason !== "error") {
+      const ids = recoveries.get(id) ?? new Set<string>()
+      ids.add(message.id)
+      recoveries.set(id, ids)
+      return
+    }
+    recoveries.delete(id)
     setCloseMap(id, { reason: "error", parentID: store.sessions[id]?.parentID ?? undefined })
   }
 
@@ -900,6 +923,7 @@ export const SessionProvider: ParentComponent = (props) => {
     refreshModelUsageForMessage(message)
     if (handleStreamMessage(message)) return
     handleCommandCompletion(message)
+    handleResumeResult(message)
     cah.handleMessage(message)
     switch (message.type) {
       case "sessionCreated":
@@ -962,6 +986,11 @@ export const SessionProvider: ParentComponent = (props) => {
 
       case "sessionDeleted":
         handleSessionDeleted(message.sessionID)
+        setDismissals(
+          produce((map) => {
+            delete map[message.sessionID]
+          }),
+        )
         break
 
       case "messageRemoved":
@@ -972,7 +1001,6 @@ export const SessionProvider: ParentComponent = (props) => {
         if (!message.error || message.error.name === "MessageAbortedError") break
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
-        failed(sid)
         // Find the last user message in this session to use as parentID
         const msgs = store.messages[sid] ?? []
         const parent = [...msgs].reverse().find((m) => m.role === "user")
@@ -985,6 +1013,7 @@ export const SessionProvider: ParentComponent = (props) => {
           error: message.error,
           sessionErrorID: message.eventID,
         }
+        failed(sid, errorMsg)
         handleMessageCreated(errorMsg)
         break
       }
@@ -1191,7 +1220,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (prefs.model && !store.sessionOverrides[sessionID]) {
       setStore("sessionOverrides", sessionID, prefs.model)
     }
-    if (prefs.model && prefs.variant) {
+    if (prefs.model && prefs.variant !== undefined) {
       const agent = prefs.agent ?? store.agentSelections[sessionID] ?? defaultAgent()
       const key = variantKey(prefs.model, agent, sessionID)
       if (store.variantSelections[key] === undefined) setStore("variantSelections", key, prefs.variant)
@@ -1406,6 +1435,12 @@ export const SessionProvider: ParentComponent = (props) => {
     rebuildToolParts(message.sessionID, store.messages[message.sessionID] ?? [])
   }
 
+  function handleResumeResult(message: ExtensionMessage): void {
+    if (message.type !== "sessionResumeResult" || !message.error) return
+    finishSubmission(message.requestID)
+    showToast({ variant: "error", title: language.t("prompt.action.continue"), description: message.error })
+  }
+
   function handleCommandCompletion(message: ExtensionMessage): void {
     if (message.type === "sessionCommandCompleted") finishSubmission(message.messageID)
   }
@@ -1520,9 +1555,8 @@ export const SessionProvider: ParentComponent = (props) => {
           ? { type: "offline", message: message ?? "" }
           : { type: newStatus }
     setStatusMap(sessionID, info)
-    // Track busy start time and discard the previous turn's terminal state.
+    if (newStatus === "busy" || newStatus === "retry") clearClose(sessionID)
     if (prev === "idle" && newStatus !== "idle") {
-      clearClose(sessionID)
       if (!busySinceMap[sessionID]) setBusySinceMap(sessionID, Date.now())
     }
     if (newStatus === "idle") {
@@ -1774,20 +1808,23 @@ export const SessionProvider: ParentComponent = (props) => {
     return suggestions().filter((item) => family.has(item.sessionID))
   }
 
+  const disconnected = createMemo<boolean>((previous) => {
+    const state = server.connectionState()
+    return state === "connecting" ? previous : state !== "connected"
+  }, false)
   const [activityMap, setActivityMap] = createStore<Record<string, Activity>>({})
   createComputed(() => {
-    const connection = server.connectionState()
     setActivityMap(
       reconcile(
         activities({
           parents: lineage().parents,
           statuses: statusMap,
           outcomes: closeMap,
-          blocked: [...permissions(), ...questions().filter((item) => item.blocking !== false), ...suggestions()].map(
+          blocked: [...permissions(), ...questions().filter((item) => item.blocking !== false)].map(
             (item) => item.sessionID,
           ),
           submitting: Object.keys(submissionMap),
-          disconnected: connection !== "connected",
+          disconnected: disconnected(),
         }),
       ),
     )
@@ -1917,6 +1954,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
+    pendingOptimistic.get(sessionID)?.delete(messageID)
+    finishSubmission(messageID)
     optimisticParts.delete(messageID)
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
     dropMessageTools(sessionID, messageID)
@@ -2119,7 +2158,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID,
         modelID,
         agent,
-        variant: currentVariant(scope),
+        variant: variants.request(scope),
         files,
         review,
         browserFeedback,
@@ -2156,7 +2195,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID,
       modelID,
       agent,
-      variant: currentVariant(scope),
+      variant: variants.request(scope),
       files,
       review,
       browserFeedback,
@@ -2219,7 +2258,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID: effectiveProvider,
         modelID: effectiveModel,
         agent,
-        variant: currentVariant(scope),
+        variant: variants.request(scope),
         files,
         command,
         commandArgs: args,
@@ -2255,10 +2294,36 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID: effectiveProvider,
       modelID: effectiveModel,
       agent,
-      variant: currentVariant(scope),
+      variant: variants.request(scope),
       files,
       agentManagerContext: context,
     })
+  }
+
+  const resumable = () =>
+    continuation({
+      id: currentSessionID(),
+      status: status(),
+      messages: messages(),
+      parts: getParts,
+      submitting: submitting(),
+      loading: loading(),
+      reverted: !!revert(),
+      blocked:
+        scopedPermissions(currentSessionID()).length > 0 ||
+        scopedQuestions(currentSessionID()).length > 0 ||
+        scopedSuggestions(currentSessionID()).length > 0,
+    })
+
+  function resume() {
+    const sessionID = currentSessionID()
+    const messageID = resumable()
+    if (!server.isConnected() || !sessionID || !messageID) return
+    const requestID = crypto.randomUUID()
+    clearClose(sessionID)
+    startSubmission(sessionID, requestID)
+    vscode.postMessage({ type: "resumeSession", sessionID, messageID, requestID })
+    queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
   }
 
   function abort() {
@@ -2668,13 +2733,11 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
-  // Clear local send bookkeeping and request deletion. The message stays visible
-  // until messageRemoved confirms deletion; a false response leaves it in place.
-  function deleteQueuedMessage(sessionID: string, messageID: string) {
-    if (!server.isConnected()) return
-    pendingOptimistic.get(sessionID)?.delete(messageID)
-    finishSubmission(messageID)
-    vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
+  async function deleteQueuedMessage(sessionID: string, messageID: string) {
+    if (!server.isConnected()) return false
+    const removed = await removeQueuedMessage(vscode, sessionID, messageID)
+    if (removed) handleMessageRemoved(sessionID, messageID)
+    return removed
   }
 
   function syncSession(sessionID: string, parentSessionID = currentSessionID(), scope: "task" | "inspector" = "task") {
@@ -2793,6 +2856,8 @@ export const SessionProvider: ParentComponent = (props) => {
     statusText,
     busySince,
     submitting,
+    canResume: () => !!resumable(),
+    resume,
     isSubmitting,
     loading,
     loadingOlderMessages,
@@ -2804,6 +2869,8 @@ export const SessionProvider: ParentComponent = (props) => {
     getParts,
     getSessionToolParts,
     getSessionToolCount,
+    dismissedBackgroundJobs,
+    dismissBackgroundJobs,
     isErrorHidden: (messageID: string) => hiddenErrors().has(messageID),
     hydrateParts,
     todos,

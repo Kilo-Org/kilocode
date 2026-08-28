@@ -84,3 +84,7 @@ const LABELS: Record<Activity, string> = {
 export function label(state: Activity): string {
   return LABELS[state]
 }
+
+export function description(state: Activity): string {
+  return `session.activity.${state}`
+}

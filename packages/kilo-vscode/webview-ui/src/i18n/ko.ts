@@ -63,6 +63,13 @@ export const dict = {
 
   "command.provider.connect": "공급자 연결",
 
+  "session.activity.waiting": "답변 또는 승인을 기다리는 중입니다.",
+  "session.activity.error": "오류 또는 연결 끊김.",
+  "session.activity.retry": "자동으로 재시도하는 중입니다.",
+  "session.activity.busy": "진행 중입니다.",
+  "session.activity.done": "턴이 완료되었습니다.",
+  "session.activity.idle": "실행 중이 아닙니다.",
+
   "command.session.new": "새 세션",
   "command.session.show.changes": "변경 사항 보기",
   "command.review.toggle": "검토 토글",
@@ -181,6 +188,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktree 검색",
   "prompt.thinking.tooltip": "추론 강도",
   "prompt.action.send": "전송",
+  "prompt.action.continue": "계속",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
@@ -1231,6 +1239,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} 할 일 완료",
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
+  "task.backgroundAgents.more": "+{{count}}개 더",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",

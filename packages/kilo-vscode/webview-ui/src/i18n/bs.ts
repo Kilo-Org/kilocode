@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Poveži provajdera",
 
+  "session.activity.waiting": "Čeka se odgovor ili odobrenje.",
+  "session.activity.error": "Greška ili prekinuta veza.",
+  "session.activity.retry": "Automatski novi pokušaj.",
+  "session.activity.busy": "U toku.",
+  "session.activity.done": "Potez završen.",
+  "session.activity.idle": "Ne radi.",
+
   "command.session.new": "Nova sesija",
   "command.session.show.changes": "Prikaži promjene",
   "command.review.toggle": "Prikaži/sakrij pregled",
@@ -179,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "Pretraži Worktree-ove",
   "prompt.thinking.tooltip": "Napor razmišljanja",
   "prompt.action.send": "Pošalji",
+  "prompt.action.continue": "Nastavi",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
@@ -1257,6 +1265,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} zadataka završeno",
   "task.backgroundAgents.running.one": "1 agent u pozadini",
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
+  "task.backgroundAgents.more": "+{{count}} još",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",

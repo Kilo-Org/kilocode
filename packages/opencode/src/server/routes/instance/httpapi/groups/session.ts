@@ -46,6 +46,12 @@ export const MessagesQuery = Schema.Struct({
   limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))),
   before: Schema.optional(Schema.String),
 })
+// kilocode_change start
+export const DeleteMessageQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  queued: Schema.optional(QueryBoolean),
+})
+// kilocode_change end
 export const StatusMap = Schema.Record(Schema.String, SessionStatus.Info)
 export const UpdatePayload = Schema.Struct({
   title: Schema.optional(Schema.String),
@@ -423,7 +429,7 @@ export const SessionApi = HttpApi.make("session")
         ),
         HttpApiEndpoint.delete("deleteMessage", SessionPaths.deleteMessage, {
           params: { sessionID: SessionID, messageID: MessageID },
-          query: WorkspaceRoutingQuery,
+          query: DeleteMessageQuery, // kilocode_change
           success: described(Schema.Boolean, "Successfully deleted message"),
           error: [HttpApiError.BadRequest, ApiNotFoundError, SessionBusyError],
         }).annotateMerge(

@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Provider verbinden",
 
+  "session.activity.waiting": "Wachten op een antwoord of goedkeuring.",
+  "session.activity.error": "Fout of verbinding verbroken.",
+  "session.activity.retry": "Automatisch opnieuw proberen.",
+  "session.activity.busy": "In uitvoering.",
+  "session.activity.done": "Beurt voltooid.",
+  "session.activity.idle": "Niet actief.",
+
   "command.session.new": "Nieuwe sessie",
   "command.session.show.changes": "Wijzigingen tonen",
   "command.review.toggle": "Review in-/uitschakelen",
@@ -179,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktrees doorzoeken",
   "prompt.thinking.tooltip": "Redeneringsinspanning",
   "prompt.action.send": "Verzenden",
+  "prompt.action.continue": "Doorgaan",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
   "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
@@ -1238,6 +1246,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} to-do's voltooid",
   "task.backgroundAgents.running.one": "1 achtergrondagent",
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
+  "task.backgroundAgents.more": "+{{count}} meer",
   "task.backgroundAgents.open": "Achtergrondagent openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",

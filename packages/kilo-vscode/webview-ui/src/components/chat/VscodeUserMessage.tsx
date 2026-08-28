@@ -4,18 +4,23 @@ import { partFeedback } from "../../../../src/shared/browser-feedback"
 import type { Message, Part, TextPart } from "../../types/messages"
 import { BrowserReferences } from "./BrowserReferences"
 import { ReviewComments } from "./ReviewComments"
+import { useLanguage } from "../../context/language"
 
 interface VscodeUserMessageProps {
   message: Message
   parts: Part[]
   interrupted?: boolean
   queued?: boolean
+  onEdit?: () => void
+  queuedDisabled?: boolean
+  editDisabled?: boolean
   onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
 }
 
 export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
+  const language = useLanguage()
   const text = createMemo(() => props.parts.find((part): part is TextPart => part.type === "text" && !part.synthetic))
   const feedback = createMemo(() => {
     const part = text()
@@ -46,6 +51,12 @@ export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
       }
       interrupted={props.interrupted}
       queued={props.queued}
+      edit={
+        props.onEdit
+          ? { label: language.t("common.edit"), onClick: props.onEdit, disabled: props.editDisabled }
+          : undefined
+      }
+      queuedDisabled={props.queuedDisabled}
       onDelete={props.onDelete}
       onFork={props.onFork}
       onRevert={props.onRevert}

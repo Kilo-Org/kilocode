@@ -1,7 +1,9 @@
 import type { BrowserReference, ReviewCommentEntry } from "../types/messages"
 import type { ImageAttachment } from "../hooks/useImageAttachments"
+import type { RevertPromptState } from "../context/session-utils"
 import { pendingDraftKey, sessionDraftKey } from "./prompt-drafts"
 
+export const mentionDrafts = new Map<string, Pick<RevertPromptState, "paths" | "sessions">>()
 export const drafts = new Map<string, string>()
 export const browserDrafts = new Map<string, BrowserReference[]>()
 export const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
@@ -19,6 +21,7 @@ export function savePromptDraft(
   scroll = 0,
   browsers: BrowserReference[] = [],
 ) {
+  if (!text) mentionDrafts.delete(key)
   if (text) drafts.set(key, text)
   else drafts.delete(key)
   if (comments.length > 0) reviewDrafts.set(key, comments)
@@ -34,7 +37,7 @@ export function savePromptDraft(
 function remove(raw: string | undefined) {
   if (!raw) return
   const suffix = `:${raw}`
-  for (const map of [drafts, browserDrafts, reviewDrafts, imageDrafts, scrollDrafts]) {
+  for (const map of [drafts, browserDrafts, reviewDrafts, imageDrafts, scrollDrafts, mentionDrafts]) {
     for (const key of map.keys()) {
       if (typeof key === "string" && key.endsWith(suffix)) map.delete(key)
     }
