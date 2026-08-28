@@ -8,6 +8,7 @@
  */
 
 import { createSignal, type Accessor } from "solid-js"
+import { zeroID } from "@opencode-ai/core/kilocode/zero-id"
 import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
 import { parseDiffId } from "./diff-scope-state"
 import type { useVSCode } from "../src/context/vscode"
@@ -18,6 +19,9 @@ import type {
   AgentManagerWorktreeDiffNoticeMessage,
   WorktreeFileDiff,
 } from "../src/types/messages"
+
+const LIMIT = 16
+const BUDGET = 64 * 1024 * 1024
 
 /**
  * Decompose a composite diff id (`ctx#scope`, or `ctx#session:<sid>`) into the
@@ -30,7 +34,7 @@ export function wireDiffId(id: string) {
 }
 
 export function diffDataKey(project: string | undefined, id: string): string {
-  return `${project ?? "single"}\0${id}`
+  return zeroID(project ?? "single", id)
 }
 
 export function createWorktreeDiffs(
@@ -42,10 +46,14 @@ export function createWorktreeDiffs(
   const diffLoading = () => Object.keys(diffLoadings()).length > 0
   const [diffNotices, setDiffNotices] = createSignal<Record<string, string | undefined>>({})
   const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
+  const sizes = new Map<string, number>()
+  let bytes = 0
 
   const key = (id: string) => diffDataKey(project(), id)
 
   const reset = () => {
+    sizes.clear()
+    bytes = 0
     setDiffDatas({})
     setDiffLoadings({})
     setDiffNotices({})
@@ -54,6 +62,11 @@ export function createWorktreeDiffs(
 
   const drop = (id: string) => {
     const data = id.includes("\0") ? id : key(id)
+    const size = sizes.get(data)
+    if (size !== undefined) {
+      bytes -= size
+      sizes.delete(data)
+    }
     const remove = <T extends Record<string, unknown>>(prev: T): T => {
       if (!(data in prev)) return prev
       const next = { ...prev }
@@ -64,6 +77,47 @@ export function createWorktreeDiffs(
     setDiffLoadings(remove)
     setDiffNotices(remove)
     setDiffFileLoading(remove)
+  }
+
+  const prune = (ids: Set<string>) => {
+    const prefix = key("")
+    const keys = new Set([
+      ...Object.keys(diffDatas()),
+      ...Object.keys(diffLoadings()),
+      ...Object.keys(diffNotices()),
+      ...Object.keys(diffFileLoading()),
+    ])
+    for (const data of keys) {
+      if (!data.startsWith(prefix)) continue
+      const ctx = parseDiffId(data.slice(prefix.length)).ctx
+      if (ctx !== "local" && !ids.has(ctx)) drop(data)
+    }
+  }
+
+  const retain = (id: string) => {
+    const data = id.includes("\0") ? id : key(id)
+    const entries = diffDatas()[data]
+    if (!entries) return
+    const size = entries.reduce(
+      (total, item) =>
+        total +
+        2 *
+          (item.before.length +
+            item.after.length +
+            (item.patch?.length ?? 0) +
+            (item.image?.before?.data?.length ?? 0) +
+            (item.image?.after?.data?.length ?? 0)),
+      0,
+    )
+    bytes -= sizes.get(data) ?? 0
+    sizes.delete(data)
+    sizes.set(data, size)
+    bytes += size
+    while ((sizes.size > LIMIT || bytes > BUDGET) && sizes.size > 1) {
+      const oldest = sizes.keys().next().value
+      if (!oldest) return
+      drop(oldest)
+    }
   }
 
   const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
@@ -143,6 +197,7 @@ export function createWorktreeDiffs(
       if (existing && existing.length === next.length && existing.every((old, i) => old === next[i])) return prev
       return { ...prev, [data]: next }
     })
+    retain(data)
     if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles, data, ev.projectId)
   }
 
@@ -154,6 +209,7 @@ export function createWorktreeDiffs(
         const next = existing.map((item) => (item.file === ev.diff!.file ? ev.diff! : item))
         return { ...prev, [data]: next }
       })
+      retain(data)
       setDiffFilePending(data, ev.diff.file, false)
       return
     }
@@ -190,7 +246,9 @@ export function createWorktreeDiffs(
     diffFileLoadingFor,
     diffLoadingFor,
     diffDataKey,
+    retain,
     drop,
+    prune,
     reset,
     onWorktreeDiff,
     onWorktreeDiffFile,

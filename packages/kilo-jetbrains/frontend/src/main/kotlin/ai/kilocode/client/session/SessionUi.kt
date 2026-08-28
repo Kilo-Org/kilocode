@@ -220,6 +220,12 @@ class SessionUi(
     private lateinit var load: LoadingPanel
     private lateinit var migrationWizard: MigrationWizardPanel
     private var empty: EmptySessionPanel? = null
+
+    /**
+     * Last observed branch/worktree status. Retained so an empty panel created after the fetch shows
+     * its tip immediately instead of waiting for the next refresh.
+     */
+    private var branch: BranchStatusDto? = null
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
@@ -234,9 +240,6 @@ class SessionUi(
         }
     }
     private var wasBusy = false
-    // Last known branch/PR status for this session's directory. Mirrored here (not only inside the
-    // dock) so the context-menu actions work in hosts that hide the dock.
-    private var branch: BranchStatusDto? = null
     // Kept separate so a background stat refresh (turn end / revert) can supersede another refresh
     // but never cancel an in-flight user-initiated open.
     private var refreshJob: Job? = null
@@ -680,6 +683,7 @@ class SessionUi(
                     val panel = manager?.emptyPanel(this, controller)
                         ?: EmptySessionPanel(this, controller, controller.recents(), timers = timers)
                     empty = panel
+                    panel.setBranch(branch)
                     scroll.show(panel.view)
                 }
 
@@ -1111,6 +1115,7 @@ class SessionUi(
                 if (disposed || project.isDisposed) return@withContext
                 branch = status
                 dock?.setBranch(status)
+                empty?.setBranch(status)
             }
         }
     }
@@ -1175,7 +1180,7 @@ class SessionUi(
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         val busy = state.isBusy()
-        if (wasBusy && state is SessionState.Idle) {
+        if (wasBusy && !busy) {
             refreshBranchChanges()
             refreshBranch()
         }

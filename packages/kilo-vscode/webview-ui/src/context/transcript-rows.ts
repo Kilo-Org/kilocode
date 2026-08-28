@@ -108,6 +108,14 @@ function diffs(msg: Message) {
   return msg.summary.diffs ?? []
 }
 
+function content(parts: Part[]) {
+  const text = parts.find((part) => part.type === "text" && !part.synthetic)
+  if (text?.type === "text" && text.text.trim()) return true
+  return parts.some(
+    (part) => part.type === "file" && (part.mime.startsWith("image/") || part.mime === "application/pdf"),
+  )
+}
+
 function copy(messages: Message[], getParts: (id: string) => Part[], live: boolean) {
   // While the session streams, the last non-empty text part changes at every
   // part boundary and the copy/feedback row would hop between parts (mount/
@@ -143,14 +151,15 @@ export function transcriptRows(
       live: opts.live?.has(turn.id) === true,
     }
     const copied = copy(turn.assistant, parts, meta.live)
+    const user = turn.partial ? [] : parts(turn.user.id)
 
-    if (!turn.partial) {
+    if (!turn.partial && (!meta.queued || content(user))) {
       rows.push({
         ...meta,
         type: "user",
         key: `${turn.id}:user`,
         message: turn.user,
-        parts: parts(turn.user.id),
+        parts: user,
         interrupted: turn.assistant.some((msg) => terminal(msg) && msg.error?.name === "MessageAbortedError"),
         answered: turn.assistant.length > 0,
       })

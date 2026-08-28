@@ -1,8 +1,8 @@
 /**
  * Source contract tests for prompt send paths.
  *
- * Static analysis — reads session.tsx source and verifies that sendMessage and
- * sendCommand still dismiss suggestions and reject questions before dispatching.
+ * Static analysis — reads the session context source and verifies that sendMessage
+ * and sendCommand still dismiss suggestions and reject questions before dispatching.
  * Also reads ChatView.tsx and asserts the prompt-block predicate is fed only
  * permission counts, never question counts — guarantees that a pending question
  * cannot re-block the prompt input.
@@ -17,6 +17,7 @@ import { clearIfOn } from "../../webview-ui/src/context/session-cloud-prune"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const SESSION_FILE = path.join(ROOT, "webview-ui/src/context/session.tsx")
+const SESSION_TYPES_FILE = path.join(ROOT, "webview-ui/src/context/session-types.ts")
 const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.tsx")
 const AGENT_MANAGER_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
@@ -427,7 +428,7 @@ describe("SessionContext userClearedSession contract", () => {
     // restoreFailed uses session.userClearedSession() to decide whether :new
     // is a legitimate restore target after the user clicks New Task or
     // deletes their current/draft session. The accessor must be exposed.
-    expect(source).toMatch(/userClearedSession:\s*Accessor<boolean>/)
+    expect(readFile(SESSION_TYPES_FILE)).toMatch(/userClearedSession:\s*Accessor<boolean>/)
   })
 
   it("clearCurrentSession sets the flag", () => {

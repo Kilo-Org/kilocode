@@ -19,5 +19,5 @@
     "@types/bun": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
-  "version": "7.5.5"
+  "version": "7.5.6"
 }

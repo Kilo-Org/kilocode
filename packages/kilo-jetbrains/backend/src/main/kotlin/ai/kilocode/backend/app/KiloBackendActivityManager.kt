@@ -90,6 +90,10 @@ class KiloBackendActivityManager(
             // it must not badge the session list, worktree rows, or the Agents tab attention dot.
             is ChatEventDto.Error -> if (event.error?.aborted != true) event.sessionID?.let { errors.add(it) }
             is ChatEventDto.TurnOpen -> errors.remove(event.sessionID)
+            // Not every failure publishes a session error — a turn whose provider ended the response in
+            // error writes the failure onto the message and only reports it through this close reason. The
+            // badge has to come from the close too, or such a session rests as if it finished cleanly.
+            is ChatEventDto.TurnClose -> if (event.reason == "error") errors.add(event.sessionID)
             is ChatEventDto.SessionIdle -> clear(event.sessionID)
             is ChatEventDto.SessionStatusChanged -> when (event.status.type) {
                 "idle" -> clear(event.sessionID)

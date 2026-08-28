@@ -70,6 +70,8 @@ function createClient(options?: {
   createDeferred?: Deferred<{ data: ReturnType<typeof mkCreatedSession> }>
   abortFailures?: string[]
   abortDeferred?: Deferred<void>
+  deleteResult?: unknown
+  deleteError?: boolean
   supportDeferred?: Deferred<{ data: { available: boolean; reason?: string } }>
   sandboxDeferred?: Deferred<{ data: unknown }>
   sandboxStarted?: Deferred<void>
@@ -79,6 +81,12 @@ function createClient(options?: {
   const stopped: { sessionID: string; directory?: string }[] = []
   const aborted: { sessionID: string; directory?: string }[] = []
   const deleted: { sessionID: string; directory?: string }[] = []
+  const deletedMessages: Array<{
+    sessionID: string
+    messageID: string
+    directory?: string
+    queued?: boolean
+  }> = []
   const prompted: Array<Record<string, unknown>> = []
   const reverted: Array<Record<string, unknown>> = []
   const created: Array<Record<string, unknown>> = []
@@ -90,6 +98,7 @@ function createClient(options?: {
     stopped,
     aborted,
     deleted,
+    deletedMessages,
     prompted,
     reverted,
     created,
@@ -133,6 +142,11 @@ function createClient(options?: {
         if (options?.deleteDeferred) return options.deleteDeferred.promise
         return { data: {} }
       },
+      deleteMessage: async (params: { sessionID: string; messageID: string; directory?: string; queued?: boolean }) => {
+        deletedMessages.push(params)
+        if (options?.deleteError) throw new Error("delete failed")
+        return { data: options?.deleteResult }
+      },
     },
     sandbox: {
       support: async (params: Record<string, unknown>) => {
@@ -171,7 +185,7 @@ function createClient(options?: {
   }
 }
 
-function createConnection(client: ReturnType<typeof createClient>) {
+function createConnection(client: ReturnType<typeof createClient> | null) {
   const state = { value: undefined as boolean | undefined, revision: 0, pending: Promise.resolve() }
   return {
     sandboxPreference: {
@@ -251,13 +265,14 @@ type ProviderInternals = {
   refreshGitStatus: (directory?: string, sessionID?: string) => Promise<void>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
+  handleDeleteMessage: (sid: string, mid: string, rid?: string) => Promise<void>
 }
 
-function makeProvider(client: ReturnType<typeof createClient>) {
+function makeProvider(client: ReturnType<typeof createClient> | null) {
   const connection = createConnection(client)
   const provider = new KiloProvider({} as never, connection as never)
   const internal = provider as unknown as ProviderInternals
-  internal.connectionState = "connected"
+  internal.connectionState = client ? "connected" : "disconnected"
   const sent: unknown[] = []
   internal.webview = {
     postMessage: async (message: unknown) => {
@@ -1156,6 +1171,31 @@ describe("KiloProvider.handleDeleteSession / background processes", () => {
     expect(internal.removedSessionIds.has("s1")).toBe(true)
     expect(internal.sessionStatusMap.has("s1")).toBe(false)
     expect(sent).toHaveLength(count)
+  })
+})
+
+describe("KiloProvider.handleDeleteMessage", () => {
+  const ids = { sessionID: "s1", messageID: "m1", requestID: "r1" }
+
+  it.each([true, false, undefined, "true"])("confirms only a true queued deletion result: %p", async (result) => {
+    const client = createClient({ deleteResult: result })
+    const { internal, sent } = makeProvider(client)
+    await internal.handleDeleteMessage(ids.sessionID, ids.messageID, ids.requestID)
+    expect(client.deletedMessages).toEqual([{ sessionID: "s1", messageID: "m1", directory: "/repo", queued: true }])
+    expect(sent).toContainEqual({ type: "deleteMessageResult", ...ids, success: result === true })
+  })
+
+  it.each([true, false])("confirms removal failures when connected=%p", async (connected) => {
+    const error = spyOn(console, "error").mockImplementation(() => {})
+    const { internal, sent } = makeProvider(connected ? createClient({ deleteError: true }) : null)
+    await internal.handleDeleteMessage(ids.sessionID, ids.messageID, ids.requestID)
+    expect(sent).toContainEqual({
+      type: "error",
+      message: connected ? "delete failed" : "Not connected to CLI backend",
+      sessionID: ids.sessionID,
+    })
+    expect(sent).toContainEqual({ type: "deleteMessageResult", ...ids, success: false })
+    error.mockRestore()
   })
 })
 
