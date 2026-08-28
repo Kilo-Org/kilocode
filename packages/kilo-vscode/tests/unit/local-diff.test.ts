@@ -467,6 +467,26 @@ describe("diffFile", () => {
     })
   })
 
+  it("keeps empty and named base cache identities separate", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncommitted\n")
+      runSync(dir, ["commit", "-am", "change seed"])
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncommitted\nworking\n")
+      const local = createLocalDiff(git())
+      await local.summary(dir, "")
+      await local.summary(dir, base)
+
+      const current = await local.file(dir, "", "seed.txt")
+      const ancestor = await local.file(dir, base, "seed.txt")
+      expect(current?.before).toBe("seed\ncommitted\n")
+      expect(ancestor?.before).toBe("seed\n")
+      expect(current?.after).toBe("seed\ncommitted\nworking\n")
+      expect(ancestor?.after).toBe(current?.after)
+      expect(await local.file(dir, "", "seed.txt")).toBe(current)
+      expect(await local.file(dir, base, "seed.txt")).toBe(ancestor)
+    })
+  })
+
   it("does not cache detail that is aborted before Git completes", async () => {
     await withRepo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "seed.txt"), "seed\ncached\n")
