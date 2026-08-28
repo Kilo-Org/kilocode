@@ -1141,6 +1141,7 @@ object KiloCliDataParser {
             parentID = obj.str("parentID"),
             cost = obj.num("cost"),
             tokens = tokens?.let(::parseTokens),
+            finish = obj.str("finish"),
             error = error?.let { parseError(it) },
             summary = summary,
         )

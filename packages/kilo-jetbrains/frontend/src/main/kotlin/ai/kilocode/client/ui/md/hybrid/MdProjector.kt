@@ -60,7 +60,7 @@ internal class MdProjector {
                 val pending = idx == lines.lastIndex && pendingOpener(line.text)
                 if (pending) {
                     flush()
-                    blocks.add(Desc.Code("", Kind.Source(PlainTextFileType.INSTANCE)))
+                    blocks.add(Desc.Code("", Kind.Source(PlainTextFileType.INSTANCE), open = true))
                     html.append(codeHtml(""))
                 } else {
                     md.append(line.text).append(line.end)
@@ -87,7 +87,7 @@ internal class MdProjector {
                 if (!partial) code.append(item.text).append(item.end)
                 idx++
             }
-            val desc = Desc.Code(code.toString(), MdLanguage.kind(open.info))
+            val desc = Desc.Code(code.toString(), MdLanguage.kind(open.info), open = !closed || trimmed)
             blocks.add(desc)
             html.append(codeHtml(desc.text))
             trailing = if (!closed && !trimmed) open else null
@@ -215,7 +215,7 @@ internal class MdProjector {
 
 internal sealed class Desc {
     data class Html(val body: String) : Desc()
-    data class Code(val text: String, val kind: Kind) : Desc()
+    data class Code(val text: String, val kind: Kind, val open: Boolean = false) : Desc()
     data class Table(val body: String) : Desc()
 }
 

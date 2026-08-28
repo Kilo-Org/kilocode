@@ -43,6 +43,33 @@ describe("routeEarlyMessage clipboard handling", () => {
   })
 })
 
+describe("routeEarlyMessage resume", () => {
+  it("forwards the original session, assistant, and request IDs without sending text", async () => {
+    const calls: string[][] = []
+    const ctx = {
+      resume: async (...ids: string[]) => {
+        calls.push(ids)
+      },
+    } as Ctx
+    const message = { type: "resumeSession", sessionID: "ses_1", messageID: "msg_1", requestID: "request-1" }
+    expect(await routeEarlyMessage(message, ctx)).toBe(true)
+    expect(calls).toEqual([["ses_1", "msg_1", "request-1"]])
+    expect(await routeEarlyMessage({ ...message, messageID: undefined }, ctx)).toBe(true)
+    expect(calls).toHaveLength(1)
+  })
+})
+
+describe("routeEarlyMessage activity", () => {
+  it("forwards authoritative webview presentation state without interpreting session events", async () => {
+    const calls: unknown[] = []
+    const ctx = { activity: (state: unknown) => calls.push(state) } as Ctx
+    for (const state of ["busy", "waiting", "done", "error", "idle"]) {
+      expect(await routeEarlyMessage({ type: "sessionActivity", state }, ctx)).toBe(true)
+    }
+    expect(calls).toEqual(["busy", "waiting", "done", "error", "idle"])
+  })
+})
+
 describe("routeEarlyMessage background jobs", () => {
   it("forwards list request correlation", async () => {
     const calls: unknown[] = []

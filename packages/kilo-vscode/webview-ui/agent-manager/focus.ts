@@ -55,7 +55,7 @@ export function createChatFocus(deps: {
 }) {
   const focus = (force: boolean) => {
     if ((!force && (!document.hasFocus() || deps.term())) || deps.history() || deps.review()) return
-    if (preservesTextFocus(document.activeElement)) return
+    if (preservesTextFocus(document.activeElement) || (!force && isTextControl(document.activeElement))) return
     if (!force && document.activeElement?.matches('[role="tab"]')) return
     if (!force && document.activeElement?.closest('[data-component="question-dock"]')) return
     if (focusQuestionOption()) return

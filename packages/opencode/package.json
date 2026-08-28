@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.5.0",
+  "version": "7.5.6",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -62,7 +62,7 @@
     "why-is-node-running": "3.2.2",
     "@types/npmcli__arborist": "6.3.3",
     "@opencode-ai/http-recorder": "workspace:*",
-    "@babel/core": "7.28.4",
+    "@babel/core": "7.29.6",
     "@standard-schema/spec": "1.0.0",
     "@types/babel__core": "7.20.5"
   },
@@ -180,7 +180,7 @@
     "@standard-schema/spec": "1.0.0",
     "chokidar": "4.0.3",
     "glob": "13.0.5",
-    "minimatch": "10.0.3",
+    "minimatch": "10.2.6",
     "partial-json": "0.1.7",
     "xdg-basedir": "5.1.0",
     "@ff-labs/fff-bun": "0.9.4",

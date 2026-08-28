@@ -13,7 +13,7 @@ const AUTH_TOKEN_QUERY = "auth_token"
 const UNAUTHORIZED = 401
 const WWW_AUTHENTICATE = 'Basic realm="Secure Area"'
 // kilocode_change start - require auth for high-risk permission toggles even when global auth is optional
-const REQUIRED_AUTH_PATHS = new Set(["/permission/allow-everything"])
+const REQUIRED_AUTH_PATHS = new Set(["/permission/allow-everything", "/kilocode/snapshot/remove"])
 // kilocode_change end
 
 // Avoid HttpApiSecurity alternatives here: Effect security middleware wraps the

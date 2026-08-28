@@ -53,6 +53,26 @@ test.describe("webview accessibility ratchet", () => {
     })
   }
 
+  test("Background agent summary and visible agents remain pointer-accessible", async ({ page }) => {
+    await page.setViewportSize({ width: 200, height: 720 })
+    await open(page, "chat--task-header-background-agents-200")
+
+    const agents = page.locator('[data-component="task-header-agents"]')
+    const summary = agents.locator('[data-slot="task-header-agents-summary"]')
+    const list = agents.locator('[data-slot="task-header-todos-list"]')
+    await expect(summary).toHaveAttribute("aria-hidden", "false")
+    await summary.click()
+    await expect(list).toBeVisible()
+    await summary.click()
+    await expect(list).toBeHidden()
+
+    await page.setViewportSize({ width: 1280, height: 720 })
+    const item = agents.locator('[data-slot="task-header-agents-item"]').first()
+    await expect(item).toHaveAttribute("aria-hidden", "false")
+    await item.click()
+    await expect(list).toBeHidden()
+  })
+
   test("Agent Manager keeps virtualized transcript fragments laid out", async ({ page }) => {
     await open(page, "agentmanager--sidebar-search-open")
 

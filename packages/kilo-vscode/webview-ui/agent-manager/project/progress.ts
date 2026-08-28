@@ -1,4 +1,14 @@
 import type { ProjectStore } from "./store"
+import type { ExtensionMessage } from "../../src/types/messages"
+
+export function clearFailedDelete(
+  msg: ExtensionMessage,
+  stores: { ensure: (id: string) => ProjectStore; active: () => ProjectStore },
+): void {
+  if (msg.type !== "error" || msg.code !== "agentManager.worktreeDeleteFailed" || !msg.worktreeId) return
+  const store = msg.projectId ? stores.ensure(msg.projectId) : stores.active()
+  store.setBusy((prev) => new Map([...prev].filter(([id]) => id !== msg.worktreeId)))
+}
 
 /** Clear setup indicators for every worktree in one multi-version group. */
 export function clearMultiVersionBusy(store: ProjectStore, groupId: string): void {
