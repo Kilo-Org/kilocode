@@ -297,6 +297,36 @@ it.live("removes an absent snapshot repository idempotently", () =>
   }),
 )
 
+for (const stored of [false, true]) {
+  it.live(`cleans ${stored ? "existing" : "absent"} checkpoints without accessing workspace ancestors`, () =>
+    Effect.gen(function* () {
+      const base = yield* tmpdirScoped()
+      const input = item(path.join(base, "allowed"))
+      const current = stored ? yield* repo(input) : undefined
+      const fs = yield* FSUtil.Service
+      const flock = yield* EffectFlock.Service
+      yield* fs.ensureDir(path.dirname(input.worktree)).pipe(Effect.orDie)
+      yield* drop(input.worktree)
+      const denied = Effect.die(new Error("Workspace ancestor access denied"))
+
+      expect(
+        yield* KiloSnapshotCleanup.remove({
+          ...input,
+          flock,
+          fs: {
+            ...fs,
+            realPath: (target) => (target === base ? denied : fs.realPath(target)),
+            stat: (target) => (target === base ? denied : fs.stat(target)),
+            readDirectoryEntries: (target) => (target === base ? denied : fs.readDirectoryEntries(target)),
+          },
+        }),
+      ).toBe(true)
+      if (current) expect(yield* exist(current.dir)).toBe(false)
+      expect(yield* exist(input.directory)).toBe(true)
+    }),
+  )
+}
+
 it.live("removes safely when the snapshot root, project, or repository is missing", () =>
   Effect.gen(function* () {
     const base = yield* tmpdirScoped()
@@ -381,6 +411,23 @@ it.live("rejects a symlinked snapshot root", () =>
 
     expect(Exit.isFailure(yield* remove(input).pipe(Effect.exit))).toBe(true)
     expect(yield* exist(path.join(outside, "sentinel"))).toBe(true)
+  }),
+)
+
+it.live("rejects symlinks in ancestors of the workspace and snapshot root", () =>
+  Effect.gen(function* () {
+    const base = yield* tmpdirScoped()
+    const ancestor = path.join(base, "ancestor")
+    const input = item(ancestor)
+    const current = yield* repo(input)
+    yield* drop(input.worktree)
+    const fs = yield* FSUtil.Service
+    const outside = path.join(base, "outside")
+    yield* fs.rename(ancestor, outside)
+    yield* link(outside, ancestor)
+
+    expect(Exit.isFailure(yield* remove(input).pipe(Effect.exit))).toBe(true)
+    expect(yield* exist(current.dir)).toBe(true)
   }),
 )
 
