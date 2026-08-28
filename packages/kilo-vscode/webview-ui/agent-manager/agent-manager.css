@@ -804,11 +804,6 @@ html[data-theme="kilo-vscode"]
   white-space: normal;
 }
 
-.am-worktree-spinner {
-  width: 16px;
-  height: 16px;
-}
-
 /* Per-worktree git stats (diff lines + commits missing from origin) */
 
 .am-worktree-stats {
