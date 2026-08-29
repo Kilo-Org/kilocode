@@ -480,7 +480,7 @@ export namespace RemoteProtocol {
           recovery: z
             .strictObject({
               invocationId: BrowserInvocationId,
-              tabId: tab,
+              tabId: tab.optional(),
               tabClosed: z.literal(true),
               locksDrained: z.literal(true),
             })
