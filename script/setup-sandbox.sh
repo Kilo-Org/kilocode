@@ -53,6 +53,7 @@ setup_java() {
 }
 
 extract_intercept_ca() {
+  rm -f "$state_dir"/chain-*.pem
   echo | openssl s_client -connect github.com:443 -showcerts 2>/dev/null |
     awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' |
     awk 'BEGIN { n=0 } /BEGIN CERT/ { n++ } { print > "'"$state_dir"'/chain-" n ".pem" }'
@@ -93,6 +94,11 @@ setup_ca() {
   fi
 
   if command -v git >/dev/null 2>&1; then
+    local prev
+    prev="$(git config --global --get http.sslCAInfo || true)"
+    if [ -n "$prev" ] && [ "$prev" != "$bundle" ]; then
+      echo "Note: replacing existing git http.sslCAInfo=$prev with $bundle"
+    fi
     git config --global http.sslCAInfo "$bundle"
     echo "git: configured http.sslCAInfo=$bundle"
   fi
@@ -101,9 +107,12 @@ setup_ca() {
     local cacerts
     cacerts="$(dirname "$(readlink -f "$(command -v java)")")/../lib/security/cacerts"
     if [ -f "$cacerts" ]; then
-      keytool -importcert -noprompt -alias kilocode-sandbox-intercept \
-        -file "$intercept" -keystore "$cacerts" -storepass changeit >/dev/null 2>&1 \
-        || echo "Warning: could not import CA into JVM cacerts ($cacerts)"
+      if ! keytool -importcert -noprompt -alias kilocode-sandbox-intercept \
+        -file "$intercept" -keystore "$cacerts" -storepass changeit >/dev/null 2>&1; then
+        if ! keytool -list -alias kilocode-sandbox-intercept -keystore "$cacerts" -storepass changeit >/dev/null 2>&1; then
+          echo "Warning: could not import CA into JVM cacerts ($cacerts)"
+        fi
+      fi
     fi
   fi
 
