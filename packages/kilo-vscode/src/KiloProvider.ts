@@ -213,6 +213,7 @@ type ConfigSnapshot = {
   effective: Config
   targets: { global: ConfigTarget; project: ConfigTarget }
 }
+type ConfigWriteResult = { success: true } | { success: false; error: string }
 
 function sandboxClient(client: KiloClient | null) {
   const sandbox = client?.sandbox
@@ -347,6 +348,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Coalesce provider refreshes — at most one follow-up rerun when a request lands mid-flight. */
   private providersRefresh: Promise<void> | null = null
   private providersQueued = false
+  /** Serializes global-config writes from chat controls (see writeGlobalConfig). */
+  private configWrites: Promise<void> = Promise.resolve()
   private providersGeneration = 0
   private sandboxRevision = 0
   private cachedAgentsMessage: unknown = null
@@ -3383,10 +3386,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     projectUnset: string[][] = [],
     globalBindingId?: string,
     projectBindingId?: string,
-  ): Promise<void> {
+  ): Promise<ConfigWriteResult> {
     if (!this.client || this.connectionState !== "connected") {
-      this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
-      return
+      return this.failConfigUpdate("Not connected to CLI backend")
     }
 
     const refreshProviders =
@@ -3401,7 +3403,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       project.agent !== undefined
     const hasGlobal = Object.keys(partial).length > 0 || globalUnset.length > 0
     const hasProject = Object.keys(project).length > 0 || projectUnset.length > 0
-    if (!hasGlobal && !hasProject) return
+    if (!hasGlobal && !hasProject) return { success: true }
 
     const globalBinding = hasGlobal
       ? this.configBindings.get(globalBindingId, this.connectionGeneration, (project) =>
@@ -3414,8 +3416,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         )
       : undefined
     if ((hasGlobal && !globalBinding) || (hasProject && !projectBinding)) {
-      this.postMessage({ type: "configUpdateFailed", message: "Settings changed or expired. Reload before saving." })
-      return
+      return this.failConfigUpdate("Settings changed or expired. Reload before saving.")
     }
 
     this.pending++
@@ -3464,9 +3465,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (globalBinding) this.configBindings.consume(globalBinding.id)
         if (projectBinding) this.configBindings.consume(projectBinding.id)
       }
-      this.postConfigFailure(error, completed, snapshot, dir)
+      const result = this.postConfigFailure(error, completed, snapshot, dir)
       this.pending--
-      return
+      return result
     }
     if (globalBinding) this.configBindings.consume(globalBinding.id)
     if (projectBinding) this.configBindings.consume(projectBinding.id)
@@ -3500,8 +3501,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
         refreshAgents ? this.fetchAndSendAgents() : Promise.resolve(),
       ]).catch((error) => console.error("[Kilo New] KiloProvider: Post-config refresh failed:", error))
+      return { success: true }
     } catch (error) {
-      this.postConfigFailure(error, completed, snapshot, dir)
+      return this.postConfigFailure(error, completed, snapshot, dir)
     } finally {
       this.pending--
     }
@@ -3511,11 +3513,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * routing selector). Settings saves present the binding issued with their
    * last config load; here a binding is issued from a fresh snapshot right
    * before the write so the revision guard in handleUpdateConfig still applies.
+   * Writes run one at a time: a control can fire again before the previous
+   * snapshot+write round-trip completes, and the queued write must see the
+   * revision the previous one produced instead of failing the guard. The chat
+   * has no save bar, so a failure is surfaced as a notification.
    */
-  private async writeGlobalConfig(partial: Partial<Config>, unset: string[][] = []): Promise<void> {
+  private writeGlobalConfig(partial: Partial<Config>, unset: string[][] = []): Promise<void> {
+    const task = this.configWrites.then(async () => {
+      const result = await this.saveGlobalConfig(partial, unset)
+      if (result.success) return
+      void vscode.window.showErrorMessage(`Config update failed: ${result.error}`)
+    })
+    this.configWrites = task.catch(() => {})
+    return task
+  }
+
+  private async saveGlobalConfig(partial: Partial<Config>, unset: string[][]): Promise<ConfigWriteResult> {
     if (!this.client || this.connectionState !== "connected") {
-      this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
-      return
+      return this.failConfigUpdate("Not connected to CLI backend")
     }
     const dir = this.settingsDirectory()
     let binding: ConfigBinding | undefined
@@ -3523,14 +3538,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const snapshot = await fetchSnapshot(this.client, dir, () => this.configSettings())
       binding = this.bindingsFor(dir, snapshot.targets).global
     } catch (error) {
-      this.postConfigFailure(error)
-      return
+      return this.postConfigFailure(error)
     }
-    if (!binding) {
-      this.postMessage({ type: "configUpdateFailed", message: "Global config is not available" })
-      return
-    }
-    await this.handleUpdateConfig(partial, {}, unset, [], binding.id)
+    if (!binding) return this.failConfigUpdate("Global config is not available")
+    return this.handleUpdateConfig(partial, {}, unset, [], binding.id)
   }
 
   private async refreshConfig(type: "configLoaded" | "configUpdated", dir = this.settingsDirectory()) {
@@ -3566,12 +3577,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     completed: Array<"global" | "project"> = [],
     snapshot?: ConfigSnapshot,
     directory?: string,
-  ): void {
+  ): ConfigWriteResult {
     console.error("[Kilo New] KiloProvider: Failed to update config:", error)
     const bindings = snapshot && directory ? this.bindingsFor(directory, snapshot.targets) : undefined
+    const message = getErrorMessage(error) || "Failed to update config"
     this.postMessage({
       type: "configUpdateFailed",
-      message: getErrorMessage(error) || "Failed to update config",
+      message,
       details: getConfigErrorDetails(error),
       completedScopes: completed,
       config: snapshot?.effective,
@@ -3579,6 +3591,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       projectConfig: bindings?.project ? snapshot?.targets.project.raw : undefined,
       bindings,
     })
+    return { success: false, error: message }
+  }
+
+  private failConfigUpdate(error: string): ConfigWriteResult {
+    this.postMessage({ type: "configUpdateFailed", message: error })
+    return { success: false, error }
   }
   private async resolveSession(sessionID?: string, draftID?: string, context?: string, contextDirectory?: string) {
     if (!this.client) return undefined

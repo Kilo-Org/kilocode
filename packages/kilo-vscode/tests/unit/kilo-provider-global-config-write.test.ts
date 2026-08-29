@@ -1,5 +1,6 @@
-import { describe, expect, it } from "bun:test"
+import { afterAll, beforeEach, describe, expect, it, spyOn } from "bun:test"
 import type { Config } from "@kilocode/sdk/v2/client"
+import * as vscode from "vscode"
 import { routingUnsetPaths, routingValue } from "../../src/shared/provider-routing"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -11,6 +12,10 @@ type Internals = {
   fetchAndSendProviders: () => Promise<void>
 }
 
+const notice = spyOn(vscode.window, "showErrorMessage").mockResolvedValue(undefined)
+beforeEach(() => notice.mockClear())
+afterAll(() => notice.mockRestore())
+
 const target = (scope: "global" | "project", revision: string) => ({
   scope,
   path: scope === "global" ? "/config/kilo.jsonc" : "/repo/.kilo/kilo.jsonc",
@@ -20,23 +25,26 @@ const target = (scope: "global" | "project", revision: string) => ({
   raw: {},
 })
 
-// The overlay snapshot carries the live revision; a write must present exactly
-// that revision, which is what the config binding guard checks.
+// The overlay snapshot carries the live revision and a write must present
+// exactly that revision — the backend rejects anything else, which is what the
+// config binding guard relies on. Every accepted write produces a new revision.
 function createConnection(options: { overlay?: () => Promise<unknown> } = {}) {
   const patches: Array<Record<string, unknown>> = []
-  const live = { global: target("global", "global-live"), project: target("project", "project-live") }
-  const written = {
-    effective: {},
-    targets: { global: target("global", "global-written"), project: target("project", "project-live") },
-  }
+  let revision = 1
+  const targets = () => ({
+    global: target("global", `global-r${revision}`),
+    project: target("project", "project-live"),
+  })
   const client = {
     global: { config: { get: async () => ({ data: {} }) } },
     config: {
       get: async () => ({ data: {} }),
-      overlay: options.overlay ?? (async () => ({ data: { project: {}, targets: live } })),
-      overlayUpdate: async (patch: Record<string, unknown>) => {
+      overlay: options.overlay ?? (async () => ({ data: { project: {}, targets: targets() } })),
+      overlayUpdate: async (patch: Record<string, unknown> & { expected: { revision: string } }) => {
+        if (patch.expected.revision !== `global-r${revision}`) throw new Error("Revision mismatch")
+        revision++
         patches.push(patch)
-        return { data: written }
+        return { data: { effective: {}, targets: targets() } }
       },
     },
     experimental: { capabilities: { get: async () => ({ data: {} }) } },
@@ -60,13 +68,16 @@ function setup(conn: ReturnType<typeof createConnection>, connected = true) {
   return { internal, sent }
 }
 
+const pin = (provider: string) =>
+  ({
+    provider: { kilo: { models: { "z-ai/glm-4.6": { options: { provider: routingValue(provider) } } } } },
+  }) as Partial<Config>
+
 describe("KiloProvider.writeGlobalConfig", () => {
   it("writes a routing pin against a binding issued from a fresh snapshot", async () => {
     const conn = createConnection()
     const { internal, sent } = setup(conn)
-    const partial = {
-      provider: { kilo: { models: { "z-ai/glm-4.6": { options: { provider: routingValue("gmicloud/fp8") } } } } },
-    } as Partial<Config>
+    const partial = pin("gmicloud/fp8")
 
     await internal.writeGlobalConfig(partial)
 
@@ -75,10 +86,11 @@ describe("KiloProvider.writeGlobalConfig", () => {
         scope: "global",
         set: partial,
         unset: [],
-        expected: { path: "/config/kilo.jsonc", revision: "global-live" },
+        expected: { path: "/config/kilo.jsonc", revision: "global-r1" },
       }),
     ])
     expect(sent.map((message) => message.type)).toEqual(["configUpdated"])
+    expect(notice).not.toHaveBeenCalled()
   })
 
   it("clears a routing pin through the same guarded write", async () => {
@@ -93,10 +105,26 @@ describe("KiloProvider.writeGlobalConfig", () => {
         scope: "global",
         set: {},
         unset,
-        expected: expect.objectContaining({ revision: "global-live" }),
+        expected: expect.objectContaining({ revision: "global-r1" }),
       }),
     ])
     expect(sent.map((message) => message.type)).toEqual(["configUpdated"])
+  })
+
+  it("runs overlapping writes one after another, each against the latest revision", async () => {
+    const conn = createConnection()
+    const { internal, sent } = setup(conn)
+
+    // Two picks in quick succession: without serialization both snapshots
+    // would carry revision 1 and the second write would fail the guard.
+    await Promise.all([internal.writeGlobalConfig(pin("gmicloud/fp8")), internal.writeGlobalConfig(pin("baseten/fp8"))])
+
+    expect(conn.patches.map((patch) => [patch.set, (patch.expected as { revision: string }).revision])).toEqual([
+      [pin("gmicloud/fp8"), "global-r1"],
+      [pin("baseten/fp8"), "global-r2"],
+    ])
+    expect(sent.map((message) => message.type)).toEqual(["configUpdated", "configUpdated"])
+    expect(notice).not.toHaveBeenCalled()
   })
 
   it("reports a failure instead of writing when the backend is not connected", async () => {
@@ -107,6 +135,7 @@ describe("KiloProvider.writeGlobalConfig", () => {
 
     expect(conn.patches).toEqual([])
     expect(sent).toEqual([{ type: "configUpdateFailed", message: "Not connected to CLI backend" }])
+    expect(notice).toHaveBeenCalledWith("Config update failed: Not connected to CLI backend")
   })
 
   it("reports a failure instead of writing when the snapshot cannot be loaded", async () => {
@@ -121,5 +150,22 @@ describe("KiloProvider.writeGlobalConfig", () => {
 
     expect(conn.patches).toEqual([])
     expect(sent).toEqual([expect.objectContaining({ type: "configUpdateFailed", message: "overlay unavailable" })])
+    expect(notice).toHaveBeenCalledWith("Config update failed: overlay unavailable")
+  })
+
+  it("surfaces a rejected write, then keeps accepting later writes", async () => {
+    const stale = { global: target("global", "global-r0"), project: target("project", "project-live") }
+    const conn = createConnection({ overlay: async () => ({ data: { project: {}, targets: stale } }) })
+    const { internal, sent } = setup(conn)
+
+    await internal.writeGlobalConfig(pin("gmicloud/fp8"))
+
+    expect(conn.patches).toEqual([])
+    expect(sent).toEqual([expect.objectContaining({ type: "configUpdateFailed", message: "Revision mismatch" })])
+    expect(notice).toHaveBeenCalledWith("Config update failed: Revision mismatch")
+
+    // A queued write after a failure still runs.
+    await internal.writeGlobalConfig(pin("baseten/fp8"))
+    expect(sent.map((message) => message.type)).toEqual(["configUpdateFailed", "configUpdateFailed"])
   })
 })
