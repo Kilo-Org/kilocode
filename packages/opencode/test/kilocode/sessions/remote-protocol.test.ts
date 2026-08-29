@@ -721,8 +721,13 @@ describe("RemoteProtocol browser jobs v1", () => {
     { type: "provider_unavailable", ...binding, reason: "provider_lost", effectsUncertain: true },
     { type: "provider_cancel", ...bound },
   ] satisfies RemoteProtocol.BrowserProviderOutbound[]
+  const dispatch = { type: "provider_job", job, goal: invoke.goal, ownerLabel: "Parent chat" } as const
   const received = [
-    { type: "provider_job", job, goal: invoke.goal, ownerLabel: "Parent chat" },
+    dispatch,
+    ...(["new", "continue"] as const).map<RemoteProtocol.BrowserProviderInbound>((mode) => ({
+      ...dispatch,
+      conversationMode: mode,
+    })),
     { type: "provider_job_cancel", ...bound, reason: "cancelled" },
     { type: "provider_snapshot", requestId, ...binding, jobs: [job, finished], nextCursor: handle.jobId },
     { type: "provider_snapshot", ...binding, jobs: [] },
@@ -730,6 +735,39 @@ describe("RemoteProtocol browser jobs v1", () => {
     history,
     { type: "provider_status_result", requestId, providerId: handle.providerId, jobs: [] },
   ] satisfies RemoteProtocol.BrowserProviderInbound[]
+
+  describe.each([
+    { name: "provider", schema: RemoteProtocol.BrowserProviderInbound },
+    { name: "negotiated web", schema: RemoteProtocol.WebInboundWithBrowser },
+  ])("provider conversation intent: $name", (contract) => {
+    test("keeps legacy jobs parseable without inventing conversation intent", () => {
+      const parsed = contract.schema.parse(dispatch)
+      expect(parsed).toStrictEqual(dispatch)
+      expect(parsed).not.toHaveProperty("conversationMode")
+    })
+
+    test.each(["new", "continue"] as const)("preserves explicit %s intent and rejects unknown fields", (mode) => {
+      const frame = { ...dispatch, conversationMode: mode }
+      expect(contract.schema.parse(frame)).toStrictEqual(frame)
+      expect(contract.schema.safeParse({ ...frame, extra: true }).success).toBe(false)
+      expect(contract.schema.safeParse({ ...frame, job: { ...job, conversationMode: mode } }).success).toBe(false)
+    })
+
+    test.each([
+      { conversationMode: "" },
+      { conversationMode: "unknown" },
+      { conversationMode: "NEW" },
+      { conversationMode: "CONTINUE" },
+      { conversationMode: "new " },
+      { conversationMode: null },
+      { conversationMode: false },
+      { conversationMode: 0 },
+      { conversationMode: [] },
+      { conversationMode: {} },
+    ])("rejects invalid conversation modes: %j", (fields) => {
+      expect(contract.schema.safeParse({ ...dispatch, ...fields }).success).toBe(false)
+    })
+  })
 
   describe("read-only provider status", () => {
     test("keeps historical generations separate from execution snapshots", () => {
