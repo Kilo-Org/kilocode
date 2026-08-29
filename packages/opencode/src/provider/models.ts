@@ -75,14 +75,10 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
           return providers
         }
 
-        const opts = cfg.provider?.kilo?.options
         const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
-        const org = opts?.kilocodeOrganizationId ?? (info?.type === "oauth" ? info.accountId : undefined)
-        const url = baseURL(opts?.baseURL, org)
-        const fetch = {
-          ...(url ? { baseURL: url } : {}),
-          ...(org ? { kilocodeOrganizationId: org } : {}),
-        }
+        const overrides = ModelCache.kiloConfigOptions(cfg, info)
+        const url = baseURL(overrides.baseURL, overrides.kilocodeOrganizationId)
+        const fetch = { ...overrides, ...(url ? { baseURL: url } : {}) }
         const fetched = yield* cache.fetch("kilo", fetch).pipe(Effect.catch(() => Effect.succeed({})))
         const models = Object.keys(fetched).length > 0 ? fetched : (fallback?.models ?? {})
         providers.kilo = {
@@ -93,7 +89,8 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
           npm: "@kilocode/kilo-gateway",
           models,
         }
-        if (Object.keys(fetched).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
+        if (Object.keys(fetched).length === 0)
+          yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
         yield* addApertis()
         return providers
       })

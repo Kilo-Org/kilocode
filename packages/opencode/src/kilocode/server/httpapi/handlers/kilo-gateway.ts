@@ -452,8 +452,8 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       // create_session test's module init. Run the helper's Effect on the
       // request Effect (yield*) so the request-scoped InstanceRef/WorkspaceRef
       // reach the persistence path instead of the AppRuntime default context.
-      const { CloudSessionImportInProcess } = yield* Effect.promise(() =>
-        import("@/kilocode/server/import-cloud-session-in-process"),
+      const { CloudSessionImportInProcess } = yield* Effect.promise(
+        () => import("@/kilocode/server/import-cloud-session-in-process"),
       )
       const outcome = yield* CloudSessionImportInProcess.importSession(ctx.payload.sessionId).pipe(
         Effect.provideService(Auth.Service, auth),
@@ -510,15 +510,14 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const modelEndpoints = Effect.fn("KiloGatewayHttpApi.modelEndpoints")(function* (ctx) {
-      const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
+      // The kilo catalog resolves token, organization and gateway URL exactly
+      // like the models catalog request (config, stored session, env), so a
+      // token meant for a self-hosted gateway never reaches the default host.
+      // The public catalog is unauthenticated and needs none of it.
+      const options = ctx.query.catalog === "public" ? {} : yield* cache.options("kilo")
 
       const result = yield* Effect.tryPromise({
-        try: () =>
-          fetchKiloModelEndpoints(ctx.query.model, {
-            kilocodeToken: getToken(info),
-            kilocodeOrganizationId: getOrganizationId(info),
-            catalog: ctx.query.catalog,
-          }),
+        try: () => fetchKiloModelEndpoints(ctx.query.model, { ...options, catalog: ctx.query.catalog }),
         catch: () => new HttpApiError.BadRequest({}),
       })
 
