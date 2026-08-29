@@ -59,6 +59,15 @@ Extension-specific settings should live in the Kilo extension settings, not defa
 
 - When a task primarily touches `packages/kilo-jetbrains/`, read `packages/kilo-jetbrains/AGENTS.md` before planning or editing. It covers split-mode architecture, IntelliJ source lookup, threading fundamentals, UI guidelines, and session component architecture.
 
+## Constrained / Cloud Environments
+
+Ephemeral sandboxes (cloud agents, CI-less containers) often miss tooling the pre-push hook needs. Run `./script/setup-sandbox.sh` at session start; it installs Java 21, trusts the sandbox TLS intercept CA for git/gh/the JVM, and runs `bun install`.
+
+- The pre-push hook skips the JetBrains typecheck when Java is not installed, and honors `KILO_SKIP_BUN_VERSION_CHECK=1` when the sandbox bun is below the required range. Only set that override after verifying the push content (package typecheck/tests) yourself.
+- System state (Java, /tmp, node_modules, bun) may be reset between operations in ephemeral sandboxes — re-run `script/setup-sandbox.sh` if tools disappear.
+- In sandboxes behind a transparent TLS proxy, set `SSL_CERT_FILE=$HOME/.kilocode-sandbox/ca-bundle.crt` before `gh` commands, and use `GIT_SSL_NO_VERIFY=true` only as a last resort for git.
+- If the main working tree refuses tree switches (`git checkout`/`rebase` fail on untracked overlay files), do branch operations in a temp worktree (`git worktree add`) instead of fighting the overlay.
+
 ## Monorepo Structure
 
 Turborepo + Bun workspaces. The packages you'll work with most:
