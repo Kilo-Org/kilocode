@@ -72,6 +72,45 @@ describe("KiloPrefill.ensureUserTail", () => {
     expect(out.at(-1)?.role).toBe("user")
   })
 
+  test("keeps an assistant with an empty-text anthropic reasoning signature and appends a continuation", () => {
+    const messages = [
+      user("hi"),
+      assistant([
+        { type: "reasoning", text: "", providerOptions: { anthropic: { signature: "sig-1" } } },
+      ]),
+    ] as ModelMessage[]
+
+    const out = KiloPrefill.ensureUserTail(messages)
+    expect(out.at(-2)).toBe(messages.at(-1))
+    expect(out.at(-1)?.role).toBe("user")
+  })
+
+  test("keeps an assistant with anthropic redacted data and appends a continuation", () => {
+    const messages = [
+      user("hi"),
+      assistant([
+        { type: "reasoning", text: "", providerOptions: { anthropic: { redactedData: ["abc"] } } },
+      ]),
+    ] as ModelMessage[]
+
+    const out = KiloPrefill.ensureUserTail(messages)
+    expect(out.at(-2)).toBe(messages.at(-1))
+    expect(out.at(-1)?.role).toBe("user")
+  })
+
+  test("keeps an assistant with a bedrock reasoning signature and appends a continuation", () => {
+    const messages = [
+      user("hi"),
+      assistant([
+        { type: "reasoning", text: "", providerOptions: { bedrock: { signature: "sig-b" } } },
+      ]),
+    ] as ModelMessage[]
+
+    const out = KiloPrefill.ensureUserTail(messages)
+    expect(out.at(-2)).toBe(messages.at(-1))
+    expect(out.at(-1)?.role).toBe("user")
+  })
+
   test("keeps an assistant with a tool call and appends a continuation", () => {
     const messages = [user("hi"), toolCall()] satisfies ModelMessage[]
 
