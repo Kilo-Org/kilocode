@@ -561,6 +561,13 @@ export namespace RemoteProtocol {
             type: z.literal("provider_status_result"),
             requestId: correlation,
             providerId: BrowserProviderId,
+            // Old responses omit this field; retained identities can outlive job history.
+            unresolvedFence: z
+              .strictObject({
+                invocationId: BrowserInvocationId,
+                tabId: tab.optional(),
+              })
+              .optional(),
             jobs: z.array(BrowserJobSnapshot).max(BROWSER_PAGE_SIZE),
             nextCursor: BrowserJobId.optional(),
           })
