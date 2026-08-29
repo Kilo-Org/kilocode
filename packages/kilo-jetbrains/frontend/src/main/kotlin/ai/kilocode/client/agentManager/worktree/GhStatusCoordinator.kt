@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.app.kiloRoot
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
@@ -123,19 +124,33 @@ class GhStatusCoordinator(
             schedule()
             return
         }
-        val dir = project.basePath ?: run {
-            LOG.info("gh probe skipped reason=$reason no_base_path=true project=${project.name} delay=${delay()}")
-            schedule()
-            return
-        }
         busy = true
         val gen = generation
         val start = timers.now()
-        LOG.info("gh probe start reason=$reason state=$value delay=${delay()} dir=$dir")
+        LOG.info("gh probe start reason=$reason state=$value delay=${delay()}")
         cs.launch {
-            runCatching { service<KiloWorktreeService>().ghStatus(dir) }
-                .onSuccess { next -> done(gen, project, next, timers.now() - start) }
+            runCatching {
+                val dir = project.kiloRoot() ?: return@runCatching null
+                LOG.info("gh probe dir=$dir")
+                service<KiloWorktreeService>().ghStatus(dir)
+            }
+                .onSuccess { next ->
+                    if (next == null) {
+                        LOG.info("gh probe skipped reason=$reason unresolved_root=true project=${project.name}")
+                        idle(gen)
+                        return@onSuccess
+                    }
+                    done(gen, project, next, timers.now() - start)
+                }
                 .onFailure { err -> failed(gen, err, timers.now() - start) }
+        }
+    }
+
+    private fun idle(gen: Int) {
+        edt {
+            if (gen != generation || refs == 0) return@edt
+            busy = false
+            schedule()
         }
     }
 

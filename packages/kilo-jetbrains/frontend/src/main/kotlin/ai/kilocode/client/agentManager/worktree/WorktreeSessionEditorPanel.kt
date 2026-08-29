@@ -96,6 +96,13 @@ class WorktreeSessionEditorPanel(
         service<WorktreeSessionListVisibility>().save(worktree.directory, value)
     },
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
+    // Register with the parent before any child component (e.g. the run control) that owns a
+    // coroutine scope or a shared-stream ref, so a failure while constructing later fields cannot
+    // leak those resources: disposing this panel now always tears the children down.
+    init {
+        Disposer.register(parent, this)
+    }
+
     private val add = NewAction()
     private val rename = RenameAction()
     private val delete = DeleteAction()
@@ -120,7 +127,18 @@ class WorktreeSessionEditorPanel(
             (row as? SessionRow)?.session?.takeIf { canRename(it) || canDelete(it) }
         }),
     )
-    private val prHeader = WorktreePrHeaderView(openWorktree = ::openInNewFrame, openEnabled = worktree.directory.isNotBlank(), openDiff = ::openBranchDiff, openTerminal = ::openTerminal)
+    private val run = if (project != null && worktree.directory.isNotBlank()) {
+        WorktreeRunControl(project, this, worktree.directory, frame = ::openInNewFrame)
+    } else {
+        null
+    }
+    private val prHeader = WorktreePrHeaderView(
+        openWorktree = ::openInNewFrame,
+        openEnabled = worktree.directory.isNotBlank(),
+        openDiff = ::openBranchDiff,
+        openTerminal = ::openTerminal,
+        run = run?.button,
+    )
     private val splitter = OnePixelSplitter(false, 0.25f)
     private var started = false
     private var stats: WorktreeStatsDto? = null
@@ -131,7 +149,6 @@ class WorktreeSessionEditorPanel(
     private var ready = false
 
     init {
-        Disposer.register(parent, this)
         isOpaque = true
         toolbar.targetComponent = this
         // Keep the toolbar transparent so it shows its themed parent background and tracks

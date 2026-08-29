@@ -1163,7 +1163,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.checkpoint(message.sessionID, () => this.handleUnrevertSession(message.sessionID))
           break
         case "deleteMessage":
-          await this.handleDeleteMessage(message.sessionID, message.messageID)
+          await this.handleDeleteMessage(message.sessionID, message.messageID, message.requestID)
           break
         case "permissionResponse":
           await handlePermissionResponse(
@@ -2425,17 +2425,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async handleDeleteMessage(sessionID: string, messageID: string): Promise<void> {
-    if (!this.client) {
+  private async handleDeleteMessage(sessionID: string, messageID: string, requestID?: string): Promise<void> {
+    const result = {
+      type: "deleteMessageResult" as const,
+      sessionID,
+      messageID,
+      ...(requestID !== undefined ? { requestID } : {}),
+    }
+    const client = this.client
+    if (!client) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend", sessionID })
+      this.postMessage({ ...result, success: false })
       return
     }
 
     try {
-      await this.client.session.deleteMessage(
-        { sessionID, messageID, directory: this.getWorkspaceDirectory(sessionID) },
+      const response = await client.session.deleteMessage(
+        { sessionID, messageID, directory: this.getWorkspaceDirectory(sessionID), queued: true },
         { throwOnError: true },
       )
+      this.postMessage({ ...result, success: response.data === true })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to delete message:", error)
       this.postMessage({
@@ -2443,6 +2452,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         message: getErrorMessage(error) || "Failed to delete message",
         sessionID,
       })
+      this.postMessage({ ...result, success: false })
     }
   }
 
