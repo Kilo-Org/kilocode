@@ -11,7 +11,15 @@ function hasContent(message: ModelMessage) {
   if (!Array.isArray(message.content)) return false
   return message.content.some((part) => {
     if (part.type === "text") return visibleText(part.text)
-    if (part.type === "reasoning") return visibleText(part.text)
+    if (part.type === "reasoning") {
+      return (
+        visibleText(part.text) ||
+        part.providerOptions?.anthropic?.signature != null ||
+        part.providerOptions?.anthropic?.redactedData != null ||
+        part.providerOptions?.bedrock?.signature != null ||
+        part.providerOptions?.bedrock?.redactedData != null
+      )
+    }
     // step-start is turn scaffolding (the AI SDK converter strips it and splits
     // the turn on it), not content the model reads back; the provider types do
     // not model it, so it is matched by string
