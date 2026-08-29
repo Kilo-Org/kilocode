@@ -3497,16 +3497,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         settings: this.configSettings(),
         features,
       })
-      await Promise.all([
-        refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
-        refreshAgents ? this.fetchAndSendAgents() : Promise.resolve(),
-      ]).catch((error) => console.error("[Kilo New] KiloProvider: Post-config refresh failed:", error))
-      return { success: true }
     } catch (error) {
-      return this.postConfigFailure(error, completed, snapshot, dir)
-    } finally {
       this.pending--
+      return this.postConfigFailure(error, completed, snapshot, dir)
     }
+    // The write is done once the webview holds the authoritative config. The
+    // provider/agent refresh runs detached so a caller waiting on the write
+    // (the chat write queue) is not held up by it; `pending` keeps covering
+    // it until it completes, as before.
+    void Promise.all([
+      refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
+      refreshAgents ? this.fetchAndSendAgents() : Promise.resolve(),
+    ])
+      .catch((error) => console.error("[Kilo New] KiloProvider: Post-config refresh failed:", error))
+      .finally(() => this.pending--)
+    return { success: true }
   }
   /**
    * Global-config write for controls outside the Settings save flow (the chat

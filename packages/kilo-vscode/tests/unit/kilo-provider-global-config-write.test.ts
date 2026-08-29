@@ -127,6 +127,21 @@ describe("KiloProvider.writeGlobalConfig", () => {
     expect(notice).not.toHaveBeenCalled()
   })
 
+  it("resolves once the config is written, without waiting for the provider refresh", async () => {
+    const conn = createConnection()
+    const { internal, sent } = setup(conn)
+    Object.assign(internal, { fetchAndSendProviders: () => new Promise<void>(() => {}) })
+
+    const outcome = await Promise.race([
+      internal.writeGlobalConfig(pin("gmicloud/fp8")).then(() => "written"),
+      new Promise<string>((resolve) => setTimeout(() => resolve("timed out"), 1000)),
+    ])
+
+    expect(outcome).toBe("written")
+    expect(conn.patches).toHaveLength(1)
+    expect(sent.map((message) => message.type)).toEqual(["configUpdated"])
+  })
+
   it("reports a failure instead of writing when the backend is not connected", async () => {
     const conn = createConnection()
     const { internal, sent } = setup(conn, false)

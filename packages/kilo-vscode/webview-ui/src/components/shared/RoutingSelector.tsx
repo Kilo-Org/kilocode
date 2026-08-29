@@ -7,7 +7,7 @@
  * RoutingSelector     — thin wrapper wired to session + config for chat usage.
  */
 
-import { type Accessor, Component, createEffect, createMemo, createSignal, For, Show } from "solid-js"
+import { type Accessor, Component, createEffect, createMemo, createSignal, For, on, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useConfig } from "../../context/config"
@@ -349,7 +349,7 @@ interface RoutingSelectorProps {
 export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   const session = useSession()
   const vscode = useVSCode()
-  const { config, projectConfig } = useConfig()
+  const { config, projectConfig, saveError } = useConfig()
   const id = () => props.sessionID?.()
 
   const routed = () => {
@@ -359,7 +359,24 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   }
   const endpoints = useModelEndpoints(routed)
 
+  // A pick shows immediately while it is persisted in the background: the
+  // global config write disposes the backend instances, so the confirming
+  // configUpdated can take seconds. The next config message — the write's own
+  // update or its failure — carries the authoritative value and replaces the
+  // optimistic one.
+  const [pending, setPending] = createSignal<{ providerID: string; modelID: string; provider: string | null }>()
+  createEffect(on([config, saveError], () => setPending(undefined), { defer: true }))
+
+  function value(model: ModelSelection) {
+    const next = pending()
+    if (next && next.providerID === model.providerID && next.modelID === model.modelID) {
+      return next.provider ?? undefined
+    }
+    return modelRouting(config(), model.providerID, model.modelID)
+  }
+
   function persist(model: ModelSelection, provider: string | null) {
+    setPending({ providerID: model.providerID, modelID: model.modelID, provider })
     vscode.postMessage({
       type: "persistModelRouting",
       providerID: model.providerID,
@@ -373,7 +390,7 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
       {(model) => (
         <RoutingSelectorBase
           endpoints={endpoints.endpoints()}
-          value={modelRouting(config(), model().providerID, model().modelID)}
+          value={value(model())}
           onSelect={(provider) => persist(model(), provider)}
           onClear={() => persist(model(), null)}
           onOpen={endpoints.load}
