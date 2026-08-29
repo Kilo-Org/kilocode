@@ -514,7 +514,7 @@ export namespace RemoteProtocol {
           tab: BrowserApprovedTab,
           result: BrowserResult,
         }),
-        z.strictObject({ type: z.literal("provider_quiesced"), ...bound, tabId: tab }),
+        z.strictObject({ type: z.literal("provider_quiesced"), ...bound, tabId: tab.optional() }),
         z.strictObject({
           type: z.literal("provider_unavailable"),
           ...binding,
