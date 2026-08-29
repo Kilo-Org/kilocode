@@ -48,7 +48,7 @@ done
 bun typecheck --filter='!@kilocode/kilo-jetbrains'
 
 if [ "$jetbrains" -eq 1 ]; then
-  if command -v java >/dev/null 2>&1 || [ -n "$JAVA_HOME" ]; then
+  if { [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; } || command -v java >/dev/null 2>&1; then
     bun typecheck --filter='@kilocode/kilo-jetbrains'
   else
     echo "Warning: Skipping JetBrains typecheck (Java not found; install a JDK 21 or set JAVA_HOME)"
