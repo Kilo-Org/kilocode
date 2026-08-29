@@ -685,7 +685,10 @@ function gpt5ChatReasoningEfforts(apiId: string) {
 // Computes the reasoning_effort tiers an OpenAI (or OpenAI-compatible upstream
 // routed through it, e.g. cf-ai-gateway) model exposes. Effort order: weakest
 // to strongest.
-function openaiReasoningEfforts(apiId: string, releaseDate: string) {
+// kilocode_change start - isFirstPartyOpenAI marks transports that only serve first-party OpenAI
+// models (native Azure), where the deployment/model key may be opaque and the family gate must not apply
+function openaiReasoningEfforts(apiId: string, releaseDate: string, isFirstPartyOpenAI = false) {
+  // kilocode_change end
   const id = apiId.toLowerCase()
   if (id.includes("deep-research")) return ["medium"]
   const chatEfforts = gpt5ChatReasoningEfforts(id)
@@ -700,7 +703,7 @@ function openaiReasoningEfforts(apiId: string, releaseDate: string) {
   // kilocode_change start - `none`/`xhigh` are OpenAI rollout tiers only gpt-5-family
   // models accept; non-OpenAI models on an OpenAI-compatible base URL (e.g. Grok
   // via api.x.ai) reject them (issue #13342). See gpt5FamilyReasoningTiers.
-  if (!gpt5FamilyReasoningTiers(id)) return WIDELY_SUPPORTED_EFFORTS
+  if (!isFirstPartyOpenAI && !gpt5FamilyReasoningTiers(id)) return WIDELY_SUPPORTED_EFFORTS
   // kilocode_change end
   const efforts = [...WIDELY_SUPPORTED_EFFORTS]
   if (GPT5_FAMILY_RE.test(id)) efforts.unshift("minimal")
@@ -1017,7 +1020,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/azure
       if (id === "o1-mini") return {}
       return Object.fromEntries(
-        openaiReasoningEfforts(id, model.release_date).map((effort) => [
+        openaiReasoningEfforts(id, model.release_date, true).map((effort) => [ // kilocode_change - native Azure serves first-party OpenAI only
           effort,
           {
             reasoningEffort: effort,
