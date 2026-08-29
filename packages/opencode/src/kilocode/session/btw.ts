@@ -262,9 +262,14 @@ export namespace KiloBtw {
       text: `/btw ${question}`,
     })
 
-    const listed = yield* ops.agents.list()
-    const ask = listed.find((a) => a.name === "ask" && !a.hidden)
-    const forkAgent = ask ? "ask" : agent
+    // Run the fork with the session's agent: guardPermissions re-appends
+    // session deny rules after agent rules for ask/plan/architect agents,
+    // which would replay the allowlist's "*" deny last and disable every
+    // tool. Primary-mode agents evaluate the session allowlist as-is
+    // (findLast: allows after the "*" deny win), so only the read/research
+    // tools below can ever execute — no MCP tools, no permission stalls.
+    const guarded = ["ask", "plan", "architect"]
+    const forkAgent = guarded.includes(agent.toLowerCase()) ? fallback?.name ?? "build" : agent
     const variant = model.variant ?? cmdInput.variant
 
     const fork = yield* ops.sessions.fork({ sessionID: parent }).pipe(Effect.orDie)
@@ -285,7 +290,12 @@ export namespace KiloBtw {
         model: { providerID: model.providerID, modelID: model.modelID, variant },
         variant,
         tools: { ...FORK_TOOLS },
-        parts: [{ type: "text", text: question }],
+        parts: [
+          {
+            type: "text",
+            text: `Side question — answer it concisely. Your tools are read-only; do not attempt to modify anything.\n\n${question}`,
+          },
+        ],
       })
       .pipe(Effect.ensuring(cleanup))
 
