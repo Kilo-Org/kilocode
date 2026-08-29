@@ -115,4 +115,28 @@ describe("ProviderTransform.variants - gpt-5 rollout-tier gate", () => {
     )
     expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh"])
   })
+
+  test("native azure with an opaque deployment key keeps rollout-gated tiers", () => {
+    const result = ProviderTransform.variants(
+      model({
+        id: "production",
+        providerID: "azure",
+        api: { id: "production", url: "", npm: "@ai-sdk/azure" },
+        release_date: "2026-08-01",
+      }),
+    )
+    expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh"])
+  })
+
+  test("native azure with a gpt-5.5 model key and separate deployment id keeps rollout-gated tiers", () => {
+    const result = ProviderTransform.variants(
+      model({
+        id: "gpt-5.5",
+        providerID: "azure",
+        api: { id: "my-gpt-5-5-deployment", url: "", npm: "@ai-sdk/azure" },
+        release_date: "2026-08-01",
+      }),
+    )
+    expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh"])
+  })
 })

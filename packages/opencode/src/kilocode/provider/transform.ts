@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // Kilo-specific reasoning-effort gate for shared ProviderTransform.
 //
 // OpenAI rolled out the `none` and `xhigh` reasoning_effort tiers on fixed
