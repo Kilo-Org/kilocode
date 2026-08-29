@@ -704,6 +704,14 @@ describe("RemoteProtocol browser jobs v1", () => {
     ],
     nextCursor: interrupted.jobId,
   } satisfies RemoteProtocol.BrowserProviderInbound
+  const fence = { invocationId: interrupted.invocationId, tabId: tab.tabId }
+  const expired = `b1.1.${"f".repeat(64)}`
+  const empty = {
+    type: "provider_status_result",
+    requestId,
+    providerId: handle.providerId,
+    jobs: [],
+  } satisfies RemoteProtocol.BrowserProviderInbound
   const sent = [
     status,
     { ...status, cursor: handle.jobId },
@@ -733,7 +741,9 @@ describe("RemoteProtocol browser jobs v1", () => {
     { type: "provider_snapshot", ...binding, jobs: [] },
     { type: "provider_lease_ack", requestId, ...binding, leaseExpiresAt: "2026-08-28T00:00:15.000Z" },
     history,
-    { type: "provider_status_result", requestId, providerId: handle.providerId, jobs: [] },
+    empty,
+    { ...history, unresolvedFence: fence },
+    { ...empty, unresolvedFence: { invocationId: expired } },
   ] satisfies RemoteProtocol.BrowserProviderInbound[]
 
   describe.each([
@@ -770,6 +780,92 @@ describe("RemoteProtocol browser jobs v1", () => {
   })
 
   describe("read-only provider status", () => {
+    test("keeps absent fences omitted from old status frames", () => {
+      for (const frame of [history, empty]) {
+        expect(RemoteProtocol.BrowserProviderInbound.parse(frame)).toStrictEqual(frame)
+        expect(RemoteProtocol.WebInboundWithBrowser.parse(frame)).toStrictEqual(frame)
+      }
+    })
+
+    test.each([
+      { invocationId: handle.invocationId },
+      fence,
+      { ...fence, tabId: 0 },
+      { ...fence, tabId: Number.MAX_SAFE_INTEGER },
+      { invocationId: expired },
+      { ...fence, invocationId: expired },
+    ])("preserves a compact fence without retained jobs: %j", (value) => {
+      const frame = { ...empty, unresolvedFence: value } satisfies RemoteProtocol.BrowserProviderInbound
+      expect(RemoteProtocol.BrowserProviderInbound.parse(frame)).toStrictEqual(frame)
+      expect(RemoteProtocol.WebInboundWithBrowser.parse(frame)).toStrictEqual(frame)
+    })
+
+    test.each([
+      { unresolvedFence: null },
+      { unresolvedFence: false },
+      { unresolvedFence: 0 },
+      { unresolvedFence: "fence" },
+      { unresolvedFence: [] },
+      { unresolvedFence: {} },
+      { unresolvedFence: { tabId: tab.tabId } },
+    ])("rejects malformed fence objects: %j", (fields) => {
+      const frame = { ...history, ...fields }
+      expect(RemoteProtocol.BrowserProviderInbound.safeParse(frame).success).toBe(false)
+      expect(RemoteProtocol.WebInboundWithBrowser.safeParse(frame).success).toBe(false)
+    })
+
+    test.each([
+      { invocationId: undefined },
+      { invocationId: null },
+      { invocationId: 7 },
+      { invocationId: "" },
+      { invocationId: handle.jobId },
+      { invocationId: `b1.0.${"a".repeat(64)}` },
+      { invocationId: `b1.01.${"a".repeat(64)}` },
+      { invocationId: `b1.8640000000000001.${"a".repeat(64)}` },
+      { invocationId: `b1.9007199254740992.${"a".repeat(64)}` },
+      { invocationId: `b1.1787875200000.${"A".repeat(64)}` },
+      { invocationId: `b1.1787875200000.${"a".repeat(63)}` },
+      { tabId: null },
+      { tabId: -1 },
+      { tabId: 1.5 },
+      { tabId: Number.MAX_SAFE_INTEGER + 1 },
+      { tabId: "7" },
+      { tabId: true },
+    ])("rejects invalid fence fields: %j", (fields) => {
+      const frame = { ...history, unresolvedFence: { ...fence, ...fields } }
+      expect(RemoteProtocol.BrowserProviderInbound.safeParse(frame).success).toBe(false)
+      expect(RemoteProtocol.WebInboundWithBrowser.safeParse(frame).success).toBe(false)
+    })
+
+    test.each([
+      { parentSessionId: owner.parentSessionId },
+      { parentProof: owner.parentProof },
+      { providerProof: registration.providerProof },
+      { connectionId: "private-route" },
+      { generation: 1 },
+      { goal: invoke.goal },
+      { result: completed },
+      { tabClosed: true },
+      { locksDrained: true },
+      { extra: true },
+    ])("rejects private or unknown fence fields: %j", (fields) => {
+      const frame = { ...history, unresolvedFence: { ...fence, ...fields } }
+      expect(RemoteProtocol.BrowserProviderInbound.safeParse(frame).success).toBe(false)
+      expect(RemoteProtocol.WebInboundWithBrowser.safeParse(frame).success).toBe(false)
+    })
+
+    test("keeps fence discovery out of execution frames and job snapshots", () => {
+      for (const frame of received) {
+        if (frame.type === "provider_status_result") continue
+        expect(RemoteProtocol.BrowserProviderInbound.safeParse({ ...frame, unresolvedFence: fence }).success).toBe(
+          false,
+        )
+        expect(RemoteProtocol.WebInboundWithBrowser.safeParse({ ...frame, unresolvedFence: fence }).success).toBe(false)
+      }
+      expect(RemoteProtocol.BrowserJobSnapshot.safeParse({ ...job, unresolvedFence: fence }).success).toBe(false)
+    })
+
     test("keeps historical generations separate from execution snapshots", () => {
       expect(RemoteProtocol.BrowserProviderInbound.parse(history)).toEqual(history)
       for (const generation of [1, 2]) {
@@ -862,8 +958,12 @@ describe("RemoteProtocol browser jobs v1", () => {
       }
     })
 
-    test("accepts 25 historical jobs but rejects a 26th job", () => {
-      const page = { ...history, jobs: Array.from({ length: 25 }, () => job) }
+    test("accepts 25 historical jobs with a fence but rejects a 26th job", () => {
+      const page = {
+        ...history,
+        unresolvedFence: fence,
+        jobs: Array.from({ length: 25 }, () => job),
+      } satisfies RemoteProtocol.BrowserProviderInbound
       expect(RemoteProtocol.BrowserProviderInbound.parse(page)).toEqual(page)
       expect(RemoteProtocol.BrowserProviderInbound.safeParse({ ...page, jobs: [...page.jobs, job] }).success).toBe(
         false,
@@ -877,6 +977,24 @@ describe("RemoteProtocol browser jobs v1", () => {
       expect(RemoteProtocol.BrowserProviderInbound.safeParse({ ...page, jobs: [...page.jobs, large] }).success).toBe(
         false,
       )
+    })
+
+    test("counts compact fences in the existing frame byte limit", () => {
+      const large = { ...finished, result: { ...completed, summary: "\u00e9".repeat(16384) } }
+      for (const schema of [RemoteProtocol.BrowserProviderInbound, RemoteProtocol.WebInboundWithBrowser]) {
+        const last = { ...finished, result: { ...completed, summary: "" } }
+        const page = {
+          ...history,
+          unresolvedFence: fence,
+          jobs: [large, large, large, last],
+        } satisfies RemoteProtocol.BrowserProviderInbound
+        last.result.summary = "x".repeat(128 * 1024 - 1 - Buffer.byteLength(JSON.stringify(page), "utf8"))
+        expect(schema.parse(page)).toEqual(page)
+        last.result.summary += "x"
+        expect(schema.safeParse(page).success).toBe(false)
+        const unfenced = { ...history, jobs: page.jobs }
+        expect(schema.parse(unfenced)).toEqual(unfenced)
+      }
     })
   })
 
