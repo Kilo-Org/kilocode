@@ -52,13 +52,15 @@ export interface Interface {
 export class Service extends Context.Service<Service, Interface>()("@kilocode/ModelCache") {}
 
 /**
- * Config-level Kilo Gateway settings layered over the stored/env credentials:
- * an explicit organization or base URL in kilo.json wins over the signed-in
- * session's organization, for catalog and endpoint requests alike.
+ * Config-level Kilo Gateway settings layered over the stored/env credentials,
+ * for catalog and endpoint requests alike. The organization follows the same
+ * precedence as the gateway requests themselves: an explicit kilo.json value,
+ * then KILO_ORG_ID, then the signed-in session's organization — so the catalogs
+ * describe the organization the requests are actually sent to.
  */
-export function kiloConfigOptions(config: Config.Info, info: Auth.Info | undefined): Options {
+export function kiloConfigOptions(config: Config.Info, info: Auth.Info | undefined, env = process.env): Options {
   const opts = config.provider?.kilo?.options
-  const org = opts?.kilocodeOrganizationId ?? (info?.type === "oauth" ? info.accountId : undefined)
+  const org = opts?.kilocodeOrganizationId || env.KILO_ORG_ID || (info?.type === "oauth" ? info.accountId : undefined)
   return {
     ...(opts?.baseURL ? { baseURL: opts.baseURL } : {}),
     ...(org ? { kilocodeOrganizationId: org } : {}),
