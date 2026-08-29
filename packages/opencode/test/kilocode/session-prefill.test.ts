@@ -10,7 +10,15 @@ function assistant(content: string | Array<Record<string, unknown>>): ModelMessa
   return { role: "assistant", content } as unknown as ModelMessage
 }
 
+function tool(): ModelMessage {
+  return {
+    role: "tool",
+    content: [{ type: "tool-result", toolCallId: "call-1", toolName: "bash", output: { type: "text", value: "done" } }],
+  }
+}
+
 const scaffold: ModelMessage = assistant([{ type: "step-start" }])
+const toolCall = () => assistant([{ type: "tool-call", toolCallId: "call-1", toolName: "bash", input: { cmd: "pwd" } }])
 
 describe("KiloPrefill.ensureUserTail", () => {
   test("leaves a user-terminated array unchanged", () => {
@@ -20,14 +28,7 @@ describe("KiloPrefill.ensureUserTail", () => {
   })
 
   test("leaves a tool-terminated array unchanged", () => {
-    const messages = [
-      user("run it"),
-      assistant([{ type: "tool-call", toolCallId: "call-1", toolName: "bash", input: { cmd: "pwd" } }]),
-      {
-        role: "tool",
-        content: [{ type: "tool-result", toolCallId: "call-1", toolName: "bash", output: { type: "text", value: "done" } }],
-      },
-    ] satisfies ModelMessage[]
+    const messages = [user("run it"), toolCall(), tool()] satisfies ModelMessage[]
 
     expect(KiloPrefill.ensureUserTail(messages)).toBe(messages)
   })
@@ -56,6 +57,13 @@ describe("KiloPrefill.ensureUserTail", () => {
     expect(out.at(-1)?.role).toBe("user")
   })
 
+  test("keeps a tool-terminated array after dropping a trailing scaffold", () => {
+    const messages = [user("run it"), toolCall(), tool(), scaffold] satisfies ModelMessage[]
+
+    const out = KiloPrefill.ensureUserTail(messages)
+    expect(out).toEqual([user("run it"), toolCall(), tool()])
+  })
+
   test("keeps an assistant with reasoning text and appends a continuation", () => {
     const messages = [user("hi"), assistant([{ type: "reasoning", text: "thinking..." }])] satisfies ModelMessage[]
 
@@ -65,13 +73,27 @@ describe("KiloPrefill.ensureUserTail", () => {
   })
 
   test("keeps an assistant with a tool call and appends a continuation", () => {
-    const messages = [
-      user("hi"),
-      assistant([{ type: "tool-call", toolCallId: "call-1", toolName: "bash", input: { cmd: "pwd" } }]),
-    ] satisfies ModelMessage[]
+    const messages = [user("hi"), toolCall()] satisfies ModelMessage[]
 
     const out = KiloPrefill.ensureUserTail(messages)
     expect(out.at(-2)).toBe(messages.at(-1))
+    expect(out.at(-1)?.role).toBe("user")
+  })
+
+  test("keeps an assistant with a file part and appends a continuation", () => {
+    const messages = [user("hi"), assistant([{ type: "file", data: "x", mediaType: "image/png" }])] as ModelMessage[]
+
+    const out = KiloPrefill.ensureUserTail(messages)
+    expect(out.at(-2)).toBe(messages.at(-1))
+    expect(out.at(-1)?.role).toBe("user")
+  })
+
+  test("keeps consecutive content-bearing assistants and appends one continuation", () => {
+    const messages = [user("hi"), assistant("first"), assistant("second")] satisfies ModelMessage[]
+
+    const out = KiloPrefill.ensureUserTail(messages)
+    expect(out.slice(0, 3)).toEqual(messages)
+    expect(out).toHaveLength(4)
     expect(out.at(-1)?.role).toBe("user")
   })
 
@@ -83,6 +105,18 @@ describe("KiloPrefill.ensureUserTail", () => {
 
   test("drops a whitespace-text assistant as scaffold", () => {
     const messages = [user("hi"), assistant([{ type: "text", text: "  " }])] satisfies ModelMessage[]
+
+    expect(KiloPrefill.ensureUserTail(messages)).toEqual([user("hi")])
+  })
+
+  test("drops an empty-string assistant as scaffold", () => {
+    const messages = [user("hi"), assistant("")] satisfies ModelMessage[]
+
+    expect(KiloPrefill.ensureUserTail(messages)).toEqual([user("hi")])
+  })
+
+  test("drops an empty-array-content assistant as scaffold", () => {
+    const messages = [user("hi"), assistant([])] satisfies ModelMessage[]
 
     expect(KiloPrefill.ensureUserTail(messages)).toEqual([user("hi")])
   })
