@@ -79,11 +79,21 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     }
   }
 
-  const openrouter = createOpenRouter(sdkOptions())
+  // Models without routing share the base instances; a pinned model needs its
+  // own, because the preferences live in that instance's fetch wrapper.
+  function routed(model: KiloModelOptions | undefined): boolean {
+    return !!model?.provider && Object.keys(model.provider).length > 0
+  }
+
+  const base = sdkOptions()
+  const openrouter = createOpenRouter(base)
+  const anthropic = createAnthropic(base)
+  const openai = createOpenAI(base)
+  const openaiCompatible = createOpenAICompatible({ ...base, name: "openaiCompatible" })
 
   return {
     languageModel(modelId: string, model?: KiloModelOptions) {
-      return createOpenRouter(sdkOptions(model))(modelId)
+      return routed(model) ? createOpenRouter(sdkOptions(model))(modelId) : openrouter(modelId)
     },
     embeddingModel(modelId: string) {
       return openrouter.textEmbeddingModel(modelId)
@@ -95,13 +105,18 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
       return openrouter.imageModel(modelId)
     },
     anthropic(modelId: string, model?: KiloModelOptions) {
-      return GatewayMetadata.wrap(createAnthropic(sdkOptions(model))(modelId))
+      const sdk = routed(model) ? createAnthropic(sdkOptions(model)) : anthropic
+      return GatewayMetadata.wrap(sdk(modelId))
     },
     openai(modelId: string, model?: KiloModelOptions) {
-      return GatewayMetadata.wrap(createOpenAI(sdkOptions(model))(modelId))
+      const sdk = routed(model) ? createOpenAI(sdkOptions(model)) : openai
+      return GatewayMetadata.wrap(sdk(modelId))
     },
     openaiCompatible(modelId: string, model?: KiloModelOptions) {
-      return createOpenAICompatible({ ...sdkOptions(model), name: "openaiCompatible" })(modelId)
+      const sdk = routed(model)
+        ? createOpenAICompatible({ ...sdkOptions(model), name: "openaiCompatible" })
+        : openaiCompatible
+      return sdk(modelId)
     },
   }
 }
