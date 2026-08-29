@@ -240,6 +240,91 @@ describe("routing endpoints store", () => {
     }
   })
 
+  it("drops cached catalogs and restarts in-flight requests when the account or organization changes", () => {
+    const { sent, post } = collect()
+    const profile = (email: string, org: string | null) => ({
+      type: "profileData" as const,
+      data: { profile: { email }, balance: null, kiloPass: null, currentOrgId: org },
+    })
+
+    expect(handleEndpointsMessage(profile("me@example.com", "org-a"))).toBe(false)
+    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    handleEndpointsMessage({
+      type: "modelEndpointsLoaded",
+      providerID: "kilo",
+      modelID: "z-ai/glm-4.6",
+      requestID: id(sent, 0),
+      endpoints: [endpoint],
+    })
+    requestEndpoints("kilo", "other/model", post)
+    expect(sent).toHaveLength(2)
+
+    // Same identity again (profile refresh): nothing changes.
+    handleEndpointsMessage(profile("me@example.com", "org-a"))
+    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toMatchObject({ status: "ok", endpoints: [endpoint] })
+    expect(sent).toHaveLength(2)
+
+    // Organization switch: cached data is gone, not merely stale, and the
+    // in-flight request is re-issued so its old response is ignored.
+    handleEndpointsMessage(profile("me@example.com", "org-b"))
+    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toBeUndefined()
+    expect(sent).toHaveLength(3)
+    handleEndpointsMessage({
+      type: "modelEndpointsLoaded",
+      providerID: "kilo",
+      modelID: "other/model",
+      requestID: id(sent, 1),
+      endpoints: [endpoint],
+    })
+    expect(endpointsEntry("kilo", "other/model")).toBeUndefined()
+    handleEndpointsMessage({
+      type: "modelEndpointsLoaded",
+      providerID: "kilo",
+      modelID: "other/model",
+      requestID: id(sent, 2),
+      endpoints: [endpoint],
+    })
+    expect(endpointsEntry("kilo", "other/model")).toMatchObject({ status: "ok", endpoints: [endpoint] })
+
+    // A failed refresh after the switch must not resurrect the old account's list.
+    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    handleEndpointsMessage({
+      type: "modelEndpointsLoaded",
+      providerID: "kilo",
+      modelID: "z-ai/glm-4.6",
+      requestID: id(sent, 3),
+      endpoints: [],
+      error: true,
+    })
+    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toEqual({ status: "error" })
+
+    // Logout is an identity change too.
+    handleEndpointsMessage(profile("me@example.com", "org-b"))
+    expect(endpointsEntry("kilo", "other/model")).toMatchObject({ status: "ok" })
+    handleEndpointsMessage({ type: "profileData", data: null })
+    expect(endpointsEntry("kilo", "other/model")).toBeUndefined()
+  })
+
+  it("keeps catalogs requested before the first profile arrives", () => {
+    const { sent, post } = collect()
+
+    requestEndpoints("kilo", "z-ai/glm-4.6", post)
+    handleEndpointsMessage({
+      type: "modelEndpointsLoaded",
+      providerID: "kilo",
+      modelID: "z-ai/glm-4.6",
+      requestID: id(sent, 0),
+      endpoints: [endpoint],
+    })
+    handleEndpointsMessage({
+      type: "profileData",
+      data: { profile: { email: "me@example.com" }, balance: null, kiloPass: null, currentOrgId: null },
+    })
+
+    expect(endpointsEntry("kilo", "z-ai/glm-4.6")).toMatchObject({ status: "ok", endpoints: [endpoint] })
+    expect(sent).toHaveLength(1)
+  })
+
   it("keeps stale cached data when a background refresh fails", () => {
     const { sent, post } = collect()
 

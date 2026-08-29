@@ -7,7 +7,7 @@
  */
 
 import { createSignal } from "solid-js"
-import type { ExtensionMessage, ModelEndpoint, WebviewMessage } from "../types/messages"
+import type { ExtensionMessage, ModelEndpoint, ProfileData, WebviewMessage } from "../types/messages"
 
 export type EndpointsEntry =
   | { status: "ok"; endpoints: ModelEndpoint[]; at: number; stale?: true }
@@ -26,13 +26,47 @@ interface PendingRequest {
 const [entries, setEntries] = createSignal<Record<string, EndpointsEntry>>({})
 const pending = new Map<string, PendingRequest>()
 let counter = 0
+/** Account and organization the cached catalogs belong to; unknown until the first profile arrives. */
+let identity: string | undefined
 
 function key(providerID: string, modelID: string): string {
   return `${providerID}/${modelID}`
 }
 
+function identityOf(data: ProfileData | null): string {
+  return data ? `${data.profile.email}\n${data.currentOrgId ?? ""}` : ""
+}
+
+/** Re-issue every in-flight request under a new ID so responses to the old ones are ignored. */
+function restartPending(): void {
+  for (const [id, request] of pending) {
+    const requestID = ++counter
+    const next = { ...request, requestID }
+    pending.set(id, next)
+    request.post({
+      type: "requestModelEndpoints",
+      providerID: request.providerID,
+      modelID: request.modelID,
+      requestID,
+    })
+  }
+}
+
 /** Feed extension messages into the store. Returns true when consumed. */
 export function handleEndpointsMessage(message: ExtensionMessage): boolean {
+  // Catalogs are scoped to the signed-in account and its organization. Once
+  // that identity changes, nothing cached may stay visible or selectable — a
+  // previous account's endpoints would otherwise survive a failed refresh.
+  if (message.type === "profileData") {
+    const next = identityOf(message.data)
+    const changed = identity !== undefined && identity !== next
+    identity = next
+    if (changed) {
+      setEntries({})
+      restartPending()
+    }
+    return false
+  }
   // Provider refreshes happen after ordinary config writes as well as auth and
   // organization changes. Keep successful data visible, mark it stale, and
   // restart in-flight requests so a refresh cannot strand the selector in its
@@ -43,17 +77,7 @@ export function handleEndpointsMessage(message: ExtensionMessage): boolean {
         Object.entries(prev).map(([id, entry]) => [id, entry.status === "ok" ? { ...entry, stale: true } : entry]),
       ),
     )
-    for (const [id, request] of pending) {
-      const requestID = ++counter
-      const next = { ...request, requestID }
-      pending.set(id, next)
-      request.post({
-        type: "requestModelEndpoints",
-        providerID: request.providerID,
-        modelID: request.modelID,
-        requestID,
-      })
-    }
+    restartPending()
     return false
   }
   if (message.type !== "modelEndpointsLoaded") return false
@@ -96,4 +120,5 @@ export function resetEndpointsStore(): void {
   setEntries({})
   pending.clear()
   counter = 0
+  identity = undefined
 }
