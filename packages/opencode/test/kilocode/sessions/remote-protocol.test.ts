@@ -723,6 +723,7 @@ describe("RemoteProtocol browser jobs v1", () => {
     { type: "provider_approval", ...bound, approval: { decision: "approved", tab } },
     { type: "provider_approval", ...bound, approval: { decision: "denied", reason: "approval_denied" } },
     { type: "provider_result", ...bound, tab, result: completed },
+    { type: "provider_quiesced", ...bound },
     { type: "provider_quiesced", ...bound, tabId: tab.tabId },
     { type: "provider_unavailable", ...binding, reason: "provider_lost", effectsUncertain: true },
     { type: "provider_cancel", ...bound },
@@ -743,6 +744,82 @@ describe("RemoteProtocol browser jobs v1", () => {
     { ...history, unresolvedFence: fence },
     { ...empty, unresolvedFence: { invocationId: expired } },
   ] satisfies RemoteProtocol.BrowserProviderInbound[]
+
+  describe("provider quiescence", () => {
+    const quiesced = { type: "provider_quiesced", ...bound } as const
+
+    test.each([{}, { tabId: tab.tabId }, { tabId: 0 }, { tabId: Number.MAX_SAFE_INTEGER }])(
+      "preserves the exact binding and supplied or omitted tab: %j",
+      (fields) => {
+        const frame = { ...quiesced, ...fields }
+        expect(RemoteProtocol.BrowserProviderOutbound.parse(frame)).toStrictEqual(frame)
+        expect(RemoteProtocol.WebOutboundWithBrowser.parse(frame)).toStrictEqual(frame)
+      },
+    )
+
+    test.each([
+      { tabId: null },
+      { tabId: -1 },
+      { tabId: 1.5 },
+      { tabId: Number.MAX_SAFE_INTEGER + 1 },
+      { tabId: "7" },
+      { tabId: true },
+      { tabId: [] },
+      { tabId: {} },
+    ])("rejects invalid supplied quiescence tabs: %j", (fields) => {
+      const frame = { ...quiesced, ...fields }
+      expect(RemoteProtocol.BrowserProviderOutbound.safeParse(frame).success).toBe(false)
+      expect(RemoteProtocol.WebOutboundWithBrowser.safeParse(frame).success).toBe(false)
+    })
+
+    test.each([
+      { providerId: undefined },
+      { providerId: handle.jobId },
+      { browserTaskId: undefined },
+      { browserTaskId: handle.jobId },
+      { jobId: undefined },
+      { jobId: handle.providerId },
+      { invocationId: undefined },
+      { invocationId: handle.jobId },
+      { generation: undefined },
+      { generation: null },
+      { generation: 0 },
+      { generation: -1 },
+      { generation: 1.5 },
+      { generation: Number.MAX_SAFE_INTEGER + 1 },
+      { generation: "1" },
+    ])("rejects invalid or missing quiescence bindings: %j", (fields) => {
+      for (const value of [{}, { tabId: tab.tabId }]) {
+        const frame = JSON.parse(JSON.stringify({ ...quiesced, ...value, ...fields }))
+        expect(RemoteProtocol.BrowserProviderOutbound.safeParse(frame).success).toBe(false)
+        expect(RemoteProtocol.WebOutboundWithBrowser.safeParse(frame).success).toBe(false)
+      }
+    })
+
+    test.each([{ connectionId: "foreign-socket" }, { recovery }, { tabClosed: true }, { locksDrained: true }])(
+      "rejects socket or recovery authority on quiescence: %j",
+      (fields) => {
+        for (const value of [{}, { tabId: tab.tabId }]) {
+          const frame = { ...quiesced, ...value, ...fields }
+          expect(RemoteProtocol.BrowserProviderOutbound.safeParse(frame).success).toBe(false)
+          expect(RemoteProtocol.WebOutboundWithBrowser.safeParse(frame).success).toBe(false)
+        }
+      },
+    )
+
+    test.each([{ tab: undefined }, { tab: { ...tab, tabId: undefined } }])(
+      "keeps approved tabs required outside quiescence: %j",
+      (fields) => {
+        for (const frame of [
+          { type: "provider_approval", ...bound, approval: { decision: "approved", tab: fields.tab } },
+          { type: "provider_result", ...bound, tab: fields.tab, result: completed },
+        ]) {
+          expect(RemoteProtocol.BrowserProviderOutbound.safeParse(frame).success).toBe(false)
+          expect(RemoteProtocol.WebOutboundWithBrowser.safeParse(frame).success).toBe(false)
+        }
+      },
+    )
+  })
 
   describe.each([
     { name: "provider", schema: RemoteProtocol.BrowserProviderInbound },
