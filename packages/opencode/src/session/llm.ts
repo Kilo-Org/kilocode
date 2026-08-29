@@ -33,7 +33,7 @@ import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
-import { KiloPrefill } from "@/kilocode/session/prefill" // kilocode_change
+import { KiloPrefill } from "@/kilocode/session/prefill"
 // kilocode_change end
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -165,9 +165,6 @@ const live: Layer.Layer<
         return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
       }
       const prepared = { ...base, tools, params: { ...base.params, maxOutputTokens } }
-      // kilocode_change - never send an assistant-terminated array to providers
-      // (Anthropic 4.6+/Opus 5 reject assistant prefill with an HTTP 400)
-      prepared.messages = KiloPrefill.ensureUserTail(prepared.messages)
       // kilocode_change end
 
       // Wire up toolExecutor for DWS workflow models so that tool calls
@@ -300,6 +297,13 @@ const live: Layer.Layer<
           },
         })
       }
+      // kilocode_change end
+
+      // kilocode_change start - never send an assistant-terminated array to providers:
+      // Anthropic (Claude 4.6+, Opus 5) rejects assistant prefill with an HTTP 400
+      // and loses the turn. Applied after the export capture above so the synthetic
+      // continuation never leaks into exported request data.
+      prepared.messages = KiloPrefill.ensureUserTail(prepared.messages)
       // kilocode_change end
 
       // Runtime seam: native is an opt-in adapter over @opencode-ai/llm. It
