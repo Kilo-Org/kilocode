@@ -712,15 +712,13 @@ describe("RemoteProtocol browser jobs v1", () => {
     providerId: handle.providerId,
     jobs: [],
   } satisfies RemoteProtocol.BrowserProviderInbound
+  const recovery = { invocationId: handle.invocationId, tabClosed: true, locksDrained: true } as const
   const sent = [
     status,
     { ...status, cursor: handle.jobId },
     registration,
-    {
-      ...registration,
-      generation: 1,
-      recovery: { invocationId: handle.invocationId, tabId: tab.tabId, tabClosed: true, locksDrained: true },
-    },
+    { ...registration, generation: 1, recovery },
+    { ...registration, generation: 1, recovery: { ...recovery, tabId: tab.tabId } },
     { type: "provider_heartbeat", requestId, ...binding, cursor: handle.jobId },
     { type: "provider_approval", ...bound, approval: { decision: "approved", tab } },
     { type: "provider_approval", ...bound, approval: { decision: "denied", reason: "approval_denied" } },
@@ -1387,26 +1385,68 @@ describe("RemoteProtocol browser jobs v1", () => {
     }
   })
 
-  test("requires closed tabs and drained locks on provider recovery registration", () => {
-    const recovery = { invocationId: handle.invocationId, tabId: tab.tabId, tabClosed: true, locksDrained: true }
-    for (const fields of [
+  describe("provider recovery registration", () => {
+    test.each([
+      recovery,
+      { ...recovery, tabId: tab.tabId },
+      { ...recovery, tabId: 0 },
+      { ...recovery, tabId: Number.MAX_SAFE_INTEGER },
+      { ...recovery, invocationId: expired },
+      { ...recovery, invocationId: expired, tabId: tab.tabId },
+    ])("preserves recovery identity and tab omission: %j", (recovery) => {
+      const frame = { ...registration, generation: 1, recovery }
+      expect(RemoteProtocol.BrowserProviderOutbound.parse(frame)).toStrictEqual(frame)
+      expect(RemoteProtocol.WebOutboundWithBrowser.parse(frame)).toStrictEqual(frame)
+    })
+
+    test.each([
+      { tabClosed: undefined },
       { tabClosed: false },
+      { tabClosed: "true" },
+      { tabClosed: 1 },
+      { locksDrained: undefined },
       { locksDrained: false },
-      { tabId: undefined },
+      { locksDrained: "true" },
+      { locksDrained: 1 },
       { invocationId: undefined },
+      { invocationId: null },
+      { invocationId: 7 },
+      { invocationId: "" },
+      { invocationId: handle.jobId },
+      { invocationId: `b1.0.${"a".repeat(64)}` },
+      { invocationId: `b1.01.${"a".repeat(64)}` },
+      { invocationId: `b1.8640000000000001.${"a".repeat(64)}` },
+      { invocationId: `b1.9007199254740992.${"a".repeat(64)}` },
+      { invocationId: `b1.1787875200000.${"A".repeat(64)}` },
+      { invocationId: `b1.1787875200000.${"a".repeat(63)}` },
       { owner },
-    ]) {
-      expect(
-        RemoteProtocol.BrowserProviderOutbound.safeParse({
-          ...registration,
-          generation: 1,
-          recovery: { ...recovery, ...fields },
-        }).success,
-      ).toBe(false)
-    }
-    for (const generation of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
-      expect(RemoteProtocol.BrowserProviderOutbound.safeParse({ ...registration, generation }).success).toBe(false)
-    }
+      { extra: true },
+    ])("rejects unsafe or malformed recovery with and without a tab: %j", (fields) => {
+      for (const value of [{}, { tabId: tab.tabId }]) {
+        const frame = { ...registration, generation: 1, recovery: { ...recovery, ...value, ...fields } }
+        expect(RemoteProtocol.BrowserProviderOutbound.safeParse(frame).success).toBe(false)
+        expect(RemoteProtocol.WebOutboundWithBrowser.safeParse(frame).success).toBe(false)
+      }
+    })
+
+    test.each([
+      { tabId: null },
+      { tabId: -1 },
+      { tabId: 1.5 },
+      { tabId: Number.MAX_SAFE_INTEGER + 1 },
+      { tabId: "7" },
+      { tabId: true },
+      { tabId: [] },
+      { tabId: {} },
+    ])("rejects invalid supplied recovery tabs: %j", (fields) => {
+      const frame = { ...registration, generation: 1, recovery: { ...recovery, ...fields } }
+      expect(RemoteProtocol.BrowserProviderOutbound.safeParse(frame).success).toBe(false)
+      expect(RemoteProtocol.WebOutboundWithBrowser.safeParse(frame).success).toBe(false)
+    })
+  })
+
+  test.each([-1, 1.5, Number.MAX_SAFE_INTEGER + 1])("rejects invalid registration generation %s", (generation) => {
+    expect(RemoteProtocol.BrowserProviderOutbound.safeParse({ ...registration, generation }).success).toBe(false)
   })
 
   test.each([
