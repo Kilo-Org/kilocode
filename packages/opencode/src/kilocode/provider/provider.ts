@@ -162,6 +162,17 @@ function useLanguageModel(sdk: any) {
   return sdk.responses === undefined && sdk.chat === undefined
 }
 
+/**
+ * A model's configured `provider` block holds OpenRouter provider preferences
+ * (order/only/allow_fallbacks, ...). Only the OpenRouter SDK forwards them from
+ * provider options, so they are handed to the gateway transport explicitly and
+ * merged into the request body regardless of which SDK serves the model.
+ */
+function providerRouting(options: Record<string, any> | undefined): Record<string, unknown> | undefined {
+  const value = options?.provider
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : undefined
+}
+
 export function patchKiloProviderPrivacy(provider: { options?: Record<string, any> } | undefined, config: any) {
   if (!provider || config.hide_prompt_training_models !== true) return
   provider.options = { ...provider.options, dataCollection: "deny" }
@@ -203,12 +214,13 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
       return {
         autoload: Object.keys(input.models).length > 0,
         options,
-        async getModel(sdk: KiloProvider, modelID: string) {
+        async getModel(sdk: KiloProvider, modelID: string, options?: Record<string, any>) {
+          const model = { provider: providerRouting(options) }
           const provider = input.models[modelID]?.ai_sdk_provider
-          if (provider === "anthropic") return sdk.anthropic(modelID)
-          if (provider === "openai") return sdk.openai(modelID)
-          if (provider === "openai-compatible") return sdk.openaiCompatible(modelID)
-          return sdk.languageModel(modelID)
+          if (provider === "anthropic") return sdk.anthropic(modelID, model)
+          if (provider === "openai") return sdk.openai(modelID, model)
+          if (provider === "openai-compatible") return sdk.openaiCompatible(modelID, model)
+          return sdk.languageModel(modelID, model)
         },
       }
     }),

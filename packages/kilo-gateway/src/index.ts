@@ -45,11 +45,7 @@ export {
   type KiloTranscriptionModel,
   type KiloTranscriptionModelsResult,
 } from "./api/models.js"
-export {
-  fetchKiloModelEndpoints,
-  type KiloModelEndpoint,
-  type KiloModelEndpointsResult,
-} from "./api/endpoints.js"
+export { fetchKiloModelEndpoints, type KiloModelEndpoint, type KiloModelEndpointsResult } from "./api/endpoints.js"
 export {
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
   fetchKiloEmbeddingModelCatalog,
@@ -129,6 +125,7 @@ export type {
   PollOptions,
   PollResult,
   // Provider types
+  KiloModelOptions,
   KiloProvider,
   KiloProviderOptions,
   KiloMetadata,

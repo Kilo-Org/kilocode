@@ -69,7 +69,7 @@ The selection is stored in your global `kilo.json` as OpenRouter-style [`provide
 }
 ```
 
-Editing the config directly also works — any field from the OpenRouter provider routing docs can be used, exactly like the [OpenRouter provider passthrough](/docs/ai-providers/openrouter#provider-routing). Note that the UI writes only the global `kilo.json`: a `provider` block set in a project-level `kilo.json` takes precedence when configs merge and will shadow selections made from the UI. The routing dropdown flags this when it happens, so a selection that cannot take effect is never silent — edit the project config to change the provider for that workspace.
+Editing the config directly also works — any field from the OpenRouter provider routing docs can be used, exactly like the [OpenRouter provider passthrough](/docs/ai-providers/openrouter#provider-routing). The preferences are applied to every Kilo Gateway request for that model, including models the gateway serves through native OpenAI or Anthropic transports. Note that the UI writes only the global `kilo.json`: a `provider` block set in a project-level `kilo.json` takes precedence when configs merge and will shadow selections made from the UI. The routing dropdown flags this when it happens, so a selection that cannot take effect is never silent — edit the project config to change the provider for that workspace.
 
 ## Configuration in Kilo Code
 

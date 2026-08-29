@@ -173,10 +173,24 @@ export interface ProviderInfo {
   models: Record<string, any>
 }
 
+/**
+ * Per-model request settings honored by every Kilo Gateway transport
+ */
+export interface KiloModelOptions {
+  /**
+   * OpenRouter-style provider routing preferences (`order`, `only`,
+   * `allow_fallbacks`, ...) merged into the request body's top-level
+   * `provider` object, including for the native OpenAI/Anthropic transports
+   * whose SDKs do not forward them from provider options.
+   */
+  provider?: Record<string, unknown>
+}
+
 export type KiloProvider = Provider & {
-  anthropic(modelId: string): LanguageModel
-  openai(modelId: string): LanguageModel
-  openaiCompatible(modelId: string): LanguageModel
+  languageModel(modelId: string, options?: KiloModelOptions): LanguageModelV3
+  anthropic(modelId: string, options?: KiloModelOptions): LanguageModel
+  openai(modelId: string, options?: KiloModelOptions): LanguageModel
+  openaiCompatible(modelId: string, options?: KiloModelOptions): LanguageModel
 }
 
 // Re-export LanguageModelV3 for convenience

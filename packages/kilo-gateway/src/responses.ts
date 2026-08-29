@@ -28,13 +28,23 @@ function strip(input: unknown[]) {
   return { kept, changed }
 }
 
+/**
+ * Rewrites an outgoing gateway request body: strips Responses item ids when
+ * storage is disabled, and merges `routing` (the model's configured OpenRouter
+ * provider preferences) plus the data-collection setting into the top-level
+ * `provider` object. Doing this at the fetch layer covers every transport —
+ * the native OpenAI/Anthropic SDKs drop unknown provider options, so routing
+ * would otherwise only reach the body through the OpenRouter SDK.
+ */
 export function transformRequestBody(
   input: string | URL | Request,
   body: BodyInit | null | undefined,
   value?: "allow" | "deny",
+  routing?: Record<string, unknown>,
 ) {
   const responses = endpoint(input)
-  if (!responses && !value) return body
+  const preferences = routing && Object.keys(routing).length > 0 ? routing : undefined
+  if (!responses && !value && !preferences) return body
   if (typeof body !== "string") return body
 
   const data = (() => {
@@ -47,12 +57,16 @@ export function transformRequestBody(
   if (!record(data)) return body
 
   const result = responses && data.store !== true && Array.isArray(data.input) ? strip(data.input) : undefined
-  if (!result?.changed && !value) return body
+  if (!result?.changed && !value && !preferences) return body
 
+  // Preferences already in the body come from the request itself and win over
+  // the model-level routing; the privacy setting wins over both.
   const provider = record(data.provider) ? data.provider : {}
   return JSON.stringify({
     ...data,
     ...(result?.changed ? { input: result.kept } : {}),
-    ...(value ? { provider: { ...provider, data_collection: value } } : {}),
+    ...(value || preferences
+      ? { provider: { ...preferences, ...provider, ...(value ? { data_collection: value } : {}) } }
+      : {}),
   })
 }

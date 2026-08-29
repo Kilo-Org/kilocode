@@ -187,3 +187,44 @@ it.effect("enables a paid catalog when auth exists", () =>
     expect(result.options).toEqual({})
   }),
 )
+
+it.effect("hands the model's provider routing to every gateway transport", () =>
+  Effect.gen(function* () {
+    const calls: Array<{ transport: string; modelID: string; options: unknown }> = []
+    const sdk = Object.fromEntries(
+      ["languageModel", "anthropic", "openai", "openaiCompatible"].map((transport) => [
+        transport,
+        (modelID: string, options: unknown) => {
+          calls.push({ transport, modelID, options })
+          return { modelId: modelID }
+        },
+      ]),
+    )
+    const routing = { order: ["gmicloud/fp8"], only: ["gmicloud/fp8"], allow_fallbacks: false }
+    const models = {
+      "paid-model": {},
+      "anthropic/claude": { ai_sdk_provider: "anthropic" },
+      "openai/gpt": { ai_sdk_provider: "openai" },
+      "compatible/model": { ai_sdk_provider: "openai-compatible" },
+    }
+    const result = yield* kiloCustomLoaders({
+      auth: () => Effect.succeed(undefined),
+      config: () => Effect.succeed({}),
+      env: () => Effect.succeed({}),
+      get: () => Effect.succeed(undefined),
+    }).kilo({ ...input, models })
+
+    for (const modelID of Object.keys(models)) {
+      yield* Effect.promise(() => result.getModel!(sdk, modelID, { dataCollection: "deny", provider: routing }))
+    }
+    yield* Effect.promise(() => result.getModel!(sdk, "paid-model", { provider: "not-an-object" }))
+
+    expect(calls).toEqual([
+      { transport: "languageModel", modelID: "paid-model", options: { provider: routing } },
+      { transport: "anthropic", modelID: "anthropic/claude", options: { provider: routing } },
+      { transport: "openai", modelID: "openai/gpt", options: { provider: routing } },
+      { transport: "openaiCompatible", modelID: "compatible/model", options: { provider: routing } },
+      { transport: "languageModel", modelID: "paid-model", options: { provider: undefined } },
+    ])
+  }),
+)

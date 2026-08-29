@@ -2,7 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
-import type { KiloProvider, KiloProviderOptions } from "./types.js"
+import type { KiloModelOptions, KiloProvider, KiloProviderOptions } from "./types.js"
 import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { ANONYMOUS_API_KEY } from "./api/constants.js"
@@ -50,39 +50,40 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     ...options.headers,
   }
 
-  // Create custom fetch wrapper to add dynamic headers
   const originalFetch = options.fetch ?? fetch
-  const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
-    const headers = buildRequestHeaders(customHeaders, init?.headers)
-    const body = transformRequestBody(input, init?.body, options.dataCollection)
 
-    // Add authorization if API key exists
-    if (apiKey) {
-      headers.set("Authorization", `Bearer ${apiKey}`)
+  // Routing preferences are per model, so each transport instance is created
+  // with a fetch wrapper bound to the model it serves; the wrapper also adds
+  // the dynamic headers and authorization.
+  function sdkOptions(model?: KiloModelOptions) {
+    const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
+      const headers = buildRequestHeaders(customHeaders, init?.headers)
+      const body = transformRequestBody(input, init?.body, options.dataCollection, model?.provider)
+
+      if (apiKey) {
+        headers.set("Authorization", `Bearer ${apiKey}`)
+      }
+
+      return originalFetch(input, {
+        ...init,
+        headers,
+        body,
+      })
     }
 
-    return originalFetch(input, {
-      ...init,
-      headers,
-      body,
-    })
+    return {
+      baseURL: openRouterUrl,
+      apiKey: apiKey ?? ANONYMOUS_API_KEY,
+      headers: customHeaders,
+      fetch: wrappedFetch as typeof fetch,
+    }
   }
 
-  const sdkOptions = {
-    baseURL: openRouterUrl,
-    apiKey: apiKey ?? ANONYMOUS_API_KEY,
-    headers: customHeaders,
-    fetch: wrappedFetch as typeof fetch,
-  }
-
-  const openrouter = createOpenRouter(sdkOptions)
-  const anthropic = createAnthropic(sdkOptions)
-  const openai = createOpenAI(sdkOptions)
-  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
+  const openrouter = createOpenRouter(sdkOptions())
 
   return {
-    languageModel(modelId) {
-      return openrouter(modelId)
+    languageModel(modelId: string, model?: KiloModelOptions) {
+      return createOpenRouter(sdkOptions(model))(modelId)
     },
     embeddingModel(modelId: string) {
       return openrouter.textEmbeddingModel(modelId)
@@ -93,14 +94,14 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     imageModel(modelId) {
       return openrouter.imageModel(modelId)
     },
-    anthropic(modelId) {
-      return GatewayMetadata.wrap(anthropic(modelId))
+    anthropic(modelId: string, model?: KiloModelOptions) {
+      return GatewayMetadata.wrap(createAnthropic(sdkOptions(model))(modelId))
     },
-    openai(modelId) {
-      return GatewayMetadata.wrap(openai(modelId))
+    openai(modelId: string, model?: KiloModelOptions) {
+      return GatewayMetadata.wrap(createOpenAI(sdkOptions(model))(modelId))
     },
-    openaiCompatible(modelId) {
-      return openaiCompatible(modelId)
+    openaiCompatible(modelId: string, model?: KiloModelOptions) {
+      return createOpenAICompatible({ ...sdkOptions(model), name: "openaiCompatible" })(modelId)
     },
   }
 }
