@@ -26,3 +26,26 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. The JetBrains
 ## Permission requests
 
 When the agent asks for several approvals at once, permission requests queue up instead of replacing each other. Resolve the current request to advance to the next one in the queue.
+
+## Session actions
+
+Right-click anywhere in a chat session to open the session context menu, or click the **more** button on the prompt bar for the same actions (except Copy and Stop, which live only in the right-click menu):
+
+- **Stop Session** — stop the running turn
+- **Auto-Approve** — approve permission prompts automatically; applies to every Kilo session in the IDE
+- **Compare to Base** — open a diff of everything the session's branch changes against its base branch, including uncommitted work
+- **Open Pull Request in Browser** / **Copy Pull Request Reference** — available when the session's branch has a pull request
+- **Copy Session ID** — copy the session identifier to the clipboard
+- **Share Session** — create a public link to the conversation and copy it to the clipboard. **Stop Sharing** revokes the link, and **Copy Share Link** copies the link of an already-shared session.
+
+Sharing requires you to be signed in to Kilo, and is unavailable when sharing is disabled in your configuration.
+
+## Running configurations in a worktree
+
+In Agent Manager worktree sessions, the worktree editor header has a **Build/Run** dropdown that runs IDE run configurations against the selected worktree:
+
+- **Start** — lists the supported run configurations (Gradle and command-line style types) and starts one inside the worktree. Command-line style configurations run with the worktree as their working directory and receive `WORKTREE_PATH` and `REPO_PATH` environment variables.
+- **Running** — lists live worktree processes with **Stop** and **Show Output** actions. Stop behaves like the IDE's own Stop button, including a second press that force-kills processes that support it. Output opens in the Run tool window.
+- **Build** / **Rebuild** — compile the worktree with the project's build tool, when the project supports it.
+
+Configurations that rely on module classpaths are not listed, because they would run the main checkout's compiled classes. For full run and debug support, use **Open in New Frame** in the same dropdown to open the worktree in a separate IDE window.

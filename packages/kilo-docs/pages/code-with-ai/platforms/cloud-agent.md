@@ -193,6 +193,15 @@ Scheduled triggers fire on a recurring schedule using cron expressions. You can 
 
 The minimum schedule interval is 10 minutes. Scheduled triggers use `{{scheduledTime}}` and `{{timestamp}}` as prompt template variables (webhook-specific variables like `{{body}}` are not available since there is no inbound HTTP request).
 
+### Invoking a Scheduled Trigger On Demand
+
+Run an active scheduled trigger immediately without waiting for its next scheduled occurrence:
+
+- Click the **Play** action on a scheduled trigger's row and confirm in the dialog. Paused triggers cannot be invoked, and webhook triggers have no invoke action.
+- When editing a scheduled trigger, use **Save and invoke now** to validate and save the form first, then invoke the trigger only after the save succeeds.
+
+A manual invocation goes through the same queue and in-flight limits as a scheduled run. It does not change the trigger's cron schedule, timezone, or next scheduled occurrence.
+
 ### Trigger Limits and Guidance
 
 Triggers are designed for low-volume invocations from trusted sources and are best suited for short-lived tasks.
