@@ -1334,6 +1334,190 @@ describe("RemoteProtocol browser jobs v1", () => {
     timed_out: { ...completed, status: "timed_out", reason: "execution_timeout", effectsUncertain: true },
   } satisfies Record<RemoteProtocol.BrowserJobSnapshot["status"], RemoteProtocol.BrowserResult | null>
 
+  // Canonical queue fixtures match both Cloud schema suites.
+  describe("queue metadata", () => {
+    const queued = { ...job, status: "queued" } as const
+
+    test.each([
+      {},
+      { ownerLabel: owner.parentSessionId },
+      { queuePosition: 1 },
+      { queuePosition: 100 },
+      { ownerLabel: owner.parentSessionId, queuePosition: 50 },
+    ])("preserves optional metadata through negotiated frames only: %j", (fields) => {
+      const snapshot = { ...queued, ...fields }
+      expect(RemoteProtocol.BrowserJobSnapshot.parse(snapshot)).toStrictEqual(snapshot)
+      for (const frame of [
+        { type: "provider_snapshot", ...binding, jobs: [snapshot] },
+        { ...empty, jobs: [snapshot] },
+      ] satisfies RemoteProtocol.BrowserProviderInbound[]) {
+        const wire = JSON.parse(JSON.stringify(frame))
+        expect(RemoteProtocol.BrowserProviderInbound.parse(wire)).toStrictEqual(frame)
+        expect(RemoteProtocol.WebInboundWithBrowser.parse(wire)).toStrictEqual(frame)
+        expect(RemoteProtocol.WebInbound.safeParse(wire).success).toBe(false)
+      }
+      for (const frame of [
+        { type: "browser_response", requestId, response: { kind: "status", job: snapshot } },
+        { type: "browser_response", requestId, response: { kind: "recovered", job: snapshot } },
+        { type: "browser_event", requestId, event: "progress", job: snapshot },
+      ] satisfies (RemoteProtocol.BrowserResponse | RemoteProtocol.BrowserEvent)[]) {
+        const wire = JSON.parse(JSON.stringify(frame))
+        expect(RemoteProtocol.BrowserCLIInbound.parse(wire)).toStrictEqual(frame)
+        expect(RemoteProtocol.InboundWithBrowser.parse(wire)).toStrictEqual(frame)
+        expect(RemoteProtocol.Inbound.safeParse(wire).success).toBe(false)
+      }
+    })
+
+    test.each([
+      { queuePosition: 0 },
+      { queuePosition: -1 },
+      { queuePosition: 101 },
+      { queuePosition: 1.5 },
+      { queuePosition: "1" },
+      { queuePosition: null },
+      { queuePosition: true },
+      { queuePosition: [] },
+      { queuePosition: {} },
+      { queuePosition: NaN },
+      { queuePosition: Infinity },
+    ])("rejects malformed queue positions: %j", (fields) => {
+      expect(RemoteProtocol.BrowserJobSnapshot.safeParse({ ...queued, ...fields }).success).toBe(false)
+    })
+
+    test.each([
+      { ownerLabel: "x", accepted: true },
+      { ownerLabel: "x".repeat(128), accepted: true },
+      { ownerLabel: "\u00e9".repeat(64), accepted: true },
+      { ownerLabel: "", accepted: false },
+      { ownerLabel: "x".repeat(129), accepted: false },
+      { ownerLabel: "\u00e9".repeat(65), accepted: false },
+      { ownerLabel: null, accepted: false },
+      { ownerLabel: 1, accepted: false },
+      { ownerLabel: false, accepted: false },
+      { ownerLabel: [], accepted: false },
+      { ownerLabel: {}, accepted: false },
+    ])("matches the existing dispatch owner-label bounds: %j", ({ ownerLabel, accepted }) => {
+      expect(RemoteProtocol.BrowserJobSnapshot.safeParse({ ...queued, ownerLabel }).success).toBe(accepted)
+      expect(RemoteProtocol.BrowserProviderInbound.safeParse({ ...dispatch, ownerLabel }).success).toBe(accepted)
+    })
+
+    test.each(entries(statuses).filter(([status]) => status !== "queued"))(
+      "preserves legacy %s snapshots and labels but rejects stale queue positions",
+      (status, result) => {
+        const snapshot = {
+          ...job,
+          status,
+          ...(status === "running" ? { approvedTab: tab } : {}),
+          ...(result ? { result } : {}),
+        }
+        expect(RemoteProtocol.BrowserJobSnapshot.parse(snapshot)).toStrictEqual(snapshot)
+        const labeled = { ...snapshot, ownerLabel: owner.parentSessionId }
+        expect(RemoteProtocol.BrowserJobSnapshot.parse(labeled)).toStrictEqual(labeled)
+        expect(RemoteProtocol.BrowserJobSnapshot.safeParse({ ...labeled, queuePosition: 1 }).success).toBe(false)
+      },
+    )
+
+    test.each([
+      { queuePosition: 0 },
+      { queuePosition: 101 },
+      { queuePosition: 1.5 },
+      { queuePosition: "1" },
+      { queuePosition: null },
+      { ownerLabel: "" },
+      { ownerLabel: "\u00e9".repeat(65) },
+      { ownerLabel: null },
+      { status: "awaiting_approval" },
+      { status: "running", approvedTab: tab },
+      finished,
+      { approvedTab: tab },
+      { result: completed },
+      { deadlines: { queue: "2026-09-04T00:00:00.001Z" } },
+    ])("rejects malformed metadata and invalid phases through negotiated parsers: %j", (fields) => {
+      const snapshot = { ...queued, ownerLabel: owner.parentSessionId, queuePosition: 1, ...fields }
+      for (const frame of [
+        { type: "provider_snapshot", ...binding, jobs: [snapshot] },
+        { ...empty, jobs: [snapshot] },
+      ]) {
+        expect(RemoteProtocol.BrowserProviderInbound.safeParse(frame).success).toBe(false)
+        expect(RemoteProtocol.WebInboundWithBrowser.safeParse(frame).success).toBe(false)
+      }
+      for (const frame of [
+        { type: "browser_response", requestId, response: { kind: "status", job: snapshot } },
+        { type: "browser_response", requestId, response: { kind: "recovered", job: snapshot } },
+        { type: "browser_event", requestId, event: "progress", job: snapshot },
+      ]) {
+        expect(RemoteProtocol.BrowserCLIInbound.safeParse(frame).success).toBe(false)
+        expect(RemoteProtocol.InboundWithBrowser.safeParse(frame).success).toBe(false)
+      }
+    })
+
+    test.each([
+      { owner },
+      { parentSessionId: owner.parentSessionId },
+      { parentProof: owner.parentProof },
+      { providerProof: registration.providerProof },
+      { connectionId: "private-route" },
+      { capabilities: { browserJobsV1: true } },
+      { goal: invoke.goal },
+      { recovery },
+      { leaseExpiresAt: "2026-08-28T00:00:15.000Z" },
+    ])("keeps private data and authority out of labeled snapshots: %j", (fields) => {
+      expect(
+        RemoteProtocol.BrowserJobSnapshot.safeParse({
+          ...queued,
+          ownerLabel: owner.parentSessionId,
+          queuePosition: 1,
+          ...fields,
+        }).success,
+      ).toBe(false)
+    })
+
+    test.each([{ ownerLabel: owner.parentSessionId }, { queuePosition: 1 }])(
+      "keeps projection metadata out of requests and immutable results: %j",
+      (fields) => {
+        for (const args of operations) {
+          expect(RemoteProtocol.BrowserTaskArguments.safeParse({ ...args, ...fields }).success).toBe(false)
+        }
+        for (const frame of requests) {
+          expect(RemoteProtocol.BrowserRequest.safeParse({ ...frame, ...fields }).success).toBe(false)
+        }
+        for (const frame of sent) {
+          expect(RemoteProtocol.BrowserProviderOutbound.safeParse({ ...frame, ...fields }).success).toBe(false)
+        }
+        expect(RemoteProtocol.BrowserResult.safeParse({ ...completed, ...fields }).success).toBe(false)
+      },
+    )
+
+    test("does not turn queued metadata into dispatch authority", () => {
+      const snapshot = { ...queued, ownerLabel: owner.parentSessionId, queuePosition: 1 }
+      expect(RemoteProtocol.BrowserJobSnapshot.parse(snapshot)).toStrictEqual(snapshot)
+      const frame = { ...dispatch, job: snapshot, conversationMode: "new" }
+      expect(RemoteProtocol.BrowserProviderInbound.safeParse(frame).success).toBe(false)
+      expect(RemoteProtocol.WebInboundWithBrowser.safeParse(frame).success).toBe(false)
+    })
+
+    test("counts queue metadata in the unchanged serialized frame limit", () => {
+      const large = { ...finished, result: { ...completed, summary: "\u00e9".repeat(16384) } }
+      const last = { ...finished, result: { ...completed, summary: "" } }
+      const snapshot = { ...queued, ownerLabel: "\u00e9".repeat(64), queuePosition: 100 }
+      const page = {
+        type: "provider_snapshot",
+        ...binding,
+        jobs: [snapshot, large, large, large, last],
+      } satisfies RemoteProtocol.BrowserProviderInbound
+      last.result.summary = "x".repeat(128 * 1024 - 1 - Buffer.byteLength(JSON.stringify(page), "utf8"))
+      for (const schema of [RemoteProtocol.BrowserProviderInbound, RemoteProtocol.WebInboundWithBrowser]) {
+        expect(schema.parse(page)).toStrictEqual(page)
+      }
+      last.result.summary += "x"
+      const legacy = { ...page, jobs: [queued, ...page.jobs.slice(1)] }
+      for (const schema of [RemoteProtocol.BrowserProviderInbound, RemoteProtocol.WebInboundWithBrowser]) {
+        expect(schema.safeParse(page).success).toBe(false)
+        expect(schema.parse(legacy)).toStrictEqual(legacy)
+      }
+    })
+  })
+
   test.each(entries(statuses))("enforces the observable result contract for %s", (status, result) => {
     const snapshot = {
       ...job,
