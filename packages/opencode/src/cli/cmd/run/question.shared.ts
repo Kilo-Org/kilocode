@@ -255,6 +255,18 @@ export function questionSelect(state: QuestionBodyState, request: QuestionReques
   return questionPick(state, request, option.label)
 }
 
+// kilocode_change start - Enter advances a multiple-choice question to the next tab
+export function questionAdvance(state: QuestionBodyState, request: QuestionRequest): QuestionStep {
+  if (questionSingle(request) || state.tab >= request.questions.length) {
+    return { state }
+  }
+
+  return {
+    state: questionSetTab(state, state.tab + 1),
+  }
+}
+// kilocode_change end
+
 export function questionSave(state: QuestionBodyState, request: QuestionRequest): QuestionStep {
   const info = questionInfo(request, state)
   if (!info) {
