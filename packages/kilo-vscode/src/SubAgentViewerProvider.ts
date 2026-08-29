@@ -42,7 +42,13 @@ export class SubAgentViewerProvider implements vscode.Disposable {
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
     }
 
-    const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, { hideTopBar: true })
+    const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      hideTopBar: true,
+      tabTitle: (title) => {
+        panel.title = title
+      },
+      tabLabel: label,
+    })
     if (directory) provider.setSessionDirectory(sessionID, directory)
     // Start accepting this session's SSE events as soon as the panel subscribes.
     // Reasoning deltas are not persisted until the reasoning part finishes.

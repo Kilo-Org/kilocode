@@ -5,6 +5,8 @@ description: "Connect Linear to your KiloClaw agent to create and manage issues 
 
 # Linear Integration
 
+{% partial file="kiloclaw-eol.md" /%}
+
 Connect Linear to your KiloClaw agent so it can create issues, update their status, read project backlogs, and track work — all automatically. Linear is a project management tool popular with software teams for planning and tracking features, bugs, and tasks.
 
 {% callout type="warning" title="Keep your API key private" %}

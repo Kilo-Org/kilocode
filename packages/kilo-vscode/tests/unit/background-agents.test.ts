@@ -2,9 +2,11 @@ import { describe, expect, it } from "bun:test"
 import {
   backgroundAgents,
   backgroundJobAgents,
-  foregroundAgent,
+  fitBackgroundAgents,
   showBackgroundAgent,
 } from "../../webview-ui/src/components/chat/background-agents"
+import { childForeground, showChildPromotion } from "../../webview-ui/src/components/chat/task-tool-state"
+import { latestTaskPart } from "../../webview-ui/src/context/session-utils"
 import type {
   BackgroundJobInfo,
   PermissionRequest,
@@ -48,6 +50,29 @@ function taskPart(opts: TaskOptions = {}): ToolPart {
 const busy: SessionStatusInfo = { type: "busy" }
 const idle: SessionStatusInfo = { type: "idle" }
 
+describe("fitBackgroundAgents", () => {
+  it("uses the full width when all agents fit without an overflow button", () => {
+    expect(fitBackgroundAgents([30, 30], 66, 80, 6)).toBe(2)
+  })
+
+  it("reserves the overflow button and spacing while fitting a prefix", () => {
+    expect(fitBackgroundAgents([100, 120, 80], 285, 50, 6)).toBe(2)
+    expect(fitBackgroundAgents([100, 120, 80], 281, 50, 6)).toBe(1)
+  })
+
+  it("falls back to the summary when no agent fits with the overflow button", () => {
+    expect(fitBackgroundAgents([100, 120], 155, 50, 6)).toBe(0)
+    expect(fitBackgroundAgents([100, 120], 156, 50, 6)).toBe(1)
+  })
+
+  it("handles single agents, empty lists, and hidden containers", () => {
+    expect(fitBackgroundAgents([100], 100, 50, 6)).toBe(1)
+    expect(fitBackgroundAgents([100], 99, 50, 6)).toBe(0)
+    expect(fitBackgroundAgents([], 100, 50, 6)).toBe(0)
+    expect(fitBackgroundAgents([100, 120], 0, 50, 6)).toBe(0)
+  })
+})
+
 describe("backgroundAgents", () => {
   it("lists a running background agent from tool state metadata", () => {
     const tools = [taskPart({ child: "ses_child", background: true, description: "Audit deps", agent: "explore" })]
@@ -72,6 +97,37 @@ describe("backgroundAgents", () => {
 
   it("ignores foreground subagents", () => {
     expect(backgroundAgents([taskPart({ child: "ses_child" })], { ses_child: busy })).toEqual([])
+  })
+
+  it("identifies each parallel foreground child independently", () => {
+    const status = { ses_a: busy, ses_b: busy }
+
+    expect(childForeground("ses_a", {}, {}, status, true)).toBe(true)
+    expect(childForeground("ses_b", {}, {}, status, true)).toBe(true)
+    expect(childForeground("ses_a", { background: true }, {}, status, true)).toBe(false)
+    expect(childForeground("ses_b", {}, { background: true }, status, true)).toBe(false)
+    expect(childForeground("ses_a", {}, {}, { ses_a: idle }, true)).toBe(false)
+    expect(
+      childForeground("ses_a", {}, {}, { ses_a: { type: "retry", attempt: 1, message: "retry", next: 1 } }, true),
+    ).toBe(true)
+    expect(childForeground(undefined, {}, {}, status, true)).toBe(false)
+    expect(childForeground("ses_a", {}, {}, status, false)).toBe(false)
+    expect(showChildPromotion("ses_a", {}, {}, status, true, false, true)).toBe(true)
+    expect(showChildPromotion("ses_a", {}, {}, status, true, true, true)).toBe(false)
+    expect(showChildPromotion("ses_a", {}, {}, status, false, false, true)).toBe(false)
+    expect(showChildPromotion("ses_a", {}, {}, status, undefined, false, true)).toBe(false)
+  })
+
+  it("only promotes the latest task part for a resumed child", () => {
+    const parts = [
+      taskPart({ id: "part_old", child: "ses_a" }),
+      taskPart({ id: "part_new", child: "ses_a" }),
+      taskPart({ id: "part_other", child: "ses_b" }),
+    ]
+
+    expect(latestTaskPart("part_old", "ses_a", parts)).toBe(false)
+    expect(latestTaskPart("part_new", "ses_a", parts)).toBe(true)
+    expect(latestTaskPart("part_other", "ses_b", parts)).toBe(true)
   })
 
   it("ignores agents whose session is no longer working", () => {
@@ -261,14 +317,5 @@ describe("backgroundAgents", () => {
 
     expect(showBackgroundAgent(agent, hidden)).toBe(true)
     expect(showBackgroundAgent({ ...agent, status: "completed" }, hidden)).toBe(false)
-  })
-
-  it("finds a running foreground child that can be promoted", () => {
-    const tools = [
-      taskPart({ id: "part_background", child: "child_background", background: true }),
-      taskPart({ id: "part_foreground", child: "child_foreground", background: false }),
-    ]
-
-    expect(foregroundAgent(tools, { child_background: busy, child_foreground: busy })).toBe("child_foreground")
   })
 })

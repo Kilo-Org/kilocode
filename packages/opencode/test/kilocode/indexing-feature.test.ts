@@ -3,7 +3,6 @@ import {
   ensureIndexingPlugin,
   indexingEnabled,
   INDEXING_PLUGIN,
-  resolveIndexingPlugin,
 } from "../../src/kilocode/indexing-feature"
 
 describe("indexing plugin helpers", () => {
@@ -27,14 +26,5 @@ describe("indexing plugin helpers", () => {
   test("skips hard-enable when plugin package is unavailable", () => {
     const list = ensureIndexingPlugin(["global-plugin"], undefined)
     expect(list).toEqual(["global-plugin"])
-  })
-
-  test("falls back to package marker when resolver fails", () => {
-    const plugin = resolveIndexingPlugin({
-      resolve() {
-        throw new Error("missing")
-      },
-    })
-    expect(plugin).toBe(INDEXING_PLUGIN)
   })
 })

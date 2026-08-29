@@ -111,14 +111,13 @@ export function buildTopLevelItems(
 /**
  * Build the flat visual order of all sidebar items matching what the user sees.
  * LOCAL is always first, then worktrees in visual order (ungrouped first, then sections,
- * skipping collapsed sections), then unassigned sessions.
+ * skipping collapsed sections). Sessions are reachable through the history view, not the tree.
  */
 export function buildSidebarOrder(
   items: TopLevelItem[],
   sorted: WorktreeState[],
   sections: SectionState[],
   members: (id: string) => WorktreeState[],
-  sessions: { id: string }[],
 ): SidebarItem[] {
   const result: SidebarItem[] = [{ type: "local", id: "local" }]
   if (sections.length > 0) {
@@ -137,9 +136,6 @@ export function buildSidebarOrder(
     for (const wt of sorted) {
       result.push({ type: "wt", id: wt.id })
     }
-  }
-  for (const s of sessions) {
-    result.push({ type: "session", id: s.id })
   }
   return result
 }

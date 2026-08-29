@@ -9,6 +9,23 @@ import { Semaphore } from "../../src/agent-manager/semaphore"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
 import type { WorktreeDiffEntry } from "../../src/agent-manager/types"
 
+function run(dir: string, args: string[]): void {
+  const result = Bun.spawnSync({
+    cmd: ["git", ...args],
+    cwd: dir,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: "Test",
+      GIT_AUTHOR_EMAIL: "test@example.com",
+      GIT_COMMITTER_NAME: "Test",
+      GIT_COMMITTER_EMAIL: "test@example.com",
+    },
+  })
+  if (result.exitCode !== 0) throw new Error(Buffer.from(result.stderr).toString("utf8"))
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -78,6 +95,7 @@ function source(
 
 class RecordingGitOps extends GitOps {
   readonly commands: Array<{ args: string[]; cwd: string }> = []
+  worktreeCalls = 0
   aheadCalls = 0
 
   constructor() {
@@ -87,6 +105,11 @@ class RecordingGitOps extends GitOps {
   override execGitBuffer(args: string[], cwd: string): Promise<ExecBufferResult> {
     this.commands.push({ args, cwd })
     return super.execGitBuffer(args, cwd)
+  }
+
+  override listWorktreePaths(cwd: string): Promise<Map<string, string>> {
+    this.worktreeCalls++
+    return super.listWorktreePaths(cwd)
   }
 
   override aheadBehind(cwd: string, base: string): Promise<{ ahead: number; behind: number }> {
@@ -125,6 +148,132 @@ describe("GitOps", () => {
 })
 
 describe("GitStatsPoller", () => {
+  it("uses isolated ref worktree maps for linked worktrees in two repositories", async () => {
+    const roots = await Promise.all([
+      fs.promises.mkdtemp(path.join(os.tmpdir(), "gsp-isolated-one-")),
+      fs.promises.mkdtemp(path.join(os.tmpdir(), "gsp-isolated-two-")),
+    ])
+    const linked = roots.map((root) => path.join(root, "linked"))
+    try {
+      for (const [index, root] of roots.entries()) {
+        run(root, ["init", "-b", "main"])
+        run(root, ["config", "commit.gpgsign", "false"])
+        await fs.promises.writeFile(path.join(root, "file.txt"), `${index}\n`)
+        run(root, ["add", "."])
+        run(root, ["commit", "-m", "base"])
+        run(root, ["remote", "add", "origin", "."])
+        run(root, ["update-ref", "refs/remotes/origin/main", "HEAD"])
+        run(root, ["branch", "--set-upstream-to=origin/main", "main"])
+        run(root, ["worktree", "add", "-b", "feature", linked[index]!, "main"])
+      }
+
+      const recorders = roots.map(() => new RecordingGitOps())
+      const pollers = roots.map(
+        (root, index) =>
+          new GitStatsPoller({
+            getWorktrees: () => [{ ...worktree(`wt-${index}`), branch: "feature", path: linked[index]! }],
+            getWorkspaceRoot: () => root,
+            onStats: () => undefined,
+            onLocalStats: () => undefined,
+            log: () => undefined,
+            intervalMs: 500,
+            git: recorders[index]!,
+          }),
+      )
+
+      pollers.forEach((poller) => poller.setEnabled(true))
+      await Promise.all(recorders.map((git) => waitFor(() => git.aheadCalls >= 2, 2_000)))
+      pollers.forEach((poller) => poller.stop())
+
+      for (const [index, git] of recorders.entries()) {
+        expect(git.worktreeCalls).toBe(0)
+        expect(git.aheadCalls).toBe(2)
+        expect(git.commands.some((item) => item.args[1]?.includes("%(worktreepath)"))).toBe(true)
+        expect(git.commands.some((item) => item.cwd === roots[index])).toBe(true)
+      }
+    } finally {
+      await Promise.all(roots.map((root) => fs.promises.rm(root, { recursive: true, force: true })))
+    }
+  })
+
+  it("falls back to worktree listing and aheadBehind for detached worktrees", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-fallback-"))
+    const named = path.join(root, "named")
+    const detached = path.join(root, "detached")
+    try {
+      run(root, ["init", "-b", "main"])
+      run(root, ["config", "commit.gpgsign", "false"])
+      await fs.promises.writeFile(path.join(root, "file.txt"), "base\n")
+      run(root, ["add", "."])
+      run(root, ["commit", "-m", "base"])
+      run(root, ["remote", "add", "origin", "."])
+      run(root, ["update-ref", "refs/remotes/origin/main", "HEAD"])
+      run(root, ["worktree", "add", "-b", "feature", named, "main"])
+      run(root, ["worktree", "add", "--detach", detached, "main"])
+
+      const git = new RecordingGitOps()
+      const poller = new GitStatsPoller({
+        getWorktrees: () => [
+          { ...worktree("named"), branch: "feature", path: named },
+          { ...worktree("detached"), branch: "HEAD", path: detached },
+        ],
+        getWorkspaceRoot: () => root,
+        onStats: () => undefined,
+        onLocalStats: () => undefined,
+        log: () => undefined,
+        intervalMs: 500,
+        git,
+      })
+
+      poller.setEnabled(true)
+      await waitFor(() => git.worktreeCalls >= 1 && git.aheadCalls >= 2, 2_000)
+      poller.stop()
+
+      expect(git.commands.filter((item) => item.args[0] === "for-each-ref")).toHaveLength(1)
+      expect(git.worktreeCalls).toBe(1)
+      expect(git.aheadCalls).toBeGreaterThan(0)
+    } finally {
+      await fs.promises.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("falls back to worktree listing when ref metadata is incomplete", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-incomplete-"))
+    const named = path.join(root, "named")
+    try {
+      run(root, ["init", "-b", "main"])
+      run(root, ["config", "commit.gpgsign", "false"])
+      await fs.promises.writeFile(path.join(root, "file.txt"), "base\n")
+      run(root, ["add", "."])
+      run(root, ["commit", "-m", "base"])
+      run(root, ["worktree", "add", "-b", "feature", named, "main"])
+
+      const git = new RecordingGitOps()
+      const poller = new GitStatsPoller({
+        getWorktrees: () => [{ ...worktree("named"), branch: "feature", path: named }],
+        getWorkspaceRoot: () => root,
+        source: {
+          status: async () => ({ branch: "feature", dirty: false, head: "head", fingerprint: "stamp", untracked: [] }),
+          refs: async () => ({ oids: new Map([["refs/heads/feature", "head"]]), upstreams: new Map() }),
+          diff: async () => ({ files: 0, additions: 0, deletions: 0 }),
+        },
+        onStats: () => undefined,
+        onLocalStats: () => undefined,
+        log: () => undefined,
+        intervalMs: 500,
+        git,
+      })
+
+      poller.setEnabled(true)
+      await waitFor(() => git.worktreeCalls >= 1, 2_000)
+      poller.stop()
+
+      expect(git.worktreeCalls).toBe(1)
+    } finally {
+      await fs.promises.rm(root, { recursive: true, force: true })
+    }
+  })
+
   it("uses only status and shared snapshots on an unchanged second poll", async () => {
     const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "gsp-optimized-"))
     try {

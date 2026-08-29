@@ -196,12 +196,13 @@ export function Diff<T>(props: DiffProps<T>) {
     "selectedLines",
     "commentedLines",
     "onRendered",
+    "visible",
     "virtualized",
     "sizeKey",
   ])
 
   const mobile = createMediaQuery("(max-width: 640px)")
-  const [visible, setVisible] = createSignal(false)
+  const [visible, setVisible] = createSignal(local.visible === true)
 
   const before = createMemo(() => {
     if (local.fileDiff) return local.fileDiff.deletionLines.join("")
@@ -277,6 +278,10 @@ export function Diff<T>(props: DiffProps<T>) {
 
   createEffect(() => {
     if (visible()) return
+    if (local.visible) {
+      setVisible(true)
+      return
+    }
     const cleanup = observe(container, () => setVisible(true))
     onCleanup(cleanup)
   })

@@ -1,5 +1,6 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -30,6 +31,7 @@ import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
 import ai.kilocode.client.session.ui.prompt.MentionAction
+import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
@@ -43,6 +45,8 @@ import ai.kilocode.client.session.ui.attachment.AttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.attachmentParams
 import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.session.ui.header.BranchDock
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.selection.SessionContextMenu
 import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
@@ -50,6 +54,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
@@ -69,11 +74,14 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.rpc.dto.BranchStatusDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
 import com.intellij.ide.BrowserUtil
@@ -84,6 +92,7 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
@@ -105,6 +114,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.datatransfer.StringSelection
 import java.awt.event.HierarchyEvent
 import java.net.URI
 import java.nio.file.Path
@@ -130,7 +140,7 @@ class SessionUi(
     private val workspaces: KiloWorkspaceService = service(),
     private val migration: MigrationUiController = service<KiloMigrationService>(),
     private val timers: UiTimerSource = UiTimers,
-) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider {
+) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider, SessionActions {
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
@@ -193,6 +203,10 @@ class SessionUi(
 
     private lateinit var header: SessionHeaderPanel
 
+    private var dock: BranchDock? = null
+
+    private var bottom: JComponent? = null
+
     internal lateinit var scroll: SessionScroll
 
     private lateinit var question: QuestionView
@@ -206,11 +220,17 @@ class SessionUi(
     private lateinit var load: LoadingPanel
     private lateinit var migrationWizard: MigrationWizardPanel
     private var empty: EmptySessionPanel? = null
+
+    /**
+     * Last observed branch/worktree status. Retained so an empty panel created after the fetch shows
+     * its tip immediately instead of waiting for the next refresh.
+     */
+    private var branch: BranchStatusDto? = null
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
     private val popup = HeaderPopupController(timers)
-    private val readonly: Boolean get() = manager?.readonly == true
+    override val readonly: Boolean get() = manager?.readonly == true
     private val provider = object : TextCopyProvider() {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
@@ -224,6 +244,7 @@ class SessionUi(
     // but never cancel an in-flight user-initiated open.
     private var refreshJob: Job? = null
     private var openJob: Job? = null
+    private var branchJob: Job? = null
     private var disposed = false
 
     init {
@@ -236,7 +257,11 @@ class SessionUi(
         bindStyle()
         bindMigration()
         onStateChanged(controller.model.state)
-        if (showBranchBadge()) refreshBranchChanges()
+        dock?.let {
+            syncDock()
+            refreshBranchChanges()
+        }
+        refreshBranch()
         loaded?.let(::finishOpen)
     }
 
@@ -254,14 +279,74 @@ class SessionUi(
 
     internal val blank: Boolean get() = controller.blank
 
-    internal val id: String? get() = controller.id
+    override val id: String? get() = controller.id
 
     internal val cacheKey: String? get() = controller.refKey
 
     internal fun currentStyle() = style
 
+    override val pr: WorktreePrDto? get() = branch?.pr
+
+    override val share: String? get() = controller.model.session?.share?.url
+
+    override val git: Boolean get() = branch.let { it != null && it.availability != GhAvailability.GIT_MISSING }
+
+    override val auto: Boolean get() = controller.autoApprove
+
+    @RequiresEdt
+    override fun setAuto(value: Boolean) {
+        controller.setAutoApprove(value)
+        prompt.setAutoApprove(controller.autoApprove)
+    }
+
+    @RequiresEdt
+    override fun compare() {
+        openBranchChanges()
+    }
+
+    @RequiresEdt
+    override fun startShare() {
+        controller.setShare(true) { url, err -> onShareResult(url, err, on = true) }
+    }
+
+    @RequiresEdt
+    override fun stopShare() {
+        controller.setShare(false) { _, err -> onShareResult(null, err, on = false) }
+    }
+
+    /**
+     * Reports a share toggle. The CLI collapses every refusal into a bare HTTP 500, so the failure
+     * text has to name both plausible causes rather than guessing one.
+     */
+    @RequiresEdt
+    private fun onShareResult(url: String?, err: Throwable?, on: Boolean) {
+        if (err != null) {
+            val key = if (on) "session.share.failed" else "session.unshare.failed"
+            KiloNotifications.error(project, KiloBundle.message(key))
+            return
+        }
+        if (!on) {
+            KiloNotifications.info(project, KiloBundle.message("session.unshare.done"))
+            return
+        }
+        val link = url ?: return
+        CopyPasteManager.getInstance().setContents(StringSelection(link))
+        KiloNotifications.info(
+            project,
+            KiloBundle.message("session.share.done"),
+            link,
+            KiloBundle.message("session.share.open"),
+        ) { BrowserUtil.browse(link) }
+    }
+
     override fun uiDataSnapshot(sink: DataSink) {
         sink[PlatformDataKeys.COPY_PROVIDER] = provider
+        sink[SessionActionsKeys.ACTIONS] = this
+        // The prompt panel is a sibling of the transcript, so its own SendPromptContext only resolves
+        // for clicks inside it. Republish here — SessionUi is an ancestor of the whole session — so
+        // the reused Kilo.StopSession action works from any right-click. Nearest-provider-wins keeps
+        // PromptPanel authoritative inside its own subtree, and both publish the same instance anyway.
+        if (this::prompt.isInitialized) sink[PromptDataKeys.SEND] = prompt
     }
 
     @RequiresEdt
@@ -388,6 +473,8 @@ class SessionUi(
         outcome = SessionOutcomeView(
             selection = selection,
             focus = focus,
+            retry = if (readonly) null else controller::retry,
+            retryable = controller::canRetry,
         )
         messageBody = SessionMessageListPanel(
             controller.model,
@@ -411,7 +498,13 @@ class SessionUi(
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this, readonly) { openBranchChanges() }
+        header = SessionHeaderPanel(controller, this, readonly)
+        if (!readonly && showBranchDock()) {
+            val owner = manager
+            val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
+            val move = if (owner?.supportsMoveToWorktree == true) ::moveToWorktree else null
+            dock = BranchDock(openDiff = ::openBranchChanges, onMove = move, onNewWorktree = newWorktree)
+        }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
         overlay = SessionHoverCopyOverlay(root, scroll.component, this)
@@ -443,7 +536,9 @@ class SessionUi(
             hostedInEditorTab = manager?.hostedInEditorTab == true,
         )
         connection = ConnectionPanel(this, controller)
-        root.addOverlay(connection) { pane, child ->
+        // The banner reports a broken session, so it owns the pointer where it sits: the transcript
+        // under it must not stay hovered and keep a popup open behind it.
+        root.addOverlay(connection, blocks = true) { pane, child ->
             val size = child.preferredSize
             if (readonly) {
                 val gap = SessionUiStyle.View.contentGap()
@@ -457,12 +552,16 @@ class SessionUi(
             val point = SwingUtilities.convertPoint(prompt.parent ?: root.content, prompt.x, prompt.y, pane)
             val gap = SessionUiStyle.View.contentGap()
             val wide = (prompt.width - gap * 2).coerceAtLeast(0)
+            // Anchor above the whole bottom container (dock + prompt) so the banner floats over the
+            // dock rather than covering it; fall back to the prompt when there is no dock.
+            val anchor = bottom ?: prompt
+            val topY = SwingUtilities.convertPoint(anchor.parent ?: root.content, anchor.x, anchor.y, pane).y
             // Fix the banner width before measuring so its word-wrapped detail height is known.
             child.setSize(wide, child.height)
-            val height = child.preferredSize.height.coerceAtMost((point.y - gap).coerceAtLeast(0))
+            val height = child.preferredSize.height.coerceAtMost((topY - gap).coerceAtLeast(0))
             java.awt.Rectangle(
                 point.x + gap,
-                point.y - height - gap,
+                topY - height - gap,
                 wide,
                 height,
             )
@@ -484,14 +583,22 @@ class SessionUi(
         sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
         if (!readonly) {
-            root.content.add(
+            // In the sidebar tool window the bottom panel fills the full width; editor tabs keep the
+            // readable-width centering used across the transcript.
+            val aligned = if (manager?.hostedInEditorTab == true) {
                 prompt.align(
                     HAlign.CENTER,
                     VAlign.FIT,
                     maxW = { SessionUiStyle.SessionLayout.readableWidth(prompt, style.transcriptFont) },
-                ),
-                BorderLayout.SOUTH,
-            )
+                )
+            } else {
+                prompt.align(HAlign.FIT, VAlign.FIT)
+            }
+            val container = Stack.vertical()
+            dock?.let { container.next(it) }
+            container.next(aligned)
+            bottom = container
+            root.content.add(container, BorderLayout.SOUTH)
         }
         add(root, BorderLayout.CENTER)
     }
@@ -506,10 +613,7 @@ class SessionUi(
             prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
             prompt.onReset = { controller.clearModelOverride() }
             prompt.onChange = { scroll.refresh() }
-            prompt.onAutoApproveToggle = { value ->
-                controller.setAutoApprove(value)
-                prompt.setAutoApprove(controller.autoApprove)
-            }
+            prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
             prompt.model.favorites = { app.favorites.value }
             prompt.model.onFavoriteToggle = { item ->
@@ -579,6 +683,7 @@ class SessionUi(
                     val panel = manager?.emptyPanel(this, controller)
                         ?: EmptySessionPanel(this, controller, controller.recents(), timers = timers)
                     empty = panel
+                    panel.setBranch(branch)
                     scroll.show(panel.view)
                 }
 
@@ -611,26 +716,34 @@ class SessionUi(
 
                 is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
 
+                is SessionModelEvent.MessageAdded,
+                is SessionModelEvent.MessageRemoved,
+                is SessionModelEvent.HistoryLoaded,
+                is SessionModelEvent.Cleared -> syncDock()
+
                 is SessionModelEvent.QueueChanged -> Unit
 
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
                 is SessionModelEvent.ContentDelta,
-                is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.TurnRemoved,
-                is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
-                is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.ContentUpdated,
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.HeaderUpdated,
-                is SessionModelEvent.Compacted,
-                is SessionModelEvent.Cleared -> Unit
+                is SessionModelEvent.Compacted -> Unit
             }
         }
+    }
+
+    @RequiresEdt
+    private fun syncDock() {
+        val dock = dock ?: return
+        dock.setHasMessages(controller.model.messages().isNotEmpty())
+        dock.setHasSession(controller.id != null)
     }
 
     @RequiresEdt
@@ -677,7 +790,7 @@ class SessionUi(
     private fun bindStyle() {
         addHierarchyListener { event ->
             if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
-            if (!isShowing) popup.hideAll()
+            if (isShowing) refreshBranch() else popup.hideAll()
         }
 
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
@@ -913,13 +1026,9 @@ class SessionUi(
         Telemetry.send("Subagent Session Opened", mapOf("sessionId" to sessionId))
     }
 
-    /** Badge-only refresh: fetches stats (no patch text) and updates the header count. */
+    /** Badge-only refresh: fetches stats (no patch text) and updates the dock's changes badge. */
     private fun refreshBranchChanges() {
-        if (!showBranchBadge()) {
-            refreshJob?.cancel()
-            header.hideBranchChanges()
-            return
-        }
+        val dock = dock ?: return
         refreshJob?.cancel()
         refreshJob = cs.launch {
             val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
@@ -930,14 +1039,17 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                header.setBranchChanges(files)
+                dock.setChanges(files)
             }
         }
     }
 
-    /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
+    /**
+     * Opens the branch diff editor. Reached from the changes badge and from the Compare to Base
+     * context-menu action, so it must not depend on [dock] — hosts that hide the dock still offer the
+     * action. Never cancelled by a background refresh.
+     */
     private fun openBranchChanges() {
-        if (!showBranchBadge()) return
         openJob?.cancel()
         openJob = cs.launch {
             val dir = workspace.directory
@@ -950,10 +1062,16 @@ class SessionUi(
                 }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
-                header.setBranchChanges(files)
+                dock?.setChanges(files)
                 openBranchDiff(branch)
             }
         }
+    }
+
+    /** Starts the Move to Worktree flow for the current session through the side-panel manager. */
+    @RequiresEdt
+    private fun moveToWorktree() {
+        manager?.moveToWorktree(controller.id, controller.sessionDirectory)
     }
 
     @RequiresEdt
@@ -971,7 +1089,36 @@ class SessionUi(
         Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
     }
 
-    private fun showBranchBadge(): Boolean = manager?.showsBranchBadgeInHeader != false
+    private fun showBranchDock(): Boolean = manager?.showsBranchDock != false
+
+    /**
+     * Refreshes the branch/PR status. Uses the session's own [workspace] directory (the resolved
+     * backend path) — not `project.basePath`, which is a synthetic frontend path in split mode — so
+     * the PR always matches the branch checked out in this session's directory.
+     *
+     * Runs regardless of [dock] because the context-menu pull-request actions read [branch] too, and
+     * the hosts that hide the dock (Agent Manager worktree session editors) are exactly the ones most
+     * likely to have a PR. Skipped for readonly hosts, which offer no branch-scoped actions worth the
+     * `gh` round-trip.
+     */
+    private fun refreshBranch() {
+        if (readonly) return
+        branchJob?.cancel()
+        branchJob = cs.launch {
+            val status = runCatching { service<KiloWorktreeService>().branchStatus(workspace.directory) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("branch status refresh failed dir=${workspace.directory}", it)
+                    return@launch
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                branch = status
+                dock?.setBranch(status)
+                empty?.setBranch(status)
+            }
+        }
+    }
 
     private fun openAttachment(messageId: String, item: FileAttachment) {
         val url = item.url.takeIf { it.isNotBlank() } ?: run {
@@ -1033,7 +1180,10 @@ class SessionUi(
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         val busy = state.isBusy()
-        if (wasBusy && state is SessionState.Idle) refreshBranchChanges()
+        if (wasBusy && !busy) {
+            refreshBranchChanges()
+            refreshBranch()
+        }
         wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()
         if (state is SessionState.Error || state is SessionState.TurnEnded) {
@@ -1041,6 +1191,7 @@ class SessionUi(
             pendingRedo = null
         }
         prompt.setBusy(busy)
+        dock?.setBusy(busy)
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))
@@ -1049,6 +1200,7 @@ class SessionUi(
     }
 
     private fun onSessionUpdated() {
+        syncDock()
         manager?.activityChanged()
     }
 
@@ -1065,6 +1217,7 @@ class SessionUi(
         selection.applyStyle(style)
         load.applyStyle(style)
         header.applyStyle(style)
+        dock?.applyStyle(style)
         prompt.applyStyle(style)
         connection.applyStyle(style)
         scroll.applyStyle(style)
@@ -1096,6 +1249,7 @@ class SessionUi(
         disposed = true
         refreshJob?.cancel()
         openJob?.cancel()
+        branchJob?.cancel()
         hide.stop()
         popup.hideAll()
         modalFocus = null

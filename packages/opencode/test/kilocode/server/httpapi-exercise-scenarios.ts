@@ -556,6 +556,15 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
   http.protected
+    .post("/kilocode/session/{sessionID}/resume", "kilocode.resumeSession")
+    .seeded((ctx) => ctx.session({ title: "Empty resume" }))
+    .at((ctx) => ({
+      path: route("/kilocode/session/{sessionID}/resume", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { messageID: "msg_httpapi_missing" },
+    }))
+    .status(400),
+  http.protected
     .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
     .seeded((ctx) => ctx.session({ title: "Model usage" }))
     .at((ctx) => ({
@@ -590,6 +599,13 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(404),
   http.protected
+    .post("/kilocode/background-jobs/{jobID}/promote", "kilocode.backgroundJob.promote")
+    .at((ctx) => ({
+      path: route("/kilocode/background-jobs/{jobID}/promote", { jobID: "job_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
+  http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
     .jsonEffect(200, (body) =>
@@ -598,6 +614,24 @@ export const kiloScenarios: Scenario[] = [
         yield* Effect.promise(() => rm(body, { force: true }))
       }),
     ),
+  http.protected
+    .post("/kilocode/snapshot/remove", "kilocode.removeSnapshot")
+    .mutating()
+    .inProject({ git: true })
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const worktree = path.join(directory(ctx), ".kilo", "worktrees", "api-snapshot-remove")
+        yield* Effect.promise(() => mkdir(worktree, { recursive: true }))
+        yield* Effect.promise(() => rm(worktree, { recursive: true, force: true }))
+        return worktree
+      }),
+    )
+    .at((ctx) => ({
+      path: `/kilocode/snapshot/remove?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+      body: { worktree: ctx.state },
+    }))
+    .status(401),
   http.protected
     .get("/kilocode/command/files", "kilocode.commandFiles")
     .inProject({ git: true, init: command })
@@ -667,6 +701,20 @@ export const kiloScenarios: Scenario[] = [
         check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed agent should not remain on disk")
       }),
     ),
+  http.protected
+    .get("/kilocode/provider-usage", "kilocode.providerUsage.get")
+    .inProject({ git: true })
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
+  http.protected
+    .post("/kilocode/provider-usage/refresh", "kilocode.providerUsage.refresh")
+    .inProject({ git: true })
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
   http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent.duplicates")
     .inProject({ git: true, init: duplicates })

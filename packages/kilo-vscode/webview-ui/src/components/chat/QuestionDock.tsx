@@ -22,6 +22,7 @@ import {
   tr,
 } from "./question-dock-utils"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { isTextControl } from "../../utils/focus"
 
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
@@ -328,7 +329,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     void store.tab
     if (store.collapsed || store.editing || confirm()) return
     requestAnimationFrame(() => {
-      if (!document.hasFocus()) return
+      if (!document.hasFocus() || isTextControl(document.activeElement)) return
       const btn = root?.querySelector<HTMLButtonElement>("button[data-slot='question-option']:not(:disabled)")
       btn?.focus({ preventScroll: true })
     })

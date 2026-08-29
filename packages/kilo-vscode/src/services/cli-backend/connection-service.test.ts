@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import * as vscode from "vscode"
 import { KiloConnectionService } from "./connection-service"
+import type { SSEPayload } from "./sdk-sse-adapter"
 
 function state(value: boolean) {
   return {
@@ -36,6 +37,58 @@ describe("KiloConnectionService clients", () => {
     } finally {
       workspace.workspaceFolders = folders
     }
+  })
+})
+
+describe("KiloConnectionService explicit aborts", () => {
+  const close = {
+    id: "event-close",
+    type: "session.turn.close",
+    properties: { sessionID: "session", reason: "interrupted" },
+  } as SSEPayload
+
+  function setup() {
+    const service = new KiloConnectionService({} as any)
+    const raw: SSEPayload[] = []
+    const first: SSEPayload[] = []
+    const second: SSEPayload[] = []
+    service.onEvent((event) => raw.push(event))
+    service.onEventFiltered(
+      () => true,
+      (event) => first.push(event),
+    )
+    service.onEventFiltered(
+      () => true,
+      (event) => second.push(event),
+    )
+    return { service, raw, first, second }
+  }
+
+  test("suppresses a successful explicit abort for filtered subscribers", async () => {
+    const state = setup()
+
+    await state.service.runExplicitAbort("session", "/repo", async () => {
+      ;(state.service as any).broadcast(close, "/repo")
+    })
+
+    expect(state.first).toEqual([])
+    expect(state.second).toEqual([])
+    expect(state.raw).toEqual([close])
+  })
+
+  test("replays a failed explicit abort for filtered subscribers", async () => {
+    const state = setup()
+
+    await expect(
+      state.service.runExplicitAbort("session", "/repo", async () => {
+        ;(state.service as any).broadcast(close, "/repo")
+        throw new Error("abort failed")
+      }),
+    ).rejects.toThrow("abort failed")
+
+    expect(state.first).toEqual([close])
+    expect(state.second).toEqual([close])
+    expect(state.raw).toEqual([close])
   })
 })
 

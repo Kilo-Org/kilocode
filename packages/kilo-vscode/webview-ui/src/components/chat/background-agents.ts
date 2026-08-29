@@ -37,6 +37,20 @@ export interface BackgroundAgent {
   question?: QuestionRequest
 }
 
+export function fitBackgroundAgents(widths: number[], space: number, overflow: number, gap: number): number {
+  const total = widths.reduce((sum, width) => sum + width, 0) + Math.max(0, widths.length - 1) * gap
+  if (total <= space) return widths.length
+  let used = 0
+  let count = 0
+  for (const width of widths) {
+    const next = used + width + (count > 0 ? gap : 0)
+    if (next + gap + overflow > space) break
+    used = next
+    count += 1
+  }
+  return count
+}
+
 export function showBackgroundAgent(agent: BackgroundAgent, hidden: ReadonlySet<string>): boolean {
   return agent.status === "running" || !hidden.has(agent.jobID)
 }
@@ -107,19 +121,4 @@ export function backgroundJobAgents(
         question: questions.find((item) => item.sessionID === id),
       }
     })
-}
-
-export function foregroundAgent(tools: ToolPart[], status: Record<string, SessionStatusInfo>): string | undefined {
-  const latest = new Map<string, ToolPart>()
-  for (const part of tools) {
-    if (part.tool !== "task") continue
-    const id = text(meta(part, "sessionId"))
-    if (id) latest.set(id, part)
-  }
-  for (const part of latest.values()) {
-    const id = text(meta(part, "sessionId"))
-    if (!id || meta(part, "background") === true || !working(status[id])) continue
-    return id
-  }
-  return undefined
 }

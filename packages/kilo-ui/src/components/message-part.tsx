@@ -163,6 +163,7 @@ export interface MessagePartProps {
   working?: boolean
   feedback?: MessageFeedbackControls
   throughput?: JSX.Element
+  readonly?: boolean
 }
 
 export type PartComponent = Component<MessagePartProps>
@@ -751,6 +752,8 @@ export function UserMessageDisplay(props: {
   text?: string
   copyText?: string
   header?: JSX.Element
+  edit?: { label: string; onClick: () => void; disabled?: boolean }
+  queuedDisabled?: boolean
   onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
@@ -834,6 +837,7 @@ export function UserMessageDisplay(props: {
           icon="close-small"
           size="normal"
           variant="ghost"
+          disabled={props.queuedDisabled}
           onMouseDown={(e) => e.preventDefault()}
           onClick={(event) => {
             event.stopPropagation()
@@ -842,6 +846,28 @@ export function UserMessageDisplay(props: {
           aria-label={i18n.t("ui.message.deleteQueued")}
         />
       </Tooltip>
+    </Show>
+  )
+
+  const Edit = () => (
+    <Show when={props.edit}>
+      {(edit) => (
+        <Tooltip value={edit().label} placement="right" gutter={4}>
+          <IconButton
+            data-slot="user-message-edit"
+            icon="edit"
+            size="small"
+            variant="ghost"
+            disabled={props.queuedDisabled || edit().disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={(event) => {
+              event.stopPropagation()
+              edit().onClick()
+            }}
+            aria-label={edit().label}
+          />
+        </Tooltip>
+      )}
     </Show>
   )
 
@@ -884,6 +910,7 @@ export function UserMessageDisplay(props: {
         <Show when={!text() && !props.header && props.queued}>
           <div data-slot="user-message-queued-indicator">
             <TextShimmer text={i18n.t("ui.message.queued")} />
+            <Edit />
             <Delete />
           </div>
         </Show>
@@ -899,6 +926,7 @@ export function UserMessageDisplay(props: {
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
+                  <Edit />
                   <Delete />
                 </div>
               </GrowBox>
@@ -1044,6 +1072,7 @@ export function Part(props: MessagePartProps) {
         working={props.working}
         feedback={props.feedback}
         throughput={props.throughput}
+        readonly={props.readonly}
       />
     </Show>
   )
@@ -1068,6 +1097,7 @@ export interface ToolProps {
   locked?: boolean
   animate?: boolean
   reveal?: boolean
+  readonly?: boolean
 }
 
 export type ToolComponent = Component<ToolProps>
@@ -1267,6 +1297,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                     forceOpen={props.forceOpen}
                     animate
                     reveal={props.animate}
+                    readonly={props.readonly}
                   />
                 )
               }
@@ -1344,6 +1375,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 forceOpenFile={props.forceOpenFile}
                 animate
                 reveal={props.animate}
+                readonly={props.readonly}
               />
             </ToolApprovalProvider>
           </Match>
@@ -1895,12 +1927,17 @@ function TaskLink(props: { href: string; text: string; onClick: (e: MouseEvent) 
   )
 }
 
-function ToolText(props: { text: string; delay?: number; animate?: boolean }) {
+function ToolText(props: { text: string; delay?: number; animate?: boolean; onClick?: (event: MouseEvent) => void }) {
   let ref: HTMLSpanElement | undefined
   useToolFade(() => ref, { delay: props.delay, wipe: true, animate: props.animate })
 
   return (
-    <span ref={ref} data-slot="basic-tool-tool-subtitle">
+    <span
+      ref={ref}
+      data-slot="basic-tool-tool-subtitle"
+      classList={{ clickable: !!props.onClick }}
+      onClick={props.onClick}
+    >
       {props.text}
     </span>
   )
@@ -1933,6 +1970,7 @@ function ToolTriggerRow(props: {
   action?: JSX.Element
   animate?: boolean
   revealOnMount?: boolean
+  onClick?: (event: MouseEvent) => void
 }) {
   const reveal = useToolReveal(
     () => props.pending,
@@ -1952,7 +1990,9 @@ function ToolTriggerRow(props: {
         <span data-slot="basic-tool-tool-title">
           <TextShimmer text={props.title} active={props.pending} />
         </span>
-        <Show when={detail()}>{(text) => <ToolText text={text()} animate={detailAnimate()} />}</Show>
+        <Show when={detail()}>
+          {(text) => <ToolText text={text()} animate={detailAnimate()} onClick={props.onClick} />}
+        </Show>
       </div>
       <Show when={props.action}>{props.action}</Show>
     </div>
@@ -2046,9 +2086,6 @@ ToolRegistry.register({
           hideDetails={!approval()?.approval.outsideWorkspace}
           {...props}
           icon="glasses"
-          onSubtitleClick={
-            data.openFile && props.input.filePath ? () => data.openFile!(props.input.filePath) : undefined
-          }
           trigger={
             <ToolTriggerRow
               title={i18n.t("ui.tool.read")}
@@ -2056,6 +2093,14 @@ ToolRegistry.register({
               subtitle={props.input.filePath ? getFilename(props.input.filePath) : ""}
               args={args}
               animate={props.reveal}
+              onClick={
+                data.openFile && props.input.filePath
+                  ? (event) => {
+                      event.stopPropagation()
+                      data.openFile!(props.input.filePath)
+                    }
+                  : undefined
+              }
             />
           }
         />
@@ -3171,7 +3216,7 @@ ToolRegistry.register({
     return (
       <BasicTool
         {...props}
-        defaultOpen={false}
+        defaultOpen={completed() && !dismissed()}
         icon="bubble-5"
         trigger={
           <ToolTriggerRow

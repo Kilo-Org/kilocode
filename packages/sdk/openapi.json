@@ -7319,6 +7319,22 @@
               "type": "string"
             },
             "required": false
+          },
+          {
+            "name": "queued",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "enum": ["true", "false"]
+                }
+              ]
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -15204,6 +15220,108 @@
         ]
       }
     },
+    "/kilocode/session/{sessionID}/resume": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.resumeSession",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session continuation accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Session continuation accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Resume the specified unfinished assistant turn without adding a user message. Active, completed, reverted, and blocked sessions cannot be resumed.",
+        "summary": "Resume an interrupted session",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messageID": {
+                    "type": "string",
+                    "pattern": "^msg"
+                  },
+                  "snapshotInitialization": {
+                    "type": "string",
+                    "enum": ["wait"]
+                  }
+                },
+                "required": ["messageID"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.resumeSession({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/heap/snapshot": {
       "post": {
         "tags": ["kilocode"],
@@ -15558,6 +15676,212 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeAgent({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/snapshot/remove": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.removeSnapshot",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Snapshot repository removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Snapshot repository removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove the snapshot repository for an already deleted Agent Manager worktree.",
+        "summary": "Remove a snapshot repository",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "worktree": {
+                    "type": "string"
+                  }
+                },
+                "required": ["worktree"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeSnapshot({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/provider-usage": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.providerUsage.get",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current provider usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get cache-aware, secret-free provider plan usage and personal billing status.",
+        "summary": "Get provider usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.providerUsage.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/provider-usage/refresh": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.providerUsage.refresh",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refreshed provider usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Refresh provider plan usage while coalescing concurrent source requests.",
+        "summary": "Refresh provider usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.providerUsage.refresh({\n  ...\n})"
           }
         ]
       }
@@ -16443,6 +16767,79 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.backgroundJob.cancel({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/background-jobs/{jobID}/promote": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.backgroundJob.promote",
+        "parameters": [
+          {
+            "name": "jobID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Background job promoted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Background job promoted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Continue one foreground subagent in the background.",
+        "summary": "Promote background job",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.backgroundJob.promote({\n  ...\n})"
           }
         ]
       }
@@ -26453,9 +26850,6 @@
             "$ref": "#/components/schemas/EventSandboxStatusChanged"
           },
           {
-            "$ref": "#/components/schemas/EventLspClientDiagnostics"
-          },
-          {
             "$ref": "#/components/schemas/EventSuggestionShown"
           },
           {
@@ -26481,6 +26875,9 @@
           },
           {
             "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+          },
+          {
+            "$ref": "#/components/schemas/EventLspClientDiagnostics"
           },
           {
             "$ref": "#/components/schemas/EventMemoryStatus1"
@@ -27323,6 +27720,50 @@
         "required": ["id", "sessionID", "operation", "targetSessionID", "sectionID"],
         "additionalProperties": false
       },
+      "AgentManagerAnswers": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "maxItems": 20
+        },
+        "minItems": 1,
+        "maxItems": 20
+      },
+      "AgentManagerAnswerRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/AgentManagerRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "targetSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "answers": {
+            "$ref": "#/components/schemas/AgentManagerAnswers"
+          }
+        },
+        "required": ["id", "sessionID", "operation", "targetSessionID", "answers"],
+        "additionalProperties": false
+      },
       "AgentManagerRequest": {
         "anyOf": [
           {
@@ -27336,6 +27777,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveRequest"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerRequest"
           }
         ]
       },
@@ -29603,9 +30047,6 @@
                 "$ref": "#/components/schemas/EventSandboxStatusChanged"
               },
               {
-                "$ref": "#/components/schemas/EventLspClientDiagnostics"
-              },
-              {
                 "$ref": "#/components/schemas/EventSuggestionShown"
               },
               {
@@ -29631,6 +30072,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+              },
+              {
+                "$ref": "#/components/schemas/EventLspClientDiagnostics"
               },
               {
                 "$ref": "#/components/schemas/EventMemoryStatus"
@@ -38992,6 +39436,158 @@
         "required": ["name", "builtin", "location", "editable", "hints"],
         "additionalProperties": false
       },
+      "ProviderUsagePeriod": {
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "enum": ["hour", "day", "week", "month"]
+          },
+          "value": {
+            "type": "integer"
+          }
+        },
+        "required": ["unit", "value"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "orientation": {
+            "type": "string",
+            "enum": ["used_percent", "remaining_percent", "amount", "count"]
+          },
+          "used": {
+            "type": "number"
+          },
+          "remaining": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "period": {
+            "$ref": "#/components/schemas/ProviderUsagePeriod"
+          },
+          "durationMs": {
+            "type": "number"
+          },
+          "resetAt": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["active", "exhausted", "unlimited", "not_in_plan", "unknown"]
+          }
+        },
+        "required": ["id", "resource", "unit", "orientation", "state"],
+        "additionalProperties": false
+      },
+      "ProviderUsageError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "retryable"],
+        "additionalProperties": false
+      },
+      "ProviderUsageSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "providerID": {
+            "type": "string"
+          },
+          "sourceKind": {
+            "type": "string",
+            "enum": ["kilo_managed", "direct"]
+          },
+          "providerLabel": {
+            "type": "string"
+          },
+          "planLabel": {
+            "type": "string"
+          },
+          "sourceLabel": {
+            "type": "string"
+          },
+          "fetchState": {
+            "type": "string",
+            "enum": ["ready", "stale", "unavailable", "error"]
+          },
+          "planState": {
+            "type": "string",
+            "enum": ["active", "past_due", "canceling", "unknown"]
+          },
+          "routingState": {
+            "type": "string",
+            "enum": ["active", "disabled", "missing", "replaced", "not_applicable", "unknown"]
+          },
+          "fetchedAt": {
+            "type": "string"
+          },
+          "managementUrl": {
+            "type": "string"
+          },
+          "windows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageWindow"
+            }
+          },
+          "error": {
+            "$ref": "#/components/schemas/ProviderUsageError"
+          }
+        },
+        "required": [
+          "id",
+          "providerID",
+          "sourceKind",
+          "providerLabel",
+          "planLabel",
+          "sourceLabel",
+          "fetchState",
+          "planState",
+          "routingState",
+          "windows"
+        ],
+        "additionalProperties": false
+      },
+      "ProviderUsage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageSnapshot"
+            }
+          },
+          "generatedAt": {
+            "type": "string"
+          }
+        },
+        "required": ["items", "generatedAt"],
+        "additionalProperties": false
+      },
       "NotebookOutput": {
         "type": "object",
         "properties": {
@@ -39533,6 +40129,30 @@
         "required": ["operation", "sessionID", "sectionID", "moved"],
         "additionalProperties": false
       },
+      "AgentManagerAnswerResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["answer"]
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "questionID": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "resolved": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["operation", "sessionID", "questionID", "resolved"],
+        "additionalProperties": false
+      },
       "AgentManagerResult": {
         "anyOf": [
           {
@@ -39546,6 +40166,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerMoveResult"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerAnswerResult"
           }
         ]
       },
@@ -41245,33 +41868,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventLspClientDiagnostics": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["lsp.client.diagnostics"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "serverID": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": ["serverID", "path"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "EventSuggestionShown": {
         "type": "object",
         "properties": {
@@ -41562,6 +42158,33 @@
               }
             },
             "required": ["enabled", "connected"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventLspClientDiagnostics": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["lsp.client.diagnostics"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "serverID": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": ["serverID", "path"],
             "additionalProperties": false
           }
         },

@@ -65,6 +65,8 @@ export function buildWebviewHtml(
     /** Sidebar top bar visibility and telemetry surface for the shared webview bundle (App.tsx). Unused by the Agent Manager bundle. */
     topBar?: boolean
     topBarSurface?: string
+    agentManagerSettings?: boolean
+    sidebar?: "left" | "right"
   },
 ): string {
   const nonce = getNonce()
@@ -72,7 +74,7 @@ export function buildWebviewHtml(
   const markdownWorkerUri = opts.workerUri.toString().replace(/shiki-worker\.js$/, "markdown-shiki-worker.js")
 
   return `<!DOCTYPE html>
-<html lang="en" data-theme="kilo-vscode">
+<html lang="en" data-theme="kilo-vscode" data-sidebar="${opts.sidebar ?? ""}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -107,7 +109,7 @@ export function buildWebviewHtml(
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}"; window.KILO_SHIKI_WORKER_URI = "${opts.workerUri}"; window.KILO_MARKDOWN_SHIKI_WORKER_URI = "${markdownWorkerUri}"; window.KILO_TOP_BAR = ${opts.topBar !== false}; window.KILO_TOP_BAR_SURFACE = "${opts.topBarSurface ?? "sidebar_title"}";</script>
+  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}"; window.KILO_SHIKI_WORKER_URI = "${opts.workerUri}"; window.KILO_MARKDOWN_SHIKI_WORKER_URI = "${markdownWorkerUri}"; window.KILO_TOP_BAR = ${opts.topBar !== false}; window.KILO_TOP_BAR_SURFACE = "${opts.topBarSurface ?? "sidebar_title"}"; window.KILO_AGENT_MANAGER_SETTINGS = ${opts.agentManagerSettings === true};</script>
   <script nonce="${nonce}" src="${opts.scriptUri}"></script>
 </body>
 </html>`

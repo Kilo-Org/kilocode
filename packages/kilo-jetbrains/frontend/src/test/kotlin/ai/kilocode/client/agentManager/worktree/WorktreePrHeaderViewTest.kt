@@ -1,8 +1,11 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.header.BranchChangesBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.stateLabel
+import ai.kilocode.client.ui.style
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -12,6 +15,7 @@ import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
+import org.jetbrains.plugins.terminal.TerminalIcons
 import java.awt.Container
 import java.awt.Cursor
 import java.awt.Point
@@ -34,9 +38,9 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(stateLabel(GhState.OPEN), (badge.icon as FilledBadgeIcon).text)
         assertSame(style(GhState.OPEN), (badge.icon as FilledBadgeIcon).style)
         assertTrue(badge.isVisible)
-        assertEquals(listOf("#123 ", "Implement header"), fragments.map { it.text })
-        assertEquals(SimpleTextAttributes.GRAYED_ATTRIBUTES.fgColor, fragments[0].attrs.fgColor)
-        assertEquals(SimpleTextAttributes.STYLE_BOLD, fragments[1].attrs.style)
+        assertEquals(listOf("Implement header", " #123"), fragments.map { it.text })
+        assertEquals(SimpleTextAttributes.STYLE_BOLD, fragments[0].attrs.style)
+        assertEquals(SimpleTextAttributes.GRAYED_ATTRIBUTES.fgColor, fragments[1].attrs.fgColor)
         assertEquals(Cursor.HAND_CURSOR, title.cursor.type)
         assertEquals(Cursor.HAND_CURSOR, badge.cursor.type)
         assertTrue(title.toolTipText.contains("Open #123 Implement header"))
@@ -69,6 +73,7 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         val view = edt { WorktreePrHeaderView {} }
         val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
         val open = edt { components(view).filterIsInstance<JButton>().single { it.text == "Open" } }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.icon === TerminalIcons.OpenTerminal_13x13 } }
 
         edt {
             view.update(WorktreeStatsDto("/repo", additions = 2, files = 1), null, "feature-x")
@@ -79,11 +84,14 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
 
         val changesX = edt { SwingUtilities.convertPoint(changes, Point(0, 0), view).x }
         val openX = edt { SwingUtilities.convertPoint(open, Point(0, 0), view).x }
-        val openRight = edt { openX + open.width }
+        val terminalX = edt { SwingUtilities.convertPoint(terminal, Point(0, 0), view).x }
+        val terminalRight = edt { terminalX + terminal.width }
         assertTrue(edt { changes.isVisible })
-        // Changes badge precedes the Open button, and the whole action cluster hugs the right edge.
+        // Changes badge precedes Open, which precedes the icon-only Terminal button, and the whole
+        // action cluster hugs the right edge.
         assertTrue(changesX < openX)
-        assertTrue(400 - openRight <= 20)
+        assertTrue(openX < terminalX)
+        assertTrue(400 - terminalRight <= 20)
     }
 
     fun `test changes view visibility follows stats`() {
@@ -136,10 +144,13 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         assertEquals("Compare with base branch", edt { changes.toolTipText })
     }
 
-    fun `test terminal button triggers callback`() {
+    fun `test terminal button is icon-only and triggers callback`() {
         var opened = 0
         val view = edt { WorktreePrHeaderView(openDiff = {}, openTerminal = { opened++ }) }
-        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.text == "Terminal" } }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.icon === TerminalIcons.OpenTerminal_13x13 } }
+
+        assertTrue(edt { terminal.text.isNullOrEmpty() })
+        assertEquals(KiloBundle.message("worktree.session.terminal.tooltip"), edt { terminal.toolTipText })
 
         edt { click(terminal) }
 

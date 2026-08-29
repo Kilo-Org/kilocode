@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.SpinnerIcon
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -852,6 +853,21 @@ class PromptPanelTest : BasePlatformTestCase() {
         )
 
         assertFalse(components(panel).contains(panel.buttonForTest()))
+        // The session menu (auto-approve + sharing) has nothing to offer before a session exists,
+        // same reasoning as hiding the auto-approve shield itself.
+        assertFalse(buttons(panel).any { it.accessibleContext.accessibleName == KiloBundle.message("prompt.action.menu") })
+    }
+
+    fun `test session menu button shown by default and does not throw without a registered action`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        val menu = buttons(panel).single { it.accessibleContext.accessibleName == KiloBundle.message("prompt.action.menu") }
+        assertEquals(KiloBundle.message("prompt.action.menu"), menu.toolTipText)
+
+        // Kilo.Session.PromptMenu is not registered with ActionManager in the test fixture (the
+        // plugin's declared actions never are — see SessionContextMenuActionsTest), so this exercises
+        // the null-guard in showMenu() rather than a real popup.
+        menu.doClick()
     }
 
     fun `test hidden submit button still exposes send context from editor`() {
@@ -1341,6 +1357,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals("make a plan", seen)
         assertFalse(enhance.isEnabled)
         assertTrue(enhance.icon is AnimatedIcon)
+        assertSame(SpinnerIcon.icon, enhance.icon)
         val icon = enhance.icon
 
         panel.setReady(true)
