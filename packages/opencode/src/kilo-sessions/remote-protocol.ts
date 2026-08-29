@@ -332,10 +332,16 @@ export namespace RemoteProtocol {
     .strictObject({
       ...metadata,
       status: BrowserJobStatus,
+      // Optional display metadata; legacy snapshots omit it.
+      ownerLabel: text(128).min(1).optional(),
+      queuePosition: z.number().int().min(1).max(100).optional(),
       approvedTab: BrowserApprovedTab.optional(),
       result: BrowserResult.optional(),
     })
     .superRefine((job, context) => {
+      if (job.queuePosition !== undefined && job.status !== "queued") {
+        context.addIssue({ code: "custom", message: "Queue position requires a queued job" })
+      }
       const terminal = BrowserTerminalStatus.safeParse(job.status).success
       if (
         terminal !== (job.result !== undefined) ||
