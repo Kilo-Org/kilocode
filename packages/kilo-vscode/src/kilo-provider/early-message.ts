@@ -59,6 +59,30 @@ async function routeBackgroundMessage(
   return undefined
 }
 
+async function routeSettingsMessage(message: { type: string }, ctx: Ctx): Promise<boolean | undefined> {
+  if (message.type === "requestChatSettings") {
+    ctx.post(buildChatSettingsMessage())
+    return true
+  }
+  if (message.type === "requestThroughputSetting") {
+    ctx.post(buildThroughputSettingMessage())
+    return true
+  }
+  if (message.type === "requestAutoApprovalReasonSetting") {
+    ctx.post(buildAutoApprovalReasonSettingMessage())
+    return true
+  }
+  if (message.type === "requestSpeechToTextModels") {
+    await ctx.speechToTextModels()
+    return true
+  }
+  if (message.type === "requestBrowserSettings") {
+    ctx.browserSettings()
+    return true
+  }
+  return undefined
+}
+
 function isResume(input: { sessionID?: unknown; messageID?: unknown; requestID?: unknown }): input is {
   sessionID: string
   messageID: string
@@ -123,26 +147,8 @@ export async function routeEarlyMessage(
     ctx.openSessions(ids)
     return true
   }
-  if (message.type === "requestChatSettings") {
-    ctx.post(buildChatSettingsMessage())
-    return true
-  }
-  if (message.type === "requestThroughputSetting") {
-    ctx.post(buildThroughputSettingMessage())
-    return true
-  }
-  if (message.type === "requestAutoApprovalReasonSetting") {
-    ctx.post(buildAutoApprovalReasonSettingMessage())
-    return true
-  }
-  if (message.type === "requestSpeechToTextModels") {
-    await ctx.speechToTextModels()
-    return true
-  }
-  if (message.type === "requestBrowserSettings") {
-    ctx.browserSettings()
-    return true
-  }
+  const settings = await routeSettingsMessage(message, ctx)
+  if (settings !== undefined) return settings
   const background = await routeBackgroundMessage(message, ctx)
   return (
     background ?? (await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post }))

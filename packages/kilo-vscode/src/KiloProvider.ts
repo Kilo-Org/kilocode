@@ -1049,7 +1049,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           resume: (sessionID, messageID, requestID) => this.handleResumeSession(sessionID, messageID, requestID),
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
-          updateConfig: (partial, unset) => this.handleUpdateConfig(partial, {}, unset),
+          updateConfig: (partial, unset) => this.writeGlobalConfig(partial, unset),
           activity: (state) => {
             if (!isActivity(state)) return
             this.activity = state
@@ -3506,6 +3506,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.pending--
     }
   }
+  /**
+   * Global-config write for controls outside the Settings save flow (the chat
+   * routing selector). Settings saves present the binding issued with their
+   * last config load; here a binding is issued from a fresh snapshot right
+   * before the write so the revision guard in handleUpdateConfig still applies.
+   */
+  private async writeGlobalConfig(partial: Partial<Config>, unset: string[][] = []): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") {
+      this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
+      return
+    }
+    const dir = this.settingsDirectory()
+    let binding: ConfigBinding | undefined
+    try {
+      const snapshot = await fetchSnapshot(this.client, dir, () => this.configSettings())
+      binding = this.bindingsFor(dir, snapshot.targets).global
+    } catch (error) {
+      this.postConfigFailure(error)
+      return
+    }
+    if (!binding) {
+      this.postMessage({ type: "configUpdateFailed", message: "Global config is not available" })
+      return
+    }
+    await this.handleUpdateConfig(partial, {}, unset, [], binding.id)
+  }
+
   private async refreshConfig(type: "configLoaded" | "configUpdated", dir = this.settingsDirectory()) {
     const snapshot = await fetchSnapshot(this.client!, dir, () => this.configSettings())
     const bindings = this.bindingsFor(dir, snapshot.targets)
