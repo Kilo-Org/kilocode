@@ -1,6 +1,6 @@
 import path from "node:path"
 import { afterAll, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect, Exit, Fiber, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Database } from "@opencode-ai/core/database/database"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
@@ -32,7 +32,6 @@ import { SessionRunState } from "../../../src/session/run-state"
 import { Session } from "../../../src/session/session"
 import { MessageV2 } from "../../../src/session/message-v2"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { SessionStatus } from "../../../src/session/status"
 import { SystemPrompt } from "../../../src/session/system"
 import { SessionSummary } from "../../../src/session/summary"
 import { Todo } from "../../../src/session/todo"
@@ -44,7 +43,7 @@ import { KiloSessions } from "../../../src/kilo-sessions/kilo-sessions"
 import { KiloBtw } from "../../../src/kilocode/session/btw"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { TestInstance, disposeAllInstances } from "../../fixture/fixture"
-import { testEffect } from "../../lib/effect"
+import { testEffect, awaitWithTimeout, pollWithTimeout } from "../../lib/effect"
 import { TestLLMServer } from "../../lib/llm-server"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -200,7 +199,6 @@ const root = LayerNode.group([
   MCP.node,
   FSUtil.node,
   BackgroundJob.node,
-  SessionStatus.node,
   SessionRunState.node,
   Database.node,
   EventV2Bridge.node,
@@ -295,12 +293,58 @@ it.instance(
         }
       }
 
-      // The fork is gone.
+      // The fork is gone. The fork is created with parentID = chat.id, so a
+      // live fork would appear in children() — an empty list proves removal.
       const children = yield* sessions.children(chat.id)
       expect(children.length).toBe(0)
 
       // Exactly one LLM request happened (inside the fork).
       expect(yield* llm.calls).toBe(1)
+    }),
+  60_000,
+)
+
+it.instance(
+  "btw fork runs as a child session of the parent",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { prompt, sessions, chat } = yield* boot()
+      const llm = yield* TestLLMServer
+      // Stream some text, then stall the reply until the test releases it.
+      let release!: (value?: unknown) => void
+      const gate = new Promise((resolve) => (release = resolve))
+      yield* llm.hold("partial answer", gate)
+
+      const fiber = yield* prompt
+        .command({
+          sessionID: chat.id,
+          command: "btw",
+          arguments: "long running question?",
+          agent: "build",
+        })
+        .pipe(Effect.forkChild)
+
+      // While the side question runs, the fork is registered as a child of
+      // the parent session — this is what makes parent-stop cancellation
+      // ride the existing cancel tree (KiloSessionPrompt.cancelTree walks
+      // sessions.children, which queries parent_id).
+      const children = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const kids = yield* sessions.children(chat.id)
+          return kids.length === 1 ? kids : undefined
+        }),
+        "fork did not appear as a child session",
+        30_000,
+      )
+      expect(children[0]!.parentID).toBe(chat.id)
+
+      // Release the held reply, then the command completes and the fork is gone.
+      release!()
+      const exit = yield* awaitWithTimeout(Effect.exit(Fiber.await(fiber)), "btw command did not finish", 30_000)
+      expect(Exit.isSuccess(exit)).toBe(true)
+      const kids = yield* sessions.children(chat.id)
+      expect(kids.length).toBe(0)
     }),
   60_000,
 )

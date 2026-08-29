@@ -44,13 +44,14 @@ export namespace KiloBtw {
     return text.slice(0, max) + "\n…[truncated]"
   }
 
+  // In-memory history used only when the Storage service is absent (bare
+  // runtimes / tests). Bounded so it can never grow without limit.
   const memFallback = new Map<string, Entry[]>()
+  const MEM_MAX_PARENTS = 100
 
   function stored(opt: Option.Option<Storage.Interface>, parentID: string) {
     if (Option.isNone(opt)) return Effect.succeed(memFallback.get(parentID) ?? ([] as Entry[]))
-    return opt.value.read<Entry[]>(key(parentID)).pipe(
-      Effect.catch(() => Effect.succeed(memFallback.get(parentID) ?? ([] as Entry[]))),
-    )
+    return opt.value.read<Entry[]>(key(parentID)).pipe(Effect.catch(() => Effect.succeed([] as Entry[])))
   }
 
   export const list = Effect.fn("KiloBtw.list")(function* (parentID: string) {
@@ -73,14 +74,21 @@ export namespace KiloBtw {
       ...(input.model ? { model: input.model } : {}),
     }
     const opt = yield* Effect.serviceOption(Storage.Service)
+    if (Option.isNone(opt)) {
+      const existing = memFallback.get(input.parentID) ?? []
+      const next = [entry, ...existing].slice(0, MAX_ENTRIES)
+      memFallback.set(input.parentID, next)
+      if (memFallback.size > MEM_MAX_PARENTS) {
+        const oldest = memFallback.keys().next().value
+        if (oldest !== undefined) memFallback.delete(oldest)
+      }
+      return entry
+    }
     const existing = yield* stored(opt, input.parentID)
     const next = [entry, ...existing].slice(0, MAX_ENTRIES)
-    memFallback.set(input.parentID, next)
-    if (Option.isSome(opt)) {
-      yield* opt.value.write(key(input.parentID), next).pipe(
-        Effect.catch((err) => Effect.logError("KiloBtw: failed to persist entry", err)),
-      )
-    }
+    yield* opt.value.write(key(input.parentID), next).pipe(
+      Effect.catch((err) => Effect.logError("KiloBtw: failed to persist entry", err)),
+    )
     return entry
   })
 
@@ -272,32 +280,42 @@ export namespace KiloBtw {
     const forkAgent = guarded.includes(agent.toLowerCase()) ? fallback?.name ?? "build" : agent
     const variant = model.variant ?? cmdInput.variant
 
-    const fork = yield* ops.sessions.fork({ sessionID: parent }).pipe(Effect.orDie)
-    setPromptCacheKey(fork.id, parent)
-
-    const cleanup = Effect.gen(function* () {
-      clearPromptCacheKey(fork.id)
-      yield* waitForIdle(ops.status, fork.id)
-      yield* ops.sessions.remove(fork.id).pipe(
-        Effect.catch((err) => Effect.logError("KiloBtw: failed to remove fork", fork.id, err)),
-      )
-    })
-
-    const exit = yield* ops
-      .runFork({
-        sessionID: fork.id,
-        agent: forkAgent,
-        model: { providerID: model.providerID, modelID: model.modelID, variant },
-        variant,
-        tools: { ...FORK_TOOLS },
-        parts: [
-          {
-            type: "text",
-            text: `Side question — answer it concisely. Your tools are read-only; do not attempt to modify anything.\n\n${question}`,
-          },
-        ],
-      })
-      .pipe(Effect.ensuring(cleanup))
+    // acquireUseRelease guarantees the fork is removed even if this fiber is
+    // interrupted between fork creation and the prompt, or mid-prompt.
+    // parentID registers the fork as a child session so stopping the parent
+    // cancels the side question through the existing cancel tree; children:
+    // false skips cloning the parent's task-subagent subtree for a side question.
+    const exit = yield* Effect.acquireUseRelease(
+      Effect.gen(function* () {
+        const fork = yield* ops.sessions
+          .fork({ sessionID: parent, parentID: parent, children: false })
+          .pipe(Effect.orDie)
+        setPromptCacheKey(fork.id, parent)
+        return fork
+      }),
+      (fork) =>
+        ops.runFork({
+          sessionID: fork.id,
+          agent: forkAgent,
+          model: { providerID: model.providerID, modelID: model.modelID, variant },
+          variant,
+          tools: { ...FORK_TOOLS },
+          parts: [
+            {
+              type: "text",
+              text: `Side question — answer it concisely. Your tools are read-only; do not attempt to modify anything.\n\n${question}`,
+            },
+          ],
+        }),
+      (fork) =>
+        Effect.gen(function* () {
+          clearPromptCacheKey(fork.id)
+          yield* waitForIdle(ops.status, fork.id)
+          yield* ops.sessions.remove(fork.id).pipe(
+            Effect.catch((err) => Effect.logError("KiloBtw: failed to remove fork", fork.id, err)),
+          )
+        }),
+    )
 
     const fail = (message: string) =>
       Effect.gen(function* () {
