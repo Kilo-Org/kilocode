@@ -33,6 +33,7 @@ import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
+import { KiloPrefill } from "@/kilocode/session/prefill" // kilocode_change
 // kilocode_change end
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -164,6 +165,9 @@ const live: Layer.Layer<
         return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
       }
       const prepared = { ...base, tools, params: { ...base.params, maxOutputTokens } }
+      // kilocode_change - never send an assistant-terminated array to providers
+      // (Anthropic 4.6+/Opus 5 reject assistant prefill with an HTTP 400)
+      prepared.messages = KiloPrefill.ensureUserTail(prepared.messages)
       // kilocode_change end
 
       // Wire up toolExecutor for DWS workflow models so that tool calls
