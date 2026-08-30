@@ -44,12 +44,27 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
     override fun getPreferredSize(): Dimension {
         if (!text.isNullOrEmpty()) return super.getPreferredSize()
         if (match) {
-            val side = super.getPreferredSize().height
+            val side = labelledHeight()
             return Dimension(side, side)
         }
         val icon = icon ?: return JBUI.size(MIN, MIN)
         val side = maxOf(JBUI.scale(MIN), icon.iconWidth + JBUI.scale(PAD), icon.iconHeight + JBUI.scale(PAD))
         return Dimension(side, side)
+    }
+
+    // Button UIs commonly special-case null/empty text and size purely from the icon, skipping the
+    // font-metrics contribution a labelled sibling gets from its non-empty text. That makes an
+    // icon-only button's height track the icon instead of the shared labelled-button height whenever
+    // the LAF's font metrics are taller than the icon. Measuring through a non-empty placeholder
+    // forces the same icon+text layout path a labelled button uses, so both stay level everywhere.
+    private fun labelledHeight(): Int {
+        val previous = text
+        text = " "
+        try {
+            return super.getPreferredSize().height
+        } finally {
+            text = previous
+        }
     }
 
     override fun getMinimumSize(): Dimension = preferredSize
