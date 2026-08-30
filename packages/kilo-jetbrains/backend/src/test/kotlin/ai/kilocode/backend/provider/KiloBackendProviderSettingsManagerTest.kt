@@ -6,11 +6,14 @@ import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.CustomModelDto
+import ai.kilocode.rpc.dto.CustomModelFetchDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.ProviderConnectDto
 import ai.kilocode.rpc.dto.ProviderDisconnectDto
 import ai.kilocode.rpc.dto.ProviderEnableDto
 import kotlinx.coroutines.async
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -263,6 +266,196 @@ class KiloBackendProviderSettingsManagerTest {
         assertContains(mock.lastAuthPutBody.orEmpty(), "\"key\":\"sk-test\"")
         assertTrue(result.state.providers.any { it.id == "my-openai" })
         assertEquals(1, mock.requestCount("/global/dispose"))
+    }
+
+    @Test
+    fun `saving custom provider with blank env var clears env in config patch`() = runBlocking {
+        mock.providers = """{
+            "all":[{"id":"my-openai","name":"My OpenAI","source":"config","models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o"}}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.saveCustom(
+            CustomProviderSaveDto(
+                "/test",
+                "my-openai",
+                "My OpenAI",
+                "https://api.example.com/v1",
+                apiKey = "sk-test",
+                envVar = null,
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            ),
+        )
+
+        assertNull(result.error)
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"env\":null")
+    }
+
+    @Test
+    fun `disconnecting env backed openai compatible custom provider deletes config and auth`() = runBlocking {
+        mock.config = """{
+            "provider":{
+                "local-openai":{"name":"Local OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"http://localhost:11434"},"env":["API_KEY"]}
+            }
+        }""".trimIndent()
+        mock.providers = """{
+            "all":[{"id":"local-openai","name":"Local OpenAI","source":"env","key":"sk-env","models":{}}],
+            "default":{},
+            "connected":["local-openai"],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.disconnect(ProviderDisconnectDto("/test", "local-openai"))
+
+        assertNull(result.error)
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"local-openai\":null")
+        assertEquals("/auth/local-openai", mock.lastAuthDeletePath)
+    }
+
+    @Test
+    fun `disconnecting env only catalog provider still returns configured by environment error`() = runBlocking {
+        mock.providers = """{
+            "all":[{"id":"anthropic","name":"Anthropic","source":"env","key":"sk-env","models":{}}],
+            "default":{},
+            "connected":["anthropic"],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.disconnect(ProviderDisconnectDto("/test", "anthropic"))
+
+        assertEquals("Provider is configured by environment variables.", result.error)
+        assertNull(mock.lastConfigPatchBody)
+    }
+
+    @Test
+    fun `fetch uses env var value for authorization when no key is typed`() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setBody("""{"data":[{"id":"gpt-4o"}]}"""))
+        server.start()
+        val manager = manager()
+
+        try {
+            val result = manager.fetch(
+                CustomModelFetchDto(baseUrl = server.url("/v1").toString(), directory = "/test", env = "API_KEY"),
+                env = mapOf("API_KEY" to "sk-env"),
+            )
+
+            assertEquals(listOf("gpt-4o"), result.models)
+            assertNull(result.error)
+            assertFalse(result.envMissing)
+            assertEquals("Bearer sk-env", server.takeRequest().getHeader("Authorization"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `fetch falls back to stored provider key when key and env are absent`() = runBlocking {
+        mock.providers = """{
+            "all":[{"id":"my-openai","name":"My OpenAI","source":"api","key":"sk-stored","models":{}}],
+            "default":{},
+            "connected":["my-openai"],
+            "failed":[]
+        }""".trimIndent()
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setBody("""{"data":[{"id":"gpt-4o"}]}"""))
+        server.start()
+        val manager = manager()
+
+        try {
+            val result = manager.fetch(
+                CustomModelFetchDto(baseUrl = server.url("/v1").toString(), directory = "/test", providerId = "my-openai"),
+                env = emptyMap(),
+            )
+
+            assertEquals(listOf("gpt-4o"), result.models)
+            assertEquals("Bearer sk-stored", server.takeRequest().getHeader("Authorization"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `fetch marks env missing and sends request without authorization when env var is unset`() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setBody("""{"data":[{"id":"local-model"}]}"""))
+        server.start()
+        val manager = manager()
+
+        try {
+            val result = manager.fetch(
+                CustomModelFetchDto(baseUrl = server.url("/v1").toString(), directory = "/test", env = "MISSING_KEY"),
+                env = emptyMap(),
+            )
+
+            assertEquals(listOf("local-model"), result.models)
+            assertTrue(result.envMissing)
+            assertNull(server.takeRequest().getHeader("Authorization"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `fetch forwards custom headers to the models request`() = runBlocking {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setBody("""{"data":[]}"""))
+        server.start()
+        val manager = manager()
+
+        try {
+            manager.fetch(
+                CustomModelFetchDto(
+                    baseUrl = server.url("/v1").toString(),
+                    directory = "/test",
+                    headers = mapOf("X-Custom" to "abc-123"),
+                ),
+                env = emptyMap(),
+            )
+
+            assertEquals("abc-123", server.takeRequest().getHeader("X-Custom"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `fetch prefers typed api key over env var and stored key`() = runBlocking {
+        mock.providers = """{
+            "all":[{"id":"my-openai","name":"My OpenAI","source":"api","key":"sk-stored","models":{}}],
+            "default":{},
+            "connected":["my-openai"],
+            "failed":[]
+        }""".trimIndent()
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setBody("""{"data":[]}"""))
+        server.start()
+        val manager = manager()
+
+        try {
+            manager.fetch(
+                CustomModelFetchDto(
+                    baseUrl = server.url("/v1").toString(),
+                    directory = "/test",
+                    providerId = "my-openai",
+                    apiKey = "sk-typed",
+                    env = "API_KEY",
+                ),
+                env = mapOf("API_KEY" to "sk-env"),
+            )
+
+            assertEquals("Bearer sk-typed", server.takeRequest().getHeader("Authorization"))
+        } finally {
+            server.shutdown()
+        }
     }
 
     @Test

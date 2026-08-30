@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.ProviderOAuthAuthorizeDto
 import ai.kilocode.rpc.dto.ProviderOAuthCallbackDto
 import ai.kilocode.rpc.dto.ProviderOAuthReadyDto
 import ai.kilocode.rpc.dto.ProviderSettingsDto
+import com.intellij.util.EnvironmentUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -111,7 +112,7 @@ internal class KiloBackendProviderSettingsManager(
         if (input.providerId == "kilo") {
             return ProviderActionResultDto(current, error = "Kilo Gateway cannot be disconnected from provider settings.")
         }
-        if (provider?.source == "env") {
+        if (provider?.source == "env" && cfg == null) {
             return ProviderActionResultDto(current, error = "Provider is configured by environment variables.")
         }
         val configured = input.providerId in current.connected || provider?.key != null || provider?.source == "config" || cfg != null
@@ -124,7 +125,7 @@ internal class KiloBackendProviderSettingsManager(
             dispose()
             return ProviderActionResultDto(state(input.directory))
         }
-        if (provider?.source == "config") {
+        if (cfg != null || provider?.source == "config") {
             val scope = cfg?.scope ?: "global"
             val ids = disabledFor(current, scope) + input.providerId
             patch(input.directory, scope, KiloCliDataParser.buildDisabledProviderPatch(ids))
@@ -160,12 +161,18 @@ internal class KiloBackendProviderSettingsManager(
         return ProviderActionResultDto(state(input.directory))
     }
 
-    suspend fun fetch(input: CustomModelFetchDto): CustomModelFetchResultDto {
+    suspend fun fetch(input: CustomModelFetchDto, env: Map<String, String> = EnvironmentUtil.getEnvironmentMap()): CustomModelFetchResultDto {
+        val name = input.env?.trim()?.takeIf { it.isNotBlank() }
+        val resolved = name?.let { env[it]?.takeIf(String::isNotBlank) }
+        val stored = if (input.apiKey.isNullOrBlank() && resolved == null) storedKey(input) else null
+        val key = input.apiKey?.takeIf { it.isNotBlank() } ?: resolved ?: stored
+        val envMissing = name != null && resolved == null
         val url = input.baseUrl.trim().trimEnd('/') + "/models"
+        LOG.debug { "custom provider model fetch: env=$name resolved=${resolved != null} stored=${stored != null}" }
         return try {
             val request = Request.Builder().url(url).get().apply {
-                input.apiKey?.takeIf { it.isNotBlank() }?.let { header("Authorization", "Bearer $it") }
-                input.headers.forEach { (key, value) -> header(key, value) }
+                key?.let { header("Authorization", "Bearer $it") }
+                input.headers.forEach { (headerKey, value) -> header(headerKey, value) }
             }.build()
             val raw = withContext(Dispatchers.IO) {
                 FETCH.newCall(request).execute().use { response ->
@@ -174,11 +181,16 @@ internal class KiloBackendProviderSettingsManager(
                     body
                 }
             }
-            CustomModelFetchResultDto(KiloCliDataParser.parseModelIds(raw))
+            CustomModelFetchResultDto(KiloCliDataParser.parseModelIds(raw), envMissing = envMissing)
         } catch (e: Exception) {
             LOG.warn("Custom provider model fetch failed: ${e.message}", e)
-            CustomModelFetchResultDto(error = e.message)
+            CustomModelFetchResultDto(error = e.message, envMissing = envMissing)
         }
+    }
+
+    private suspend fun storedKey(input: CustomModelFetchDto): String? {
+        val id = input.providerId?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        return state(input.directory).providers.firstOrNull { it.id == id }?.key?.takeIf(String::isNotBlank)
     }
 
     private suspend fun <T> load(resource: String, errors: MutableList<LoadErrorDto>, block: suspend () -> T): T? {
