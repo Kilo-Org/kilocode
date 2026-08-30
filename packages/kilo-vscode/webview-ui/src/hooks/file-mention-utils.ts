@@ -3,7 +3,16 @@ import type { FileAttachment, FileSearchItem, SessionSearchItem } from "../types
 import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
 import { TERMINAL_MENTION } from "./terminal-context-utils"
 
-export const AT_PATTERN = /(?:^|\s)@(\S*)$/
+/**
+ * The in-progress `@mention` query ending at the cursor.
+ *
+ * The query may contain spaces so paths like `@my report.txt` stay searchable,
+ * but it never spans a newline or a later ` @`, so a second mention starts its
+ * own query instead of swallowing the previous one. A `@` that is not preceded
+ * by whitespace stays inside the query, keeping scoped paths such as
+ * `@node_modules/@types/node` searchable.
+ */
+export const AT_PATTERN = /(?:^|\s)@(?![^\n]*\s@)([^\n]*)$/
 
 export type WorktreeReference = {
   id: string

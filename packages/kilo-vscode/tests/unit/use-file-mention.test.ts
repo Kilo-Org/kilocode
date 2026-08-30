@@ -152,6 +152,114 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("keeps mention search open after typing a space in the query", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@my report", 10)
+    expect(mention.showMention()).toBe(true)
+    await wait(170)
+
+    const request = posted.at(-1)
+    expect(request).toMatchObject({ type: "requestFileSearch", query: "my report" })
+
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: request?.type === "requestFileSearch" ? request.requestId : "",
+        dir: "/repo",
+        paths: ["docs/my report.txt"],
+        items: [{ path: "docs/my report.txt", type: "file" }],
+      })
+    }
+
+    expect(mention.showMention()).toBe(true)
+    expect(mention.mentionResults()).toEqual([{ type: "file", value: "docs/my report.txt" }, FILE_PICKER_RESULT])
+
+    dispose.fn?.()
+  })
+
+  it("closes the dropdown and stays closed while prose is typed after a mention", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@README.md and", 14)
+    await wait(170)
+    const request = posted.at(-1)
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: request?.type === "requestFileSearch" ? request.requestId : "",
+        dir: "/repo",
+        paths: [],
+        items: [],
+      })
+    }
+
+    expect(mention.showMention()).toBe(false)
+
+    // Continuing the sentence must not reopen the dropdown on every keystroke.
+    mention.onInput("@README.md and then", 19)
+    expect(mention.showMention()).toBe(false)
+
+    // Editing back to a query that can still match reopens it.
+    mention.onInput("@READ", 5)
+    expect(mention.showMention()).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("lets Enter send the message when a spaced query only offers the file picker", async () => {
+    const posted: WebviewMessage[] = []
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@README.md and then", 19)
+    expect(mention.showMention()).toBe(true)
+    expect(mention.mentionResults()).toEqual([FILE_PICKER_RESULT])
+
+    const prevented = { count: 0 }
+    const event = { key: "Enter", preventDefault: () => prevented.count++ } as unknown as KeyboardEvent
+    expect(mention.onKeyDown(event, undefined, () => {})).toBe(false)
+    expect(prevented.count).toBe(0)
+
+    dispose.fn?.()
+  })
+
   it("seedFromText populates knownPaths so mentions are recognized in pre-filled text", () => {
     const ctx = {
       postMessage: () => {},

@@ -40,6 +40,26 @@ describe("AT_PATTERN", () => {
     expect(match?.[1]).toBe("path/to/file.ts")
   })
 
+  it("captures spaces in an in-progress mention query", () => {
+    const match = "hello @my report".match(AT_PATTERN)
+    expect(match?.[1]).toBe("my report")
+  })
+
+  it("starts a new query at the latest mention instead of swallowing an earlier one", () => {
+    const match = "see @src/a.ts and @my rep".match(AT_PATTERN)
+    expect(match?.[1]).toBe("my rep")
+  })
+
+  it("keeps an @ that is part of a scoped path inside the query", () => {
+    const match = "@node_modules/@types/node".match(AT_PATTERN)
+    expect(match?.[1]).toBe("node_modules/@types/node")
+  })
+
+  it("does not span a newline", () => {
+    const match = "@src/a.ts\nnext line".match(AT_PATTERN)
+    expect(match).toBeNull()
+  })
+
   it("matches empty @", () => {
     expect(AT_PATTERN.test("@")).toBe(true)
   })

@@ -183,6 +183,13 @@ export function useFileMention(
     onSelect?: () => void
   } | null = null
   let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
+  // Offset of the "@" that opened the current query, and the last spaced query
+  // the file search resolved to nothing. Since a query may contain spaces,
+  // ordinary prose typed after a completed mention still matches AT_PATTERN;
+  // remembering the dead query stops the dropdown from reopening on every
+  // following keystroke until the user edits back into a query that can match.
+  let at = 0
+  let dead: { at: number; query: string } | undefined
 
   const showMention = () => mentionQuery() !== null
   const scope = () => sessionID?.() ?? ""
@@ -192,6 +199,7 @@ export function useFileMention(
     const value = scope()
     if (value === activeScope) return value
     activeScope = value
+    dead = undefined
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
     fileSearchRevision++
     fileSearchRequest = undefined
@@ -300,7 +308,14 @@ export function useFileMention(
     }
     if (!request.query) writeCache(message.dir, items, request.revision)
     if (!showMention() || request.query !== mentionQuery()) return
-    replaceResults(results(request.query, items))
+    const next = results(request.query, items)
+    // A spaced query that matches nothing is prose, not a filename in progress.
+    if (/\s/.test(request.query) && next.every((item) => item.type === "file-picker")) {
+      dead = { at, query: request.query }
+      closeMention()
+      return
+    }
+    replaceResults(next)
   })
 
   onCleanup(() => {
@@ -473,30 +488,36 @@ export function useFileMention(
     setWorktreePicker(false)
     const before = val.substring(0, cursor)
     const match = before.match(AT_PATTERN)
-    if (match) {
-      const query = match[1] ?? ""
-      setMentionQuery(query)
-      const items = readCache(workspaceDir)
-      if (!query) {
-        setMentionResults(results("", items))
-        setMentionIndex(0)
-        requestFileSearch("")
-        return
-      }
-      setMentionResults((prev) => {
-        const base = prev.length ? prev : results("", items)
-        const files = filterMentionResults(query, base).flatMap((item) =>
-          item.type === "file" || item.type === "folder" || item.type === "opened-file"
-            ? [{ path: item.value, type: item.type }]
-            : [],
-        )
-        return results(query, files)
-      })
-      setMentionIndex(0)
-      requestFileSearch(query)
-    } else {
+    if (!match) {
       closeMention()
+      return
     }
+    const query = match[1] ?? ""
+    at = (match.index ?? 0) + (/^\s/.test(match[0]) ? 1 : 0)
+    if (dead && dead.at === at && query.startsWith(dead.query)) {
+      closeMention()
+      return
+    }
+    dead = undefined
+    setMentionQuery(query)
+    const items = readCache(workspaceDir)
+    if (!query) {
+      setMentionResults(results("", items))
+      setMentionIndex(0)
+      requestFileSearch("")
+      return
+    }
+    setMentionResults((prev) => {
+      const base = prev.length ? prev : results("", items)
+      const files = filterMentionResults(query, base).flatMap((item) =>
+        item.type === "file" || item.type === "folder" || item.type === "opened-file"
+          ? [{ path: item.value, type: item.type }]
+          : [],
+      )
+      return results(query, files)
+    })
+    setMentionIndex(0)
+    requestFileSearch(query)
   }
 
   const onKeyDown = (
@@ -521,6 +542,9 @@ export function useFileMention(
     if (e.key === "Enter" || e.key === "Tab") {
       const result = mentionResults()[mentionIndex()]
       if (!result) return false
+      // While a spaced query is still being resolved the only offer can be the
+      // file-picker fallback. Sending the message must win over browsing files.
+      if (result.type === "file-picker" && /\s/.test(mentionQuery() ?? "")) return false
       e.preventDefault()
       if (textarea) selectMention(result, textarea, setText, onSelect)
       return true
