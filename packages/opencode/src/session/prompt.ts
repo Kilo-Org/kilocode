@@ -2179,7 +2179,7 @@ export const layer = Layer.effect(
           modelID: model.modelID,
           directory: ctx.directory,
           worktree: ctx.worktree,
-        }),
+        }).pipe(Effect.provideService(Session.Service, sessions)),
       )
       if (Exit.isFailure(writeExit)) {
         const err = Cause.squash(writeExit.cause)

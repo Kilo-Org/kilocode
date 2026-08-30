@@ -37,16 +37,12 @@ export const sessionResumeHandlers = HttpApiBuilder.group(InstanceHttpApi, "sess
     const doDiscover = Effect.fn("SessionResumeHttpApi.discover")(function* (ctx: {
       payload: typeof SessionResumeDiscoverPayload.Type
     }) {
+      // Discovery reports unreadable transcripts through `dropped` instead of
+      // failing, so there is no error channel to map here.
       const result = yield* SessionResumeImport.discover({
         cwd: ctx.payload.cwd,
         formats: ctx.payload.formats ? [...ctx.payload.formats] : undefined,
-      }).pipe(
-        Effect.catch((err) =>
-          NamedError.Unknown.isInstance(err)
-            ? Effect.fail(new SessionResumeFailedError({ message: err.data.message }))
-            : Effect.fail(err),
-        ),
-      )
+      })
       return { sessions: result.sessions, dropped: result.dropped }
     })
 

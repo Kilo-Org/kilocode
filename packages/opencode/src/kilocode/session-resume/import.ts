@@ -153,6 +153,11 @@ export namespace SessionResumeImport {
 
     const sessionID = SessionID.make(input.sessionID)
 
+    // Reject unknown sessions first. Without this the missing row surfaces as a
+    // died `messages` call below (500, no usable message) instead of a
+    // user-actionable failure the handler can map to 422.
+    yield* sessions.get(sessionID).pipe(Effect.catch(() => fail(`Session not found: "${input.sessionID}".`)))
+
     // Reject nonempty sessions — importing into a session with history would
     // interleave the transcript with unrelated messages.
     const existing = yield* sessions.messages({ sessionID }).pipe(Effect.orDie)
@@ -160,8 +165,14 @@ export namespace SessionResumeImport {
       return yield* fail("Start a new Kilo session, then run the import again.")
     }
 
-    // Resolve agent.
+    // Resolve agent. `agents.get` resolves to undefined for unknown names, so
+    // reject those here instead of dying on `agent.name` further down.
     const agent = input.agent ? yield* agents.get(input.agent) : yield* agents.defaultInfo()
+    if (!agent) {
+      const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+      const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+      return yield* fail(`Agent not found: "${input.agent}".${hint}`)
+    }
 
     // Resolve model: explicit input → agent default → provider default.
     const model = input.model
@@ -346,7 +357,7 @@ export namespace SessionResumeImport {
 
     const sessions: Discovered[] = []
     for (const item of files) {
-      const result = yield* describe(item.format, item.file)
+      const result: DescribeResult = yield* describe(item.format, item.file)
       if (result.entry) sessions.push(result.entry)
       if (result.dropped) dropped.push(result.dropped)
     }

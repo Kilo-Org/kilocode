@@ -220,16 +220,21 @@ const root = LayerNode.group([
   serverNode,
 ])
 
-const replacements = [
+const base = [
   [SessionSummary.node, summary],
-  [AgentSvc.node, fastAgents],
   [LSP.node, lsp],
   [MCP.node, mcp],
   [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
   [KiloSessions.node, KiloSessions.testLayer],
 ] as const
 
+const replacements = [...base, [AgentSvc.node, fastAgents]] as const
+
 const it = testEffect(LayerNode.compile(root, replacements))
+
+// Same stack but with the real Agent service, so agent resolution behaves like
+// production (unknown names resolve to undefined instead of the mocked agent).
+const itAgents = testEffect(LayerNode.compile(root, base))
 
 const picker = Layer.mock(Question.Service, {
   ask: (input) =>
@@ -1167,6 +1172,51 @@ it.instance(
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) {
         expect(JSON.stringify(exit.cause)).toContain("no user messages")
+      }
+
+      const msgs = yield* sessionMessages(chat.id)
+      expect(msgs.length).toBe(0)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "fromContent rejects a session that does not exist and creates nothing",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      const missing = SessionID.make("ses_missing_import_target")
+
+      const exit = yield* Effect.exit(SessionResumeImport.fromContent({ sessionID: missing, content, agent: "build" }))
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("Session not found")
+      }
+
+      // The import must not have conjured the session into existence.
+      expect(Exit.isFailure(yield* Effect.exit(sessions.get(missing)))).toBe(true)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+itAgents.instance(
+  "fromContent rejects an unknown agent and writes nothing",
+  () =>
+    Effect.gen(function* () {
+      yield* useServerConfig(providerCfg)
+      const { chat } = yield* boot()
+      const content = yield* Effect.promise(() => claudeFixture())
+
+      const exit = yield* Effect.exit(
+        SessionResumeImport.fromContent({ sessionID: chat.id, content, agent: "no-such-agent" }),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("Agent not found")
       }
 
       const msgs = yield* sessionMessages(chat.id)
