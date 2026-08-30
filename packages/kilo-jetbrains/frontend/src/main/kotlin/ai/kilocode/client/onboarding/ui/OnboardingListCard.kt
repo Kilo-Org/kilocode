@@ -3,8 +3,6 @@ package ai.kilocode.client.onboarding.ui
 import ai.kilocode.client.onboarding.OnboardingStep
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.views.base.DialogView
-import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.layout.Stack
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import javax.swing.JComponent
 
@@ -13,8 +11,8 @@ private const val ACTION_SKIP_ALL = "skipAll"
 private const val ACTION_START = "start"
 
 /**
- * Compact, read-only list of currently detected onboarding steps, shown as modal blocker content
- * in the session when a blocking step is pending. Rows show title + summary only — per-step
+ * Compact, read-only summary of the currently detected onboarding steps, shown as modal blocker
+ * content in the session when a blocking step is pending. Steps render as a bullet list — per-step
  * controls live in [OnboardingDialog], opened via `Start`.
  *
  * Build once; call [update] for every state change. Does not rebuild the component tree.
@@ -25,16 +23,8 @@ class OnboardingListCard : DialogView() {
     var onSkipAll: (() -> Unit)? = null
     var onStart: (() -> Unit)? = null
 
-    private val rows = mutableListOf<OnboardingStepRow>()
-    private val content = Stack.vertical(gap = UiStyle.Gap.sm())
-
     init {
-        isOpaque = false
-        setHeader(
-            KiloBundle.message("onboarding.list.title"),
-            KiloBundle.message("onboarding.list.subtitle"),
-        )
-        setContent(content)
+        setHeader(KiloBundle.message("onboarding.list.title"))
         setActions(
             listOf(
                 DialogView.Action(ACTION_LATER, KiloBundle.message("onboarding.button.later"), primary = false) {
@@ -50,24 +40,26 @@ class OnboardingListCard : DialogView() {
         )
     }
 
+    /**
+     * Renders the intro plus one bullet per step into the card's description.
+     *
+     * This deliberately reuses the card's own description text rather than adding per-step labels:
+     * [DialogView] lays that text out width-aware so it wraps, where a plain label would just
+     * ellipsize the step summary.
+     */
     @RequiresEdt
     fun update(steps: List<OnboardingStep>) {
-        while (rows.size < steps.size) {
-            val row = OnboardingStepRow()
-            rows.add(row)
-            content.next(row)
-        }
-        while (rows.size > steps.size) {
-            val row = rows.removeAt(rows.size - 1)
-            content.remove(row)
-        }
-        steps.forEachIndexed { index, step -> rows[index].update(step) }
-        content.revalidate()
-        content.repaint()
-        revalidate()
-        repaint()
+        setDescription(describe(steps))
     }
 
     @RequiresEdt
     fun preferredFocusComponent(): JComponent = preferredActionComponent(ACTION_START)
+
+    private fun describe(steps: List<OnboardingStep>): String {
+        val intro = KiloBundle.message("onboarding.list.subtitle")
+        if (steps.isEmpty()) return intro
+        return steps.joinToString(separator = "\n", prefix = "$intro\n\n") {
+            KiloBundle.message("onboarding.list.item", it.need.title, it.need.summary)
+        }
+    }
 }

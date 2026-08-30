@@ -14,16 +14,20 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBDimension
+import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import javax.swing.Action
 import javax.swing.JButton
@@ -31,6 +35,7 @@ import javax.swing.JComponent
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListSelectionModel
+import javax.swing.SwingConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -114,6 +119,29 @@ internal class OnboardingDialog(
             secondComponent = right
             splitterProportionKey = "Kilo.OnboardingDialog.splitter"
             preferredSize = JBDimension(DIALOG_WIDTH, DIALOG_HEIGHT)
+        }
+    }
+
+    /**
+     * Standard [DialogWrapper] banner slot (rendered above the center panel). Carries the Kilo
+     * branding for the setup flow.
+     */
+    override fun createTitlePane(): JComponent {
+        val label = JBLabel(
+            KiloBundle.message("onboarding.dialog.title"),
+            IconLoader.getIcon("/icons/kilo@20x20.svg", OnboardingDialog::class.java),
+            SwingConstants.LEADING,
+        ).apply {
+            font = JBFont.h4()
+            iconTextGap = UiStyle.Gap.sm()
+        }
+        return BorderLayoutPanel().apply {
+            border = JBUI.Borders.merge(
+                JBUI.Borders.empty(UiStyle.Gap.pad()),
+                JBUI.Borders.customLineBottom(UiStyle.Colors.contentBorder()),
+                true,
+            )
+            addToCenter(label)
         }
     }
 
