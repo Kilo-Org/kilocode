@@ -5,6 +5,7 @@ import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
 import { KiloTask } from "../../src/kilocode/tool/task"
+import * as KiloAgent from "../../src/kilocode/agent"
 import { deriveSubagentSessionPermission } from "../../src/agent/subagent-permissions"
 import { provideTestInstance } from "../fixture/fixture"
 import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
@@ -640,6 +641,75 @@ test("marketplace architect honors plan allow after wildcard edit deny", async (
   expect(architect!.displayName).toBe("Architect")
   expect(Permission.evaluate("read", "src/output.log", architect!.permission).action).toBe("allow")
   expect(Permission.evaluate("glob", "*", architect!.permission).action).toBe("allow")
+})
+
+// A custom agent whose name collides with `architect`/`plan` must keep its own edit
+// permission. The previous name check appended the plan-mode edit guard after the
+// agent's rules, so last-match-wins made its `*.md` allows unreachable (#13581).
+test("custom architect agent keeps its own edit rules instead of plan hardening", async () => {
+  const architect = await get(
+    {
+      agent: {
+        architect: {
+          mode: "primary",
+          permission: {
+            edit: {
+              "*": "ask",
+              "*.md": "allow",
+              "**/*.md": "allow",
+            },
+          },
+        },
+      },
+    },
+    "architect",
+  )
+  expect(architect).toBeDefined()
+  expect(architect!.name).toBe("architect")
+  // No plan guard may be appended after the agent's own rules.
+  expect(
+    architect!.permission.some((rule) => rule.permission === "edit" && rule.pattern === "*" && rule.action === "deny"),
+  ).toBe(false)
+  expect(Permission.evaluate("edit", "src/output.log", architect!.permission).action).toBe("ask")
+  expect(Permission.evaluate("edit", "docs/notes/test.md", architect!.permission).action).toBe("allow")
+})
+
+test("custom architect agent is not plan-hardened by name", async () => {
+  const architect = await get(
+    {
+      agent: {
+        architect: {
+          mode: "primary",
+          permission: {
+            edit: "allow",
+          },
+        },
+      },
+    },
+    "architect",
+  )
+  expect(architect).toBeDefined()
+  expect(Permission.evaluate("edit", "src/output.log", architect!.permission).action).toBe("allow")
+  expect(Permission.evaluate("edit", ".kilo/plans/fix.md", architect!.permission).action).toBe("allow")
+})
+
+test("hardenPlan hardens only the native plan agent, never name-colliding custom agents", () => {
+  const rules = Permission.fromConfig({ edit: { "*": "ask", "*.md": "allow" } })
+
+  const customPlan = { native: false as const, permission: [...rules] }
+  KiloAgent.hardenPlan("plan", customPlan, "/tmp/worktree", [], [...rules])
+  expect(
+    customPlan.permission.some((rule) => rule.permission === "edit" && rule.pattern === "*" && rule.action === "deny"),
+  ).toBe(false)
+
+  const customArchitect = { native: false as const, permission: [...rules] }
+  KiloAgent.hardenPlan("architect", customArchitect, "/tmp/worktree", [], [...rules])
+  expect(Permission.evaluate("edit", "src/output.log", customArchitect.permission).action).toBe("ask")
+
+  const builtin = { native: true as const, permission: [...rules] }
+  KiloAgent.hardenPlan("plan", builtin, "/tmp/worktree", [], [...rules])
+  expect(Permission.evaluate("edit", "src/output.log", builtin.permission).action).toBe("deny")
+  expect(Permission.evaluate("edit", "plans/fix.md", builtin.permission).action).toBe("allow")
 })
 
 test("non-planning agents retain per-agent edit permissions", async () => {

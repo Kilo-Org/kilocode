@@ -298,11 +298,15 @@ function planEditGuard(worktree: string) {
 
 export function hardenPlan(
   key: string,
-  item: { permission: Permission.Ruleset },
+  item: { native?: boolean; permission: Permission.Ruleset },
   worktree: string,
   ...explicit: Permission.Ruleset[]
 ) {
-  if (key !== "plan" && key !== "architect") return
+  // Plan hardening is a ceiling for the built-in plan agent only. Custom agents
+  // that happen to be named `plan` or `architect` are governed by their own
+  // permission config; the name check previously locked them to plan dirs with
+  // no opt-out (#13581).
+  if (key !== "plan" || item.native !== true) return
   const edit = explicit.map(editRestrictions)
   item.permission = Permission.merge(item.permission, planEditGuard(worktree), ...edit)
 }
