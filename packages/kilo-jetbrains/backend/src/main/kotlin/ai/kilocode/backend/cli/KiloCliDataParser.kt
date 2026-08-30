@@ -1087,7 +1087,7 @@ object KiloCliDataParser {
             put("name", input.name.trim().ifBlank { id })
             put("npm", "@ai-sdk/openai-compatible")
             put("options", buildJsonObject { put("baseURL", input.baseUrl.trim()) })
-            if (env != null) put("env", buildJsonArray { add(JsonPrimitive(env)) }) else put("env", JsonNull)
+            if (env != null) put("env", buildJsonArray { add(JsonPrimitive(env)) })
             if (input.headers.isNotEmpty()) put("headers", buildJsonObject { input.headers.forEach { (k, v) -> put(k, v) } })
             if (models.isNotEmpty()) put("models", JsonObject(models))
         }

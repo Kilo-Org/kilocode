@@ -269,7 +269,16 @@ class KiloBackendProviderSettingsManagerTest {
     }
 
     @Test
-    fun `saving custom provider with blank env var clears env in config patch`() = runBlocking {
+    fun `saving custom provider with blank env var clears existing env from config`() = runBlocking {
+        // The config schema only allows nulling a whole provider entry, not a single field inside
+        // one, so clearing "env" requires deleting and recreating the entry. This exercises that
+        // two-step flow through MockCliServer's own JSON-merge-patch simulation of the real config
+        // endpoint, rather than asserting on a single "env":null patch body the real CLI would 400 on.
+        mock.config = """{
+            "provider":{
+                "my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"http://localhost:11434"},"env":["OLD_VAR"]}
+            }
+        }""".trimIndent()
         mock.providers = """{
             "all":[{"id":"my-openai","name":"My OpenAI","source":"config","models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o"}}}],
             "default":{},
@@ -292,7 +301,11 @@ class KiloBackendProviderSettingsManagerTest {
         )
 
         assertNull(result.error)
-        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"env\":null")
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"my-openai\"")
+        assertFalse(mock.lastConfigPatchBody.orEmpty().contains("\"env\""))
+        assertContains(mock.lastAuthPutBody.orEmpty(), "\"key\":\"sk-test\"")
+        val state = manager.state("/test")
+        assertEquals(emptyList<String>(), state.config["my-openai"]?.env.orEmpty())
     }
 
     @Test
