@@ -3529,24 +3529,28 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (result.success) return
       void vscode.window.showErrorMessage(`Config update failed: ${result.error}`)
     })
-    this.configWrites = task.catch(() => {})
+    this.configWrites = task.catch((error) => console.error("[Kilo New] KiloProvider: Config write failed:", error))
     return task
   }
 
+  /**
+   * Every outcome is reported through configUpdated / configUpdateFailed: the
+   * chat control holds its pick until one of them arrives, so a failure that
+   * escaped as a throw would leave it stuck and skip the notification.
+   */
   private async saveGlobalConfig(partial: Partial<Config>, unset: string[][]): Promise<ConfigWriteResult> {
-    if (!this.client || this.connectionState !== "connected") {
-      return this.failConfigUpdate("Not connected to CLI backend")
-    }
-    const dir = this.settingsDirectory()
-    let binding: ConfigBinding | undefined
     try {
+      if (!this.client || this.connectionState !== "connected") {
+        return this.failConfigUpdate("Not connected to CLI backend")
+      }
+      const dir = this.settingsDirectory()
       const snapshot = await fetchSnapshot(this.client, dir, () => this.configSettings())
-      binding = this.bindingsFor(dir, snapshot.targets).global
+      const binding = this.bindingsFor(dir, snapshot.targets).global
+      if (!binding) return this.failConfigUpdate("Global config is not available")
+      return await this.handleUpdateConfig(partial, {}, unset, [], binding.id)
     } catch (error) {
       return this.postConfigFailure(error)
     }
-    if (!binding) return this.failConfigUpdate("Global config is not available")
-    return this.handleUpdateConfig(partial, {}, unset, [], binding.id)
   }
 
   private async refreshConfig(type: "configLoaded" | "configUpdated", dir = this.settingsDirectory()) {

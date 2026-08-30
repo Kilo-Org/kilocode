@@ -10,6 +10,7 @@ type Internals = {
   connectionState: "connecting" | "connected" | "disconnected" | "error"
   writeGlobalConfig: (partial: Partial<Config>, unset?: string[][]) => Promise<void>
   fetchAndSendProviders: () => Promise<void>
+  handleUpdateConfig: (...args: unknown[]) => Promise<unknown>
 }
 
 const notice = spyOn(vscode.window, "showErrorMessage").mockResolvedValue(undefined)
@@ -182,5 +183,27 @@ describe("KiloProvider.writeGlobalConfig", () => {
     // A queued write after a failure still runs.
     await internal.writeGlobalConfig(pin("baseten/fp8"))
     expect(sent.map((message) => message.type)).toEqual(["configUpdateFailed", "configUpdateFailed"])
+  })
+
+  it("reports a throw inside the write like a rejected write, then keeps accepting later writes", async () => {
+    const conn = createConnection()
+    const { internal, sent } = setup(conn)
+    const write = internal.handleUpdateConfig.bind(internal)
+    Object.assign(internal, {
+      handleUpdateConfig: async () => {
+        throw new Error("boom")
+      },
+    })
+
+    await internal.writeGlobalConfig(pin("gmicloud/fp8"))
+
+    expect(conn.patches).toEqual([])
+    expect(sent).toEqual([expect.objectContaining({ type: "configUpdateFailed", message: "boom" })])
+    expect(notice).toHaveBeenCalledWith("Config update failed: boom")
+
+    Object.assign(internal, { handleUpdateConfig: write })
+    await internal.writeGlobalConfig(pin("baseten/fp8"))
+    expect(conn.patches).toHaveLength(1)
+    expect(sent.map((message) => message.type)).toEqual(["configUpdateFailed", "configUpdated"])
   })
 })

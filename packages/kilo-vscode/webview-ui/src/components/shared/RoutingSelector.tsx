@@ -7,7 +7,7 @@
  * RoutingSelector     — thin wrapper wired to session + config for chat usage.
  */
 
-import { type Accessor, Component, createEffect, createMemo, createSignal, For, on, Show } from "solid-js"
+import { type Accessor, Component, createEffect, createMemo, createSignal, For, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useConfig } from "../../context/config"
@@ -18,7 +18,8 @@ import { routable, routingPreview } from "./model-selector-utils"
 import { fmtPrice } from "./model-preview-utils"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { endpointsEntry, requestEndpoints } from "../../context/routing-endpoints"
-import { modelRouting, routingOverriddenByProject } from "../../../../src/shared/provider-routing"
+import { useRoutingPick } from "../../hooks/useRoutingPick"
+import { routingOverriddenByProject } from "../../../../src/shared/provider-routing"
 import type { ModelEndpoint, ModelSelection } from "../../types/messages"
 
 // ---------------------------------------------------------------------------
@@ -349,7 +350,7 @@ interface RoutingSelectorProps {
 export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   const session = useSession()
   const vscode = useVSCode()
-  const { config, projectConfig, saveError } = useConfig()
+  const { config, projectConfig } = useConfig()
   const id = () => props.sessionID?.()
 
   const routed = () => {
@@ -358,41 +359,16 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
     return model
   }
   const endpoints = useModelEndpoints(routed)
-
-  // A pick shows immediately while it is persisted in the background: the
-  // global config write disposes the backend instances, so the confirming
-  // configUpdated can take seconds. The next config message — the write's own
-  // update or its failure — carries the authoritative value and replaces the
-  // optimistic one.
-  const [pending, setPending] = createSignal<{ providerID: string; modelID: string; provider: string | null }>()
-  createEffect(on([config, saveError], () => setPending(undefined), { defer: true }))
-
-  function value(model: ModelSelection) {
-    const next = pending()
-    if (next && next.providerID === model.providerID && next.modelID === model.modelID) {
-      return next.provider ?? undefined
-    }
-    return modelRouting(config(), model.providerID, model.modelID)
-  }
-
-  function persist(model: ModelSelection, provider: string | null) {
-    setPending({ providerID: model.providerID, modelID: model.modelID, provider })
-    vscode.postMessage({
-      type: "persistModelRouting",
-      providerID: model.providerID,
-      modelID: model.modelID,
-      provider,
-    })
-  }
+  const routing = useRoutingPick(config, vscode)
 
   return (
     <Show when={routed()}>
       {(model) => (
         <RoutingSelectorBase
           endpoints={endpoints.endpoints()}
-          value={value(model())}
-          onSelect={(provider) => persist(model(), provider)}
-          onClear={() => persist(model(), null)}
+          value={routing.value(model())}
+          onSelect={(provider) => routing.pick(model(), provider)}
+          onClear={() => routing.pick(model(), null)}
           onOpen={endpoints.load}
           overridden={routingOverriddenByProject(projectConfig(), model().providerID, model().modelID)}
         />
