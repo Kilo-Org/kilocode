@@ -247,25 +247,26 @@ const lastCommitDiff = Effect.fnUntraced(function* (
     { concurrency: 3 },
   )
 
-  const patches = splitGitPatch(batchResult).reduce((acc, patch, index) => {
+  const statMap = nums(stats)
+  const batchPatches = splitGitPatch(batchResult).reduce((acc, patch, index) => {
     const file = fileFromPatchChunk(patch) ?? list[index]?.file
     if (!file) return acc
     acc.set(file, (acc.get(file) ?? "") + patch)
     return acc
   }, new Map<string, string>())
-  const capped = batchResult.truncated
-  const statMap = nums(stats)
+  const batch = { patches: batchPatches, capped: false }
+  const ref = `${parent}..HEAD`
 
   const next: FileDiff[] = []
   let total = 0
+  let capped = false
   for (const item of list.toSorted((a, b) => a.file.localeCompare(b.file))) {
     const stat = statMap.get(item.file)
-    const patch = capped
-      ? emptyPatch(item.file)
-      : patches.get(item.file) ?? emptyPatch(item.file)
+    const patch = yield* patchForItem(git, cwd, ref, item, batch, capped, options)
     const result: { patch: string; capped: boolean } = capped
       ? { patch, capped: true }
       : totalPatch(item.file, patch, total)
+    capped = capped || result.capped
     if (!capped) {
       total += Buffer.byteLength(result.patch)
     }

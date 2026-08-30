@@ -364,5 +364,39 @@ describe("Vcs diff", () => {
       }),
     { git: true },
   )
+
+  it.instance(
+    "diff('last-commit') recovers patches when batch fetch is truncated",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* write(path.join(test.directory, "seed.txt"), "seed\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "seed"])
+
+        // Large file pushes the unified batch patch over MAX_TOTAL_PATCH_BYTES
+        // (10MB), but each individual file diff stays well under it. Smaller
+        // commits must still produce real patches via per-file fallback.
+        const big = "x".repeat(11 * 1024 * 1024)
+        yield* write(path.join(test.directory, "big.bin"), big)
+        yield* write(path.join(test.directory, "small.txt"), "tiny change\n")
+        yield* git(test.directory, ["add", "."])
+        yield* git(test.directory, ["commit", "--no-gpg-sign", "-m", "mixed sizes"])
+
+        const vcs = yield* init()
+        const diff = yield* vcs.diff("last-commit")
+
+        const files = diff.map((item) => item.file).sort()
+        expect(files).toEqual(["big.bin", "small.txt"])
+
+        const small = diff.find((item) => item.file === "small.txt")
+        expect(small?.patch).toContain("diff --git")
+        expect(small?.patch).toContain("+tiny change")
+
+        const bigItem = diff.find((item) => item.file === "big.bin")
+        expect(bigItem?.patch).toBeDefined()
+      }),
+    { git: true, timeout: 60_000 },
+  )
   // kilocode_change end
 })
