@@ -373,6 +373,8 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("id=\"Kilo.Worktree.Delete\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.OpenPr\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.OpenDiff\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.OpenLocalDiff\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.RunSetupScript\""))
         assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Rename\""))
         assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("id=\"Kilo.Worktree.RowMenu\""))
@@ -386,16 +388,30 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("ref=\"Kilo.Worktree.Delete\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenPr\""))
         assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenDiff\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenLocalDiff\""))
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("ref=\"${'$'}Copy\""))
 
-        // Row menu order: rename, (separator), open pr, open diff, (separator), delete.
-        val rename = xml.indexOf("ref=\"Kilo.Worktree.Rename\"")
-        val openPr = xml.indexOf("ref=\"Kilo.Worktree.OpenPr\"")
-        val openDiff = xml.indexOf("ref=\"Kilo.Worktree.OpenDiff\"")
-        val delete = xml.indexOf("ref=\"Kilo.Worktree.Delete\"")
-        assertTrue(rename in 0 until openPr && openPr < openDiff && openDiff < delete)
+        // Row menu order: rename, (separator), open pr, open diff, open local diff, (separator),
+        // open/create setup script, run setup script, (separator), delete.
+        val rowMenuStart = xml.indexOf("<group id=\"Kilo.Worktree.RowMenu\">")
+        val rowMenuEnd = xml.indexOf("</group>", rowMenuStart)
+        val rowMenu = xml.substring(rowMenuStart, rowMenuEnd)
+        assertTrue(rowMenu.contains("ref=\"Kilo.OpenSetupScript\""))
+        assertTrue(rowMenu.contains("ref=\"Kilo.Worktree.RunSetupScript\""))
+
+        val rename = rowMenu.indexOf("ref=\"Kilo.Worktree.Rename\"")
+        val openPr = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenPr\"")
+        val openDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenDiff\"")
+        val openLocalDiff = rowMenu.indexOf("ref=\"Kilo.Worktree.OpenLocalDiff\"")
+        val openSetup = rowMenu.indexOf("ref=\"Kilo.OpenSetupScript\"")
+        val runSetup = rowMenu.indexOf("ref=\"Kilo.Worktree.RunSetupScript\"")
+        val delete = rowMenu.indexOf("ref=\"Kilo.Worktree.Delete\"")
+        assertTrue(
+            rename in 0 until openPr && openPr < openDiff && openDiff < openLocalDiff &&
+                openLocalDiff < openSetup && openSetup < runSetup && runSetup < delete,
+        )
     }
 
     // ------ Helpers ------

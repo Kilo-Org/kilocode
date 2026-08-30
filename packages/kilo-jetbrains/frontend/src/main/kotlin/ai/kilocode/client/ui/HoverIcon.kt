@@ -12,6 +12,19 @@ import javax.swing.JButton
 class HoverIcon(private val fill: Boolean = false) : JButton() {
     private var over = false
 
+    /**
+     * Makes an icon-only button a square of the height the look-and-feel would give it as a button,
+     * so it lines up with labelled siblings in the same cluster instead of looking shorter. Taking
+     * the height from the LAF rather than a fixed token keeps the two in step wherever the LAF
+     * applies its own button minimum (Darcula raises both to the same floor).
+     */
+    var match = false
+        set(value) {
+            if (field == value) return
+            field = value
+            revalidate()
+        }
+
     init {
         iconButton(this)
         addMouseListener(object : MouseAdapter() {
@@ -30,6 +43,10 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
     // content plus their (symmetric) border, which already gives equal padding on every side.
     override fun getPreferredSize(): Dimension {
         if (!text.isNullOrEmpty()) return super.getPreferredSize()
+        if (match) {
+            val side = super.getPreferredSize().height
+            return Dimension(side, side)
+        }
         val icon = icon ?: return JBUI.size(MIN, MIN)
         val side = maxOf(JBUI.scale(MIN), icon.iconWidth + JBUI.scale(PAD), icon.iconHeight + JBUI.scale(PAD))
         return Dimension(side, side)

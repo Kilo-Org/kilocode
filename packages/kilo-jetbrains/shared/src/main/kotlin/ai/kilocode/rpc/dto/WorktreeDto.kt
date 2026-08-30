@@ -20,15 +20,37 @@ data class WorktreeListDto(val worktrees: List<WorktreeDto> = emptyList())
 @Serializable
 data class WorktreeStatsDto(
     val path: String,
+    /** Committed additions vs `merge-base(base, HEAD)` — GitHub's "Files changed" number. */
     val additions: Int = 0,
     val deletions: Int = 0,
     val ahead: Int = 0,
     val behind: Int = 0,
     val files: Int = 0,
+    /** Resolved base ref the counts are relative to, e.g. `origin/main`. Empty when unresolved. */
+    val base: String = "",
 )
 
 @Serializable
 data class WorktreeStatsListDto(val items: List<WorktreeStatsDto> = emptyList())
+
+/**
+ * Uncommitted state of one worktree, relative to its own HEAD — staged, unstaged, and untracked
+ * together. Deliberately separate from [WorktreeStatsDto], which is measured against the base branch.
+ */
+@Serializable
+data class WorktreeDirtyDto(
+    val path: String,
+    val additions: Int = 0,
+    val deletions: Int = 0,
+    val files: Int = 0,
+    /** How many of [files] are untracked. Their additions are line counts; deletions are always 0. */
+    val untracked: Int = 0,
+    /** Commits ahead of `@{upstream}`. 0 when the branch has no upstream. */
+    val unpushed: Int = 0,
+)
+
+@Serializable
+data class WorktreeDirtyListDto(val items: List<WorktreeDirtyDto> = emptyList())
 
 @Serializable
 enum class GhState { OPEN, DRAFT, MERGED, CLOSED }

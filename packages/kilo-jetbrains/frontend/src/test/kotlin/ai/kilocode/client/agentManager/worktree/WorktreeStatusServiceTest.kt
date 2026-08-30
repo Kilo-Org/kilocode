@@ -2,10 +2,13 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -27,6 +30,8 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         rpc = FakeWorktreeRpcApi()
         ApplicationManager.getApplication()
             .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(coroutines.scope, rpc), testRootDisposable)
+        // Stats and PR loading resolve the backend project root before every call.
+        fakeRoot(project, coroutines.scope, testRootDisposable, project.basePath!!)
         ApplicationManager.getApplication()
             .replaceService(GhStatusCoordinator::class.java, GhStatusCoordinator(coroutines.scope, TestUiTimers()), testRootDisposable)
         timers = TestUiTimers()
@@ -54,6 +59,22 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         timers.advanceBy(300)
         drain()
         assertEquals(4, service.stats.value[key]?.additions)
+        handle.close()
+    }
+
+    fun `test attach loads dirty on the same debounce as stats`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
+        val key = normalizeWorktreePath(path)
+
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(4, service.stats.value[key]?.additions)
+        assertEquals(2, service.dirty.value[key]?.additions)
+        assertEquals(1, service.dirty.value[key]?.files)
         handle.close()
     }
 

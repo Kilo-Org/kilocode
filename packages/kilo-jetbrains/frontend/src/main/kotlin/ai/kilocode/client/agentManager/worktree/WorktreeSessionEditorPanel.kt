@@ -1,9 +1,8 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.diff.KiloDiffEditorKind
-import ai.kilocode.client.diff.diffParams
-import ai.kilocode.client.diff.ensureDiffEditorKind
+import ai.kilocode.client.diff.KiloDiffComparison
+import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
@@ -29,9 +28,9 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
@@ -79,7 +78,7 @@ import javax.swing.border.Border
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 
-class WorktreeSessionEditorPanel(
+class WorktreeSessionEditorPanel @RequiresEdt constructor(
     parent: Disposable,
     private val manager: WorktreeSessionEditorManager,
     private val controller: WorktreeSessionListController,
@@ -96,6 +95,13 @@ class WorktreeSessionEditorPanel(
         service<WorktreeSessionListVisibility>().save(worktree.directory, value)
     },
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
+    // Register with the parent before any child component (e.g. the run control) that owns a
+    // coroutine scope or a shared-stream ref, so a failure while constructing later fields cannot
+    // leak those resources: disposing this panel now always tears the children down.
+    init {
+        Disposer.register(parent, this)
+    }
+
     private val add = NewAction()
     private val rename = RenameAction()
     private val delete = DeleteAction()
@@ -120,10 +126,23 @@ class WorktreeSessionEditorPanel(
             (row as? SessionRow)?.session?.takeIf { canRename(it) || canDelete(it) }
         }),
     )
-    private val prHeader = WorktreePrHeaderView(openWorktree = ::openInNewFrame, openEnabled = worktree.directory.isNotBlank(), openDiff = ::openBranchDiff, openTerminal = ::openTerminal)
+    private val run = if (project != null && worktree.directory.isNotBlank()) {
+        WorktreeRunControl(project, this, worktree.directory, frame = ::openInNewFrame)
+    } else {
+        null
+    }
+    private val prHeader = WorktreePrHeaderView(
+        openWorktree = ::openInNewFrame,
+        openEnabled = worktree.directory.isNotBlank(),
+        openDiff = { openDiff(KiloDiffComparison.BASE) },
+        onLocal = { openDiff(KiloDiffComparison.LOCAL) },
+        openTerminal = ::openTerminal,
+        run = run?.button,
+    )
     private val splitter = OnePixelSplitter(false, 0.25f)
     private var started = false
     private var stats: WorktreeStatsDto? = null
+    private var dirty: WorktreeDirtyDto? = null
     private var pr: WorktreePrDto? = null
     // Last known persisted visibility, and whether it is known at all: until the stored value arrives
     // (or the user clicks) the list stays hidden and nothing is written.
@@ -131,7 +150,6 @@ class WorktreeSessionEditorPanel(
     private var ready = false
 
     init {
-        Disposer.register(parent, this)
         isOpaque = true
         toolbar.targetComponent = this
         // Keep the toolbar transparent so it shows its themed parent background and tracks
@@ -424,13 +442,9 @@ class WorktreeSessionEditorPanel(
     private fun same(path: String?, dir: String): Boolean = FileUtil.pathsEqual(path, dir)
 
     @RequiresEdt
-    private fun openBranchDiff() {
+    private fun openDiff(comparison: KiloDiffComparison) {
         val target = project ?: return
-        ensureDiffEditorKind()
-        target.service<KiloVfsManager>().open(
-            KiloDiffEditorKind.ID,
-            diffParams("branch", worktree.directory, null, KiloBundle.message("diff.editor.branch.title")),
-        )
+        openKiloDiff(target, worktree.directory, comparison, parent = this)
     }
 
     /**
@@ -517,18 +531,23 @@ class WorktreeSessionEditorPanel(
     @RequiresEdt
     private fun selectedKeys(): List<String> = list.selectedKeys().filter { it != SessionHost.NEW && it !in manager.deleting() }
 
+    @RequiresEdt
     private fun bindModel() {
         val listener = object : ListDataListener {
+            @RequiresEdt
             override fun intervalAdded(e: ListDataEvent) = sync()
 
+            @RequiresEdt
             override fun intervalRemoved(e: ListDataEvent) = sync()
 
+            @RequiresEdt
             override fun contentsChanged(e: ListDataEvent) = sync()
         }
         controller.model.addListDataListener(listener)
         Disposer.register(this) { controller.model.removeListDataListener(listener) }
     }
 
+    @RequiresEdt
     private fun bindStatus() {
         val key = normalizeWorktreePath(worktree.directory)
         syncHeader()
@@ -544,12 +563,13 @@ class WorktreeSessionEditorPanel(
             this,
             onStats = { value -> stats = value[key]; syncHeader() },
             onPr = { value -> pr = value[key]; syncHeader() },
+            onDirty = { value -> dirty = value[key]; syncHeader() },
         )
     }
 
     @RequiresEdt
     private fun syncHeader() {
-        prHeader.update(stats, pr, worktreeName())
+        prHeader.update(stats, pr, worktreeName(), dirty)
     }
 
     @RequiresEdt
@@ -560,6 +580,7 @@ class WorktreeSessionEditorPanel(
             ?: key.trimEnd('/').substringAfterLast('/').ifBlank { key }
     }
 
+    @RequiresEdt
     override fun uiDataSnapshot(sink: DataSink) {
         sink[WorktreeSessionDataKeys.PANEL] = this
         selectedSession()?.let { sink[WorktreeSessionDataKeys.SESSION] = it }

@@ -1,6 +1,8 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.diff.GitComparison
+import ai.kilocode.backend.diff.runGitCommand
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.parsePrUrl
@@ -14,6 +16,8 @@ import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -56,21 +60,16 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.io.path.fileSize
-import kotlin.io.path.inputStream
-import kotlin.io.path.isRegularFile
 
 class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     companion object {
         internal val LOG = KiloLog.create(KiloWorktreeRpcApiImpl::class.java)
-        private const val BASE_TTL = 60_000L
         private const val GH_PROBE_TTL = 300_000L
         private const val GH_STATUS_TTL = 3_000L
         private const val PR_TTL = 90_000L
     }
 
-    private val bases = ConcurrentHashMap<String, Timed<String>>()
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
     private val resolver = PrResolver(gh = ::runGh, git = ::runGit)
@@ -155,6 +154,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val items = sync(root) ?: return@withContext WorktreeStatsListDto()
         val fallback = baseBranch(items) ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
+    }
+
+    override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
+        val root = Path.of(directory).normalize()
+        val items = sync(root) ?: return@withContext WorktreeDirtyListDto()
+        WorktreeDirtyListDto(parallel(items.filter { !it.main }) { item -> dirty(item) })
     }
 
     /**
@@ -583,15 +588,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     private fun runGit(base: Path, vararg args: String): CmdOut = runGit(base, args.toList())
 
-    private fun runGit(base: Path, args: List<String>): CmdOut {
-        return try {
-            val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(base.toFile())
-            val out = CapturingProcessHandler(cmd).runProcess(30_000)
-            CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
-        } catch (e: Exception) {
-            CmdOut(-1, "", e.message ?: "git failed")
-        }
-    }
+    private fun runGit(base: Path, args: List<String>): CmdOut = runGitCommand(base, args)
 
     private fun runGh(base: Path, vararg args: String): CmdOut = runGh(base, args.toList())
 
@@ -628,47 +625,32 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     private fun stats(item: WorktreeDto, fallback: String): WorktreeStatsDto {
         val dir = Path.of(item.path).normalize()
-        return runCatching {
-            val base = base(item, fallback)
-            val anc = runGit(dir, "merge-base", "HEAD", base).stdout.trim().takeIf { it.isNotBlank() } ?: base
-            val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc)
-            val tracked = if (diff.ok) parseNumstat(diff.stdout) else emptyList()
-            val untrackedFiles = runGit(dir, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
-                .stdout
-                .lineSequence()
-                .filter { it.isNotBlank() }
-                .toList()
-            val untracked = untrackedFiles.sumOf { countUntracked(dir, it) }
-            val counts = aheadBehind(dir, base)
-            WorktreeStatsDto(
-                item.path,
-                tracked.sumOf { it.additions } + untracked,
-                tracked.sumOf { it.deletions },
-                counts.second,
-                counts.first,
-                files = tracked.size + untrackedFiles.size,
-            )
-        }.getOrElse { err ->
-            LOG.warn("worktree stats failed: path=${item.path} message=${err.message}", err)
-            WorktreeStatsDto(item.path)
-        }
+        val comparison = GitComparison.open(dir, GitComparison.Mode.Base, fallback) ?: return WorktreeStatsDto(item.path)
+        val files = comparison.files(false)
+        val counts = comparison.counts()
+        return WorktreeStatsDto(
+            item.path,
+            additions = files.sumOf { it.additions },
+            deletions = files.sumOf { it.deletions },
+            ahead = counts.second,
+            behind = counts.first,
+            files = files.size,
+            base = comparison.base,
+        )
     }
 
-    private fun base(item: WorktreeDto, fallback: String): String {
-        val now = System.currentTimeMillis()
-        bases[item.path]?.takeIf { now - it.time < BASE_TTL }?.let { return it.value }
+    private fun dirty(item: WorktreeDto): WorktreeDirtyDto {
         val dir = Path.of(item.path).normalize()
-        val upstream = runGit(dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
-        val value = upstream.stdout.trim().takeIf { upstream.ok && it.isNotBlank() } ?: fallback
-        bases[item.path] = Timed(now, value)
-        return value
-    }
-
-    private fun aheadBehind(dir: Path, base: String): Pair<Int, Int> {
-        val out = runGit(dir, "rev-list", "--left-right", "--count", "$base...HEAD")
-        if (!out.ok) return 0 to 0
-        val parts = out.stdout.trim().split(Regex("\\s+"))
-        return (parts.getOrNull(0)?.toIntOrNull() ?: 0) to (parts.getOrNull(1)?.toIntOrNull() ?: 0)
+        val comparison = GitComparison.open(dir, GitComparison.Mode.Local) ?: return WorktreeDirtyDto(item.path)
+        val files = comparison.files(false)
+        return WorktreeDirtyDto(
+            item.path,
+            additions = files.sumOf { it.additions },
+            deletions = files.sumOf { it.deletions },
+            files = files.size,
+            untracked = files.count { it.status == "untracked" },
+            unpushed = comparison.unpushed(),
+        )
     }
 
     private fun ghAvailable(root: Path): GhAvailability {
@@ -1049,37 +1031,4 @@ private fun samePath(a: String, b: String): Boolean {
 private fun realPath(path: String): Path {
     val file = Path.of(path).normalize()
     return if (Files.exists(file)) file.toRealPath() else file
-}
-
-private fun countUntracked(base: Path, rel: String): Int {
-    return runCatching {
-        val path = base.resolve(rel).normalize()
-        if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > 2 * 1024 * 1024L) return@runCatching 0
-        countLines(path) ?: 0
-    }.getOrElse { err ->
-        KiloWorktreeRpcApiImpl.LOG.debug { "worktree stats untracked read failed: path=$rel message=${err.message}" }
-        0
-    }
-}
-
-private fun countLines(path: Path): Int? {
-    var newlines = 0
-    var last = 0
-    var any = false
-    path.inputStream().buffered().use { input ->
-        val buf = ByteArray(8192)
-        while (true) {
-            val n = input.read(buf)
-            if (n <= 0) break
-            any = true
-            for (i in 0 until n) {
-                val b = buf[i].toInt()
-                if (b == 0) return null
-                if (b == '\n'.code) newlines++
-            }
-            last = buf[n - 1].toInt()
-        }
-    }
-    if (!any) return 0
-    return if (last == '\n'.code) newlines else newlines + 1
 }

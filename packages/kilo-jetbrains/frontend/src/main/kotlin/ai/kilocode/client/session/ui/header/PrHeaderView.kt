@@ -2,6 +2,8 @@ package ai.kilocode.client.session.ui.header
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
@@ -13,7 +15,6 @@ import ai.kilocode.client.ui.stateLabel
 import ai.kilocode.client.ui.style
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
-import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.ide.BrowserUtil
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
@@ -26,27 +27,28 @@ import java.awt.Component
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.JSeparator
+import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 
-/**
- * Neutral core of the branch/PR header: a state badge (LEFT), the PR title (CENTER, click opens the
- * PR in the browser), and a changes badge plus a host-fillable trailing action slot (RIGHT).
- *
- * Shared by the Agent Manager worktree editor ([ai.kilocode.client.agentManager.worktree.WorktreePrHeaderView])
- * and the chat [BranchDock]. Retained-mode: [update] mutates existing nodes rather than rebuilding.
- * Stays non-opaque so the host owns background and borders.
- */
-internal class PrHeaderView(
+internal class PrHeaderView @RequiresEdt constructor(
     private val titleStyle: Int = SimpleTextAttributes.STYLE_BOLD,
+    mode: ChangesPanel.Mode = ChangesPanel.Mode.COMPACT,
+    onLocal: (() -> Unit)? = null,
     openDiff: () -> Unit,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
     private val status = JBLabel()
     private val title = SimpleColoredComponent()
-    private val changes = BranchChangesBadge(openDiff)
+    private val changes = ChangesPanel(mode, onBase = openDiff, onLocal = onLocal)
     private val statusPane = status.align(HAlign.LEFT, VAlign.CENTER)
+    // Hidden until the first action is added: hosts with no trailing actions (e.g. BranchDock) show
+    // just the changes summary, so an always-visible separator would dangle with nothing after it.
+    private val actionsSeparator = JSeparator(SwingConstants.VERTICAL).apply { isVisible = false }
     private val actions = Stack.horizontal(UiStyle.Gap.sm())
         .next(changes.align(HAlign.CENTER, VAlign.CENTER))
+        .next(actionsSeparator)
     private var style = SessionEditorStyle.current()
-    private var pull: WorktreePrDto? = null
+    private var actionCount = 0
     private var state: GhState? = null
     private var number: String? = null
     private var body: String? = null
@@ -55,47 +57,63 @@ internal class PrHeaderView(
 
     init {
         isOpaque = false
-        actions.isOpaque = false
-        actions.border = JBUI.Borders.emptyRight(UiStyle.Gap.sm())
+        // Standard padding fences the toolbar off from the PR title on the left.
+        actions.border = JBUI.Borders.empty(0, UiStyle.Gap.md(), 0, UiStyle.Gap.sm())
         status.border = JBUI.Borders.empty(0, UiStyle.Gap.md(), 0, UiStyle.Gap.xs())
+        status.isVisible = false
         title.border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         title.isOpaque = false
+        title.isVisible = false
         addToLeft(statusPane)
         addToCenter(title)
         addToRight(actions.align(HAlign.RIGHT, VAlign.CENTER))
         val listener = object : MouseAdapter() {
+            @RequiresEdt
             override fun mouseClicked(event: MouseEvent) {
-                url?.let(BrowserUtil::browse)
+                if (event.isConsumed || event.isPopupTrigger || !SwingUtilities.isLeftMouseButton(event) || event.clickCount != 1) return
+                if (isEnabled && event.component.isEnabled) url?.let(BrowserUtil::browse)
             }
         }
         status.addMouseListener(listener)
         title.addMouseListener(listener)
-        changes.applyStyle(style)
-        syncClick(null)
+        changes.font = style.smallFont
+        changes.foreground = SessionUiStyle.Text.Secondary.foreground()
     }
 
-    /** Adds a host action into the trailing slot, to the right of the changes badge. */
+    @RequiresEdt
     fun addAction(component: Component) {
+        actionCount++
         actions.next(component.align(HAlign.CENTER, VAlign.CENTER))
+        syncSeparator()
     }
 
-    /** Update from worktree branch stats (files/additions/deletions on the stats DTO). */
     @RequiresEdt
-    fun update(stats: WorktreeStatsDto?, pull: WorktreePrDto?, name: String) {
-        changes.update(stats?.files ?: 0, stats?.additions ?: 0, stats?.deletions ?: 0)
+    fun update(
+        files: Int,
+        additions: Int,
+        deletions: Int,
+        pull: WorktreePrDto?,
+        name: String,
+        ahead: Int = 0,
+        behind: Int = 0,
+        localFiles: Int = 0,
+        localAdditions: Int = 0,
+        localDeletions: Int = 0,
+        base: String = "",
+    ) {
+        changes.update(files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base)
+        syncSeparator()
         applyPr(pull, name)
     }
 
-    /** Update from precomputed change aggregates (chat dock aggregates a DiffFileDto list). */
     @RequiresEdt
-    fun update(files: Int, additions: Int, deletions: Int, pull: WorktreePrDto?, name: String) {
-        changes.update(files, additions, deletions)
-        applyPr(pull, name)
+    private fun syncSeparator() {
+        val visible = actionCount > 0 && changes.isVisible
+        if (actionsSeparator.isVisible != visible) actionsSeparator.isVisible = visible
     }
 
     @RequiresEdt
     private fun applyPr(pull: WorktreePrDto?, name: String) {
-        this.pull = pull
         if (pull == null) {
             syncPr(false)
             syncStatus(null)
@@ -110,30 +128,26 @@ internal class PrHeaderView(
         syncStatus(pull.state)
         syncTitle("#${pull.number}", body, tip)
         syncClick(pull.url)
-        status.toolTipText = tip
+        if (status.toolTipText != tip) status.toolTipText = tip
     }
 
+    @RequiresEdt
     private fun syncStatus(next: GhState?) {
-        if (state == next) {
-            val visible = next != null
-            if (status.isVisible != visible) status.isVisible = visible
-            return
-        }
+        if (state == next) return
         state = next
         status.icon = next?.let { FilledBadgeIcon(stateLabel(it), style(it)) }
         status.isVisible = next != null
         changed()
     }
 
+    @RequiresEdt
     private fun syncPr(value: Boolean) {
-        if (value) {
-            title.isVisible = true
-            return
-        }
-        title.isVisible = false
+        if (title.isVisible == value) return
+        title.isVisible = value
         changed()
     }
 
+    @RequiresEdt
     private fun clearTitle() {
         if (number == null && tip == null) return
         number = null
@@ -145,36 +159,38 @@ internal class PrHeaderView(
         changed()
     }
 
-    private fun syncTitle(number: String, body: String?, nextTip: String?) {
+    @RequiresEdt
+    private fun syncTitle(number: String, body: String?, next: String?) {
         var changed = false
         if (this.number != number || this.body != body) {
             this.number = number
             this.body = body
-            renderTitle()
+            syncText()
             changed = true
         }
-        if (tip != nextTip) {
-            tip = nextTip
-            title.toolTipText = nextTip
-            if (pull == null) status.toolTipText = null
+        if (tip != next) {
+            tip = next
+            title.toolTipText = next
             changed = true
         }
         if (changed) changed()
     }
 
-    private fun renderTitle() {
+    @RequiresEdt
+    private fun syncText() {
         val number = number ?: return
         title.clear()
         val body = body
         val attrs = SimpleTextAttributes(titleStyle, UIUtil.getLabelForeground())
         if (body == null) {
             title.append(number, attrs)
-        } else {
-            title.append(body, attrs)
-            title.append(" $number", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+            return
         }
+        title.append(body, attrs)
+        title.append(" $number", SimpleTextAttributes.GRAYED_ATTRIBUTES)
     }
 
+    @RequiresEdt
     private fun syncClick(next: String?) {
         if (url == next) return
         url = next
@@ -183,14 +199,16 @@ internal class PrHeaderView(
         title.cursor = cursor
     }
 
+    @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        changes.applyStyle(style)
-        // Re-render the title so its foreground follows the theme, then repaint.
-        renderTitle()
+        changes.font = style.smallFont
+        changes.foreground = SessionUiStyle.Text.Secondary.foreground()
+        syncText()
         changed()
     }
 
+    @RequiresEdt
     private fun changed() {
         revalidate()
         repaint()

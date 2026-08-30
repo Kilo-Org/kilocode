@@ -8,6 +8,7 @@ import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
@@ -41,6 +42,13 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     suspend fun open(directory: String): Boolean
 
     suspend fun stats(directory: String): WorktreeStatsListDto
+
+    /**
+     * Uncommitted changes per managed worktree, vs each worktree's own HEAD. Separate from [stats]
+     * because the baseline differs (HEAD vs the base branch) and because it changes on every file
+     * save, so callers may refresh it independently.
+     */
+    suspend fun dirty(directory: String): WorktreeDirtyListDto
     suspend fun ghStatus(directory: String): GhAvailability
     suspend fun prStatus(directory: String): WorktreePrListDto
 
