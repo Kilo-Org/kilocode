@@ -16986,6 +16986,197 @@
         ]
       }
     },
+    "/kilocode/migrate/sessions": {
+      "post": {
+        "tags": ["migrate"],
+        "operationId": "kilocode.migrate.sessions",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session migration result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KilocodeMigrateSessionsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "MigrateFailedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrateFailedError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Parse a Claude Code or OpenAI Codex JSONL transcript and migrate it into an empty Kilo session.",
+        "summary": "Migrate an external session transcript into Kilo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionID": {
+                    "type": "string",
+                    "description": "Target Kilo session. Must be empty (no existing messages)."
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "Raw JSONL transcript content (Claude Code or OpenAI Codex, Anthropic message format)."
+                  },
+                  "agent": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  }
+                },
+                "required": ["sessionID", "content"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.migrate.sessions({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/migrate/sessions/discover": {
+      "post": {
+        "tags": ["migrate"],
+        "operationId": "kilocode.migrate.discover",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discovered migratable sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KilocodeMigrateSessionsDiscoverResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "MigrateFailedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrateFailedError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each so callers can list migratable sessions before migrating. Read-only; writes nothing.",
+        "summary": "Discover migratable external session transcripts",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cwd": {
+                    "type": "string"
+                  },
+                  "formats": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": ["claude", "codex"]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.migrate.discover({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/network": {
       "get": {
         "tags": ["network"],
@@ -40290,6 +40481,115 @@
         "required": ["operation", "message"],
         "additionalProperties": false
       },
+      "KilocodeMigrateSessionsResult": {
+        "type": "object",
+        "properties": {
+          "messageID": {
+            "type": "string",
+            "description": "Final assistant message written by the migration."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["claude", "codex"],
+            "description": "Detected transcript format."
+          },
+          "messages": {
+            "type": "number",
+            "description": "Number of messages written to the session."
+          },
+          "dropped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Human-readable reasons for content that could not be migrated."
+          }
+        },
+        "required": ["messageID", "format", "messages", "dropped"],
+        "additionalProperties": false
+      },
+      "MigrateFailedError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      },
+      "KilocodeMigrateSessionsModel": {
+        "type": "object",
+        "properties": {
+          "providerID": {
+            "type": "string"
+          },
+          "modelID": {
+            "type": "string"
+          }
+        },
+        "required": ["providerID", "modelID"],
+        "additionalProperties": false
+      },
+      "KilocodeMigrateSessionsDiscovered": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Session UUID parsed from the transcript filename."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["claude", "codex"],
+            "description": "Detected transcript format."
+          },
+          "path": {
+            "type": "string",
+            "description": "Absolute path to the JSONL transcript on the CLI host."
+          },
+          "mtime": {
+            "type": "number",
+            "description": "Last-modified time (epoch ms)."
+          },
+          "version": {
+            "type": "number",
+            "description": "Source harness major version."
+          },
+          "title": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "number",
+            "description": "Number of user + assistant steps in the transcript."
+          },
+          "model": {
+            "$ref": "#/components/schemas/KilocodeMigrateSessionsModel"
+          }
+        },
+        "required": ["id", "format", "path", "mtime", "version", "messages"],
+        "additionalProperties": false
+      },
+      "KilocodeMigrateSessionsDiscoverResult": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeMigrateSessionsDiscovered"
+            },
+            "description": "Discovered migratable sessions, most recently modified first."
+          },
+          "dropped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Human-readable reasons for transcripts that were found but could not be previewed."
+          }
+        },
+        "required": ["sessions", "dropped"],
+        "additionalProperties": false
+      },
       "KilocodeSessionImportResult": {
         "type": "object",
         "properties": {
@@ -59618,6 +59918,10 @@
     {
       "name": "anaconda-desktop",
       "description": "Local Anaconda Desktop provider setup routes."
+    },
+    {
+      "name": "migrate",
+      "description": "Kilo routes for migrating sessions from other coding agents into Kilo."
     },
     {
       "name": "network",

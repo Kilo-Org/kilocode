@@ -4456,15 +4456,9 @@ export type AnacondaDesktopOperationError = {
   message: string
 }
 
-export type KilocodeSessionImportResult = {
-  ok: boolean
-  id: string
-  skipped?: boolean
-}
-
-export type KilocodeSessionResumeResult = {
+export type KilocodeMigrateSessionsResult = {
   /**
-   * Final assistant message written by the import.
+   * Final assistant message written by the migration.
    */
   messageID: string
   /**
@@ -4476,21 +4470,21 @@ export type KilocodeSessionResumeResult = {
    */
   messages: number
   /**
-   * Human-readable reasons for content that could not be imported.
+   * Human-readable reasons for content that could not be migrated.
    */
   dropped: Array<string>
 }
 
-export type SessionResumeFailedError = {
+export type MigrateFailedError = {
   message: string
 }
 
-export type KilocodeSessionResumeModel = {
+export type KilocodeMigrateSessionsModel = {
   providerID: string
   modelID: string
 }
 
-export type KilocodeSessionResumeDiscovered = {
+export type KilocodeMigrateSessionsDiscovered = {
   /**
    * Session UUID parsed from the transcript filename.
    */
@@ -4516,18 +4510,24 @@ export type KilocodeSessionResumeDiscovered = {
    * Number of user + assistant steps in the transcript.
    */
   messages: number
-  model?: KilocodeSessionResumeModel
+  model?: KilocodeMigrateSessionsModel
 }
 
-export type KilocodeSessionResumeDiscoverResult = {
+export type KilocodeMigrateSessionsDiscoverResult = {
   /**
-   * Discovered importable sessions, most recently modified first.
+   * Discovered migratable sessions, most recently modified first.
    */
-  sessions: Array<KilocodeSessionResumeDiscovered>
+  sessions: Array<KilocodeMigrateSessionsDiscovered>
   /**
    * Human-readable reasons for transcripts that were found but could not be previewed.
    */
   dropped: Array<string>
+}
+
+export type KilocodeSessionImportResult = {
+  ok: boolean
+  id: string
+  skipped?: boolean
 }
 
 export type MemoryApiClientError = {
@@ -17432,6 +17432,84 @@ export type AnacondaDesktopSyncResponses = {
 
 export type AnacondaDesktopSyncResponse = AnacondaDesktopSyncResponses[keyof AnacondaDesktopSyncResponses]
 
+export type KilocodeMigrateSessionsData = {
+  body?: {
+    /**
+     * Target Kilo session. Must be empty (no existing messages).
+     */
+    sessionID: string
+    /**
+     * Raw JSONL transcript content (Claude Code or OpenAI Codex, Anthropic message format).
+     */
+    content: string
+    agent?: string
+    model?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/migrate/sessions"
+}
+
+export type KilocodeMigrateSessionsErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * MigrateFailedError
+   */
+  422: MigrateFailedError
+}
+
+export type KilocodeMigrateSessionsError = KilocodeMigrateSessionsErrors[keyof KilocodeMigrateSessionsErrors]
+
+export type KilocodeMigrateSessionsResponses = {
+  /**
+   * Session migration result
+   */
+  200: KilocodeMigrateSessionsResult
+}
+
+export type KilocodeMigrateSessionsResponse = KilocodeMigrateSessionsResponses[keyof KilocodeMigrateSessionsResponses]
+
+export type KilocodeMigrateDiscoverData = {
+  body?: {
+    cwd?: string
+    formats?: Array<"claude" | "codex">
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/migrate/sessions/discover"
+}
+
+export type KilocodeMigrateDiscoverErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * MigrateFailedError
+   */
+  422: MigrateFailedError
+}
+
+export type KilocodeMigrateDiscoverError = KilocodeMigrateDiscoverErrors[keyof KilocodeMigrateDiscoverErrors]
+
+export type KilocodeMigrateDiscoverResponses = {
+  /**
+   * Discovered migratable sessions
+   */
+  200: KilocodeMigrateSessionsDiscoverResult
+}
+
+export type KilocodeMigrateDiscoverResponse = KilocodeMigrateDiscoverResponses[keyof KilocodeMigrateDiscoverResponses]
+
 export type NetworkListData = {
   body?: never
   path?: never
@@ -18036,88 +18114,6 @@ export type KilocodeSessionImportPartResponses = {
 
 export type KilocodeSessionImportPartResponse =
   KilocodeSessionImportPartResponses[keyof KilocodeSessionImportPartResponses]
-
-export type KilocodeSessionResumeImportData = {
-  body?: {
-    /**
-     * Target Kilo session. Must be empty (no existing messages).
-     */
-    sessionID: string
-    /**
-     * Raw JSONL transcript content (Claude Code or OpenAI Codex, Anthropic message format).
-     */
-    content: string
-    agent?: string
-    model?: string
-  }
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/kilocode/session-resume"
-}
-
-export type KilocodeSessionResumeImportErrors = {
-  /**
-   * BadRequest | InvalidRequestError
-   */
-  400: EffectHttpApiErrorBadRequest | InvalidRequestError
-  /**
-   * SessionResumeFailedError
-   */
-  422: SessionResumeFailedError
-}
-
-export type KilocodeSessionResumeImportError =
-  KilocodeSessionResumeImportErrors[keyof KilocodeSessionResumeImportErrors]
-
-export type KilocodeSessionResumeImportResponses = {
-  /**
-   * Session import result
-   */
-  200: KilocodeSessionResumeResult
-}
-
-export type KilocodeSessionResumeImportResponse =
-  KilocodeSessionResumeImportResponses[keyof KilocodeSessionResumeImportResponses]
-
-export type KilocodeSessionResumeDiscoverData = {
-  body?: {
-    cwd?: string
-    formats?: Array<"claude" | "codex">
-  }
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/kilocode/session-resume/discover"
-}
-
-export type KilocodeSessionResumeDiscoverErrors = {
-  /**
-   * BadRequest | InvalidRequestError
-   */
-  400: EffectHttpApiErrorBadRequest | InvalidRequestError
-  /**
-   * SessionResumeFailedError
-   */
-  422: SessionResumeFailedError
-}
-
-export type KilocodeSessionResumeDiscoverError =
-  KilocodeSessionResumeDiscoverErrors[keyof KilocodeSessionResumeDiscoverErrors]
-
-export type KilocodeSessionResumeDiscoverResponses = {
-  /**
-   * Discovered importable sessions
-   */
-  200: KilocodeSessionResumeDiscoverResult
-}
-
-export type KilocodeSessionResumeDiscoverResponse =
-  KilocodeSessionResumeDiscoverResponses[keyof KilocodeSessionResumeDiscoverResponses]
 
 export type SuggestionListData = {
   body?: never

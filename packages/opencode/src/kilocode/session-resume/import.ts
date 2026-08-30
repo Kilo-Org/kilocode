@@ -5,8 +5,8 @@
 // SessionResume (./index.ts) is a pure parser/mapper with no Effect or Session
 // dependencies. This module adds the Effect-based orchestration that both the
 // `/resume-claude` / `/resume-codex` slash commands (src/session/prompt.ts) and
-// the HTTP endpoint (src/kilocode/server/httpapi/.../session-resume) use to map a
-// parsed transcript and write the resulting messages/parts through
+// the migrate HTTP endpoints (src/kilocode/server/httpapi/.../migrate) use to map
+// a parsed transcript and write the resulting messages/parts through
 // Session.Service. Keeping the write path here means every client (VS Code, CLI,
 // TUI) can trigger a Claude Code / Codex import through the CLI server without
 // reimplementing it.

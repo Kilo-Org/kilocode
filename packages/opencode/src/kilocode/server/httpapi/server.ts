@@ -23,11 +23,11 @@ import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
 import { memoryHandlers } from "./handlers/memory"
+import { migrateHandlers } from "./handlers/migrate"
 import { networkHandlers } from "./handlers/network"
 import { remoteHandlers } from "./handlers/remote"
 import { sandboxHandlers } from "./handlers/sandbox"
 import { sessionImportHandlers } from "./handlers/session-import"
-import { sessionResumeHandlers } from "./handlers/session-resume"
 import { suggestionHandlers } from "./handlers/suggestion"
 import { telemetryHandlers } from "./handlers/telemetry"
 
@@ -45,11 +45,11 @@ export const provide = Layer.provide([
   kiloGatewayHandlers,
   kilocodeHandlers,
   memoryHandlers,
+  migrateHandlers,
   networkHandlers,
   remoteHandlers,
   sandboxHandlers,
   sessionImportHandlers,
-  sessionResumeHandlers,
   suggestionHandlers,
   telemetryHandlers,
 ])

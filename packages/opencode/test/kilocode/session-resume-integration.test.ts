@@ -1059,7 +1059,7 @@ it.instance(
 
 // ── SessionResumeImport.fromContent (shared endpoint logic) ───────────────
 //
-// The HTTP endpoint (POST /kilocode/session-resume) passes raw JSONL content
+// The HTTP endpoint (POST /kilocode/migrate/sessions) passes raw JSONL content
 // straight to SessionResumeImport.fromContent. These tests exercise that shared
 // entry point directly — no file discovery, no slash command — since that is the
 // path every thin client (VS Code, CLI) uses through the server.
@@ -1250,7 +1250,7 @@ it.instance(
 
 // ── SessionResumeImport.discover (discovery endpoint logic) ───────────────
 //
-// The HTTP endpoint (POST /kilocode/session-resume/discover) delegates to
+// The HTTP endpoint (POST /kilocode/migrate/sessions/discover) delegates to
 // SessionResumeImport.discover. These tests drive that shared entry point
 // directly with fixtures written under redirected discovery roots (via the
 // ResumeRoots test seam), the same seam the slash-command picker uses. Discovery

@@ -3,16 +3,12 @@ import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { SessionResumeImport } from "@/kilocode/session-resume/import"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import {
-  SessionResumeDiscoverPayload,
-  SessionResumeFailedError,
-  SessionResumePayload,
-} from "../groups/session-resume"
+import { MigrateFailedError, MigrateSessionsDiscoverPayload, MigrateSessionsPayload } from "../groups/migrate"
 
-export const sessionResumeHandlers = HttpApiBuilder.group(InstanceHttpApi, "session-resume", (handlers) =>
+export const migrateHandlers = HttpApiBuilder.group(InstanceHttpApi, "migrate", (handlers) =>
   Effect.gen(function* () {
-    const doImport = Effect.fn("SessionResumeHttpApi.import")(function* (ctx: {
-      payload: typeof SessionResumePayload.Type
+    const sessions = Effect.fn("MigrateHttpApi.sessions")(function* (ctx: {
+      payload: typeof MigrateSessionsPayload.Type
     }) {
       const result = yield* SessionResumeImport.fromContent({
         sessionID: ctx.payload.sessionID,
@@ -22,7 +18,7 @@ export const sessionResumeHandlers = HttpApiBuilder.group(InstanceHttpApi, "sess
       }).pipe(
         Effect.catch((err) =>
           NamedError.Unknown.isInstance(err)
-            ? Effect.fail(new SessionResumeFailedError({ message: err.data.message }))
+            ? Effect.fail(new MigrateFailedError({ message: err.data.message }))
             : Effect.fail(err),
         ),
       )
@@ -34,8 +30,8 @@ export const sessionResumeHandlers = HttpApiBuilder.group(InstanceHttpApi, "sess
       }
     })
 
-    const doDiscover = Effect.fn("SessionResumeHttpApi.discover")(function* (ctx: {
-      payload: typeof SessionResumeDiscoverPayload.Type
+    const discover = Effect.fn("MigrateHttpApi.discover")(function* (ctx: {
+      payload: typeof MigrateSessionsDiscoverPayload.Type
     }) {
       // Discovery reports unreadable transcripts through `dropped` instead of
       // failing, so there is no error channel to map here.
@@ -46,6 +42,6 @@ export const sessionResumeHandlers = HttpApiBuilder.group(InstanceHttpApi, "sess
       return { sessions: result.sessions, dropped: result.dropped }
     })
 
-    return handlers.handle("import", doImport).handle("discover", doDiscover)
+    return handlers.handle("sessions", sessions).handle("discover", discover)
   }),
 )

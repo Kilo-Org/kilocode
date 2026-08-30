@@ -69,9 +69,9 @@ function enable(ctx: ScenarioContext) {
   return Effect.promise(() => KiloMemory.enable({ ctx: { directory: dir, worktree: dir } }))
 }
 
-// Smallest transcript the session-resume import accepts: one real user turn and
+// Smallest transcript the session migration accepts: one real user turn and
 // one assistant reply, in the Claude Code JSONL shape.
-const resume = [
+const migrate = [
   '{"type":"user","version":"2.42.0","isSidechain":false,"message":{"id":"msg_001","role":"user","content":[{"type":"text","text":"Hello from the exerciser"}]}}',
   '{"type":"assistant","version":"2.42.0","isSidechain":false,"message":{"id":"msg_002","role":"assistant","content":[{"type":"text","text":"Hi from the transcript"}]}}',
 ].join("\n")
@@ -831,39 +831,39 @@ export const kiloScenarios: Scenario[] = [
       check(body.ok === true && body.id === "prt_httpapi_import", "part import should return imported ID")
     }),
   http.protected
-    .post("/kilocode/session-resume", "kilocode.sessionResume.import")
+    .post("/kilocode/migrate/sessions", "kilocode.migrate.sessions")
     .withLlm()
     .mutating()
-    .seeded((ctx) => ctx.session({ title: "Session resume import" }))
+    .seeded((ctx) => ctx.session({ title: "Migrate session" }))
     .at((ctx) => ({
-      path: "/kilocode/session-resume",
+      path: "/kilocode/migrate/sessions",
       headers: ctx.headers(),
-      body: { sessionID: ctx.state.id, content: resume },
+      body: { sessionID: ctx.state.id, content: migrate },
     }))
     .json(200, (body) => {
       object(body)
-      check(body.format === "claude", "resume import should detect the Claude transcript format")
-      check(body.messages === 2, "resume import should write both transcript messages")
-      check(typeof body.messageID === "string", "resume import should return the final assistant message ID")
+      check(body.format === "claude", "session migration should detect the Claude transcript format")
+      check(body.messages === 2, "session migration should write both transcript messages")
+      check(typeof body.messageID === "string", "session migration should return the final assistant message ID")
       array(body.dropped)
     }),
   http.protected
-    .post("/kilocode/session-resume", "kilocode.sessionResume.import.missing")
+    .post("/kilocode/migrate/sessions", "kilocode.migrate.sessions.missing")
     .at((ctx) => ({
-      path: "/kilocode/session-resume",
+      path: "/kilocode/migrate/sessions",
       headers: ctx.headers(),
-      body: { sessionID: "ses_httpapi_missing", content: resume },
+      body: { sessionID: "ses_httpapi_missing", content: migrate },
     }))
     .json(422, (body) => {
       object(body)
       check(
         typeof body.message === "string" && body.message.includes("Session not found"),
-        "importing into an unknown session should report a user-actionable failure",
+        "migrating into an unknown session should report a user-actionable failure",
       )
     }),
   http.protected
-    .post("/kilocode/session-resume/discover", "kilocode.sessionResume.discover")
-    .at((ctx) => ({ path: "/kilocode/session-resume/discover", headers: ctx.headers(), body: {} }))
+    .post("/kilocode/migrate/sessions/discover", "kilocode.migrate.discover")
+    .at((ctx) => ({ path: "/kilocode/migrate/sessions/discover", headers: ctx.headers(), body: {} }))
     .json(200, (body) => {
       object(body)
       array(body.sessions)

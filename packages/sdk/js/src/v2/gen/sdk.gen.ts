@@ -193,6 +193,10 @@ import type {
   KilocodeCommandFilesResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
+  KilocodeMigrateDiscoverErrors,
+  KilocodeMigrateDiscoverResponses,
+  KilocodeMigrateSessionsErrors,
+  KilocodeMigrateSessionsResponses,
   KilocodeNotebookListErrors,
   KilocodeNotebookListResponses,
   KilocodeNotebookRejectErrors,
@@ -223,10 +227,6 @@ import type {
   KilocodeSessionImportSessionResponses,
   KilocodeSessionModelUsageErrors,
   KilocodeSessionModelUsageResponses,
-  KilocodeSessionResumeDiscoverErrors,
-  KilocodeSessionResumeDiscoverResponses,
-  KilocodeSessionResumeImportErrors,
-  KilocodeSessionResumeImportResponses,
   KiloEditErrors,
   KiloEditResponses,
   KiloFimErrors,
@@ -7942,6 +7942,98 @@ export class BackgroundJob extends HeyApiClient {
   }
 }
 
+export class Migrate extends HeyApiClient {
+  /**
+   * Migrate an external session transcript into Kilo
+   *
+   * Parse a Claude Code or OpenAI Codex JSONL transcript and migrate it into an empty Kilo session.
+   */
+  public sessions<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      sessionID: string
+      content: string
+      agent?: string
+      model?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+            { in: "body", key: "content" },
+            { in: "body", key: "agent" },
+            { in: "body", key: "model" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMigrateSessionsResponses,
+      KilocodeMigrateSessionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/migrate/sessions",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Discover migratable external session transcripts
+   *
+   * Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each so callers can list migratable sessions before migrating. Read-only; writes nothing.
+   */
+  public discover<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      cwd?: string
+      formats?: Array<"claude" | "codex">
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "cwd" },
+            { in: "body", key: "formats" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMigrateDiscoverResponses,
+      KilocodeMigrateDiscoverErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/migrate/sessions/discover",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
@@ -8327,98 +8419,6 @@ export class SessionImport extends HeyApiClient {
   }
 }
 
-export class SessionResume extends HeyApiClient {
-  /**
-   * Import an external session transcript
-   *
-   * Parse a Claude Code or OpenAI Codex JSONL transcript and import it into an empty Kilo session.
-   */
-  public import<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      sessionID?: string
-      content?: string
-      agent?: string
-      model?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "sessionID" },
-            { in: "body", key: "content" },
-            { in: "body", key: "agent" },
-            { in: "body", key: "model" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeSessionResumeImportResponses,
-      KilocodeSessionResumeImportErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/session-resume",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Discover importable external session transcripts
-   *
-   * Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each so callers can list importable sessions before importing. Read-only; writes nothing.
-   */
-  public discover<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      cwd?: string
-      formats?: Array<"claude" | "codex">
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "cwd" },
-            { in: "body", key: "formats" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeSessionResumeDiscoverResponses,
-      KilocodeSessionResumeDiscoverErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/session-resume/discover",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
 export class Kilocode extends HeyApiClient {
   /**
    * Resume an interrupted session
@@ -8758,14 +8758,14 @@ export class Kilocode extends HeyApiClient {
     return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
   }
 
+  private _migrate?: Migrate
+  get migrate(): Migrate {
+    return (this._migrate ??= new Migrate({ client: this.client }))
+  }
+
   private _sessionImport?: SessionImport
   get sessionImport(): SessionImport {
     return (this._sessionImport ??= new SessionImport({ client: this.client }))
-  }
-
-  private _sessionResume?: SessionResume
-  get sessionResume(): SessionResume {
-    return (this._sessionResume ??= new SessionResume({ client: this.client }))
   }
 }
 
