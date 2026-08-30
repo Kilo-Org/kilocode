@@ -2,7 +2,7 @@ import { NamedError } from "@opencode-ai/core/util/error"
 import { Effect, Redacted, Schema } from "effect"
 import { RemoteProtocol } from "../../kilo-sessions/remote-protocol"
 import type { RemoteWS } from "../../kilo-sessions/remote-ws"
-import type { BrowserOwner } from "./owner"
+import { BrowserOwner } from "./owner"
 
 export namespace BrowserClient {
   type Owner = Effect.Success<ReturnType<typeof BrowserOwner.open>>
@@ -44,8 +44,13 @@ export namespace BrowserClient {
     message: Schema.String,
     retryable: Schema.Boolean,
   })
-  const recovery = "Use browser_task with operation=recover to retrieve stored status without replay."
+  const recovery =
+    "Once private browser storage is available, use browser_task with operation=recover to retrieve stored status without replay. " +
+    "Recovery uses the original retained intent. Do not automatically repeat operation=run."
   const panel = "Enable CLI tasks for the browser profile and keep its signed-in panel open. Refresh operation=list."
+  const busy =
+    "Use browser_task with operation=status and the same browser_task_id to check the outstanding job. " +
+    "Use operation=cancel with that browser_task_id to request cancellation. Do not automatically retry the continuation."
   const uncertain =
     "Close the affected bound tabs, release execution locks, and use the panel recovery action. " +
     "Then explicitly continue with provider_id and browser_task_id and approve a fresh tab."
@@ -58,6 +63,7 @@ export namespace BrowserClient {
         "Browser result delivery was interrupted; this does not establish browser failure. " + recovery,
       provider_unavailable: "The selected browser provider is unavailable. " + panel,
       capacity_exceeded: "The browser queue or retained job limit is full. Wait for capacity, then refresh discovery.",
+      conversation_busy: "This browser conversation has an outstanding job. " + busy,
       cancelled: "The tool call was cancelled. Cancellation does not undo browser actions already issued.",
       invalid_response: "The browser response does not match this parent's request. No result was delivered.",
     }
@@ -78,6 +84,7 @@ export namespace BrowserClient {
       retryable: data.retryable,
       ...(data.code === "effects_uncertain" ? { guidance: uncertain } : {}),
       ...(data.code === "delivery_interrupted" ? { guidance: recovery } : {}),
+      ...(data.code === "conversation_busy" ? { guidance: busy } : {}),
     }
   }
 
@@ -248,11 +255,24 @@ export namespace BrowserClient {
       )
         throw failure("invalid_response")
       if (watch.handle && !matches(watch.handle, value)) throw failure("invalid_response")
-      watch.handle = await owner.remember({
+      // Relay acceptance remains authoritative even if local persistence fails.
+      watch.handle = {
         providerId: value.providerId,
         browserTaskId: value.browserTaskId,
         jobId: value.jobId,
         invocationId: value.invocationId,
+      }
+      await owner.remember(watch.handle).catch((err: unknown) => {
+        if (!(err instanceof BrowserOwner.Error)) throw err
+        throw new Error({
+          code: "delivery_interrupted",
+          message:
+            "The relay accepted the browser task, but local handle persistence failed. " +
+            err.data.message +
+            " Browser result delivery was interrupted; this does not establish browser failure. " +
+            recovery,
+          retryable: err.data.retryable,
+        })
       })
       await hooks.metadata({
         ...ids(value),
@@ -279,14 +299,22 @@ export namespace BrowserClient {
       if (response.kind === "not_found" && response.invocationId === watch.intent.invocationId) return undefined
       if (response.kind !== "recovered") throw failure("invalid_response")
       verify(watch.intent, response.job)
+      if (!watch.latest || !terminal(watch.latest)) watch.latest = response.job
       await remember(owner, watch, response.job, hooks)
-      watch.latest = response.job
       watch.lost = undefined
       return response.job
     }
 
     function interrupted(watch: Watch, err: Failure = failure("delivery_interrupted", true)): Output {
-      return { ...rejected(err), ...ids(watch.handle ?? watch.intent), guidance: recovery }
+      const latest = watch.latest ? output(watch.latest) : undefined
+      // Local delivery failure cannot replace an already observed terminal outcome.
+      return {
+        ...rejected(err),
+        ...(terminal(watch.latest) ? latest : {}),
+        ...ids(watch.handle ?? watch.intent),
+        ...(latest ? { summary: latest.summary + " " + err.data.message } : {}),
+        guidance: latest?.guidance ? latest.guidance + " " + recovery : recovery,
+      }
     }
 
     function release(watch: Watch) {
@@ -392,7 +420,11 @@ export namespace BrowserClient {
         } catch (err) {
           if (!(err instanceof Error)) throw err
           if (err.data.code === "cancelled") throw err
-          jobs.push({ ...rejected(err), ...ids(watch.handle ?? intent), guidance: recovery })
+          jobs.push(
+            err.data.code === "delivery_interrupted"
+              ? interrupted(watch, err)
+              : { ...rejected(err), ...ids(watch.handle ?? intent), guidance: recovery },
+          )
         } finally {
           release(watch)
         }
@@ -449,7 +481,7 @@ export namespace BrowserClient {
             if (response.kind !== "ack" || response.operation !== "invoke") throw failure("invalid_response")
             await remember(owner, watch, response, hooks)
           } catch (err) {
-            if (!(err instanceof Error) || err.data.code !== "delivery_interrupted") throw err
+            if (watch.handle || !(err instanceof Error) || err.data.code !== "delivery_interrupted") throw err
             // Only authoritative not-found permits another send of this exact stored invocation and payload.
             if (await lookup(owner, watch, hooks, end)) break
             await pause(Math.min(1_000, Math.max(0, end - now())), hooks.signal)
@@ -459,7 +491,7 @@ export namespace BrowserClient {
         return await wait(owner, watch, hooks)
       } catch (err) {
         if (hooks.signal.aborted) return await stop(owner, watch, hooks)
-        if (err instanceof Error && err.data.code === "delivery_interrupted") return interrupted(watch)
+        if (err instanceof Error && err.data.code === "delivery_interrupted") return interrupted(watch, err)
         throw err
       } finally {
         release(watch)

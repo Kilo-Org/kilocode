@@ -281,6 +281,108 @@ describe("browser client delivery", () => {
     }),
   )
 
+  it.live("retains accepted identity after failed handle persistence and recovers only the original intent", () =>
+    Effect.gen(function* () {
+      const { ctx, owner } = yield* seed()
+      const wire = link()
+      const job = yield* Effect.promise(async () => {
+        const pending = wire.client.run(owner, input, wire.hooks)
+        const request = await wire.next("invoke")
+        const job = await snapshot(owner, request)
+        const dir = path.join(Global.Path.data, "browser-owner", ctx.sessionID)
+        await fs.rename(dir, `${dir}.unavailable`)
+        try {
+          ack(wire, request, job)
+          const result = await pending
+          expect(result).toMatchObject({
+            status: "interrupted",
+            reason: "delivery_interrupted",
+            provider_id: provider,
+            browser_task_id: job.browserTaskId,
+            job_id: job.jobId,
+            invocation_id: job.invocationId,
+            effectsUncertain: true,
+            retryable: true,
+            evidence: [],
+          })
+          expect(result.summary).toContain("accepted")
+          expect(result.summary).toContain("persistence failed")
+          expect(result.summary).toContain("does not establish browser failure")
+          expect(result.guidance).toContain("Once private browser storage is available")
+          expect(result.guidance).toContain("operation=recover")
+          expect(result.guidance).toContain("without replay")
+          expect(result.guidance).toContain("Do not automatically repeat operation=run")
+          expect(wire.requests.map((request) => request.operation)).toEqual(["invoke"])
+          expect(wire.clock.timers.size).toBe(0)
+        } finally {
+          await fs.rename(`${dir}.unavailable`, dir)
+        }
+        expect((await owner.recover()).at(0)?.handle).toBeUndefined()
+        return job
+      })
+      const reopened = yield* BrowserOwner.open({ ...ctx, callID: "recover-after-storage-failure" })
+      yield* Effect.promise(async () => {
+        const pending = wire.client.recover(reopened, wire.hooks)
+        const request = await wire.next("recover")
+        const first = wire.requests.at(0)
+        if (request.operation !== "recover" || first?.operation !== "invoke")
+          throw new Error("Expected lookup after acceptance")
+        expect(request.invocationId).toBe(owner.invocationId)
+        expect(request.owner).toEqual(first.owner)
+        wire.reply(request, { kind: "recovered", job: completed(job) })
+        expect(await pending).toMatchObject({
+          status: "recovered",
+          jobs: [{ status: "succeeded", job_id: job.jobId, invocation_id: owner.invocationId }],
+        })
+        expect((await reopened.recover()).at(0)?.handle?.jobId).toBe(job.jobId)
+        expect(wire.requests.map((request) => request.operation)).toEqual(["invoke", "recover"])
+        expect(wire.clock.timers.size).toBe(0)
+      })
+    }),
+  )
+
+  it.live("preserves authoritative terminal facts when recovered handle persistence fails", () =>
+    Effect.gen(function* () {
+      const { ctx, owner } = yield* seed()
+      yield* Effect.promise(async () => {
+        await owner.prepare(input)
+        const wire = link()
+        const pending = wire.client.recover(owner, wire.hooks)
+        const request = await wire.next("recover")
+        if (request.operation !== "recover") throw new Error("Expected recovery")
+        const job = completed(await snapshot(owner, { ...request, operation: "invoke", ...input }))
+        const dir = path.join(Global.Path.data, "browser-owner", ctx.sessionID)
+        await fs.rename(dir, `${dir}.unavailable`)
+        try {
+          wire.reply(request, { kind: "recovered", job })
+          const result = await pending
+          expect(result).toMatchObject({
+            status: "recovered",
+            effectsUncertain: false,
+            jobs: [
+              {
+                status: "succeeded",
+                reason: "completed",
+                browser_task_id: job.browserTaskId,
+                job_id: job.jobId,
+                invocation_id: owner.invocationId,
+                evidence: [{ title: "Example Domain", url: "https://example.com" }],
+                effectsUncertain: false,
+              },
+            ],
+          })
+          expect(result.jobs?.at(0)?.summary).toContain("The page title is Example Domain.")
+          expect(result.jobs?.at(0)?.summary).toContain("persistence failed")
+          expect(result.jobs?.at(0)?.guidance).toContain("operation=recover")
+          expect(wire.requests.map((request) => request.operation)).toEqual(["recover"])
+          expect(wire.clock.timers.size).toBe(0)
+        } finally {
+          await fs.rename(`${dir}.unavailable`, dir)
+        }
+      })
+    }),
+  )
+
   it.live("recovers a lost acknowledgement without sending another invocation", () =>
     Effect.gen(function* () {
       const { owner } = yield* seed()
@@ -814,6 +916,7 @@ describe("browser client delivery", () => {
   for (const [code, retryable] of [
     ["provider_unavailable", true],
     ["capacity_exceeded", true],
+    ["conversation_busy", true],
     ["invocation_expired", false],
     ["invocation_conflict", false],
     ["owner_mismatch", false],

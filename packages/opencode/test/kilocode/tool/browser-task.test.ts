@@ -300,6 +300,123 @@ describe("browser_task permission and schema", () => {
   )
 })
 
+it.live("formats accepted handle persistence failure as interrupted delivery with lookup-only recovery", () =>
+  Effect.gen(function* () {
+    const wire = relay()
+    const ctx = context()
+    yield* seed(ctx)
+    const current = yield* tool
+    const pending = yield* current.execute(args, ctx).pipe(Effect.forkChild)
+    const request = yield* Effect.promise(wire.next)
+    if (request.operation !== "invoke") throw new Error("Expected run dispatch")
+    const handle: RemoteProtocol.BrowserJobHandle = {
+      providerId: provider,
+      browserTaskId: task,
+      jobId: `bj_${crypto.randomUUID()}`,
+      invocationId: request.invocationId,
+    }
+    const dir = folder(ctx)
+    yield* Effect.acquireUseRelease(
+      Effect.promise(() => fs.rename(dir, `${dir}.unavailable`)),
+      () =>
+        Effect.gen(function* () {
+          wire.reply(request, { kind: "ack", operation: "invoke", ...handle })
+          const result = yield* Fiber.join(pending)
+          expect(result.title).toBe("Browser task: interrupted")
+          expect(JSON.parse(result.output)).toMatchObject({
+            status: "interrupted",
+            reason: "delivery_interrupted",
+            provider_id: provider,
+            browser_task_id: task,
+            job_id: handle.jobId,
+            invocation_id: handle.invocationId,
+            evidence: [],
+            effectsUncertain: true,
+            retryable: true,
+          })
+          expect(result.metadata).toMatchObject(JSON.parse(result.output))
+          expect(result.output).toContain("accepted")
+          expect(result.output).toContain("persistence failed")
+          expect(result.output).toContain("does not establish browser failure")
+          expect(result.output).toContain("Once private browser storage is available")
+          expect(result.output).toContain("operation=recover")
+          expect(result.output).toContain("without replay")
+          expect(result.output).toContain("Do not automatically repeat operation=run")
+          expect(result.output).not.toContain(request.owner.parentProof)
+          expect(wire.requests.map((request) => request.operation)).toEqual(["invoke"])
+        }),
+      () => Effect.promise(() => fs.rename(`${dir}.unavailable`, dir)),
+    )
+    const owner = yield* BrowserOwner.open(ctx)
+    expect((yield* Effect.promise(() => owner.recover())).at(0)?.handle).toBeUndefined()
+  }),
+)
+
+it.live("explains a busy continuation and checks its outstanding job only on an explicit status call", () =>
+  Effect.gen(function* () {
+    const wire = relay()
+    const ctx = context()
+    yield* seed(ctx)
+    const owner = yield* BrowserOwner.open(ctx)
+    const handle: RemoteProtocol.BrowserJobHandle = {
+      providerId: provider,
+      browserTaskId: task,
+      jobId: `bj_${crypto.randomUUID()}`,
+      invocationId: owner.invocationId,
+    }
+    yield* Effect.promise(async () => {
+      await owner.approve(provider)
+      await owner.prepare({ providerId: provider, goal: args.goal })
+      await owner.remember(handle)
+    })
+    const current = yield* tool
+    const pending = yield* current
+      .execute({ ...args, browser_task_id: task, goal: "Read the next page" }, { ...ctx, callID: "continue" })
+      .pipe(Effect.forkChild)
+    const request = yield* Effect.promise(wire.next)
+    expect(request).toMatchObject({ operation: "invoke", browserTaskId: task, goal: "Read the next page" })
+    wire.reply(request, { kind: "error", code: "conversation_busy", retryable: true, message: "Conversation busy" })
+    const result = yield* Fiber.join(pending)
+    expect(JSON.parse(result.output)).toMatchObject({
+      status: "rejected",
+      reason: "conversation_busy",
+      retryable: true,
+      effectsUncertain: false,
+    })
+    expect(result.output).toContain("outstanding job")
+    expect(result.output).toContain("operation=status")
+    expect(result.output).toContain("same browser_task_id")
+    expect(result.output).toContain("operation=cancel")
+    expect(result.output).toContain("Do not automatically retry the continuation")
+    expect(wire.requests.map((request) => request.operation)).toEqual(["invoke"])
+    const polling = yield* current
+      .execute({ operation: "status", browser_task_id: task }, { ...ctx, callID: "check-outstanding-job" })
+      .pipe(Effect.forkChild)
+    const status = yield* Effect.promise(wire.next)
+    expect(status).toMatchObject({ operation: "status", browserTaskId: task })
+    const created = Number(handle.invocationId.split(".").at(1))
+    wire.reply(status, {
+      kind: "status",
+      job: {
+        ...handle,
+        status: "queued",
+        generation: 1,
+        payloadFingerprint: "a".repeat(64),
+        createdAt: new Date(created).toISOString(),
+        expiresAt: new Date(created + 604_800_000).toISOString(),
+        deadlines: { queue: new Date(created + 600_000).toISOString() },
+      },
+    })
+    expect(JSON.parse((yield* Fiber.join(polling)).output)).toMatchObject({
+      status: "queued",
+      browser_task_id: task,
+      job_id: handle.jobId,
+      invocation_id: owner.invocationId,
+    })
+    expect(wire.requests.map((request) => request.operation)).toEqual(["invoke", "status"])
+  }),
+)
+
 it.live("requires panel recovery and fresh consent after an uncertain execution rejection", () =>
   Effect.gen(function* () {
     const wire = relay()
