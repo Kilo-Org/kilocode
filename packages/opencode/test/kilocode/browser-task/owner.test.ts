@@ -356,6 +356,163 @@ describe("BrowserOwner directory durability", () => {
   }
 })
 
+describe("BrowserOwner record durability", () => {
+  function publication(kind: "credential" | "intent" | "handle") {
+    return Effect.gen(function* () {
+      const ctx = yield* seed()
+      if (kind === "credential") {
+        return {
+          ctx,
+          file: credential(ctx),
+          publish: BrowserOwner.open(ctx).pipe(
+            Effect.map((owner) => JSON.stringify({ parentProof: Redacted.value(owner.proof) })),
+          ),
+          recover: undefined,
+        }
+      }
+      const owner = yield* BrowserOwner.open(ctx)
+      const input = { providerId: provider, goal: "Persist before dispatch" } as const
+      yield* Effect.promise(() => owner.approve(provider))
+      if (kind === "handle") yield* Effect.promise(() => owner.prepare(input))
+      return {
+        ctx,
+        file: path.join(folder(ctx), `${kind === "intent" ? "intent" : "job"}-${owner.invocationId}.json`),
+        publish: Effect.tryPromise({
+          try: async () =>
+            JSON.stringify(
+              await (kind === "intent" ? owner.prepare(input) : owner.remember(handle(owner.invocationId))),
+            ),
+          catch: (err) => err,
+        }),
+        recover: Effect.tryPromise({ try: () => owner.recover(), catch: (err) => err }),
+      }
+    })
+  }
+
+  for (const kind of ["credential", "intent", "handle"] as const) {
+    for (const mode of ["existing", "EEXIST"] as const) {
+      unix(`waits for each ${kind} sync on ${mode}, even when one caller fails`, () =>
+        Effect.gen(function* () {
+          const entry = yield* publication(kind)
+          const first = { entered: Promise.withResolvers<void>(), release: Promise.withResolvers<void>() }
+          const second = { entered: Promise.withResolvers<void>(), release: Promise.withResolvers<void>() }
+          const pending = [first, second]
+          const ready = Promise.withResolvers<void>()
+          let attempts = 0
+          let linked = false
+          const link = fs.link
+          spyOn(fs, "link").mockImplementation(async (source, target) => {
+            if (String(target) !== entry.file) return link(source, target)
+            if (mode === "EEXIST") {
+              if (++attempts === 2) ready.resolve()
+              await ready.promise
+            }
+            linked = true
+            return link(source, target)
+          })
+          const open = fs.open
+          spyOn(fs, "open").mockImplementation(async (...args) => {
+            const file = await open(...args)
+            if (String(args.at(0)) !== folder(entry.ctx)) return file
+            const sync = file.sync.bind(file)
+            spyOn(file, "sync").mockImplementation(async () => {
+              if (!linked) return sync()
+              const gate = pending.shift()
+              if (!gate) return sync()
+              gate.entered.resolve()
+              await gate.release.promise
+              await sync()
+            })
+            return file
+          })
+          const creator = yield* entry.publish.pipe(Effect.forkChild)
+          const contender = yield* Effect.gen(function* () {
+            if (mode === "existing") yield* Effect.promise(() => first.entered.promise)
+            return yield* entry.publish
+          }).pipe(Effect.forkChild)
+          try {
+            for (const [gate, fiber] of [
+              [first, creator],
+              [second, contender],
+            ] as const) {
+              expect(
+                yield* Effect.raceFirst(
+                  Effect.promise(() => gate.entered.promise).pipe(Effect.as("blocked")),
+                  Fiber.await(fiber).pipe(Effect.as("returned")),
+                ),
+              ).toBe("blocked")
+            }
+            expect(creator.pollUnsafe()).toBeUndefined()
+            expect(contender.pollUnsafe()).toBeUndefined()
+            first.release.reject(new Error("private record sync failure"))
+            const err = yield* Effect.raceFirst(
+              Fiber.join(creator).pipe(Effect.flip),
+              Fiber.join(contender).pipe(Effect.flip),
+            )
+            expect(err).toMatchObject({ data: { code: "storage_unavailable", retryable: true } })
+            expect(JSON.stringify(err)).not.toContain("private record sync failure")
+            expect([creator, contender].filter((fiber) => fiber.pollUnsafe() === undefined)).toHaveLength(1)
+            const waiting = creator.pollUnsafe() === undefined ? creator : contender
+            const text = yield* Effect.promise(() => fs.readFile(entry.file, "utf8"))
+            second.release.resolve()
+            const winner = yield* Fiber.join(waiting)
+            expect(JSON.parse(text)).toMatchObject(JSON.parse(winner))
+            expect(yield* entry.publish).toBe(winner)
+            expect(yield* Effect.promise(() => fs.readFile(entry.file, "utf8"))).toBe(text)
+          } finally {
+            ready.resolve()
+            first.release.resolve()
+            second.release.resolve()
+            yield* Fiber.await(creator)
+            yield* Fiber.await(contender)
+          }
+        }),
+      )
+    }
+
+    unix(`rejects ${kind} retries and recovery until the failed sync succeeds`, () =>
+      Effect.gen(function* () {
+        const entry = yield* publication(kind)
+        let linked = false
+        const link = fs.link
+        spyOn(fs, "link").mockImplementation(async (source, target) => {
+          if (String(target) === entry.file) linked = true
+          return link(source, target)
+        })
+        const open = fs.open
+        const opening = spyOn(fs, "open").mockImplementation(async (...args) => {
+          const file = await open(...args)
+          if (linked && String(args.at(0)) === folder(entry.ctx)) {
+            spyOn(file, "sync").mockRejectedValueOnce(new Error("private record sync failure"))
+          }
+          return file
+        })
+        const err = yield* entry.publish.pipe(Effect.flip)
+        expect(err).toMatchObject({ data: { code: "storage_unavailable", retryable: true } })
+        expect(JSON.stringify(err)).not.toContain("private record sync failure")
+        const text = yield* Effect.promise(() => fs.readFile(entry.file, "utf8"))
+        const retry = yield* entry.publish.pipe(Effect.flip)
+        expect(retry).toMatchObject({ data: { code: "storage_unavailable", retryable: true } })
+        if (entry.recover) {
+          expect(yield* entry.recover.pipe(Effect.flip)).toMatchObject({
+            data: { code: "storage_unavailable", retryable: true },
+          })
+        }
+        expect(yield* Effect.promise(() => fs.readFile(entry.file, "utf8"))).toBe(text)
+        opening.mockRestore()
+        const result = yield* entry.publish
+        expect(JSON.parse(text)).toMatchObject(JSON.parse(result))
+        expect(yield* Effect.promise(() => fs.readFile(entry.file, "utf8"))).toBe(text)
+        if (entry.recover) {
+          const records = yield* entry.recover
+          expect(records).toHaveLength(1)
+          expect(kind === "intent" ? records.at(0) : records.at(0)?.handle).toMatchObject(JSON.parse(result))
+        }
+      }),
+    )
+  }
+})
+
 describe("BrowserOwner private publication", () => {
   it.live("concurrent creators read one complete winner and preserve unrelated temporary files", () =>
     Effect.gen(function* () {
