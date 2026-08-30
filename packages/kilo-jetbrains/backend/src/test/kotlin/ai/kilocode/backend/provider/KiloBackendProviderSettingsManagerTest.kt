@@ -309,6 +309,45 @@ class KiloBackendProviderSettingsManagerTest {
     }
 
     @Test
+    fun `saving custom provider without an existing env var does not delete the entry first`() = runBlocking {
+        // Deleting first is only needed to clear a previously-set env var. Doing it unconditionally
+        // would risk wiping fields the save patch doesn't set (e.g. a hand-authored
+        // whitelist/blacklist) on every ordinary save, and would leave the provider entry missing
+        // if the recreate patch failed, so this must stay a no-op when there is nothing to clear.
+        mock.config = """{
+            "provider":{
+                "my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"http://localhost:11434"}}
+            }
+        }""".trimIndent()
+        mock.providers = """{
+            "all":[{"id":"my-openai","name":"My OpenAI","source":"config","models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o"}}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.saveCustom(
+            CustomProviderSaveDto(
+                "/test",
+                "my-openai",
+                "My OpenAI",
+                "https://api.example.com/v1",
+                apiKey = "sk-test",
+                envVar = null,
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            ),
+        )
+
+        assertNull(result.error)
+        assertContains(mock.lastAuthPutBody.orEmpty(), "\"key\":\"sk-test\"")
+        // Exactly one GET (the pre-check) + one PATCH (the recreate) + one GET (the trailing
+        // reload) hit /global/config; a fourth request would mean a delete patch also fired.
+        assertEquals(3, mock.requestCount("/global/config"))
+    }
+
+    @Test
     fun `disconnecting env backed openai compatible custom provider deletes config and auth`() = runBlocking {
         mock.config = """{
             "provider":{

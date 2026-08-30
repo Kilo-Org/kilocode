@@ -151,10 +151,13 @@ internal class KiloBackendProviderSettingsManager(
         val err = validate(input)
         if (err != null) return ProviderActionResultDto(state(input.directory), error = err)
         // The config schema only allows nulling a whole provider entry (to delete it), not an
-        // individual field inside one, so a blank env var must be cleared by deleting the entry
-        // before the patch below recreates it without that key. Deleting an entry that has no
-        // existing "env" (or doesn't exist yet) is a no-op, so this is safe to always do.
-        if (input.envVar.isNullOrBlank()) patch(KiloCliDataParser.buildCustomProviderDeletePatch(input.id))
+        // individual field inside one, so a previously-set env var can only be cleared by deleting
+        // the entry before the patch below recreates it. Only do this when there is an existing env
+        // var to clear: deleting drops any fields the recreate patch doesn't set (e.g. a
+        // hand-authored whitelist/blacklist), and a failure between the two patches would otherwise
+        // leave the entry missing until the next successful save.
+        val hadEnv = input.envVar.isNullOrBlank() && state(input.directory).config[input.id]?.env?.isNotEmpty() == true
+        if (hadEnv) patch(KiloCliDataParser.buildCustomProviderDeletePatch(input.id))
         patch(KiloCliDataParser.buildCustomProviderPatch(input))
         if (input.envVar.isNullOrBlank()) {
             val key = input.apiKey?.takeIf { it.isNotBlank() }
