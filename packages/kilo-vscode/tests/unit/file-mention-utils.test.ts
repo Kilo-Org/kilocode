@@ -334,6 +334,16 @@ describe("buildFileAttachments", () => {
     expect(result).toEqual([])
   })
 
+  it("does not attach a file from another workspace folder", () => {
+    // Multi-root file search offers folders added via "Add Folder to Workspace..."
+    // as absolute mentions. They must stay mention-only: attaching would read the
+    // file on the backend through a path that bypasses external_directory
+    // approval. The agent has to Read them instead.
+    const paths = new Set(["/other-folder/src/app.ts"])
+    const result = buildFileAttachments("@/other-folder/src/app.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
   it("does not attach an absolute path that escapes the workspace via ../ segments", () => {
     const paths = new Set(["/workspace/../../etc/passwd"])
     const result = buildFileAttachments("@/workspace/../../etc/passwd", paths, "/workspace")

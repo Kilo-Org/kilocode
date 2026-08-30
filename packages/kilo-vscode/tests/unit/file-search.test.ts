@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import { handleFileSearch } from "../../src/kilo-provider/file-search"
+import * as path from "path"
+import { handleFileSearch, splitRoots } from "../../src/kilo-provider/file-search"
 
 type Query = { query: string; directory: string; type: "file" | "directory"; limit: number }
 
@@ -17,6 +18,25 @@ function client(data: { files: string[]; folders: string[] }) {
     },
   }
 }
+
+/** Per-directory backend, for asserting fan-out across several roots. */
+function multiClient(data: Record<string, { files: string[]; folders: string[] }>) {
+  const calls: Query[] = []
+  return {
+    calls,
+    value: {
+      find: {
+        files: async (query: Query) => {
+          calls.push(query)
+          const entry = data[query.directory] ?? { files: [], folders: [] }
+          return { data: query.type === "file" ? entry.files : entry.folders }
+        },
+      },
+    },
+  }
+}
+
+const abs = (root: string, rel: string) => path.resolve(root, rel).replaceAll("\\", "/")
 
 describe("handleFileSearch", () => {
   it("posts one fresh response for each request", async () => {
@@ -70,5 +90,143 @@ describe("handleFileSearch", () => {
         items: [],
       },
     ])
+  })
+
+  it("searches every workspace folder and returns outside roots as labelled absolute paths", async () => {
+    const api = multiClient({
+      "/repo": { files: ["src/a.ts"], folders: ["src"] },
+      "/other": { files: ["lib/b.ts"], folders: ["lib"] },
+    })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "", requestId: "request-multi" },
+      dir: () => "/repo",
+      roots: () => [
+        { path: "/repo", name: "repo" },
+        { path: "/other", name: "other" },
+      ],
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(api.calls.map((call) => call.directory)).toEqual(["/repo", "/repo", "/other", "/other"])
+    // The session's own project stays relative and stays first; the added
+    // folder is absolute so it can be mentioned without being auto-attached.
+    expect(posted[0]!.paths).toEqual(["src/a.ts", abs("/other", "lib/b.ts")])
+    // Every entry is labelled once the workspace has more than one folder,
+    // including the session's own project.
+    expect(posted[0]!.items).toEqual([
+      { path: "src/a.ts", type: "file", root: "repo" },
+      { path: abs("/other", "lib/b.ts"), type: "file", root: "other" },
+      { path: "src", type: "folder", root: "repo" },
+      { path: abs("/other", "lib"), type: "folder", root: "other" },
+    ])
+  })
+
+  it("leaves entries unlabelled when the workspace has a single folder", async () => {
+    const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: [] } })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "", requestId: "request-single" },
+      dir: () => "/repo",
+      roots: () => [{ path: "/repo", name: "repo" }],
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(posted[0]!.items).toEqual([{ path: "src/a.ts", type: "file" }])
+  })
+
+  it("ranks an exact filename match in an added folder above fuzzy matches in the session's project", async () => {
+    const api = multiClient({
+      // None of these is a real match for "CLAUDE.md"; they only match as a
+      // scattered subsequence of the full path.
+      "/repo": {
+        files: ["docs/error-handling/extension-refresh-on-update.md", "docs/features/background-agent-visibility.md"],
+        folders: [],
+      },
+      "/other": { files: ["CLAUDE.md"], folders: [] },
+    })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "CLAUDE.md", requestId: "request-exact" },
+      dir: () => "/repo",
+      roots: () => [
+        { path: "/repo", name: "repo" },
+        { path: "/other", name: "other" },
+      ],
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect((posted[0]!.paths as string[])[0]).toBe(abs("/other", "CLAUDE.md"))
+  })
+
+  it("prefers the session's own project when matches are equally good", async () => {
+    const api = multiClient({
+      "/repo": { files: ["notes.md"], folders: [] },
+      "/other": { files: ["notes.md"], folders: [] },
+    })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "notes.md", requestId: "request-tie" },
+      dir: () => "/repo",
+      roots: () => [
+        { path: "/repo", name: "repo" },
+        { path: "/other", name: "other" },
+      ],
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(posted[0]!.paths).toEqual(["notes.md", abs("/other", "notes.md")])
+  })
+
+  it("does not widen the search when the session runs outside the workspace folders", async () => {
+    const api = multiClient({ "/worktree": { files: ["src/a.ts"], folders: [] } })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "", requestId: "request-worktree" },
+      dir: () => "/worktree",
+      roots: () => [{ path: "/repo", name: "repo" }],
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(api.calls.map((call) => call.directory)).toEqual(["/worktree", "/worktree"])
+    expect(posted[0]!.paths).toEqual(["src/a.ts"])
+  })
+})
+
+describe("splitRoots", () => {
+  const roots = [
+    { path: "/repo", name: "repo" },
+    { path: "/other", name: "other" },
+  ]
+
+  it("separates the session's own folder from the rest", () => {
+    expect(splitRoots(roots, "/repo")).toEqual({
+      primary: { path: "/repo", name: "repo" },
+      secondary: [{ path: "/other", name: "other" }],
+    })
+  })
+
+  it("finds no roots when the directory is not a workspace folder", () => {
+    // Worktree and Agent Manager sessions must not inherit unrelated projects.
+    expect(splitRoots(roots, "/worktree")).toEqual({ secondary: [] })
+  })
+
+  it("finds no roots when there is no directory", () => {
+    expect(splitRoots(roots, "")).toEqual({ secondary: [] })
   })
 })

@@ -47,6 +47,21 @@
   max-width: 180px;
 }
 
+/* Owning workspace folder badge, shown only in multi-root workspaces so
+   identical relative paths in two folders stay distinguishable. */
+.file-mention-root {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-size: var(--kilo-font-size-11);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100px;
+}
+
 .file-mention-dir {
   flex: 1;
   overflow: hidden;

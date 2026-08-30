@@ -11,7 +11,7 @@ follow up with Grep and Read. Prefer Grep directly when exact terms are already 
 - Search for an exact symbol or regex pattern — use `Grep`
 - Find files by filename or extension — use `Glob`
 - Read the contents of a known file — use `Read`
-- Explore files outside the current workspace - use `Grep`, `Glob`, and `Read`
+- Explore files outside the indexed root — use `Read` with an absolute path. `Grep` and `Glob` are bounded to the same root as this tool and cannot reach outside it either.
 
 ## Examples
 
@@ -23,5 +23,7 @@ follow up with Grep and Read. Prefer Grep directly when exact terms are already 
 ## Constraints
 
 - Write the query in English.
-- Searches the entire current workspace by default. Limit semantic search to one subdirectory with `path`.
-- Cannot search outside the current workspace. Use other tools if this functionality is needed.
+- Searches one indexed root: the project directory of the current session. Limit the search to a subdirectory of that root with `path`.
+- In a multi-root editor workspace, only that one root is indexed. Files in other workspace folders are not searchable here even though they may appear as `@` mentions.
+- Cannot search outside the indexed root. Use `Read` with an absolute path instead.
+- Empty results are not proof that no matching code exists. The output states whether the index was complete, still building, disabled, or failed; read it before concluding anything.

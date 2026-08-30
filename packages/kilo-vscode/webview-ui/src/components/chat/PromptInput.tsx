@@ -183,6 +183,10 @@ function MentionItemContent(props: { item: MentionResult }) {
       <span class="file-mention-name">
         {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
       </span>
+      {/* Without the folder name, two roots holding the same relative path render identically. */}
+      <Show when={item.type !== "session" ? item.root : undefined}>
+        {(root) => <span class="file-mention-root">{root()}</span>}
+      </Show>
       <span class="file-mention-dir">{dirName(item.value)}</span>
     </>
   )

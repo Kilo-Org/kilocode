@@ -571,6 +571,13 @@ export interface SpeechToTextErrorMessage {
 export interface FileSearchItem {
   path: string
   type: "file" | "folder" | "opened-file"
+  /**
+   * Owning workspace folder name, set only when the workspace has more than one
+   * folder. Entries outside the session's own project carry an absolute path and
+   * are mention-only: they are never auto-attached, so the agent must Read them
+   * under the normal external-directory permission check.
+   */
+  root?: string
 }
 
 export interface FileSearchResultMessage {

@@ -1,4 +1,9 @@
-export type FileSearchItem = { path: string; type: "file" | "folder" | "opened-file" }
+export type FileSearchItem = {
+  path: string
+  type: "file" | "folder" | "opened-file"
+  /** Owning workspace folder name, set only when the workspace has more than one folder. */
+  root?: string
+}
 
 const normalize = (p: string) => p.replaceAll("\\", "/")
 const trim = (p: string) => normalize(p).replace(/\/+$/, "")
@@ -23,12 +28,18 @@ export function mergeFileSearchItems(input: {
   files: string[]
   folders: string[]
   open?: Set<string>
+  /** Path to owning workspace-folder name. Empty in a single-folder workspace, where a badge would say nothing. */
+  labels?: Map<string, string>
 }): FileSearchItem[] {
   const query = normalize(input.query).trim().toLowerCase()
   const open = new Set([...(input.open ?? [])].map(normalize))
+  const label = (p: string) => {
+    const value = input.labels?.get(p)
+    return value ? { root: value } : {}
+  }
   const files = input.files.map((p) => {
     const path = normalize(p)
-    return { path, type: open.has(path) ? ("opened-file" as const) : ("file" as const) }
+    return { path, type: open.has(path) ? ("opened-file" as const) : ("file" as const), ...label(p) }
   })
   const pinned = files.filter((item) => item.type === "opened-file")
   const rest = files.filter((item) => !open.has(item.path))
@@ -42,7 +53,7 @@ export function mergeFileSearchItems(input: {
       return true
     })
     .map((p, index) => ({
-      item: { path: normalize(p), type: "folder" as const },
+      item: { path: normalize(p), type: "folder" as const, ...label(p) },
       index,
       rank: query ? rank(query, p) : 4,
     }))

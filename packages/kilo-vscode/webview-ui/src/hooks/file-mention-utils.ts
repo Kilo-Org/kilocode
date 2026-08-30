@@ -19,9 +19,9 @@ export type MentionResult =
   | { type: "terminal"; value: typeof TERMINAL_MENTION; label: string; description: string }
   | { type: "git-changes"; value: typeof GIT_CHANGES_MENTION; label: string; description: string }
   | { type: "past-chats"; value: typeof PAST_CHATS_MENTION; label: string; description: string }
-  | { type: "file"; value: string }
-  | { type: "opened-file"; value: string }
-  | { type: "folder"; value: string }
+  | { type: "file"; value: string; root?: string }
+  | { type: "opened-file"; value: string; root?: string }
+  | { type: "folder"; value: string; root?: string }
   | { type: "file-picker"; value: "file-picker"; label: string; description: string }
   | { type: "session"; value: string; session: SessionSearchItem }
   | { type: "worktrees"; value: "worktrees" }
@@ -88,9 +88,10 @@ export function buildMentionResults(
       : []
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
-    if (item.type === "folder") return { type: "folder", value: item.path }
-    if (item.type === "opened-file") return { type: "opened-file", value: item.path }
-    return { type: "file", value: item.path }
+    const root = item.root ? { root: item.root } : {}
+    if (item.type === "folder") return { type: "folder", value: item.path, ...root }
+    if (item.type === "opened-file") return { type: "opened-file", value: item.path, ...root }
+    return { type: "file", value: item.path, ...root }
   })
   return [
     ...getTerminalMentionResult(query),
