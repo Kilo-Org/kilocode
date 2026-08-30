@@ -3,7 +3,7 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.FakeMigrationUiController
+import ai.kilocode.client.onboarding.providers.v5migration.FakeMigrationUiController
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef

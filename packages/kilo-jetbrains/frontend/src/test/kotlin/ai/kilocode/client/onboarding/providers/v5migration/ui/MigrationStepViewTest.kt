@@ -1,10 +1,10 @@
-package ai.kilocode.client.migration.ui
+package ai.kilocode.client.onboarding.providers.v5migration.ui
 
-import ai.kilocode.client.migration.FakeMigrationUiController
-import ai.kilocode.client.migration.MigrationItemUiProgress
-import ai.kilocode.client.migration.MigrationUiPhase
-import ai.kilocode.client.migration.MigrationUiState
 import ai.kilocode.client.onboarding.OnboardingRunState
+import ai.kilocode.client.onboarding.providers.v5migration.FakeMigrationUiController
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationItemUiProgress
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiPhase
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiState
 import ai.kilocode.rpc.dto.LegacyMigrationDetectionDto
 import ai.kilocode.rpc.dto.LegacyMigrationResultItemDto
 import ai.kilocode.rpc.dto.MigrationItemCategoryDto

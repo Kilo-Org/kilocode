@@ -1,15 +1,15 @@
-package ai.kilocode.client.migration.ui
+package ai.kilocode.client.onboarding.providers.v5migration.ui
 
-import ai.kilocode.client.migration.MigrationItemUiProgress
-import ai.kilocode.client.migration.MigrationSelectionBuilder
-import ai.kilocode.client.migration.MigrationSettingsUiSelections
-import ai.kilocode.client.migration.MigrationUiController
-import ai.kilocode.client.migration.MigrationUiPhase
-import ai.kilocode.client.migration.MigrationUiSelections
-import ai.kilocode.client.migration.MigrationUiState
-import ai.kilocode.client.migration.groupStatus
 import ai.kilocode.client.onboarding.OnboardingRunState
 import ai.kilocode.client.onboarding.OnboardingStepView
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationItemUiProgress
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationSelectionBuilder
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationSettingsUiSelections
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiController
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiPhase
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiSelections
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiState
+import ai.kilocode.client.onboarding.providers.v5migration.groupStatus
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack

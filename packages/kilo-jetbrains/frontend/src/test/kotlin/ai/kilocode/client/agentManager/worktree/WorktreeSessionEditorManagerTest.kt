@@ -5,8 +5,8 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.FakeMigrationUiController
-import ai.kilocode.client.migration.MigrationUiState
+import ai.kilocode.client.onboarding.providers.v5migration.FakeMigrationUiController
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiState
 import ai.kilocode.client.onboarding.FakeOnboardingController
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef

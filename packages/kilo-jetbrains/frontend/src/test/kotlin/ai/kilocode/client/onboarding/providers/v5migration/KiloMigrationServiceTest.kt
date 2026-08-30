@@ -1,4 +1,4 @@
-package ai.kilocode.client.migration
+package ai.kilocode.client.onboarding.providers.v5migration
 
 import ai.kilocode.client.testing.FakeMigrationRpcApi
 import ai.kilocode.rpc.dto.KiloAppStateDto

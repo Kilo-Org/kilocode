@@ -1,9 +1,9 @@
-package ai.kilocode.client.migration
+package ai.kilocode.client.onboarding.providers.v5migration
 
-import ai.kilocode.client.migration.ui.MigrationStepView
 import ai.kilocode.client.onboarding.OnboardingNeed
 import ai.kilocode.client.onboarding.OnboardingProvider
 import ai.kilocode.client.onboarding.OnboardingStepView
+import ai.kilocode.client.onboarding.providers.v5migration.ui.MigrationStepView
 import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.flow.Flow

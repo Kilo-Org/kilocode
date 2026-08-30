@@ -1,4 +1,4 @@
-package ai.kilocode.client.migration
+package ai.kilocode.client.onboarding.providers.v5migration
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

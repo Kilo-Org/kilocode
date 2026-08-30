@@ -1,4 +1,4 @@
-package ai.kilocode.client.migration.ui
+package ai.kilocode.client.onboarding.providers.v5migration.ui
 
 import ai.kilocode.rpc.dto.MigrationItemProgressStatusDto
 import com.intellij.icons.AllIcons

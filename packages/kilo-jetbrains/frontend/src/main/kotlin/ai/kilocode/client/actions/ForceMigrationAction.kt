@@ -1,7 +1,7 @@
 package ai.kilocode.client.actions
 
 import ai.kilocode.client.KiloNotifications
-import ai.kilocode.client.migration.KiloMigrationService
+import ai.kilocode.client.onboarding.providers.v5migration.KiloMigrationService
 import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction

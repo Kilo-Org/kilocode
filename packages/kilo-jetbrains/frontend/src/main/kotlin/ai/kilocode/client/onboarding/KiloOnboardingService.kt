@@ -1,8 +1,8 @@
 package ai.kilocode.client.onboarding
 
 import ai.kilocode.client.app.KiloAppService
-import ai.kilocode.client.migration.KiloMigrationService
-import ai.kilocode.client.migration.MigrationOnboardingProvider
+import ai.kilocode.client.onboarding.providers.v5migration.KiloMigrationService
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationOnboardingProvider
 import ai.kilocode.client.onboarding.ui.OnboardingDialog
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.log.KiloLog

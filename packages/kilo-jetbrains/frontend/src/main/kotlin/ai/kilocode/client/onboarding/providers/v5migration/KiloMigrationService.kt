@@ -1,6 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
-package ai.kilocode.client.migration
+package ai.kilocode.client.onboarding.providers.v5migration
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService
