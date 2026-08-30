@@ -30,6 +30,22 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         assertFalse(dialog.nextButton.isVisible)
     }
 
+    fun `test step state present at construction is reflected without any edt pump`() {
+        // The dialog is modal, so it cannot rely on queued EDT work to compute its initial button
+        // state — a step that is already Done/not-ready when the dialog opens must render
+        // correctly on first paint. Deliberately no settle() here.
+        val view = FakeOnboardingStepView(ready = true)
+        view._run.value = OnboardingRunState.Done
+        val provider = FakeOnboardingProvider("a", newView = { view })
+        val controller = FakeOnboardingController(mapOf("a" to provider))
+        val dialog = OnboardingDialog(controller, listOf(step("a"))) {}
+
+        assertFalse(dialog.runButton.isVisible)
+        assertFalse(dialog.laterButton.isVisible)
+        assertFalse(dialog.skipButton.isVisible)
+        assertTrue(dialog.nextButton.isVisible)
+    }
+
     fun `test run disabled when step not ready`() {
         val view = FakeOnboardingStepView(ready = false)
         val provider = FakeOnboardingProvider("a", newView = { view })

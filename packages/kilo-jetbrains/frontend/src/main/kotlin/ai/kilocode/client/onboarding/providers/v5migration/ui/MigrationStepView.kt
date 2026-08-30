@@ -18,6 +18,8 @@ import ai.kilocode.rpc.dto.MigrationItemCategoryDto
 import ai.kilocode.rpc.dto.MigrationItemStatusDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.asContextElement
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -32,7 +34,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Renders the v5 migration category rows + keep-legacy checkbox as an [OnboardingStepView].
@@ -44,7 +45,11 @@ import kotlinx.coroutines.withContext
 class MigrationStepView(private val migration: MigrationUiController) :
     BorderLayoutPanel(), OnboardingStepView, Disposable {
 
-    private val cs = CoroutineScope(SupervisorJob() + Dispatchers.EDT)
+    // ModalityState.any(): this view is hosted inside a modal dialog, so plain Dispatchers.EDT
+    // work would be queued behind the modal and never run until the dialog closes.
+    private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
+
+    private val cs = CoroutineScope(SupervisorJob() + edt)
 
     private val rows = mutableMapOf<MigrationItemCategoryDto, MigrationItemRow>()
     private val settingsRow = MigrationItemRow(KiloBundle.message("migration.row.settings"), MigrationItemCategoryDto.settings)
@@ -98,9 +103,11 @@ class MigrationStepView(private val migration: MigrationUiController) :
             },
         )
 
-        cs.launch {
-            migration.state.collect { state -> withContext(Dispatchers.EDT) { apply(state) } }
-        }
+        // Seed synchronously so the very first paint already has row visibility, default
+        // selections, and run/ready state applied. The collector below only carries later
+        // transitions (progress, done, error).
+        apply(migration.state.value)
+        cs.launch { migration.state.collect { apply(it) } }
     }
 
     @RequiresEdt
@@ -121,7 +128,7 @@ class MigrationStepView(private val migration: MigrationUiController) :
     private fun apply(state: MigrationUiState) {
         val needed = state as? MigrationUiState.Needed ?: return
         val det = needed.detection
-        if (detection == null || detection != det) {
+        if (detection != det) {
             detection = det
             applyDefaults(det)
         }

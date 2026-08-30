@@ -10,6 +10,8 @@ import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.ColoredListCellRenderer
@@ -51,7 +53,10 @@ internal class OnboardingDialog(
 
     private class Entry(val step: OnboardingStep, val view: OnboardingStepView)
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.EDT)
+    // ModalityState.any(): this dialog is modal, so plain Dispatchers.EDT work would be queued
+    // behind it and never run while it is open — the run-state watchers below would go dead and
+    // Run/Next would never update as a step progresses.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.EDT + ModalityState.any().asContextElement())
     private val entries = linkedMapOf<String, Entry>()
     private val resolved = mutableSetOf<String>()
     private val skipped = mutableSetOf<String>()
