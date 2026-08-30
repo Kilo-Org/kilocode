@@ -5091,6 +5091,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * re-read .kilocodeignore from disk on every alternating lookup. Bounded by
    * insertion order because session directories, not just workspace folders,
    * reach this cache.
+   *
+   * A failed init is evicted rather than cached. `initialize()` lets permission
+   * errors from reading .kilocodeignore propagate, and caching that rejection
+   * would keep failing every later lookup for the same directory.
    */
   private async getIgnoreController(workspaceDir: string): Promise<FileIgnoreController> {
     const cached = this.ignoreControllers.get(workspaceDir)
@@ -5100,6 +5104,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await controller.initialize()
       return controller
     })()
+    void pending.catch(() => {
+      if (this.ignoreControllers.get(workspaceDir) === pending) this.ignoreControllers.delete(workspaceDir)
+    })
     this.ignoreControllers.set(workspaceDir, pending)
     while (this.ignoreControllers.size > KiloProvider.IGNORE_CONTROLLER_LIMIT) {
       const oldest = this.ignoreControllers.keys().next().value

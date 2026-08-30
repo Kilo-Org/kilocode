@@ -2,7 +2,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { mergeFileSearchResults } from "./file-search-results"
-import { mergeFileSearchItems } from "./file-search-items"
+import { mergeFileSearchItems, type FileSearchItem } from "./file-search-items"
 
 /**
  * Bounds on the merged multi-root result, applied after ranking so the best
@@ -79,7 +79,16 @@ function activeIn(dir: string): string | undefined {
   return slash(rel)
 }
 
-type Gathered = { files: string[]; folders: string[]; open: Set<string>; active?: string }
+type Gathered = {
+  files: string[]
+  folders: string[]
+  open: Set<string>
+  active?: string
+  /** Inserted path to its root-relative form, so ranking is not skewed by the filesystem prefix. */
+  relative: Map<string, string>
+}
+
+const EMPTY: Gathered = { files: [], folders: [], open: new Set(), relative: new Map() }
 
 /**
  * Collect one root's candidates, without ranking them.
@@ -91,7 +100,12 @@ type Gathered = { files: string[]; folders: string[]; open: Set<string>; active?
  * Primary-root paths stay relative, preserving today's attachment behavior.
  * Secondary-root paths are made absolute: that is what makes them insertable as
  * mentions while `buildFileAttachments` still refuses to auto-read them, which
- * is the same boundary the "Browse files..." picker relies on.
+ * is the same boundary the "Browse files..." picker relies on. Their relative
+ * form is kept alongside so ranking still judges them on the same basis.
+ *
+ * A root that cannot be read yields nothing rather than throwing. Extra folders
+ * are arbitrary user-chosen directories, and one unreadable `.kilocodeignore`
+ * must not empty the whole mention list.
  */
 async function gather(
   client: KiloClient,
@@ -100,17 +114,31 @@ async function gather(
   open: (dir: string) => Promise<Set<string>>,
   absolute: boolean,
 ): Promise<Gathered> {
-  if (!root) return { files: [], folders: [], open: new Set() }
-  const [files, folders] = await fetchBackend(client, root, query)
-  const tabs = await open(root)
-  const active = activeIn(root)
-  if (!absolute) return { files: files.map(slash), folders: folders.map(slash), open: tabs, active }
-  const abs = (value: string) => slash(path.resolve(root, value))
-  return {
-    files: files.map(abs),
-    folders: folders.map(abs),
-    open: new Set([...tabs].map(abs)),
-    active: active ? abs(active) : undefined,
+  if (!root) return EMPTY
+  try {
+    const [files, folders] = await fetchBackend(client, root, query)
+    const tabs = await open(root)
+    const active = activeIn(root)
+    if (!absolute) {
+      return { files: files.map(slash), folders: folders.map(slash), open: tabs, active, relative: new Map() }
+    }
+    const relative = new Map<string, string>()
+    const abs = (value: string) => {
+      const rel = slash(value)
+      const full = slash(path.resolve(root, value))
+      relative.set(full, rel)
+      return full
+    }
+    return {
+      files: files.map(abs),
+      folders: folders.map(abs),
+      open: new Set([...tabs].map(abs)),
+      active: active ? abs(active) : undefined,
+      relative,
+    }
+  } catch (err) {
+    console.error(`[Kilo New] File search failed for ${root}:`, err)
+    return EMPTY
   }
 }
 
@@ -124,7 +152,16 @@ export async function handleFileSearch(input: Input): Promise<void> {
   const id = input.message.sessionID ?? input.current ?? input.context
   const dir = input.dir(id)
   const query = input.message.query
-  const split = splitRoots(input.roots?.() ?? [], dir)
+  // A root list that throws must not take the mention dropdown down with it;
+  // fall back to searching the session's own directory alone.
+  const split = (() => {
+    try {
+      return splitRoots(input.roots?.() ?? [], dir)
+    } catch (err) {
+      console.error("[Kilo New] Failed to read workspace folders:", err)
+      return { secondary: [] as SearchRoot[] }
+    }
+  })()
   const extras = split.secondary
   const multi = extras.length > 0
 
@@ -139,11 +176,13 @@ export async function handleFileSearch(input: Input): Promise<void> {
   // folder order, and only breaks ties between equally good matches.
   const labels = new Map<string, string>()
   const priority = new Map<string, number>()
+  const relative = new Map<string, string>()
   const groups: Array<{ hits: Gathered; root?: SearchRoot }> = [
     { hits: primary, root: split.primary },
     ...secondary.map((hits, index) => ({ hits, root: extras[index] })),
   ]
   groups.forEach((group, index) => {
+    for (const [full, rel] of group.hits.relative) relative.set(full, rel)
     for (const value of [...group.hits.files, ...group.hits.folders, ...group.hits.open]) {
       if (!priority.has(value)) priority.set(value, index)
       if (multi && group.root && !labels.has(value)) labels.set(value, group.root.name)
@@ -161,20 +200,38 @@ export async function handleFileSearch(input: Input): Promise<void> {
     open: opened,
     active: groups.find((group) => group.hits.active)?.hits.active,
     priority,
+    relative,
   })
-  const folders = groups.flatMap((group) => group.hits.folders)
   const paths = multi ? ranked.slice(0, MULTI_FILE_LIMIT) : ranked
   // Folders need no priority map: mergeFileSearchItems sorts them by match rank
   // and breaks ties on input order, which is already workspace-folder order.
-  const items = mergeFileSearchItems({
+  const merged = mergeFileSearchItems({
     query,
     files: paths,
-    folders: multi ? folders.slice(0, MULTI_FOLDER_LIMIT) : folders,
+    folders: groups.flatMap((group) => group.hits.folders),
     open: opened,
     labels,
   })
+  // Cap folders only after ranking. Slicing the input would hand the whole
+  // allowance to the first root, dropping every added folder before its
+  // entries ever competed.
+  const items = multi ? capFolders(merged, MULTI_FOLDER_LIMIT) : merged
 
   input.post({ type: "fileSearchResult", paths, items, dir, requestId: input.message.requestId })
+}
+
+/** Keep the best `limit` folder entries, leaving files and their order untouched. */
+function capFolders(items: FileSearchItem[], limit: number): FileSearchItem[] {
+  const kept: FileSearchItem[] = []
+  let folders = 0
+  for (const item of items) {
+    if (item.type === "folder") {
+      if (folders >= limit) continue
+      folders++
+    }
+    kept.push(item)
+  }
+  return kept
 }
 
 function settled(result: PromiseSettledResult<{ data: string[] }>, kind: "file" | "folder"): string[] {

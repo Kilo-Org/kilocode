@@ -208,6 +208,108 @@ describe("handleFileSearch", () => {
   })
 })
 
+describe("handleFileSearch resilience and ranking basis", () => {
+  const roots = [
+    { path: "/repo", name: "repo" },
+    { path: "/other", name: "other" },
+  ]
+
+  it("still returns the session's own files when an added folder cannot be read", async () => {
+    const api = multiClient({
+      "/repo": { files: ["src/a.ts"], folders: ["src"] },
+      "/other": { files: ["lib/b.ts"], folders: [] },
+    })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "", requestId: "request-broken-root" },
+      dir: () => "/repo",
+      roots: () => roots,
+      // A .kilocodeignore that cannot be read propagates out of the ignore
+      // controller; it must not empty the whole mention list.
+      open: async (dir) => {
+        if (dir === "/other") throw new Error("EACCES: permission denied")
+        return new Set()
+      },
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(posted).toHaveLength(1)
+    expect(posted[0]!.paths).toEqual(["src/a.ts"])
+    expect(posted[0]!.items).toEqual([
+      { path: "src/a.ts", type: "file", root: "repo" },
+      { path: "src", type: "folder", root: "repo" },
+    ])
+  })
+
+  it("posts a result even when the workspace folder list throws", async () => {
+    const api = multiClient({ "/repo": { files: ["src/a.ts"], folders: [] } })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "", requestId: "request-broken-roots" },
+      dir: () => "/repo",
+      roots: () => {
+        throw new Error("workspace unavailable")
+      },
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(posted).toHaveLength(1)
+    expect(posted[0]!.paths).toEqual(["src/a.ts"])
+  })
+
+  it("does not let the filesystem prefix of an added folder count as a match", async () => {
+    // "nested" occurs in the added folder's own path but nowhere in the file's
+    // relative path. Scoring the absolute form matched every file under that
+    // folder on a query that describes none of them.
+    const api = multiClient({
+      "/repo": { files: ["src/a.ts"], folders: [] },
+      "/deep-nested-name": { files: [], folders: [] },
+    })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "nested", requestId: "request-prefix" },
+      dir: () => "/repo",
+      roots: () => [
+        { path: "/repo", name: "repo" },
+        { path: "/deep-nested-name", name: "deep-nested-name" },
+      ],
+      open: async (dir) => (dir === "/deep-nested-name" ? new Set(["src/zzz.ts"]) : new Set()),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    expect(posted[0]!.paths).not.toContain(abs("/deep-nested-name", "src/zzz.ts"))
+  })
+
+  it("keeps folders from added roots when the primary root fills the cap", async () => {
+    // The primary root alone exceeds the multi-root folder allowance. Slicing
+    // before ranking handed it the whole budget and dropped every added folder.
+    const api = multiClient({
+      "/repo": { files: [], folders: Array.from({ length: 60 }, (_, i) => `pkg-${i}`) },
+      "/other": { files: [], folders: ["target"] },
+    })
+    const posted: Array<Record<string, unknown>> = []
+
+    await handleFileSearch({
+      client: api.value as never,
+      message: { query: "target", requestId: "request-folder-cap" },
+      dir: () => "/repo",
+      roots: () => roots,
+      open: async () => new Set(),
+      post: (message) => posted.push(message as Record<string, unknown>),
+    })
+
+    const items = posted[0]!.items as Array<{ path: string; root?: string }>
+    expect(items.some((item) => item.path === abs("/other", "target"))).toBe(true)
+  })
+})
+
 describe("splitRoots", () => {
   const roots = [
     { path: "/repo", name: "repo" },
