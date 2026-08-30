@@ -143,6 +143,8 @@ export namespace BrowserOwner {
           }),
       )
       if (value.parentSessionId !== session) throw failure("owner_mismatch")
+      // A visible link can precede its creator's sync or survive a failed one.
+      await sync(path.dirname(file))
       return value
     } finally {
       await handle.close()
@@ -170,7 +172,6 @@ export namespace BrowserOwner {
         }
         throw err
       })
-      await sync(path.dirname(file))
       const winner = await read(file, schema, value.parentSessionId)
       if (!winner) throw failure("invalid_record")
       return winner
