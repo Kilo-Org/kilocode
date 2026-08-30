@@ -855,6 +855,10 @@ class KiloBackendAppService private constructor(
         val active = sessions.statuses.value.filterValues { it.type != "idle" }
         if (active.isEmpty()) return
         log.warn("SSE $event while sessions are active; sessions may be cancelled count=${active.size} statuses=${active.values.map { it.type }.distinct()}")
+        // Badged here rather than off the event below, because the reload that follows this restarts the
+        // activity collector and the event could be dropped in the gap. Both still matter: the badge
+        // marks the worktree row, the event lets the open session name its own reason.
+        activity.interrupt(active.keys)
         chat.interrupt(active.keys, ChatEventDto.SessionInterrupted.RELOAD)
     }
 
