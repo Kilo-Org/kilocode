@@ -12,6 +12,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
+import { revertPromptState } from "../../context/session-utils"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
 import { useIndexing } from "../../context/indexing"
@@ -52,12 +53,12 @@ import {
   insertSpacedText,
   isPromptBusy,
   isPathMention,
-  applySandboxStates,
   memoryRest,
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
-import type { ExtensionMessage, ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
+import { sandboxMessages } from "./prompt-sandbox-messages"
+import type { ReviewCommentEntry, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
@@ -73,6 +74,7 @@ import {
   drafts,
   finishPendingSend,
   imageDrafts,
+  mentionDrafts,
   isPendingDraftDiscarded,
   isSessionDraftDiscarded,
   reviewDrafts,
@@ -112,6 +114,9 @@ function readTerminalContext(read: (() => string | undefined) | undefined): stri
 
 interface PromptInputProps {
   blocked?: () => boolean
+  edit?: { sessionID: string; messageID: string }
+  onEditReady?: (ready: boolean) => void
+  onEditComplete?: () => void
   /** When true, session is busy only because a suggestion is pending — treat as idle for input */
   suggesting?: () => boolean
   /** When true, session is busy only because a question is pending — treat as idle for input */
@@ -237,6 +242,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     pendingDraftKey(props.pendingSessionID ?? session.draftSessionID()) ??
     "new"
   const draftKey = () => scopeDraftKey(boxKey(), rawKey())
+  const locked = () => !!props.edit && props.edit.sessionID === session.currentSessionID()
   const saveDraft = (
     key: string,
     next: string,
@@ -399,6 +405,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const scroll = scrollDrafts.get(key) ?? 0
       setText(draft)
       mention.seedFromText(draft)
+      const refs = mentionDrafts.get(key)
+      if (refs) {
+        mention.seedFromParts(refs.paths, draft)
+        mention.seedSessions(refs.sessions, draft)
+      }
       setReviewComments(pending)
       imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
@@ -540,19 +551,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       config(),
       globalConfig(),
     )
-  const isDisabled = () => !server.isConnected()
+  const isDisabled = () => !server.isConnected() || locked()
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const sendReady = () => !isDisabled() && !terminal.pending() && !git.pending() && !props.blocked?.()
+  const canContinue = () => speech.state() === "idle" && !hasInput() && session.canResume()
   const canSend = () =>
-    !isDisabled() &&
-    !terminal.pending() &&
-    !git.pending() &&
-    !props.blocked?.() &&
-    (speech.state() === "recording" || (hasInput() && !speech.active()))
+    sendReady() && (speech.state() === "recording" || (!speech.active() && (hasInput() || canContinue())))
+  const canSendContinue = () => sendReady() && !speech.active() && canContinue()
   const sendLabel = () => {
     if (props.blocked?.()) return language.t("prompt.action.send.blocked")
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
+    if (canSendContinue()) return language.t("prompt.action.continue")
     return language.t("prompt.action.send")
   }
   const showStop = () => isBusy() && !hasInput() && speech.state() !== "recording"
@@ -575,6 +586,65 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         return language.t("prompt.placeholder.default")
     }
   }
+
+  const canEdit = () =>
+    server.isConnected() && !hasInput() && !enhancing() && !speech.active() && !terminal.pending() && !git.pending()
+  createEffect(() => props.onEditReady?.(canEdit()))
+
+  const edit = async (request: NonNullable<PromptInputProps["edit"]>) => {
+    try {
+      if (!canEdit() || request.sessionID !== session.currentSessionID()) return
+      const parts = session.getParts(request.messageID)
+      if (
+        parts.some(
+          (part) =>
+            part.type !== "text" &&
+            (part.type !== "file" ||
+              (!part.source && !(part.mime.startsWith("image/") && part.url.startsWith("data:")))),
+        )
+      )
+        return
+      const state = revertPromptState(parts)
+      if (!state.text.trim() && state.images.length === 0) return
+      const key = draftKey()
+      mention.closeMention()
+      slash.close()
+      ghost.dismiss()
+      if (!(await session.deleteQueuedMessage(request.sessionID, request.messageID))) return
+      if (!session.sessions().some((item) => item.id === request.sessionID)) return
+      const active = draftKey() === key && textareaRef?.isConnected
+      const value = [state.text, active ? text() : drafts.get(key)].filter(Boolean).join("\n\n")
+      const images = [
+        ...state.images.map((image) => ({ ...image, id: crypto.randomUUID(), filename: image.filename ?? "image" })),
+        ...(active ? imageAttach.images() : (imageDrafts.get(key) ?? [])),
+      ]
+      const comments = active ? reviewComments() : (reviewDrafts.get(key) ?? [])
+      savePromptDraft(key, value, comments, images)
+      mentionDrafts.set(key, { paths: state.paths, sessions: state.sessions })
+      if (!active) return
+      enhanceCounter++
+      preEnhanceText = null
+      history.reset()
+      setText(value)
+      mention.seedFromParts(state.paths, value)
+      mention.seedSessions(state.sessions, value)
+      replaceReviewComments(comments)
+      imageAttach.replace(images)
+      adjustHeight()
+      textareaRef?.focus()
+      textareaRef?.setSelectionRange(value.length, value.length)
+    } finally {
+      props.onEditComplete?.()
+    }
+  }
+  createEffect(
+    on(
+      () => props.edit,
+      (request) => {
+        if (request) void edit(request)
+      },
+    ),
+  )
 
   const unsubAutoApprove = vscode.onMessage((message) => {
     if (message.type === "autoApproveState") {
@@ -632,91 +702,29 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imageDrafts.set(target, images)
   }
 
-  const handleSandboxMessage = (message: ExtensionMessage) => {
-    if (message.type === "sandboxDefaultStatus") {
-      const matching = message.requestID !== undefined && message.requestID === sandboxRequest(undefined)
-      if (sandboxID() && !matching) return false
-      if (!server.isConnected()) return true
-      if (matching) clearSandboxRequest(undefined, message.requestID!)
-      const current = sandboxDefault()
-      if (!current || current.revision <= message.revision) {
-        setSandboxDefault({
-          desired: message.desired,
-          enabled: message.enabled,
-          available: message.available,
-          reason: message.reason,
-          revision: message.revision,
-        })
-      }
-      if (matching && !message.available) {
-        showToast({
-          variant: "error",
-          title: language.t("common.requestFailed"),
-          description: message.reason,
-        })
-      }
-      return true
-    }
-
-    if (message.type === "sandboxStatus") {
-      const matching = message.requestID !== undefined && message.requestID === sandboxRequest(message.sessionID)
-      if (!server.isConnected()) return true
-      const current = sandboxes()
-      if (matching) clearSandboxRequest(message.sessionID, message.requestID!)
-      const next = applySandboxStates(current, message)
-      if (next !== current) setSandboxes(next)
-      const state = next[message.sessionID]
-      if (message.sessionID === sandboxID()) {
-        sandboxAttempts = 0
-        if (sandboxRetry) clearTimeout(sandboxRetry)
-        sandboxRetry = undefined
-      }
-      if (matching && !state.available) {
-        showToast({
-          variant: "error",
-          title: language.t("common.requestFailed"),
-          description: state.reason,
-        })
-      }
-      return true
-    }
-
-    if (message.type === "sandboxStatusError") {
-      const matching = message.requestID !== undefined && message.requestID === sandboxRequest(message.sessionID)
-      if (!server.isConnected()) return true
-      const current = sandboxes()
-      const state = current[message.sessionID]
-      if (matching) clearSandboxRequest(message.sessionID, message.requestID!)
-      if ((state?.revision ?? -1) > message.revision) return true
-      if (!message.requestID) {
-        const same = state?.directory === message.directory
-        setSandboxes(
-          applySandboxStates(current, {
-            sessionID: message.sessionID,
-            directory: message.directory,
-            enabled: same ? state.enabled : false,
-            available: false,
-            reason: message.message,
-            version: same ? state.version : 0,
-            revision: message.revision,
-          }),
-        )
-        if (message.sessionID === sandboxID()) retrySandbox(message.sessionID)
-      }
-      if (matching) {
-        showToast({
-          variant: "error",
-          title: language.t("common.requestFailed"),
-          description: message.message,
-        })
-      }
-      return true
-    }
-
-    if (message.type !== "configUpdated") return false
-    requestSandbox()
-    return true
-  }
+  const handleSandboxMessage = sandboxMessages({
+    connected: server.isConnected,
+    session: sandboxID,
+    pending: sandboxRequest,
+    clear: clearSandboxRequest,
+    defaults: sandboxDefault,
+    setDefault: setSandboxDefault,
+    states: sandboxes,
+    setStates: setSandboxes,
+    reset: () => {
+      sandboxAttempts = 0
+      if (sandboxRetry) clearTimeout(sandboxRetry)
+      sandboxRetry = undefined
+    },
+    retry: retrySandbox,
+    refresh: requestSandbox,
+    error: (reason) =>
+      showToast({
+        variant: "error",
+        title: language.t("common.requestFailed"),
+        description: reason,
+      }),
+  })
 
   const unsubscribe = vscode.onMessage((message) => {
     if (handleSandboxMessage(message)) return
@@ -836,6 +844,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   vscode.postMessage({ type: "requestAutoApproveState" })
 
   onCleanup(() => {
+    props.onEditReady?.(false)
     // Persist current draft before unmounting
     saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
     if (sandboxRetry) clearTimeout(sandboxRetry)
@@ -886,6 +895,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const handlePaste = (e: ClipboardEvent) => {
+    if (locked()) {
+      e.preventDefault()
+      return
+    }
     imageAttach.handlePaste(e)
     // After pasting text, the textarea content changes but the layout may not
     // have reflowed yet, causing the caret position to be visually out of sync.
@@ -912,6 +925,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (locked()) return
     // Undo enhanced prompt with Ctrl+Z / ⌘Z
     if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey && preEnhanceText !== null) {
       e.preventDefault()
@@ -1183,6 +1197,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       drafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
+      mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       return
@@ -1208,6 +1223,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       drafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
+      mentionDrafts.delete(draftKey())
       scrollDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       matched.action()
@@ -1217,17 +1233,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const imgs = imageAttach.images()
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
+    if (canSendContinue()) {
+      session.resume()
+      return
+    }
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
     const data = review ? { version: 1 as const, comments: pending } : undefined
-    if (
-      (!message && imgs.length === 0) ||
-      isDisabled() ||
-      speech.active() ||
-      terminal.pending() ||
-      git.pending() ||
-      props.blocked?.()
-    )
-      return
+    if ((!message && imgs.length === 0) || !sendReady() || speech.active()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
@@ -1297,6 +1309,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     drafts.delete(key)
     reviewDrafts.delete(key)
     imageDrafts.delete(key)
+    mentionDrafts.delete(key)
     scrollDrafts.delete(key)
     history.append(draft)
     if (draftKey() !== key) return
@@ -1317,7 +1330,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
       onDragOver={imageAttach.handleDragOver}
       onDragLeave={imageAttach.handleDragLeave}
-      onDrop={imageAttach.handleDrop}
+      onDrop={(event) => {
+        if (locked()) {
+          event.preventDefault()
+          return
+        }
+        imageAttach.handleDrop(event)
+      }}
     >
       <Show when={reviewComments().length > 0}>
         <ReviewComments
@@ -1539,6 +1558,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             }}
             onScroll={syncHighlightScroll}
             aria-disabled={isDisabled()}
+            readOnly={locked()}
             rows={1}
             dir="auto"
           />

@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Provider verbinden",
 
+  "session.activity.waiting": "Wachten op een antwoord of goedkeuring.",
+  "session.activity.error": "Fout of verbinding verbroken.",
+  "session.activity.retry": "Automatisch opnieuw proberen.",
+  "session.activity.busy": "In uitvoering.",
+  "session.activity.done": "Beurt voltooid.",
+  "session.activity.idle": "Niet actief.",
+
   "command.session.new": "Nieuwe sessie",
   "command.session.show.changes": "Wijzigingen tonen",
   "command.review.toggle": "Review in-/uitschakelen",
@@ -179,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktrees doorzoeken",
   "prompt.thinking.tooltip": "Redeneringsinspanning",
   "prompt.action.send": "Verzenden",
+  "prompt.action.continue": "Doorgaan",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
   "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
@@ -1033,6 +1041,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
   "settings.context.compaction.title": "Compactie",
+  "settings.context.compactionModel.title": "Compactiemodel",
+  "settings.context.compactionModel.description":
+    "Model dat wordt gebruikt voor automatische en handmatige compactie. Laat dit leeg om het chatmodel te gebruiken. Kosten, snelheid en de kwaliteit van de samenvatting hangen af van het model.",
+  "settings.context.compactionModel.useChatModel": "Chatmodel gebruiken",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
@@ -1234,6 +1246,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} to-do's voltooid",
   "task.backgroundAgents.running.one": "1 achtergrondagent",
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
+  "task.backgroundAgents.more": "+{{count}} meer",
   "task.backgroundAgents.open": "Achtergrondagent openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",

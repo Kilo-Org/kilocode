@@ -145,6 +145,13 @@ export interface SendMessageFailedMessage {
   review?: import("../../../../src/shared/review-comments").ReviewMessageData
 }
 
+export interface SessionResumeResultMessage {
+  type: "sessionResumeResult"
+  sessionID: string
+  requestID: string
+  error?: string
+}
+
 export interface SessionCommandCompletedMessage {
   type: "sessionCommandCompleted"
   messageID: string
@@ -170,6 +177,7 @@ export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
   reason: SessionCloseReason
+  parentID?: string
 }
 
 export interface SessionErrorMessage {
@@ -230,6 +238,14 @@ export interface MessageRemovedMessage {
   type: "messageRemoved"
   sessionID: string
   messageID: string
+}
+
+export interface DeleteMessageResultMessage {
+  type: "deleteMessageResult"
+  sessionID: string
+  messageID: string
+  requestID?: string
+  success: boolean
 }
 
 export interface MessagesLoadedMessage {
@@ -1426,6 +1442,7 @@ export type ExtensionMessage =
   | ConnectionStateMessage
   | ErrorMessage
   | SendMessageFailedMessage
+  | SessionResumeResultMessage
   | SessionCommandCompletedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
@@ -1442,6 +1459,7 @@ export type ExtensionMessage =
   | SessionUpdatedMessage
   | SessionDeletedMessage
   | MessageRemovedMessage
+  | DeleteMessageResultMessage
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage

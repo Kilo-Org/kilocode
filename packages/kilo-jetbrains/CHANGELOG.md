@@ -1,5 +1,33 @@
 # Changelog
 
+## 7.6.0
+
+### Minor Changes
+
+- [#13521](https://github.com/Kilo-Org/kilocode/pull/13521) [`a453e2d`](https://github.com/Kilo-Org/kilocode/commit/a453e2d231fd2275d6a0ac84bb17e3e888e29abb) - Show a branch-aware tip on the empty session screen: suggest running work in a worktree with a link when you're on a plain checkout, and confirm isolation when you're already in one.
+
+- [#13482](https://github.com/Kilo-Org/kilocode/pull/13482) [`ec94fdc`](https://github.com/Kilo-Org/kilocode/commit/ec94fdc791ea52fb1faee1ec21536fc58a2f29bf) - Stop treating a manually stopped session as a failure, and add a Retry action to failed turns. Pressing Stop now shows a short "Stopped" note instead of an error badge and attention dot. Retry continues the failed turn where it stopped, keeping the conversation and any file changes it already made, and runs with the model and effort selected at that moment — so switching away from an unavailable provider and pressing Retry picks the new one up. This includes failures that never produced a reply, such as missing provider credentials.
+
+- [#13521](https://github.com/Kilo-Org/kilocode/pull/13521) [`dfaa30b`](https://github.com/Kilo-Org/kilocode/commit/dfaa30b0b0fc79d2d048da6b8c94039c9d94476f) - Add a toggle to show or hide the session list in a worktree editor tab. The choice is remembered per worktree, and while the list is hidden the toggle shows the session count or flags a session that needs your attention.
+
+- [#13396](https://github.com/Kilo-Org/kilocode/pull/13396) [`b9d4d87`](https://github.com/Kilo-Org/kilocode/commit/b9d4d874f76c034626e628a29f50a82b028901d0) - Render Mermaid code fences as inline diagrams in JetBrains chat markdown, and open any diagram in its own editor tab with Diagram and Source views.
+
+### Patch Changes
+
+- [#13396](https://github.com/Kilo-Org/kilocode/pull/13396) [`54b7225`](https://github.com/Kilo-Org/kilocode/commit/54b7225c4d30775cd5918aa77e410fc55889221f) - Click a diagram in chat to open it in a resizable viewer window with zoom controls, trackpad pinch zoom, drag to pan, double click to fit and scrollbars. The diagram editor tab uses the same viewer. Copying a rendered diagram, from the viewer or from chat, now puts the picture on the clipboard.
+
+- [#13520](https://github.com/Kilo-Org/kilocode/pull/13520) [`bac3e7a`](https://github.com/Kilo-Org/kilocode/commit/bac3e7a7a83bdcc0ec8b93ede2fa49adb88fd133) - Show why a turn failed instead of letting the session stop with no visible reason. The reason is written once, on the turn that failed, and Retry sits below it whenever that turn can be continued. Failures the conversation has already moved past no longer leave cards behind mid-transcript, and failed sessions are flagged in history, worktree rows, and their editor tab the same way an error or a pending question is.
+
+- [#13520](https://github.com/Kilo-Org/kilocode/pull/13520) [`b3f68e0`](https://github.com/Kilo-Org/kilocode/commit/b3f68e0a2ac9ecf44e3dadfec54e41f6dd1f8273) - Show a warning when a provider ends a response without signalling that it finished, instead of quietly returning the session to idle. The warning also appears when reopening the session.
+
+- [#13521](https://github.com/Kilo-Org/kilocode/pull/13521) [`d96b1b3`](https://github.com/Kilo-Org/kilocode/commit/d96b1b3c3d2a5424b0d5a5ecb299731cd1e88a37) - Label the Kilo tool window's create buttons as + Session and + Worktree with a compact plus icon.
+
+- [#13440](https://github.com/Kilo-Org/kilocode/pull/13440) [`85e13e5`](https://github.com/Kilo-Org/kilocode/commit/85e13e59fcb7e9cdc4d717b50e9ef92ec3e54471) - Detect a worktree's pull request reliably in Agent Manager. Imported PRs — including PRs from forks — hand-made worktrees, and locally renamed branches now show their PR badge, the current repository row gets one too, and a freshly imported PR no longer waits out the status poll. Imported PR branches also get proper git tracking, so `git push` and `git pull` work in the new worktree.
+
+- [#13440](https://github.com/Kilo-Org/kilocode/pull/13440) [`c3066e9`](https://github.com/Kilo-Org/kilocode/commit/c3066e988b0d8a0b56289f410f0f2a8de640fe3d) - Stop the New Worktree dialog from flashing the previous tab's content when switching between New, From PR, and From Branch.
+
+- [#13525](https://github.com/Kilo-Org/kilocode/pull/13525) [`66e6871`](https://github.com/Kilo-Org/kilocode/commit/66e687169973e917e415a6401586a24cdcf6a79a) - Stop showing a false "Git is not installed" warning for worktrees that were deleted from disk
+
 ## 7.4.24
 
 ### Patch Changes
@@ -315,6 +343,45 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.1] - 2026-08-28
+
+### Added
+
+- Render Mermaid diagrams directly in JetBrains chat, with editor-tab viewing, zoom, pan, fit-to-view, source view, and PNG copy support.
+- Add clearer JetBrains worktree session empty states, labeled create actions, and a persisted toggle for showing or hiding the worktree session list.
+
+### Fixed
+
+- Retry failed JetBrains turns by continuing the original request, keeping transcript and workspace context intact instead of rolling back or appending a placeholder prompt.
+- Surface JetBrains failed-turn errors more clearly and hide the failure card as soon as Retry starts.
+- Prevent compaction recovery from replaying requests incorrectly, looping, or dropping pending tool progress in Kilo Core.
+- Avoid unsafe indexing and checkpoint cleanup behavior in filesystem roots, home directories, and protected parent directories.
+- Return real subagent results instead of empty task responses in Kilo Core.
+- Avoid duplicated plan-mode permission rule stacking.
+
+### Changed
+
+- Update the pinned Kilo Core CLI used by JetBrains from 7.4.23 to 7.5.5.
+- Improve JetBrains worktree session guidance with branch-aware copy and localized empty-state text.
+
+## [7.1.1-rc.1] - 2026-08-27
+
+### Added
+
+- Open Mermaid diagrams in JetBrains editor tabs with zoom, pan, fit-to-view, source view, and PNG copy support.
+- Add clearer JetBrains worktree session empty states, labeled create actions, and a persisted toggle for showing or hiding the worktree session list.
+
+### Fixed
+
+- Retry failed JetBrains turns by continuing the original request, keeping transcript and workspace context intact instead of rolling back or appending a placeholder prompt.
+- Surface JetBrains failed-turn errors more clearly and hide the failure card as soon as Retry starts.
+- Avoid duplicated plan-mode permission rule stacking in Kilo Core.
+
+### Changed
+
+- Update the pinned Kilo Core CLI used by JetBrains from 7.4.23 to 7.5.5.
+- Improve JetBrains worktree session UX with branch-aware guidance and localized copy updates.
 
 ## [7.1.0] - 2026-08-26
 

@@ -17,8 +17,10 @@ type Ctx = {
   post: (msg: unknown) => void
   browserSettings: () => void
   exportTranscript: (sessionID: string) => Promise<void>
+  resume: (sessionID: string, messageID: string, requestID: string) => Promise<void>
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
+  activity: (state: unknown) => void
   speechToTextModels: () => Promise<void>
   modelUsage: (message: ModelUsageMessage) => Promise<void>
   backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
@@ -55,10 +57,27 @@ async function routeBackgroundMessage(
   return undefined
 }
 
+function isResume(input: { sessionID?: unknown; messageID?: unknown; requestID?: unknown }): input is {
+  sessionID: string
+  messageID: string
+  requestID: string
+} {
+  return (
+    typeof input.sessionID === "string" && typeof input.messageID === "string" && typeof input.requestID === "string"
+  )
+}
+
 export async function routeEarlyMessage(
-  message: { type: string; id?: unknown; text?: unknown },
+  message: { type: string; id?: unknown; text?: unknown; state?: unknown },
   ctx: Ctx,
 ): Promise<boolean> {
+  if (message.type === "resumeSession") {
+    const input = message as { sessionID?: unknown; messageID?: unknown; requestID?: unknown }
+    if (isResume(input)) {
+      await ctx.resume(input.sessionID, input.messageID, input.requestID)
+    }
+    return true
+  }
   if (message.type === "copyToClipboard") {
     if (typeof message.id !== "string") return true
     if (typeof message.text !== "string") {
@@ -86,6 +105,10 @@ export async function routeEarlyMessage(
   if (message.type === "exportSessionTranscript") {
     const input = message as { sessionID?: unknown }
     if (typeof input.sessionID === "string") await ctx.exportTranscript(input.sessionID)
+    return true
+  }
+  if (message.type === "sessionActivity") {
+    ctx.activity(message.state)
     return true
   }
   if (message.type === "sidebar.openSessions") {

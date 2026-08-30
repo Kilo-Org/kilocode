@@ -87,4 +87,13 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
      * `git worktree list` (unknown paths dropped, missing ones appended). Returns true when written.
      */
     suspend fun reorder(directory: String, paths: List<String>): Boolean
+
+    /**
+     * Returns the persisted session-list visibility for [directory], or null when the user has not
+     * chosen a value yet.
+     */
+    suspend fun sessionList(directory: String): Boolean?
+
+    /** Records the session-list visibility for [directory]. Returns true when written. */
+    suspend fun setSessionList(directory: String, visible: Boolean): Boolean
 }

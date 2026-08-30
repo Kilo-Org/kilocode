@@ -67,8 +67,6 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminali Aç",
   "agentManager.tab.newOptions": "Daha fazla yeni sekme seçeneği",
-  "agentManager.tabsMenu.status.waiting": "Bekliyor",
-  "agentManager.tabsMenu.status.retry": "Yeniden",
   "agentManager.sidebarSearch.label": "Worktree'leri ve oturumları ara",
   "agentManager.sidebarSearch.scope":
     "Yerel çalışma alanını, yerel oturumları, Worktree'leri ve bunların oturumlarını arar",

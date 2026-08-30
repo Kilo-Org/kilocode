@@ -102,6 +102,29 @@ val worktreeRoot = providers.gradleProperty("kilo.dev.worktree.root").orElse(
     providers.provider { rootProject.layout.projectDirectory.asFile.parentFile.parentFile.canonicalPath }
 )
 
+val ides = file(".intellijPlatform/ides")
+val corrupt = ides.listFiles()
+    ?.filter { ide ->
+        ide.isDirectory && (
+            ide.walkTopDown().none { it.name == "product-info.json" } ||
+                ide.resolve("lib").listFiles()?.any { jar -> jar.isFile && jar.extension == "jar" } != true
+        )
+    }
+    .orEmpty()
+
+if (corrupt.isNotEmpty()) {
+    val paths = corrupt.joinToString("\n") { ide -> "- ${ide.absolutePath}" }
+    error(
+        """
+        Incomplete IntelliJ Platform extraction detected:
+        $paths
+
+        Remove .intellijPlatform/ides, .intellijPlatform/localPlatformArtifacts, .intellijPlatform/layoutIndex,
+        and .intellijPlatform/coroutines-javaagent.jar, then rerun the Gradle task.
+        """.trimIndent(),
+    )
+}
+
 version = ver
 
 plugins {

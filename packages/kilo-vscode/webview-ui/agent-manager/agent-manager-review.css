@@ -192,11 +192,6 @@
   padding: 4px 6px;
 }
 
-.am-file-tree-group {
-  display: flex;
-  flex-direction: column;
-}
-
 /* Shared row base for files and directories */
 .am-file-tree-dir,
 .am-file-tree-file {

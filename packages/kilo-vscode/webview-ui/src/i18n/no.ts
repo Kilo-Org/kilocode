@@ -62,6 +62,13 @@ export const dict = {
 
   "command.provider.connect": "Koble til leverandør",
 
+  "session.activity.waiting": "Venter på et svar eller en godkjenning.",
+  "session.activity.error": "Feil eller tilkobling brutt.",
+  "session.activity.retry": "Prøver automatisk på nytt.",
+  "session.activity.busy": "Pågår.",
+  "session.activity.done": "Runde fullført.",
+  "session.activity.idle": "Kjører ikke.",
+
   "command.session.new": "Ny sesjon",
   "command.session.show.changes": "Vis endringer",
   "command.review.toggle": "Veksle gjennomgang",
@@ -181,6 +188,7 @@ export const dict = {
   "prompt.worktrees.search": "Søk i Worktrees",
   "prompt.thinking.tooltip": "Resonnementsinnsats",
   "prompt.action.send": "Send",
+  "prompt.action.continue": "Fortsett",
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.send.recording": "Transkriber og send",
   "prompt.action.stop": "Stopp",
@@ -1060,6 +1068,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
   "settings.context.compaction.title": "Komprimering",
+  "settings.context.compactionModel.title": "Komprimeringsmodell",
+  "settings.context.compactionModel.description":
+    "Modell som brukes for automatisk og manuell komprimering. La feltet stå tomt for å bruke chatmodellen. Kostnad, hastighet og kvaliteten på sammendraget avhenger av modellen.",
+  "settings.context.compactionModel.useChatModel": "Bruk chatmodell",
   "settings.context.compactionLimit.title": "Grense for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimer når konteksten når denne prosentandelen av modellvinduet. La stå tomt for å bare bruke sikkerhetsbufferen.",
@@ -1244,6 +1256,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} oppgaver fullført",
   "task.backgroundAgents.running.one": "1 bakgrunnsagent",
   "task.backgroundAgents.running.many": "{{count}} bakgrunnsagenter",
+  "task.backgroundAgents.more": "+{{count}} flere",
   "task.backgroundAgents.open": "Åpne bakgrunnsagent",
   "task.backgroundAgents.cancel": "Stopp",
   "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",

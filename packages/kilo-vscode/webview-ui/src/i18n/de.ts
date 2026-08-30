@@ -65,6 +65,13 @@ export const dict = {
 
   "command.provider.connect": "Anbieter verbinden",
 
+  "session.activity.waiting": "Warten auf eine Antwort oder Genehmigung.",
+  "session.activity.error": "Fehler oder Verbindung verloren.",
+  "session.activity.retry": "Automatischer erneuter Versuch.",
+  "session.activity.busy": "In Bearbeitung.",
+  "session.activity.done": "Turn abgeschlossen.",
+  "session.activity.idle": "Nicht aktiv.",
+
   "command.session.new": "Neue Sitzung",
   "command.session.show.changes": "Änderungen anzeigen",
   "command.review.toggle": "Überprüfung umschalten",
@@ -184,6 +191,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktrees durchsuchen",
   "prompt.thinking.tooltip": "Reasoning-Aufwand",
   "prompt.action.send": "Senden",
+  "prompt.action.continue": "Fortsetzen",
   "prompt.action.send.blocked": "Beantworten oder verwerfen Sie zuerst die ausstehende Frage",
   "prompt.action.send.recording": "Transkribieren und senden",
   "prompt.action.stop": "Stopp",
@@ -1086,6 +1094,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
   "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
   "settings.context.compaction.title": "Komprimierung",
+  "settings.context.compactionModel.title": "Komprimierungsmodell",
+  "settings.context.compactionModel.description":
+    "Modell für die automatische und manuelle Komprimierung. Leer lassen, um das Chatmodell zu verwenden. Kosten, Geschwindigkeit und Zusammenfassungsqualität hängen vom Modell ab.",
+  "settings.context.compactionModel.useChatModel": "Chatmodell verwenden",
   "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
   "settings.context.compactionLimit.description":
     "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",
@@ -1277,6 +1289,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} Aufgaben erledigt",
   "task.backgroundAgents.running.one": "1 Hintergrund-Agent",
   "task.backgroundAgents.running.many": "{{count}} Hintergrund-Agenten",
+  "task.backgroundAgents.more": "+{{count}} weitere",
   "task.backgroundAgents.open": "Hintergrund-Agent öffnen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Im Hintergrund fortsetzen",

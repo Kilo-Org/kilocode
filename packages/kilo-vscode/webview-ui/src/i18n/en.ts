@@ -58,6 +58,13 @@ export const dict = {
 
   "command.provider.connect": "Connect provider",
 
+  "session.activity.waiting": "Waiting for an answer or approval.",
+  "session.activity.error": "Error or connection lost.",
+  "session.activity.retry": "Retrying automatically.",
+  "session.activity.busy": "In progress.",
+  "session.activity.done": "Turn completed.",
+  "session.activity.idle": "Not running.",
+
   "command.session.new": "New session",
   "command.session.show.changes": "Show Changes",
   "command.review.toggle": "Toggle review",
@@ -178,6 +185,7 @@ export const dict = {
   "prompt.worktrees.search": "Search worktrees",
   "prompt.thinking.tooltip": "Reasoning effort",
   "prompt.action.send": "Send",
+  "prompt.action.continue": "Continue",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",
   "prompt.action.stop": "Stop",
@@ -1038,6 +1046,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
   "settings.context.compaction.title": "Compaction",
+  "settings.context.compactionModel.title": "Compaction model",
+  "settings.context.compactionModel.description":
+    "Model used for automatic and manual compaction. Leave unset to use the chat model. Cost, speed, and summary quality depend on the model.",
+  "settings.context.compactionModel.useChatModel": "Use chat model",
   "settings.context.compactionLimit.title": "Auto Compaction Limit",
   "settings.context.compactionLimit.description":
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
@@ -1240,6 +1252,7 @@ export const dict = {
   "task.backgroundAgents.dismiss": "Dismiss",
   "task.backgroundAgents.clearFinished": "Clear finished",
   "task.backgroundAgents.summary": "{{running}} of {{total}} background agents running",
+  "task.backgroundAgents.more": "+{{count}} more",
   "task.backgroundAgents.status.running": "Running",
   "task.backgroundAgents.status.completed": "Done",
   "task.backgroundAgents.status.cancelled": "Cancelled",

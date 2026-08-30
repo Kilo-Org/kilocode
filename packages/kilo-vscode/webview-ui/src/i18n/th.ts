@@ -58,6 +58,13 @@ export const dict = {
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 
+  "session.activity.waiting": "กำลังรอคำตอบหรือการอนุมัติ",
+  "session.activity.error": "เกิดข้อผิดพลาดหรือการเชื่อมต่อขาดหาย",
+  "session.activity.retry": "กำลังลองใหม่โดยอัตโนมัติ",
+  "session.activity.busy": "กำลังดำเนินการ",
+  "session.activity.done": "จบรอบการทำงานแล้ว",
+  "session.activity.idle": "ไม่ได้ทำงานอยู่",
+
   "command.session.new": "เซสชันใหม่",
   "command.session.show.changes": "แสดงการเปลี่ยนแปลง",
   "command.review.toggle": "สลับการตรวจสอบ",
@@ -177,6 +184,7 @@ export const dict = {
   "prompt.worktrees.search": "ค้นหา Worktree",
   "prompt.thinking.tooltip": "ความพยายามในการให้เหตุผล",
   "prompt.action.send": "ส่ง",
+  "prompt.action.continue": "ดำเนินการต่อ",
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.send.recording": "ถอดเสียงและส่ง",
   "prompt.action.stop": "หยุด",
@@ -1041,6 +1049,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
   "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
   "settings.context.compaction.title": "การบีบอัด",
+  "settings.context.compactionModel.title": "โมเดลสำหรับการบีบอัด",
+  "settings.context.compactionModel.description":
+    "โมเดลที่ใช้สำหรับการบีบอัดอัตโนมัติและด้วยตนเอง เว้นว่างไว้เพื่อใช้โมเดลแชท ค่าใช้จ่าย ความเร็ว และคุณภาพของสรุปขึ้นอยู่กับโมเดล",
+  "settings.context.compactionModel.useChatModel": "ใช้โมเดลแชท",
   "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
   "settings.context.compactionLimit.description":
     "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",
@@ -1224,6 +1236,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
   "task.backgroundAgents.running.one": "เอเจนต์เบื้องหลัง 1 ตัว",
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
+  "task.backgroundAgents.more": "+{{count}} เพิ่มเติม",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",

@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Підключити провайдера",
 
+  "session.activity.waiting": "Очікується відповідь або підтвердження.",
+  "session.activity.error": "Помилка або втрата з'єднання.",
+  "session.activity.retry": "Автоматична повторна спроба.",
+  "session.activity.busy": "Виконується.",
+  "session.activity.done": "Хід завершено.",
+  "session.activity.idle": "Не запущено.",
+
   "command.session.new": "Нова сесія",
   "command.session.show.changes": "Показати зміни",
   "command.review.toggle": "Перемкнути огляд",
@@ -179,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
   "prompt.action.send": "Надіслати",
+  "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
@@ -1020,6 +1028,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
   "settings.context.compaction.title": "Стискання",
+  "settings.context.compactionModel.title": "Модель стискання",
+  "settings.context.compactionModel.description":
+    "Модель, що використовується для автоматичного та ручного стискання. Залиште поле порожнім, щоб використовувати модель чату. Вартість, швидкість і якість підсумку залежать від моделі.",
+  "settings.context.compactionModel.useChatModel": "Використовувати модель чату",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
@@ -1220,6 +1232,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} завдань виконано",
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
+  "task.backgroundAgents.more": "+{{count}} ще",
   "task.backgroundAgents.open": "Відкрити фонового агента",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",

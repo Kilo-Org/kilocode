@@ -63,6 +63,13 @@ export const dict = {
 
   "command.provider.connect": "공급자 연결",
 
+  "session.activity.waiting": "답변 또는 승인을 기다리는 중입니다.",
+  "session.activity.error": "오류 또는 연결 끊김.",
+  "session.activity.retry": "자동으로 재시도하는 중입니다.",
+  "session.activity.busy": "진행 중입니다.",
+  "session.activity.done": "턴이 완료되었습니다.",
+  "session.activity.idle": "실행 중이 아닙니다.",
+
   "command.session.new": "새 세션",
   "command.session.show.changes": "변경 사항 보기",
   "command.review.toggle": "검토 토글",
@@ -181,6 +188,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktree 검색",
   "prompt.thinking.tooltip": "추론 강도",
   "prompt.action.send": "전송",
+  "prompt.action.continue": "계속",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
@@ -1044,6 +1052,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",
+  "settings.context.compactionModel.title": "압축 모델",
+  "settings.context.compactionModel.description":
+    "자동 및 수동 압축에 사용하는 모델입니다. 채팅 모델을 사용하려면 설정하지 않은 상태로 두세요. 비용, 속도 및 요약 품질은 모델에 따라 달라집니다.",
+  "settings.context.compactionModel.useChatModel": "채팅 모델 사용",
   "settings.context.compactionLimit.title": "자동 압축 한도",
   "settings.context.compactionLimit.description":
     "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",
@@ -1227,6 +1239,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} 할 일 완료",
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
+  "task.backgroundAgents.more": "+{{count}}개 더",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
