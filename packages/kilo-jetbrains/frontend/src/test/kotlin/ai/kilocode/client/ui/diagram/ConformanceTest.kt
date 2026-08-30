@@ -16,7 +16,7 @@ class ConformanceTest {
 
     @Test
     fun `every corpus diagram produces a finite scene`() {
-        for (name in CORPUS) {
+        for (name in CORPUS.keys) {
             val out = runBlocking { engine.draw(read(name), spec()) }
             val scene = scene(out)
 
@@ -28,9 +28,8 @@ class ConformanceTest {
 
     @Test
     fun `corpus diagrams report the detected type`() {
-        for (name in CORPUS) {
+        for ((name, expected) in CORPUS) {
             val out = runBlocking { engine.draw(read(name), spec()) }
-            val expected = if (name.startsWith("flow")) Type.Flowchart else Type.Sequence
 
             assertEquals(expected, scene(out).type, "$name resolved the wrong type")
         }
@@ -38,7 +37,7 @@ class ConformanceTest {
 
     @Test
     fun `rendering is deterministic across runs`() {
-        for (name in CORPUS) {
+        for (name in CORPUS.keys) {
             val first = runBlocking { engine.draw(read(name), spec()) }
             val second = runBlocking { Mermaid(FakeMeasure()).draw(read(name), spec()) }
 
@@ -48,7 +47,7 @@ class ConformanceTest {
 
     @Test
     fun `text marks never lose their content`() {
-        for (name in CORPUS) {
+        for (name in CORPUS.keys) {
             val out = runBlocking { engine.draw(read(name), spec()) }
             val texts = flatten(scene(out).marks).filterIsInstance<Mark.Text>()
 
@@ -64,15 +63,35 @@ class ConformanceTest {
     }
 
     internal companion object {
-        val CORPUS = listOf(
-            "flow-basic",
-            "flow-shapes",
-            "flow-subgraph",
-            "flow-cycle",
-            "flow-long",
-            "seq-basic",
-            "seq-blocks",
-            "seq-notes",
+        val CORPUS = mapOf(
+            "flow-basic" to Type.Flowchart,
+            "flow-shapes" to Type.Flowchart,
+            "flow-subgraph" to Type.Flowchart,
+            "flow-cycle" to Type.Flowchart,
+            "flow-long" to Type.Flowchart,
+            "seq-basic" to Type.Sequence,
+            "seq-blocks" to Type.Sequence,
+            "seq-notes" to Type.Sequence,
+            "class-basic" to Type.Class,
+            "state-basic" to Type.State,
+            "er-basic" to Type.Er,
+            "journey-basic" to Type.Journey,
+            "gantt-basic" to Type.Gantt,
+            "pie-basic" to Type.Pie,
+            "quadrant-basic" to Type.Quadrant,
+            "requirement-basic" to Type.Requirement,
+            "git-basic" to Type.Git,
+            "c4-basic" to Type.C4,
+            "mindmap-basic" to Type.Mindmap,
+            "timeline-basic" to Type.Timeline,
+            "sankey-basic" to Type.Sankey,
+            "xychart-basic" to Type.XyChart,
+            "block-basic" to Type.Block,
+            "packet-basic" to Type.Packet,
+            "kanban-basic" to Type.Kanban,
+            "architecture-basic" to Type.Architecture,
+            "radar-basic" to Type.Radar,
+            "treemap-basic" to Type.Treemap,
         )
     }
 }
