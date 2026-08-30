@@ -299,7 +299,7 @@ describe("RemoteProtocol", () => {
 
   test.each(["cli", "remote"])("heartbeat preserves full %s instance metadata and capabilities", (kind) => {
     const msg = {
-      type: "heartbeat",
+      type: "heartbeat" as const,
       protocolVersion: "1.0.0",
       sessions: [{ id: "s1", status: "busy", title: "Task", gitBranch: "feature/session-branch-is-not-truncated" }],
       instance: {

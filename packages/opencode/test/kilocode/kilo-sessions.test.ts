@@ -553,6 +553,7 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
       fn: async () => {
         await KiloSessions.enableRemote()
         const first = await capturedGetSessions()()
+        if (!first.instance) throw new Error("initial heartbeat is missing its instance advertisement")
         const { AppRuntime } = await import("../../src/effect/app-runtime")
         const { Vcs } = await import("../../src/project/vcs")
         const vcs = await AppRuntime.runPromise(Vcs.Service.use((svc) => Effect.succeed(svc)))
@@ -576,6 +577,7 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
         const branch = spyOn(vcs, "branch").mockReturnValue(Effect.succeed("main"))
         await KiloSessions.enableRemote()
         const first = await capturedGetSessions()()
+        if (!first.instance) throw new Error("initial heartbeat is missing its instance advertisement")
         const chat = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
         KiloSessions.setAttachedSessions([chat.id])
         for (const [input, expected] of [
