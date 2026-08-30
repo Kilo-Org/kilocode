@@ -1,5 +1,6 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -9,6 +10,8 @@ import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.SetupScriptTargetDto
+import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.AnAction
@@ -108,6 +111,11 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("<reference ref=\"Kilo.OpenConfigGroup\"/>"))
         assertFalse(xml.contains("<action id=\"Kilo.ShowProfile\""))
         assertFalse(xml.contains("<reference ref=\"Kilo.ShowProfile\"/>"))
+
+        // The setup-script action lives only in the worktree row menu, not the tool-window popup.
+        val settingsGroupStart = xml.indexOf("<group id=\"Kilo.SettingsGroup\">")
+        val settingsGroupEnd = xml.indexOf("</group>", settingsGroupStart)
+        assertFalse(xml.substring(settingsGroupStart, settingsGroupEnd).contains("Kilo.OpenSetupScript"))
     }
 
     fun `test core info action shows version and architecture`() {
@@ -302,6 +310,94 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals(0, rpc.localConfigPathCalls)
     }
 
+    fun `test setup script action says open when target exists`() {
+        rpc.setupScriptExists = true
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "~/.kilo/setup-script", true)
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertEquals("Open Worktree Setup", event.presentation.text)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test setup script action says create when target is missing`() {
+        rpc.setupScriptExists = false
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "~/.kilo/setup-script", false)
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertEquals("Create Worktree Setup", event.presentation.text)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test setup script action refreshes missing target in background`() {
+        rpc.setupScriptExists = true
+        val call = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeSetupScriptTarget = {
+            call.complete(Unit)
+            gate.await()
+        }
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"))
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+        // No cached target yet: defaults to the "Open" wording, same as a resolved existing script.
+        assertEquals("Open Worktree Setup", event.presentation.text)
+        await(call)
+        assertEquals(1, rpc.setupScriptTargetCalls.size)
+
+        gate.complete(Unit)
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "/test/.kilo/setup-script", false)
+
+        val next = event(action, workspace = workspace("/test"))
+        update(action, next)
+
+        assertEquals("Create Worktree Setup", next.presentation.text)
+    }
+
+    fun `test setup script action disables without directory`() {
+        val action = OpenSetupScriptAction()
+        val event = event(action)
+
+        update(action, event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
+    }
+
+    fun `test setup script action hides on the main worktree row`() {
+        val action = OpenSetupScriptAction()
+        val event = event(action, workspace = workspace("/test"), worktree = WorktreeDto("/test", "main", "main", "/test", main = true))
+
+        update(action, event)
+
+        assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    fun `test setup script action visible on a non-main worktree row`() {
+        rpc.setupScriptExists = true
+        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "/test/.kilo/setup-script", true)
+        val action = OpenSetupScriptAction()
+        val event = event(
+            action,
+            workspace = workspace("/test"),
+            worktree = WorktreeDto("/test/.kilo/worktrees/feature-x", "feature-x", "feature-x", "/test/.kilo/worktrees/feature-x"),
+        )
+
+        update(action, event)
+
+        assertTrue(event.presentation.isEnabledAndVisible)
+    }
+
     fun `test settings popup group updates recursively in background`() {
         val group = DefaultActionGroup()
         val wrapped = KiloSettingsAction.popupGroup(group)
@@ -318,6 +414,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
 
         assertEquals(1, rpc.localConfigPathCalls)
         assertEquals(1, rpc.globalConfigPathCalls)
+        assertEquals(0, rpc.setupScriptTargetCalls.size)
     }
 
     fun `test workspace creation prewarms config targets`() {
@@ -334,10 +431,10 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals(1, rpc.globalConfigPathCalls)
     }
 
-    private fun event(action: AnAction, workspace: Workspace? = null, place: String = ""): AnActionEvent {
+    private fun event(action: AnAction, workspace: Workspace? = null, place: String = "", worktree: WorktreeDto? = null): AnActionEvent {
         val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
         presentation.isEnabled = false
-        return AnActionEvent.createFromDataContext(place, presentation, context(workspace))
+        return AnActionEvent.createFromDataContext(place, presentation, context(workspace, worktree))
     }
 
     private fun update(action: AnAction, event: AnActionEvent) {
@@ -360,11 +457,12 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         field.set(service(), target)
     }
 
-    private fun context(workspace: Workspace?): DataContext {
+    private fun context(workspace: Workspace?, worktree: WorktreeDto? = null): DataContext {
         return DataContext { id ->
             when (id) {
                 SessionManager.WORKSPACE_KEY.name -> workspace
                 CommonDataKeys.PROJECT.name -> project.takeIf { workspace != null }
+                WorktreeDataKeys.WORKTREE.name -> worktree
                 else -> null
             }
         }

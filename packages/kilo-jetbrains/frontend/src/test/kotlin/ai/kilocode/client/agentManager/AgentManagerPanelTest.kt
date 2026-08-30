@@ -39,8 +39,11 @@ import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
+import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.SetupScriptTargetDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeDto
@@ -726,6 +729,70 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("branch", file.path.params["source"])
         assertEquals(item.branch, file.path.params["branch"])
         assertEquals(KiloBundle.message("diff.editor.branch.title.named", item.branch), file.name)
+    }
+
+    fun `test open local diff opens the uncommitted changes editor`() {
+        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        assertTrue(edt { panel.canOpenLocalDiff(item) })
+        edt { panel.openLocalDiff(item) }
+        // No branch is passed for the local comparison, so opening resolves the branch name
+        // asynchronously (for the editor title) on KiloDiffEditorService's own scope before
+        // creating the tab, hence pumpUntil rather than this test's own coroutines.drain().
+        val editors = FileEditorManager.getInstance(project)
+        assertTrue(coroutines.pumpUntil { edt { editors.openFiles.isNotEmpty() } })
+
+        val file = edt { editors.openFiles.single() as KiloVirtualFile }
+        assertEquals(KiloDiffEditorKind.ID, file.path.kind)
+        assertEquals(item.path, file.path.params["directory"])
+        assertEquals("local", file.path.params["source"])
+        assertEquals(KiloBundle.message("diff.editor.local.title"), file.name)
+    }
+
+    fun `test open local diff is hidden on the main worktree row`() {
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+
+        assertFalse(edt { panel.canOpenLocalDiff(main()) })
+    }
+
+    fun `test setup script actions are hidden and disabled on the main worktree row`() {
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+
+        assertFalse(edt { panel.canOpenSetupScript(main()) })
+        assertFalse(edt { panel.canRunSetup(main()) })
+    }
+
+    fun `test can run setup script requires an existing script for a non-main worktree row`() {
+        val workspaceRpc = FakeWorkspaceRpcApi()
+        ApplicationManager.getApplication()
+            .replaceService(KiloWorkspaceService::class.java, KiloWorkspaceService(coroutines.scope, workspaceRpc), testRootDisposable)
+        val item = worktree("feature-x")
+        rpc.listed += item
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        assertTrue(edt { panel.canOpenSetupScript(item) })
+        // No cached target yet: hidden, not just disabled, and a background refresh is kicked off.
+        assertFalse(edt { panel.canRunSetup(item) })
+        flush()
+        assertEquals(listOf(controller.directory), workspaceRpc.setupScriptTargetCalls.toList())
+
+        service<KiloWorkspaceService>().setupScript[controller.directory] =
+            SetupScriptTargetDto("${controller.directory}/.kilo/setup-script", "", exists = false)
+        assertFalse(edt { panel.canRunSetup(item) })
+
+        service<KiloWorkspaceService>().setupScript[controller.directory] =
+            SetupScriptTargetDto("${controller.directory}/.kilo/setup-script", "", exists = true)
+        assertTrue(edt { panel.canRunSetup(item) })
     }
 
     fun `test worktree changes clicks use the correct branch after equal-count rows render`() {

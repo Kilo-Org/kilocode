@@ -1,6 +1,7 @@
 package ai.kilocode.client.app
 
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -163,5 +164,28 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         }
 
         assertEquals(listOf("src"), rpc.searchQueries)
+    }
+
+    fun `test ifSetupScriptExists invokes callback when a script is configured`() = runBlocking {
+        rpc.setupScriptExists = true
+        rpc.setupScriptPath = "/test/.kilo/setup-script"
+        var seen: String? = null
+
+        service.ifSetupScriptExists("/test") { seen = it.path }.join()
+        pumpEdt()
+
+        assertEquals("/test/.kilo/setup-script", seen)
+        assertEquals(listOf("/test"), rpc.setupScriptTargetCalls.toList())
+    }
+
+    fun `test ifSetupScriptExists is silent when no script is configured`() = runBlocking {
+        rpc.setupScriptExists = false
+        var called = false
+
+        service.ifSetupScriptExists("/test") { called = true }.join()
+        pumpEdt()
+
+        assertFalse(called)
+        assertEquals(listOf("/test"), rpc.setupScriptTargetCalls.toList())
     }
 }

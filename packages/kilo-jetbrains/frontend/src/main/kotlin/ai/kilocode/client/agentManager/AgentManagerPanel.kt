@@ -13,6 +13,8 @@ import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
+import ai.kilocode.client.agentManager.worktree.runWorktreeSetupScript
+import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
@@ -112,7 +114,10 @@ class AgentManagerPanel(
             open(item, focus)
         },
         menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
-            (row as? WorktreeRow)?.dto?.takeIf { canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) }
+            (row as? WorktreeRow)?.dto?.takeIf {
+                canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) || canOpenLocalDiff(it) ||
+                    canOpenSetupScript(it) || canRunSetup(it)
+            }
         }),
         reorder = ActiveListReorder(
             movable = { row -> row is WorktreeRow && !row.current && row.progress == null },
@@ -138,9 +143,10 @@ class AgentManagerPanel(
         }
         // A fresh worktree changes what git reports, so bypass the refresh throttle instead of
         // leaving the new row without its stats and PR badge until the next poll.
-        controller.onCreated = {
+        controller.onCreated = { created ->
             project?.service<WorktreeStatusService>()?.refreshStats()
             project?.service<WorktreeStatusService>()?.refreshPr(force = true)
+            autoRunSetupScript(created)
         }
         controller.onReload = { sync() }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
@@ -276,6 +282,56 @@ class AgentManagerPanel(
         val target = project ?: return
         if (!canOpenDiff(item)) return
         openKiloDiff(target, item.path, KiloDiffComparison.BASE, item.branch.takeUnless { it == "(detached)" })
+    }
+
+    internal fun canOpenLocalDiff(item: WorktreeDto?): Boolean {
+        if (item == null || item.main || project == null) return false
+        return controller.progress(item.id) == null
+    }
+
+    @RequiresEdt
+    internal fun openLocalDiff(item: WorktreeDto) {
+        val target = project ?: return
+        if (!canOpenLocalDiff(item)) return
+        openKiloDiff(target, item.path, KiloDiffComparison.LOCAL)
+    }
+
+    /** The Open/Create setup-script action is repo-scoped, so it never targets the main worktree row. */
+    internal fun canOpenSetupScript(item: WorktreeDto?): Boolean = item != null && !item.main
+
+    internal fun canRunSetup(item: WorktreeDto?): Boolean {
+        if (item == null || item.main) return false
+        if (controller.progress(item.id) != null) return false
+        val service = service<KiloWorkspaceService>()
+        val target = service.setupScript[controller.directory] ?: run {
+            service.refreshSetupScriptTarget(controller.directory)
+            return false
+        }
+        return target.exists
+    }
+
+    @RequiresEdt
+    internal fun runSetup(item: WorktreeDto) {
+        val target = project ?: return
+        if (!canRunSetup(item)) return
+        val script = service<KiloWorkspaceService>().setupScript[controller.directory] ?: return
+        Telemetry.send("Worktree Setup Script Run", mapOf("surface" to "worktree_row"))
+        runWorktreeSetupScript(target, script, item.path, controller.directory)
+    }
+
+    /**
+     * Fires the setup script right after worktree creation, mirroring VS Code's trigger point but not
+     * its blocking semantics: this does not await the script or gate session creation. Silently does
+     * nothing when [created] is the main worktree or no script is configured, matching VS Code.
+     */
+    @RequiresEdt
+    private fun autoRunSetupScript(created: WorktreeDto) {
+        if (created.main) return
+        val target = project ?: return
+        service<KiloWorkspaceService>().ifSetupScriptExists(controller.directory) { script ->
+            Telemetry.send("Worktree Setup Script Run", mapOf("surface" to "auto"))
+            runWorktreeSetupScript(target, script, created.path, controller.directory)
+        }
     }
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
