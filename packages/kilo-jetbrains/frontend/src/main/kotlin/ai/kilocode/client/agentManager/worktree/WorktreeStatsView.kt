@@ -9,7 +9,8 @@ import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListHitCell
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.client.ui.prTooltip
+import ai.kilocode.client.ui.style
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.ide.BrowserUtil
@@ -17,21 +18,28 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
-import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
-import java.awt.Dimension
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.Icon
 import javax.swing.JPanel
 
+/**
+ * The trailing ahead/behind/diff and PR badges of a worktree row.
+ *
+ * Uses a real layout manager on purpose: a `null` layout resolves min/preferred size through the
+ * peer, which reports the component's *current* size. Inside the list this view is a single render
+ * stamp reused for every row, and [Stack] and [ai.kilocode.client.ui.layout.Align] clamp a child's
+ * preferred width into its `[min, max]` range - so a peer-reported minimum would carry the previous
+ * row's width into the next row's layout and drift the badges off their hit regions.
+ */
 internal class WorktreeStatsView(
     openDiff: (() -> Unit)? = null,
     fill: Boolean = true,
-) : JPanel(null) {
+) : JPanel(BorderLayout()) {
     companion object {
         private val UP: Icon = IconLoader.getIcon("/icons/arrow-up.svg", WorktreeStatsView::class.java)
         private val DOWN: Icon = IconLoader.getIcon("/icons/arrow-down-to-line.svg", WorktreeStatsView::class.java)
@@ -51,11 +59,10 @@ internal class WorktreeStatsView(
     // it is always the rightmost element.
     private val row = Stack.horizontal(UiStyle.Gap.md()).next(changeHit).next(prHit)
     private var url: String? = null
-    private var stats: WorktreeStatsDto? = null
-    private var pull: WorktreePrDto? = null
+    private var state: State? = null
 
     init {
-        add(row)
+        add(row, BorderLayout.CENTER)
         changeHit.act = openDiff
         prHit.act = { url?.let(BrowserUtil::browse) }
         diff.toolTipText = KiloBundle.message("worktree.stats.tooltip", 0, 0, 0, 0)
@@ -83,21 +90,29 @@ internal class WorktreeStatsView(
     }
 
     fun update(stats: WorktreeStatsDto?, pull: WorktreePrDto?) {
-        if (this.stats == stats && this.pull == pull) return
-        this.stats = stats
-        this.pull = pull
-        sync(stats, pull?.let { ActiveListBadge("#${it.number}", style(it.state)) }, pull?.url, pull?.let(::prTooltip))
+        sync(
+            State(
+                stats,
+                pull?.let { ActiveListBadge("#${it.number}", style(it.state)) },
+                pull?.url,
+                pull?.let(::prTooltip),
+            ),
+        )
     }
 
     fun update(stats: WorktreeStatsDto?, badge: ActiveListBadge?, prTip: String? = badge?.text) {
-        if (this.stats == stats && pull == null && (pr.icon as? FilledBadgeIcon)?.text == badge?.text && prHit.tip == prTip) return
-        this.stats = stats
-        this.pull = null
-        sync(stats, badge, null, prTip)
+        sync(State(stats, badge, null, prTip))
     }
 
-    private fun sync(stats: WorktreeStatsDto?, badge: ActiveListBadge?, link: String?, tip: String?) {
-        val s = stats ?: WorktreeStatsDto("")
+    /**
+     * Applies [next] unless it is already rendered. The memo key must cover everything this method
+     * writes: inside the list one instance renders every row, so a field left out of the key would
+     * carry another row's badge, tooltip, or visibility.
+     */
+    private fun sync(next: State) {
+        if (state == next) return
+        state = next
+        val s = next.stats ?: WorktreeStatsDto("")
         behind.text = s.behind.toString()
         behind.toolTipText = KiloBundle.message("worktree.stats.behind.tooltip")
         behind.isVisible = s.behind > 0
@@ -112,12 +127,12 @@ internal class WorktreeStatsView(
         diff.toolTipText = changeTip
         changeHit.tip = changeTip
         changeHit.toolTipText = changeTip
-        url = link
-        pr.icon = badge?.let { FilledBadgeIcon(it.text, it.style) }
-        pr.toolTipText = tip
-        prHit.tip = tip
-        prHit.toolTipText = tip
-        pr.isVisible = badge != null
+        url = next.link
+        pr.icon = next.badge?.let { FilledBadgeIcon(it.text, it.style) }
+        pr.toolTipText = next.tip
+        prHit.tip = next.tip
+        prHit.toolTipText = next.tip
+        pr.isVisible = next.badge != null
         val changesVisible = behind.isVisible || ahead.isVisible || diff.isVisible
         changeHit.isVisible = changesVisible
         prHit.isVisible = pr.isVisible
@@ -145,18 +160,6 @@ internal class WorktreeStatsView(
         if (comp is Container) comp.components.forEach { applyCursor(it, active) }
     }
 
-    override fun getPreferredSize(): Dimension {
-        val ins = insets
-        val size = row.preferredSize
-        return Dimension(size.width + ins.left + ins.right, size.height + ins.top + ins.bottom)
-    }
-
-    override fun doLayout() {
-        val ins = insets
-        val size = row.preferredSize
-        row.setBounds(ins.left, ins.top, minOf(size.width, width - ins.left - ins.right), minOf(size.height, height - ins.top - ins.bottom))
-    }
-
     private fun count(icon: Icon) = JBLabel().apply {
         this.icon = icon
         iconTextGap = UiStyle.Gap.xs()
@@ -164,6 +167,14 @@ internal class WorktreeStatsView(
         foreground = UiStyle.Colors.weak()
         border = JBUI.Borders.empty()
     }
+
+    /** Everything [sync] renders, so a repeated row can be skipped without leaking stale state. */
+    private data class State(
+        val stats: WorktreeStatsDto?,
+        val badge: ActiveListBadge?,
+        val link: String?,
+        val tip: String?,
+    )
 
     /** A badge wrapper the ActiveList hit-tests for clicks, cursor, and tooltip. */
     private class HitRegion(override val cellId: String) : JPanel(BorderLayout()), ActiveListHitCell {
@@ -182,37 +193,4 @@ internal class WorktreeStatsView(
 
         override fun cellAction(): (() -> Unit)? = act
     }
-}
-
-internal fun style(state: GhState): UiStyle.Badge.Style = when (state) {
-    GhState.OPEN -> UiStyle.Badge.PullRequestOpen
-    GhState.DRAFT -> UiStyle.Badge.PullRequestDraft
-    GhState.MERGED -> UiStyle.Badge.PullRequestMerged
-    GhState.CLOSED -> UiStyle.Badge.PullRequestClosed
-}
-
-internal fun stateLabel(state: GhState): String = when (state) {
-    GhState.OPEN -> KiloBundle.message("worktree.pr.state.open")
-    GhState.DRAFT -> KiloBundle.message("worktree.pr.state.draft")
-    GhState.MERGED -> KiloBundle.message("worktree.pr.state.merged")
-    GhState.CLOSED -> KiloBundle.message("worktree.pr.state.closed")
-}
-
-internal fun prTooltip(pull: WorktreePrDto, name: String? = null): String {
-    val title = pull.title.trim()
-    val head = buildString {
-        append(stateLabel(pull.state))
-        append(" #")
-        append(pull.number)
-        if (title.isNotBlank()) {
-            append(' ')
-            append(title)
-        }
-    }
-    val lines = listOfNotNull(
-        head,
-        name?.takeIf { title.isNotBlank() }?.let { "($it)" },
-        KiloBundle.message("worktree.pr.tooltip.open"),
-    ).map(XmlStringUtil::escapeString)
-    return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }

@@ -1,4 +1,14 @@
-import { type Component, createSignal, createMemo, Show, createEffect, on, type JSXElement } from "solid-js"
+import {
+  type Component,
+  createSignal,
+  createMemo,
+  Show,
+  createEffect,
+  createRenderEffect,
+  on,
+  untrack,
+  type JSXElement,
+} from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
@@ -8,7 +18,6 @@ import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
@@ -39,7 +48,7 @@ import {
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
   sendReviewComments,
-  type AnnotationLabels,
+  labels,
   type AnnotationMeta,
   type ReviewComposer,
   type ReviewDraft,
@@ -62,7 +71,7 @@ import { treeOrder } from "../diff-viewer/file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
 import { ImageDiffView } from "../diff-viewer/ImageDiffView"
 import { createDiffRows, diffSizeKey } from "../diff-viewer/diff-state"
-import { createDiffRequests } from "../diff-viewer/diff-requests"
+import { createDiffRequests, createDiffViewport } from "../diff-viewer/diff-requests"
 
 // --- Data model ---
 
@@ -74,6 +83,7 @@ const DIFF_NOTICE_KEYS: Record<string, string> = {
 interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
+  active?: boolean
   loadingFiles?: Set<string>
   sessionId?: string
   sessionKey?: string
@@ -120,18 +130,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
-  const labels = (): AnnotationLabels => ({
-    commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
-    editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
-    placeholder: t("agentManager.review.commentPlaceholder"),
-    cancel: t("common.cancel"),
-    comment: t("agentManager.review.commentAction"),
-    send: t("prompt.action.send"),
-    save: t("common.save"),
-    sendToChat: t("agentManager.review.sendToChat"),
-    edit: t("common.edit"),
-    delete: t("common.delete"),
-  })
   const localComposer = createReviewComposer()
   const composer = () => props.composer ?? localComposer
   const [manualOpen, setManualOpen] = createSignal<Record<string, string[]>>({})
@@ -159,6 +157,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       },
     ),
   )
+
   const setOpen = (files: string[] | ((prev: string[]) => string[])) => {
     const key = props.sessionKey ?? ""
     const current = open()
@@ -197,6 +196,20 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // so pierre's annotation cache doesn't invalidate and destroy the textarea.
   let draftMeta: AnnotationMeta | null = composer().draft
   let editMeta: AnnotationMeta | null = composer().edit
+  createRenderEffect(
+    on(
+      () => props.active,
+      (active) => {
+        if (!active) return
+        const value = reviewComposerDraft(composer())
+        const edit = reviewComposerEdit(composer())
+        setDraft(value)
+        setEditing(edit)
+        draftMeta = composer().draft
+        editMeta = composer().edit
+      },
+    ),
+  )
 
   // Ref to the scrollable container — used to preserve scroll position when
   // annotation changes cause pierre to fully re-render diffs
@@ -249,6 +262,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     on(
       () => props.sessionKey,
       () => {
+        if (props.active === false) return
         setDraft(null)
         draftMeta = null
         setEditing(null)
@@ -264,7 +278,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     diffs: () => props.diffs,
     open,
     loading: () => props.loadingFiles,
-    send: () => props.onRequestDiff,
+    send: () => (props.active === false ? undefined : props.onRequestDiff),
+    eager: false,
   })
 
   // --- CRUD ---
@@ -327,6 +342,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     on(
       () => [props.diffs, comments()] as const,
       ([diffs, current]) => {
+        if (props.active === false) return
         const valid = sanitizeReviewComments(current, diffs)
         if (valid.length !== current.length) {
           setComments(valid)
@@ -392,8 +408,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     const result = buildFileAnnotations(file, commentsByFile().get(file) ?? [], editing(), draft(), draftMeta, editMeta)
     draftMeta = result.draftMeta
     editMeta = result.editMeta
-    composer().draft = draft() ? draftMeta : null
-    composer().edit = editing() ? editMeta : null
+    if (untrack(() => props.active) !== false) {
+      composer().draft = draft() ? draftMeta : null
+      composer().edit = editing() ? editMeta : null
+    }
     return result.annotations
   }
 
@@ -407,7 +425,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       updateComment,
       deleteComment,
       cancelDraft,
-      labels: labels(),
+      labels: labels(t),
       activeTerminalId: props.activeTerminalId,
       speech: reviewSpeech,
     })
@@ -435,16 +453,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const sendAllToChat = () => {
     const all = comments()
     if (all.length === 0) return
-    window.dispatchEvent(
-      new MessageEvent("message", {
-        data: {
-          type: props.activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
-          comments: all,
-          autoSend: true,
-          targetTerminalId: props.activeTerminalId,
-        },
-      }),
-    )
+    sendReviewComments(all, props.activeTerminalId)
     preserveScroll(() => setComments([]))
     props.onSendAll?.()
   }
@@ -553,7 +562,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
       <Show when={props.loading && props.diffs.length === 0}>
         <div class="am-diff-loading">
-          <Spinner />
           <span>{t("session.review.loadingChanges")}</span>
         </div>
       </Show>
@@ -579,13 +587,16 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                 const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
+                const viewport = createDiffViewport(scroller)
 
                 createEffect(() => {
-                  if (diff.kind === "image" && open().includes(diff.file)) request(diff)
+                  if (props.active === false || !viewport.visible() || !open().includes(diff.file)) return
+                  request(diff, viewport.intersects)
                 })
 
                 return (
                   <Accordion.Item
+                    ref={viewport.ref}
                     value={diff.file}
                     data-slot="session-review-accordion-item"
                     data-file-path={diff.file}
@@ -714,10 +725,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                           fallback={
                             <div class="am-diff-summary-state">
                               <Show when={isLoadingDetail()} fallback={<span>Diff preview loads on demand.</span>}>
-                                <>
-                                  <Spinner />
-                                  <span>Loading diff...</span>
-                                </>
+                                <span>Loading diff...</span>
                               </Show>
                             </div>
                           }
@@ -735,6 +743,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                     diffStyle={props.diffStyle ?? "unified"}
                                     sizeKey={diffSizeKey(props.sessionKey, diff, props.diffStyle ?? "unified")}
                                     virtualized={shouldVirtualizeDiff(diff)}
+                                    visible={viewport.visible() && props.active !== false}
                                     annotations={annotationsForFile(diff.file)}
                                     renderAnnotation={buildAnnotation}
                                     enableGutterUtility={true}

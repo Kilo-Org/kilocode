@@ -148,6 +148,10 @@
   white-space: nowrap;
 }
 
+.worktree-mention-picker [data-slot="list-item"] {
+  text-align: start;
+}
+
 /* ============================================
    Slash Command Dropdown
    ============================================ */

@@ -175,8 +175,13 @@ export function createDocumentInspector(
     openPanel()
     return true
   }
+  const openFile = (file: string, line?: number, column?: number, sessionId = context()) => {
+    if (!sessionId) return false
+    vscode.postMessage({ type: "agentManager.openFile", sessionId, filePath: file, line, column })
+    return true
+  }
   onMount(() => {
-    const handler = (event: Event) => handleDocumentOpen(event, open)
+    const handler = (event: Event) => handleDocumentOpen(event, open, openFile)
     const message = vscode.onMessage((item) => {
       if (item.type === "document.result" || item.type === "agentManager.document") documents.onMessage(item)
     })
@@ -191,10 +196,6 @@ export function createDocumentInspector(
   // Tabs are keyed per worktree, so this hides itself on a worktree with none,
   // and stays visible while the panel is open so it can still be toggled shut.
   const available = () => documents.tabs().length > 0 || isOpen()
-  const openFile = (file: string, line?: number, column?: number) => {
-    const sessionId = context()
-    if (sessionId) vscode.postMessage({ type: "agentManager.openFile", sessionId, filePath: file, line, column })
-  }
   const toggle = () => (isOpen() ? closePanel() : open())
   return { documents, comments, open, openFile, toggle, available, isOpen, scope }
 }
@@ -202,6 +203,7 @@ export function createDocumentInspector(
 export function handleDocumentOpen(
   event: Event,
   open: (file: string, sessionId?: string, line?: number, column?: number) => boolean,
+  openFile?: (file: string, line?: number, column?: number, sessionId?: string) => boolean,
 ): void {
   const detail = (event as CustomEvent<{ filePath?: unknown; sessionID?: unknown; line?: unknown; column?: unknown }>)
     .detail
@@ -210,5 +212,10 @@ export function handleDocumentOpen(
   const sessionId = typeof detail.sessionID === "string" ? detail.sessionID : undefined
   const line = typeof detail.line === "number" ? detail.line : undefined
   const column = typeof detail.column === "number" ? detail.column : undefined
+  if (!isMarkdownPath(file)) {
+    if (!openFile?.(file, line, column, sessionId)) return
+    event.preventDefault()
+    return
+  }
   if (open(file, sessionId, line, column)) event.preventDefault()
 }

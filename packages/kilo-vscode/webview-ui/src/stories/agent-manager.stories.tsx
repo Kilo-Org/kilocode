@@ -8,8 +8,11 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders, defaultMockData, mockSessionValue, t } from "./StoryProviders"
 import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
+import { DiffPanelCache } from "../../agent-manager/DiffPanelCache"
+import { createReviewComposers } from "../../agent-manager/review-composers"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import { SessionTab } from "../components/chat/SessionTab"
 import { ChatView } from "../components/chat/ChatView"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
@@ -29,7 +32,7 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
 import { PRComments } from "../../agent-manager/pr/PRComments"
-import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
+import { For, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type {
   AgentProjectSnapshot,
   WorktreeFileDiff,
@@ -229,6 +232,11 @@ const chatServer = {
   errorDetails: () => undefined,
   isConnected: () => true,
   profileData: () => null,
+  providerUsage: () => undefined,
+  providerUsageLoading: () => false,
+  providerUsageError: () => undefined,
+  requestProviderUsage: () => undefined,
+  refreshProviderUsage: () => undefined,
   deviceAuth: () => ({ status: "idle" as const }),
   startLogin: () => undefined,
   goToLogin: () => undefined,
@@ -300,6 +308,37 @@ export const FileTreeEmpty: Story = {
   ),
 }
 
+export const FileTreeVirtualizedLarge: Story = {
+  name: "FileTree - virtualized large review",
+  render: () => {
+    const diffs = Array.from({ length: 600 }, (_, index): WorktreeFileDiff => {
+      const group = String(Math.floor(index / 30)).padStart(2, "0")
+      const file = String(index).padStart(4, "0")
+      return {
+        file: `src/group-${group}/file-${file}.ts`,
+        before: "",
+        after: "",
+        patch: "",
+        additions: 1,
+        deletions: 0,
+        status: "modified",
+        tracked: true,
+        generatedLike: false,
+        summarized: true,
+      }
+    })
+    const [selected, setSelected] = createSignal(diffs[0]!.file)
+
+    return (
+      <StoryProviders>
+        <div data-testid="large-file-tree" data-selected={selected()} style={{ width: "420px", height: "520px" }}>
+          <FileTree diffs={diffs} activeFile={selected()} onFileSelect={setSelected} />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
 // ---------------------------------------------------------------------------
 // DiffPanel
 // ---------------------------------------------------------------------------
@@ -341,6 +380,209 @@ export const DiffPanelScrollUp: Story = {
             onCommentsChange={() => {}}
             onClose={() => {}}
           />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+export const DiffPanelCachedWorktreeSwitch: Story = {
+  name: "DiffPanel - switch cached worktrees without blank frames",
+  render: () => {
+    const ids = Array.from({ length: 12 }, (_, index) => `worktree-${index + 1}`)
+    const [current, setCurrent] = createSignal(ids[0]!)
+    const values = Object.fromEntries(ids.map((id) => [`single\0${id}#branch`, [edited(id, `src/${id}.ts`)]]))
+    const composers = createReviewComposers(() => undefined)
+    const comments = [
+      {
+        id: "cached-comment",
+        file: "src/worktree-1.ts",
+        side: "additions" as const,
+        line: 2,
+        comment: "Keep the cached review annotation mounted",
+        selectedText: "line 2",
+      },
+    ]
+
+    return (
+      <StoryProviders noPadding>
+        <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+          <div data-testid="cached-worktree-tabs">
+            {ids.map((id) => (
+              <button type="button" data-testid={`select-${id}`} onClick={() => setCurrent(id)}>
+                {id}
+              </button>
+            ))}
+          </div>
+          <div class="am-diff-panel-wrapper" style={{ flex: 1 }}>
+            <DiffPanelCache
+              current={() => `${current()}#branch`}
+              context={current}
+              project={() => undefined}
+              active={() => true}
+              contexts={() => new Set(ids)}
+              data={() => values}
+              loading={() => false}
+              loadingFiles={() => new Set()}
+              notice={() => undefined}
+              comments={(key) => (key === "worktree-1#branch" ? comments : [])}
+              setComments={() => {}}
+              composer={composers.get}
+              lead={() => <span>Branch</span>}
+              canRevert={false}
+              diffStyle="unified"
+              onDiffStyleChange={() => {}}
+              markdownRender={false}
+              onMarkdownRenderChange={() => {}}
+              onSendClick={() => {}}
+              onClose={() => {}}
+              onRequestDiff={() => {}}
+              onOpenFile={() => {}}
+              onOpenDocument={() => {}}
+              onRevertFile={() => {}}
+              revertingFiles={() => new Set()}
+            />
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+export const DiffPanelViewportLoading: Story = {
+  name: "DiffPanel - load only visible file details",
+  render: () => {
+    const [entries, setEntries] = createSignal<WorktreeFileDiff[]>(
+      Array.from({ length: 120 }, (_, index) => ({
+        file: `src/file-${String(index).padStart(3, "0")}.ts`,
+        before: "",
+        after: "",
+        patch: "",
+        additions: 1,
+        deletions: 1,
+        status: "modified",
+        tracked: true,
+        generatedLike: false,
+        summarized: true,
+        stamp: "1:1",
+      })),
+    )
+    const [requested, setRequested] = createSignal<string[]>([])
+    const [offscreen, setOffscreen] = createSignal<string[]>([])
+    const load = (file: string) => {
+      const root = document.querySelector("[data-testid=viewport-diff-review] .am-diff-content")
+      const row = root?.querySelector(`[data-file-path="${CSS.escape(file)}"]`)
+      if (root && row) {
+        const box = root.getBoundingClientRect()
+        const rect = row.getBoundingClientRect()
+        if (rect.bottom < box.top - 201 || rect.top > box.bottom + 201) setOffscreen((prev) => [...prev, file])
+      }
+      setRequested((prev) => (prev.includes(file) ? prev : [...prev, file]))
+      // Simulate a host reply after the requesting Solid effect has completed.
+      queueMicrotask(() => {
+        setEntries((prev) =>
+          prev.map((item) =>
+            item.file === file
+              ? {
+                  ...item,
+                  before: "before\n",
+                  after: "after\n",
+                  patch: `--- a/${file}\n+++ b/${file}\n@@ -1 +1 @@\n-before\n+after\n`,
+                  summarized: false,
+                }
+              : item,
+          ),
+        )
+      })
+    }
+
+    return (
+      <StoryProviders noPadding>
+        <div
+          data-testid="viewport-diff-review"
+          data-request-count={requested().length}
+          data-requested={requested().join("|")}
+          data-offscreen={offscreen().join("|")}
+          style={{ height: "700px", display: "flex", "flex-direction": "column" }}
+        >
+          <DiffPanel
+            diffs={entries()}
+            loading={false}
+            sessionKey="viewport-diff-review"
+            diffStyle="unified"
+            onDiffStyleChange={() => {}}
+            comments={[]}
+            onCommentsChange={() => {}}
+            onClose={() => {}}
+            onRequestDiff={load}
+          />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+export const DiffPanelInterruptedLoading: Story = {
+  name: "DiffPanel - resume interrupted visible file",
+  render: () => {
+    const [active, setActive] = createSignal(true)
+    const [count, setCount] = createSignal(0)
+    const [loading, setLoading] = createSignal(new Set<string>())
+    const [entries, setEntries] = createSignal<WorktreeFileDiff[]>([
+      { file: "src/resume.ts", before: "", after: "", patch: "", additions: 1, deletions: 1, summarized: true },
+    ])
+    const request = (file: string) => {
+      setCount((value) => value + 1)
+      setLoading(new Set([file]))
+      if (count() === 1) return
+      // Keep the resumed host reply asynchronous, as in the real request/response path.
+      queueMicrotask(() => {
+        setEntries([
+          {
+            ...entries()[0]!,
+            before: "before\n",
+            after: "after\n",
+            patch: "--- a/src/resume.ts\n+++ b/src/resume.ts\n@@ -1 +1 @@\n-before\n+after\n",
+            summarized: false,
+          },
+        ])
+        setLoading(new Set<string>())
+      })
+    }
+    return (
+      <StoryProviders noPadding>
+        <div
+          data-testid="interrupted-review"
+          data-requests={count()}
+          style={{ height: "700px", display: "flex", "flex-direction": "column" }}
+        >
+          <button
+            data-testid="interrupt-review"
+            onClick={() => {
+              setActive(false)
+              setLoading(new Set<string>())
+            }}
+          >
+            Interrupt
+          </button>
+          <button data-testid="resume-review" onClick={() => setActive(true)}>
+            Resume
+          </button>
+          <div style={{ flex: 1, "min-height": 0, display: "flex", "flex-direction": "column" }}>
+            <DiffPanel
+              diffs={entries()}
+              loading={false}
+              active={active()}
+              loadingFiles={loading()}
+              sessionKey="interrupted-review"
+              diffStyle="unified"
+              onDiffStyleChange={() => {}}
+              comments={[]}
+              onCommentsChange={() => {}}
+              onClose={() => {}}
+              onRequestDiff={request}
+            />
+          </div>
         </div>
       </StoryProviders>
     )
@@ -534,7 +776,7 @@ const defaultProps = {
   active: false,
   pendingDelete: false,
   busy: false,
-  working: false,
+  activity: "idle" as const,
   stale: false,
   shortcut: 2,
   sessions: 1,
@@ -560,6 +802,81 @@ const defaultProps = {
 // ---------------------------------------------------------------------------
 // WorktreeItem stories
 // ---------------------------------------------------------------------------
+
+const activityStates = [
+  ["busy", "Running"],
+  ["waiting", "Needs input"],
+  ["done", "Completed"],
+  ["retry", "Retrying"],
+  ["error", "Error"],
+  ["idle", "Idle"],
+] as const
+
+export const WorktreeActivityStates: Story = {
+  name: "Worktree cards - all activity states",
+  render: (args: { active?: boolean }) => (
+    <StoryProviders noPadding>
+      <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
+        <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+        <For each={activityStates}>
+          {([state, title]) => (
+            <WorktreeItem
+              {...defaultProps}
+              worktree={{
+                ...baseWorktree,
+                id: `wt-${state}`,
+                branch: `feature/${state}`,
+                createdAt: "2026-01-01T00:00:00.000Z",
+              }}
+              label={title}
+              subtitle={`feature/${state}`}
+              active={args.active === true}
+              activity={state}
+              stats={{ ...baseStats, worktreeId: `wt-${state}` }}
+              shortcut={0}
+            />
+          )}
+        </For>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const WorktreeActivityStatesActive: Story = {
+  ...WorktreeActivityStates,
+  name: "Worktree cards - selected activity states",
+  args: { active: true },
+}
+
+export const SessionTabActivityStates: Story = {
+  name: "Agent Manager session tabs - activity states",
+  render: () => (
+    <StoryProviders noPadding>
+      <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
+        <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+        <For each={activityStates}>
+          {([state, title]) => (
+            <div class="am-tab-bar" role="tablist" aria-label={title}>
+              <SessionTab
+                title={title}
+                active
+                state={state}
+                stateLabel={title}
+                closeTitle="Close tab"
+                closeLabel="Close tab"
+                role="tab"
+                selected
+                onSelect={noop}
+                onMiddleClick={noop}
+                onClose={noop}
+              />
+            </div>
+          )}
+        </For>
+      </div>
+    </StoryProviders>
+  ),
+}
 
 export const WorktreeItemDefault: Story = {
   name: "WorktreeItem — default",
@@ -967,6 +1284,71 @@ export const TabBarSingleTab: Story = {
   ),
 }
 
+const MockFullContextActions = () => (
+  <div class="am-tab-actions">
+    <span class="am-split-button am-run-group">
+      <TooltipKeybind title="Run" keybind="⌘R" placement="bottom">
+        <Button size="small" variant="ghost" icon="play">
+          Run
+        </Button>
+      </TooltipKeybind>
+      <button class="am-split-arrow" aria-label="Run options">
+        <Icon name="chevron-down" size="small" />
+      </button>
+    </span>
+    <TooltipKeybind title="Pull request" keybind="" placement="bottom">
+      <IconButton icon="pull-request" size="small" variant="ghost" label="Pull request" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Documents" keybind="" placement="bottom">
+      <IconButton icon="book-open-check" size="small" variant="ghost" label="Documents" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Subagents" keybind="" placement="bottom">
+      <IconButton icon="task" size="small" variant="ghost" label="Subagents" />
+    </TooltipKeybind>
+    <TooltipKeybind title="Toggle diff" keybind="" placement="bottom">
+      <button class="am-diff-toggle-btn am-diff-toggle-has-changes" title="Toggle diff">
+        <Icon name="layers" size="small" />
+        <span class="am-diff-toggle-stats">
+          <span class="am-stat-files">4f</span>
+          <span class="am-stat-additions">+32</span>
+          <span class="am-stat-deletions">−8</span>
+        </span>
+      </button>
+    </TooltipKeybind>
+    <TooltipKeybind title="Toggle review" keybind="" placement="bottom">
+      <IconButton icon="expand" size="small" variant="ghost" label="Toggle review" />
+    </TooltipKeybind>
+    <div class="am-split-button">
+      <TooltipKeybind title="Open Terminal" keybind="" placement="bottom">
+        <IconButton icon="console" size="small" variant="ghost" label="Open Terminal" />
+      </TooltipKeybind>
+      <button class="am-split-arrow" aria-label="Choose terminal destination">
+        <Icon name="chevron-down" size="small" />
+      </button>
+    </div>
+  </div>
+)
+
+export const TabBarFullContext: Story = {
+  name: "TabBar — all optional context actions",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <MockTabLeading />
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "1" } as JSX.CSSProperties}>
+              <MockTab title="Full context" active />
+            </div>
+          </div>
+        </div>
+        <MockTabAdd />
+        <MockFullContextActions />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 // Side terminal panel inside the real inspector host chain, empty state —
 // no live PTY, so the start affordance renders. The tab strip header keeps
 // the .am-diff-header height so the a11y/screenshot baseline also guards
@@ -1307,8 +1689,7 @@ export const SidebarSearchOpen: Story = {
                   scope: "Searches the local workspace, local sessions, worktrees, and their sessions",
                   contexts: "LOCAL & WORKTREES",
                   sessions: "SESSIONS",
-                  waiting: "Wait",
-                  retry: "Retry",
+                  state: (value) => value,
                 }}
                 onSelect={(item) => setSelected(item.key)}
                 defaultOpen
@@ -1467,6 +1848,8 @@ export const MultiProjectSidebar: Story = {
               [projectB.id]: storyLocal("master", 0, 0, 0, 2),
             }}
             prs={{ [projectA.id]: {}, [projectB.id]: {} }}
+            busy={() => false}
+            blocked={() => false}
             sessions={{
               [projectA.id]: [
                 projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
@@ -1476,10 +1859,13 @@ export const MultiProjectSidebar: Story = {
             }}
             selectedProject={projectA.id}
             selection="local"
+            activityFor={() => "idle"}
+            sessionActivity={() => "idle"}
             bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
             t={t}
             onSearchRef={() => {}}
             onShortcuts={() => {}}
+            onHistory={() => {}}
           />
         </div>
       </StoryProviders>
@@ -1507,6 +1893,7 @@ const prComments: NonNullable<PRStatus["comments"]> = {
       outdated: false,
       diffHunk:
         '@@ -39,7 +39,7 @@ export function execGhRead(args: string[]) {\n-  return execWithShellEnv("gh", args, options)\n+  return execWithShellEnv("gh", args, { ...options, env: env(options) })',
+      after: ["  return result", "}", ""],
       replies: [{ author: "hubot", body: "Agreed. A guard plus a log line is enough here." }],
     },
     {

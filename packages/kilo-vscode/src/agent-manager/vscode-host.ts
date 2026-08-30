@@ -104,12 +104,17 @@ export class VscodeHost implements Host {
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      tabTitle: (title) => {
+        panel.title = title
+      },
+      tabLabel: "Agent Manager",
       platform: PLATFORM,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
       rootDirectory: opts.workspaceRoot,
       disableViewedRegistration: true,
+      disableStatsPolling: true,
       focusTargetContext: {
         prompt: "kilo-code.new.agentManagerPromptFocused",
         mainTerminal: "kilo-code.new.agentManagerMainTerminalFocused",
@@ -318,6 +323,10 @@ export class VscodeHost implements Host {
 
   openExternal(url: string): void {
     void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
+  openSettings(tab?: string, projectId?: string): void {
+    void vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", tab, projectId)
   }
 
   refreshGit(): void {

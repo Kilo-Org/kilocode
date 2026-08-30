@@ -3,9 +3,6 @@
 /**
  * MessageList component
  * Scrollable turn-based message list with virtualization.
- * Each user message is rendered as a VscodeSessionTurn — a custom component that
- * renders all assistant parts as a flat, verbose list with no context grouping,
- * and fully expands sub-agent (task tool) parts inline.
  * Shows recent sessions in the empty state for quick resumption.
  */
 
@@ -26,6 +23,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { useProvider } from "../../context/provider"
@@ -87,12 +85,15 @@ interface MessageListProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
   onForkMessage?: (sessionId: string, messageId: string) => void
+  onEditMessage?: (sessionID: string, messageID: string) => void
   /** Non-tool question requests to render inline at the bottom of the message list */
   questions?: () => QuestionRequest[]
   /** Non-tool suggestion requests to render inline at the bottom of the message list */
   suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
+  queuedDisabled?: boolean
+  editDisabled?: boolean
   /** Optionally replace the standard welcome content while the conversation is empty. */
   emptyState?: () => JSX.Element
   /** Announce transcript changes as a live log. Disable for multi-session surfaces with concurrent streams. */
@@ -103,6 +104,7 @@ interface MessageListProps {
 export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
+  const vscode = useVSCode()
   const language = useLanguage()
   const provider = useProvider()
   const i18n = useI18n()
@@ -1328,10 +1330,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         row={row}
                         index={index()}
                         onForkMessage={props.onForkMessage}
+                        onEditMessage={props.onEditMessage}
+                        queuedDisabled={props.queuedDisabled}
+                        editDisabled={props.editDisabled}
                         highlight={highlight}
                         activeSearch={activeKey() === row.key}
                         activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                         activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                        readonly={props.readonly}
                       />
                     )}
                   </Virtualizer>
@@ -1341,10 +1347,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     <TranscriptRowView
                       row={lookup().get(key)!}
                       onForkMessage={props.onForkMessage}
+                      onEditMessage={props.onEditMessage}
+                      queuedDisabled={props.queuedDisabled}
+                      editDisabled={props.editDisabled}
                       highlight={highlight}
                       activeSearch={activeKey() === key}
                       activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
                       activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
+                      readonly={props.readonly}
                     />
                   )}
                 </For>
@@ -1357,9 +1367,13 @@ export const MessageList: Component<MessageListProps> = (props) => {
               {(row) => (
                 <TranscriptRowView
                   row={row}
+                  onEditMessage={props.onEditMessage}
+                  queuedDisabled={props.queuedDisabled}
+                  editDisabled={props.editDisabled}
                   activeSearch={activeKey() === row.key}
                   activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
                   activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                  readonly={props.readonly}
                 />
               )}
             </For>
@@ -1371,6 +1385,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
       </div>
 
       <PromptRail
+        // Editor tabs and Agent Manager have no sidebar edge signal. Keep their rail on the physical right in RTL too.
+        side={vscode.sidebarSide() ?? "right"}
         entries={entries}
         items={items}
         active={() => railActiveKey()}

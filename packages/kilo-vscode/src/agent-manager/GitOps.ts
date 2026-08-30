@@ -20,7 +20,7 @@ interface GitOpsOptions {
   /** Shared concurrency gate for child process spawning. */
   semaphore?: Semaphore
   /** Validated Git executable shared by Agent Manager operations. */
-  binary?: GitExecutable
+  binary?: GitExecutable | string
 }
 
 export interface ApplyConflict {
@@ -44,6 +44,8 @@ interface ExecOptions {
   env?: NodeJS.ProcessEnv
   stdin?: string
   timeout?: number
+  signal?: AbortSignal
+  priority?: boolean
 }
 
 export interface ExecResult {
@@ -130,6 +132,8 @@ export class GitOps {
   private static readonly DEFAULT_BRANCH_CACHE_TTL_MS = 10 * 60_000
   private static readonly MAX_CACHE_SIZE = 100
 
+  public readonly path: string
+
   get disposed(): boolean {
     return this.controller.signal.aborted
   }
@@ -137,7 +141,12 @@ export class GitOps {
   constructor(options: GitOpsOptions) {
     this.log = options.log
     this.semaphore = options.semaphore
-    this.binary = options.binary ?? (() => Promise.resolve("git"))
+    const configured = options.binary
+    this.path = typeof configured === "string" ? configured : "git"
+    this.binary =
+      typeof configured === "string"
+        ? () => Promise.resolve(configured)
+        : (configured ?? (() => Promise.resolve("git")))
     this.injected = options.runGit !== undefined
     this.runGit =
       options.runGit ??
@@ -146,6 +155,7 @@ export class GitOps {
         return simpleGit(cwd, {
           abort: this.controller.signal,
           binary,
+          unsafe: { allowUnsafeCustomBinary: binary !== "git" },
         })
           .raw(args)
           .then((out) => out.trim())
@@ -594,12 +604,20 @@ export class GitOps {
    * suitable for callers that need to tolerate legitimate failures (e.g.
    * `merge-base` on an orphan branch, `ls-files --error-unmatch`).
    */
-  execGit(args: string[], cwd: string, options?: { stdin?: string }): Promise<ExecResult> {
+  execGit(
+    args: string[],
+    cwd: string,
+    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean },
+  ): Promise<ExecResult> {
     return this.exec(args, cwd, options)
   }
 
-  execGitBuffer(args: string[], cwd: string): Promise<ExecBufferResult> {
-    return this.execBuffer(args, cwd)
+  execGitBuffer(
+    args: string[],
+    cwd: string,
+    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean },
+  ): Promise<ExecBufferResult> {
+    return this.execBuffer(args, cwd, options)
   }
 
   private async exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
@@ -608,32 +626,40 @@ export class GitOps {
   }
 
   private async execBuffer(args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
-    if (this.controller.signal.aborted) {
+    if (this.controller.signal.aborted || options?.signal?.aborted) {
       return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
     }
-    const cmd = await this.executable().catch(() => undefined)
-    if (!cmd || this.controller.signal.aborted) {
+    const cmd = await this.executable(options?.signal).catch(() => undefined)
+    if (!cmd || this.controller.signal.aborted || options?.signal?.aborted) {
       return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
     }
     const invoke = () => this.invoke(cmd, args, cwd, options)
-    return this.semaphore ? this.semaphore.run(invoke) : invoke()
+    return this.semaphore ? this.semaphore.run(invoke, options?.signal, options?.priority) : invoke()
   }
 
-  private executable(): Promise<string> {
+  private executable(cancel?: AbortSignal): Promise<string> {
     const signal = this.controller.signal
-    if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
+    if (signal.aborted || cancel?.aborted) return Promise.reject(new Error("GitOps disposed"))
 
     return new Promise<string>((resolve, reject) => {
-      const onAbort = () => reject(new Error("GitOps disposed"))
-      signal.addEventListener("abort", onAbort, { once: true })
+      const clear = () => {
+        signal.removeEventListener("abort", abort)
+        cancel?.removeEventListener("abort", abort)
+      }
+      const abort = () => {
+        clear()
+        reject(new Error("GitOps disposed"))
+      }
+      signal.addEventListener("abort", abort, { once: true })
+      cancel?.addEventListener("abort", abort, { once: true })
       const cache = (this.executableCache ??= Promise.resolve().then(() => this.binary()))
       cache.then(
         (value) => {
-          signal.removeEventListener("abort", onAbort)
+          clear()
           resolve(value)
         },
         (err) => {
-          signal.removeEventListener("abort", onAbort)
+          clear()
           if (this.executableCache === cache) this.executableCache = undefined
           reject(err)
         },
@@ -642,7 +668,7 @@ export class GitOps {
   }
 
   private invoke(cmd: string, args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
-    if (this.controller.signal.aborted) {
+    if (this.controller.signal.aborted || options?.signal?.aborted) {
       return Promise.resolve({ code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" })
     }
 
@@ -664,6 +690,7 @@ export class GitOps {
         : undefined
 
       this.controller.signal.addEventListener("abort", abort, { once: true })
+      options?.signal?.addEventListener("abort", abort, { once: true })
       child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
       child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
@@ -673,6 +700,7 @@ export class GitOps {
       child.on("close", (code) => {
         if (timeout) clearTimeout(timeout)
         this.controller.signal.removeEventListener("abort", abort)
+        options?.signal?.removeEventListener("abort", abort)
         resolve({
           code: code ?? 1,
           stdout: Buffer.concat(out),

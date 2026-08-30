@@ -54,6 +54,7 @@ import type {
 } from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
+import type { ProviderUsageLoadedMessage } from "./provider-usage"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
   AgentManagerApplyWorktreeDiffStatus,
@@ -129,6 +130,8 @@ export interface ErrorMessage {
   message: string
   code?: string
   sessionID?: string
+  projectId?: string
+  worktreeId?: string
 }
 
 export interface SendMessageFailedMessage {
@@ -140,6 +143,13 @@ export interface SendMessageFailedMessage {
   messageID?: string
   files?: FileAttachment[]
   review?: import("../../../../src/shared/review-comments").ReviewMessageData
+}
+
+export interface SessionResumeResultMessage {
+  type: "sessionResumeResult"
+  sessionID: string
+  requestID: string
+  error?: string
 }
 
 export interface SessionCommandCompletedMessage {
@@ -167,6 +177,7 @@ export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
   reason: SessionCloseReason
+  parentID?: string
 }
 
 export interface SessionErrorMessage {
@@ -200,6 +211,7 @@ export interface TodoUpdatedMessage {
 
 export interface SessionCreatedMessage {
   type: "sessionCreated"
+  projectId?: string
   session: SessionInfo
   draftID?: string
   activate?: boolean
@@ -207,6 +219,7 @@ export interface SessionCreatedMessage {
 
 export interface SessionForkedMessage {
   type: "sessionForked"
+  projectId?: string
   sessionID: string
   forkedFromID: string
 }
@@ -225,6 +238,14 @@ export interface MessageRemovedMessage {
   type: "messageRemoved"
   sessionID: string
   messageID: string
+}
+
+export interface DeleteMessageResultMessage {
+  type: "deleteMessageResult"
+  sessionID: string
+  messageID: string
+  requestID?: string
+  success: boolean
 }
 
 export interface MessagesLoadedMessage {
@@ -306,6 +327,13 @@ export interface ActionMessage {
   action: string
 }
 
+/** Image attachment carried back into the prompt input when restoring a message. */
+export interface RestoredImage {
+  dataUrl: string
+  mime: string
+  filename?: string
+}
+
 export interface SetChatBoxMessage {
   type: "setChatBoxMessage"
   text: string
@@ -319,6 +347,12 @@ export interface SetChatBoxMessage {
   paths?: string[]
   /** Past chats referenced by the restored message, seeded the same way as paths. */
   sessions?: SessionSearchItem[]
+  /**
+   * Images attached to the restored message. Present means authoritative:
+   * PromptInput replaces its current attachments with this list (an empty
+   * array clears them); absent leaves current attachments untouched.
+   */
+  images?: RestoredImage[]
 }
 
 export interface AppendChatBoxMessage {
@@ -395,6 +429,36 @@ export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
+  projectId?: string
+}
+
+export interface AgentManagerSettingsProject {
+  id: string
+  root: string
+  label: string
+  pinned: boolean
+  missing: boolean
+  defaultBaseBranch?: string
+  defaultBranch?: string
+  setupScriptPath?: string
+}
+
+export interface AgentManagerSettingsLoadedMessage {
+  type: "agentManagerSettingsLoaded"
+  projects: AgentManagerSettingsProject[]
+  projectId?: string
+  requestId: string
+}
+
+export interface AgentManagerSettingsBranchesLoadedMessage {
+  type: "agentManagerSettingsBranchesLoaded"
+  projectId: string
+  branches: BranchInfo[]
+  defaultBranch: string
+  requestId: string
+  error?: boolean
+  configuredBaseBranch?: string
+  setupScriptPath?: string
 }
 
 export interface IndexingStatusLoadedMessage {
@@ -729,6 +793,7 @@ export interface AgentManagerRepoInfoMessage {
   type: "agentManager.repoInfo"
   branch: string
   defaultBranch?: string
+  projectId?: string
 }
 
 // Agent Manager worktree setup progress
@@ -747,6 +812,7 @@ export interface AgentManagerWorktreeSetupMessage {
 // Agent Manager session added to an existing worktree (no setup overlay needed)
 export interface AgentManagerSessionAddedMessage {
   type: "agentManager.sessionAdded"
+  projectId?: string
   sessionId: string
   worktreeId: string
 }
@@ -754,13 +820,20 @@ export interface AgentManagerSessionAddedMessage {
 // Agent Manager session forked from an existing session
 export interface AgentManagerSessionForkedMessage {
   type: "agentManager.sessionForked"
+  projectId?: string
   sessionId: string
   forkedFromId: string
   worktreeId?: string
 }
 
+export interface AgentManagerWorktreeActivityMessage {
+  type: "agentManager.worktreeActivity"
+  active: string[]
+}
+
 export interface AgentManagerSessionClosedMessage {
   type: "agentManager.sessionClosed"
+  projectId?: string
   sessionId: string
 }
 
@@ -1002,12 +1075,14 @@ export interface AgentManagerImportResultMessage {
 // Agent Manager: Diff data push (extension → webview)
 export interface AgentManagerWorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
+  projectId?: string
   sessionId: string
   diffs: WorktreeFileDiff[]
 }
 
 export interface AgentManagerWorktreeDiffFileMessage {
   type: "agentManager.worktreeDiffFile"
+  projectId?: string
   sessionId: string
   file: string
   diff: WorktreeFileDiff | null
@@ -1029,6 +1104,7 @@ export interface AgentManagerDocumentMessage {
 // Agent Manager: Diff loading state (extension → webview)
 export interface AgentManagerWorktreeDiffLoadingMessage {
   type: "agentManager.worktreeDiffLoading"
+  projectId?: string
   sessionId: string
   loading: boolean
 }
@@ -1036,12 +1112,14 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
 // Agent Manager: Source-level diff notice (extension → webview)
 export interface AgentManagerWorktreeDiffNoticeMessage {
   type: "agentManager.worktreeDiffNotice"
+  projectId?: string
   sessionId: string
   notice?: DiffViewerNotice
 }
 
 export interface AgentManagerApplyWorktreeDiffResultMessage {
   type: "agentManager.applyWorktreeDiffResult"
+  projectId?: string
   worktreeId: string
   status: AgentManagerApplyWorktreeDiffStatus
   message: string
@@ -1051,6 +1129,7 @@ export interface AgentManagerApplyWorktreeDiffResultMessage {
 // Agent Manager: Revert single file result (extension → webview)
 export interface AgentManagerRevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
+  projectId?: string
   sessionId: string
   file: string
   status: "success" | "error"
@@ -1060,6 +1139,7 @@ export interface AgentManagerRevertWorktreeFileResultMessage {
 // Agent Manager: Branch picker data for a diff context (extension → webview)
 export interface AgentManagerDiffBranchesMessage {
   type: "agentManager.diffBranches"
+  projectId?: string
   sessionId: string
   branches: BranchInfo[]
   defaultBranch: string
@@ -1097,6 +1177,7 @@ export interface AgentManagerPRStatusMessage {
 
 export interface AgentManagerPRErrorMessage {
   type: "agentManager.prError"
+  projectId?: string
   error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
@@ -1361,6 +1442,7 @@ export type ExtensionMessage =
   | ConnectionStateMessage
   | ErrorMessage
   | SendMessageFailedMessage
+  | SessionResumeResultMessage
   | SessionCommandCompletedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
@@ -1377,6 +1459,7 @@ export type ExtensionMessage =
   | SessionUpdatedMessage
   | SessionDeletedMessage
   | MessageRemovedMessage
+  | DeleteMessageResultMessage
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage
@@ -1387,11 +1470,14 @@ export type ExtensionMessage =
   | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
+  | ProviderUsageLoadedMessage
   | DeviceAuthStartedMessage
   | DeviceAuthCompleteMessage
   | DeviceAuthFailedMessage
   | DeviceAuthCancelledMessage
   | NavigateMessage
+  | AgentManagerSettingsLoadedMessage
+  | AgentManagerSettingsBranchesLoadedMessage
   | IndexingStatusLoadedMessage
   | IndexingSettingsLoadedMessage
   | ChatSettingsLoadedMessage
@@ -1443,6 +1529,7 @@ export type ExtensionMessage =
   | AgentManagerSessionAddedMessage
   | AgentManagerSessionForkedMessage
   | AgentManagerSessionClosedMessage
+  | AgentManagerWorktreeActivityMessage
   | AgentManagerStateMessage
   | AgentManagerProjectsMessage
   | AgentManagerSelectionActivatedMessage

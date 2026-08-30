@@ -2,8 +2,10 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
+import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
 import com.intellij.openapi.application.ApplicationManager
@@ -22,11 +24,13 @@ class GhBannerTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
+        installBrowser()
         coroutines = TestCoroutines()
         rpc = FakeWorktreeRpcApi()
         timers = TestUiTimers()
         ApplicationManager.getApplication()
             .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(coroutines.scope, rpc), testRootDisposable)
+        fakeRoot(project, coroutines.scope, testRootDisposable, project.basePath!!)
         service = GhStatusCoordinator(coroutines.scope, timers)
         ApplicationManager.getApplication().replaceService(GhStatusCoordinator::class.java, service, testRootDisposable)
     }

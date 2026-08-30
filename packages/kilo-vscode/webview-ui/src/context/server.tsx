@@ -5,7 +5,14 @@
 
 import { createContext, useContext, createSignal, onMount, onCleanup, ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { ConnectionState, ServerInfo, ProfileData, DeviceAuthState, ExtensionMessage } from "../types/messages"
+import type {
+  ConnectionState,
+  ServerInfo,
+  ProfileData,
+  ProviderUsageData,
+  DeviceAuthState,
+  ExtensionMessage,
+} from "../types/messages"
 import { applyFontSize } from "../font-size"
 
 interface ServerContextValue {
@@ -16,6 +23,11 @@ interface ServerContextValue {
   errorDetails: Accessor<string | undefined>
   isConnected: Accessor<boolean>
   profileData: Accessor<ProfileData | null>
+  providerUsage: Accessor<ProviderUsageData | undefined>
+  providerUsageLoading: Accessor<boolean>
+  providerUsageError: Accessor<string | undefined>
+  requestProviderUsage: () => void
+  refreshProviderUsage: () => void
   deviceAuth: Accessor<DeviceAuthState>
   startLogin: () => void
   goToLogin: () => void
@@ -38,6 +50,9 @@ export const ServerProvider: ParentComponent = (props) => {
   const [errorMessage, setErrorMessage] = createSignal<string | undefined>()
   const [errorDetails, setErrorDetails] = createSignal<string | undefined>()
   const [profileData, setProfileData] = createSignal<ProfileData | null>(null)
+  const [providerUsage, setProviderUsage] = createSignal<ProviderUsageData>()
+  const [providerUsageLoading, setProviderUsageLoading] = createSignal(false)
+  const [providerUsageError, setProviderUsageError] = createSignal<string>()
   const [deviceAuth, setDeviceAuth] = createSignal<DeviceAuthState>(initialDeviceAuth)
   const [vscodeLanguage, setVscodeLanguage] = createSignal<string | undefined>()
   const [languageOverride, setLanguageOverride] = createSignal<string | undefined>()
@@ -52,6 +67,30 @@ export const ServerProvider: ParentComponent = (props) => {
     if (m.type === "ready" && m.fontSize !== undefined) applyFontSize(m.fontSize)
     if (m.type === "fontSizeChanged") applyFontSize(m.fontSize)
   })
+
+  const usageSub = vscode.onMessage((m: ExtensionMessage) => {
+    if (m.type !== "providerUsageLoaded") return
+    if (m.reset) {
+      setProviderUsage(undefined)
+      setProviderUsageError(undefined)
+      // The reset itself means previous account/project usage was invalidated:
+      // never show it again, and reload once via the cache-aware endpoint.
+      setProviderUsageLoading(true)
+      vscode.postMessage({ type: "requestProviderUsage" })
+      return
+    }
+    if (m.data) setProviderUsage(m.data)
+    setProviderUsageError(m.error)
+    setProviderUsageLoading(false)
+  })
+
+  const resetProviderUsageForDirectory = () => {
+    if (providerUsage() === undefined && !providerUsageLoading()) return
+    setProviderUsage(undefined)
+    setProviderUsageError(undefined)
+    setProviderUsageLoading(true)
+    vscode.postMessage({ type: "requestProviderUsage" })
+  }
 
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
@@ -76,6 +115,7 @@ export const ServerProvider: ParentComponent = (props) => {
 
         case "workspaceDirectoryChanged":
           setWorkspaceDirectory(message.directory)
+          resetProviderUsageForDirectory()
           break
 
         case "languageChanged":
@@ -137,6 +177,7 @@ export const ServerProvider: ParentComponent = (props) => {
     onCleanup(() => {
       gitSub()
       fontSub()
+      usageSub()
       unsubscribe()
     })
 
@@ -168,6 +209,18 @@ export const ServerProvider: ParentComponent = (props) => {
     startLogin()
   }
 
+  const requestProviderUsage = () => {
+    setProviderUsageLoading(true)
+    setProviderUsageError(undefined)
+    vscode.postMessage({ type: "requestProviderUsage" })
+  }
+
+  const refreshProviderUsage = () => {
+    setProviderUsageLoading(true)
+    setProviderUsageError(undefined)
+    vscode.postMessage({ type: "refreshProviderUsage" })
+  }
+
   const value: ServerContextValue = {
     connectionState,
     serverInfo,
@@ -176,6 +229,11 @@ export const ServerProvider: ParentComponent = (props) => {
     errorDetails,
     isConnected: () => connectionState() === "connected",
     profileData,
+    providerUsage,
+    providerUsageLoading,
+    providerUsageError,
+    requestProviderUsage,
+    refreshProviderUsage,
     deviceAuth,
     startLogin,
     goToLogin,

@@ -7,12 +7,31 @@
  */
 
 import simpleGit from "simple-git"
+import type { GitOps } from "../GitOps"
 import type { AgentManagerInMessage } from "../types"
 import type { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { ProjectContexts } from "./contexts"
 import { projectIdFor, resolveProjectRoot, samePath } from "./paths"
-import type { SidebarTarget } from "./route"
+import type { SidebarTarget, SessionRef } from "./route"
+
+/** Route one session to a directory inside a project via the shared session provider. */
+export function routeProjectSession(
+  sessions:
+    | {
+        setSessionDirectory(id: string, directory: string): void
+        registerSessionRoute?(ref: SessionRef, directory: string, generation: number): void
+      }
+    | undefined,
+  projectId: string,
+  sessionId: string,
+  directory: string,
+  generation: number,
+): void {
+  if (!sessions) return
+  sessions.setSessionDirectory(sessionId, directory)
+  sessions.registerSessionRoute?.({ projectId, sessionId }, directory, generation)
+}
 
 export interface ProjectMessageDeps {
   registry: ProjectRegistry
@@ -27,17 +46,28 @@ export interface ProjectMessageDeps {
   expand: (ctx: ProjectContext) => void
   /** Push the current project snapshots to the webview. */
   push: () => void
+  /** Push one project's managed state to the webview. */
+  pushState?: (ctx: ProjectContext) => void
   /** Acknowledge an atomically validated sidebar selection. */
   selected: (target: SidebarTarget) => void
   /** Show a user-facing error. */
   error: (message: string) => void
+  /** Open the Kilo Settings editor, optionally on a tab and project. */
+  openSettings: (tab?: string, projectId?: string) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
   ready: (ctx: ProjectContext) => Promise<ProjectInitResult>
+  /** Route one session to a directory inside a project (session override + project route). */
+  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
+  git?: GitOps
   log: (...args: unknown[]) => void
 }
 
 /** Handle a project-management message. Returns true when the message was consumed. */
 export async function handleProjectMessage(m: AgentManagerInMessage, deps: ProjectMessageDeps): Promise<boolean> {
+  if (m.type === "openSettingsPanel") {
+    deps.openSettings(m.tab, m.projectId)
+    return true
+  }
   if (m.type === "agentManager.requestProjects") {
     deps.push()
     return true
@@ -56,6 +86,11 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
   }
   if (m.type === "agentManager.activateSelection") {
     await activateSelection(m.target, deps, m.restore === true)
+    return true
+  }
+  if (m.type === "agentManager.openSessionLocally") {
+    if (!m.projectId) return false
+    await openSessionLocally(m.projectId, m.sessionId, deps)
     return true
   }
   if (m.type === "agentManager.rememberTarget") {
@@ -100,6 +135,36 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
   finish(target, deps)
 }
 
+/**
+ * Move a worktree-bound session back to the project root and open it in the
+ * project's local tabs. Fall back to local gracefully when the worktree is
+ * already gone (the session may be live only).
+ */
+async function openSessionLocally(projectId: string, sessionId: string, deps: ProjectMessageDeps): Promise<void> {
+  if (disabled(deps)) return
+  const ctx = deps.contexts.resolve(projectId)
+  if (!ctx || !deps.contexts.usable(projectId)) {
+    deps.error("The project is unavailable. Check that the repository still exists.")
+    return
+  }
+  const result = await deps.ready(ctx)
+  if (!result.current || !result.ok) {
+    deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
+    deps.push()
+    return
+  }
+  const state = ctx.peekState()
+  if (!state?.getSession(sessionId) && !ctx.hasLiveSession(sessionId)) {
+    deps.log(`openSessionLocally: unknown session ${sessionId}`)
+    return
+  }
+  state?.moveSession(sessionId, null)
+  deps.routeSession?.(projectId, sessionId, ctx.root, ctx.generation)
+  deps.pushState?.(ctx)
+  deps.push()
+  finish({ projectId, kind: "session", sessionId }, deps)
+}
+
 /** Commit the active project, persist the target, and acknowledge the selection. */
 function finish(target: SidebarTarget, deps: ProjectMessageDeps): void {
   const previous = deps.contexts.active()?.id
@@ -122,7 +187,12 @@ function rememberTarget(projectId: string, target: SidebarTarget, deps: ProjectM
   // Never persist a target the project does not have: the webview can race a
   // project switch and still hold the previous project's selection.
   if (target.kind === "worktree" && !state.getWorktree(target.worktreeId)) return
-  if (target.kind === "session" && !state.getSession(target.sessionId)) return
+  if (
+    target.kind === "session" &&
+    !state.getSession(target.sessionId) &&
+    !deps.contexts.get(projectId)?.hasLiveSession(target.sessionId)
+  )
+    return
   state.setActiveTarget(target)
 }
 
@@ -138,7 +208,17 @@ async function addProject(deps: ProjectMessageDeps): Promise<void> {
   if (!dir) return
   // resolveProjectRoot (not resolveGitRoot) so a folder inside a linked worktree
   // registers the primary checkout and cannot duplicate an existing project.
-  const root = await resolveProjectRoot(dir, (cwd, args) => simpleGit(cwd).raw(args))
+  const git = deps.git
+  const root = await resolveProjectRoot(
+    dir,
+    git
+      ? async (cwd, args) => {
+          const result = await git.execGit(args, cwd)
+          if (result.code !== 0) throw new Error(result.stderr)
+          return result.stdout
+        }
+      : (cwd, args) => simpleGit(cwd).raw(args),
+  )
   if (!root) {
     deps.error("The selected folder is not inside a Git repository.")
     return

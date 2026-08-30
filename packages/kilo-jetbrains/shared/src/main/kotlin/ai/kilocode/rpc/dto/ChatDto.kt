@@ -17,6 +17,7 @@ data class MessageDto(
     val parentID: String? = null,
     val cost: Double? = null,
     val tokens: TokensDto? = null,
+    val finish: String? = null,
     val error: MessageErrorDto? = null,
     val summary: MessageSummaryDto? = null,
 )
@@ -49,7 +50,13 @@ data class MessageErrorDto(
     val responseBody: String? = null,
     val dataKeys: List<String> = emptyList(),
     val ref: String? = null,
-)
+) {
+    val aborted: Boolean get() = type == ABORTED
+
+    companion object {
+        const val ABORTED = "MessageAbortedError"
+    }
+}
 
 @Serializable
 data class MessageWithPartsDto(

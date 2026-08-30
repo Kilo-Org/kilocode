@@ -7,11 +7,11 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
-import ai.kilocode.client.session.ui.selection.hoverPlaceholder
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
+import ai.kilocode.client.session.views.base.HeaderOpenAction
 import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.tool.EditFileChange
 import ai.kilocode.client.session.views.tool.PatchBody
@@ -19,8 +19,6 @@ import ai.kilocode.client.session.views.tool.setFont
 import ai.kilocode.client.session.views.tool.setForeground
 import ai.kilocode.client.session.views.tool.setIcon
 import ai.kilocode.client.ui.DiffBadge
-import ai.kilocode.client.ui.ToolbarButtonAction
-import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBLabel
@@ -41,13 +39,13 @@ internal abstract class ChangesCardView(
     protected var sessionId: String? = null
 
     override val copyEligible: Boolean get() = items.any(::openable)
-    override val copyAnchor: JComponent get() = parts.anchor
-    override val copyToolbar: JComponent get() = parts.diff
+    override val copyAnchor: JComponent get() = parts.open.anchor
+    override val copyToolbar: JComponent get() = parts.open.button
 
     init {
         body.parent = this
         body.overflow = ::openDiffViewer
-        parts.diff.addActionListener { openDiffViewer() }
+        parts.open.button.addActionListener { openDiffViewer() }
         applyStyle(style)
     }
 
@@ -60,7 +58,7 @@ internal abstract class ChangesCardView(
         val additions = files.sumOf { it.additions }
         val deletions = files.sumOf { it.deletions }
         parts.update(files.size, additions, deletions)
-        parts.diff.isEnabled = value.any(::openable)
+        parts.open.enabled = value.any(::openable)
         syncExpandable(files.any { it.patch.isNotBlank() })
         if (isExpanded()) body.updateFiles(files)
         revalidate()
@@ -128,15 +126,13 @@ internal abstract class ChangesCardView(
         val glyph = JBLabel()
         val title = JBLabel(title)
         val count = JBLabel()
-        val diff = toolbarButton(
-            ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff")) {},
-        ).apply { isEnabled = false }
-        val anchor: JComponent = hoverPlaceholder(diff)
+        val open = HeaderOpenAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff")) {}
+            .apply { enabled = false }
         val panel = PartHeader().apply {
             leading(glyph)
             left(this@Header.title)
             titleGap()
-            left(count, PartHeader.centered(badge), anchor)
+            left(count, PartHeader.centered(badge), open.anchor)
         }
 
         @RequiresEdt

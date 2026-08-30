@@ -7,7 +7,7 @@
  * and content area.
  */
 
-import { Show } from "solid-js"
+import { Show, createMemo } from "solid-js"
 import type { Accessor, JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
@@ -17,6 +17,7 @@ import { SortableTab, SortableReviewTab } from "./sortable-tab"
 import type { TerminalStateControls } from "./terminal"
 import { isTerminalTabId, renderTerminalTab } from "./terminal"
 import type { SessionInfo } from "../src/types/messages"
+import type { Activity } from "../src/utils/session-activity"
 import { parseBindingTokens } from "./keybind-tokens"
 
 interface FocusTabDeps {
@@ -72,7 +73,8 @@ export interface TabRenderDeps {
    *  getter so Solid tracks its reactivity inside rendered JSX. */
   visibleTabId: () => string | undefined
   isPending: (id: string) => boolean
-  isBusy: (id: string) => boolean
+  activityFor: (id: string) => Activity
+  stateLabel: (state: Activity) => string
   tabLookup: () => Map<string, SessionInfo>
   adjacentHint: (id: string, activeId: string, ids: string[], prev: string, next: string) => string
   // Handlers
@@ -164,6 +166,7 @@ function renderReviewTab(deps: TabRenderDeps): JSX.Element {
 
 function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
   const pending = deps.isPending(s.id)
+  const state = createMemo(() => deps.activityFor(s.id))
   const active = () =>
     !deps.terms.activeId() &&
     (pending ? s.id === deps.activePendingId() && !deps.currentSessionID() : s.id === deps.currentSessionID())
@@ -181,7 +184,8 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
     <SortableTab
       tab={s}
       active={active() && !deps.reviewActive()}
-      busy={deps.isBusy(s.id)}
+      state={state()}
+      stateLabel={deps.stateLabel(state())}
       role="tab"
       selected={deps.visibleTabId() === s.id}
       tabIndex={deps.visibleTabId() === s.id ? 0 : -1}

@@ -2,6 +2,18 @@
 
 This file provides guidance to agents when working with code in this repository.
 
+## Start Here
+
+Paths below are relative to this package. Start with the relevant implementation and nearby tests; the sections below retain the architecture and safety details.
+
+| Area | Entry points |
+|---|---|
+| CLI connection and process lifecycle | [connection-service.ts](src/services/cli-backend/connection-service.ts), [server-manager.ts](src/services/cli-backend/server-manager.ts) |
+| Host/webview messages | [host handlers](src/kilo-provider/), [message contracts](webview-ui/src/types/messages/) |
+| Agent Manager and project routing | [host](src/agent-manager/), [project routing/settings](src/agent-manager/project/), [webview](webview-ui/agent-manager/) |
+| Webview composition and styles | [provider-shell.tsx](webview-ui/src/context/provider-shell.tsx), [styles](webview-ui/src/styles/) |
+| Tests | [unit tests](tests/unit/), [visual regression](tests/visual-regression.spec.ts) |
+
 ## Product Context
 
 Kilo Code is an open source AI coding agent platform. It ships as a CLI and editor clients that all build on the same backend. This package (`packages/kilo-vscode/`) is the **VS Code extension**.
@@ -10,14 +22,14 @@ Kilo Code is an open source AI coding agent platform. It ships as a CLI and edit
 
 All products are thin clients over the **CLI** (`packages/opencode/`, published as `@kilocode/cli`). The CLI is a fork of upstream [OpenCode](https://github.com/anomalyco/opencode) with Kilo-specific additions (gateway auth, telemetry, migration, code review, branding). It contains the full AI agent runtime, tool execution, session management, provider integrations (500+ models), and an HTTP API server.
 
-Every client spawns or connects to a `kilo serve` process and communicates via HTTP REST + SSE using the auto-generated `@kilocode/sdk`.
+The VS Code extension spawns or connects to a `kilo serve` process and communicates via HTTP REST + SSE using the auto-generated `@kilocode/sdk`. CLI clients can also use in-process transports, as shown below.
 
 ```
                         @kilocode/cli  (packages/opencode/)
                      ┌────────────────────────────────┐
                      │  AI agents, tools, sessions,    │
                      │  providers, config, MCP, LSP    │
-                     │  Hono HTTP server + SSE         │
+                     │  HTTP API server + SSE          │
                      └──┬──────────┬──────────────────┘
                         │          │
                 ┌───────┴──┐ ┌────┴────┐
@@ -48,9 +60,9 @@ Every client spawns or connects to a `kilo serve` process and communicates via H
 | Package | Name | Role |
 |---|---|---|
 | `packages/opencode/` | `@kilocode/cli` | Core CLI — forked from upstream OpenCode. AI agents, tools, sessions, server. |
-| `packages/sdk/js/` | `@kilocode/sdk` | Auto-generated TypeScript SDK client for the server API. Do not edit `src/gen/` by hand. |
+| `packages/sdk/js/` | `@kilocode/sdk` | Auto-generated TypeScript SDK client for the server API. Do not edit `src/gen/` or `src/v2/gen/` by hand. |
 | `packages/ui/` | `@opencode-ai/ui` | Shared UI primitives |
-| `packages/util/` | `@opencode-ai/util` | Shared utilities (error, path, retry, slug) |
+| `packages/core/` | `@opencode-ai/core` | Shared runtime and utilities (`src/util/`) |
 | `packages/plugin/` | `@kilocode/plugin` | Plugin/tool interface definitions |
 
 ## Commands
@@ -68,7 +80,9 @@ bun run format                     # Run formatter (do this before committing to
 
 The `extension` commands also work from the repo root. When a user asks to run an isolated VS Code/Kilo environment, prefer the CLI scripts: `bun run extension:isolated` reuses `.kilo-dev/`, while `bun run extension:isolated:clean` clears `.kilo-dev/` before launching. Pass an optional workspace path after `--`, for example `bun run extension:isolated -- ../sample-project`. Pass `--insiders` to prefer VS Code Insiders, `--workspace PATH` to open a different folder, `--clean` to wipe cached state, or `--wait` to block until VS Code closes. VS Code is auto-detected on macOS, Linux, and Windows; override with `--app-path` or `VSCODE_EXEC_PATH`.
 
-Single test: `bun run test -- --grep "test name"`
+From this package: `bun run typecheck` checks host and webview types; `bun run test:unit` runs Bun unit tests. For a focused Agent Manager example, use `bun test tests/unit/agent-manager-arch.test.ts`.
+
+Single VS Code integration test: `bun run test -- --grep "test name"`
 
 ## CLI Binary
 
@@ -96,7 +110,7 @@ The extension is a client of the CLI. Activation creates one shared `KiloConnect
 Extension (Node.js)                          CLI Backend (child process)
 ┌──────────────────────────┐                ┌──────────────────────┐
 │ KiloConnectionService    │── HTTP/SSE ──> │ kilo serve --port 0  │
-│   ├── ServerManager      │                │   Hono REST API      │
+│   ├── ServerManager      │                │   HTTP REST API      │
 │   ├── HttpClient         │                │   SSE event stream   │
 │   └── SSEClient          │                │   Session management │
 │                          │                │   AI agent runtime   │
@@ -123,11 +137,11 @@ Two separate esbuild builds in [`esbuild.js`](esbuild.js):
 - Webview uses **Solid.js** (not React) — JSX compiles via `esbuild-plugin-solid`
 - Extension code in `src/`, webview code in `webview-ui/src/` with separate tsconfig
 - Tests compile to `out/` via `compile-tests`, not `dist/`
-- CSP requires nonce for scripts and `font-src` for bundled fonts — see [`KiloProvider.ts`](src/KiloProvider.ts:777)
+- CSP requires nonce for scripts and `font-src` for bundled fonts — see [`KiloProvider.ts`](src/KiloProvider.ts)
 - HTML root has `data-theme="kilo-vscode"` to activate kilo-ui's VS Code theme bridge
 - Extension and webview have no shared state — communicate via `vscode.Webview.postMessage()`
 - For editor panels, use [`AgentManagerProvider`](src/agent-manager/AgentManagerProvider.ts) pattern with `retainContextWhenHidden: true`
-- esbuild webview build includes [`cssPackageResolvePlugin`](esbuild.js:29) for CSS `@import` resolution and font loaders (`.woff`, `.woff2`, `.ttf`)
+- esbuild webview build includes [`cssPackageResolvePlugin`](esbuild.js) for CSS `@import` resolution and font loaders (`.woff`, `.woff2`, `.ttf`)
 - Avoid `setTimeout` for sequencing VS Code operations — use deterministic event-based waits (e.g. `waitForWebviewPanelToBeActive()`)
 
 ## Extension ↔ Webview Feature Pattern
@@ -135,9 +149,9 @@ Two separate esbuild builds in [`esbuild.js`](esbuild.js):
 When adding a new feature that requires data from the CLI backend to be displayed in the webview:
 
 1. **Types** (`src/services/cli-backend/types.ts`): Add response types for the backend data
-2. **HTTP Client** (`src/services/cli-backend/http-client.ts`): Add a fetch method to retrieve the data
-3. **KiloProvider** (`src/KiloProvider.ts`): Add a `fetchAndSend*()` method using the cached message pattern, and handle the corresponding `request*` message from the webview in `handleWebviewMessage()`
-4. **Message Types** (`webview-ui/src/types/messages.ts`): Add `*LoadedMessage` (extension→webview) and `Request*Message` (webview→extension) types to the `ExtensionMessage` / `WebviewMessage` unions
+2. **SDK Client** (`src/services/cli-backend/connection-service.ts`): Use the existing SDK client to retrieve the data
+3. **Host Handler** (`src/kilo-provider/` or the existing handler in `src/KiloProvider.ts`): Handle the corresponding webview request using the existing cached message pattern
+4. **Message Types** (`webview-ui/src/types/messages/`): Add `*LoadedMessage` (extension→webview) and `Request*Message` (webview→extension) types to the `ExtensionMessage` / `WebviewMessage` unions
 5. **Context** (`webview-ui/src/context/`): Subscribe to the loaded message **outside** `onMount` (to catch early pushes before mount), add retry logic for the request message, expose state via context
 6. **Component** (`webview-ui/src/components/`): Consume context, render UI
 
@@ -172,7 +186,7 @@ Extension-side code lives in `src/agent-manager/`, webview code in `webview-ui/a
 
 Multi-project Agent Manager is an incremental migration behind the application-scoped `kilo-code.new.experimental.multiProject` flag (default `false`); flag-off behavior must remain unchanged. The project registry/contexts, per-project state and session routing, project sidebar, sections and drag-and-drop, progress/persistence, and project-targeted worktree creation are implemented.
 
-It is not yet a complete convergence: audit every operation for explicit project/worktree/session routing, finish immutable project-bound Settings and machine-local indexing consent, harden canonical Git identity and multi-window route ownership, and replace the duplicate `SidebarBody`/`ProjectSidebarBody` implementations with one shared body. Full two-project E2E and legacy-parity coverage is still incomplete.
+Current implementations are in [project/](src/agent-manager/project/) and [indexing-consent.ts](src/indexing-consent.ts). Check the code and tests before treating migration items as unfinished work. Review areas remain explicit project/worktree/session routing, immutable project-bound Settings, machine-local indexing consent, canonical Git identity, multi-window route ownership, shared sidebar convergence, and full two-project E2E/legacy-parity coverage.
 
 ## Webview UI (kilo-ui)
 
@@ -180,14 +194,14 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 
 - Import via deep subpaths: `import { Button } from "@kilocode/kilo-ui/button"`
 - Available components include `Button`, `IconButton`, `Dialog`, `Spinner`, `Card`, `Tabs`, `Tooltip`, `Toast`, `Code`, `Markdown`, and more
-- Provider hierarchy in [`App.tsx`](webview-ui/src/App.tsx:113): `ThemeProvider → I18nProvider → DialogProvider → MarkedProvider → VSCodeProvider → ServerProvider → ProviderProvider → SessionProvider`
-- Global styles imported via `import "@kilocode/kilo-ui/styles"` in [`index.tsx`](webview-ui/src/index.tsx:2)
-- [`chat.css`](webview-ui/src/styles/chat.css) is being progressively migrated — when replacing a component with kilo-ui, remove the corresponding CSS rules from it
-- New CSS for components not yet in kilo-ui goes into `chat.css` grouped by comment-delimited sections (`/* Component Name */`). Once a kilo-ui equivalent exists, remove the section.
+- Provider composition is defined by `ProviderShell.Root`, `.Session`, and `.Chat` in [provider-shell.tsx](webview-ui/src/context/provider-shell.tsx); follow that implementation rather than a copied provider order.
+- Global styles imported via `import "@kilocode/kilo-ui/styles"` in [`index.tsx`](webview-ui/src/index.tsx)
+- [`chat.css`](webview-ui/src/styles/chat.css) imports the focused stylesheets in [styles/](webview-ui/src/styles/). When replacing a component with kilo-ui, remove obsolete rules from the owning stylesheet.
+- Extension-specific CSS stays with its feature: chat styles under `webview-ui/src/styles/`, Agent Manager styles under `webview-ui/agent-manager/`. Reusable component styles belong in `packages/kilo-ui/`.
 - **Check existing webview usages first**: `webview-ui/src/` and `packages/kilo-ui/src/stories/` show how kilo-ui components are composed. Do not rely only on the component API in isolation.
 - **`data-component` and `data-slot` attributes carry CSS styling** — kilo-ui uses `[data-component]` and `[data-slot]` attribute selectors, not class names. Reuse existing component slots where available so shared styles apply consistently.
-- **Prefer kilo-ui styles**: Always reuse existing kilo-ui CSS variables, tokens, and component styles instead of writing custom CSS. If a style doesn't exist in kilo-ui yet, add it there and reuse it rather than inlining or duplicating styles in the webview.
-- **Icons**: kilo-ui has 75+ custom SVG icons in [`packages/ui/src/components/icon.tsx`](../../packages/ui/src/components/icon.tsx). To list all available icon names: `node -e "const c=require('fs').readFileSync('../../packages/ui/src/components/icon.tsx','utf8');[...c.matchAll(/^\\s{2}[\"']?([\\w-]+)[\"']?:\\s*\x60/gm)].map(m=>m[1]).sort().forEach(n=>console.log(n))"`. Icon names use both hyphenated (`arrow-left`) and bare-word (`brain`, `console`, `providers`) keys.
+- **Prefer kilo-ui styles**: Reuse existing kilo-ui CSS variables, tokens, and component styles. Add missing reusable styles there; keep extension-specific rules in their owning feature stylesheet rather than inlining or duplicating styles.
+- **Icons**: Kilo-only icons are in [kilo-ui's registry](../kilo-ui/src/components/icon.tsx), which falls back to [the upstream registry](../ui/src/components/icon.tsx). To list upstream icon names: `node -e "const c=require('fs').readFileSync('../../packages/ui/src/components/icon.tsx','utf8');[...c.matchAll(/^\\s{2}[\"']?([\\w-]+)[\"']?:\\s*\x60/gm)].map(m=>m[1]).sort().forEach(n=>console.log(n))"`. Icon names use both hyphenated (`arrow-left`) and bare-word (`brain`, `console`, `providers`) keys.
 
 ### Diff Rendering Performance
 
@@ -236,7 +250,7 @@ Follow monorepo root AGENTS.md style guide:
 - Prefer `const` over `let`, early returns over `else`
 - Single-word variable names when possible
 - Avoid `try`/`catch`, avoid `any` type
-- ESLint enforces: curly braces, strict equality, semicolons, camelCase/PascalCase imports
+- ESLint rules live in [eslint.config.mjs](eslint.config.mjs); formatting follows the repository's Prettier configuration.
 
 ## File Size Caps (maxLines)
 

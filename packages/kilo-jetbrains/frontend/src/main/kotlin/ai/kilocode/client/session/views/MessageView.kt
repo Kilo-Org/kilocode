@@ -30,6 +30,7 @@ import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.rpc.dto.MessageErrorDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
@@ -67,6 +68,7 @@ class MessageView(
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
+    private val onOpenSubagent: ((String, String) -> Unit)? = null,
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -97,6 +99,7 @@ class MessageView(
     private var openDiff: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
     private var reverted = false
+    private var failure: MessageErrorView? = null
 
     init {
         isOpaque = false
@@ -111,6 +114,43 @@ class MessageView(
         }
         syncVisibility()
     }
+
+    /**
+     * Show, update, or drop the failure this message ended with. Returns true when anything visible
+     * changed, so the panel only relayouts on a real change — `message.updated` also fires on every
+     * streamed token/cost delta.
+     *
+     * [SessionModel.upsertMessage] replaces the [Message] instance while this view keeps the original,
+     * so the error has to be passed in rather than read back off [msg].
+     */
+    @RequiresEdt
+    fun syncError(error: MessageErrorDto?): Boolean {
+        val text = failureText(error)
+        val existing = failure
+        if (text == null) {
+            if (existing == null) return false
+            failure = null
+            remove(existing)
+            refresh()
+            return true
+        }
+        if (existing != null) {
+            if (!existing.setText(text)) return false
+            refresh()
+            return true
+        }
+        val view = MessageErrorView().also {
+            it.applyStyle(style)
+            it.setText(text)
+        }
+        failure = view
+        add(view)
+        refresh()
+        return true
+    }
+
+    /** Insertion slot that keeps the failure card last, or -1 to append when there is none. */
+    private fun tail(): Int = failure?.let { components.indexOf(it) } ?: -1
 
     fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
         this.openDiff = openDiff
@@ -228,7 +268,7 @@ class MessageView(
         view.hover = hover
         view.applyStyle(style)
         parts[content.id] = view
-        wrapPrompt(view)?.let { add(it) }
+        wrapPrompt(view)?.let { add(it, tail()) }
     }
 
     @RequiresEdt
@@ -240,7 +280,7 @@ class MessageView(
             attachments = it
             val node = ensurePromptWrap()
             promptBox?.add(it, BorderLayout.SOUTH)
-            if (node.parent == null) add(node)
+            if (node.parent == null) add(node, tail())
         }
         view.upsert(content)
         parts[content.id] = view
@@ -369,9 +409,9 @@ class MessageView(
     }
 
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg), { openAttachment(msg.info.id, it) }, openDiff, sessionId)
+        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg), { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
     } else {
-        ViewFactory.create(content, openFile, openUrl, selection, repo, { openAttachment(msg.info.id, it) }, openDiff, sessionId)
+        ViewFactory.create(content, openFile, openUrl, selection, repo, { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
     }
 
     private fun syncPromptMentions() {
@@ -453,6 +493,7 @@ class MessageView(
         this.style = style
         if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = SessionUiStyle.View.Prompt.bgColor(style)
         for (view in parts.values) view.applyStyle(style)
+        failure?.applyStyle(style)
         refresh()
     }
 
@@ -463,6 +504,8 @@ class MessageView(
             Disposer.dispose(it)
         }
         wrap?.let { remove(it) }
+        failure?.let { remove(it) }
+        failure = null
         parts.clear()
         aliases.clear()
         sources.clear()

@@ -57,6 +57,39 @@ describe("GitOps", () => {
     })
   })
 
+  it("passes stdin to binary Git commands without decoding their output", async () => {
+    await withRepo(async (cwd) => {
+      const git = new GitOps({ log: () => undefined, binary: async () => "git" })
+      const value = "before\u0000after"
+      const object = await git.execGit(["hash-object", "-w", "--stdin"], cwd, { stdin: value })
+      const result = await git.execGitBuffer(["cat-file", "--batch"], cwd, {
+        stdin: `${object.stdout.trim()}\n`,
+      })
+      expect(result.code).toBe(0)
+      expect(result.stdout.includes(Buffer.from(value))).toBe(true)
+      git.dispose()
+    })
+  })
+
+  it("uses an explicit Git executable path with spaces", async () => {
+    await withRepo(async (cwd) => {
+      const real = Bun.which("git")
+      if (!real) throw new Error("Git is required for this test")
+
+      const dir = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-gitops executable-"))
+      const binary = process.platform === "win32" ? real : nodePath.join(dir, "git")
+      try {
+        if (process.platform !== "win32") await fs.symlink(real, binary)
+
+        const git = new GitOps({ log: () => undefined, binary })
+        expect(git.path).toBe(binary)
+        expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      } finally {
+        await fs.rm(dir, { recursive: true, force: true })
+      }
+    })
+  })
+
   it("does not hold a semaphore slot while resolving Git", async () => {
     const semaphore = new Semaphore(1)
     let resolve!: (value: string) => void
@@ -667,11 +700,40 @@ describe("GitOps", () => {
       })
     })
 
+    it("kills an in-flight exec when its request signal aborts", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined, binary: async () => process.execPath })
+        const ctl = new AbortController()
+        const pending = git.execGit(["-e", "setTimeout(() => {}, 5000)"], cwd, { signal: ctl.signal })
+        await sleep(25)
+        ctl.abort()
+
+        const result = await pending
+        expect(result.code).not.toBe(0)
+        git.dispose()
+      })
+    })
+
     it("is safe to call multiple times", () => {
       const git = ops(async () => "ok")
       git.dispose()
       git.dispose()
       expect(git.disposed).toBe(true)
+    })
+
+    it("stops waiting for executable discovery when its request signal aborts", async () => {
+      let release!: (value: string) => void
+      const gate = new Promise<string>((resolve) => {
+        release = resolve
+      })
+      const git = new GitOps({ log: () => undefined, binary: () => gate })
+      const ctl = new AbortController()
+      const pending = git.execGit(["status"], "/repo", { signal: ctl.signal })
+      ctl.abort()
+      const result = await pending
+      expect(result.code).not.toBe(0)
+      release("git")
+      git.dispose()
     })
   })
 

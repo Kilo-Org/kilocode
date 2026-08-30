@@ -57,13 +57,13 @@ internal class PermissionDiffView private constructor(
     internal fun openDiffForTest() = openDiffViewer()
 
     @RequiresEdt
-    internal fun openDiffEnabledForTest() = parts.diff.isEnabled
+    internal fun openDiffEnabledForTest() = parts.open.enabled
 
     @RequiresEdt
-    internal fun openDiffButtonForTest() = parts.diff
+    internal fun openDiffButtonForTest() = parts.open.button
 
     @RequiresEdt
-    internal fun openDiffAnchorForTest() = parts.anchor
+    internal fun openDiffAnchorForTest() = parts.open.anchor
 
     @RequiresEdt
     internal fun codeEditorsForTest() = cardCodeEditors()

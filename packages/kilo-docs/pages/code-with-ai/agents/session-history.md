@@ -17,7 +17,7 @@ Different search surfaces cover different content and scopes:
 
 | Method | Searches | Scope |
 |---|---|---|
-| [VS Code History](#search-session-history-in-vs-code) | Session titles | Sessions loaded in the selected Local or Cloud history view |
+| [VS Code History](#search-session-history-in-vs-code) | Session titles | Sessions loaded in the selected Local, Cloud, or Worktree history view |
 | [JetBrains History](#search-session-history-in-jetbrains) | Session titles | Sessions loaded in the selected Local or Cloud history view |
 | [CLI Past chats](#reference-a-past-chat-in-the-cli-tui) | Session titles | Current workspace |
 | [`kilo session list --search`](#filter-session-titles) | Session titles | Current workspace, or every local workspace with `--all` |
@@ -42,6 +42,8 @@ History and CLI list searches do **not** search message content. To find a strin
 5. Select a result to reopen it.
 
 Local history actions also let you rename, export, or delete a session. Cloud history can be filtered to **Only this repository**.
+
+In Agent Manager, select a worktree before opening **History**. The **Worktree** source is selected by default and lists only sessions assigned to that worktree. When you open a worktree session, Agent Manager returns to its owning worktree. Select **Local** or **Cloud** to view another source.
 
 The History search is a fuzzy title search over the sessions currently loaded into the view. It does not search prompts or agent replies.
 

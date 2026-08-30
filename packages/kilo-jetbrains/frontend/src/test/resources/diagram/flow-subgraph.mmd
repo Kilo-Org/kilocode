@@ -1,0 +1,10 @@
+flowchart TD
+    Client --> Gateway
+    subgraph core [Core Services]
+        Gateway --> Auth
+        subgraph store [Storage]
+            Auth --> Cache
+            Cache --> Db[(Database)]
+        end
+    end
+    Db --> Report
