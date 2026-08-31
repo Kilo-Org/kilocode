@@ -5,8 +5,9 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.FakeMigrationUiController
-import ai.kilocode.client.migration.MigrationUiState
+import ai.kilocode.client.onboarding.providers.v5migration.FakeMigrationUiController
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiState
+import ai.kilocode.client.onboarding.FakeOnboardingController
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
@@ -52,6 +53,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private val notified = mutableListOf<Pair<String, String?>>()
     private val ui = mutableListOf<SessionUi>()
     private val migration = FakeMigrationUiController()
+    private val onboarding = FakeOnboardingController()
 
     override fun setUp() {
         super.setUp()
@@ -408,7 +410,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
                     ref = ref,
                     manager = owner,
                     workspaces = workspaces,
-                    migration = migration,
+                    onboarding = onboarding,
                     timers = timers,
                 ).also {
                     ui.add(it)

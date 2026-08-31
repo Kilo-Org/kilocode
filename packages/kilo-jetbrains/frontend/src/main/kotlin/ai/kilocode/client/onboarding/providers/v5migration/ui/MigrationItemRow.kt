@@ -1,7 +1,7 @@
-package ai.kilocode.client.migration.ui
+package ai.kilocode.client.onboarding.providers.v5migration.ui
 
-import ai.kilocode.client.migration.MigrationItemUiProgress
-import ai.kilocode.client.migration.MigrationUiPhase
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationItemUiProgress
+import ai.kilocode.client.onboarding.providers.v5migration.MigrationUiPhase
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack

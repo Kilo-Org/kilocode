@@ -193,6 +193,10 @@ import type {
   KilocodeCommandFilesResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
+  KilocodeMigrateDiscoverErrors,
+  KilocodeMigrateDiscoverResponses,
+  KilocodeMigrateSessionsErrors,
+  KilocodeMigrateSessionsResponses,
   KilocodeNotebookListErrors,
   KilocodeNotebookListResponses,
   KilocodeNotebookRejectErrors,
@@ -7938,6 +7942,102 @@ export class BackgroundJob extends HeyApiClient {
   }
 }
 
+export class Migrate extends HeyApiClient {
+  /**
+   * Migrate external sessions into Kilo
+   *
+   * Discover Claude Code and OpenAI Codex JSONL transcripts for a directory and migrate them into new Kilo sessions, one session per transcript. Sources that were already migrated are skipped, so calling this repeatedly is a no-op once everything has landed.
+   */
+  public sessions<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      cwd?: string
+      formats?: Array<"claude" | "codex">
+      ids?: Array<string>
+      agent?: string
+      model?: string
+      force?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "cwd" },
+            { in: "body", key: "formats" },
+            { in: "body", key: "ids" },
+            { in: "body", key: "agent" },
+            { in: "body", key: "model" },
+            { in: "body", key: "force" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMigrateSessionsResponses,
+      KilocodeMigrateSessionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/migrate/sessions",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Discover migratable external session transcripts
+   *
+   * Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each, marking the ones already migrated, so callers can render a picker before migrating. Read-only; writes nothing.
+   */
+  public discover<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      cwd?: string
+      formats?: Array<"claude" | "codex">
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "cwd" },
+            { in: "body", key: "formats" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeMigrateDiscoverResponses,
+      KilocodeMigrateDiscoverErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/migrate/sessions/discover",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
@@ -8660,6 +8760,11 @@ export class Kilocode extends HeyApiClient {
   private _backgroundJob?: BackgroundJob
   get backgroundJob(): BackgroundJob {
     return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
+  }
+
+  private _migrate?: Migrate
+  get migrate(): Migrate {
+    return (this._migrate ??= new Migrate({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport

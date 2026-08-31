@@ -1,4 +1,4 @@
-package ai.kilocode.client.migration
+package ai.kilocode.client.onboarding.providers.v5migration
 
 import ai.kilocode.client.testing.FakeMigrationRpcApi
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -20,6 +20,7 @@ import ai.kilocode.rpc.dto.MigrationSessionInfoDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -60,6 +61,12 @@ class KiloMigrationServiceTest : BasePlatformTestCase() {
             UIUtil.dispatchAllInvocationEvents()
         }
     }
+
+    /**
+     * `later()` suspends on the `resume` RPC, so it must run off the EDT — exactly as
+     * [ai.kilocode.client.onboarding.KiloOnboardingService] calls it from its own scope.
+     */
+    private fun later() = runBlocking(Dispatchers.Default) { service.later() }
 
     fun `test migration required app state shows needed without polling`() {
         app.value = KiloAppStateDto(KiloAppStatusDto.MIGRATION_REQUIRED, migration = sampleDetection())
@@ -131,7 +138,7 @@ class KiloMigrationServiceTest : BasePlatformTestCase() {
     fun `test later resumes without marking status and hides`() {
         app.value = KiloAppStateDto(KiloAppStatusDto.MIGRATION_REQUIRED, migration = sampleDetection())
         settle()
-        service.later()
+        assertTrue(later())
         settle()
         assertEquals(1, rpc.resumeCalls.size)
         assertEquals(0, rpc.skipCalls.size)
@@ -142,18 +149,35 @@ class KiloMigrationServiceTest : BasePlatformTestCase() {
         assertEquals("2", props["mcpServers"])
     }
 
-    fun `test later keeps wizard visible when resume fails`() {
+    fun `test later keeps wizard selectable when resume fails`() {
         app.value = KiloAppStateDto(KiloAppStatusDto.MIGRATION_REQUIRED, migration = sampleDetection())
         rpc.resumeError = IllegalStateException("backend unavailable")
         settle()
 
-        service.later()
+        assertFalse("a failed resume must be reported to the caller", later())
+        settle()
+
+        // Nothing was migrated, so the wizard must stay in its selecting phase: an error phase
+        // reads as a finished-with-errors run whose only exit finalizes the migration.
+        val state = service.state.value as MigrationUiState.Needed
+        assertEquals(1, rpc.resumeCalls.size)
+        assertEquals(MigrationUiPhase.selecting, state.phase)
+        assertTrue(state.results.isEmpty())
+    }
+
+    fun `test skip keeps wizard selectable when the backend call fails`() {
+        app.value = KiloAppStateDto(KiloAppStatusDto.MIGRATION_REQUIRED, migration = sampleDetection())
+        rpc.skipError = IllegalStateException("backend unavailable")
+        settle()
+
+        service.skip()
         settle()
 
         val state = service.state.value as MigrationUiState.Needed
-        assertEquals(1, rpc.resumeCalls.size)
-        assertEquals(MigrationUiPhase.error, state.phase)
-        assertEquals("backend unavailable", state.results.single().message)
+        assertEquals(1, rpc.skipCalls.size)
+        assertEquals(MigrationUiPhase.selecting, state.phase)
+        assertTrue(state.results.isEmpty())
+        assertEquals(0, rpc.finalizeCalls.size)
     }
 
     fun `test finish with kept source marks completed without cleanup`() {
