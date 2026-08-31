@@ -51,9 +51,8 @@ const build = (overrides?: Partial<Parameters<typeof buildSidebarSearch>[0]>) =>
     localBranch: "main",
     untitled: "Untitled",
     pending: (id) => id.startsWith("pending:"),
-    status: (id) => (id === "busy-session" ? "busy" : "idle"),
+    activityFor: (id) => (id === "busy-session" ? "busy" : "idle"),
     busy: () => false,
-    localBusy: false,
     ...overrides,
   })
 
@@ -104,6 +103,24 @@ describe("buildSidebarSearch", () => {
     expect(items[4]).toMatchObject({ state: "busy", updatedAt: "2026-06-03T00:00:00.000Z" })
   })
 
+  it("uses the strongest session activity for context rows", () => {
+    const items = build({
+      activityFor: (id) => (id === "busy-session" ? "busy" : id === "recent-session" ? "waiting" : "idle"),
+    })
+
+    expect(items.find((item) => item.key === "session:recent-session")).toMatchObject({ state: "waiting" })
+    expect(items.find((item) => item.key === "worktree:wt-search")).toMatchObject({ state: "waiting" })
+  })
+
+  it("keeps operation busy separate from session activity", () => {
+    const items = build({
+      activityFor: () => "idle",
+      busy: () => true,
+    })
+
+    expect(items.find((item) => item.key === "worktree:wt-search")).toMatchObject({ state: "idle", busy: true })
+  })
+
   it("uses expanded sidebar visibility before recency as a tie-breaker", () => {
     const items = build({
       worktrees: [
@@ -119,7 +136,7 @@ describe("buildSidebarSearch", () => {
         },
       ],
       local: [],
-      status: () => "idle",
+      activityFor: () => "idle",
     })
 
     expect(items.filter((item) => item.kind === "session").map((item) => item.sessionId)).toEqual(["visible", "hidden"])

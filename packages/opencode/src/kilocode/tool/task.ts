@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { Effect, Schema } from "effect"
 import path from "path"
 import { Permission } from "@/permission"
@@ -13,6 +12,7 @@ import type { Agent } from "../../agent/agent"
 import type { Config } from "../../config/config"
 import { Provider } from "../../provider/provider"
 import z from "zod"
+import { selectModel } from "./model-selection"
 
 const log = Log.create({ service: "kilocode-task-model" })
 
@@ -33,6 +33,24 @@ const ModelState = z
   .passthrough()
 
 export namespace KiloTask {
+  export const ModelFields = {
+    model: Schema.optional(Schema.String).annotate({
+      description:
+        "Optional subagent model name or qualified provider/model ID from agent_manager_models. Choose a model suited to this task; omit to use the normal subagent model.",
+    }),
+    provider: Schema.optional(Schema.String).annotate({
+      description:
+        "Optional provider ID from agent_manager_models. Requires model; omit to prefer the current turn's provider, then Kilo Gateway.",
+    }),
+    variant: Schema.optional(Schema.String).annotate({
+      description:
+        "Optional reasoning effort variant from agent_manager_models. Can be used without model to change only the normal subagent model's reasoning effort.",
+    }),
+  }
+
+  export const modelDescription =
+    "Experimental subagent model selection is enabled. You may choose model, provider, and variant (reasoning effort) for each task based on its complexity, cost, and latency needs. Use agent_manager_models to find available models, providers, and variants before selecting them; do not guess. This does not create Agent Manager sessions. Omit these fields to keep the normal subagent defaults. Resumed tasks keep their last model and variant unless overridden. A model override does not inherit the parent's reasoning effort; specify variant when a particular effort is needed."
+
   /** Reject primary agents used as subagents */
   export function validate(info: Agent.Info, name: string) {
     if (info.mode === "primary") throw new Error(`Agent "${name}" is a primary agent and cannot be used as a subagent`)
@@ -146,8 +164,7 @@ export namespace KiloTask {
     }
   })
 
-  /** Resolve the task subagent model while discarding stale unavailable overrides. */
-  export const resolveModel = Effect.fn("KiloTask.resolveModel")(function* (input: {
+  const defaults = Effect.fn("KiloTask.defaultModel")(function* (input: {
     name: string
     agent: Pick<Agent.Info, "model" | "variant">
     config: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
@@ -210,6 +227,41 @@ export namespace KiloTask {
       .pipe(Effect.catchTag("ProviderModelNotFoundError", () => Effect.succeed(undefined)))
     const variant = full?.variants?.[value] ? value : input.variant
     return { model: input.parent, variant }
+  })
+
+  export const resolveModel = Effect.fn("KiloTask.resolveModel")(function* (
+    input: Parameters<typeof defaults>[0] & {
+      enabled?: boolean
+      selection?: { model?: string; provider?: string; variant?: string }
+      resume?: Session.Info["model"]
+    },
+  ) {
+    const selection = input.selection ?? {}
+    const requested = Object.values(selection).some((value) => value !== undefined)
+    if (requested && !input.enabled) {
+      return yield* Effect.fail(
+        new Error("Task model selection requires experimental.task_model_selection=true in Kilo config"),
+      )
+    }
+    if (requested && Object.values(selection).some((value) => value !== undefined && !value.trim())) {
+      return yield* Effect.fail(new Error("Task model, provider, and variant must not be empty when specified"))
+    }
+    if (selection.provider && !selection.model) {
+      return yield* Effect.fail(new Error("Task provider requires a model"))
+    }
+    const source = selection.model
+      ? undefined
+      : input.enabled && input.resume
+        ? {
+            model: { providerID: input.resume.providerID, modelID: input.resume.id },
+            variant: input.resume.variant === "default" ? undefined : input.resume.variant,
+          }
+        : yield* defaults(input)
+    if (!requested && source) return source
+    const providers = yield* input.provider.list()
+    const selected = selectModel(selection, providers, source, input.parent.providerID)
+    if ("error" in selected) return yield* Effect.fail(new Error(`Task ${selected.error}`))
+    return selected
   })
 
   export function workflow(value: unknown): Workflow | undefined {

@@ -48,11 +48,38 @@ class SessionOutcomeView(
     }
 
     /**
+     * Failure footer for a failure the transcript already explains: the action only, no message.
+     *
+     * The failed message renders its own card with the provider's reason, so repeating that text here
+     * would print the same sentence twice. Retry stays in the footer rather than moving onto that card
+     * because it always continues the session tail, and the card scrolls out of reach.
+     *
+     * Hides itself when the tail cannot be continued — a header with no reason and no action says
+     * nothing that the card above has not already said.
+     */
+    @RequiresEdt
+    fun showRetry() {
+        if (retry == null || retryable?.invoke() == false) {
+            hideView()
+            return
+        }
+        val title = KiloBundle.message("session.outcome.failed.title")
+        setOutlined(true)
+        setHeaderIcon(AllIcons.General.Error, title)
+        setHeader(title, null)
+        setContentPadding()
+        setContent(null)
+        syncRetry(true)
+        isVisible = true
+        refresh()
+    }
+
+    /**
      * A user-initiated stop is not a failure: it renders as one muted line with no icon and no card
      * outline. Only a model/provider failure gets the error card treatment.
      */
     @RequiresEdt
-    fun showOutcome(outcome: Outcome) {
+    fun showOutcome(outcome: Outcome, finish: String? = null) {
         when (outcome) {
             Outcome.INTERRUPTED -> {
                 setOutlined(false)
@@ -67,6 +94,15 @@ class SessionOutcomeView(
                 setHeaderIcon(AllIcons.General.Error, title)
                 setHeader(title, KiloBundle.message("session.outcome.failed.description"))
                 syncRetry(true)
+            }
+
+            Outcome.INCOMPLETE -> {
+                val title = KiloBundle.message("session.outcome.incomplete.title")
+                val tip = finish?.let { KiloBundle.message("session.outcome.incomplete.reason", it) } ?: title
+                setOutlined(true)
+                setHeaderIcon(AllIcons.General.Warning, tip)
+                setHeader(title, KiloBundle.message("session.outcome.incomplete.description"))
+                syncRetry(false)
             }
         }
         setContentPadding()

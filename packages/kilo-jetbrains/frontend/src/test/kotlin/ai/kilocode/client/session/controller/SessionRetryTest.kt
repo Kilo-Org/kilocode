@@ -10,14 +10,14 @@ import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.ProviderDto
-import ai.kilocode.rpc.dto.SessionStatusDto
-import kotlinx.coroutines.CompletableDeferred
 
 /**
- * Retry replays the last user turn after a failure: revert to the failed assistant message (which
- * restores files when that turn edited any), then re-prompt reusing the original user message id so no
- * synthetic message is appended. The failed message itself is removed server-side by
- * `SessionRevert.cleanup` on the prompt that follows.
+ * Retry *continues* a failed turn: it re-prompts the original user message id with no parts and nothing
+ * else. No revert, no message delete, so the transcript and the workspace are untouched and the CLI
+ * simply starts a fresh assistant message under the same user turn.
+ *
+ * The revert this used to do widened server-side to the preceding user message, and the replay then
+ * deleted that message and everything after it — the whole session when the failure hit the first turn.
  */
 class SessionRetryTest : SessionControllerTestBase() {
 
@@ -86,7 +86,7 @@ class SessionRetryTest : SessionControllerTestBase() {
         )
     }
 
-    fun `test retry reverts the failed turn then replays the user message`() {
+    fun `test retry continues the failed turn without touching the transcript`() {
         failed()
         val m = controller("ses_test")
         flush()
@@ -94,19 +94,56 @@ class SessionRetryTest : SessionControllerTestBase() {
         edt { m.retry() }
         flush()
 
-        assertEquals(1, rpc.reverts.size)
-        val revert = rpc.reverts.single()
-        assertEquals("ses_test", revert.id)
-        assertEquals("msg_fail", revert.message)
-        assertNull("Reverting the whole message, not truncating its parts", revert.part)
+        assertTrue("A revert widens to the user message server-side and deletes it", rpc.reverts.isEmpty())
+        assertTrue("Nothing is deleted either — the failed turn is history", rpc.messageDeletes.isEmpty())
 
         assertEquals(1, rpc.prompts.size)
         val prompt = rpc.prompts.single().third
-        assertEquals("Replays the existing user message, no synthetic one", "msg_user", prompt.messageID)
-        assertTrue("An empty part list leaves the original user parts intact", prompt.parts.isEmpty())
+        assertEquals("ses_test", rpc.prompts.single().first)
+        assertEquals("Continues the existing user message, no synthetic one", "msg_user", prompt.messageID)
+        assertTrue("No parts means the CLI keeps the original prompt text", prompt.parts.isEmpty())
         assertEquals("kilo", prompt.providerID)
         assertEquals("gpt-5", prompt.modelID)
         assertEquals("code", prompt.agent)
+    }
+
+    /** The transcript is the thing the old revert-based retry destroyed, so assert it survives. */
+    fun `test retry keeps the failed turn in the transcript`() {
+        failed()
+        val m = controller("ses_test")
+        flush()
+
+        edt { m.retry() }
+        flush()
+
+        edt {
+            assertEquals(
+                "Both messages must still be there",
+                listOf("msg_user", "msg_fail"),
+                m.model.messages().map { it.info.id },
+            )
+        }
+    }
+
+    /** No "continue" text may reach the CLI: a visible user turn is exactly what this avoids. */
+    fun `test retry sends no text part`() {
+        failed()
+        val m = controller("ses_test")
+        flush()
+
+        edt { m.retry() }
+        flush()
+
+        val prompt = rpc.prompts.single().third
+        assertTrue(prompt.parts.isEmpty())
+        assertNull("A continue must not attach fresh editor context either", prompt.editorContext)
+        edt {
+            assertEquals(
+                "No message was appended to the transcript",
+                listOf("msg_user", "msg_fail"),
+                m.model.messages().map { it.info.id },
+            )
+        }
     }
 
     fun `test retry uses the model selected after the failure`() {
@@ -223,23 +260,34 @@ class SessionRetryTest : SessionControllerTestBase() {
         assertEquals("kilo-auto/free", prompt.modelID)
     }
 
-    fun `test retry does not prompt until the revert completes`() {
+    /**
+     * The error card is bound to the session state (`SessionMessageListPanel.syncActive`), so leaving the
+     * failed state is what dismisses it. That has to happen on the click, not when the RPC returns.
+     */
+    fun `test retry leaves the failed state before the prompt resolves`() {
         failed()
-        val gate = CompletableDeferred<Unit>()
-        rpc.revertGate = gate
+        val m = controller("ses_test")
+        flush()
+        // seedOutcome() puts an errored tail into Error on load, which is what paints the card.
+        edt { assertTrue("Precondition: the card is showing", m.model.state is SessionState.Error) }
+
+        edt { m.retry() }
+
+        edt { assertTrue("The card must be gone on click", m.model.state is SessionState.Busy) }
+        flush()
+        assertTrue(m.model.state is SessionState.Busy)
+    }
+
+    /** A busy state is also what makes a second click a no-op, so no double prompt can escape. */
+    fun `test retry clicked twice prompts once`() {
+        failed()
         val m = controller("ses_test")
         flush()
 
         edt { m.retry() }
+        edt { m.retry() }
         flush()
 
-        assertTrue("The prompt must not race the workspace restore", rpc.prompts.isEmpty())
-        assertTrue(m.model.state is SessionState.Reverting)
-
-        gate.complete(Unit)
-        flush()
-
-        assertEquals(1, rpc.reverts.size)
         assertEquals(1, rpc.prompts.size)
     }
 
@@ -268,15 +316,18 @@ class SessionRetryTest : SessionControllerTestBase() {
 
     fun `test retry is unavailable while the session is busy`() {
         failed()
-        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
         val m = controller("ses_test")
         flush()
+        // A live turn is the deterministic way to be busy here: the recovery status map arrives through
+        // a flow, so seeding rpc.statuses cannot be observed reliably right after the first flush.
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        edt { assertTrue("Precondition: the session is busy", m.model.state is SessionState.Busy) }
 
         edt { m.retry() }
         flush()
 
         assertTrue(rpc.reverts.isEmpty())
-        assertTrue(rpc.prompts.isEmpty())
+        assertTrue("A busy session must not be continued", rpc.prompts.isEmpty())
     }
 
     fun `test retry is unavailable when nothing failed`() {
@@ -295,10 +346,10 @@ class SessionRetryTest : SessionControllerTestBase() {
 
     /**
      * Missing provider credentials fail during model resolution, before the assistant message exists, so
-     * the failure only surfaces as a session error over a user-message tail. There is nothing to roll
-     * back — Retry must still replay, otherwise the card's only action is dead.
+     * the failure only surfaces as a session error over a user-message tail. Retry must still continue,
+     * otherwise the card's only action is dead.
      */
-    fun `test retry replays a turn that failed before the assistant message existed`() {
+    fun `test retry continues a turn that failed before the assistant message existed`() {
         unanswered()
         val m = controller("ses_test")
         flush()
@@ -315,9 +366,9 @@ class SessionRetryTest : SessionControllerTestBase() {
         edt { m.retry() }
         flush()
 
-        assertTrue("Nothing was produced, so there is no message to roll back", rpc.reverts.isEmpty())
+        assertTrue(rpc.reverts.isEmpty())
         val prompt = rpc.prompts.single().third
-        assertEquals("Replays the existing user message, no synthetic one", "msg_user", prompt.messageID)
+        assertEquals("Continues the existing user message, no synthetic one", "msg_user", prompt.messageID)
         assertTrue(prompt.parts.isEmpty())
         assertEquals("anthropic", prompt.providerID)
         assertEquals("claude-opus-5", prompt.modelID)
@@ -325,7 +376,7 @@ class SessionRetryTest : SessionControllerTestBase() {
     }
 
     /** The same failure also arrives as a turn close with reason "error" when no session error follows. */
-    fun `test retry replays an unanswered turn reported only by turn close`() {
+    fun `test retry continues an unanswered turn reported only by turn close`() {
         unanswered()
         val m = controller("ses_test")
         flush()
@@ -344,12 +395,12 @@ class SessionRetryTest : SessionControllerTestBase() {
         assertEquals("msg_user", prompt.messageID)
         assertEquals("kilo", prompt.providerID)
         assertEquals("gpt-5", prompt.modelID)
-        assertEquals("Effort switched after the failure has to reach the replay", "high", prompt.variant)
+        assertEquals("Effort switched after the failure has to reach the continue", "high", prompt.variant)
     }
 
     /**
      * A session-level error (a bad config, a plugin failure) can land after a turn that delivered its
-     * answer. Retrying then would revert real work, so the card must not offer it.
+     * answer. Continuing then would ask the model to redo delivered work, so the card must not offer it.
      */
     fun `test retry is unavailable when the last turn completed`() {
         rpc.history.add(MessageWithPartsDto(msg("msg_user", "ses_test", "user"), emptyList()))
@@ -371,8 +422,8 @@ class SessionRetryTest : SessionControllerTestBase() {
         edt { m.retry() }
         flush()
 
-        assertTrue("A completed turn must not be rolled back", rpc.reverts.isEmpty())
-        assertTrue(rpc.prompts.isEmpty())
+        assertTrue(rpc.reverts.isEmpty())
+        assertTrue("A completed turn must not be re-run", rpc.prompts.isEmpty())
     }
 
     fun `test retry is unavailable when the session has no user message`() {
@@ -381,7 +432,7 @@ class SessionRetryTest : SessionControllerTestBase() {
         flush()
         emit(ChatEventDto.Error(null, MessageErrorDto(type = "UnknownError", message = "invalid kilo.json")))
 
-        edt { assertFalse("Nothing to replay, so the card must not offer Retry", m.canRetry()) }
+        edt { assertFalse("Nothing to continue, so the card must not offer Retry", m.canRetry()) }
     }
 
     fun `test retry is offered for a failed assistant turn`() {
@@ -400,9 +451,9 @@ class SessionRetryTest : SessionControllerTestBase() {
         edt { assertFalse(m.canRetry()) }
     }
 
-    fun `test retry surfaces an error when the revert fails`() {
+    fun `test retry surfaces an error when the prompt fails`() {
         failed()
-        rpc.revertThrows = RuntimeException("snapshot unavailable")
+        rpc.promptThrows = RuntimeException("backend unavailable")
         val m = controller("ses_test")
         flush()
 
@@ -411,7 +462,8 @@ class SessionRetryTest : SessionControllerTestBase() {
 
         assertTrue(rpc.prompts.isEmpty())
         val state = m.model.state
-        assertTrue("A failed revert must stay visible", state is SessionState.Error)
-        assertEquals("snapshot unavailable", (state as SessionState.Error).message)
+        assertTrue("A rejected continue must not leave a fake busy state", state is SessionState.Error)
+        assertEquals("backend unavailable", (state as SessionState.Error).message)
+        edt { assertTrue("The card must offer Retry again", m.canRetry()) }
     }
 }

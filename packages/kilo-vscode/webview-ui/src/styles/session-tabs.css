@@ -177,6 +177,27 @@
   flex-shrink: 0;
 }
 
+.session-tab-bar .am-tab-icon[data-activity="waiting"],
+.session-tab-switcher-popover .search-menu-icon[data-activity="waiting"],
+.session-tab-switcher-popover .session-tab-switcher-meta[data-activity="waiting"] {
+  --icon-base: var(--icon-warning-base);
+  color: var(--icon-warning-base);
+}
+
+.session-tab-bar .am-tab-icon[data-activity="error"],
+.session-tab-switcher-popover .search-menu-icon[data-activity="error"],
+.session-tab-switcher-popover .session-tab-switcher-meta[data-activity="error"] {
+  --icon-base: var(--icon-critical-base);
+  color: var(--icon-critical-base);
+}
+
+.session-tab-bar .am-tab-icon[data-activity="done"],
+.session-tab-switcher-popover .search-menu-icon[data-activity="done"],
+.session-tab-switcher-popover .session-tab-switcher-meta[data-activity="done"] {
+  --icon-base: var(--icon-success-base);
+  color: var(--icon-success-base);
+}
+
 .session-tab-bar .am-worktree-spinner {
   width: 16px;
   height: 16px;

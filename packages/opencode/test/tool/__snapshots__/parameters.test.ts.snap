@@ -376,8 +376,16 @@ exports[`tool parameters JSON Schema (wire shape) task 1`] = `
       "description": "A short (3-5 words) description of the task",
       "type": "string",
     },
+    "model": {
+      "description": "Optional subagent model name or qualified provider/model ID from agent_manager_models. Choose a model suited to this task; omit to use the normal subagent model.",
+      "type": "string",
+    },
     "prompt": {
       "description": "The task for the agent to perform",
+      "type": "string",
+    },
+    "provider": {
+      "description": "Optional provider ID from agent_manager_models. Requires model; omit to prefer the current turn's provider, then Kilo Gateway.",
       "type": "string",
     },
     "subagent_type": {
@@ -386,6 +394,10 @@ exports[`tool parameters JSON Schema (wire shape) task 1`] = `
     },
     "task_id": {
       "description": "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
+      "type": "string",
+    },
+    "variant": {
+      "description": "Optional reasoning effort variant from agent_manager_models. Can be used without model to change only the normal subagent model's reasoning effort.",
       "type": "string",
     },
   },

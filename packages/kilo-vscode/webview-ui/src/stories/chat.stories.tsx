@@ -26,6 +26,7 @@ import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
+import type { SessionContextValue } from "../context/session-types"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
@@ -38,6 +39,7 @@ import type {
   SessionModelUsage,
   SuggestionRequest,
   TodoItem,
+  ToolPart,
 } from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { reviewMetadata } from "../../../src/shared/review-comments"
@@ -1197,6 +1199,57 @@ export const TaskHeaderWithTodos: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const TaskHeaderBackgroundAgents1280: Story = {
+  name: "TaskHeader background agents, wide",
+  args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
+  render: (args: { names: string[] }) => {
+    const tools: ToolPart[] = args.names.map((description, index) => ({
+      id: `task-${index}`,
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "task",
+      state: { status: "completed", input: { description }, output: "Started background agent", title: description },
+      metadata: { sessionId: `child-${index}`, background: true },
+    }))
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID }),
+      messages: () => headerMessages,
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Investigate request size limits",
+        createdAt: new Date(headerNow).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
+      }),
+      getSessionToolParts: () => tools,
+      allStatusMap: () => Object.fromEntries(tools.map((_, index) => [`child-${index}`, { type: "busy" as const }])),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} noPadding>
+        <SessionContext.Provider value={session as unknown as SessionContextValue}>
+          <TaskHeader />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TaskHeaderBackgroundAgents420: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader background agents, narrow",
+}
+
+export const TaskHeaderBackgroundAgents200: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader background agents, compact",
+}
+
+export const TaskHeaderSingleBackgroundAgent420: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader single background agent, narrow",
+  args: { names: ["Check request limits"] },
 }
 
 export const TaskHeaderWithTodosAllDone: Story = {

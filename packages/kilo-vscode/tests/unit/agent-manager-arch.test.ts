@@ -70,6 +70,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
   // Shared components that consume agent-manager CSS classes (e.g. am-dropdown,
   // am-branch-item) used by both the agent manager and the diff viewer.
+  path.join(ROOT, "webview-ui/src/components/shared/ActivityIcon.tsx"),
   path.join(ROOT, "webview-ui/src/components/shared/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/TabDnd.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
@@ -360,7 +361,7 @@ describe("Agent Manager Model Picker", () => {
 
 describe("Agent Manager Worktree Actions", () => {
   it("opens the configuration dialog from the primary plus action", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"), "utf-8")
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"), "utf-8")
     const start = source.indexOf('<div class="am-split-button">')
     const end = source.indexOf("</div>", start)
     const actions = source.slice(start, end)

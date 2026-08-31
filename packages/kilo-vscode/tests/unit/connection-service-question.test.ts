@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
 
 describe("KiloConnectionService question routing", () => {
-  test("ignores stale NotFoundError rejects while draining questions", async () => {
+  test.each([undefined, { _tag: "NotFound" }])("invalidates recovery after draining (%j)", async (error) => {
     const service = new KiloConnectionService({} as any)
     const client = {
       permission: {
@@ -10,7 +10,7 @@ describe("KiloConnectionService question routing", () => {
       },
       question: {
         list: async () => ({ data: [{ id: "que_test" }] }),
-        reject: async () => ({ error: { _tag: "NotFound" } }),
+        reject: async () => ({ error }),
       },
       suggestion: {
         list: async () => ({ data: [] }),
@@ -22,8 +22,14 @@ describe("KiloConnectionService question routing", () => {
 
     ;(service as any).client = client
     ;(service as any).directoryProviders.add(() => ["/tmp/workspace"])
+    service.recordQuestionDirectory("que_test", "/tmp/workspace")
+    const revisions: number[] = []
+    service.onClearPendingPrompts(() => revisions.push(service.getQuestionRevision()))
 
     await expect(service.drainPendingPrompts()).resolves.toBeUndefined()
+
+    expect(service.getQuestionDirectory("que_test")).toBeUndefined()
+    expect(revisions).toEqual([1])
   })
 
   test("records and clears request origins from SSE events", () => {

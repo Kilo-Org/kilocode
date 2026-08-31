@@ -3,6 +3,9 @@ import { expect, test, type Page } from "@playwright/test"
 const GLOBALS = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
 const STORY_ID = "agentmanager--full-screen-diff-agent-edit-scroll"
 const INLINE_STORY_ID = "agentmanager--diff-panel-scroll-up"
+const CACHE_STORY_ID = "agentmanager--diff-panel-cached-worktree-switch"
+const VIEWPORT_STORY_ID = "agentmanager--diff-panel-viewport-loading"
+const TREE_STORY_ID = "agentmanager--file-tree-virtualized-large"
 
 function storyUrl() {
   return `/iframe.html?id=${STORY_ID}&viewMode=story&globals=${GLOBALS}`
@@ -220,4 +223,150 @@ test("keeps the inline diff position stable while scrolling upward", async ({ pa
   expect(result.remounts).toBeGreaterThan(0)
   expect(result.correction).toBeLessThanOrEqual(1)
   expect(result.range).toBeLessThanOrEqual(1)
+})
+
+test("keeps cached worktree reviews visible on every switch frame", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 760 })
+  await page.goto(`/iframe.html?id=${CACHE_STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await disableAnimations(page)
+
+  for (let index = 1; index <= 12; index++) {
+    await page.getByTestId(`select-worktree-${index}`).click()
+    await expect(page.locator(".am-diff-panel-cache-active [data-file-path]")).toHaveAttribute(
+      "data-file-path",
+      `src/worktree-${index}.ts`,
+    )
+    await expect(page.locator(".am-diff-panel-cache-active diffs-container [data-line]").first()).toBeVisible()
+  }
+
+  const result = await page.evaluate(async () => {
+    const frames: Array<{ id: string; immediate: boolean; painted: boolean; remounted: boolean; rebuilt: boolean }> = []
+    const panels = new Map<string, Element>()
+    const lines = new Map<string, Element>()
+    for (let cycle = 0; cycle < 3; cycle++) {
+      for (let index = 1; index <= 12; index++) {
+        const id = `worktree-${index}`
+        const button = document.querySelector<HTMLButtonElement>(`[data-testid="select-${id}"]`)
+        if (!button) throw new Error(`Missing worktree ${id}`)
+        button.click()
+        const panel = document.querySelector(".am-diff-panel-cache-active")
+        const known = panels.get(id)
+        const remounted = known !== undefined && known !== panel
+        if (panel) panels.set(id, panel)
+        const visible = () => {
+          const row = document.querySelector(".am-diff-panel-cache-active [data-file-path]")
+          if (row?.getAttribute("data-file-path") !== `src/${id}.ts`) return false
+          const line = row.querySelector("diffs-container")?.shadowRoot?.querySelector("[data-line]")
+          return Boolean(line?.textContent?.trim() && line.getBoundingClientRect().height > 0)
+        }
+        const immediate = visible()
+        await new Promise((resolve) => requestAnimationFrame(resolve))
+        const line = panel?.querySelector("diffs-container")?.shadowRoot?.querySelector("[data-line]")
+        const previous = lines.get(id)
+        const rebuilt = previous !== undefined && previous !== line
+        if (line) lines.set(id, line)
+        frames.push({ id, immediate, painted: visible(), remounted, rebuilt })
+      }
+    }
+    return {
+      frames,
+      blank: frames.filter((frame) => !frame.immediate || !frame.painted),
+      remounts: frames.filter((frame) => frame.remounted),
+      rebuilds: frames.filter((frame) => frame.rebuilt),
+      panels: document.querySelectorAll(".am-diff-panel-cache").length,
+      active: document.querySelectorAll(".am-diff-panel-cache-active").length,
+      hidden: [...document.querySelectorAll(".am-diff-panel-cache:not(.am-diff-panel-cache-active)")].every(
+        (panel) => getComputedStyle(panel).contentVisibility === "hidden",
+      ),
+    }
+  })
+
+  expect(result.blank).toEqual([])
+  expect(result.remounts).toEqual([])
+  expect(result.rebuilds).toEqual([])
+  expect(result.panels).toBe(12)
+  expect(result.active).toBe(1)
+  expect(result.hidden).toBe(true)
+})
+
+test("loads only visible diff details and fetches distant rows when scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 760 })
+  await page.goto(`/iframe.html?id=${VIEWPORT_STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await disableAnimations(page)
+
+  const root = page.getByTestId("viewport-diff-review")
+  const scroll = page.locator(".am-diff-content")
+  await expect(scroll).toBeVisible()
+  await expect.poll(async () => Number(await root.getAttribute("data-request-count"))).toBeGreaterThan(0)
+  await expect(root.locator("diffs-container [data-line]").first()).toBeVisible()
+
+  const initial = Number(await root.getAttribute("data-request-count"))
+  expect(initial).toBeLessThan(30)
+  expect(await root.getAttribute("data-requested")).not.toContain("src/file-119.ts")
+  await expect(root).toHaveAttribute("data-offscreen", "")
+
+  await expect
+    .poll(
+      async () => {
+        await scroll.evaluate((element) => {
+          element.scrollTop = element.scrollHeight
+        })
+        return (await root.getAttribute("data-requested"))?.includes("src/file-119.ts") ?? false
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(true)
+
+  expect(Number(await root.getAttribute("data-request-count"))).toBeLessThan(40)
+  await expect(root).toHaveAttribute("data-offscreen", "")
+})
+
+test("resumes interrupted visible diff content without requiring a new summary", async ({ page }) => {
+  await page.goto(`/iframe.html?id=agentmanager--diff-panel-interrupted-loading&viewMode=story&globals=${GLOBALS}`, {
+    waitUntil: "load",
+  })
+  const root = page.getByTestId("interrupted-review")
+  await expect(root).toHaveAttribute("data-requests", "1")
+  await page.getByTestId("interrupt-review").click()
+  await page.getByTestId("resume-review").click()
+  await expect(root).toHaveAttribute("data-requests", "2")
+  await expect(root.locator("diffs-container [data-line]").filter({ hasText: "after" })).toBeVisible()
+})
+
+test("virtualizes large review file trees while preserving navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 760 })
+  await page.goto(`/iframe.html?id=${TREE_STORY_ID}&viewMode=story&globals=${GLOBALS}`, { waitUntil: "load" })
+  await disableAnimations(page)
+
+  const root = page.getByTestId("large-file-tree")
+  const scroll = root.locator(".am-file-tree-list")
+  const files = root.locator(".am-file-tree-file")
+  await expect(scroll).toBeVisible()
+  await expect.poll(async () => files.count()).toBeGreaterThan(0)
+  expect(await files.count()).toBeLessThan(80)
+
+  await expect
+    .poll(
+      async () => {
+        await scroll.evaluate((element) => {
+          element.scrollTop = element.scrollHeight
+        })
+        return root.getByText("file-0599.ts").count()
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(1)
+
+  await root.getByText("file-0599.ts").click()
+  await expect(root).toHaveAttribute("data-selected", "src/group-19/file-0599.ts")
+  expect(await files.count()).toBeLessThan(80)
+
+  await scroll.evaluate((element) => {
+    element.scrollTop = 0
+  })
+  await expect(root.locator(".am-file-tree-dir").first()).toBeVisible()
+  await root.locator(".am-file-tree-dir").first().click()
+  await expect(files).toHaveCount(0)
+  await root.locator(".am-file-tree-dir").first().click()
+  await expect.poll(async () => files.count()).toBeGreaterThan(0)
 })

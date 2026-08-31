@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Poveži provajdera",
 
+  "session.activity.waiting": "Čeka se odgovor ili odobrenje.",
+  "session.activity.error": "Greška ili prekinuta veza.",
+  "session.activity.retry": "Automatski novi pokušaj.",
+  "session.activity.busy": "U toku.",
+  "session.activity.done": "Potez završen.",
+  "session.activity.idle": "Ne radi.",
+
   "command.session.new": "Nova sesija",
   "command.session.show.changes": "Prikaži promjene",
   "command.review.toggle": "Prikaži/sakrij pregled",
@@ -175,8 +182,11 @@ export const dict = {
   "common.saving": "Čuvanje...",
   "common.default": "Podrazumijevano",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "Pretraži Worktree-ove",
   "prompt.thinking.tooltip": "Napor razmišljanja",
   "prompt.action.send": "Pošalji",
+  "prompt.action.continue": "Nastavi",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
@@ -884,6 +894,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
+  "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
+  "settings.experimental.taskModelSelection.description":
+    "Omogućava izričit odabir modela, provajdera i napora zaključivanja za Task podagente.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1064,6 +1077,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
   "settings.context.compaction.title": "Kompresija",
+  "settings.context.compactionModel.title": "Model za kompresiju",
+  "settings.context.compactionModel.description":
+    "Model koji se koristi za automatsku i ručnu kompresiju. Ostavite nepostavljeno da biste koristili model za chat. Trošak, brzina i kvalitet sažetka zavise od modela.",
+  "settings.context.compactionModel.useChatModel": "Koristi model za chat",
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
@@ -1251,6 +1268,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} zadataka završeno",
   "task.backgroundAgents.running.one": "1 agent u pozadini",
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
+  "task.backgroundAgents.more": "+{{count}} još",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",

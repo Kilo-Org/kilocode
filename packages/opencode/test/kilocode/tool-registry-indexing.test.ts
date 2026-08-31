@@ -375,6 +375,18 @@ describe("kilocode tool registry indexing", () => {
         "send_file",
       ])
 
+      for (const client of ["cli", "run", "acp"]) {
+        process.env["KILO_CLIENT"] = client
+        const enabled = KiloToolRegistry.extra(tools, { experimental: { task_model_selection: true } }).map(
+          (tool) => tool.id,
+        )
+        expect(enabled).toContain("agent_manager_models")
+        expect(enabled).not.toContain("agent_manager")
+        expect(
+          KiloToolRegistry.extra(tools, { experimental: { task_model_selection: false } }).map((tool) => tool.id),
+        ).not.toContain("agent_manager_models")
+      }
+
       process.env["KILO_CLIENT"] = "vscode"
       expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
         "semantic_search",

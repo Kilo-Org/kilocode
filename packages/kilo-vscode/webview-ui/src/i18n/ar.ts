@@ -58,6 +58,13 @@ export const dict = {
 
   "command.provider.connect": "اتصال بموفر",
 
+  "session.activity.waiting": "في انتظار إجابة أو موافقة.",
+  "session.activity.error": "حدث خطأ أو فُقد الاتصال.",
+  "session.activity.retry": "إعادة المحاولة تلقائيًا.",
+  "session.activity.busy": "قيد التنفيذ.",
+  "session.activity.done": "اكتمل الدور.",
+  "session.activity.idle": "غير قيد التشغيل.",
+
   "command.session.new": "جلسة جديدة",
   "command.session.show.changes": "إظهار التغييرات",
   "command.review.toggle": "تبديل المراجعة",
@@ -170,8 +177,11 @@ export const dict = {
   "common.saving": "جارٍ الحفظ...",
   "common.default": "افتراضي",
 
+  "prompt.worktrees.title": "Worktrees",
+  "prompt.worktrees.search": "البحث في Worktrees",
   "prompt.thinking.tooltip": "جهد الاستدلال",
   "prompt.action.send": "إرسال",
+  "prompt.action.continue": "متابعة",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
   "prompt.action.send.recording": "تفريغ وإرسال",
   "prompt.action.stop": "توقف",
@@ -861,6 +871,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
+  "settings.experimental.taskModelSelection.title": "اختيار نموذج الوكيل الفرعي لـ Task",
+  "settings.experimental.taskModelSelection.description":
+    "السماح باختيار النموذج والمزوّد ومستوى الاستدلال صراحةً للوكلاء الفرعيين في Task.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1032,6 +1045,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
   "settings.context.compaction.title": "الضغط",
+  "settings.context.compactionModel.title": "نموذج الضغط",
+  "settings.context.compactionModel.description":
+    "النموذج المستخدم للضغط التلقائي واليدوي. اتركه فارغاً لاستخدام نموذج الدردشة. تعتمد التكلفة والسرعة وجودة الملخص على النموذج.",
+  "settings.context.compactionModel.useChatModel": "استخدام نموذج الدردشة",
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
@@ -1217,6 +1234,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} مهام مكتملة",
   "task.backgroundAgents.running.one": "وكيل خلفي واحد",
   "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
+  "task.backgroundAgents.more": "+{{count}} آخرون",
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",

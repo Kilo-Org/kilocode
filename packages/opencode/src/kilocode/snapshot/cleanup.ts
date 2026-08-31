@@ -31,56 +31,41 @@ export namespace KiloSnapshotCleanup {
 
   const alias = (value: string, canonical: string) =>
     process.platform === "darwin" &&
-    ((value === "/var" && canonical === "/private/var") || (value === "/tmp" && canonical === "/private/tmp"))
+    canonical === `/private${value}` &&
+    ["/var", "/tmp"].some((root) => value === root || value.startsWith(`${root}/`))
 
   const inspect = Effect.fnUntraced(function* (fs: FSUtil.Interface, target: string) {
-    const root = path.parse(target).root
-    const parts = path.relative(root, target).split(path.sep).filter(Boolean)
-    let current = root
-    let canonical = yield* fs
-      .realPath(root)
-      .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(root)))
+    const missing: string[] = []
+    let current = target
 
-    for (const [index, name] of parts.entries()) {
-      const info = yield* fs
-        .stat(current)
+    while (true) {
+      const canonical = yield* fs
+        .realPath(current)
         .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
-      if (!info) {
+      if (canonical !== undefined) {
+        if (normalized(canonical) !== normalized(current) && !alias(current, canonical))
+          return yield* Effect.fail(new Error("trusted path contains an unexpected symlink"))
+        const info = yield* fs.stat(current)
+        if (missing.length > 0 && info.type !== "Directory")
+          return yield* Effect.fail(new Error("trusted path parent is not a directory"))
+        if (normalized(yield* fs.realPath(current)) !== normalized(canonical))
+          return yield* Effect.fail(new Error("trusted path changed during inspection"))
         return {
-          canonical: path.join(canonical, ...parts.slice(index)),
-          exists: false,
-        } satisfies Checked
-      }
-      if (info.type !== "Directory") return yield* Effect.fail(new Error("trusted path parent is not a directory"))
-
-      const entries = yield* fs.readDirectoryEntries(current)
-      const entry = entries.find((item) => item.name === name)
-      if (!entry) {
-        canonical = yield* fs.realPath(current)
-        return {
-          canonical: path.join(canonical, ...parts.slice(index)),
-          exists: false,
+          canonical: path.join(canonical, ...missing),
+          exists: missing.length === 0,
+          type: info.type === "Directory" ? "directory" : "other",
         } satisfies Checked
       }
 
-      const next = path.join(current, name)
-      const real = yield* fs.realPath(next)
-      const again = (yield* fs.readDirectoryEntries(current)).find((item) => item.name === name)
-      if (!again || (again.type === "symlink" && !alias(next, real)) || again.type !== entry.type)
-        return yield* Effect.fail(new Error("trusted path contains an unexpected symlink"))
-
-      current = next
-      canonical = real
-      if (index === parts.length - 1) {
-        return {
-          canonical,
-          exists: true,
-          type: again.type === "symlink" && alias(next, real) ? "directory" : again.type,
-        } satisfies Checked
-      }
+      const link = yield* fs
+        .readLink(current)
+        .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
+      if (link !== undefined) return yield* Effect.fail(new Error("trusted path contains an unexpected symlink"))
+      const parent = path.dirname(current)
+      if (parent === current) return yield* Effect.fail(new Error("trusted path root is missing"))
+      missing.unshift(path.basename(current))
+      current = parent
     }
-
-    return { canonical, exists: true, type: "directory" } satisfies Checked
   })
 
   const dir = (value: Checked, name: string) => {
