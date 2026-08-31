@@ -10,13 +10,13 @@ import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.ensureActive
 
 /**
- * In-process mermaid engine covering flowcharts and sequence diagrams.
+ * In-process mermaid engine covering every diagram type [Type] can detect.
  *
  * [Measure] is a construction-time capability rather than part of [Spec] so an out-of-process engine
  * can implement the same interface while doing its own text measurement.
  */
 internal class Mermaid(private val measure: Measure) : Engine {
-    override fun accepts(type: Type) = type == Type.Flowchart || type == Type.Sequence
+    override fun accepts(type: Type) = type != Type.Unknown
 
     override suspend fun draw(source: String, spec: Spec): Out {
         if (source.length > spec.limits.chars) {
@@ -32,10 +32,31 @@ internal class Mermaid(private val measure: Measure) : Engine {
         if (clean.lines.any { it.text.length > spec.limits.span }) {
             return Out.Err(Fault.Limit, "a line exceeds ${spec.limits.span} characters")
         }
-        val type = Type.of(clean)
-        if (!accepts(type)) return Out.Err(Fault.Unsupported, "unsupported diagram type: $type")
-        if (type == Type.Flowchart) return flow(clean, spec)
-        return seq(clean, spec)
+        return when (val type = Type.of(clean)) {
+            Type.Flowchart -> flow(clean, spec)
+            Type.Sequence -> seq(clean, spec)
+            Type.Class -> ClassDg(measure, spec).draw(clean)
+            Type.State -> StateDg(measure, spec).draw(clean)
+            Type.Er -> ErDg(measure, spec).draw(clean)
+            Type.Gantt -> Gantt(measure, spec).draw(clean)
+            Type.Pie -> Pie(measure, spec).draw(clean)
+            Type.Journey -> Journey(measure, spec).draw(clean)
+            Type.Quadrant -> Quadrant(measure, spec).draw(clean)
+            Type.Requirement -> ReqDg(measure, spec).draw(clean)
+            Type.Git -> GitDg(measure, spec).draw(clean)
+            Type.C4 -> C4Dg(measure, spec).draw(clean)
+            Type.Mindmap -> Mindmap(measure, spec).draw(clean)
+            Type.Timeline -> Timeline(measure, spec).draw(clean)
+            Type.Sankey -> Sankey(measure, spec).draw(clean)
+            Type.XyChart -> XyChart(measure, spec).draw(clean)
+            Type.Block -> BlockDg(measure, spec).draw(clean)
+            Type.Packet -> Packet(measure, spec).draw(clean)
+            Type.Kanban -> Kanban(measure, spec).draw(clean)
+            Type.Architecture -> Arch(measure, spec).draw(clean)
+            Type.Radar -> Radar(measure, spec).draw(clean)
+            Type.Treemap -> Treemap(measure, spec).draw(clean)
+            Type.Unknown -> Out.Err(Fault.Unsupported, "unsupported diagram type: $type")
+        }
     }
 
     private suspend fun flow(clean: Clean, spec: Spec): Out {
