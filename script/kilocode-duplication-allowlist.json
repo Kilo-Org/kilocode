@@ -181,18 +181,6 @@
     },
     {
       "files": [
-        "packages/kilo-vscode/src/agent-manager/diff-scope.ts",
-        "packages/kilo-vscode/webview-ui/agent-manager/diff-scope-state.ts"
-      ],
-      "fingerprint": "b4d0b555891237a8",
-      "maxMatches": 1,
-      "maxTokens": 233,
-      "kind": "legacy",
-      "owner": "kilo-vscode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
         "packages/kilo-vscode/src/agent-manager/orchestration-bridge.ts",
         "packages/kilo-vscode/src/services/notebook/bridge.ts"
       ],
