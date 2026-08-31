@@ -309,6 +309,43 @@ class KiloBackendProviderSettingsManagerTest {
     }
 
     @Test
+    fun `clearing an env var keeps hand-authored headers on the provider entry`() = runBlocking {
+        // Deleting the entry to clear "env" also drops every other key on it. The dialog has no
+        // headers field, so headers only ever come from a hand-edited kilo.json and must survive
+        // the recreate patch instead of being silently wiped by an unrelated env var change.
+        mock.config = """{
+            "provider":{
+                "my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"http://localhost:11434"},"env":["OLD_VAR"],"headers":{"X-Custom":"abc-123"}}
+            }
+        }""".trimIndent()
+        mock.providers = """{
+            "all":[{"id":"my-openai","name":"My OpenAI","source":"config","models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o"}}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.saveCustom(
+            CustomProviderSaveDto(
+                "/test",
+                "my-openai",
+                "My OpenAI",
+                "https://api.example.com/v1",
+                apiKey = "sk-test",
+                envVar = null,
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            ),
+        )
+
+        assertNull(result.error)
+        val state = manager.state("/test")
+        assertEquals(emptyList<String>(), state.config["my-openai"]?.env.orEmpty())
+        assertEquals(mapOf("X-Custom" to "abc-123"), state.config["my-openai"]?.headers)
+    }
+
+    @Test
     fun `saving custom provider without an existing env var does not delete the entry first`() = runBlocking {
         // Deleting first is only needed to clear a previously-set env var. Doing it unconditionally
         // would risk wiping fields the save patch doesn't set (e.g. a hand-authored

@@ -156,9 +156,13 @@ internal class KiloBackendProviderSettingsManager(
         // var to clear: deleting drops any fields the recreate patch doesn't set (e.g. a
         // hand-authored whitelist/blacklist), and a failure between the two patches would otherwise
         // leave the entry missing until the next successful save.
-        val hadEnv = input.envVar.isNullOrBlank() && state(input.directory).config[input.id]?.env?.isNotEmpty() == true
-        if (hadEnv) patch(KiloCliDataParser.buildCustomProviderDeletePatch(input.id))
-        patch(KiloCliDataParser.buildCustomProviderPatch(input))
+        val cfg = if (input.envVar.isNullOrBlank()) state(input.directory).config[input.id] else null
+        val stale = cfg?.takeIf { it.env.isNotEmpty() }
+        if (stale != null) patch(KiloCliDataParser.buildCustomProviderDeletePatch(input.id))
+        // The dialog never edits headers, so the delete above would otherwise drop hand-authored
+        // ones: carry them into the recreate patch when the save itself doesn't set any.
+        val save = if (stale != null && input.headers.isEmpty()) input.copy(headers = stale.headers) else input
+        patch(KiloCliDataParser.buildCustomProviderPatch(save))
         if (input.envVar.isNullOrBlank()) {
             val key = input.apiKey?.takeIf { it.isNotBlank() }
             if (key != null) put("/auth/${enc(input.id)}", KiloCliDataParser.buildProviderAuthJson(key, emptyMap()))
