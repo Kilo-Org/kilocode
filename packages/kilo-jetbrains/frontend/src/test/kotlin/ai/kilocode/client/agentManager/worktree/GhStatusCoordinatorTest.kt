@@ -6,6 +6,7 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
+import ai.kilocode.client.testing.activateIde
 import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
@@ -142,14 +143,15 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         assertEquals(1, rpc.ghCalls.size)
     }
 
-    fun `test coordinator skips forced probes while busy instead of queueing`() {
+    fun `test coordinator drops submitted syncs while busy instead of queueing`() {
         val gate = CompletableDeferred<Unit>()
         rpc.beforeGhStatus = { gate.await() }
         val handle = edtWait { service.attach(project) }
         awaitCalls(1)
 
-        edtWait { service.forceProbe("test") }
-        timers.advanceBy(0)
+        // Past the event throttle, so an in-flight probe is the only thing that can drop the submit.
+        timers.advanceBy(EVENT_THROTTLE)
+        edtWait { service.sync("test") }
         pump()
         assertEquals(1, rpc.ghCalls.size)
 
@@ -157,6 +159,56 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         drain()
         assertEquals(1, rpc.ghCalls.size)
         handle.close()
+    }
+
+    fun `test coordinator throttles a burst of submitted syncs`() {
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertEquals(1, rpc.ghCalls.size)
+
+        // Focus and tab-switch events can arrive in bursts; inside the window they collapse to none.
+        repeat(5) { edtWait { service.sync("burst") } }
+        drain()
+        assertEquals(1, rpc.ghCalls.size)
+
+        timers.advanceBy(EVENT_THROTTLE)
+        edtWait { service.sync("later") }
+        drain()
+
+        assertEquals(2, rpc.ghCalls.size)
+        handle.close()
+    }
+
+    fun `test coordinator ignores submitted syncs while nothing is attached`() {
+        edtWait { service.sync("detached") }
+        drain()
+
+        assertTrue(rpc.ghCalls.isEmpty())
+    }
+
+    fun `test coordinator syncs when the ide frame is activated`() {
+        rpc.ghResult = GhAvailability.UNAUTH
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertEquals(GhAvailability.UNAUTH, service.current())
+        assertEquals(1, rpc.ghCalls.size)
+        timers.advanceBy(EVENT_THROTTLE)
+
+        // The user authorized gh in a terminal and came back to the IDE.
+        rpc.ghResult = GhAvailability.OK
+        edtWait { activateIde(project) }
+        drain()
+
+        assertEquals(2, rpc.ghCalls.size)
+        assertEquals(GhAvailability.OK, service.current())
+        handle.close()
+    }
+
+    fun `test coordinator does not probe on activation before anything attaches`() {
+        edtWait { activateIde(project) }
+        drain()
+
+        assertTrue(rpc.ghCalls.isEmpty())
     }
 
     fun `test coordinator probes git only while the github integration is off`() {
@@ -252,5 +304,8 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
 
     private companion object {
         private const val ROOT = "/real/repo"
+
+        /** Mirrors GhStatusCoordinator.EVENT_THROTTLE, the floor between event-driven syncs. */
+        private const val EVENT_THROTTLE = 3_000L
     }
 }

@@ -6,6 +6,7 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
+import ai.kilocode.client.testing.activateIde
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
@@ -16,6 +17,7 @@ import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 
@@ -145,6 +147,52 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         drain()
 
         assertEquals(GhAvailability.MISSING, service.gh.value)
+        handle.close()
+    }
+
+    fun `test activation reloads pr state within the throttle budget`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        val handle = service.attach()
+        drain()
+        assertEquals(1, service.pr.value[key]?.number)
+
+        // A PR merged while the IDE sat in the background.
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.MERGED, "https://pr/1")))
+        timers.advanceBy(30_000)
+        activateIde(project)
+        drain()
+
+        assertEquals(GhState.MERGED, service.pr.value[key]?.state)
+        handle.close()
+    }
+
+    fun `test activation collapses a burst of focus events into one lookup`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        val before = rpc.prCalls.size
+
+        repeat(5) { activateIde(project) }
+        drain()
+
+        assertEquals("PR_THROTTLE must absorb repeated activation", before, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test activation of another project does not reload pr state`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        val before = rpc.prCalls.size
+        timers.advanceBy(30_000)
+
+        // A different project's window gaining focus says nothing about this project's worktrees.
+        activateIde(ProjectManager.getInstance().defaultProject)
+        drain()
+
+        assertEquals(before, rpc.prCalls.size)
         handle.close()
     }
 

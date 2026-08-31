@@ -10,10 +10,12 @@ import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
+import com.intellij.openapi.application.ApplicationActivationListener
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.IdeFrame
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,8 +56,16 @@ class WorktreeStatusService internal constructor(
     val gh: StateFlow<GhAvailability> get() = ghFlow
 
     init {
-        ApplicationManager.getApplication().messageBus.connect(cs)
-            .subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener { enabled -> github(enabled) })
+        val bus = ApplicationManager.getApplication().messageBus.connect(cs)
+        bus.subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener { enabled -> github(enabled) })
+        // A PR can be merged or closed while the IDE sits in the background, so re-check on
+        // activation. Unforced, so PR_THROTTLE collapses a burst of focus events into one lookup.
+        bus.subscribe(ApplicationActivationListener.TOPIC, object : ApplicationActivationListener {
+            override fun applicationActivated(ideFrame: IdeFrame) {
+                if (ideFrame.project !== project) return
+                refreshPr()
+            }
+        })
     }
 
     fun attach(): AutoCloseable {

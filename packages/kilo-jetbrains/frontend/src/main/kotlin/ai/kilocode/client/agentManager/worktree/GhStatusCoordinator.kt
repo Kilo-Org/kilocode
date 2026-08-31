@@ -11,11 +11,13 @@ import ai.kilocode.client.util.edt
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.GhAvailability
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.application.ApplicationActivationListener
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.wm.IdeFrame
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -35,6 +37,9 @@ class GhStatusCoordinator(
         private const val FAST = 5_000
         private const val SLOW = 60_000
         private const val MAX_BACKOFF = 120_000
+        // Floor between event-driven syncs. Matches the backend's gh auth status cache TTL, so a
+        // burst of focus/tab events cannot outrun the answer a probe would get anyway.
+        private const val EVENT_THROTTLE = 3_000
     }
 
     private var timers: UiTimerSource = UiTimers
@@ -47,11 +52,17 @@ class GhStatusCoordinator(
     private var generation = 0
     private var github = KiloPluginSettings.getGithub()
     private var job: Job? = null
+    private var probed = 0L
     private val projects = linkedMapOf<Project, Int>()
 
     init {
-        ApplicationManager.getApplication().messageBus.connect(cs)
-            .subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener { enabled -> edt { github(enabled) } })
+        val bus = ApplicationManager.getApplication().messageBus.connect(cs)
+        bus.subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener { enabled -> edt { github(enabled) } })
+        // Returning to the IDE usually follows work done elsewhere — `gh auth login` in a terminal,
+        // a PR merged in a browser — so re-check then instead of waiting out the poll interval.
+        bus.subscribe(ApplicationActivationListener.TOPIC, object : ApplicationActivationListener {
+            override fun applicationActivated(ideFrame: IdeFrame) = sync("frame-focus")
+        })
     }
 
     fun current(): GhAvailability = value
@@ -65,8 +76,29 @@ class GhStatusCoordinator(
         edt { apply(project, next) }
     }
 
-    fun forceProbe(reason: String = "forced") {
-        edt { probe(reason) }
+    /**
+     * Submits an out-of-band probe after an event that may have changed gh state (IDE frame focus,
+     * tool window tab switch). Coalesces rather than queues: dropped while a probe is already in
+     * flight or within [EVENT_THROTTLE] of the last one, so the single-probe-at-a-time loop keeps
+     * its shape no matter how many events arrive.
+     */
+    fun sync(reason: String) {
+        edt { syncEdt(reason) }
+    }
+
+    @RequiresEdt
+    private fun syncEdt(reason: String) {
+        if (refs == 0) return
+        if (busy) {
+            LOG.info("gh sync dropped reason=$reason busy=true")
+            return
+        }
+        val since = timers.now() - probed
+        if (since < EVENT_THROTTLE) {
+            LOG.info("gh sync dropped reason=$reason sinceMs=$since")
+            return
+        }
+        probe(reason)
     }
 
     @RequiresEdt
@@ -142,6 +174,7 @@ class GhStatusCoordinator(
         busy = true
         val gen = generation
         val start = timers.now()
+        probed = start
         val mode = github
         LOG.info("gh probe start reason=$reason state=$value delay=${delay()} github=$mode")
         job = cs.launch {
