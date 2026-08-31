@@ -16,6 +16,7 @@ export namespace KiloMessageDiagnostics {
   export type MessageShape = {
     index: number
     role: string
+    contentKind: "string" | "array" | "absent" | "other"
     parts: Array<Record<string, unknown>>
     providerOptions?: string[]
   }
@@ -91,21 +92,41 @@ export namespace KiloMessageDiagnostics {
 
   export function messageShape(msgs: readonly ModelMessage[]): MessageShape[] {
     return msgs.map((msg, i) => {
-      const parts = Array.isArray(msg.content) ? msg.content : []
+      // The messages failed schema validation, so runtime parts can be anything:
+      // null, primitives, or objects missing expected fields. Diagnostics on the
+      // failure path must never throw, so each part is treated as unknown and
+      // degraded to a safe placeholder before its fields are read.
+      const content = (msg as { content?: unknown }).content
+      const isArray = Array.isArray(content)
+      const contentKind = typeof content === "string"
+        ? "string"
+        : isArray
+          ? "array"
+          : content === undefined || content === null
+            ? "absent"
+            : "other"
       return {
         index: i,
         role: msg.role,
-        parts: parts.map((p) => {
-          if (p.type === "tool-call") return { type: "tool-call", toolCallId: p.toolCallId, toolName: p.toolName }
-          if (p.type === "tool-result") return { type: "tool-result", toolCallId: p.toolCallId, toolName: p.toolName }
-          if (p.type === "reasoning") return { type: "reasoning" }
-          if (p.type === "text") return { type: "text" }
-          if (p.type === "file") return { type: "file", mediaType: p.mediaType }
-          return { type: p.type }
-        }),
+        contentKind,
+        parts: isArray ? (content as unknown[]).map(partShape) : [],
         providerOptions: msg.providerOptions ? Object.keys(msg.providerOptions) : undefined,
       }
     })
+  }
+
+  function partShape(p: unknown): Record<string, unknown> {
+    if (!p || typeof p !== "object") return { type: String(p) }
+    const part = p as Record<string, unknown>
+    if (part.type === "tool-call")
+      return { type: "tool-call", toolCallId: String(part.toolCallId), toolName: String(part.toolName) }
+    if (part.type === "tool-result")
+      return { type: "tool-result", toolCallId: String(part.toolCallId), toolName: String(part.toolName) }
+    if (part.type === "reasoning") return { type: "reasoning" }
+    if (part.type === "text") return { type: "text" }
+    if (part.type === "file")
+      return { type: "file", mediaType: part.mediaType === undefined ? undefined : String(part.mediaType) }
+    return { type: String(part.type) }
   }
 
   export function toolPairing(msgs: readonly ModelMessage[]): ToolPairing {
@@ -114,8 +135,9 @@ export namespace KiloMessageDiagnostics {
     for (const msg of msgs) {
       if (!Array.isArray(msg.content)) continue
       for (const part of msg.content) {
-        if (part.type === "tool-call") callIds.add(part.toolCallId)
-        if (part.type === "tool-result") resultIds.add(part.toolCallId)
+        if (!part || typeof part !== "object") continue
+        if (part.type === "tool-call" && typeof part.toolCallId === "string") callIds.add(part.toolCallId)
+        if (part.type === "tool-result" && typeof part.toolCallId === "string") resultIds.add(part.toolCallId)
       }
     }
     const matched = [...callIds].filter((id) => resultIds.has(id))
