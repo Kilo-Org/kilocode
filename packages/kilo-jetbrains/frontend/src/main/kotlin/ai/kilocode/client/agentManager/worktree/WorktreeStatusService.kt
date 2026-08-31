@@ -16,6 +16,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.IdeFrame
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +64,8 @@ class WorktreeStatusService internal constructor(
         val bus = ApplicationManager.getApplication().messageBus.connect(cs)
         bus.subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener { enabled -> github(enabled) })
         // A PR can be merged or closed while the IDE sits in the background, so re-check on
-        // activation.
+        // activation. The platform publishes both callbacks on the EDT, which is what lets the
+        // absence be tracked in plain fields alongside the rest of this service's state.
         bus.subscribe(ApplicationActivationListener.TOPIC, object : ApplicationActivationListener {
             override fun applicationActivated(ideFrame: IdeFrame) {
                 if (ideFrame.project !== project) return
@@ -101,6 +103,16 @@ class WorktreeStatusService internal constructor(
      */
     fun refreshPr(force: Boolean = false, maxAge: Long? = null) {
         if (project.isDisposed || refs == 0 || !github) return
+        // One lookup at a time, whatever the caller asked for. [force] bypasses the throttle, so
+        // without this a caller returning to the IDE every few seconds could stack lookups faster than
+        // they finish — and each one fans out to several concurrent `gh` calls, so they would multiply
+        // that cost rather than answer sooner. Skipping instead of cancelling keeps the work already
+        // spawned; the poll and the next focus correct whatever the running lookup began too early to
+        // observe.
+        if (prJob?.isActive == true) {
+            LOG.info("worktree PR refresh skipped, lookup in flight force=$force maxAge=${maxAge ?: "default"}")
+            return
+        }
         val now = timers.now()
         if (!force && now - lastPr < PR_THROTTLE) return
         lastPr = now
@@ -113,6 +125,9 @@ class WorktreeStatusService internal constructor(
      * throttled path; a long absence is the case worth paying a full `gh` fan-out for, and is also the
      * only path that can get past the backend's own PR cache.
      */
+    // Assertion-free: the rest of this service is EDT-confined by the same convention rather than by
+    // enforcement, and its public entry points are reached from tests directly.
+    @RequiresEdt(generateAssertion = false)
     private fun focus() {
         val gone = away.back() ?: return
         val max = Away.ceiling(gone)

@@ -145,6 +145,49 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test a forced refresh does not stack a second lookup on a running one`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+
+        // Every return from a long absence forces past PR_THROTTLE, so without an in-flight guard a
+        // user leaving and coming back faster than a lookup completes would multiply the per-worktree
+        // `gh` fan-out instead of getting an answer sooner.
+        repeat(5) { service.refreshPr(force = true, maxAge = 0) }
+        drain()
+        assertEquals("a lookup already running covers the request", 1, rpc.prCalls.size)
+
+        // Once it lands the path is open again, so the guard throttles nothing on its own.
+        gate.complete(Unit)
+        drain()
+        rpc.beforePrStatus = {}
+        service.refreshPr(force = true)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test activation while a lookup runs does not stack a second one`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+
+        assertEquals(1, rpc.prCalls.size)
+        gate.complete(Unit)
+        drain()
+        handle.close()
+    }
+
     fun `test gh availability propagates from pr status`() {
         rpc.prResult = WorktreePrListDto(GhAvailability.MISSING)
         val handle = service.attach()
