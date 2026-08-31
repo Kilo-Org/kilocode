@@ -7,6 +7,7 @@ import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.activateIde
+import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
@@ -20,6 +21,9 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 @Suppress("UnstableApiUsage")
 class WorktreeStatusServiceTest : BasePlatformTestCase() {
@@ -150,6 +154,53 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test stats and dirty both target the resolved backend root`() {
+        // In split/remote mode project.basePath is a synthetic JetBrains Client path. Sending it to
+        // the backend makes dirty() answer for a directory that is not there, which the UI would
+        // render as "no local changes" instead of the real uncommitted counts.
+        fakeRoot(project, coroutines.scope, testRootDisposable, BACKEND_ROOT)
+        val remote = WorktreeStatusService(project, coroutines.scope, timers)
+
+        val handle = remote.attach()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(listOf(BACKEND_ROOT), rpc.statsCalls)
+        assertEquals(listOf(BACKEND_ROOT), rpc.dirtyCalls)
+        assertFalse(rpc.dirtyCalls.contains(project.basePath))
+        handle.close()
+    }
+
+    fun `test a pr lookup cancelled by a disable cannot publish after a re-enable`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        val gate = CompletableDeferred<Unit>()
+        // The lookup that gets abandoned. It answers empty and OK, which is what the RPC layer
+        // synthesizes when it swallows the cancellation. NonCancellable holds it open past the
+        // cancel so it lands after the replacement, the ordering that makes a stale write dangerous.
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        rpc.beforePrStatus = { withContext(NonCancellable) { gate.await() } }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.isNotEmpty() })
+
+        github(false)
+        // The fresh lookup after re-enabling sees a real PR and an unauthorized gh.
+        rpc.beforePrStatus = {}
+        rpc.prResult = WorktreePrListDto(GhAvailability.UNAUTH, listOf(WorktreePrDto(path, 7, GhState.OPEN, "https://pr/7")))
+        github(true)
+        drain()
+        assertEquals(7, service.pr.value[key]?.number)
+        assertEquals(GhAvailability.UNAUTH, service.gh.value)
+
+        // Now let the abandoned lookup finish. It must not wipe the badge or report a false OK.
+        gate.complete(Unit)
+        drain()
+
+        assertEquals(7, service.pr.value[key]?.number)
+        assertEquals(GhAvailability.UNAUTH, service.gh.value)
+        handle.close()
+    }
+
     fun `test activation reloads pr state within the throttle budget`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
@@ -271,4 +322,9 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     private fun drain() = coroutines.drain(::pump)
 
     private fun pump() = pumpEdt()
+
+    private companion object {
+        /** Stands in for a real repo path that differs from the project's synthetic client basePath. */
+        private const val BACKEND_ROOT = "/real/repo"
+    }
 }

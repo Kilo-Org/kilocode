@@ -11,6 +11,7 @@ import javax.swing.JButton
 
 class HoverIcon(private val fill: Boolean = false) : JButton() {
     private var over = false
+    private var probe: JButton? = null
 
     /**
      * Makes an icon-only button a square of the height the look-and-feel would give it as a button,
@@ -57,14 +58,27 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
     // icon-only button's height track the icon instead of the shared labelled-button height whenever
     // the LAF's font metrics are taller than the icon. Measuring through a non-empty placeholder
     // forces the same icon+text layout path a labelled button uses, so both stay level everywhere.
+    //
+    // The placeholder goes on a detached probe rather than on this button: setText fires property
+    // changes and calls revalidate()/repaint(), and doing that from a size query would invalidate
+    // this control and its ancestors on every layout pass, re-queueing validation while the header
+    // is showing. The probe never joins a hierarchy, so its own invalidation reaches nothing.
     private fun labelledHeight(): Int {
-        val previous = text
-        text = " "
-        try {
-            return super.getPreferredSize().height
-        } finally {
-            text = previous
+        val button = probe ?: JButton(" ").also {
+            iconButton(it)
+            probe = it
         }
+        button.font = font
+        button.border = border
+        button.margin = margin
+        button.icon = icon
+        return button.preferredSize.height
+    }
+
+    // Dropped so the probe is rebuilt under the incoming LAF instead of measuring with the old one.
+    override fun updateUI() {
+        super.updateUI()
+        probe = null
     }
 
     override fun getMinimumSize(): Dimension = preferredSize

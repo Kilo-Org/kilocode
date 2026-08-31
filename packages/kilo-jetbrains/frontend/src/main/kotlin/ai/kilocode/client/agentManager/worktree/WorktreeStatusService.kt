@@ -49,6 +49,9 @@ class WorktreeStatusService internal constructor(
     private var refs = 0
     private var lastPr = 0L
     private var github = KiloPluginSettings.getGithub()
+    // Bumped whenever a PR lookup starts or is abandoned, so a result that arrives after its reason
+    // to exist is gone cannot publish. Mirrors GhStatusCoordinator's probe generation.
+    private var generation = 0
 
     val stats: StateFlow<Map<String, WorktreeStatsDto>> get() = statsFlow
     val dirty: StateFlow<Map<String, WorktreeDirtyDto>> get() = dirtyFlow
@@ -103,6 +106,7 @@ class WorktreeStatusService internal constructor(
         statsTimer?.stop()
         prTimer?.stop()
         prJob?.cancel()
+        generation++
         debounce = null
         statsTimer = null
         prTimer = null
@@ -122,6 +126,7 @@ class WorktreeStatusService internal constructor(
             prTimer = null
             prJob?.cancel()
             prJob = null
+            generation++
             lastPr = 0
             prFlow.value = emptyMap()
             ghFlow.value = GhAvailability.OK
@@ -141,9 +146,12 @@ class WorktreeStatusService internal constructor(
         }
     }
 
+    // Resolves the backend root like loadStats rather than reading project.basePath, which is a
+    // synthetic JetBrains Client path in split/remote mode. Pointing the backend at that path makes
+    // dirty() answer for a directory that does not exist, which reads as "no local changes".
     private fun loadDirty() {
-        val dir = project.basePath ?: return
         cs.launch {
+            val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().dirty(dir) }
                 .onSuccess { dto -> dirtyFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) } }
                 .onFailure { err -> LOG.warn("worktree dirty refresh failed dir=$dir", err) }
@@ -151,14 +159,17 @@ class WorktreeStatusService internal constructor(
     }
 
     private fun loadPr() {
+        val gen = ++generation
         prJob = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().prStatus(dir) }
                 .onSuccess { dto ->
-                    // KiloWorktreeService.prStatus swallows the cancellation, so a lookup that was
-                    // in flight when the user turned the integration off still lands here. Drop it
-                    // rather than repopulating the badges we just cleared.
-                    if (!github) return@onSuccess
+                    // KiloWorktreeService.prStatus swallows the cancellation and answers with an
+                    // empty DTO, so a lookup cancelled by a disable still lands here — and after a
+                    // quick re-enable the github flag is true again. Only the newest lookup may
+                    // publish, or a stale empty result would wipe fresh badges and report a false OK
+                    // over a real UNAUTH.
+                    if (gen != generation) return@onSuccess
                     prFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) }
                     ghFlow.value = dto.availability
                     service<GhStatusCoordinator>().report(project, dto.availability)

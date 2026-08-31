@@ -57,10 +57,14 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     /** Each [branchStatus] call as directory to `github` flag. */
     val branchCalls = CopyOnWriteArrayList<Pair<String, Boolean>>()
     val prCalls = CopyOnWriteArrayList<String>()
+    val statsCalls = CopyOnWriteArrayList<String>()
+    val dirtyCalls = CopyOnWriteArrayList<String>()
     var beforeCreate: suspend () -> Unit = {}
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
     var beforeGhStatus: suspend () -> Unit = {}
+    /** Gate for holding a [prStatus] answer open while the test changes state around it. */
+    var beforePrStatus: suspend () -> Unit = {}
     var adoptResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
         RenameWorktreeResultDto(worktree = WorktreeDto(path, name, name, path))
     }
@@ -94,11 +98,13 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
 
     override suspend fun stats(directory: String): WorktreeStatsListDto {
         assertNotEdt("stats")
+        statsCalls.add(directory)
         return statsResult
     }
 
     override suspend fun dirty(directory: String): WorktreeDirtyListDto {
         assertNotEdt("dirty")
+        dirtyCalls.add(directory)
         return dirtyResult
     }
 
@@ -114,7 +120,11 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     override suspend fun prStatus(directory: String): WorktreePrListDto {
         assertNotEdt("prStatus")
         prCalls.add(directory)
-        return prResult
+        // Snapshot before the gate so a call held open answers with what was configured when it
+        // started, letting a test stage a newer result for the calls that follow.
+        val answer = prResult
+        beforePrStatus()
+        return answer
     }
 
     override suspend fun branchStatus(directory: String, github: Boolean): BranchStatusDto {
