@@ -128,7 +128,17 @@ const AnswerParams = Schema.Struct({
     }),
 })
 
-export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams, AnswerParams])
+export const Params = Schema.Union([
+  Schema.Struct({
+    ...StartParams.fields,
+    tasks: Schema.Union([StartParams.fields.tasks, Schema.fromJsonString(StartParams.fields.tasks)]),
+  }),
+  ListParams,
+  PromptParams,
+  StopParams,
+  MoveParams,
+  AnswerParams,
+])
 
 // Anthropic rejects a top-level anyOf/oneOf/allOf, so the advertised schema has to
 // stay one flat object while Params keeps the real per-operation validation. That

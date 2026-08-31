@@ -42,8 +42,6 @@
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://blog.kilo.ai/p/kilo-gateway-now-supports-byok-20-providers>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx -->
-- <https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live>
-  <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://chatgpt.com/explore/plus>
   <!-- packages/opencode/src/provider/error.ts -->
 - <https://cli.github.com/>
@@ -138,8 +136,6 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
 - <https://kilo.ai/docs/code-with-ai/platforms/github>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
-- <https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new>
-  <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://kilo.ai/docs/customize/marketplace>
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceListView.tsx -->
