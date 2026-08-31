@@ -16,6 +16,7 @@ import ai.kilocode.client.migration.MigrationUiController
 import ai.kilocode.client.migration.MigrationUiState
 import ai.kilocode.client.migration.ui.MigrationWizardPanel
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
@@ -47,6 +48,7 @@ import ai.kilocode.client.session.ui.attachment.AttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.attachmentParams
 import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
+import ai.kilocode.client.agentManager.worktree.GithubIntegrationListener
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.session.ui.header.BranchDock
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
@@ -812,6 +814,14 @@ class SessionUi(
                 messageBody.syncApprovalReasons(visible)
             }
         })
+        // refreshBranch cancels the in-flight lookup first, so a flip both drops a running gh call
+        // and re-reads the branch without one.
+        bus.subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener {
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                refreshBranch()
+            }
+        })
     }
 
     private fun onSessionLoaded(show: Boolean) {
@@ -1093,12 +1103,16 @@ class SessionUi(
      * the hosts that hide the dock (Agent Manager worktree session editors) are exactly the ones most
      * likely to have a PR. Skipped for readonly hosts, which offer no branch-scoped actions worth the
      * `gh` round-trip.
+     *
+     * With the GitHub integration off, the backend resolves the branch from git alone and returns a
+     * null PR, so the dock keeps working while no `gh` process is spawned.
      */
     private fun refreshBranch() {
         if (readonly) return
         branchJob?.cancel()
+        val github = KiloPluginSettings.getGithub()
         branchJob = cs.launch {
-            val status = runCatching { service<KiloWorktreeService>().branchStatus(workspace.directory) }
+            val status = runCatching { service<KiloWorktreeService>().branchStatus(workspace.directory, github) }
                 .getOrElse {
                     if (it is CancellationException) throw it
                     LOG.warn("branch status refresh failed dir=${workspace.directory}", it)

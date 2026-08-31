@@ -52,6 +52,11 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     var sessionListThrows: Exception? = null
     val opens = CopyOnWriteArrayList<String>()
     val ghCalls = CopyOnWriteArrayList<String>()
+    /** The `github` flag of each [ghStatus] call, positionally matching [ghCalls]. */
+    val ghFlags = CopyOnWriteArrayList<Boolean>()
+    /** Each [branchStatus] call as directory to `github` flag. */
+    val branchCalls = CopyOnWriteArrayList<Pair<String, Boolean>>()
+    val prCalls = CopyOnWriteArrayList<String>()
     var beforeCreate: suspend () -> Unit = {}
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
@@ -97,21 +102,26 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         return dirtyResult
     }
 
-    override suspend fun ghStatus(directory: String): GhAvailability {
+    override suspend fun ghStatus(directory: String, github: Boolean): GhAvailability {
         assertNotEdt("ghStatus")
         ghCalls.add(directory)
+        ghFlags.add(github)
         beforeGhStatus()
+        if (!github) return if (ghResult == GhAvailability.GIT_MISSING) ghResult else GhAvailability.OK
         return ghResult
     }
 
     override suspend fun prStatus(directory: String): WorktreePrListDto {
         assertNotEdt("prStatus")
+        prCalls.add(directory)
         return prResult
     }
 
-    override suspend fun branchStatus(directory: String): BranchStatusDto {
+    override suspend fun branchStatus(directory: String, github: Boolean): BranchStatusDto {
         assertNotEdt("branchStatus")
+        branchCalls.add(directory to github)
         branchThrows?.let { throw it }
+        if (!github) return branchResult.copy(pr = null)
         return branchResult
     }
 

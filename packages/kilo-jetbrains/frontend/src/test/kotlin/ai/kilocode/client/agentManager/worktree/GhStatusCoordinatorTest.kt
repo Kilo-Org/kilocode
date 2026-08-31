@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fakeRoot
@@ -37,6 +38,7 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            KiloPluginSettings.unsetGithub()
             coroutines.close(::pump)
         } finally {
             super.tearDown()
@@ -157,8 +159,86 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test coordinator probes git only while the github integration is off`() {
+        rpc.ghResult = GhAvailability.UNAUTH
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertEquals(GhAvailability.UNAUTH, service.current())
+
+        github(false)
+        drain()
+        // Disabling publishes OK immediately so the banner hides without waiting for a probe.
+        assertEquals(GhAvailability.OK, service.current())
+
+        val before = rpc.ghCalls.size
+        // SLOW cadence while disabled: the loop only checks whether git exists.
+        timers.advanceBy(59_999)
+        drain()
+        assertEquals(before, rpc.ghCalls.size)
+
+        timers.advanceBy(1)
+        drain()
+        assertEquals(before + 1, rpc.ghCalls.size)
+        assertFalse("a disabled probe must never ask the backend to run gh", rpc.ghFlags.last())
+        assertEquals(GhAvailability.OK, service.current())
+        handle.close()
+    }
+
+    fun `test coordinator still reports a missing git while the github integration is off`() {
+        rpc.ghResult = GhAvailability.GIT_MISSING
+        github(false)
+        val handle = edtWait { service.attach(project) }
+        drain()
+
+        assertEquals(GhAvailability.GIT_MISSING, service.current())
+        assertFalse(rpc.ghFlags.last())
+        handle.close()
+    }
+
+    fun `test coordinator ignores a stale gh report while the github integration is off`() {
+        val events = mutableListOf<GhAvailability>()
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable)
+            .subscribe(GhStatusListener.TOPIC, GhStatusListener { events += it })
+        github(false)
+
+        // A prStatus lookup that was in flight at the moment of disabling.
+        report(GhAvailability.UNAUTH)
+
+        assertEquals(GhAvailability.OK, service.current())
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test coordinator cancels the in flight probe and reprobes when re-enabled`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeGhStatus = { gate.await() }
+        val handle = edtWait { service.attach(project) }
+        awaitCalls(1)
+
+        // Disabling must not wait for the running gh call to finish.
+        github(false)
+        assertEquals(GhAvailability.OK, service.current())
+        gate.complete(Unit)
+        drain()
+
+        rpc.beforeGhStatus = {}
+        rpc.ghResult = GhAvailability.UNAUTH
+        val before = rpc.ghCalls.size
+        github(true)
+        drain()
+
+        assertEquals("re-enabling probes at once instead of waiting out the timer", before + 1, rpc.ghCalls.size)
+        assertTrue(rpc.ghFlags.last())
+        assertEquals(GhAvailability.UNAUTH, service.current())
+        handle.close()
+    }
+
     private fun report(value: GhAvailability) {
         edtWait { service.report(project, value) }
+        pump()
+    }
+
+    private fun github(enabled: Boolean) {
+        edtWait { setGithubIntegration(enabled, "test") }
         pump()
     }
 

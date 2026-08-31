@@ -88,8 +88,16 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
-                id="ai.kilocode.jetbrains.settings.advanced"
+                id="ai.kilocode.jetbrains.settings.integrations"
                 groupWeight="-2"
+                instance="ai.kilocode.client.settings.integrations.IntegrationsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.integrations.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.advanced"
+                groupWeight="-3"
                 instance="ai.kilocode.client.settings.AdvancedConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.advanced.displayName"/>

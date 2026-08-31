@@ -1,10 +1,12 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -40,6 +42,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            KiloPluginSettings.unsetGithub()
             coroutines.close(::pump)
         } finally {
             super.tearDown()
@@ -143,6 +146,78 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
 
         assertEquals(GhAvailability.MISSING, service.gh.value)
         handle.close()
+    }
+
+    fun `test attach skips pr polling while the github integration is off`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 3, GhState.OPEN, "https://pr/3")))
+        KiloPluginSettings.setGithub(false)
+        val off = WorktreeStatusService(project, coroutines.scope, timers)
+
+        val handle = off.attach()
+        drain()
+        assertTrue(rpc.prCalls.isEmpty())
+
+        // Git-backed stats and dirty counts are unaffected by the GitHub integration setting.
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, off.stats.value[key]?.additions)
+
+        // No PR timer was started, so the poll interval must not produce a lookup either.
+        timers.advanceBy(120_000)
+        drain()
+        assertTrue(rpc.prCalls.isEmpty())
+        assertTrue(off.pr.value.isEmpty())
+        handle.close()
+    }
+
+    fun `test disabling clears pr state and stops the poll`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.prResult = WorktreePrListDto(GhAvailability.UNAUTH, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        val handle = service.attach()
+        drain()
+        assertEquals(1, service.pr.value[key]?.number)
+        assertEquals(GhAvailability.UNAUTH, service.gh.value)
+        val before = rpc.prCalls.size
+
+        github(false)
+        drain()
+        assertTrue("badges, tab titles, and PR actions all read this map", service.pr.value.isEmpty())
+        assertEquals(GhAvailability.OK, service.gh.value)
+
+        timers.advanceBy(120_000)
+        drain()
+        assertEquals(before, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test re-enabling reloads pr state and resumes the poll`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        val handle = service.attach()
+        drain()
+        github(false)
+        drain()
+        assertTrue(service.pr.value.isEmpty())
+
+        github(true)
+        drain()
+        assertEquals("re-enabling loads at once instead of waiting out the poll", 1, service.pr.value[key]?.number)
+
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 2, GhState.OPEN, "https://pr/2")))
+        timers.advanceBy(120_000)
+        drain()
+        assertEquals(2, service.pr.value[key]?.number)
+        handle.close()
+    }
+
+    private fun github(enabled: Boolean) {
+        edtWait { setGithubIntegration(enabled, "test") }
+        pump()
     }
 
     private fun drain() = coroutines.drain(::pump)

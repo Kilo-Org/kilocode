@@ -3,6 +3,7 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.kiloRoot
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
@@ -17,6 +18,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 @Service(Service.Level.APP)
@@ -43,7 +45,14 @@ class GhStatusCoordinator(
     private var busy = false
     private var failures = 0
     private var generation = 0
+    private var github = KiloPluginSettings.getGithub()
+    private var job: Job? = null
     private val projects = linkedMapOf<Project, Int>()
+
+    init {
+        ApplicationManager.getApplication().messageBus.connect(cs)
+            .subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener { enabled -> edt { github(enabled) } })
+    }
 
     fun current(): GhAvailability = value
 
@@ -86,6 +95,8 @@ class GhStatusCoordinator(
         generation++
         timer?.stop()
         timer = null
+        job?.cancel()
+        job = null
         busy = false
         failures = 0
         LOG.info("gh probe loop stop")
@@ -93,6 +104,10 @@ class GhStatusCoordinator(
 
     @RequiresEdt
     private fun apply(project: Project?, next: GhAvailability) {
+        // Ignore a stray backend result (e.g. an in-flight prStatus reporting into report()) that
+        // resolves after the user turned the integration off — anything but OK/GIT_MISSING implies
+        // gh ran, which cannot be trusted once disabled.
+        if (!github && next != GhAvailability.OK && next != GhAvailability.GIT_MISSING) return
         if (value == next) return
         val previous = value
         value = next
@@ -127,12 +142,13 @@ class GhStatusCoordinator(
         busy = true
         val gen = generation
         val start = timers.now()
-        LOG.info("gh probe start reason=$reason state=$value delay=${delay()}")
-        cs.launch {
+        val mode = github
+        LOG.info("gh probe start reason=$reason state=$value delay=${delay()} github=$mode")
+        job = cs.launch {
             runCatching {
                 val dir = project.kiloRoot() ?: return@runCatching null
                 LOG.info("gh probe dir=$dir")
-                service<KiloWorktreeService>().ghStatus(dir)
+                service<KiloWorktreeService>().ghStatus(dir, mode)
             }
                 .onSuccess { next ->
                     if (next == null) {
@@ -144,6 +160,30 @@ class GhStatusCoordinator(
                 }
                 .onFailure { err -> failed(gen, err, timers.now() - start) }
         }
+    }
+
+    /**
+     * Applies a GitHub integration setting change. Disabling cancels the in-flight probe and forces
+     * the published state to [GhAvailability.OK] so the banner hides at once instead of waiting for
+     * the next probe; the loop keeps running so a missing git is still reported.
+     */
+    @RequiresEdt
+    private fun github(enabled: Boolean) {
+        if (github == enabled) return
+        github = enabled
+        job?.cancel()
+        job = null
+        busy = false
+        failures = 0
+        generation++
+        notified = false
+        LOG.info("gh probe github=$enabled state=$value refs=$refs")
+        if (!enabled) {
+            apply(target(), GhAvailability.OK)
+            schedule()
+            return
+        }
+        probe("github-enabled")
     }
 
     private fun idle(gen: Int) {
@@ -195,7 +235,9 @@ class GhStatusCoordinator(
         return baseDelay()
     }
 
-    private fun baseDelay(): Int = when (value) {
+    // While the GitHub integration is off the loop only checks whether git exists, so it never needs
+    // the OK cadence tuned for spotting a gh auth change.
+    private fun baseDelay(): Int = if (!github) SLOW else when (value) {
         GhAvailability.OK -> NORMAL
         GhAvailability.UNAUTH -> FAST
         GhAvailability.MISSING -> SLOW

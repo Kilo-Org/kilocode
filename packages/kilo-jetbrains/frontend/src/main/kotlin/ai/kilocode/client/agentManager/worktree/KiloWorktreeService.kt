@@ -99,7 +99,7 @@ class KiloWorktreeService internal constructor(
      * distinguish a healthy gh from an unhealthy backend via their own `runCatching` + backoff;
      * swallowing errors here would publish a false "gh is fine" and reset that backoff.
      */
-    suspend fun ghStatus(directory: String): GhAvailability = call { ghStatus(directory) }
+    suspend fun ghStatus(directory: String, github: Boolean = true): GhAvailability = call { ghStatus(directory, github) }
 
     suspend fun prStatus(directory: String): WorktreePrListDto = try {
         call { prStatus(directory) }
@@ -114,7 +114,7 @@ class KiloWorktreeService internal constructor(
      * would offer worktree actions against a directory whose real state is unknown. Callers decide
      * what an unknown status means.
      */
-    suspend fun branchStatus(directory: String): BranchStatusDto = call { branchStatus(directory) }
+    suspend fun branchStatus(directory: String, github: Boolean = true): BranchStatusDto = call { branchStatus(directory, github) }
 
     /**
      * Long-lived move flow. Routed through [durable] (via [call]) so it survives reconnects and

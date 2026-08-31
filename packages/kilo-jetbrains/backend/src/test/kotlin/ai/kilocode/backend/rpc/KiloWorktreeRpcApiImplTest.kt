@@ -64,6 +64,26 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `ghStatus reports git only when the github integration is off`() = runBlocking {
+        initRepo()
+        assertEquals(GhAvailability.OK, api.ghStatus(repo.toString(), github = false))
+    }
+
+    @Test
+    fun `branch status resolves git state without a pull request when the github integration is off`() = runBlocking {
+        initRepo()
+        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("off")
+        git(repo, "worktree", "add", "-b", "feature/off", dir.toString())
+
+        val status = api.branchStatus(dir.toString(), github = false)
+
+        assertEquals("feature/off", status.branch)
+        assertTrue(status.worktree)
+        assertEquals(GhAvailability.OK, status.availability)
+        assertNull(status.pr)
+    }
+
+    @Test
     fun `stats syncs away a worktree deleted from disk`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)

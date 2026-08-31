@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
@@ -55,6 +56,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            KiloPluginSettings.unsetGithub()
             dialog?.let { d -> edt { Disposer.dispose(d.disposable) } }
             dialog = null
             scope.cancel()
@@ -297,6 +299,17 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
 
         assertTrue(edt { newTab().isVisible })
         assertFalse(edt { prTab().isVisible })
+    }
+
+    fun `test the pr tab is dropped while the github integration is off`() {
+        // Importing a PR needs gh, so the tab must not be offered as a guaranteed failure.
+        KiloPluginSettings.setGithub(false)
+        open()
+
+        edt {
+            val titles = tabs().tabs.map { it.text }
+            assertEquals(listOf("New", "From Branch"), titles)
+        }
     }
 
     fun `test an empty branch list disables the branch picker`() {

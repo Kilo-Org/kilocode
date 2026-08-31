@@ -7,6 +7,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.KiloDiffEditorService
 import ai.kilocode.client.diff.openKiloDiff
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.telemetry.KiloTelemetryService
 import ai.kilocode.client.vfs.KiloVirtualFile
@@ -46,10 +47,12 @@ import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.client.session.views.permission.PermissionView
@@ -66,6 +69,17 @@ import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
 class SessionUiLayoutTest : SessionUiTestBase() {
+
+    /** The worktree RPC installed by [dock], so branch/PR lookups can be asserted. */
+    private lateinit var worktree: FakeWorktreeRpcApi
+
+    override fun tearDown() {
+        try {
+            KiloPluginSettings.unsetGithub()
+        } finally {
+            super.tearDown()
+        }
+    }
 
     fun `test root contains content overlay and blocker layers`() {
         val root = find<SessionRootPanel>(ui)
@@ -345,6 +359,32 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals(1, dock.changeCount())
         assertTrue(workspaceRpc.branchDiffPatchCalls.all { !it })
         assertEquals(listOf(false, false), workspaceRpc.localDiffPatchCalls)
+    }
+
+    fun `test dock resolves the pull request while the github integration is on`() {
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+
+        val dock = dock(WorktreePrDto("/test", 7, GhState.OPEN, "https://pr/7"))
+
+        assertEquals(listOf("/test" to true), worktree.branchCalls)
+        assertTrue(dock.isVisible)
+        // Read by the PR badge and by the pull-request context-menu actions.
+        assertEquals(7, ui.pr?.number)
+    }
+
+    fun `test dock resolves the branch without gh while the github integration is off`() {
+        KiloPluginSettings.setGithub(false)
+        workspaceRpc.localDiffs.add(DiffFileDto("src/Local.kt", 9, 7))
+
+        val dock = dock(WorktreePrDto("/test", 7, GhState.OPEN, "https://pr/7"))
+
+        assertEquals("the backend must be told not to spawn gh", listOf("/test" to false), worktree.branchCalls)
+        // Git-backed dock content and worktree actions are unaffected by the GitHub setting.
+        assertTrue(dock.isVisible)
+        assertTrue(dock.newWorktreeEnabled())
+        assertEquals(1, dock.changeCount())
+        // Nothing PR-shaped survives.
+        assertNull(ui.pr)
     }
 
     fun `test committed-only summary does not enable empty-session worktree actions`() {
@@ -1190,12 +1230,13 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     // newUi(...)` swap in this file: SessionController.dispose() cancels the shared `scope`, which
     // would kill every later coroutine (including the replacement UI's own branch/local refresh)
     // launched on that same scope for the rest of the test.
-    private fun dock(): BranchDock {
-        val worktree = FakeWorktreeRpcApi().apply {
-            branchResult = BranchStatusDto(branch = "feature/topic", availability = GhAvailability.OK)
+    private fun dock(pr: WorktreePrDto? = null): BranchDock {
+        val fake = FakeWorktreeRpcApi().apply {
+            branchResult = BranchStatusDto(branch = "feature/topic", availability = GhAvailability.OK, pr = pr)
         }
+        worktree = fake
         ApplicationManager.getApplication()
-            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, worktree), testRootDisposable)
+            .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(scope, fake), testRootDisposable)
         ui = newUi(manager = object : SessionManager {
             override fun newSession() {}
             override fun showHistory(back: (() -> Unit)?) {}

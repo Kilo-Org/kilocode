@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.kiloRoot
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
@@ -9,10 +10,12 @@ import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -40,13 +43,20 @@ class WorktreeStatusService internal constructor(
     private var debounce: UiTimer? = null
     private var statsTimer: UiTimer? = null
     private var prTimer: UiTimer? = null
+    private var prJob: Job? = null
     private var refs = 0
     private var lastPr = 0L
+    private var github = KiloPluginSettings.getGithub()
 
     val stats: StateFlow<Map<String, WorktreeStatsDto>> get() = statsFlow
     val dirty: StateFlow<Map<String, WorktreeDirtyDto>> get() = dirtyFlow
     val pr: StateFlow<Map<String, WorktreePrDto>> get() = prFlow
     val gh: StateFlow<GhAvailability> get() = ghFlow
+
+    init {
+        ApplicationManager.getApplication().messageBus.connect(cs)
+            .subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener { enabled -> github(enabled) })
+    }
 
     fun attach(): AutoCloseable {
         refs++
@@ -64,7 +74,7 @@ class WorktreeStatusService internal constructor(
     }
 
     fun refreshPr(force: Boolean = false) {
-        if (project.isDisposed || refs == 0) return
+        if (project.isDisposed || refs == 0 || !github) return
         val now = timers.now()
         if (!force && now - lastPr < PR_THROTTLE) return
         lastPr = now
@@ -75,16 +85,41 @@ class WorktreeStatusService internal constructor(
         refreshStats()
         refreshPr(force = true)
         statsTimer = timers.timer(STATS_POLL) { refreshStats() }.also { it.start() }
-        prTimer = timers.timer(PR_POLL) { refreshPr(force = true) }.also { it.start() }
+        if (github) prTimer = timers.timer(PR_POLL) { refreshPr(force = true) }.also { it.start() }
     }
 
     private fun stop() {
         debounce?.stop()
         statsTimer?.stop()
         prTimer?.stop()
+        prJob?.cancel()
         debounce = null
         statsTimer = null
         prTimer = null
+        prJob = null
+    }
+
+    /**
+     * Applies a GitHub integration setting change. Disabling cancels the in-flight PR lookup, stops
+     * the poll, and clears the PR map so badges, tab titles, and PR actions drop immediately. Git
+     * stats and dirty counts are unaffected.
+     */
+    private fun github(enabled: Boolean) {
+        if (github == enabled) return
+        github = enabled
+        if (!enabled) {
+            prTimer?.stop()
+            prTimer = null
+            prJob?.cancel()
+            prJob = null
+            lastPr = 0
+            prFlow.value = emptyMap()
+            ghFlow.value = GhAvailability.OK
+            return
+        }
+        if (refs == 0) return
+        prTimer = timers.timer(PR_POLL) { refreshPr(force = true) }.also { it.start() }
+        refreshPr(force = true)
     }
 
     private fun loadStats() {
@@ -106,10 +141,14 @@ class WorktreeStatusService internal constructor(
     }
 
     private fun loadPr() {
-        cs.launch {
+        prJob = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
             runCatching { service<KiloWorktreeService>().prStatus(dir) }
                 .onSuccess { dto ->
+                    // KiloWorktreeService.prStatus swallows the cancellation, so a lookup that was
+                    // in flight when the user turned the integration off still lands here. Drop it
+                    // rather than repopulating the badges we just cleared.
+                    if (!github) return@onSuccess
                     prFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) }
                     ghFlow.value = dto.availability
                     service<GhStatusCoordinator>().report(project, dto.availability)

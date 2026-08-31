@@ -194,8 +194,8 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return synced.filter { Files.isDirectory(Path.of(it.path)) }
     }
 
-    override suspend fun ghStatus(directory: String): GhAvailability = withContext(Dispatchers.IO) {
-        probeGh(Path.of(directory).normalize(), "rpc")
+    override suspend fun ghStatus(directory: String, github: Boolean): GhAvailability = withContext(Dispatchers.IO) {
+        probeGh(Path.of(directory).normalize(), "rpc", github)
     }
 
     override suspend fun prStatus(directory: String): WorktreePrListDto = withContext(Dispatchers.IO) {
@@ -229,9 +229,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         dto
     }
 
-    override suspend fun branchStatus(directory: String): BranchStatusDto = withContext(Dispatchers.IO) {
+    override suspend fun branchStatus(directory: String, github: Boolean): BranchStatusDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        branches[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
+        // Keyed by directory + mode so flipping the GitHub integration setting cannot serve a
+        // cross-mode entry (a disabled-mode entry always has a null pr; an enabled-mode entry may
+        // not) for up to PR_TTL after the flip.
+        val key = "$directory|$github"
+        branches[key]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
         if (!Files.isDirectory(root)) {
             LOG.info("branch status skipped, directory does not exist: $root")
@@ -239,8 +243,8 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         }
         val branch = runGit(root, "branch", "--show-current").stdout.trim()
         val worktree = isLinkedWorktree(root)
-        val availability = ghAvailable(root)
-        val lookup = if (availability == GhAvailability.OK && branch.isNotBlank()) {
+        val availability = ghAvailable(root, github)
+        val lookup = if (github && availability == GhAvailability.OK && branch.isNotBlank()) {
             resolver.resolve(directory, branch, baseBranch(root))
         } else {
             PrLookup()
@@ -252,7 +256,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             availability = if (availability == GhAvailability.OK) lookup.availability else availability,
             pr = lookup.pr,
         )
-        branches[directory] = Timed(System.currentTimeMillis(), dto)
+        branches[key] = Timed(System.currentTimeMillis(), dto)
         dto
     }
 
@@ -653,13 +657,19 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         )
     }
 
-    private fun ghAvailable(root: Path): GhAvailability {
+    /**
+     * Resolves git/gh availability. When [github] is false, only git presence is checked and `gh`
+     * is never spawned — used while the user has turned off the GitHub integration setting.
+     */
+    private fun ghAvailable(root: Path, github: Boolean = true): GhAvailability {
         if (!Files.isDirectory(root)) {
             LOG.info("gh availability skipped dir=$root missing=true")
             return GhAvailability.OK
         }
-        val status = probeGh(root, "availability")
-        if (status != GhAvailability.MISSING) return status
+        val status = probeGh(root, "availability", github)
+        // A git-only probe can only return GIT_MISSING or OK, so the gh-binary re-check below is
+        // unreachable while github is false; the guard documents that explicitly.
+        if (!github || status != GhAvailability.MISSING) return status
         val now = System.currentTimeMillis()
         ghProbe?.takeIf { now - it.time < GH_PROBE_TTL }?.let { return it.value }
         val res = runGh(root, "--version")
@@ -668,7 +678,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return value
     }
 
-    private fun probeGh(root: Path, reason: String): GhAvailability = synchronized(ghLock) {
+    /**
+     * Resolves git/gh availability. When [github] is false, resolves git presence only and never
+     * spawns `gh` or touches [ghCache] (the cache mixes gh-auth verdicts with a boolean this probe
+     * would otherwise poison with a git-only "OK").
+     */
+    private fun probeGh(root: Path, reason: String, github: Boolean = true): GhAvailability = synchronized(ghLock) {
         // A stale/removed worktree directory makes the process spawn fail, which would be
         // misreported as GIT_MISSING. Treat a missing directory as "nothing to report" and
         // don't cache it, so the next probe on a real directory still runs.
@@ -677,12 +692,14 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             return@synchronized GhAvailability.OK
         }
         val now = System.currentTimeMillis()
-        ghCache?.takeIf { now - it.time < GH_STATUS_TTL }?.let {
-            LOG.info("gh probe cache hit reason=$reason value=${it.value}")
-            return@synchronized it.value
+        if (github) {
+            ghCache?.takeIf { now - it.time < GH_STATUS_TTL }?.let {
+                LOG.info("gh probe cache hit reason=$reason value=${it.value}")
+                return@synchronized it.value
+            }
         }
         val start = System.currentTimeMillis()
-        LOG.info("gh probe start reason=$reason dir=$root")
+        LOG.info("gh probe start reason=$reason dir=$root github=$github")
         val git = runGit(root, "--version")
         if (!git.ok) {
             // The directory can disappear between the check above and the spawn; a failed working
@@ -692,9 +709,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 return@synchronized GhAvailability.OK
             }
             val value = GhAvailability.GIT_MISSING
-            ghCache = Timed(System.currentTimeMillis(), value)
+            if (github) ghCache = Timed(System.currentTimeMillis(), value)
             LOG.info("gh probe result reason=$reason value=$value exit=${git.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(git.stderr)}")
             return@synchronized value
+        }
+        if (!github) {
+            LOG.info("gh probe result reason=$reason value=OK github=false ms=${System.currentTimeMillis() - start}")
+            return@synchronized GhAvailability.OK
         }
         val res = runGh(root, "auth", "status")
         val value = if (res.ok) GhAvailability.OK else classifyGhError(res.stderr.ifBlank { res.stdout })
