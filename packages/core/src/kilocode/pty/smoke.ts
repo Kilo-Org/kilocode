@@ -55,7 +55,8 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
         ready.reject(new Error(`TUI diagnostic during ${state.phase}: ${JSON.stringify(state.output)}`))
         return
       }
-      if (state.phase === "prompt" && text.includes("Ask anything...")) {
+      const visible = text.replace(/[\r\n]/g, "")
+      if (state.phase === "prompt" && visible.includes("Ask anything...")) {
         state.phase = "palette"
         state.output = ""
         try {
@@ -65,7 +66,7 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
         }
         return
       }
-      if (state.phase === "palette" && text.includes("Commands")) ready.resolve()
+      if (state.phase === "palette" && visible.includes("Commands")) ready.resolve()
     })
     const exit = proc.onExit((event) => {
       ready.reject(

@@ -4,14 +4,14 @@ import { render } from "../../src/kilocode/pty/smoke"
 const run = (source: string, timeout = 3_000) => render(process.execPath, ["-e", source], timeout)
 
 describe("rendered PTY smoke", () => {
-  test("accepts a chunked prompt and responsive command palette", async () => {
+  test("accepts chunked terminal redraws and a responsive command palette", async () => {
     const source = [
       "if (process.stdin.isTTY && process.stdin.setRawMode) process.stdin.setRawMode(true)",
-      'process.stdout.write("\\x1b[2J\\x1b[HAsk any")',
+      'process.stdout.write("\\x1b[2J\\x1b[HAsk any" + "\\r\\n".repeat(39) + "\\x1b[1;8H")',
       'setTimeout(() => process.stdout.write("thing..."), 20)',
       'process.stdin.on("data", (data) => {',
       '  if (!data.toString().includes("\\x10")) return',
-      '  process.stdout.write("\\x1b[2JCom")',
+      '  process.stdout.write("\\x1b[2J\\x1b[HCom" + "\\r\\n".repeat(39) + "\\x1b[1;4H")',
       '  setTimeout(() => process.stdout.write("mands"), 20)',
       "})",
       "setInterval(() => {}, 1000)",
