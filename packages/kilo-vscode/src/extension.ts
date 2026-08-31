@@ -17,7 +17,7 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { AttentionService } from "./services/attention"
-import { BrowserAutomationService } from "./services/browser-automation"
+import { BrowserBroker } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
@@ -56,8 +56,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const telemetry = TelemetryProxy.getInstance()
 
+  const browserBroker = new BrowserBroker({
+    log: (...args) => console.warn("[Kilo New] BrowserBroker:", ...args),
+    enabled: () => vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false),
+    trusted: () => vscode.workspace.isTrusted,
+    useSystemChrome: () =>
+      vscode.workspace.getConfiguration("kilo-code.new.browserAutomation").get("useSystemChrome", true),
+  })
+
   // Create shared connection service (one server for all webviews)
-  const connectionService = new KiloConnectionService(context)
+  const connectionService = new KiloConnectionService(context, () => browserBroker.env())
   const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
@@ -67,20 +75,13 @@ export async function activate(context: vscode.ExtensionContext) {
     void context.workspaceState.update(RESTORE_KEY, restore)
   }
 
-  // Create browser automation service (manages Playwright MCP registration)
-  const browserAutomationService = new BrowserAutomationService(connectionService)
-  browserAutomationService.syncWithSettings()
-
   // Create remote status service (one status bar item for all webviews)
   const remoteService = new RemoteStatusService()
   context.subscriptions.push(remoteService)
   connectionService.setRemoteService(remoteService)
 
-  // Re-register browser automation MCP server on CLI backend reconnect, configure telemetry,
-  // set remote service client, and reload autocomplete so it picks up the now-available backend connection.
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
-      browserAutomationService.reregisterIfEnabled()
       const config = connectionService.getServerConfig()
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
@@ -171,9 +172,16 @@ export async function activate(context: vscode.ExtensionContext) {
     log: (message) => console.warn(`[Kilo New] ${message}`),
   })
   const binary = process.platform === "win32" ? await git() : git
-  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, binary)
+  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, binary, browserBroker)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kilo-code.new.experimental.browserAutomation")) {
+        agentManagerProvider.refreshBrowserAutomation()
+      }
+    }),
+  )
   context.subscriptions.push(agentManagerProvider)
 
   // Wire "Continue in Worktree" from sidebar → Agent Manager
@@ -636,7 +644,7 @@ export async function activate(context: vscode.ExtensionContext) {
       shuttingDown = true
       unsubscribeStateChange()
       attention.dispose()
-      browserAutomationService.dispose()
+      browserBroker.dispose()
       provider.dispose()
       notebookBridge.dispose()
       connectionService.dispose()

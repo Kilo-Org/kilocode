@@ -33,4 +33,11 @@ export const STATE_GATED = new Set<string>([
   "agentManager.toggleSectionCollapsed",
   "agentManager.moveToSection",
   "agentManager.moveSection",
+  "agentManager.browser.open",
+  "agentManager.browser.refresh",
+  "agentManager.browser.close",
+  "agentManager.browser.state",
+  "agentManager.browser.inspect",
+  "agentManager.browser.input",
+  "agentManager.browser.devtools",
 ])

@@ -339,6 +339,7 @@ describe("kilocode tool registry indexing", () => {
       save: def("kilo_memory_save"),
       manager: def("agent_manager"),
       process: def("background_process"),
+      browser: def("browser_open"),
       chart: def("chart"),
       image: def("generate_image"),
       terminal: def("interactive_terminal"),
@@ -397,6 +398,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "agent_manager_models",
         "agent_manager",
+        "browser_open",
         "notify_user",
         "send_file",
       ])
@@ -413,6 +415,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "agent_manager_models",
         "agent_manager",
+        "browser_open",
         "notebook_read",
         "notebook_edit",
         "notebook_execute",
@@ -427,6 +430,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "agent_manager_models",
         "agent_manager",
+        "browser_open",
         "notify_user",
         "send_file",
       ])

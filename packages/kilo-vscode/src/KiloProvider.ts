@@ -143,7 +143,8 @@ import {
 import { fetchAndSendPendingSuggestions } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { isActivity, type Activity } from "../webview-ui/src/utils/session-activity"
-import { parseReview, reviewMetadata, type ReviewMessageData } from "./shared/review-comments"
+import { type ReviewMessageData } from "./shared/review-comments"
+import { feedbackMetadata, parseFeedback, type BrowserFeedbackData } from "./shared/browser-feedback"
 import { completesWithoutStatus } from "./kilo-provider/command-completion"
 import { KiloProviderMemory } from "./kilo-provider/memory"
 
@@ -202,6 +203,29 @@ type ContextMessage = { contextDirectory?: unknown }
 type TypedWebviewMessage = {
   type: string
   value?: unknown
+}
+
+type WebviewMessage = Parameters<Parameters<vscode.Webview["onDidReceiveMessage"]>[0]>[0]
+
+function feedbackMessage(message: { text: string; review?: unknown; browserFeedback?: unknown }) {
+  return parseFeedback({ review: message.review, browserFeedback: message.browserFeedback }, message.text)
+}
+
+type SendWebviewMessage = {
+  type: "sendMessage"
+  text: string
+  messageID?: unknown
+  sessionID?: string
+  draftID?: unknown
+  providerID?: string
+  modelID?: string
+  agent?: string
+  variant?: string
+  files?: unknown
+  review?: unknown
+  browserFeedback?: unknown
+  agentManagerContext?: unknown
+  contextDirectory?: unknown
 }
 type SandboxSupportClient = {
   support: (
@@ -1115,21 +1139,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.readyResolvers.splice(0).forEach((r) => r())
           break
         case "sendMessage": {
-          const msg = message as typeof message & ContextMessage
-          await this.handleSendMessage(
-            message.text,
-            typeof message.messageID === "string" ? message.messageID : undefined,
-            message.sessionID,
-            typeof message.draftID === "string" ? message.draftID : undefined,
-            message.providerID,
-            message.modelID,
-            message.agent,
-            message.variant,
-            parseMessageFiles(message.files),
-            parseReview(message.review, message.text),
-            typeof message.agentManagerContext === "string" ? message.agentManagerContext : undefined,
-            typeof msg.contextDirectory === "string" ? msg.contextDirectory : undefined,
-          )
+          await this.sendWebviewMessage(message as SendWebviewMessage)
           break
         }
         case "sendCommand": {
@@ -1481,6 +1491,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "importAndSend": {
           const files = parseMessageFiles(message.files)
+          const feedback = feedbackMessage(message)
           void handleImportAndSend(
             this.cloudSessionCtx,
             message.cloudSessionId,
@@ -1491,9 +1502,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.agent,
             message.variant,
             files,
-            parseReview(message.review, message.text),
+            feedback?.review,
             typeof message.command === "string" ? message.command : undefined,
             typeof message.commandArgs === "string" ? message.commandArgs : undefined,
+            feedback?.browserFeedback,
           )
           break
         }
@@ -1569,6 +1581,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
     this.webviewMessageDisposable = watchWorkStyleConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
+  }
+
+  private async sendWebviewMessage(message: SendWebviewMessage): Promise<void> {
+    const feedback = feedbackMessage(message)
+    await this.handleSendMessage(
+      message.text,
+      typeof message.messageID === "string" ? message.messageID : undefined,
+      message.sessionID,
+      typeof message.draftID === "string" ? message.draftID : undefined,
+      message.providerID,
+      message.modelID,
+      message.agent,
+      message.variant,
+      parseMessageFiles(message.files),
+      feedback?.review,
+      typeof message.agentManagerContext === "string" ? message.agentManagerContext : undefined,
+      typeof message.contextDirectory === "string" ? message.contextDirectory : undefined,
+      feedback?.browserFeedback,
+    )
   }
 
   private async handleProfileDataMessage(message: TypedWebviewMessage): Promise<boolean> {
@@ -3726,6 +3757,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("multiProject", false)
   }
 
+  private browserAutomationSetting(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("browserAutomation", false)
+  }
+
   private async sendIndexingSettings(projectId?: string) {
     if (!this.extensionContext) {
       this.postMessage(buildIndexingSettingsMessage())
@@ -3788,6 +3823,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       maxCost: this.maxCostSetting(),
       languageCommitMessage: this.commitMessageLanguageSetting(),
       multiProject: this.multiProjectSetting(),
+      browserAutomation: this.browserAutomationSetting(),
     }
   }
 
@@ -4008,6 +4044,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     review?: ReviewMessageData,
     context?: string,
     contextDirectory?: string,
+    browserFeedback?: BrowserFeedbackData,
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -4019,6 +4056,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         messageID,
         files,
         review,
+        browserFeedback,
       })
       return
     }
@@ -4040,7 +4078,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
-      parts.push({ type: "text", text, metadata: review ? reviewMetadata(review) : undefined })
+      parts.push({ type: "text", text, metadata: feedbackMetadata(review, browserFeedback) })
 
       const editorContext = await this.gatherEditorContext(dir)
       if (draftID && this.closedDrafts.delete(draftID)) {
@@ -4082,6 +4120,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         messageID,
         files,
         review,
+        browserFeedback,
       })
     }
   }
@@ -4416,7 +4455,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle a generic setting update from the webview.
-   * The key uses dot notation relative to `kilo-code.new` (e.g. "browserAutomation.enabled").
    */
   private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
     if (key === "maxCost") {
@@ -4515,9 +4553,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({
       type: "browserSettingsLoaded",
       settings: {
-        enabled: config.get<boolean>("enabled", false),
         useSystemChrome: config.get<boolean>("useSystemChrome", true),
-        headless: config.get<boolean>("headless", false),
       },
     })
   }

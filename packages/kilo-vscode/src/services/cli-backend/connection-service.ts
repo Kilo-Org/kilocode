@@ -133,7 +133,7 @@ export class KiloConnectionService {
   private viewedDirty = false
   private unsubRemote: (() => void) | null = null
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(context: vscode.ExtensionContext, env?: () => Promise<Record<string, string>>) {
     const state =
       context.workspaceState ??
       ({
@@ -141,7 +141,7 @@ export class KiloConnectionService {
         update: async () => undefined,
       } satisfies Pick<vscode.Memento, "get" | "update">)
     this.sandboxPreference = new SandboxPreference(state)
-    this.serverManager = new ServerManager(context, (code, signal) => this.handleServerExit(code, signal))
+    this.serverManager = new ServerManager(context, (code, signal) => this.handleServerExit(code, signal), env)
     this.active = vscode.window.state.focused
     this.windowStateDisposable = vscode.window.onDidChangeWindowState((ws) => {
       this.active = ws.focused

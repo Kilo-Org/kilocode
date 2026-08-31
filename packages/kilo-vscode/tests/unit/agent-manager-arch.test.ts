@@ -19,6 +19,7 @@ const EDIT_PREVIEW_PANEL_FILE = path.join(ROOT, "webview-ui/agent-manager/EditPr
 const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
+  path.join(ROOT, "webview-ui/browser/browser.css"),
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
@@ -29,6 +30,8 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/BrowserPanel.tsx"),
+  path.join(ROOT, "webview-ui/browser/BrowserPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanelCache.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/review-composers.ts"),
   path.join(ROOT, "webview-ui/documents/DocumentPanel.tsx"),
@@ -168,6 +171,23 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const unused = defined.filter((c) => !tsx.includes(c!))
 
     expect(unused, `Classes defined in CSS but not used in TSX: ${unused.join(", ")}`).toEqual([])
+  })
+})
+
+describe("Browser module boundaries", () => {
+  it("keeps browser core independent from Agent Manager and VS Code context", () => {
+    const files = ["BrowserPanel.tsx", "controller.ts", "types.ts", "index.ts"]
+    for (const file of files) {
+      const source = fs.readFileSync(path.join(ROOT, "webview-ui/browser", file), "utf-8")
+      expect(source).not.toMatch(/agent-manager|AgentManager|SidePanel|useVSCode|window\.postMessage/)
+    }
+  })
+
+  it("owns browser styles in the reusable module", () => {
+    const css = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"), "utf-8")
+    const browser = fs.readFileSync(path.join(ROOT, "webview-ui/browser/BrowserPanel.tsx"), "utf-8")
+    expect(css).not.toContain(".am-browser-")
+    expect(browser).toContain('import "./browser.css"')
   })
 })
 
@@ -647,10 +667,13 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("does not restore running indicators after a session is deleted", () => {
     const lifecycle = body("onSessionLifecycle")
     const status = body("onSessionStatus")
+    const helper = fs.readFileSync(path.join(ROOT, "src/agent-manager/session-lifecycle.ts"), "utf-8")
 
-    expect(lifecycle).toContain("this.removedSessions.add(id)")
-    expect(lifecycle).toContain("this.busySessions.delete(id)")
-    expect(lifecycle).toContain("info && !this.removedSessions.has(info.id) ? info.directory : undefined")
+    expect(lifecycle).toContain("removed: this.removedSessions")
+    expect(lifecycle).toContain("busy: this.busySessions")
+    expect(helper).toContain("deps.removed.add(id)")
+    expect(helper).toContain("deps.busy.delete(id)")
+    expect(helper).toContain("if (deps.removed.has(info.id)) return")
     expect(status).toContain("this.removedSessions.has(sid)")
   })
 
