@@ -207,6 +207,63 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         assertFalse("cancel must not close the dialog while running", closed)
     }
 
+    fun `test cancel after a finished run still finalizes the step`() {
+        val view = FakeOnboardingStepView(ready = true)
+        val provider = FakeOnboardingProvider("a", newView = { view })
+        val controller = FakeOnboardingController(mapOf("a" to provider))
+        var closed = false
+        val dialog = OnboardingDialog(controller, listOf(step("a"))) { closed = true }
+
+        view._run.value = OnboardingRunState.Done
+        settle()
+        // Escape / the window close box bypass Next, but done() is what commits the run.
+        dialog.doCancelAction()
+
+        assertTrue(closed)
+        assertEquals(1, view.dones.size)
+    }
+
+    fun `test cancel after a failed run still finalizes the step`() {
+        val view = FakeOnboardingStepView(ready = true)
+        val provider = FakeOnboardingProvider("a", newView = { view })
+        val controller = FakeOnboardingController(mapOf("a" to provider))
+        val dialog = OnboardingDialog(controller, listOf(step("a"))) {}
+
+        view._run.value = OnboardingRunState.Failed("boom")
+        settle()
+        dialog.doCancelAction()
+
+        assertEquals(1, view.dones.size)
+    }
+
+    fun `test cancel before running does not finalize the step`() {
+        val view = FakeOnboardingStepView(ready = true)
+        val provider = FakeOnboardingProvider("a", newView = { view })
+        val controller = FakeOnboardingController(mapOf("a" to provider))
+        val dialog = OnboardingDialog(controller, listOf(step("a"))) {}
+
+        dialog.doCancelAction()
+
+        assertTrue("an untouched step must not be finalized on dismiss", view.dones.isEmpty())
+    }
+
+    fun `test next then cancel finalizes the finished step only once`() {
+        val viewA = FakeOnboardingStepView(ready = true)
+        val viewB = FakeOnboardingStepView(ready = true)
+        val providerA = FakeOnboardingProvider("a", newView = { viewA })
+        val providerB = FakeOnboardingProvider("b", newView = { viewB })
+        val controller = FakeOnboardingController(mapOf("a" to providerA, "b" to providerB))
+        val dialog = OnboardingDialog(controller, listOf(step("a"), step("b"))) {}
+
+        viewA._run.value = OnboardingRunState.Done
+        settle()
+        dialog.nextButton.doClick()
+        dialog.doCancelAction()
+
+        assertEquals(1, viewA.dones.size)
+        assertTrue(viewB.dones.isEmpty())
+    }
+
     fun `test selecting a different rail row swaps the right panel and buttons`() {
         val viewA = FakeOnboardingStepView(ready = true)
         val viewB = FakeOnboardingStepView(ready = false)

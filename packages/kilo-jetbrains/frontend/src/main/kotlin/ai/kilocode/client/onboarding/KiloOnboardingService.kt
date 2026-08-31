@@ -109,10 +109,16 @@ class KiloOnboardingService internal constructor(
     }
 
     override fun laterStep(id: String) {
-        deferred.add(id)
-        providers[id]?.later()
+        val provider = providers[id] ?: return
         capture("Onboarding Step Deferred", mapOf("stepId" to id))
-        cs.launch { redetect() }
+        cs.launch {
+            // Defer only once the provider confirms. For a blocking step, `later()` is what
+            // unpauses the app, so suppressing the step on a failed resume would hide the only UI
+            // that can still resolve it.
+            if (provider.later()) deferred.add(id)
+            else LOG.warn("Onboarding: keeping the step offered because later failed id=$id")
+            redetect()
+        }
     }
 
     override fun skipStep(id: String) {

@@ -81,8 +81,12 @@ interface OnboardingProvider {
     fun skip()
 
     /**
-     * Defer for now. The framework keeps this step out of [ai.kilocode.client.onboarding.KiloOnboardingService.steps]
-     * for the rest of this IDE run; the provider is still expected to resume whatever it paused.
+     * Defer for now, resuming whatever the provider paused, and report whether that actually
+     * succeeded.
+     *
+     * The framework keeps this step out of [ai.kilocode.client.onboarding.KiloOnboardingService.steps]
+     * for the rest of this IDE run only when this returns `true`. A [blocking] step whose resume
+     * failed must stay offered — otherwise the app is left paused with no UI to recover from.
      */
-    fun later()
+    suspend fun later(): Boolean
 }

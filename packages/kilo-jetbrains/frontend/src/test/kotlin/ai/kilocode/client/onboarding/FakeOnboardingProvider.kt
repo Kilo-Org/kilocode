@@ -14,6 +14,9 @@ class FakeOnboardingProvider(
 
     var need: OnboardingNeed? = null
 
+    /** What [later] reports back — `false` simulates a provider that failed to resume. */
+    var laterResult: Boolean = true
+
     override val invalidate: Flow<Unit> get() = invalidateFlow ?: emptyFlow()
 
     val skips = mutableListOf<Unit>()
@@ -28,7 +31,8 @@ class FakeOnboardingProvider(
         skips.add(Unit)
     }
 
-    override fun later() {
+    override suspend fun later(): Boolean {
         laters.add(Unit)
+        return laterResult
     }
 }

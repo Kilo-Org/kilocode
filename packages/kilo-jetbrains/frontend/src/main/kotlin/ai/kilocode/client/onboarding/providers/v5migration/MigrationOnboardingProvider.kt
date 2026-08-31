@@ -41,9 +41,7 @@ class MigrationOnboardingProvider(private val migration: MigrationUiController) 
         migration.skip()
     }
 
-    override fun later() {
-        migration.later()
-    }
+    override suspend fun later(): Boolean = migration.later()
 
     companion object {
         const val ID = "v5-migration"

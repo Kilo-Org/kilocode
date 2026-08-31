@@ -20,6 +20,7 @@ import ai.kilocode.rpc.dto.MigrationSessionInfoDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -60,6 +61,12 @@ class KiloMigrationServiceTest : BasePlatformTestCase() {
             UIUtil.dispatchAllInvocationEvents()
         }
     }
+
+    /**
+     * `later()` suspends on the `resume` RPC, so it must run off the EDT — exactly as
+     * [ai.kilocode.client.onboarding.KiloOnboardingService] calls it from its own scope.
+     */
+    private fun later() = runBlocking(Dispatchers.Default) { service.later() }
 
     fun `test migration required app state shows needed without polling`() {
         app.value = KiloAppStateDto(KiloAppStatusDto.MIGRATION_REQUIRED, migration = sampleDetection())
@@ -131,7 +138,7 @@ class KiloMigrationServiceTest : BasePlatformTestCase() {
     fun `test later resumes without marking status and hides`() {
         app.value = KiloAppStateDto(KiloAppStatusDto.MIGRATION_REQUIRED, migration = sampleDetection())
         settle()
-        service.later()
+        assertTrue(later())
         settle()
         assertEquals(1, rpc.resumeCalls.size)
         assertEquals(0, rpc.skipCalls.size)
@@ -147,7 +154,7 @@ class KiloMigrationServiceTest : BasePlatformTestCase() {
         rpc.resumeError = IllegalStateException("backend unavailable")
         settle()
 
-        service.later()
+        assertFalse("a failed resume must be reported to the caller", later())
         settle()
 
         val state = service.state.value as MigrationUiState.Needed

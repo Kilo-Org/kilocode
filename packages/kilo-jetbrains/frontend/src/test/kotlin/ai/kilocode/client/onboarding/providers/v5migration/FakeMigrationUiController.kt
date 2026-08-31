@@ -14,6 +14,9 @@ class FakeMigrationUiController : MigrationUiController {
     val _state = MutableStateFlow<MigrationUiState>(MigrationUiState.Hidden)
     override val state: StateFlow<MigrationUiState> = _state
 
+    /** What [later] reports back — `false` simulates a failed resume. */
+    var laterResult: Boolean = true
+
     val checks = mutableListOf<Unit>()
     val starts = mutableListOf<MigrationUiSelections>()
     val skips = mutableListOf<Unit>()
@@ -32,8 +35,9 @@ class FakeMigrationUiController : MigrationUiController {
         skips.add(Unit)
     }
 
-    override fun later() {
+    override suspend fun later(): Boolean {
         laters.add(Unit)
+        return laterResult
     }
 
     override fun finish() {

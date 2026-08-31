@@ -24,6 +24,7 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import fleet.rpc.client.durable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,7 +44,9 @@ interface MigrationUiController {
     fun check()
     fun start(selections: MigrationUiSelections)
     fun skip()
-    fun later()
+
+    /** Resumes the paused app without marking any status. Returns whether the resume succeeded. */
+    suspend fun later(): Boolean
     fun finish()
 }
 
@@ -169,21 +172,25 @@ class KiloMigrationService internal constructor(
     /**
      * Defer migration — resumes app load without marking any status, so migration is offered
      * again on the next startup.
+     *
+     * Suspends until the backend has actually resumed and returns `false` when it did not, so the
+     * caller can keep the wizard offered instead of hiding a still-paused app.
      */
-    override fun later() {
+    override suspend fun later(): Boolean {
         LOG.info("Migration wizard: user chose later")
         val current = _state.value as? MigrationUiState.Needed
         if (current != null) telemetry("Migration Deferred", detectionProps(current.detection))
-        cs.launch {
-            try {
-                call { resume() }
-            } catch (e: Exception) {
-                LOG.warn("migration resume failed", e)
-                finishWithError(e.message ?: "Migration resume failed")
-                return@launch
-            }
-            hide("later", current?.detection)
+        try {
+            call { resume() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("migration resume failed", e)
+            finishWithError(e.message ?: "Migration resume failed")
+            return false
         }
+        hide("later", current?.detection)
+        return true
     }
 
     /**

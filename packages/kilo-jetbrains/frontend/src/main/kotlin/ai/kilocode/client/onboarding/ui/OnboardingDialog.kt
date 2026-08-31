@@ -167,10 +167,30 @@ internal class OnboardingDialog(
     }
 
     override fun dispose() {
+        finishRuns()
         entries.values.forEach { (it.view.component as? Disposable)?.let(Disposer::dispose) }
         scope.cancel()
         onClosed()
         super.dispose()
+    }
+
+    /**
+     * Finalizes every step that reached a terminal run state but was never left via `Next`.
+     *
+     * [OnboardingStepView.done] is what commits a finished step (for v5 migration: the finalize RPC
+     * plus hide), and Escape / the window close box bypass `Next` entirely. Doing this on dispose
+     * covers every exit path, so a step that already ran cannot be dismissed half-applied and then
+     * re-offered.
+     */
+    @RequiresEdt
+    private fun finishRuns() {
+        entries.values.forEach { entry ->
+            if (entry.step.id in resolved) return@forEach
+            val state = entry.view.run.value
+            if (state !is OnboardingRunState.Done && state !is OnboardingRunState.Failed) return@forEach
+            resolved.add(entry.step.id)
+            entry.view.done()
+        }
     }
 
     private fun watchEntries() {

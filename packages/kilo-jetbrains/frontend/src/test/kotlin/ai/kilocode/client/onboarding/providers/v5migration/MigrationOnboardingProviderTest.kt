@@ -41,9 +41,14 @@ class MigrationOnboardingProviderTest : BasePlatformTestCase() {
         assertEquals(1, controller.skips.size)
     }
 
-    fun `test later delegates to controller`() {
-        provider.later()
+    fun `test later delegates to controller and reports success`() = runBlocking {
+        assertTrue(provider.later())
         assertEquals(1, controller.laters.size)
+    }
+
+    fun `test later reports failure when the controller could not resume`() = runBlocking {
+        controller.laterResult = false
+        assertFalse(provider.later())
     }
 
     private fun sampleDetection() = LegacyMigrationDetectionDto(

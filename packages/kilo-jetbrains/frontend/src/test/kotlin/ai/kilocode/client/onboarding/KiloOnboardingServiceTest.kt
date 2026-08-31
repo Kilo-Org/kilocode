@@ -115,6 +115,28 @@ class KiloOnboardingServiceTest : BasePlatformTestCase() {
         assertTrue(svc.steps.value.isEmpty())
     }
 
+    fun `test later keeps the step offered when the provider could not resume`() {
+        val a = FakeOnboardingProvider("a").apply {
+            need = OnboardingNeed("A", "a detail")
+            laterResult = false
+        }
+        val svc = service(a)
+        settle()
+
+        svc.later()
+        settle()
+
+        // A blocking step's later() is what unpauses the app. If that failed the step must stay
+        // visible, otherwise the app is paused with no UI left to resolve it.
+        assertEquals(1, a.laters.size)
+        assertEquals(listOf("a"), svc.steps.value.map { it.id })
+
+        // Not deferred either: a later re-detect still offers it.
+        app.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        settle()
+        assertEquals(listOf("a"), svc.steps.value.map { it.id })
+    }
+
     fun `test reoffer clears the deferral and offers the step again`() {
         val a = FakeOnboardingProvider("a").apply { need = OnboardingNeed("A", "a detail") }
         val svc = service(a)
