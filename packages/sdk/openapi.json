@@ -2789,7 +2789,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["git", "branch"]
+              "enum": ["git", "branch", "last-commit"]
             },
             "required": true
           },
