@@ -148,7 +148,7 @@ test(
 )
 
 test(
-  "includes new Kilo packages without counting upstream, generated, locale or fixture files",
+  "includes new Kilo packages without counting JetBrains, upstream, generated, locale or fixture files",
   async () => {
     await fixture(
       {
@@ -161,6 +161,8 @@ test(
         "packages/kilo-example/src/copy.d.ts": source,
         "packages/kilo-i18n/src/en.ts": source,
         "packages/kilo-docs/src/copy.ts": source,
+        "packages/kilo-jetbrains/src/first.ts": source,
+        "packages/kilo-jetbrains/src/second.tsx": source,
         "packages/kilo-vscode/src/services/autocomplete/continuedev/copy.ts": source,
       },
       async (root) => {
@@ -197,40 +199,18 @@ test(
 )
 
 test(
-  "detects CSS and handwritten JetBrains Kotlin",
+  "detects duplicated CSS blocks",
   async () => {
     const css = `.box {\n${Array.from({ length: 20 }, (_, index) => `  --shade-${index}: rgb(${index}, 0, 0);`).join("\n")}\n}\n`
-    const kotlin = `fun summarize(input: List<Int>): Map<String, Int> {
-    val positive = input.filter { it > 0 }
-    val negative = input.filter { it < 0 }
-    val total = positive.sum()
-    val sorted = positive.sorted()
-    val first = sorted.firstOrNull() ?: 0
-    val last = sorted.lastOrNull() ?: 0
-    val average = if (positive.isEmpty()) 0 else total / positive.size
-    return mapOf(
-        "count" to input.size,
-        "positive" to positive.size,
-        "negative" to negative.size,
-        "total" to total,
-        "first" to first,
-        "last" to last,
-        "average" to average,
-        "range" to last - first,
-    )
-}
-`
     await fixture(
       {
         "packages/kilo-example/src/first.css": css,
         "packages/kilo-example/src/second.css": css,
-        "packages/kilo-jetbrains/frontend/src/main/kotlin/First.kt": kotlin,
-        "packages/kilo-jetbrains/backend/src/main/kotlin/Second.kt": kotlin,
       },
       async (root) => {
         const result = await scan(root)
-        expect(result.findings.some((finding) => finding.files.every((file) => file.endsWith(".css")))).toBe(true)
-        expect(result.findings.some((finding) => finding.files.every((file) => file.endsWith(".kt")))).toBe(true)
+        expect(result.pairs).toBe(1)
+        expect(result.findings.at(0)?.files.every((file) => file.endsWith(".css"))).toBe(true)
       },
     )
   },

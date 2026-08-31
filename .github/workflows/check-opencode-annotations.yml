@@ -18,6 +18,7 @@ on:
       - "script/**"
       - "package.json"
       - "bun.lock"
+      - "!packages/kilo-jetbrains/**"
   workflow_dispatch:
 
 jobs:

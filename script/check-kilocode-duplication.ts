@@ -9,12 +9,12 @@ const filename = "script/kilocode-duplication-allowlist.json"
 const roots = [
   "packages/kilo-*/src",
   "packages/kilo-vscode/webview-ui",
-  "packages/kilo-jetbrains/*/src/main/kotlin",
   "packages/plugin-atomic-chat/src",
   "packages/*/src/kilocode",
   "packages/*/src/kilo-*",
 ]
 const excluded = {
+  "packages/kilo-jetbrains/**": "Outside the VS Code scope",
   "packages/kilo-i18n/**": "Locale dictionaries",
   "packages/kilo-docs/**": "Documentation",
   "**/node_modules/**": "Dependencies",
@@ -144,7 +144,7 @@ export async function scan(cwd: string) {
   const directory = await realpath(cwd)
   const candidates = new Set<string>()
   for (const scope of roots) {
-    const glob = new Bun.Glob(`${scope}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,kt,kts,java,css}`)
+    const glob = new Bun.Glob(`${scope}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,css}`)
     for await (const file of glob.scan({ cwd: directory, onlyFiles: true, followSymlinks: false })) {
       const normalized = file.replaceAll("\\", "/")
       if (!ignored.some((glob) => glob.match(normalized))) candidates.add(normalized)
@@ -173,7 +173,7 @@ export async function scan(cwd: string) {
         mode: "weak",
         minLines: 10,
         minTokens: 100,
-        format: ["typescript", "tsx", "javascript", "jsx", "kotlin", "java", "css"],
+        format: ["typescript", "tsx", "javascript", "jsx", "css"],
         crossFormats: [["typescript", "tsx"]],
         maxSize: "10mb",
         absolute: true,
@@ -307,7 +307,7 @@ async function main() {
         "--report prints findings without changing the allowlist.\n" +
         "--prune only removes stale exceptions and lowers existing limits; new findings still fail.\n" +
         "--init creates the initial legacy baseline and refuses to overwrite an existing allowlist.\n" +
-        "Shared upstream files, docs, translations, tests, generated source and vendored code are outside this ratchet.",
+        "JetBrains, shared upstream files, docs, translations, tests, generated source and vendored code are outside this ratchet.",
     )
     return
   }
