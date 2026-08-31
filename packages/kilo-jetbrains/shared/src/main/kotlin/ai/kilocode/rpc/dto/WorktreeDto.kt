@@ -96,8 +96,17 @@ data class WorktreePrDto(
     val checks: GhChecksDto = GhChecksDto(),
 )
 
+/**
+ * Why gh cannot answer, or [OK] when it can.
+ *
+ * [RATE_LIMITED] is temporary and fixes itself, unlike the others: GitHub refused the query because the
+ * token's hourly budget is spent. It still has to be a state of its own, because the alternative is
+ * reading a refusal as "this checkout has no pull request" — which blanks every badge with no reason
+ * given, and costs the most calls doing it, since a lookup that stops at the first answer instead walks
+ * its whole strategy ladder.
+ */
 @Serializable
-enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING }
+enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING, RATE_LIMITED }
 
 @Serializable
 data class WorktreePrListDto(

@@ -119,6 +119,8 @@ internal class PrResolver(
         val wanted = if (rich) PR_RICH_FIELDS else PR_FIELDS
         val out = gh(dir, command(wanted))
         if (out.ok || wanted == PR_FIELDS) return out
+        // A spent budget refuses the scalar form just as readily, so retrying only burns another call.
+        if (rateLimited(out.stderr.lowercase())) return out
         val refusal = richRefusal(out.stderr) ?: return out
         if (refusal == RichRefusal.FIELD) {
             rich = false
@@ -152,15 +154,28 @@ internal class PrResolver(
 
 /**
  * Classifies a failing `gh pr` command. A missing PR is the normal case, so anything that is not a
- * recognised authorization failure counts as OK — a missing `gh` binary is caught by the upfront
- * availability probe instead.
+ * recognised authorization or budget failure counts as OK — a missing `gh` binary is caught by the
+ * upfront availability probe instead.
  */
 internal fun prError(stderr: String): GhAvailability {
     val text = stderr.lowercase()
     if (text.contains("not logged") || text.contains("gh auth login") || text.contains("authentication")) {
         return GhAvailability.UNAUTH
     }
+    if (rateLimited(text)) return GhAvailability.RATE_LIMITED
     return GhAvailability.OK
+}
+
+/**
+ * Whether gh was refused for spending the token's budget rather than for anything about the query.
+ *
+ * Both wordings GitHub uses are matched: the primary hourly limit and the secondary limit that answers
+ * bursts. Neither may fall through to "no pull request here" — that reading is both wrong and expensive,
+ * because it makes the resolver try its remaining strategies against a limit that will refuse them too.
+ */
+internal fun rateLimited(text: String): Boolean {
+    if (text.contains("rate limit") || text.contains("rate-limit")) return true
+    return text.contains("abuse detection") || text.contains("too many requests")
 }
 
 private val json = Json { ignoreUnknownKeys = true }

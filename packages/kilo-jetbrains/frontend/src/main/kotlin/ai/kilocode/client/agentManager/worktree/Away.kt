@@ -46,6 +46,9 @@ internal class Away(private val now: () -> Long) {
         /**
          * Absences at or past this point stop being explainable as window churn, so the caches
          * covering them are no longer evidence about the current state.
+         *
+         * The default bar, for a return that costs a single command. A caller whose return costs more
+         * than that should raise it — see [ceiling].
          */
         const val FRESH = 10_000L
 
@@ -57,7 +60,12 @@ internal class Away(private val now: () -> Long) {
          * Passing the absence rather than zero is deliberate. Work done *during* the absence — a poll
          * that ran while the window sat in the background, another panel's lookup — is still current
          * and worth reusing; only answers that predate the departure have to be rejected.
+         *
+         * [bar] is how long an absence has to be to earn one, and belongs to the caller because it is
+         * really a price: one `gh auth status` is worth spending on a ten-second absence, while a
+         * per-worktree pull request fan-out costs several calls per return and has to clear the poll
+         * floor it is bypassing, or steady window switching would outspend the poll it replaces.
          */
-        fun ceiling(gone: Long): Long? = gone.takeIf { it >= FRESH }
+        fun ceiling(gone: Long, bar: Long = FRESH): Long? = gone.takeIf { it >= bar }
     }
 }

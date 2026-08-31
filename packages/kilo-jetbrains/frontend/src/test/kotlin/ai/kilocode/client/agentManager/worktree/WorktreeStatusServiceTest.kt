@@ -269,16 +269,53 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         drain()
         assertEquals(1, rpc.prCalls.size)
 
-        // Well inside PR_THROTTLE, so the frontend floor alone would have dropped this. The absence is
-        // the whole reason to spend the lookup, and the ceiling is the only way past the backend's own
-        // PR cache — without it the answer could predate the departure by up to its full TTL.
+        // At the floor, so the throttle alone would have dropped this. The absence is the whole reason
+        // to spend the lookup, and the ceiling is the only way past the backend's own PR cache —
+        // without it the answer could predate the departure by up to its full TTL.
         deactivateIde(project)
-        timers.advanceBy(Away.FRESH)
+        timers.advanceBy(PR_BAR)
         activateIde(project)
         drain()
 
         assertEquals(2, rpc.prCalls.size)
-        assertEquals(listOf(null, Away.FRESH), rpc.prAges.toList())
+        assertEquals(listOf(null, PR_BAR), rpc.prAges.toList())
+        handle.close()
+    }
+
+    fun `test a spent github budget leaves the badges it cannot refresh alone`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        val handle = service.attach()
+        drain()
+        assertEquals(1, service.pr.value[key]?.number)
+
+        // GitHub refuses the lookup, so it carries no PRs. That is not evidence the PR went away, and
+        // the limit can stand for an hour — blanking every badge over it would be a worse lie than
+        // holding the last known state behind the banner.
+        rpc.prResult = WorktreePrListDto(GhAvailability.RATE_LIMITED)
+        service.refreshPr(force = true)
+        drain()
+
+        assertEquals(1, service.pr.value[key]?.number)
+        assertEquals(GhAvailability.RATE_LIMITED, service.gh.value)
+        handle.close()
+    }
+
+    fun `test an absence just short of the pr bar does not force a lookup`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        // A forced return spends a gh call per worktree, so its bar is the throttle it bypasses rather
+        // than the cheaper one a single availability probe uses. Under it, the throttle still rules.
+        deactivateIde(project)
+        timers.advanceBy(PR_BAR - 1)
+        activateIde(project)
+        drain()
+
+        assertEquals("an absence under the bar must not outrank the throttle", 1, rpc.prCalls.size)
         handle.close()
     }
 
@@ -324,7 +361,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         assertEquals(1, rpc.prCalls.size)
 
         deactivateIde(project)
-        timers.advanceBy(Away.FRESH)
+        timers.advanceBy(PR_BAR)
         repeat(5) { activateIde(project) }
         drain()
 
@@ -455,5 +492,11 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
     private companion object {
         /** Stands in for a real repo path that differs from the project's synthetic client basePath. */
         private const val BACKEND_ROOT = "/real/repo"
+
+        /**
+         * How long an absence has to be before a return forces a PR lookup: the service's own throttle,
+         * which is what such a return bypasses. Mirrors its private `PR_THROTTLE`.
+         */
+        private const val PR_BAR = 30_000L
     }
 }

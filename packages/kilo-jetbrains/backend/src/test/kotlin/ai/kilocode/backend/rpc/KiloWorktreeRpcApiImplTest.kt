@@ -333,6 +333,17 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `classifyGhError detects a spent api budget without calling it an auth problem`() {
+        // `gh auth status` validates the token against the API, so it is usually the first to be told.
+        assertEquals(GhAvailability.RATE_LIMITED, classifyGhError("HTTP 403: API rate limit exceeded for user ID 1."))
+        assertEquals(GhAvailability.RATE_LIMITED, classifyGhError("You have exceeded a secondary rate limit."))
+        assertEquals(GhAvailability.RATE_LIMITED, classifyGhError("HTTP 429: Too Many Requests"))
+        // A revoked token also mentions authentication; that reading has to win, because the answer is
+        // "log in again" rather than "wait".
+        assertEquals(GhAvailability.UNAUTH, classifyGhError("authentication failed, and rate limit remaining is 0"))
+    }
+
+    @Test
     fun `overlayWorktreeNames applies labels only to non-main worktrees`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
         val child = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")

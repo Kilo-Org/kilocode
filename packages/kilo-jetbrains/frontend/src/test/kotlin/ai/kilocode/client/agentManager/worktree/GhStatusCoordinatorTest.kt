@@ -88,6 +88,28 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test coordinator slows right down while the github budget is spent`() {
+        rpc.ghResult = GhAvailability.RATE_LIMITED
+        val handle = edtWait { service.attach(project) }
+        drain()
+        assertEquals(GhAvailability.RATE_LIMITED, service.current())
+        assertEquals(1, rpc.ghCalls.size)
+
+        // Slower than every other state, including MISSING: the window resets on GitHub's schedule, so
+        // each probe before then spends a call to be told the same thing.
+        timers.advanceBy(299_999)
+        drain()
+        assertEquals("a spent budget must not be re-probed on the ordinary cadence", 1, rpc.ghCalls.size)
+
+        rpc.ghResult = GhAvailability.OK
+        timers.advanceBy(1)
+        drain()
+        assertEquals(2, rpc.ghCalls.size)
+        // And the recovery is picked up on its own, without the user doing anything.
+        assertEquals(GhAvailability.OK, service.current())
+        handle.close()
+    }
+
     fun `test coordinator backs off on backend failure without reporting ok`() {
         rpc.ghResult = GhAvailability.UNAUTH
         val handle = edtWait { service.attach(project) }

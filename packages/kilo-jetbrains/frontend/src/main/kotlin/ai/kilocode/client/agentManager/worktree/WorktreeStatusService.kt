@@ -130,7 +130,9 @@ class WorktreeStatusService internal constructor(
     @RequiresEdt(generateAssertion = false)
     private fun focus() {
         val gone = away.back() ?: return
-        val max = Away.ceiling(gone)
+        // The bar is the throttle this bypasses: a forced return spends a `gh` call per worktree, so
+        // absences shorter than the floor the poll already keeps must not be able to beat it.
+        val max = Away.ceiling(gone, PR_THROTTLE)
         refreshPr(force = max != null, maxAge = max)
     }
 
@@ -210,7 +212,13 @@ class WorktreeStatusService internal constructor(
                     // publish, or a stale empty result would wipe fresh badges and report a false OK
                     // over a real UNAUTH.
                     if (gen != generation) return@onSuccess
-                    prFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) }
+                    // A spent GitHub budget carries no pull request data and says nothing about the
+                    // pull requests themselves, so the rows keep what they had and the banner explains
+                    // why it stopped moving. Publishing the empty list would instead blank every badge
+                    // for up to an hour over something the user cannot act on.
+                    if (dto.availability != GhAvailability.RATE_LIMITED) {
+                        prFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) }
+                    }
                     ghFlow.value = dto.availability
                     service<GhStatusCoordinator>().report(project, dto.availability)
                 }

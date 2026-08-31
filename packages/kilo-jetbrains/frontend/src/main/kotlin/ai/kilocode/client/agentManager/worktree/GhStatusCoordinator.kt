@@ -36,6 +36,10 @@ class GhStatusCoordinator(
         private const val NORMAL = 30_000
         private const val FAST = 5_000
         private const val SLOW = 60_000
+        // A spent GitHub budget resets on GitHub's schedule, not ours, and every probe until then is a
+        // call spent confirming what the last one said. Slower than every other state for that reason,
+        // while still noticing the reset long before the user would think to look.
+        private const val LIMITED = 300_000
         private const val MAX_BACKOFF = 120_000
         // Floor between event-driven syncs. Matches the backend's gh auth status cache TTL, so a
         // burst of focus/tab events cannot outrun the answer a probe would get anyway. Measured from
@@ -381,6 +385,7 @@ class GhStatusCoordinator(
         GhAvailability.UNAUTH -> FAST
         GhAvailability.MISSING -> SLOW
         GhAvailability.GIT_MISSING -> SLOW
+        GhAvailability.RATE_LIMITED -> LIMITED
     }
 
     @RequiresEdt
@@ -402,6 +407,17 @@ class GhStatusCoordinator(
                 KiloBundle.message("worktree.gh.missing.content"),
                 KiloBundle.message("worktree.gh.learnMore"),
             ) { BrowserUtil.browse("https://cli.github.com/") }
+            return
+        }
+        // Told once, not on every probe: `notified` only clears on a return to OK, and there is nothing
+        // to do about a spent budget except wait for it, which the banner keeps saying meanwhile.
+        if (value == GhAvailability.RATE_LIMITED) {
+            KiloNotifications.suggestion(
+                target,
+                KiloBundle.message("worktree.gh.limited.title"),
+                KiloBundle.message("worktree.gh.limited.content"),
+                KiloBundle.message("worktree.gh.learnMore"),
+            ) { BrowserUtil.browse(GH_LIMIT_DOCS) }
             return
         }
         KiloNotifications.suggestion(

@@ -72,6 +72,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         internal val LOG = KiloLog.create(KiloWorktreeRpcApiImpl::class.java)
         private const val GH_PROBE_TTL = 300_000L
         private const val GH_STATUS_TTL = 3_000L
+        // A spent budget lasts until GitHub's window rolls over, so re-probing on the ordinary cadence
+        // would spend calls confirming a state that cannot have changed. Long enough to stop the churn,
+        // short enough to notice the reset without waiting out a poll interval.
+        private const val GH_LIMIT_TTL = 60_000L
         private const val PR_TTL = 90_000L
     }
 
@@ -377,6 +381,11 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 GhAvailability.GIT_MISSING -> return@withContext CreateWorktreeResultDto(error = "Git is not installed")
                 GhAvailability.MISSING -> return@withContext CreateWorktreeResultDto(error = "GitHub CLI (gh) is not installed")
                 GhAvailability.UNAUTH -> return@withContext CreateWorktreeResultDto(error = "GitHub CLI (gh) is not authorized")
+                // Stated rather than attempted: the import runs several gh calls and the first would
+                // fail anyway, so say why instead of leaving a half-made worktree behind.
+                GhAvailability.RATE_LIMITED -> return@withContext CreateWorktreeResultDto(
+                    error = "GitHub is rate limiting this token. Try again later.",
+                )
                 GhAvailability.OK -> Unit
             }
             val fields = "headRefName,title,isCrossRepository,headRepositoryOwner"
@@ -702,7 +711,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         }
         val now = System.currentTimeMillis()
         if (github) {
-            ghCache?.takeIf { usable(it.time, now, GH_STATUS_TTL, maxAge) }?.let {
+            ghCache?.takeIf { usable(it.time, now, ghTtl(it.value), maxAge) }?.let {
                 LOG.info("gh probe cache hit reason=$reason value=${it.value} ageMs=${now - it.time}")
                 return@synchronized it.value
             }
@@ -732,6 +741,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         LOG.info("gh probe result reason=$reason value=$value exit=${res.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(res.stderr)}")
         value
     }
+
+    /** How long a cached gh verdict may be served. See [GH_LIMIT_TTL] for why one value is special. */
+    private fun ghTtl(value: GhAvailability): Long =
+        if (value == GhAvailability.RATE_LIMITED) GH_LIMIT_TTL else GH_STATUS_TTL
 
     private fun snippet(text: String): String {
         return text.trim().replace(Regex("\\s+"), " ").take(180)
@@ -763,6 +776,10 @@ internal fun classifyGhError(text: String): GhAvailability {
     // transient gh auth failures (e.g. a GitHub Enterprise 404 or revoked token) as an uninstalled gh;
     // scope to spawn/shell signals instead.
     if (msg.contains("cannot run program") || msg.contains("no such file") || msg.contains("command not found")) return GhAvailability.MISSING
+    // `gh auth status` validates the token against the API, so it is usually the first command to be
+    // told the budget is spent. Checked after the auth wordings above: a rate-limited response says
+    // nothing about whether the token is valid, so it must not be reported as a login problem.
+    if (rateLimited(msg)) return GhAvailability.RATE_LIMITED
     return GhAvailability.OK
 }
 

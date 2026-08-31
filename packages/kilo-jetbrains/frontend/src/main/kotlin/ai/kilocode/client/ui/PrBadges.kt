@@ -1,6 +1,8 @@
 package ai.kilocode.client.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.rpc.dto.BranchStatusDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
 import ai.kilocode.rpc.dto.GhReview
@@ -66,6 +68,20 @@ internal fun checksTooltip(checks: GhChecksDto): String {
 
 /** GitHub's checks tab for a pull request, which is what a CI glyph should open. */
 internal fun checksUrl(pull: WorktreePrDto): String = "${pull.url.trimEnd('/')}/checks"
+
+/**
+ * [next], but carrying [previous]'s pull request when [next] could not carry one of its own.
+ *
+ * GitHub refusing a lookup because the token's budget is spent is not evidence that the branch lost its
+ * pull request, and the refusal can stand for the best part of an hour — so dropping the pill would
+ * report a change that never happened and leave it reported for a long time. Only for the same branch:
+ * on a different one the held pull request would be wrong rather than merely stale.
+ */
+internal fun held(next: BranchStatusDto, previous: BranchStatusDto?): BranchStatusDto {
+    if (next.availability != GhAvailability.RATE_LIMITED || next.pr != null) return next
+    val pr = previous?.takeIf { it.branch == next.branch }?.pr ?: return next
+    return next.copy(pr = pr)
+}
 
 /**
  * Tooltip for a PR pill that shows its own number and state, such as the one on a worktree row. Only

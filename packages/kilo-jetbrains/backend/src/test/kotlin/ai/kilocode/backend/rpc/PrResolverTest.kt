@@ -217,6 +217,38 @@ class PrResolverTest {
     }
 
     @Test
+    fun `reports a spent budget instead of walking the ladder against it`() {
+        // Both wordings GitHub answers with, primary and secondary.
+        val limits = listOf(
+            "HTTP 403: API rate limit exceeded for user ID 1. (https://api.github.com/graphql)",
+            "GraphQL: You have exceeded a secondary rate limit. Please wait a few minutes before you try again.",
+        )
+
+        for (stderr in limits) {
+            calls.clear()
+            val resolver = resolver(view = { CmdOut(1, "", stderr) }, list = { throw IllegalStateException("must not search") })
+
+            val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+            assertEquals(GhAvailability.RATE_LIMITED, lookup.availability, "for: $stderr")
+            assertNull(lookup.pr)
+            // The remaining strategies would be refused by the same limit, so a lookup that reads as
+            // "no PR here" would cost three calls per checkout at the worst possible moment.
+            assertEquals(1, calls.size, "a spent budget must stop the ladder immediately, got $calls")
+        }
+    }
+
+    @Test
+    fun `does not retry the scalar fields when the budget is spent`() {
+        val resolver = resolver(view = { CmdOut(1, "", "API rate limit exceeded") })
+
+        resolver.resolve(path, "feature/x", base = "main")
+
+        // The scalar form is refused just as readily, so the field-support fallback must not fire.
+        assertEquals(listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS)), calls)
+    }
+
+    @Test
     fun `treats a missing pull request as a clean result`() {
         val resolver = resolver(view = { missing() }, list = { ok("[]") })
 
