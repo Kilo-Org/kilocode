@@ -22,7 +22,10 @@ import ai.kilocode.client.agentManager.worktree.WorktreeTitle
 import ai.kilocode.client.agentManager.worktree.openWorktreeSession
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
+import ai.kilocode.client.ui.checksTooltip
+import ai.kilocode.client.ui.checksUrl
 import ai.kilocode.client.ui.prTooltip
+import ai.kilocode.client.ui.reviewTooltip
 import ai.kilocode.client.ui.style
 import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.openKiloDiff
@@ -585,6 +588,42 @@ class AgentManagerPanel(
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)
+
+        /**
+         * Review then CI verdict, on the title line so they stay readable without hovering the row.
+         * Both are glyphs rather than pills: they are the states a reviewer scans a worktree list for,
+         * and GitHub's own icons say it faster than words at this size.
+         */
+        override val badges: List<ActiveListBadge>
+            get() {
+                if (progress != null) return emptyList()
+                val p = pr ?: return emptyList()
+                return listOfNotNull(reviewBadge(p), checksBadge(p))
+            }
+
+        private fun reviewBadge(p: WorktreePrDto): ActiveListBadge? {
+            val glyph = WorktreeIcons.forReview(p.review) ?: return null
+            return ActiveListBadge(
+                "",
+                id = "pr-review",
+                tooltip = reviewTooltip(p.review),
+                action = { BrowserUtil.browse(p.url) },
+                icon = glyph,
+            )
+        }
+
+        private fun checksBadge(p: WorktreePrDto): ActiveListBadge? {
+            val glyph = WorktreeIcons.forChecks(p.checks) ?: return null
+            return ActiveListBadge(
+                "",
+                id = "pr-checks",
+                tooltip = checksTooltip(p.checks),
+                // The checks tab rather than the conversation: someone clicking a red build wants the log.
+                action = { BrowserUtil.browse(checksUrl(p)) },
+                icon = glyph,
+            )
+        }
+
         override val secondaryBadges: List<ActiveListBadge>
             get() {
                 if (progress != null) return emptyList()

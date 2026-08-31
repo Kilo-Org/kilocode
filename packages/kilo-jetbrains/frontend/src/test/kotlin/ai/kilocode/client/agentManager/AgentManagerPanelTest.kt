@@ -42,6 +42,9 @@ import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhChecks
+import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.SetupScriptTargetDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -906,6 +909,116 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(edt { panel.canOpenPr(main) })
     }
 
+    fun `test review and checks glyphs sit on the title line in review then run order`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        rpc.prResult = prs(
+            item,
+            review = GhReview.APPROVED,
+            checks = GhChecksDto(GhChecks.FAILED, total = 5, passed = 3, failed = 2),
+        )
+        val panel = panelWithPr()
+
+        val row = row(panel, 0)
+        assertEquals(listOf("pr-review", "pr-checks"), row.badges.map { it.id })
+        // Glyphs, not worded pills: the icon carries the state and the text would only repeat it.
+        assertTrue(row.badges.all { it.text.isBlank() })
+        assertEquals(WorktreeIcons.reviewApproved, row.badges[0].icon)
+        assertEquals(WorktreeIcons.checksFailed, row.badges[1].icon)
+        // The changes cell and PR number stay where they were, on the description line.
+        assertEquals("pull-request", row.secondaryBadges.single().id)
+
+        edt {
+            val view = UIUtil.findComponentOfType(panel, ActiveListView::class.java)!!
+            val list = view.list
+            list.setSize(560, 160)
+            list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            list.clearSelection()
+            val areas = activeListCellBounds(list, 0, selected = false)
+            val review = areas.getValue("pr-review")
+            val checks = areas.getValue("pr-checks")
+            val badge = areas.getValue("pull-request")
+            assertTrue("review must sit left of the run status", review.x + review.width <= checks.x)
+            assertTrue(kotlin.math.abs(center(review).y - center(checks).y) <= 1)
+
+            val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
+            renderer.setSize(list.width, list.getCellBounds(0, 0).height)
+            components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+            val header = SwingUtilities.convertPoint(title, 0, 0, renderer)
+            val bounds = list.getCellBounds(0, 0)
+            // Line one, right after the title, and above the PR number on line two.
+            assertTrue(review.x >= bounds.x + header.x + title.width)
+            assertTrue(kotlin.math.abs(center(review).y - (bounds.y + header.y + title.height / 2)) <= 2)
+            assertTrue(checks.y + checks.height <= badge.y)
+            assertTrue(bounds.contains(review))
+            assertTrue(bounds.contains(checks))
+        }
+    }
+
+    fun `test glyphs carry counts in their tooltips and the run glyph opens the checks tab`() {
+        val browser = installBrowser()
+        val item = worktree("feature-x")
+        rpc.listed += item
+        rpc.prResult = prs(
+            item,
+            review = GhReview.CHANGES_REQUESTED,
+            checks = GhChecksDto(GhChecks.FAILED, total = 5, passed = 3, failed = 2),
+        )
+        val panel = panelWithPr()
+
+        val row = row(panel, 0)
+        assertEquals("<html>Changes requested</html>", row.badges[0].tooltip)
+        // The glyph cannot say how many failed, so the tooltip has to.
+        assertEquals(
+            "<html>2 of 5 checks failed<br>Click to open the checks in your browser.</html>",
+            row.badges[1].tooltip,
+        )
+
+        edt { row.badges[1].action?.invoke() }
+
+        assertEquals(listOf("https://example.test/pr/7/checks"), browser.urls)
+    }
+
+    fun `test a required but ungiven review gets no glyph`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        rpc.prResult = prs(item, review = GhReview.PENDING, checks = GhChecksDto(GhChecks.PASSED, total = 2, passed = 2))
+        val panel = panelWithPr()
+
+        // Nearly every open PR is waiting on review, so a glyph for it would sit on almost every row
+        // and tell the user nothing.
+        assertEquals(listOf("pr-checks"), row(panel, 0).badges.map { it.id })
+        assertEquals(WorktreeIcons.checksPassed, row(panel, 0).badges.single().icon)
+    }
+
+    fun `test a running build gets the run glyph`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        rpc.prResult = prs(item, checks = GhChecksDto(GhChecks.PENDING, total = 3, passed = 1, pending = 2))
+        val panel = panelWithPr()
+
+        val badge = row(panel, 0).badges.single()
+        assertEquals("pr-checks", badge.id)
+        assertEquals(WorktreeIcons.checksRunning, badge.icon)
+        assertEquals(
+            "<html>2 of 3 checks running<br>Click to open the checks in your browser.</html>",
+            badge.tooltip,
+        )
+    }
+
+    fun `test no glyphs when github reports neither review nor checks`() {
+        val item = worktree("feature-x")
+        rpc.listed += item
+        rpc.prResult = prs(item)
+        val panel = panelWithPr()
+
+        // What an older gh or a restricted token resolves to, and what a repo with no CI looks like.
+        assertTrue(row(panel, 0).badges.isEmpty())
+        assertEquals("pull-request", row(panel, 0).secondaryBadges.single().id)
+    }
+
     fun `test pr title replaces row name and tooltip reveals custom name`() {
         val path = "${project.basePath!!}/.kilo/worktrees/feature-x"
         val item = WorktreeDto(path, "Feature Label", "feature/x", path)
@@ -1166,6 +1279,27 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         // The optimistic swap is discarded; reload restores the backend (listed) order.
         assertEquals(listOf(a.path, b.path), edt { worktreeIds(controller) })
         assertEquals(listOf(listOf(b.path, a.path)), rpc.reorders.toList())
+    }
+
+    private fun prs(
+        item: WorktreeDto,
+        review: GhReview = GhReview.NONE,
+        checks: GhChecksDto = GhChecksDto(),
+    ) = WorktreePrListDto(
+        GhAvailability.OK,
+        listOf(WorktreePrDto(item.path, 7, GhState.OPEN, "https://example.test/pr/7", "Feature title", review, checks)),
+    )
+
+    /** Panel wired to a status service with a controllable clock, reloaded past the stats debounce. */
+    private fun panelWithPr(): AgentManagerPanel {
+        val timers = TestUiTimers()
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+        return panel
     }
 
     private fun main(): WorktreeDto {

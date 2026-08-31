@@ -10,6 +10,9 @@ import ai.kilocode.rpc.dto.BranchStatusDto
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhChecks
+import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.MoveStage
@@ -50,8 +53,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -772,7 +777,71 @@ internal fun parsePr(path: String, raw: String): WorktreePrDto? {
         "CLOSED" -> GhState.CLOSED
         else -> GhState.OPEN
     }
-    return WorktreePrDto(path, number, state, url, title)
+    return WorktreePrDto(path, number, state, url, title, parseReview(obj), parseChecks(obj))
+}
+
+/**
+ * Reads GitHub's `reviewDecision`. Absent when the field was not requested, when the repository asks
+ * for no review, or when this `gh` could not answer it — all of which mean "nothing to show".
+ */
+internal fun parseReview(obj: JsonObject): GhReview {
+    return when (obj["reviewDecision"]?.jsonPrimitive?.contentOrNull?.uppercase()) {
+        "APPROVED" -> GhReview.APPROVED
+        "CHANGES_REQUESTED" -> GhReview.CHANGES_REQUESTED
+        "REVIEW_REQUIRED" -> GhReview.PENDING
+        else -> GhReview.NONE
+    }
+}
+
+/**
+ * Rolls GitHub's `statusCheckRollup` up into counts and one verdict.
+ *
+ * A rollup entry is either a check run (`conclusion`, still empty while it runs, plus `status`) or a
+ * legacy commit status (`state`), so the verdict is read from whichever the entry carries. Skipped
+ * checks are excluded from [GhChecksDto.total] because GitHub does not count them either, and a single
+ * failure outranks anything still running: a red build stays red however many jobs are queued behind it.
+ */
+internal fun parseChecks(obj: JsonObject): GhChecksDto {
+    val items = obj["statusCheckRollup"] as? JsonArray ?: return GhChecksDto()
+    var total = 0
+    var passed = 0
+    var failed = 0
+    var pending = 0
+    for (item in items) {
+        val entry = item as? JsonObject ?: continue
+        val raw = entry["conclusion"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            ?: entry["state"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            ?: entry["status"]?.jsonPrimitive?.contentOrNull
+        when (checkState(raw)) {
+            CheckState.SKIPPED -> continue
+            CheckState.PASSED -> passed++
+            CheckState.FAILED -> failed++
+            CheckState.PENDING -> pending++
+        }
+        total++
+    }
+    val state = when {
+        total == 0 -> GhChecks.NONE
+        failed > 0 -> GhChecks.FAILED
+        pending > 0 -> GhChecks.PENDING
+        else -> GhChecks.PASSED
+    }
+    return GhChecksDto(state, total, passed, failed, pending)
+}
+
+/** One rollup entry's verdict. [SKIPPED] is tracked only so it can be left out of the totals. */
+internal enum class CheckState { PASSED, FAILED, PENDING, SKIPPED }
+
+/**
+ * Maps one rollup entry's conclusion, commit-status state, or run status to a verdict. An unknown or
+ * missing value counts as pending: a check nobody recognises has not reported success, and calling it
+ * a failure would paint rows red on GitHub's next new status name.
+ */
+internal fun checkState(raw: String?): CheckState = when (raw?.uppercase()) {
+    "SUCCESS", "NEUTRAL" -> CheckState.PASSED
+    "FAILURE", "ERROR", "ACTION_REQUIRED", "CANCELLED", "TIMED_OUT", "STALE", "STARTUP_FAILURE" -> CheckState.FAILED
+    "SKIPPED" -> CheckState.SKIPPED
+    else -> CheckState.PENDING
 }
 
 /** Head of a pull request being imported. */

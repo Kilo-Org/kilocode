@@ -1,5 +1,6 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.WorktreePrDto
 import kotlinx.serialization.json.Json
@@ -16,7 +17,29 @@ internal data class CmdOut(val exit: Int, val stdout: String, val stderr: String
 /** PR for one checkout, plus the gh availability observed while resolving it. */
 internal data class PrLookup(val pr: WorktreePrDto? = null, val availability: GhAvailability = GhAvailability.OK)
 
+/** Scalar fields every supported `gh` release and token can answer. */
 internal const val PR_FIELDS = "number,state,isDraft,url,title"
+
+/**
+ * [PR_FIELDS] plus the review verdict and CI rollup. Both are GraphQL sub-queries rather than scalars,
+ * so an older `gh` rejects the field names outright and a restricted token is refused the data. See
+ * [richUnsupported] for how that is detected and [PrResolver] for the fallback.
+ */
+internal const val PR_RICH_FIELDS = "$PR_FIELDS,reviewDecision,statusCheckRollup"
+
+/**
+ * Whether a failing `gh pr` command was rejected for asking about review or CI state, rather than for
+ * any of the ordinary reasons (no PR, no auth, no network).
+ *
+ * This has to be distinguished because [prError] treats everything non-auth as "no PR here", so an
+ * unsupported field would otherwise make a checkout with a perfectly good PR report no PR at all.
+ */
+internal fun richUnsupported(stderr: String): Boolean {
+    val text = stderr.lowercase()
+    // Old gh rejects the field name; a restricted token is refused the underlying GraphQL node.
+    if (text.contains("unknown json field")) return true
+    return text.contains("resource not accessible by integration")
+}
 
 /**
  * Resolves the pull request a checkout belongs to. A worktree can reach a PR in several ways —
@@ -36,6 +59,11 @@ internal class PrResolver(
     private val gh: (Path, List<String>) -> CmdOut,
     private val git: (Path, List<String>) -> CmdOut,
 ) {
+    // Volatile because prStatus resolves several checkouts concurrently. Two threads racing to clear it
+    // is harmless: both observed the same unsupported field and both write false.
+    @Volatile
+    private var rich = true
+
     /**
      * Resolves the PR for the checkout at [path] on [branch]. [base] is the repository's base
      * branch; a PR headed by it is not worth a search query, so strategy 3 is skipped there.
@@ -50,25 +78,41 @@ internal class PrResolver(
 
     /** Null means "no PR here, keep looking"; a value is terminal (a PR, or gh being unusable). */
     private fun view(dir: Path, path: String, branch: String?): PrLookup? {
-        val args = buildList {
-            add("pr")
-            add("view")
-            branch?.let { add(it) }
-            add("--json")
-            add(PR_FIELDS)
+        val out = query(dir) { fields ->
+            buildList {
+                add("pr")
+                add("view")
+                branch?.let { add(it) }
+                add("--json")
+                add(fields)
+            }
         }
-        val out = gh(dir, args)
         if (!out.ok) return unusable(out.stderr)
         return parsePr(path, out.stdout)?.let { PrLookup(it) }
+    }
+
+    /**
+     * Runs a `gh pr` command with the richest field list this `gh` and token have proven they can
+     * answer, dropping to [PR_FIELDS] and retrying once when they turn out they cannot.
+     *
+     * The downgrade latches, so a release or token without review/CI support costs one extra call in
+     * total rather than one per checkout on every poll.
+     */
+    private fun query(dir: Path, command: (String) -> List<String>): CmdOut {
+        val wanted = if (rich) PR_RICH_FIELDS else PR_FIELDS
+        val out = gh(dir, command(wanted))
+        if (out.ok || wanted == PR_FIELDS || !richUnsupported(out.stderr)) return out
+        rich = false
+        LOG.info("gh cannot answer review/CI fields, falling back to scalars: ${out.stderr.trim()}")
+        return gh(dir, command(PR_FIELDS))
     }
 
     private fun search(dir: Path, path: String): PrLookup? {
         val head = git(dir, listOf("rev-parse", "HEAD")).stdout.trim()
         if (head.isEmpty()) return null
-        val out = gh(
-            dir,
-            listOf("pr", "list", "--state", "all", "--search", "$head is:pr", "--limit", "5", "--json", "$PR_FIELDS,headRefOid"),
-        )
+        val out = query(dir) { fields ->
+            listOf("pr", "list", "--state", "all", "--search", "$head is:pr", "--limit", "5", "--json", "$fields,headRefOid")
+        }
         if (!out.ok) return unusable(out.stderr)
         val items = runCatching { json.parseToJsonElement(out.stdout) as? JsonArray }.getOrNull() ?: return null
         for (item in items) {
@@ -100,3 +144,5 @@ internal fun prError(stderr: String): GhAvailability {
 }
 
 private val json = Json { ignoreUnknownKeys = true }
+
+private val LOG = KiloLog.create(PrResolver::class.java)

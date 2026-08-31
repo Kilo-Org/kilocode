@@ -3,9 +3,14 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.rpc.parsePrUrl
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhChecks
+import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.WorktreeDto
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.openapi.util.SystemInfo
@@ -1035,6 +1040,89 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals("https://example.test/pr/12", pull.url)
         assertEquals("Fix login bug", pull.title)
     }
+
+    @Test
+    fun `parsePr defaults review and checks when gh did not report them`() {
+        val pull = assertNotNull(parsePr("/repo", """{"number":1,"state":"OPEN","url":"https://pr/1"}"""))
+
+        // The scalar fallback and repositories with no review or CI land here, so "nothing to show"
+        // has to be the default rather than an optimistic pass.
+        assertEquals(GhReview.NONE, pull.review)
+        assertEquals(GhChecks.NONE, pull.checks.state)
+        assertEquals(GhChecksDto(), pull.checks)
+    }
+
+    @Test
+    fun `parseReview maps every github review decision`() {
+        assertEquals(GhReview.APPROVED, parseReview(obj("""{"reviewDecision":"APPROVED"}""")))
+        assertEquals(GhReview.CHANGES_REQUESTED, parseReview(obj("""{"reviewDecision":"CHANGES_REQUESTED"}""")))
+        assertEquals(GhReview.PENDING, parseReview(obj("""{"reviewDecision":"REVIEW_REQUIRED"}""")))
+        // A repository that requires no review reports an empty decision rather than omitting it.
+        assertEquals(GhReview.NONE, parseReview(obj("""{"reviewDecision":""}""")))
+        assertEquals(GhReview.NONE, parseReview(obj("""{"reviewDecision":null}""")))
+        assertEquals(GhReview.NONE, parseReview(obj("{}")))
+    }
+
+    @Test
+    fun `parseChecks counts a mixed rollup and lets failure win`() {
+        val checks = parseChecks(
+            obj(
+                """
+                {"statusCheckRollup":[
+                  {"conclusion":"SUCCESS"},
+                  {"conclusion":"SUCCESS"},
+                  {"conclusion":"FAILURE"},
+                  {"conclusion":"","status":"IN_PROGRESS"},
+                  {"conclusion":"SKIPPED"}
+                ]}
+                """.trimIndent(),
+            ),
+        )
+
+        // A red build stays red however many jobs are still queued behind it.
+        assertEquals(GhChecks.FAILED, checks.state)
+        assertEquals(4, checks.total, "skipped checks are excluded, matching GitHub's own count")
+        assertEquals(2, checks.passed)
+        assertEquals(1, checks.failed)
+        assertEquals(1, checks.pending)
+    }
+
+    @Test
+    fun `parseChecks reads a running check from status when conclusion is still empty`() {
+        val checks = parseChecks(obj("""{"statusCheckRollup":[{"conclusion":"","status":"IN_PROGRESS"}]}"""))
+
+        assertEquals(GhChecks.PENDING, checks.state)
+        assertEquals(1, checks.pending)
+    }
+
+    @Test
+    fun `parseChecks reads a legacy commit status from state`() {
+        // Commit statuses carry `state` and never `conclusion`, unlike check runs.
+        assertEquals(GhChecks.PASSED, parseChecks(obj("""{"statusCheckRollup":[{"state":"SUCCESS"}]}""")).state)
+        assertEquals(GhChecks.FAILED, parseChecks(obj("""{"statusCheckRollup":[{"state":"ERROR"}]}""")).state)
+    }
+
+    @Test
+    fun `parseChecks reports none for an absent or empty rollup`() {
+        assertEquals(GhChecks.NONE, parseChecks(obj("{}")).state)
+        assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[]}""")).state)
+        // Every check skipped is still nothing to report, not a pass.
+        assertEquals(GhChecks.NONE, parseChecks(obj("""{"statusCheckRollup":[{"conclusion":"SKIPPED"}]}""")).state)
+    }
+
+    @Test
+    fun `checkState treats an unrecognised verdict as pending`() {
+        assertEquals(CheckState.PASSED, checkState("NEUTRAL"))
+        assertEquals(CheckState.FAILED, checkState("TIMED_OUT"))
+        assertEquals(CheckState.FAILED, checkState("CANCELLED"))
+        assertEquals(CheckState.SKIPPED, checkState("SKIPPED"))
+        // A name nobody recognises has not reported success; calling it a failure would paint rows red
+        // the next time GitHub adds a status.
+        assertEquals(CheckState.PENDING, checkState("SOMETHING_NEW"))
+        assertEquals(CheckState.PENDING, checkState(null))
+    }
+
+    private fun obj(raw: String) = Json.parseToJsonElement(raw) as JsonObject
 
     @Test
     fun `branchStatus reports plain checkout and linked worktree`() = runBlocking {

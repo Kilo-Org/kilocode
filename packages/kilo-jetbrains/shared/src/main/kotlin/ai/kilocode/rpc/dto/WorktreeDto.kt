@@ -55,6 +55,36 @@ data class WorktreeDirtyListDto(val items: List<WorktreeDirtyDto> = emptyList())
 @Serializable
 enum class GhState { OPEN, DRAFT, MERGED, CLOSED }
 
+/**
+ * Aggregate review verdict for a pull request, from GitHub's `reviewDecision`. Orthogonal to
+ * [GhState]: a draft PR can be approved, and an open one can be waiting on review.
+ *
+ * [PENDING] means a review is required but not yet given; [NONE] means the repository asks for none.
+ */
+@Serializable
+enum class GhReview { NONE, PENDING, APPROVED, CHANGES_REQUESTED }
+
+/** Rolled-up CI verdict for a pull request head. [NONE] means the head reports no checks at all. */
+@Serializable
+enum class GhChecks { NONE, PENDING, PASSED, FAILED }
+
+/**
+ * Rolled-up CI state for a pull request head, from GitHub's `statusCheckRollup`.
+ *
+ * Counts only, deliberately: per-check names, URLs, and timestamps would make every poll produce a
+ * DTO that compares unequal to the last one, and both `WorktreeRow.equals` and `WorktreeNameCache`
+ * gate listener/row refreshes on whole-DTO equality. Aggregates stay stable between polls that found
+ * nothing new. [total] excludes skipped checks, matching what GitHub's own PR page counts.
+ */
+@Serializable
+data class GhChecksDto(
+    val state: GhChecks = GhChecks.NONE,
+    val total: Int = 0,
+    val passed: Int = 0,
+    val failed: Int = 0,
+    val pending: Int = 0,
+)
+
 @Serializable
 data class WorktreePrDto(
     val path: String,
@@ -62,6 +92,8 @@ data class WorktreePrDto(
     val state: GhState,
     val url: String,
     val title: String = "",
+    val review: GhReview = GhReview.NONE,
+    val checks: GhChecksDto = GhChecksDto(),
 )
 
 @Serializable
