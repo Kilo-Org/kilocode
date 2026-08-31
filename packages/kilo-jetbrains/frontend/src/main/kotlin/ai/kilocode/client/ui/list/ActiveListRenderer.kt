@@ -94,9 +94,11 @@ internal class ActiveListRenderer(
         add(title, BorderLayout.CENTER)
         add(badges, BorderLayout.EAST)
     }
-    // Pin the title+badges group to the leading edge so badges trail the title text directly
-    // instead of drifting to the far right of the row.
-    private val header = titleGroup.align(HAlign.LEFT, VAlign.CENTER)
+    // Pin the title+badges group to the leading edge so badges trail the title text directly instead of
+    // drifting to the far right of the row. A list that opts into [ActiveListConfig.badgesRight] gets
+    // the group stretched across the row instead, which lands its badges on the same trailing edge as
+    // the metrics and secondary badges below them.
+    private val header = titleGroup.align(if (cfg.badgesRight) HAlign.FIT else HAlign.LEFT, VAlign.CENTER)
     private val desc = JBLabel()
     private val metrics = ActiveListChangesCell()
     private val details = Stack.horizontal(UiStyle.Gap.md()).next(metrics).next(secondary)

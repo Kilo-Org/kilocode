@@ -1,4 +1,4 @@
-package ai.kilocode.client.agentManager.worktree
+package ai.kilocode.client.ui
 
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
  * hex strings, so an off-palette color themes incorrectly and a missing `_dark` sibling renders invisible
  * in Dark — both of which look fine in a code review and only show up when someone switches theme.
  */
-class PrStatusIconTest {
+class PrIconsTest {
     private val names = listOf(
         "pr-review-approved",
         "pr-review-changes",
@@ -80,34 +80,37 @@ class PrStatusIconTest {
     }
 
     @Test
+    fun `the failed and running badges carry the muted fills in both themes`() {
+        // These two land on rows the user has not acted on yet, several at a time. The saturated fills
+        // turned the list into a traffic light, so both themes use the muted tone of the same hue.
+        for (name in listOf("pr-checks-failed", "pr-checks-running")) {
+            val light = assertNotNull(read("$name.svg"))
+            val dark = assertNotNull(read("${name}_dark.svg"))
+            val fill = FILL.find(light)?.groupValues?.get(1)
+
+            assertEquals(fill, FILL.find(dark)?.groupValues?.get(1), "$name does not share its dark fill")
+            assertTrue(MUTED.contains(fill?.uppercase()), "$name fills with $fill instead of a muted tone")
+        }
+    }
+
+    @Test
     fun `review glyphs are shown only for a verdict the user can act on`() {
-        assertEquals(WorktreeIcons.reviewApproved, WorktreeIcons.forReview(GhReview.APPROVED))
-        assertEquals(WorktreeIcons.reviewChanges, WorktreeIcons.forReview(GhReview.CHANGES_REQUESTED))
-        assertNull(WorktreeIcons.forReview(GhReview.PENDING))
-        assertNull(WorktreeIcons.forReview(GhReview.NONE))
+        assertEquals(PrIcons.reviewApproved, PrIcons.review(GhReview.APPROVED))
+        assertEquals(PrIcons.reviewChanges, PrIcons.review(GhReview.CHANGES_REQUESTED))
+        assertNull(PrIcons.review(GhReview.PENDING))
+        assertNull(PrIcons.review(GhReview.NONE))
     }
 
     @Test
     fun `check glyphs follow the rolled up verdict`() {
-        assertEquals(WorktreeIcons.checksPassed, WorktreeIcons.forChecks(GhChecksDto(GhChecks.PASSED, total = 2, passed = 2)))
-        assertEquals(WorktreeIcons.checksFailed, WorktreeIcons.forChecks(GhChecksDto(GhChecks.FAILED, total = 2, failed = 1)))
-        assertEquals(WorktreeIcons.checksRunning, WorktreeIcons.forChecks(GhChecksDto(GhChecks.PENDING, total = 2, pending = 2)))
-        assertNull(WorktreeIcons.forChecks(GhChecksDto()))
-    }
-
-    @Test
-    fun `status glyphs are never tinted to the row text color`() {
-        // neutral() drives tinting, which would flatten these to the label foreground and lose the
-        // red/green/amber the whole indicator depends on.
-        assertTrue(!WorktreeIcons.neutral(WorktreeIcons.reviewApproved))
-        assertTrue(!WorktreeIcons.neutral(WorktreeIcons.reviewChanges))
-        assertTrue(!WorktreeIcons.neutral(WorktreeIcons.checksPassed))
-        assertTrue(!WorktreeIcons.neutral(WorktreeIcons.checksFailed))
-        assertTrue(!WorktreeIcons.neutral(WorktreeIcons.checksRunning))
+        assertEquals(PrIcons.checksPassed, PrIcons.checks(GhChecksDto(GhChecks.PASSED, total = 2, passed = 2)))
+        assertEquals(PrIcons.checksFailed, PrIcons.checks(GhChecksDto(GhChecks.FAILED, total = 2, failed = 1)))
+        assertEquals(PrIcons.checksRunning, PrIcons.checks(GhChecksDto(GhChecks.PENDING, total = 2, pending = 2)))
+        assertNull(PrIcons.checks(GhChecksDto()))
     }
 
     private fun read(file: String): String? =
-        PrStatusIconTest::class.java.getResourceAsStream("/icons/$file")?.bufferedReader()?.use { it.readText() }
+        PrIconsTest::class.java.getResourceAsStream("/icons/$file")?.bufferedReader()?.use { it.readText() }
 
     /**
      * The file with every color literal reduced to the same placeholder, leaving only geometry and
@@ -118,6 +121,10 @@ class PrStatusIconTest {
 
     private companion object {
         val HEX = Regex("#[0-9A-Fa-f]{6}")
+        val FILL = Regex("""fill="(#[0-9A-Fa-f]{6})"""")
+
+        /** The palette's muted red and orange, which the loud CI verdicts are painted with. */
+        val MUTED = setOf("#DB5C5C", "#C77D55")
 
         /** Light and dark entries from the icon skill's palette that these icons are allowed to use. */
         val PALETTE = setOf(

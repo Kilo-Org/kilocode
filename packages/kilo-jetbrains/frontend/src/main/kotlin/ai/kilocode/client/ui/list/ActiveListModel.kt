@@ -57,6 +57,13 @@ internal data class ActiveListConfig(
     val header: ActiveListWeight = ActiveListWeight.BOLD,
     /** Show a separator line above section headers, except above the first row. */
     val divider: Boolean = true,
+    /**
+     * Pin title-line [ActiveListItem.badges] to the row's trailing edge instead of letting them trail
+     * the title text. Turn it on for status glyphs, which are scanned down the list as a column and
+     * then line up with the metrics on the description line; leave it off for pills that label the
+     * title ("builtin", "env"), which read as part of it and would be covered by the hover actions.
+     */
+    val badgesRight: Boolean = false,
 ) {
     companion object {
         val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)

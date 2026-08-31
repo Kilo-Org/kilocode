@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.session.ui.header.PrHeaderView
 import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.checksLabel
 import ai.kilocode.client.ui.layout.Stack
@@ -58,8 +59,8 @@ internal class WorktreeRowPopupBody @RequiresEdt constructor(
             localDeletions = dirty?.deletions ?: 0,
             base = stats?.base.orEmpty(),
         )
-        line(review, WorktreeIcons.forReview(pull?.review ?: GhReview.NONE), reviewLabel(pull?.review ?: GhReview.NONE))
-        line(checks, WorktreeIcons.forChecks(pull?.checks ?: GhChecksDto()), checksLabel(pull?.checks ?: GhChecksDto()))
+        line(review, PrIcons.review(pull?.review ?: GhReview.NONE), reviewLabel(pull?.review ?: GhReview.NONE))
+        line(checks, PrIcons.checks(pull?.checks ?: GhChecksDto()), checksLabel(pull?.checks ?: GhChecksDto()))
     }
 
     /** Hidden when there is no glyph, so a PR with no CI does not leave an empty row behind. */

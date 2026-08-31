@@ -28,6 +28,7 @@ import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.installBrowser
+import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMetrics
@@ -923,8 +924,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(listOf("pr-review", "pr-checks"), row.badges.map { it.id })
         // Glyphs, not worded pills: the icon carries the state and the text would only repeat it.
         assertTrue(row.badges.all { it.text.isBlank() })
-        assertEquals(WorktreeIcons.reviewApproved, row.badges[0].icon)
-        assertEquals(WorktreeIcons.checksFailed, row.badges[1].icon)
+        assertEquals(PrIcons.reviewApproved, row.badges[0].icon)
+        assertEquals(PrIcons.checksFailed, row.badges[1].icon)
         // The changes cell and PR number stay where they were, on the description line.
         assertEquals("pull-request", row.secondaryBadges.single().id)
 
@@ -948,8 +949,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
             val header = SwingUtilities.convertPoint(title, 0, 0, renderer)
             val bounds = list.getCellBounds(0, 0)
-            // Line one, right after the title, and above the PR number on line two.
+            // Line one, clear of the title, and above the PR number on line two.
             assertTrue(review.x >= bounds.x + header.x + title.width)
+            // A column, not a ragged edge: the run glyph ends where the PR pill under it ends, so the
+            // verdicts line up down the list instead of following each title's own width.
+            assertEquals(badge.x + badge.width, checks.x + checks.width)
             assertTrue(kotlin.math.abs(center(review).y - (bounds.y + header.y + title.height / 2)) <= 2)
             assertTrue(checks.y + checks.height <= badge.y)
             assertTrue(bounds.contains(review))
@@ -990,7 +994,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         // Nearly every open PR is waiting on review, so a glyph for it would sit on almost every row
         // and tell the user nothing.
         assertEquals(listOf("pr-checks"), row(panel, 0).badges.map { it.id })
-        assertEquals(WorktreeIcons.checksPassed, row(panel, 0).badges.single().icon)
+        assertEquals(PrIcons.checksPassed, row(panel, 0).badges.single().icon)
     }
 
     fun `test a running build gets the run glyph`() {
@@ -1001,7 +1005,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         val badge = row(panel, 0).badges.single()
         assertEquals("pr-checks", badge.id)
-        assertEquals(WorktreeIcons.checksRunning, badge.icon)
+        assertEquals(PrIcons.checksRunning, badge.icon)
         assertEquals(
             "<html>2 of 3 checks running<br>Click to open the checks in your browser.</html>",
             badge.tooltip,
@@ -1019,7 +1023,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("pull-request", row(panel, 0).secondaryBadges.single().id)
     }
 
-    fun `test pr title replaces row name and tooltip reveals custom name`() {
+    fun `test pr title replaces row name and the pill tooltip is only the click hint`() {
         val path = "${project.basePath!!}/.kilo/worktrees/feature-x"
         val item = WorktreeDto(path, "Feature Label", "feature/x", path)
         rpc.listed += item
@@ -1038,7 +1042,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(row.leading.isEmpty())
         assertTrue(row.badges.isEmpty())
         val tip = row.secondaryBadges.single().tooltip ?: error("expected PR tooltip")
-        assertEquals("<html>Draft #7 Fix &lt;login&gt; bug<br>(Feature Label)<br>Click to open the pull request in your browser.</html>", tip)
+        // The row shows the title, the pill shows the number, and the popup header carries the rest, so
+        // repeating any of it here is noise over a badge the user is about to click.
+        assertEquals("<html>Click to open the pull request in your browser.</html>", tip)
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
         edt {
             list.size = java.awt.Dimension(360, 80)
@@ -1050,7 +1056,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(tip, edt { list.getToolTipText(MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, center(area).x, center(area).y, 0, false)) })
     }
 
-    fun `test blank pr title keeps row name and omits custom name line`() {
+    fun `test blank pr title keeps the row name`() {
         val path = "${project.basePath!!}/.kilo/worktrees/feature-x"
         val item = WorktreeDto(path, "Feature Label", "feature/x", path)
         rpc.listed += item
@@ -1067,7 +1073,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val row = row(panel, 0)
         assertEquals("Feature Label", row.title)
         assertTrue(row.leading.isEmpty())
-        assertEquals("<html>Open #8<br>Click to open the pull request in your browser.</html>", row.secondaryBadges.single().tooltip)
+        // The pill already reads "#8" next to the state color, so its tooltip is only the click hint.
+        assertEquals("<html>Click to open the pull request in your browser.</html>", row.secondaryBadges.single().tooltip)
     }
 
     fun `test pr badge follows stats on the description line and opens the browser without opening an editor`() {

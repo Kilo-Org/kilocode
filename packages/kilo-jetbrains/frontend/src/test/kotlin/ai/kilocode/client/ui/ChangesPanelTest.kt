@@ -32,7 +32,8 @@ class ChangesPanelTest : BasePlatformTestCase() {
         assertEquals(listOf("3 files", "-7", "+10"), labels(view))
         assertEquals(1, groups(view).size)
         assertEquals(1, components(view).filterIsInstance<DiffStatBadge>().size)
-        assertEquals(KiloBundle.message("worktree.stats.base.tooltip", 3, 10, 7, "origin/main"), view.toolTipText)
+        // The row already prints the counts beside this tooltip, so it only says what a click does.
+        assertEquals(KiloBundle.message("worktree.stats.tooltip.open"), view.toolTipText)
         assertEquals(view.toolTipText, groups(view).single().toolTipText)
     }
 

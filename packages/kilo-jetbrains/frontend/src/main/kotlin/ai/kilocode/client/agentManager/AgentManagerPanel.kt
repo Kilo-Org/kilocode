@@ -24,6 +24,7 @@ import ai.kilocode.client.agentManager.worktree.openWorktreeSession
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
+import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.checksTooltip
 import ai.kilocode.client.ui.checksUrl
 import ai.kilocode.client.ui.popup.SidePopupContent
@@ -32,7 +33,7 @@ import ai.kilocode.client.ui.popup.SidePopupFit
 import ai.kilocode.client.ui.popup.SidePopupGeometry
 import ai.kilocode.client.ui.popup.SidePopupRequest
 import ai.kilocode.client.ui.popup.SidePopupSpot
-import ai.kilocode.client.ui.prTooltip
+import ai.kilocode.client.ui.openTooltip
 import ai.kilocode.client.ui.reviewTooltip
 import ai.kilocode.client.ui.style
 import ai.kilocode.client.diff.KiloDiffComparison
@@ -120,6 +121,9 @@ class AgentManagerPanel(
             hoverActions = true,
             title = ActiveListWeight.PLAIN,
             header = ActiveListWeight.PLAIN,
+            // The review and CI glyphs are read as a column down the list, so they line up with the
+            // changes summary and PR pill below them rather than following each title's own width.
+            badgesRight = true,
         ),
         surface = ActiveListSurface.ToolWindow,
         showSearch = false,
@@ -692,7 +696,6 @@ class AgentManagerPanel(
         override val tinted: Boolean get() = WorktreeIcons.neutral(icon)
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
-        private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)
 
         /**
          * Review then CI verdict, on the title line so they stay readable without hovering the row.
@@ -707,7 +710,7 @@ class AgentManagerPanel(
             }
 
         private fun reviewBadge(p: WorktreePrDto): ActiveListBadge? {
-            val glyph = WorktreeIcons.forReview(p.review) ?: return null
+            val glyph = PrIcons.review(p.review) ?: return null
             return ActiveListBadge(
                 "",
                 id = "pr-review",
@@ -718,7 +721,7 @@ class AgentManagerPanel(
         }
 
         private fun checksBadge(p: WorktreePrDto): ActiveListBadge? {
-            val glyph = WorktreeIcons.forChecks(p.checks) ?: return null
+            val glyph = PrIcons.checks(p.checks) ?: return null
             return ActiveListBadge(
                 "",
                 id = "pr-checks",
@@ -738,7 +741,7 @@ class AgentManagerPanel(
                         "#${p.number}",
                         style(p.state),
                         id = "pull-request",
-                        tooltip = prTooltip(p, customName),
+                        tooltip = openTooltip(),
                         action = { BrowserUtil.browse(p.url) },
                     ),
                 )

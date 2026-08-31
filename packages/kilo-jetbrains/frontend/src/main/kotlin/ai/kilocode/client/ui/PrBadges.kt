@@ -67,6 +67,17 @@ internal fun checksTooltip(checks: GhChecksDto): String {
 /** GitHub's checks tab for a pull request, which is what a CI glyph should open. */
 internal fun checksUrl(pull: WorktreePrDto): String = "${pull.url.trimEnd('/')}/checks"
 
+/**
+ * Tooltip for a PR pill that shows its own number and state, such as the one on a worktree row. Only
+ * the click hint: repeating "Open #8" under a pill that reads "#8" tells the user nothing.
+ */
+internal fun openTooltip(): String =
+    XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(KiloBundle.message("worktree.pr.tooltip.open")))
+
+/**
+ * Tooltip for a PR title that can be truncated — the header, where the pill and the title are laid out
+ * in a row that a narrow editor tab clips. Carries the state, number, full title, and worktree name.
+ */
 internal fun prTooltip(pull: WorktreePrDto, name: String? = null): String {
     val title = pull.title.trim()
     val head = buildString {
