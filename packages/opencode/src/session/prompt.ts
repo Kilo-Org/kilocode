@@ -1782,11 +1782,13 @@ export const layer = Layer.effect(
             // turn into the output-token cap, so image/vision input is measured by the provider
             // rather than by encoded payload bytes (see KiloLLM.capOutputTokens). Summary messages
             // are skipped like in the isOverflow check above: their reported input reflects the
-            // pre-compaction history, not the trimmed context of the next request.
-            reportedContextTokens:
-              lastFinished && lastFinished.summary !== true
-                ? KiloSessionOverflow.count(lastFinished.tokens)
-                : undefined,
+            // pre-compaction history, not the trimmed context of the next request. A trailing
+            // unfinished assistant invalidates the report: its request never completed, so the
+            // payload holds content the report never covered.
+            reportedContextTokens: KiloSessionOverflow.baseline({
+              assistant: lastAssistant,
+              finished: lastFinished,
+            }),
             // kilocode_change end
           })
 

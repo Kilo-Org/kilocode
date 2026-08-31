@@ -62,6 +62,20 @@ export namespace KiloSessionOverflow {
     return total || tokens.total || 0
   }
 
+  // The provider report covers only the request that produced the finished assistant.
+  // When an unfinished (cancelled or errored) assistant trails it, the payload holds
+  // content that report never saw — tool results and partial text generated after it —
+  // and the tail estimate cannot see them either, since it starts after the last
+  // serialized assistant. Dropping the baseline makes the full estimate decide alone.
+  export function baseline(input: {
+    assistant?: { id: string }
+    finished?: { id: string; summary?: boolean; tokens: MessageV2.Assistant["tokens"] }
+  }) {
+    if (!input.finished || input.finished.summary === true) return undefined
+    if (input.assistant?.id !== input.finished.id) return undefined
+    return count(input.finished.tokens)
+  }
+
   export function limit(input: { cfg: Config.Info; model: Provider.Model; usable: number }) {
     const percent = input.cfg.compaction?.threshold_percent
     if (typeof percent !== "number") return input.usable

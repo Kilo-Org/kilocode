@@ -444,6 +444,68 @@ describe("Kilo preflight compaction", () => {
     ).toBe(false)
   })
 
+  test("drops the provider baseline when an unfinished assistant trails the finished one", () => {
+    // A cancelled response leaves an assistant without a finish marker after the
+    // last finished one. Its request never completed, so the report predates the
+    // tool output and partial text the payload now replays - the tail estimate
+    // starts after that assistant and cannot count them either.
+    const finished = { id: "msg-1", tokens: tokens(150_000) }
+    const cancelled = { id: "msg-2" }
+
+    expect(KiloSessionOverflow.baseline({ assistant: cancelled, finished })).toBeUndefined()
+    expect(KiloSessionOverflow.baseline({ assistant: finished, finished })).toBe(150_000)
+    expect(KiloSessionOverflow.baseline({ assistant: finished, finished: undefined })).toBeUndefined()
+  })
+
+  test("keeps the summary guard on the reported baseline", () => {
+    const summary = { id: "msg-1", summary: true, tokens: tokens(150_000) }
+
+    expect(KiloSessionOverflow.baseline({ assistant: summary, finished: summary })).toBeUndefined()
+  })
+
+  test("counts intervening tool output after a cancelled response", () => {
+    // The cancelled assistant's request never reported usage, so the baseline
+    // must fall back to the full estimate: reported + tail omits the 300k-char
+    // tool result that sits between the finished assistant and the tail.
+    const conf = cfg({ threshold_percent: 80 })
+    const mdl = model({ context: 200_000, output: 32_000 })
+    const messages = [
+      { role: "user", content: "x".repeat(600_000) },
+      { role: "assistant", content: [{ type: "tool-call", toolCallId: "call-1", toolName: "bash", input: {} }] },
+      {
+        role: "tool",
+        content: [{ type: "tool-result", toolCallId: "call-1", toolName: "bash", output: { type: "text", value: "y".repeat(300_000) } }],
+      },
+      { role: "assistant", content: [{ type: "text", text: "cancelled mid-response" }] },
+      { role: "user", content: "Continue." },
+    ] satisfies ModelMessage[]
+
+    // 600k chars alone inflate past the 160k threshold; the estimate must decide.
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        messages,
+        tools: {},
+      }),
+    ).toBe(true)
+
+    // A stale baseline plus the tail-only projection stays below the threshold -
+    // the exact omission this guard exists to prevent.
+    expect(
+      KiloSessionOverflow.shouldCompact({
+        cfg: conf,
+        model: mdl,
+        usable: usable({ cfg: conf, model: mdl }),
+        tokens: 10_000,
+        tail: 100,
+        continuation: false,
+        reported: 150_000,
+      }),
+    ).toBe(false)
+  })
+
   test("triggers at the reserved input ceiling before a high threshold on input-limited models", () => {
     // 80% of the 400k window (320k) exceeds the usable input budget (272k - 20k
     // reserve), so compaction fires at 252k - about 63% of the displayed bar.
