@@ -1,5 +1,6 @@
 import { Shell } from "../../shell"
 import { KiloPtyTermination } from "./termination"
+import { hasReadyMarker } from "./smoke-output"
 import { spawn } from "#pty"
 
 const TIMEOUT = 15_000
@@ -17,8 +18,7 @@ export async function smoke() {
   const exited = Promise.withResolvers<number>()
   const data = proc.onData((chunk) => {
     state.output += chunk
-    const lines = state.output.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "").split(/\r?\n/)
-    if (lines.some((line) => line.trim() === "KILO_PTY_READY")) output.resolve()
+    if (hasReadyMarker(state.output)) output.resolve()
   })
   const exit = proc.onExit((event) => {
     state.exited = true
