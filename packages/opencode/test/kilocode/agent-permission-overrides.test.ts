@@ -421,13 +421,66 @@ test("plan carries guarded denies into delegated sessions under a global catch-a
       const explore = await load(tmp.path, (svc) => svc.get("explore"))
       const child = KiloTask.merge(
         deriveSubagentSessionPermission({ parentSessionPermission: [], subagent: explore! }),
-        KiloTask.permissions(KiloTask.inherited({ caller: plan!, session: { permission: [] }, mcp: undefined })),
+        KiloTask.permissions(
+          KiloTask.inherited({ caller: plan!, target: explore!, session: { permission: [] }, mcp: undefined }),
+        ),
       )
       // A subagent session is evaluated as merge(agent, session), so session rules win.
       const runtime = Permission.merge(explore!.permission, child)
       for (const permission of ["agent_manager", "repo_clone", "write", "interactive_terminal", "bash", "edit"]) {
         expect(Permission.evaluate(permission, "*", runtime).action).toBe("deny")
       }
+    },
+  })
+})
+
+test("custom agents opt in to Plan restriction inheritance with an exact allow", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        implicit: {
+          description: "A custom agent with only a wildcard allow",
+          mode: "subagent",
+          permission: { "*": "allow" },
+        },
+        denied: {
+          description: "A custom agent that rejects Plan restrictions",
+          mode: "subagent",
+          permission: { plan: "deny" },
+        },
+        asked: {
+          description: "A custom agent that asks for Plan restrictions",
+          mode: "subagent",
+          permission: { plan: "ask" },
+        },
+        allowed: {
+          description: "A custom agent that accepts Plan restrictions",
+          mode: "subagent",
+          permission: { plan: "allow" },
+        },
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      const explore = await load(tmp.path, (svc) => svc.get("explore"))
+      const implicit = await load(tmp.path, (svc) => svc.get("implicit"))
+      const denied = await load(tmp.path, (svc) => svc.get("denied"))
+      const asked = await load(tmp.path, (svc) => svc.get("asked"))
+      const allowed = await load(tmp.path, (svc) => svc.get("allowed"))
+      const inherited = (target: Agent.Info) =>
+        KiloTask.inherited({ caller: plan!, target, session: { permission: [] }, mcp: undefined })
+
+      for (const target of [implicit!, denied!, asked!]) {
+        expect(Permission.evaluate("edit", "src/output.ts", inherited(target)).action).not.toBe("deny")
+        expect(Permission.evaluate("write", "src/output.ts", inherited(target)).action).not.toBe("deny")
+      }
+      expect(Permission.evaluate("edit", "src/output.ts", inherited(allowed!)).action).toBe("deny")
+      expect(Permission.evaluate("write", "src/output.ts", inherited(allowed!)).action).toBe("deny")
+      expect(Permission.evaluate("edit", "src/output.ts", inherited(explore!)).action).toBe("deny")
     },
   })
 })

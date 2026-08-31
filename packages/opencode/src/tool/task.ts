@@ -166,7 +166,7 @@ export const TaskTool = Tool.define(
       }
       // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
       const caller = yield* agent.get(ctx.agent)
-      const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
+      const rules = KiloTask.inherited({ caller, target: next, session: parent, mcp: cfg.mcp })
       const childPermission = KiloTask.merge(
         deriveSubagentSessionPermission({
           parentSessionPermission: parent.permission ?? [],

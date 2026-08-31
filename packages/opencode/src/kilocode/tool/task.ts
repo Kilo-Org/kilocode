@@ -65,9 +65,19 @@ export namespace KiloTask {
    */
   export function inherited(input: {
     caller: Agent.Info
+    target: Agent.Info
     session: Pick<Session.Info, "permission">
     mcp: Config.Info["mcp"]
   }): Permission.Ruleset {
+    const id = typeof input.caller.options.id === "string" ? input.caller.options.id.toLowerCase() : undefined
+    const name = input.caller.name.toLowerCase()
+    const plan = id === "architect" || name === "plan" || name === "architect"
+    if (
+      plan &&
+      !input.target.native &&
+      input.target.permission.findLast((rule) => rule.permission === "plan")?.action !== "allow"
+    )
+      return []
     const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))

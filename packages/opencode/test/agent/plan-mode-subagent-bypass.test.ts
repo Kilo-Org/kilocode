@@ -165,9 +165,12 @@ it.effect("subagent inherits parent session deny rules as hard runtime ceilings"
 it.instance("Plan delegation preserves notebook ceilings without projecting bash denies", () =>
   Effect.gen(function* () {
     const caller = yield* Agent.use.get("plan")
+    const target = yield* Agent.use.get("explore")
     expect(caller).toBeDefined()
+    expect(target).toBeDefined()
     const rules = KiloTask.inherited({
       caller: caller!,
+      target: target!,
       session: { permission: [] } as unknown as Parameters<typeof KiloTask.inherited>[0]["session"],
       mcp: {},
     })
@@ -192,6 +195,7 @@ it.instance(
       const inherited = (caller: Agent.Info) =>
         KiloTask.inherited({
           caller,
+          target: explore!,
           session: { permission: [] } as unknown as Parameters<typeof KiloTask.inherited>[0]["session"],
           mcp: {},
         })
@@ -246,6 +250,7 @@ it.instance(
 
       const rules = KiloTask.inherited({
         caller: caller!,
+        target: worker!,
         session: { permission: [] } as unknown as Parameters<typeof KiloTask.inherited>[0]["session"],
         mcp: {},
       })
