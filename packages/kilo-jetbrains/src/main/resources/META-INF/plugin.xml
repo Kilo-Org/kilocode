@@ -3,10 +3,83 @@
     <vendor url="https://kilo.ai">Kilo Code</vendor>
 
     <description><![CDATA[
-        Open Source AI coding agent that generates code from natural language, automates tasks,
-        and runs terminal commands. Features inline autocomplete, browser automation, automated
-        refactoring, and custom modes for planning, coding, and debugging.
-        Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.
+        <p>
+            <b>Kilo Code</b> is an open-source AI coding agent for JetBrains IDEs, built for both local
+            and remote development. Run multiple agents on different tasks at the same time — each in its
+            own isolated git worktree — without opening a new IDE window per task. The entire UI is native
+            Swing (no embedded browser, no Node.js), so it works identically locally and in JetBrains
+            Remote Development split mode over SSH, VMs, or Dev Containers.
+        </p>
+
+        <p><b>Built for remote development</b></p>
+        <ul>
+            <li>No JCEF embedded browser anywhere in the UI — renders the same locally and through JetBrains Gateway.</li>
+            <li>True split-mode architecture: the frontend runs on your machine, the agent server runs on the host next to your code.</li>
+            <li>No Node.js dependency — a native <code>kilo</code> binary is downloaded per OS and architecture.</li>
+            <li>Dev Container aware: if a project is opened so the backend can't see container files, Kilo tells you to reopen via Gateway instead of failing silently.</li>
+            <li>Resilient to flaky connections — long-running calls survive backend restarts and reconnects.</li>
+        </ul>
+
+        <p><b>Agent Manager — many tasks, one IDE frame</b></p>
+        <ul>
+            <li>Every task gets its own git worktree: own branch, own working directory, own uncommitted changes.</li>
+            <li>Start from a new worktree off a base branch, an existing branch, or directly from a GitHub PR URL.</li>
+            <li><em>Continue in Worktree</em> — fork an in-progress session's uncommitted changes into a fresh isolated worktree mid-conversation.</li>
+            <li>One panel showing every task in flight with live PR status, diff stats, and run state.</li>
+            <li>Optional per-worktree setup scripts (POSIX / PowerShell / CMD) that run automatically in their own terminal tab.</li>
+        </ul>
+
+        <p><b>Run and debug without juggling windows</b></p>
+        <ul>
+            <li>Your existing Run Configurations (Gradle, external system, program-based) are transplanted onto each worktree with the correct working directory.</li>
+            <li>Live run indicators per worktree, plus Build and Rebuild from the same popup.</li>
+            <li>Need real breakpoint debugging? <em>Open in New Frame</em> opens one worktree as its own project window — reusing an open frame when there is one, and working correctly in remote sessions too.</li>
+        </ul>
+
+        <p><b>GitHub-native workflow</b></p>
+        <ul>
+            <li>PR number, title, and state in the session header, clickable through to the browser.</li>
+            <li>Diff versus the PR base branch with file and line counts, plus a full diff viewer.</li>
+            <li>Uncommitted local changes tracked separately from the base diff.</li>
+            <li>Import any existing PR into an isolated worktree to review, continue, or debug it.</li>
+            <li>Guided setup when <code>git</code> or the GitHub CLI is missing or unauthenticated, instead of a silent failure.</li>
+        </ul>
+
+        <p><b>600+ models, your keys or ours</b></p>
+        <ul>
+            <li>Claude, Gemini, GPT, Grok, GLM, and hundreds more from every major provider, switchable without leaving the IDE.</li>
+            <li>Bring your own API keys or use Kilo credits.</li>
+            <li>Pin a specific model to a specific custom agent so it never drifts between sessions.</li>
+            <li>A separate fast, cheap model tier for high-frequency operations like subagent orchestration.</li>
+            <li>Data-sensitivity badges flag models that may train on your prompts.</li>
+            <li>Enterprise model access controls: org admins can block models or providers account-wide by training policy, retention policy, or datacenter location.</li>
+        </ul>
+
+        <p><b>Powered by Kilo CLI</b></p>
+        <ul>
+            <li>The same open-source agent runtime behind the Kilo CLI, VS Code extension, and Kilo Cloud.</li>
+            <li>One shared <code>kilo.jsonc</code> config — set up agents, providers, and preferences once and use them on every surface.</li>
+            <li>Built-in tools, MCP servers, semantic search, and LSP integration come from the shared runtime.</li>
+            <li>One agent server per IDE instance serving your main workspace and every open worktree.</li>
+        </ul>
+
+        <p><b>Also included</b></p>
+        <ul>
+            <li>Custom agents and modes with full create, edit, import, and export support.</li>
+            <li>MCP server management with live connection status.</li>
+            <li>Custom slash-command workflows backed by editable Markdown files.</li>
+            <li>Skills management, including custom local and remote skill sources.</li>
+            <li>Session checkpoints — revert to any prior message and redo forward, with per-file diff stats.</li>
+            <li>Granular auto-approve permissions with per-tool Allow / Ask / Deny rules and queued approval requests.</li>
+            <li>Session sharing via a public link.</li>
+            <li>Smart context management: auto-compaction, stale tool-output pruning, and ignore patterns for large repos.</li>
+            <li>Automatic settings, MCP config, and state migration from the older Roo/Kilo JetBrains plugin.</li>
+        </ul>
+
+        <p>
+            <a href="https://kilo.ai">kilo.ai</a> &middot;
+            <a href="https://github.com/Kilo-Org/kilocode">Source on GitHub</a>
+        </p>
     ]]></description>
 
     <content>
