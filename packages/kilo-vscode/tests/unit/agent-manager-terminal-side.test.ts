@@ -1,4 +1,7 @@
 import { describe, expect, it } from "bun:test"
+import { createRoot, createSignal } from "solid-js"
+import { createSidePanel } from "../../webview-ui/agent-manager/side-panel-state"
+import { SidePanel } from "../../webview-ui/agent-manager/side-panel-layout"
 import {
   createSideTerminal,
   readSavedDestination,
@@ -11,6 +14,7 @@ function scene(
     destination?: "vscode" | "agentManager"
     saved?: "vscode" | "agentManager"
     visible?: boolean
+    panel?: () => boolean
     focusedId?: string
     count?: number
     script?: boolean
@@ -44,7 +48,7 @@ function scene(
         return true
       },
     },
-    visible: () => visible,
+    visible: () => opts.panel?.() ?? visible,
     focusedId: () => focusedId,
     count: () => opts.count ?? 2,
     isScript: () => opts.script ?? false,
@@ -121,6 +125,38 @@ describe("Agent Manager side terminal controller", () => {
     closed.ctl.toggle()
     await Promise.resolve()
     expect(closed.calls.ensureSide).toBe(0)
+  })
+
+  it("only ensures terminals when the current context actually selects Terminal", async () => {
+    const state = createRoot((dispose) => {
+      const [selection, select] = createSignal("local")
+      const panels = createSidePanel({ project: () => "project", current: () => undefined, selection })
+      const side = scene({ panel: () => panels.panel() === SidePanel.Terminal })
+      return { panels, select, side, dispose }
+    })
+    state.panels.open(SidePanel.Terminal)
+    state.select("worktree")
+    state.panels.open(SidePanel.Diff)
+    state.side.ctl.syncContext("worktree", "local")
+    await Promise.resolve()
+    expect(state.side.calls.ensureSide).toBe(0)
+    state.select("local")
+    state.side.ctl.syncContext("local", "worktree")
+    state.select("worktree")
+    await Promise.resolve()
+    expect(state.side.calls.ensureSide).toBe(0)
+    state.select("local")
+    state.side.ctl.syncContext("local", "worktree")
+    await Promise.resolve()
+    expect(state.side.calls.ensureSide).toBe(1)
+    state.panels.close()
+    state.select("worktree")
+    state.select("local")
+    state.side.ctl.syncContext("local", "worktree")
+    await Promise.resolve()
+    expect(state.side.calls.ensureSide).toBe(1)
+    expect(state.side.calls.closed).toEqual([])
+    state.dispose()
   })
 
   it("closes the focused terminal without stealing focus from its survivor", () => {

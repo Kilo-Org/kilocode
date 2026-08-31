@@ -12,6 +12,8 @@ import fs from "node:fs"
 import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
 import { WorktreeImporter } from "../../src/agent-manager/worktree-importer"
+import { createProjectStore } from "../../webview-ui/agent-manager/project/store"
+import { updateSetup } from "../../webview-ui/agent-manager/project/progress"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -1197,12 +1199,21 @@ describe("Shared webview provider shell", () => {
 })
 
 describe("Agent Manager worktree setup", () => {
-  it("dismisses successful setup overlays immediately and retains the error delay", () => {
+  it("dismisses successful setup overlays immediately and retains the guarded error delay", () => {
+    const store = createProjectStore("project")
+    const message = {
+      type: "agentManager.worktreeSetup" as const,
+      status: "creating" as const,
+      message: "Creating",
+      projectId: "project",
+      worktreeId: "worktree",
+    }
+    const state = updateSetup(store, { active: false, message: "" }, message, "project", "worktree")
+    expect(updateSetup(store, state, { ...message, status: "ready" }, "project", "worktree").active).toBe(false)
+    expect(updateSetup(store, state, { ...message, status: "error" }, "project", "worktree").active).toBe(true)
     const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
-    expect(source).toContain('globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 0)')
-    expect(source).not.toContain(
-      'globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)',
-    )
-    expect(source).toContain("globalThis.setTimeout")
+    const timer = source.match(/if \(next.active && next.error\)[\s\S]*?,\s*3000,\s*\)/)?.at(0)
+    expect(timer).toContain("globalThis.setTimeout")
+    expect(timer).toContain('current === next ? { active: false, message: "" } : current')
   })
 })

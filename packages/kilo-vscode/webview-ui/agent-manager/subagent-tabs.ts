@@ -1,4 +1,4 @@
-import { batch, createEffect, createMemo, createSignal, on, type Accessor } from "solid-js"
+import { batch, createMemo, createSignal, type Accessor } from "solid-js"
 import { reorderTabs } from "../src/utils/tab-order"
 import { childID } from "../src/context/session-utils"
 import type { ToolPart } from "../src/types/messages"
@@ -138,7 +138,6 @@ export function availableSubagents(parts: ToolPart[]): SubagentTab[] {
 }
 
 export function createSubagentToolbar(opts: {
-  context: Accessor<string>
   current: Accessor<string | undefined>
   parts: (id: string) => ToolPart[]
   tabs: Accessor<SubagentTab[]>
@@ -164,15 +163,6 @@ export function createSubagentToolbar(opts: {
     if (!id) return
     for (const tab of available()) opts.open(tab.id, tab.title, id)
   }
-  createEffect(
-    on(
-      opts.context,
-      () => {
-        if (opts.visible() && opts.tabs().length === 0) opts.hide()
-      },
-      { defer: true },
-    ),
-  )
   return { available, toggle }
 }
 
@@ -197,7 +187,6 @@ export function createSubagentController(opts: {
     hide: opts.hide,
   })
   const toolbar = createSubagentToolbar({
-    context: createMemo(() => context()),
     current: opts.current,
     parts: opts.parts,
     tabs: tabs.tabs,

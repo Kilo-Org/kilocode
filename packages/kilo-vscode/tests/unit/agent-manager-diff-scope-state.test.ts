@@ -2,6 +2,45 @@ import { describe, it, expect } from "bun:test"
 import { composeDiffId, parseDiffId, scopeDescriptors } from "../../webview-ui/agent-manager/diff-scope-state"
 
 describe("agent-manager webview diff scope descriptors", () => {
+  it("remembers each project's scope without changing wire IDs", () => {
+    const script = `
+      import { strict as assert } from "node:assert"
+      import { createRoot, createSignal } from "solid-js"
+      import { createDiffReviewScope } from "./webview-ui/agent-manager/diff-review-scope"
+      const state = createRoot((dispose) => {
+        const [project, activate] = createSignal("first")
+        const [ctx, select] = createSignal("local")
+        const scope = createDiffReviewScope({
+          project, ctx,
+          session: () => "session",
+          panelOpen: () => false,
+          reviewActive: () => false,
+          vscode: { postMessage: () => {} },
+        })
+        return { scope, activate, select, dispose }
+      })
+      for (const ctx of ["local", "worktree"]) {
+        state.select(ctx)
+        state.activate("first")
+        state.scope.select(ctx + "#staged")
+        state.activate("second")
+        assert.equal(state.scope.scope(), "branch")
+        state.scope.select(ctx + "#unstaged")
+        state.activate("first")
+        assert.equal(state.scope.id(), ctx + "#staged")
+        state.activate("second")
+        assert.equal(state.scope.id(), ctx + "#unstaged")
+      }
+      state.dispose()
+    `
+    const child = Bun.spawnSync([process.execPath, "--conditions=browser", "-e", script], {
+      cwd: `${import.meta.dir}/../..`,
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
+  })
+
   it("offers the three git scopes without an active session", () => {
     const descriptors = scopeDescriptors("wt_1")
     expect(descriptors.map((d) => d.type)).toEqual(["workspace", "staged", "unstaged"])
