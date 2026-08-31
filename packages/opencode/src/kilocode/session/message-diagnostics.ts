@@ -43,24 +43,28 @@ export namespace KiloMessageDiagnostics {
     return walk(err)
   }
 
-  function flattenIssues(issues: ZodIssue[]): string[] {
+  function flattenIssues(issues: ZodIssue[], depth = 0): string[] {
     const result: string[] = []
     for (const issue of issues) {
-      const path = issue.path?.join(".") ?? "?"
+      const path = Array.isArray(issue.path) ? issue.path.join(".") : "?"
       const msg = issue.message ?? ""
       const code = issue.code ?? ""
       const expected = short(issue.expected)
       const received = short(issue.received)
       result.push(`${path}: ${msg} [${code}] expected=${expected} received=${received}`)
       // zod/v4 unions nest their member failures under `errors`; recurse so the
-      // deep schema path (e.g. `content.0.text`) is not lost behind `invalid_union`
-      if (issue.errors) {
+      // deep schema path (e.g. `content.0.text`) is not lost behind `invalid_union`.
+      // Depth is capped so a pathological cycle degrades instead of throwing —
+      // diagnostics on the failure path must never mask the original error.
+      if (issue.errors && depth < 8) {
         for (const sub of issue.errors) {
           const nested = Array.isArray(sub) ? sub : [sub]
           for (const inner of nested) {
-            result.push(
-              ...flattenIssues([{ ...inner, path: [...(issue.path ?? []), ...(inner.path ?? [])] }]),
-            )
+            const nextPath =
+              Array.isArray(issue.path) && Array.isArray(inner.path)
+                ? [...issue.path, ...inner.path]
+                : inner.path
+            result.push(...flattenIssues([{ ...inner, path: nextPath }], depth + 1))
           }
         }
       }
