@@ -1,0 +1,20 @@
+classDiagram
+    class Shape {
+        <<abstract>>
+        +area() double
+    }
+    class Circle {
+        +double radius
+        +area() double
+    }
+    class Rectangle {
+        +double width
+        +double height
+        +area() double
+    }
+    class Canvas {
+        +draw()
+    }
+    Shape <|-- Circle
+    Shape <|-- Rectangle
+    Canvas o-- "0..*" Shape : holds
