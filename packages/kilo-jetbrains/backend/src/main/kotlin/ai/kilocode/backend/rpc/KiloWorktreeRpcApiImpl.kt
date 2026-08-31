@@ -194,13 +194,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return synced.filter { Files.isDirectory(Path.of(it.path)) }
     }
 
-    override suspend fun ghStatus(directory: String, github: Boolean): GhAvailability = withContext(Dispatchers.IO) {
-        probeGh(Path.of(directory).normalize(), "rpc", github)
+    override suspend fun ghStatus(directory: String, github: Boolean, maxAge: Long?): GhAvailability = withContext(Dispatchers.IO) {
+        probeGh(Path.of(directory).normalize(), "rpc", github, maxAge)
     }
 
-    override suspend fun prStatus(directory: String): WorktreePrListDto = withContext(Dispatchers.IO) {
+    override suspend fun prStatus(directory: String, maxAge: Long?): WorktreePrListDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        prs[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
+        prs[directory]?.takeIf { usable(it.time, now, PR_TTL, maxAge) }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
         // A gone directory reports nothing and is not cached, so a real availability problem found
         // from a live directory still reaches the UI.
@@ -208,7 +208,9 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             LOG.info("pr status skipped, directory does not exist: $root")
             return@withContext WorktreePrListDto()
         }
-        val available = ghAvailable(root)
+        // A caller that rejected the cached PR list would not accept a cached availability verdict
+        // from the same moment either, so the ceiling carries into the gh probe.
+        val available = ghAvailable(root, maxAge = maxAge)
         if (available != GhAvailability.OK) return@withContext WorktreePrListDto(available).also { prs[directory] = Timed(now, it) }
         // Sync the worktree list before the per-worktree lookups so a worktree that was added and
         // then deleted on disk is pruned instead of resolved from a directory that no longer exists.
@@ -229,13 +231,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         dto
     }
 
-    override suspend fun branchStatus(directory: String, github: Boolean): BranchStatusDto = withContext(Dispatchers.IO) {
+    override suspend fun branchStatus(directory: String, github: Boolean, maxAge: Long?): BranchStatusDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         // Keyed by directory + mode so flipping the GitHub integration setting cannot serve a
         // cross-mode entry (a disabled-mode entry always has a null pr; an enabled-mode entry may
         // not) for up to PR_TTL after the flip.
         val key = "$directory|$github"
-        branches[key]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
+        branches[key]?.takeIf { usable(it.time, now, PR_TTL, maxAge) }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
         if (!Files.isDirectory(root)) {
             LOG.info("branch status skipped, directory does not exist: $root")
@@ -243,7 +245,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         }
         val branch = runGit(root, "branch", "--show-current").stdout.trim()
         val worktree = isLinkedWorktree(root)
-        val availability = ghAvailable(root, github)
+        val availability = ghAvailable(root, github, maxAge)
         val lookup = if (github && availability == GhAvailability.OK && branch.isNotBlank()) {
             resolver.resolve(directory, branch, baseBranch(root))
         } else {
@@ -661,17 +663,19 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
      * Resolves git/gh availability. When [github] is false, only git presence is checked and `gh`
      * is never spawned — used while the user has turned off the GitHub integration setting.
      */
-    private fun ghAvailable(root: Path, github: Boolean = true): GhAvailability {
+    private fun ghAvailable(root: Path, github: Boolean = true, maxAge: Long? = null): GhAvailability {
         if (!Files.isDirectory(root)) {
             LOG.info("gh availability skipped dir=$root missing=true")
             return GhAvailability.OK
         }
-        val status = probeGh(root, "availability", github)
+        val status = probeGh(root, "availability", github, maxAge)
         // A git-only probe can only return GIT_MISSING or OK, so the gh-binary re-check below is
         // unreachable while github is false; the guard documents that explicitly.
         if (!github || status != GhAvailability.MISSING) return status
         val now = System.currentTimeMillis()
-        ghProbe?.takeIf { now - it.time < GH_PROBE_TTL }?.let { return it.value }
+        // Installing gh is the transition this long-lived entry hides, so a caller demanding
+        // freshness must be able to re-check the binary and not just the auth verdict.
+        ghProbe?.takeIf { usable(it.time, now, GH_PROBE_TTL, maxAge) }?.let { return it.value }
         val res = runGh(root, "--version")
         val value = if (res.ok) GhAvailability.OK else GhAvailability.MISSING
         ghProbe = Timed(now, value)
@@ -683,7 +687,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
      * spawns `gh` or touches [ghCache] (the cache mixes gh-auth verdicts with a boolean this probe
      * would otherwise poison with a git-only "OK").
      */
-    private fun probeGh(root: Path, reason: String, github: Boolean = true): GhAvailability = synchronized(ghLock) {
+    private fun probeGh(root: Path, reason: String, github: Boolean = true, maxAge: Long? = null): GhAvailability = synchronized(ghLock) {
         // A stale/removed worktree directory makes the process spawn fail, which would be
         // misreported as GIT_MISSING. Treat a missing directory as "nothing to report" and
         // don't cache it, so the next probe on a real directory still runs.
@@ -693,13 +697,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         }
         val now = System.currentTimeMillis()
         if (github) {
-            ghCache?.takeIf { now - it.time < GH_STATUS_TTL }?.let {
-                LOG.info("gh probe cache hit reason=$reason value=${it.value}")
+            ghCache?.takeIf { usable(it.time, now, GH_STATUS_TTL, maxAge) }?.let {
+                LOG.info("gh probe cache hit reason=$reason value=${it.value} ageMs=${now - it.time}")
                 return@synchronized it.value
             }
         }
         val start = System.currentTimeMillis()
-        LOG.info("gh probe start reason=$reason dir=$root github=$github")
+        LOG.info("gh probe start reason=$reason dir=$root github=$github maxAge=${maxAge ?: "default"}")
         val git = runGit(root, "--version")
         if (!git.ok) {
             // The directory can disappear between the check above and the spawn; a failed working
@@ -728,6 +732,17 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return text.trim().replace(Regex("\\s+"), " ").take(180)
     }
 
+}
+
+/**
+ * Whether a cache entry written at [time] may still be served. [maxAge] is the caller's own ceiling
+ * on staleness: it can only tighten [ttl], never extend it, so an event-driven request can reject an
+ * entry the poll would have accepted while no caller is able to pin stale data in place past the TTL.
+ * A [maxAge] of 0 (or below) rejects every entry and forces the work to run.
+ */
+internal fun usable(time: Long, now: Long, ttl: Long, maxAge: Long?): Boolean {
+    val limit = maxAge?.coerceIn(0, ttl) ?: ttl
+    return now - time < limit
 }
 
 /** True when a process failed because its working directory is gone, not because the tool is absent. */

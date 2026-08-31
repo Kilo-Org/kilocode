@@ -7,7 +7,7 @@ import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.activateIde
-import ai.kilocode.client.testing.fakeRoot
+import ai.kilocode.client.testing.deactivateIde
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
@@ -201,7 +201,7 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
-    fun `test activation reloads pr state within the throttle budget`() {
+    fun `test returning after a long absence observes a pr merged elsewhere`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         val key = normalizeWorktreePath(path)
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
@@ -209,8 +209,9 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         drain()
         assertEquals(1, service.pr.value[key]?.number)
 
-        // A PR merged while the IDE sat in the background.
+        // A PR merged in a browser while the IDE sat in the background.
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.MERGED, "https://pr/1")))
+        deactivateIde(project)
         timers.advanceBy(30_000)
         activateIde(project)
         drain()
@@ -219,16 +220,86 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
-    fun `test activation collapses a burst of focus events into one lookup`() {
+    fun `test a long absence outranks the throttle and the backend pr cache`() {
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)
         val handle = service.attach()
         drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        // Well inside PR_THROTTLE, so the frontend floor alone would have dropped this. The absence is
+        // the whole reason to spend the lookup, and the ceiling is the only way past the backend's own
+        // PR cache — without it the answer could predate the departure by up to its full TTL.
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
+        activateIde(project)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(listOf(null, Away.FRESH), rpc.prAges.toList())
+        handle.close()
+    }
+
+    fun `test returning from a quick switch reloads without bypassing the backend cache`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        // Past PR_THROTTLE, so only the absence rule decides what this activation costs.
+        timers.advanceBy(30_000)
+
+        deactivateIde(project)
+        timers.advanceBy(Away.REAL)
+        activateIde(project)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertNull("a quick switch does not justify a fresh gh fan-out", rpc.prAges.last())
+        handle.close()
+    }
+
+    fun `test returning from a transient window does not reload pr state`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        timers.advanceBy(30_000)
         val before = rpc.prCalls.size
 
+        // A dialog or popup closing never took focus out of the IDE for long enough to have changed a
+        // PR, and this lookup costs one `gh` call per worktree.
+        deactivateIde(project)
+        timers.advanceBy(Away.REAL - 1)
+        activateIde(project)
+        drain()
+
+        assertEquals(before, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test a burst of activations reloads once per absence`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        assertEquals(1, rpc.prCalls.size)
+
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
         repeat(5) { activateIde(project) }
         drain()
 
-        assertEquals("PR_THROTTLE must absorb repeated activation", before, rpc.prCalls.size)
+        assertEquals("one departure owes one lookup, however often the frame reports focus", 2, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test activation without a preceding absence does not reload pr state`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+        timers.advanceBy(30_000)
+        val before = rpc.prCalls.size
+
+        activateIde(project)
+        drain()
+
+        assertEquals("the first focus of a session is not a return", before, rpc.prCalls.size)
         handle.close()
     }
 
@@ -237,13 +308,28 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         val handle = service.attach()
         drain()
         val before = rpc.prCalls.size
-        timers.advanceBy(30_000)
+        deactivateIde(project)
+        timers.advanceBy(Away.FRESH)
 
         // A different project's window gaining focus says nothing about this project's worktrees.
         activateIde(ProjectManager.getInstance().defaultProject)
         drain()
 
         assertEquals(before, rpc.prCalls.size)
+        handle.close()
+    }
+
+    fun `test a forced refresh can demand a fresh backend lookup`() {
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK)
+        val handle = service.attach()
+        drain()
+
+        // What creating a worktree needs: the cached PR list was built before this worktree existed,
+        // so serving it would leave the new row without a badge until the entry aged out.
+        service.refreshPr(force = true, maxAge = 0)
+        drain()
+
+        assertEquals(listOf(null, 0L), rpc.prAges.toList())
         handle.close()
     }
 

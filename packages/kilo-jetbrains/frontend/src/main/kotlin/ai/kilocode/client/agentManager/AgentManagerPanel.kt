@@ -141,11 +141,12 @@ class AgentManagerPanel(
             if (list.select(key)) list.focusList()
             item(key)?.takeIf { controller.progress(it.id) == null }?.let { open(it, focus = false) }
         }
-        // A fresh worktree changes what git reports, so bypass the refresh throttle instead of
-        // leaving the new row without its stats and PR badge until the next poll.
+        // A fresh worktree changes what git reports, so bypass both the refresh throttle and the
+        // backend's PR cache — that cache was populated before this worktree existed, so serving it
+        // would leave the new row without its badge until the entry aged out.
         controller.onCreated = { created ->
             project?.service<WorktreeStatusService>()?.refreshStats()
-            project?.service<WorktreeStatusService>()?.refreshPr(force = true)
+            project?.service<WorktreeStatusService>()?.refreshPr(force = true, maxAge = 0)
             autoRunSetupScript(created)
         }
         controller.onReload = { sync() }

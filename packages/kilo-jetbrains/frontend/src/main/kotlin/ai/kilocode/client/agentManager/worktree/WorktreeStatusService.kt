@@ -49,6 +49,7 @@ class WorktreeStatusService internal constructor(
     private var refs = 0
     private var lastPr = 0L
     private var github = KiloPluginSettings.getGithub()
+    private val away = Away { timers.now() }
     // Bumped whenever a PR lookup starts or is abandoned, so a result that arrives after its reason
     // to exist is gone cannot publish. Mirrors GhStatusCoordinator's probe generation.
     private var generation = 0
@@ -62,12 +63,16 @@ class WorktreeStatusService internal constructor(
         val bus = ApplicationManager.getApplication().messageBus.connect(cs)
         bus.subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener { enabled -> github(enabled) })
         // A PR can be merged or closed while the IDE sits in the background, so re-check on
-        // activation. Unforced, so PR_THROTTLE collapses a burst of focus events into one lookup.
+        // activation.
         bus.subscribe(ApplicationActivationListener.TOPIC, object : ApplicationActivationListener {
             override fun applicationActivated(ideFrame: IdeFrame) {
                 if (ideFrame.project !== project) return
-                refreshPr()
+                focus()
             }
+
+            // Unfiltered: the absence belongs to the application, not to one frame, so every open
+            // project records it and each consumes its own copy when that project is focused again.
+            override fun applicationDeactivated(ideFrame: IdeFrame) = away.left()
         })
     }
 
@@ -86,12 +91,32 @@ class WorktreeStatusService internal constructor(
         timer.restart()
     }
 
-    fun refreshPr(force: Boolean = false) {
+    /**
+     * Reloads PR state. [force] bypasses [PR_THROTTLE], the frontend floor between lookups. [maxAge]
+     * caps how old a cached backend answer may be and is the only way past the backend's own PR
+     * cache, so a caller that needs to observe a change made outside the IDE has to pass it.
+     *
+     * The two are separate because they guard different costs: the throttle guards the RPC round
+     * trip, [maxAge] guards the per-worktree `gh` fan-out behind it.
+     */
+    fun refreshPr(force: Boolean = false, maxAge: Long? = null) {
         if (project.isDisposed || refs == 0 || !github) return
         val now = timers.now()
         if (!force && now - lastPr < PR_THROTTLE) return
         lastPr = now
-        loadPr()
+        loadPr(maxAge)
+    }
+
+    /**
+     * Reloads PR state on return to the IDE, scaled to the absence. A dialog or popup that never took
+     * focus out of the IDE reports no absence and costs nothing; a quick window switch takes the
+     * throttled path; a long absence is the case worth paying a full `gh` fan-out for, and is also the
+     * only path that can get past the backend's own PR cache.
+     */
+    private fun focus() {
+        val gone = away.back() ?: return
+        val max = Away.ceiling(gone)
+        refreshPr(force = max != null, maxAge = max)
     }
 
     private fun start() {
@@ -158,11 +183,11 @@ class WorktreeStatusService internal constructor(
         }
     }
 
-    private fun loadPr() {
+    private fun loadPr(maxAge: Long? = null) {
         val gen = ++generation
         prJob = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
-            runCatching { service<KiloWorktreeService>().prStatus(dir) }
+            runCatching { service<KiloWorktreeService>().prStatus(dir, maxAge) }
                 .onSuccess { dto ->
                     // KiloWorktreeService.prStatus swallows the cancellation and answers with an
                     // empty DTO, so a lookup cancelled by a disable still lands here — and after a

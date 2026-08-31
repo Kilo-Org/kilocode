@@ -53,6 +53,54 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `a cache entry is usable only within both the ttl and the caller ceiling`() {
+        assertTrue(usable(time = 0, now = 89_999, ttl = 90_000, maxAge = null))
+        assertFalse(usable(time = 0, now = 90_000, ttl = 90_000, maxAge = null))
+
+        // A ceiling tightens: an entry the TTL alone would have served can be rejected, which is the
+        // only way a caller returning to the IDE can get past a cache filled before it left.
+        assertTrue(usable(time = 0, now = 9_999, ttl = 90_000, maxAge = 10_000))
+        assertFalse(usable(time = 0, now = 10_000, ttl = 90_000, maxAge = 10_000))
+
+        // ...and never extends, so no caller can pin stale data beyond the TTL.
+        assertFalse(usable(time = 0, now = 120_000, ttl = 90_000, maxAge = Long.MAX_VALUE))
+
+        // Zero forces the work to run, and a negative value is clamped to that rather than inverting
+        // the comparison into "always fresh".
+        assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = 0))
+        assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = -1))
+    }
+
+    @Test
+    fun `branch status serves its cache until a caller demands a fresher answer`() = runBlocking {
+        initRepo()
+        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("cached")
+        git(repo, "worktree", "add", "-b", "feature/cached", dir.toString())
+        assertEquals("feature/cached", api.branchStatus(dir.toString()).branch)
+
+        git(dir, "checkout", "-b", "feature/moved")
+
+        // The default ceiling accepts the entry written above, so a change made meanwhile is invisible
+        // for as long as it lives — the staleness a returning caller has to be able to reject.
+        assertEquals("feature/cached", api.branchStatus(dir.toString()).branch)
+        assertEquals("feature/moved", api.branchStatus(dir.toString(), maxAge = 0).branch)
+    }
+
+    @Test
+    fun `branch status keeps serving the cache for a ceiling wider than the entry age`() = runBlocking {
+        initRepo()
+        val dir = repo.resolve(".kilo").resolve("worktrees").resolve("wide")
+        git(repo, "worktree", "add", "-b", "feature/wide", dir.toString())
+        assertEquals("feature/wide", api.branchStatus(dir.toString()).branch)
+
+        git(dir, "checkout", "-b", "feature/other")
+
+        // A returning caller passes the length of its absence, not zero: work that happened while it
+        // was away is still current, so a ceiling the entry fits inside must reuse it.
+        assertEquals("feature/wide", api.branchStatus(dir.toString(), maxAge = 60_000).branch)
+    }
+
+    @Test
     fun `branch status skips a missing directory without caching the empty result`() = runBlocking {
         initRepo()
         val dir = repo.resolve(".kilo").resolve("worktrees").resolve("late")
