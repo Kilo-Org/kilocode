@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui.popup
 
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.popup.SidePopupContent
 import com.intellij.openapi.Disposable
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBScrollPane
@@ -26,25 +27,25 @@ class HeaderPopupRequest(
 
 class HeaderPopupBody(
     component: JComponent,
-    val disposable: Disposable,
-    val background: Color,
+    override val disposable: Disposable,
+    override val background: Color,
     maxWidth: Int = SessionUiStyle.View.Popup.MAX_WIDTH,
     // Opt-in bounds for live bodies (e.g. the task card): a floor width in final device px, a fixed
     // height pinned to the shared cap, and a horizontal scrollbar. Snapshot popups keep the defaults.
     minWidth: Int = 0,
     fixedHeight: Boolean = false,
     horizontal: Boolean = false,
-) {
+) : SidePopupContent {
     private val panel = HeaderPopupPanel(component, JBUI.scale(maxWidth), minWidth, fixedHeight, horizontal)
 
-    val component: JComponent get() = panel
+    override val component: JComponent get() = panel
 
     /**
      * Clamps the body to the space available beside the chat, in already-scaled device px. This wins
      * over the opt-in floor width, because a body that overflows its side makes the balloon re-point
      * above or below the chat.
      */
-    fun fitWithin(width: Int, height: Int) {
+    override fun fitWithin(width: Int, height: Int) {
         panel.fitWithin(width, height)
     }
 }

@@ -35,6 +35,14 @@ internal fun reviewLabel(review: GhReview): String = when (review) {
     GhReview.NONE -> ""
 }
 
+/** Plain-text CI summary for a popup row, where a tooltip is not available to carry the counts. */
+internal fun checksLabel(checks: GhChecksDto): String = when (checks.state) {
+    GhChecks.PASSED -> KiloBundle.message("worktree.pr.checks.passed", checks.total)
+    GhChecks.FAILED -> KiloBundle.message("worktree.pr.checks.failed", checks.failed, checks.total)
+    GhChecks.PENDING -> KiloBundle.message("worktree.pr.checks.running", checks.pending, checks.total)
+    GhChecks.NONE -> ""
+}
+
 /** Tooltip for a review verdict glyph. Blank for states that get no glyph, which never reach a tooltip. */
 internal fun reviewTooltip(review: GhReview): String {
     val label = reviewLabel(review).takeIf { it.isNotBlank() } ?: return ""
