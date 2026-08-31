@@ -347,22 +347,23 @@
 ## [7.1.3] - 2026-08-31
 
 ### Added
-- feat(cli): add a client-only migrate API to bring Claude Code and Codex sessions into Kilo by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13294
-- feat(jetbrains): add worktree copy actions and polish diff/rename popups by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13633
-- feat(jetbrains): add pluggable onboarding framework, port v5 migration by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13588
+
+- Hover a worktree row to see its pull request details, review state, and CI status at a glance.
+- Copy a worktree's branch name, path, or pull request reference (title plus link) from the worktree row menu.
+- Guided onboarding on first launch, including a wizard that imports your Kilo v5 settings and providers.
 
 ### Fixed
-- fix(jetbrains): resolve api key env var when selecting custom provider models by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13586
-- fix(jetbrains): make gh/PR focus sync responsive without overwhelming the backend by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13628
+
+- Selecting a model from a custom provider now resolves its API key environment variable correctly, and keeps custom headers when the variable is cleared.
+- Pull request and GitHub status now refresh promptly when you return to the IDE, without flooding the backend with lookups.
+- Keep showing a pull request when GitHub declines review details or the API budget is spent, instead of blanking the badges.
+- Onboarding and the migration wizard stay usable if Skip or Later fails.
+- Center the empty state in the diff editor.
+- Worktree row popups no longer clip long pull request titles or jump while the list refreshes.
 
 ### Changed
-- release(jetbrains): v7.1.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13622
-- refactor(vscode): share prompt dropdown container styles by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13626
-- refactor(vscode): share marketplace type contracts by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13625
-- refactor(vscode): reuse Agent Manager diff scope helpers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13627
-- docs: document Kilo model routing/config and correct Gas Town small model docs by @alexkgold in https://github.com/Kilo-Org/kilocode/pull/13621
-- docs(jetbrains): rewrite plugin marketplace description by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13632
 
+- Refreshed the JetBrains Marketplace listing description.
 
 ## [7.1.2] - 2026-08-31
 
