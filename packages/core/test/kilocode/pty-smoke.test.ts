@@ -7,8 +7,8 @@ describe("rendered PTY smoke", () => {
   test("accepts a chunked prompt and responsive command palette", async () => {
     const source = [
       "if (process.stdin.isTTY && process.stdin.setRawMode) process.stdin.setRawMode(true)",
-      'process.stdout.write("\\x1b[2J\\x1b[HAsk ")',
-      'setTimeout(() => process.stdout.write("anything..."), 20)',
+      'process.stdout.write("\\x1b[2J\\x1b[HAsk any")',
+      'setTimeout(() => process.stdout.write("thing..."), 20)',
       'process.stdin.on("data", (data) => {',
       '  if (!data.toString().includes("\\x10")) return',
       '  process.stdout.write("\\x1b[2JCom")',
@@ -17,7 +17,7 @@ describe("rendered PTY smoke", () => {
       "setInterval(() => {}, 1000)",
     ].join("\n")
 
-    await expect(run(source)).resolves.toBeUndefined()
+    await run(source)
   })
 
   test("times out when output has no visible prompt", async () => {
