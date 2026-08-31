@@ -7,6 +7,8 @@ import ai.kilocode.client.onboarding.OnboardingStepView
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.list.ActiveList
+import ai.kilocode.client.ui.list.ActiveListItem
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.EDT
@@ -15,14 +17,8 @@ import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.IconLoader
-import com.intellij.ui.ColoredListCellRenderer
-import com.intellij.ui.CollectionListModel
 import com.intellij.ui.JBSplitter
-import com.intellij.ui.ScrollingUtil
-import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBList
-import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBFont
@@ -32,9 +28,7 @@ import java.awt.BorderLayout
 import javax.swing.Action
 import javax.swing.JButton
 import javax.swing.JComponent
-import javax.swing.JList
 import javax.swing.JPanel
-import javax.swing.ListSelectionModel
 import javax.swing.SwingConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,13 +58,21 @@ internal class OnboardingDialog(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.EDT + ModalityState.any().asContextElement())
     private val entries = linkedMapOf<String, Entry>()
     private val resolved = mutableSetOf<String>()
-    private val skipped = mutableSetOf<String>()
 
-    private val listModel = CollectionListModel<String>()
+    /** A rail row: just the step title, in the shared list's standard bold weight. */
+    private data class StepRow(
+        override val key: String,
+        override val title: String,
+    ) : ActiveListItem
 
     // internal (not private): lets tests simulate real clicks/selection on the same live
     // components the dialog wires up, instead of adding test-only accessor methods.
-    internal val rail = JBList(listModel)
+    internal val rail = ActiveList(
+        emptyText = "",
+        showSearch = false,
+        onCell = { _, _ -> },
+        onSelect = { syncSelection() },
+    )
     private val right = JPanel(BorderLayout())
 
     /**
@@ -104,38 +106,20 @@ internal class OnboardingDialog(
             val provider = controller.provider(step.id) ?: return@forEach
             entries[step.id] = Entry(step, provider.view())
         }
-        listModel.replaceAll(entries.keys.toList())
+        rail.update(entries.values.map { StepRow(it.step.id, it.step.need.title) })
         init()
-        if (entries.isNotEmpty()) rail.selectedIndex = 0
+        if (entries.isNotEmpty()) rail.select(entries.keys.first())
         watchEntries()
         syncSelection()
     }
 
     override fun createCenterPanel(): JComponent {
-        rail.cellRenderer = object : ColoredListCellRenderer<String>() {
-            override fun customizeCellRenderer(
-                list: JList<out String>,
-                value: String,
-                index: Int,
-                selected: Boolean,
-                focused: Boolean,
-            ) {
-                val entry = entries[value] ?: return
-                append(entry.step.need.title)
-                append("  ${statusText(value)}", SimpleTextAttributes.GRAYED_ATTRIBUTES)
-            }
-        }
-        rail.selectionMode = ListSelectionModel.SINGLE_SELECTION
-        rail.addListSelectionListener { event -> if (!event.valueIsAdjusting) syncSelection() }
-        ScrollingUtil.installActions(rail)
-        val left = JBScrollPane(rail).apply {
-            border = JBUI.Borders.customLineRight(UiStyle.Colors.contentBorder())
-            preferredSize = JBDimension(RAIL_WIDTH, DIALOG_HEIGHT)
-        }
+        rail.border = JBUI.Borders.customLineRight(UiStyle.Colors.contentBorder())
+        rail.preferredSize = JBDimension(RAIL_WIDTH, DIALOG_HEIGHT)
         right.isOpaque = false
         right.border = JBUI.Borders.empty(UiStyle.Gap.pad())
         return JBSplitter(false, SPLIT_PROPORTION).apply {
-            firstComponent = left
+            firstComponent = rail
             secondComponent = right
             splitterProportionKey = "Kilo.OnboardingDialog.splitter"
             preferredSize = JBDimension(DIALOG_WIDTH, DIALOG_HEIGHT)
@@ -173,7 +157,7 @@ internal class OnboardingDialog(
         add(footer, BorderLayout.EAST)
     }
 
-    override fun getPreferredFocusedComponent(): JComponent = rail
+    override fun getPreferredFocusedComponent(): JComponent = rail.preferredFocus()
 
     override fun getDimensionServiceKey(): String = "Kilo.OnboardingDialog"
 
@@ -193,7 +177,6 @@ internal class OnboardingDialog(
         entries.values.forEach { entry ->
             scope.launch {
                 entry.view.run.collect {
-                    rail.repaint()
                     if (selectedId() == entry.step.id) syncButtons()
                 }
             }
@@ -205,7 +188,7 @@ internal class OnboardingDialog(
         }
     }
 
-    private fun selectedId(): String? = rail.selectedValue
+    private fun selectedId(): String? = rail.selected()?.key
 
     private fun selectedEntry(): Entry? = selectedId()?.let(entries::get)
 
@@ -244,7 +227,9 @@ internal class OnboardingDialog(
         } else {
             KiloBundle.message("onboarding.button.next")
         }
-        rail.isEnabled = !running
+        // Locked, not busy: the step's own content on the right already shows run progress, so the
+        // rail must not paint a second spinner over it.
+        rail.setLocked(running)
     }
 
     private fun isLastUnresolved(id: String): Boolean = entries.keys.none { it != id && it !in resolved }
@@ -258,8 +243,6 @@ internal class OnboardingDialog(
     private fun onSkip() {
         val entry = selectedEntry() ?: return
         controller.skipStep(entry.step.id)
-        skipped.add(entry.step.id)
-        rail.repaint()
         advance(entry.step.id)
     }
 
@@ -284,18 +267,8 @@ internal class OnboardingDialog(
             close(OK_EXIT_CODE)
             return
         }
-        rail.setSelectedValue(next, true)
+        rail.select(next)
         syncSelection()
-    }
-
-    private fun statusText(id: String): String = when {
-        id in skipped -> KiloBundle.message("onboarding.status.skipped")
-        else -> when (entries[id]?.view?.run?.value) {
-            is OnboardingRunState.Running -> KiloBundle.message("onboarding.status.running")
-            is OnboardingRunState.Done -> KiloBundle.message("onboarding.status.done")
-            is OnboardingRunState.Failed -> KiloBundle.message("onboarding.status.failed")
-            else -> KiloBundle.message("onboarding.status.pending")
-        }
     }
 
     private fun button(text: String, primary: Boolean = false, action: () -> Unit): JButton {

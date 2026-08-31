@@ -28,6 +28,18 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         return found
     }
 
+    /** The rail's real backing list, read off the live component tree (no test-only accessor). */
+    private fun railList(root: java.awt.Container): javax.swing.JList<*> {
+        fun find(c: java.awt.Container): javax.swing.JList<*>? {
+            for (child in c.components) {
+                if (child is javax.swing.JList<*>) return child
+                if (child is java.awt.Container) find(child)?.let { return it }
+            }
+            return null
+        }
+        return find(root) ?: error("rail JList not found")
+    }
+
     fun `test idle step shows later skip run and run is enabled when ready`() {
         val view = FakeOnboardingStepView(ready = true)
         val provider = FakeOnboardingProvider("a", newView = { view })
@@ -52,7 +64,7 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         // The long detail belongs to this dedicated UI, not the session list card.
         assertEquals("Detail a", dialog.detail.text)
 
-        dialog.rail.setSelectedValue("b", true)
+        dialog.rail.select("b")
         assertEquals("Detail b", dialog.detail.text)
     }
 
@@ -112,7 +124,7 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         assertFalse(dialog.laterButton.isVisible)
         assertFalse(dialog.skipButton.isVisible)
         assertFalse(dialog.runButton.isEnabled)
-        assertFalse(dialog.rail.isEnabled)
+        assertFalse("locked rail must disable the underlying list", railList(dialog.rail).isEnabled)
     }
 
     fun `test done step shows only next and calls view done then closes on the last step`() {
@@ -151,7 +163,7 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         dialog.nextButton.doClick()
 
         assertFalse("should not close with a second step pending", closed)
-        assertEquals("b", dialog.rail.selectedValue)
+        assertEquals("b", dialog.rail.selected()?.key)
     }
 
     fun `test later on a step delegates to controller and advances`() {
@@ -165,7 +177,7 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         dialog.laterButton.doClick()
 
         assertEquals(listOf("a"), controller.laterSteps)
-        assertEquals("b", dialog.rail.selectedValue)
+        assertEquals("b", dialog.rail.selected()?.key)
     }
 
     fun `test skip on a step delegates to controller and advances`() {
@@ -179,7 +191,7 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         dialog.skipButton.doClick()
 
         assertEquals(listOf("a"), controller.skipSteps)
-        assertEquals("b", dialog.rail.selectedValue)
+        assertEquals("b", dialog.rail.selected()?.key)
     }
 
     fun `test cancel is a no-op while the selected step is running`() {
@@ -204,7 +216,7 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         val dialog = OnboardingDialog(controller, listOf(step("a"), step("b"))) {}
 
         assertTrue(dialog.runButton.isEnabled)
-        dialog.rail.setSelectedValue("b", true)
+        dialog.rail.select("b")
         assertFalse("selecting step b's not-ready view should disable Run", dialog.runButton.isEnabled)
     }
 }
