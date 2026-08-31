@@ -6,6 +6,7 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionSidePanelManager
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.agentManager.worktree.GhStatusCoordinator
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
@@ -154,9 +155,14 @@ internal class KiloToolWindowSetupService(
             }
             val listener = object : ContentManagerListener {
                 override fun selectionChanged(event: ContentManagerEvent) {
-                    if (event.operation == ContentManagerEvent.ContentOperation.add && event.content === agentContent) {
-                        agentManagerPanel.refresh()
-                    }
+                    if (event.operation != ContentManagerEvent.ContentOperation.add) return
+                    // Either direction: switching tabs is a deliberate act that often follows an
+                    // authorization or PR change made elsewhere. The coordinator drops the submit
+                    // when a probe is already running or too recent, so tab churn cannot stack up
+                    // gh calls. Chat needs nothing further — SessionUi re-reads branch/PR state
+                    // itself once it becomes showing.
+                    service<GhStatusCoordinator>().sync("tab-switch")
+                    if (event.content === agentContent) agentManagerPanel.refresh()
                 }
             }
             toolWindow.contentManager.addContentManagerListener(listener)

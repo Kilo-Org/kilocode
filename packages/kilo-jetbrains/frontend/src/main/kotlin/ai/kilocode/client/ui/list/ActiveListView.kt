@@ -580,23 +580,19 @@ internal class ActiveListView(
             ?: onActivate?.invoke(item)
     }
 
-    /**
-     * Dispatches a click on a button. A per-cell action or a metrics handler ([ActiveListMetrics])
-     * takes precedence; otherwise the click routes through the list-level [onCell] callback.
-     */
+    /** Dispatches a click from the row model, never the renderer stamp reused across rows. */
     private fun fire(item: ActiveListItem, id: String) {
-        when (id) {
-            ACTIVE_LIST_CHANGES_CELL -> {
-                item.metrics?.onChanges?.invoke()
-                return
-            }
-            ACTIVE_LIST_PR_CELL -> {
-                item.metrics?.onPr?.invoke()
-                return
-            }
+        val cell = item.cells.firstOrNull { it.id == id }?.action
+        if (cell != null) {
+            cell()
+            return
         }
-        val action = item.cells.firstOrNull { it.id == id }?.action
-        if (action != null) action() else onCell(item.key, id)
+        val region = activeListRegions(item)[id]
+        if (region != null) {
+            region()
+            return
+        }
+        onCell(item.key, id)
     }
 
     @RequiresEdt
@@ -714,7 +710,7 @@ internal class ActiveListView(
         if (!bounds.contains(point)) return baseCursor
         val item = model.getElementAt(idx)
         if (item is ActiveListGap) return baseCursor
-        if (menu == null && item.cells.isEmpty() && item.metrics == null) return baseCursor
+        if (menu == null && item.cells.isEmpty() && activeListRegions(item).isEmpty()) return baseCursor
         val hit = activeListHits(list, idx, list.isSelectedIndex(idx))
             .firstOrNull { it.enabled && it.bounds.contains(point) }
             ?: return baseCursor

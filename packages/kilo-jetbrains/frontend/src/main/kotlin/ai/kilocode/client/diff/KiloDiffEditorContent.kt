@@ -91,6 +91,13 @@ internal fun buildDiffEditor(
 
 internal val DIFF_FILE_KEY: Key<String> = Key.create("kilo.diff.file")
 
+/** Pane labels for a comparison [source]: committed base/HEAD, uncommitted HEAD/working tree, or a session diff's original/modified. */
+internal fun diffLabels(source: String?): Pair<String, String> = when (source) {
+    "branch" -> KiloBundle.message("diff.editor.side.base") to KiloBundle.message("diff.editor.side.head")
+    "local" -> KiloBundle.message("diff.editor.side.head") to KiloBundle.message("diff.editor.side.working")
+    else -> KiloBundle.message("diff.editor.side.original") to KiloBundle.message("diff.editor.side.modified")
+}
+
 internal class DiffEditorView(
     private val project: Project,
     private val params: Map<String, String>,
@@ -205,7 +212,7 @@ internal class DiffEditorView(
     internal fun refresh() {
         if (disposed.get() || project.isDisposed) return
         if (!refreshing.compareAndSet(false, true)) return
-        saveDocuments()
+        if (params["source"] != "branch" && params["source"] != "local") saveDocuments()
         outdated.set(false)
         banner.isVisible = false
         root.revalidate()
@@ -307,12 +314,7 @@ internal class DiffEditorView(
         }
     }
 
-    private fun labels(): Pair<String, String> {
-        if (params["source"] == "branch") {
-            return KiloBundle.message("diff.editor.side.base") to KiloBundle.message("diff.editor.side.current")
-        }
-        return KiloBundle.message("diff.editor.side.original") to KiloBundle.message("diff.editor.side.modified")
-    }
+    private fun labels(): Pair<String, String> = diffLabels(params["source"])
 
     private fun syncTree() {
         if (disposed.get()) return
