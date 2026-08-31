@@ -18,19 +18,20 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import javax.swing.Icon
 
 /**
- * Everything known about one worktree's pull request, for the row hover popup: the shared PR header with
- * its full changes summary, plus a line each for the review and CI verdicts whose row glyphs have no room
- * to say more than their color.
+ * Everything known about one worktree's pull request, for the row hover popup, one thing per line: state,
+ * verdict glyphs and title, then the full changes summary under a rule, then a line each for the review
+ * and CI verdicts whose row glyphs have no room to say more than their color.
  *
  * Reuses [PrHeaderView] in [ChangesPanel.Mode.FULL] rather than laying out PR title, number, state badge
  * and diff counts again — that widget already renders the committed and uncommitted counts side by side
- * for the worktree session editor header.
+ * for the worktree session editor header. Stacked, because a popup has the vertical room the editor tab
+ * header does not and a title squeezed against a row of counters is the thing this popup exists to show.
  */
 internal class WorktreeRowPopupBody @RequiresEdt constructor(
     openDiff: () -> Unit,
     onLocal: (() -> Unit)? = null,
 ) : BorderLayoutPanel() {
-    private val header = PrHeaderView(mode = ChangesPanel.Mode.FULL, onLocal = onLocal, openDiff = openDiff)
+    private val header = PrHeaderView(mode = ChangesPanel.Mode.FULL, onLocal = onLocal, stacked = true, openDiff = openDiff)
     private val review = JBLabel()
     private val checks = JBLabel()
 

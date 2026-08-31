@@ -674,8 +674,11 @@ class AgentManagerPanel(
     }
 
     private companion object {
-        // Wider than a chat card popup: the PR header lays title, state, and two diff summaries in a row.
-        const val POPUP_WIDTH = 460
+        // Wider than a chat card popup: PR titles are conventional commit lines and the summary row puts
+        // the committed and uncommitted counts beside each other. This is only a cap — the popup asks for
+        // the width its content needs and [SidePopupGeometry.beside] trims it to the room beside the row,
+        // so a narrow window gets a narrow popup rather than one re-pointed above the list.
+        const val POPUP_WIDTH = 920
         const val POPUP_HEIGHT = 320
     }
 

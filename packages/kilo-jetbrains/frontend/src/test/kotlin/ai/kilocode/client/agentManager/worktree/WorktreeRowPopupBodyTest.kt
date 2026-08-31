@@ -1,5 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
@@ -9,10 +11,15 @@ import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
+import javax.swing.JSeparator
+import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 
 class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
     private val path = "/repo/.kilo/worktrees/feature-x"
@@ -83,7 +90,66 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         assertTrue("the stale failing line must be gone, got $lines", lines.none { it.contains("failed") })
     }
 
+    fun `test the popup stacks state and title, then the changes, then a verdict per line`() {
+        val body = body()
+
+        edt {
+            body.update(
+                stats = WorktreeStatsDto(path, additions = 9, deletions = 4, files = 3, ahead = 2, base = "origin/main"),
+                pull = pr(GhReview.APPROVED, GhChecksDto(GhChecks.PASSED, total = 4, passed = 4)),
+                name = "feature-x",
+                dirty = WorktreeDirtyDto(path, additions = 2, files = 1),
+            )
+            layout(body)
+        }
+
+        edt {
+            val badge = components(body).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
+            val title = components(body).filterIsInstance<SimpleColoredComponent>().single()
+            val changes = UIUtil.findComponentOfType(body, ChangesPanel::class.java)!!
+            val rule = components(body).filterIsInstance<JSeparator>().single { it.orientation == SwingConstants.HORIZONTAL }
+            val review = components(body).filterIsInstance<JBLabel>().single { it.text == "Review approved" }
+            val checks = components(body).filterIsInstance<JBLabel>().single { it.text == "4 checks passed" }
+
+            // The state pill and the title share the first line; everything else gets its own.
+            assertTrue(kotlin.math.abs(middle(body, badge) - middle(body, title)) <= 2)
+            assertTrue(bottom(body, title) <= top(body, rule))
+            assertTrue(bottom(body, rule) <= top(body, changes))
+            assertTrue(bottom(body, changes) <= top(body, review))
+            assertTrue(bottom(body, review) <= top(body, checks))
+            // One row for every counter, committed and uncommitted alike.
+            val counters = components(changes).filterIsInstance<JBLabel>().filter { it.isVisible }
+            assertEquals(listOf("1 file", "+2", "2", "3 files", "-4", "+9"), counters.map { it.text })
+            val rows = counters.map { middle(body, it) }
+            assertTrue("the counters must share one row, got $rows", rows.max() - rows.min() <= 2)
+        }
+    }
+
+    fun `test a clean worktree drops the rule with the changes row`() {
+        val body = body()
+
+        edt { body.update(null, pr(GhReview.APPROVED, GhChecksDto()), "feature-x", null) }
+
+        // Nothing to summarise, so a rule would fence the title off from the verdict lines for no reason.
+        assertTrue(edt { components(body).filterIsInstance<JSeparator>().none { it.isVisible } })
+    }
+
     private fun body(): WorktreeRowPopupBody = edt { WorktreeRowPopupBody(openDiff = {}, onLocal = {}) }
+
+    @RequiresEdt
+    private fun layout(body: WorktreeRowPopupBody) {
+        body.setSize(body.preferredSize)
+        components(body).forEach { if (it is Container) it.doLayout() }
+    }
+
+    @RequiresEdt
+    private fun top(body: WorktreeRowPopupBody, child: Component): Int = SwingUtilities.convertPoint(child, 0, 0, body).y
+
+    @RequiresEdt
+    private fun bottom(body: WorktreeRowPopupBody, child: Component): Int = top(body, child) + child.height
+
+    @RequiresEdt
+    private fun middle(body: WorktreeRowPopupBody, child: Component): Int = top(body, child) + child.height / 2
 
     private fun pr(review: GhReview, checks: GhChecksDto) =
         WorktreePrDto(path, 7, GhState.OPEN, "https://example.test/pr/7", "Feature title", review, checks)

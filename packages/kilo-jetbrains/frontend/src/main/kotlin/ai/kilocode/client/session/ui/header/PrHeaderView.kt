@@ -40,6 +40,12 @@ internal class PrHeaderView @RequiresEdt constructor(
     private val titleStyle: Int = SimpleTextAttributes.STYLE_BOLD,
     mode: ChangesPanel.Mode = ChangesPanel.Mode.COMPACT,
     onLocal: (() -> Unit)? = null,
+    /**
+     * Give the changes summary its own row under a rule instead of trailing the title. For a popup,
+     * which has the vertical room a toolbar row does not and would otherwise squeeze the title against
+     * a long line of counters.
+     */
+    stacked: Boolean = false,
     openDiff: () -> Unit,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
     private val status = JBLabel()
@@ -56,9 +62,19 @@ internal class PrHeaderView @RequiresEdt constructor(
     // Hidden until the first action is added: hosts with no trailing actions (e.g. BranchDock) show
     // just the changes summary, so an always-visible separator would dangle with nothing after it.
     private val actionsSeparator = JSeparator(SwingConstants.VERTICAL).apply { isVisible = false }
-    private val actions = Stack.horizontal(UiStyle.Gap.sm())
-        .next(changes.align(HAlign.CENTER, VAlign.CENTER))
-        .next(actionsSeparator)
+    private val actions = Stack.horizontal(UiStyle.Gap.sm()).apply {
+        if (!stacked) next(changes.align(HAlign.CENTER, VAlign.CENTER))
+        next(actionsSeparator)
+    }
+    private val divider = if (stacked) JSeparator(SwingConstants.HORIZONTAL) else null
+    // The rule spans the body while the counters keep the header's own leading padding, so the summary
+    // starts under the state pill rather than flush against the popup border.
+    private val summary = divider?.let {
+        Stack.vertical(UiStyle.Gap.sm())
+            .next(it)
+            .next(changes.align(HAlign.LEFT, VAlign.CENTER).apply { border = JBUI.Borders.emptyLeft(UiStyle.Gap.sm()) })
+    }
+    private val head = BorderLayoutPanel()
     private var style = SessionEditorStyle.current()
     private var actionCount = 0
     private var state: GhState? = null
@@ -79,9 +95,16 @@ internal class PrHeaderView @RequiresEdt constructor(
         title.border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         title.isOpaque = false
         title.isVisible = false
-        addToLeft(statusPane)
-        addToCenter(title)
-        addToRight(actions.align(HAlign.RIGHT, VAlign.CENTER))
+        head.isOpaque = false
+        head.addToLeft(statusPane)
+        head.addToCenter(title)
+        head.addToRight(actions.align(HAlign.RIGHT, VAlign.CENTER))
+        if (summary == null) {
+            addToCenter(head)
+        } else {
+            addToTop(head)
+            addToCenter(summary)
+        }
         val listener = object : MouseAdapter() {
             @RequiresEdt
             override fun mouseClicked(event: MouseEvent) {
@@ -134,6 +157,8 @@ internal class PrHeaderView @RequiresEdt constructor(
     private fun syncSeparator() {
         val visible = actionCount > 0 && changes.isVisible
         if (actionsSeparator.isVisible != visible) actionsSeparator.isVisible = visible
+        // The rule exists only to fence the summary row off from the header line above it.
+        divider?.let { if (it.isVisible != changes.isVisible) it.isVisible = changes.isVisible }
     }
 
     @RequiresEdt
