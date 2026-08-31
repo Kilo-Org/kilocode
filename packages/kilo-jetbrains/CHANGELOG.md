@@ -344,6 +344,26 @@
 
 ## [Unreleased]
 
+## [7.1.3] - 2026-08-31
+
+### Added
+- feat(cli): add a client-only migrate API to bring Claude Code and Codex sessions into Kilo by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13294
+- feat(jetbrains): add worktree copy actions and polish diff/rename popups by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13633
+- feat(jetbrains): add pluggable onboarding framework, port v5 migration by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13588
+
+### Fixed
+- fix(jetbrains): resolve api key env var when selecting custom provider models by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13586
+- fix(jetbrains): make gh/PR focus sync responsive without overwhelming the backend by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13628
+
+### Changed
+- release(jetbrains): v7.1.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13622
+- refactor(vscode): share prompt dropdown container styles by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13626
+- refactor(vscode): share marketplace type contracts by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13625
+- refactor(vscode): reuse Agent Manager diff scope helpers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13627
+- docs: document Kilo model routing/config and correct Gas Town small model docs by @alexkgold in https://github.com/Kilo-Org/kilocode/pull/13621
+- docs(jetbrains): rewrite plugin marketplace description by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13632
+
+
 ## [7.1.2] - 2026-08-31
 
 ### Added
