@@ -255,7 +255,10 @@ export const dict = {
   "agentManager.browser.empty": "Åpne en lokal applikasjon for å forhåndsvise den her.",
   "agentManager.browser.noSession": "Velg en økt i Agent Manager først.",
   "agentManager.browser.screenshotAlt": "Gjeldende nettleserside",
-  "agentManager.browser.errors": "{{count}} konsollfeil",
+  "agentManager.browser.errors": "Nettleserproblemer: {{count}}",
+  "agentManager.browser.diagnostics": "Nettleserdiagnostikk",
+  "agentManager.browser.diagnosticsHint":
+    "Nylige hendelser fra automatiseringsnettleseren. Sikkerhetsblokkeringer er ikke konsollfeil.",
 
   "agentManager.pr.error.gh_auth.title": "GitHub-autentisering kreves",
   "agentManager.pr.error.gh_auth.description": "Kjør 'gh auth login' i terminalen for å gjenopprette PR-status.",

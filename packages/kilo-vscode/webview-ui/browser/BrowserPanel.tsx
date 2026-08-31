@@ -1,5 +1,6 @@
-import { For, Show, type Accessor, type Component } from "solid-js"
+import { For, Show, createMemo, type Accessor, type Component } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -28,10 +29,6 @@ const Toolbar: Component<{
   active: boolean
 }> = (props) => {
   const ready = () => !!props.controller.state()?.url && props.controller.state()?.status !== "closed"
-  const diagnostics = () =>
-    props.controller.state()?.errors
-      ? `${props.labels.devtoolsTitle}, ${props.labels.errors(props.controller.state()!.errors)}`
-      : props.labels.devtoolsTitle
   return (
     <div class="am-browser-toolbar">
       <Tooltip value={props.labels.refresh} placement="bottom">
@@ -52,11 +49,11 @@ const Toolbar: Component<{
           if (props.active && props.controller.url().trim() && !props.controller.loading()) props.controller.open()
         }}
       >
-        <span class="am-browser-site" aria-hidden="true">
-          <Show when={props.controller.loading()} fallback={<Icon name="globe" size="small" />}>
+        <Show when={props.controller.loading()}>
+          <span class="am-browser-site" aria-hidden="true">
             <Spinner />
-          </Show>
-        </span>
+          </span>
+        </Show>
         <TextField
           class="am-browser-url"
           variant="ghost"
@@ -91,22 +88,17 @@ const Toolbar: Component<{
         />
       </Tooltip>
       <div class="am-browser-tools-action">
-        <Tooltip value={diagnostics()} placement="bottom">
+        <Tooltip value={props.labels.devtoolsTitle} placement="bottom">
           <IconButton
             icon="console"
             size="small"
             variant={props.controller.tools() ? "secondary" : "ghost"}
-            aria-label={diagnostics()}
+            aria-label={props.labels.devtoolsTitle}
             aria-pressed={!!props.controller.tools()}
             onClick={props.controller.toggleTools}
             disabled={!ready() || props.controller.loading()}
           />
         </Tooltip>
-        <Show when={(props.controller.state()?.errors ?? 0) > 0}>
-          <span class="am-browser-error-count" aria-hidden="true">
-            {(props.controller.state()?.errors ?? 0) > 99 ? "99+" : props.controller.state()?.errors}
-          </span>
-        </Show>
       </div>
       <Tooltip value={props.labels.close} placement="bottom">
         <IconButton
@@ -227,19 +219,38 @@ const Tools: Component<{ url: string; labels: BrowserLabels }> = (props) => (
   </section>
 )
 
-const Diagnostics: Component<{ logs: string[] }> = (props) => (
-  <Show when={props.logs.length}>
-    <div class="am-browser-console" role="log" aria-live="polite">
-      <For each={props.logs}>
-        {(line) => (
-          <div class="am-browser-console-entry" data-level={line.match(/^\[([^\]]+)\]/)?.[1] ?? "error"}>
-            {line}
+const Diagnostics: Component<{ logs: string[]; errors: number; labels: BrowserLabels }> = (props) => {
+  const entries = createMemo(() => {
+    const counts = new Map<string, number>()
+    for (const text of props.logs) counts.set(text, (counts.get(text) ?? 0) + 1)
+    return Array.from(counts, ([text, count]) => ({ text, count }))
+  })
+  return (
+    <Show when={props.logs.length || props.errors}>
+      <Collapsible variant="ghost" class="am-browser-diagnostics">
+        <Collapsible.Trigger>
+          <span>{props.errors ? props.labels.errors(props.errors) : props.labels.diagnostics}</span>
+          <Collapsible.Arrow />
+        </Collapsible.Trigger>
+        <Collapsible.Content>
+          <div class="am-browser-diagnostics-hint">{props.labels.diagnosticsHint}</div>
+          <div class="am-browser-console" role="log" aria-live="polite">
+            <For each={entries()}>
+              {(entry) => (
+                <div class="am-browser-console-entry" data-level={entry.text.match(/^\[([^\]]+)\]/)?.[1] ?? "error"}>
+                  <span>{entry.text}</span>
+                  <Show when={entry.count > 1}>
+                    <span class="am-browser-console-count">×{entry.count}</span>
+                  </Show>
+                </div>
+              )}
+            </For>
           </div>
-        )}
-      </For>
-    </div>
-  </Show>
-)
+        </Collapsible.Content>
+      </Collapsible>
+    </Show>
+  )
+}
 
 export interface BrowserPanelProps {
   scope: Accessor<BrowserScope | undefined>
@@ -278,9 +289,7 @@ export const BrowserPanel: Component<BrowserPanelProps> = (props) => {
           {(entry) => <Tools url={entry.url} labels={props.labels} />}
         </Show>
       </div>
-      <Show when={!controller.tools()}>
-        <Diagnostics logs={state()?.logs ?? []} />
-      </Show>
+      <Diagnostics logs={state()?.logs ?? []} errors={state()?.errors ?? 0} labels={props.labels} />
     </div>
   )
 }

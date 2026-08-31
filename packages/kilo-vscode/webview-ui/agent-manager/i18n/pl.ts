@@ -256,7 +256,10 @@ export const dict = {
   "agentManager.browser.empty": "Otwórz lokalną aplikację, aby wyświetlić ją tutaj.",
   "agentManager.browser.noSession": "Najpierw wybierz sesję aplikacji Agent Manager.",
   "agentManager.browser.screenshotAlt": "Bieżąca strona przeglądarki",
-  "agentManager.browser.errors": "{{count}} błędów konsoli",
+  "agentManager.browser.errors": "Problemy przeglądarki: {{count}}",
+  "agentManager.browser.diagnostics": "Diagnostyka przeglądarki",
+  "agentManager.browser.diagnosticsHint":
+    "Ostatnie zdarzenia z przeglądarki używanej do automatyzacji. Blokady ze względów bezpieczeństwa nie są błędami konsoli.",
 
   "agentManager.pr.error.gh_auth.title": "Wymagana autoryzacja GitHub",
   "agentManager.pr.error.gh_auth.description": "Uruchom 'gh auth login' w terminalu, aby przywrócić status PR.",

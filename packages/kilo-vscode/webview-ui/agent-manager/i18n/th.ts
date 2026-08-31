@@ -251,7 +251,10 @@ export const dict = {
   "agentManager.browser.empty": "เปิดแอปพลิเคชันในเครื่องเพื่อดูตัวอย่างที่นี่",
   "agentManager.browser.noSession": "เลือกเซสชัน Agent Manager ก่อน",
   "agentManager.browser.screenshotAlt": "หน้าปัจจุบันของเบราว์เซอร์",
-  "agentManager.browser.errors": "{{count}} ข้อผิดพลาดในคอนโซล",
+  "agentManager.browser.errors": "ปัญหาเบราว์เซอร์: {{count}} รายการ",
+  "agentManager.browser.diagnostics": "การวินิจฉัยเบราว์เซอร์",
+  "agentManager.browser.diagnosticsHint":
+    "เหตุการณ์ล่าสุดจากเบราว์เซอร์สำหรับงานอัตโนมัติ การบล็อกเพื่อความปลอดภัยไม่ใช่ข้อผิดพลาดในคอนโซล",
 
   "agentManager.pr.error.gh_auth.title": "ต้องยืนยันตัวตน GitHub",
   "agentManager.pr.error.gh_auth.description": "รันคำสั่ง 'gh auth login' ในเทอร์มินัลเพื่อกู้คืนสถานะ PR",

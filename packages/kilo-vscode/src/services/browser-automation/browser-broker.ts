@@ -495,14 +495,6 @@ export class BrowserBroker {
         entry.response = response.status()
       }
     })
-    entry.page.on("requestfailed", (request) => {
-      const target = request.url()
-      if (this.allowed(entry, target)) return
-      entry.state.errors++
-      entry.state.error = `Blocked browser request: ${new URL(target).origin}`
-      this.record(entry, entry.state.error)
-      this.emit(entry.state)
-    })
     entry.page.on("console", (message) => {
       const type = message.type()
       if (type === "error") entry.state.errors++
@@ -516,8 +508,7 @@ export class BrowserBroker {
     })
     entry.page.on("popup", (page) => {
       entry.state.errors++
-      entry.state.error = "Blocked browser popup"
-      this.record(entry, entry.state.error)
+      this.record(entry, "Blocked browser popup")
       this.emit(entry.state)
       void page.close().catch((error: unknown) => this.opts.log("Browser popup close failed", error))
     })
@@ -536,6 +527,9 @@ export class BrowserBroker {
       }
       const origin = URL.canParse(target) ? new URL(target).origin : "invalid"
       this.opts.log("Blocked browser request", { sessionId: entry.route.sessionId, origin })
+      entry.state.errors++
+      this.record(entry, `Blocked browser request: ${origin}`)
+      this.emit(entry.state)
       await route.abort("blockedbyclient")
     })
     await entry.context.routeWebSocket("**/*", async (socket) => {
@@ -547,7 +541,7 @@ export class BrowserBroker {
       const origin = URL.canParse(target) ? new URL(target).origin : "invalid"
       this.opts.log("Blocked browser WebSocket", { sessionId: entry.route.sessionId, origin })
       entry.state.errors++
-      entry.state.error = `Blocked browser request: ${origin}`
+      this.record(entry, `Blocked browser request: ${origin}`)
       this.emit(entry.state)
       await socket.close({ code: 1008, reason: "Blocked browser origin" })
     })

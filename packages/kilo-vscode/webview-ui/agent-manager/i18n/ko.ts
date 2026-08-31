@@ -255,7 +255,9 @@ export const dict = {
   "agentManager.browser.empty": "로컬 애플리케이션을 열어 여기에서 미리 보세요.",
   "agentManager.browser.noSession": "먼저 Agent Manager 세션을 선택하세요.",
   "agentManager.browser.screenshotAlt": "현재 브라우저 페이지",
-  "agentManager.browser.errors": "{{count}}개 콘솔 오류",
+  "agentManager.browser.errors": "브라우저 문제: {{count}}개",
+  "agentManager.browser.diagnostics": "브라우저 진단",
+  "agentManager.browser.diagnosticsHint": "자동화 브라우저의 최근 이벤트입니다. 보안 차단은 콘솔 오류가 아닙니다.",
 
   "agentManager.pr.error.gh_auth.title": "GitHub 인증 필요",
   "agentManager.pr.error.gh_auth.description": "PR 상태를 복원하려면 터미널에서 'gh auth login'을 실행하세요.",

@@ -261,7 +261,9 @@ export const dict = {
   "agentManager.browser.empty": "برای پیش‌نمایش، یک برنامه محلی را باز کنید.",
   "agentManager.browser.noSession": "ابتدا یک جلسه Agent Manager را انتخاب کنید.",
   "agentManager.browser.screenshotAlt": "صفحه فعلی مرورگر",
-  "agentManager.browser.errors": "{{count}} خطای کنسول",
+  "agentManager.browser.errors": "مشکلات مرورگر: {{count}}",
+  "agentManager.browser.diagnostics": "عیب‌یابی مرورگر",
+  "agentManager.browser.diagnosticsHint": "رویدادهای اخیر مرورگر خودکار. مسدودسازی‌های امنیتی خطاهای کنسول نیستند.",
 
   "agentManager.pr.error.gh_auth.title": "احراز هویت GitHub لازم است",
   "agentManager.pr.error.gh_auth.description": "برای بازیابی وضعیت PR، دستور 'gh auth login' را در ترمینال اجرا کنید.",

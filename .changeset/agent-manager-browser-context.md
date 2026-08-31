@@ -3,4 +3,4 @@
 "kilo-code": minor
 ---
 
-Inspect local applications in Agent Manager with embedded developer tools and review-style element feedback for precise frontend changes.
+Preview local applications in Agent Manager with embedded developer tools, grouped diagnostics, and review-style element feedback for precise frontend changes.

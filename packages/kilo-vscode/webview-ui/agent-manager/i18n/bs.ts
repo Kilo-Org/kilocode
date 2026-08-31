@@ -256,7 +256,10 @@ export const dict = {
   "agentManager.browser.empty": "Otvorite lokalnu aplikaciju da biste je ovdje pregledali.",
   "agentManager.browser.noSession": "Najprije odaberite sesiju aplikacije Agent Manager.",
   "agentManager.browser.screenshotAlt": "Trenutna stranica preglednika",
-  "agentManager.browser.errors": "{{count}} grešaka konzole",
+  "agentManager.browser.errors": "Problemi preglednika: {{count}}",
+  "agentManager.browser.diagnostics": "Dijagnostika preglednika",
+  "agentManager.browser.diagnosticsHint":
+    "Nedavni događaji iz preglednika za automatizaciju. Sigurnosne blokade nisu greške konzole.",
 
   "agentManager.pr.error.gh_auth.title": "Potrebna GitHub autentikacija",
   "agentManager.pr.error.gh_auth.description": "Pokrenite 'gh auth login' u terminalu da vratite status PR-a.",

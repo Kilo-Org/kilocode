@@ -247,7 +247,10 @@ export const dict = {
   "agentManager.browser.empty": "Open a local application to preview it here.",
   "agentManager.browser.noSession": "Select an Agent Manager session first.",
   "agentManager.browser.screenshotAlt": "Current browser page",
-  "agentManager.browser.errors": "{{count}} console errors",
+  "agentManager.browser.errors": "Browser issues: {{count}}",
+  "agentManager.browser.diagnostics": "Browser diagnostics",
+  "agentManager.browser.diagnosticsHint":
+    "Recent events from the automation browser. Security blocks are not console errors.",
 
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Paste PR URL...",

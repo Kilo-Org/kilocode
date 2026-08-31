@@ -249,7 +249,9 @@ export const dict = {
   "agentManager.browser.empty": "開啟本機應用程式，即可在此處預覽。",
   "agentManager.browser.noSession": "請先選取 Agent Manager 工作階段。",
   "agentManager.browser.screenshotAlt": "目前的瀏覽器頁面",
-  "agentManager.browser.errors": "{{count}} 個主控台錯誤",
+  "agentManager.browser.errors": "瀏覽器問題：{{count}}",
+  "agentManager.browser.diagnostics": "瀏覽器診斷",
+  "agentManager.browser.diagnosticsHint": "來自自動化瀏覽器的近期事件。安全性封鎖不是主控台錯誤。",
 
   "agentManager.pr.error.gh_auth.title": "需要 GitHub 驗證",
   "agentManager.pr.error.gh_auth.description": "在終端機中執行 'gh auth login' 以還原 PR 狀態。",

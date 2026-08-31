@@ -257,7 +257,10 @@ export const dict = {
   "agentManager.browser.empty": "ローカルアプリケーションを開くと、ここでプレビューできます。",
   "agentManager.browser.noSession": "先に Agent Manager セッションを選択してください。",
   "agentManager.browser.screenshotAlt": "現在のブラウザーページ",
-  "agentManager.browser.errors": "{{count}} 件のコンソールエラー",
+  "agentManager.browser.errors": "ブラウザーの問題: {{count}} 件",
+  "agentManager.browser.diagnostics": "ブラウザー診断",
+  "agentManager.browser.diagnosticsHint":
+    "自動操作用ブラウザーの最近のイベントです。セキュリティによるブロックはコンソールエラーではありません。",
 
   "agentManager.pr.error.gh_auth.title": "GitHub認証が必要です",
   "agentManager.pr.error.gh_auth.description":

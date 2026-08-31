@@ -103,7 +103,6 @@ export class BrowserDevtools {
     this.targets.set(browser, target)
     const path = `/browser/devtools/${browser}/${secret}`
     const query = new URLSearchParams({
-      can_dock: "false",
       ws: `127.0.0.1:${this.port}${path}/connect`,
     })
     return `http://127.0.0.1:${this.port}${path}/inspector.html?${query}`

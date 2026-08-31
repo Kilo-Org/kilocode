@@ -16,6 +16,7 @@ Object.assign(globalThis, {
   ResizeObserver: window.ResizeObserver,
   Event: window.Event,
   MouseEvent: window.MouseEvent,
+  getComputedStyle: window.getComputedStyle.bind(window),
   requestAnimationFrame: window.requestAnimationFrame.bind(window),
   cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
 })
@@ -42,6 +43,8 @@ const [labels, update] = createSignal<BrowserLabels>({
   close: "Close",
   inspect: "Select element",
   devtoolsTitle: "Developer tools",
+  diagnostics: "Browser diagnostics",
+  diagnosticsHint: "Recent events from the automation browser. Security blocks are not console errors.",
   empty: "Open a local page",
   noSession: "Choose a session",
   screenshotAlt: "Preview",
@@ -82,8 +85,11 @@ assert.equal(root.querySelector('[role="alert"]'), null)
 await window.happyDOM.waitUntilComplete()
 const frame = root.querySelector(".am-browser-frame")
 assert.ok(frame)
+assert.equal(root.querySelector(".am-browser-site"), null)
 receive?.({ type: "state", value: { ...state, logs: ["[info] Updated"] } })
 assert.equal(root.querySelector(".am-browser-frame"), frame)
+assert.equal(root.querySelector(".am-browser-diagnostics button")?.textContent, "Browser diagnostics")
+assert.equal(root.querySelector(".am-browser-console"), null)
 ;(root.querySelector("button[aria-label=Reload]") as HTMLButtonElement).click()
 assert.deepEqual(sent.at(-1), { type: "refresh", scope })
 receive?.({ type: "state", value: { ...state, navigation: 1 } })
@@ -135,8 +141,37 @@ assert.equal(references[0]?.selector, "#save")
 update((value) => ({ ...value, close: "Fermer" }))
 await window.happyDOM.waitUntilComplete()
 assert.ok(root.querySelector("button[aria-label=Fermer]"))
+const blocked = "Blocked browser request: http://127.0.0.1:4097"
+const other = "Blocked browser request: http://127.0.0.1:4098"
+receive?.({
+  type: "state",
+  value: { ...state, navigation: 1, errors: 5, logs: [blocked, blocked, other, blocked, "[error] Failed to load"] },
+})
+assert.equal(root.querySelector('[role="alert"]'), null)
+assert.equal(root.querySelector(".am-browser-error-count"), null)
+assert.ok(root.querySelector(".am-browser-tools-action button[aria-label='Developer tools']"))
+const diagnostics = root.querySelector(".am-browser-diagnostics button") as HTMLButtonElement
+assert.equal(diagnostics.textContent, "5 errors")
+assert.equal(diagnostics.getAttribute("aria-expanded"), "false")
+assert.equal(root.querySelector(".am-browser-console"), null)
+diagnostics.click()
+await window.happyDOM.waitUntilComplete()
+assert.equal(diagnostics.getAttribute("aria-expanded"), "true")
+const entries = [...root.querySelectorAll(".am-browser-console-entry")]
+assert.equal(entries.length, 3, root.querySelector(".am-browser-diagnostics")?.outerHTML)
+assert.equal(entries.at(0)?.textContent, `${blocked}×3`)
+assert.equal(entries.at(1)?.textContent, other)
+assert.equal(entries.at(2)?.textContent, "[error] Failed to load")
+assert.equal(root.querySelector(".am-browser-frame"), refreshed)
 ;(root.querySelector(".am-browser-tools-action button") as HTMLButtonElement).click()
 assert.deepEqual(sent.at(-1), { type: "devtools", scope, theme: "light" })
+receive?.({ type: "devtools", value: { scope, browserId: state.browserId, url: "about:blank" } })
+await window.happyDOM.waitUntilComplete()
+assert.ok(root.querySelector(".am-browser-devtools-frame"))
+assert.equal(root.querySelectorAll(".am-browser-console-entry").length, 3)
+assert.equal(diagnostics.getAttribute("aria-expanded"), "true")
+receive?.({ type: "state", value: { ...state, navigation: 2 } })
+assert.equal(root.querySelector(".am-browser-diagnostics"), null)
 ;(root.querySelector("button[aria-label=Fermer]") as HTMLButtonElement).click()
 assert.equal(closed, 1)
 assert.deepEqual(sent.at(-1), { type: "close", scope })

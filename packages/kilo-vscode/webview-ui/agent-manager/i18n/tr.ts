@@ -265,7 +265,10 @@ export const dict = {
   "agentManager.browser.empty": "Burada önizlemek için yerel bir uygulama açın.",
   "agentManager.browser.noSession": "Önce bir Agent Manager oturumu seçin.",
   "agentManager.browser.screenshotAlt": "Geçerli tarayıcı sayfası",
-  "agentManager.browser.errors": "{{count}} konsol hatası",
+  "agentManager.browser.errors": "Tarayıcı sorunları: {{count}}",
+  "agentManager.browser.diagnostics": "Tarayıcı tanılaması",
+  "agentManager.browser.diagnosticsHint":
+    "Otomasyon tarayıcısındaki son olaylar. Güvenlik engellemeleri konsol hatası değildir.",
 
   "agentManager.pr.error.gh_auth.title": "GitHub kimlik doğrulaması gerekli",
   "agentManager.pr.error.gh_auth.description":

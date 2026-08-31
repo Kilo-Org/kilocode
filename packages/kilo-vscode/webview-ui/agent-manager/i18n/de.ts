@@ -260,7 +260,10 @@ export const dict = {
   "agentManager.browser.empty": "Öffnen Sie eine lokale Anwendung, um sie hier in der Vorschau anzuzeigen.",
   "agentManager.browser.noSession": "Wählen Sie zuerst eine Sitzung im Agent Manager aus.",
   "agentManager.browser.screenshotAlt": "Aktuelle Browserseite",
-  "agentManager.browser.errors": "{{count}} Konsolenfehler",
+  "agentManager.browser.errors": "Browserprobleme: {{count}}",
+  "agentManager.browser.diagnostics": "Browserdiagnose",
+  "agentManager.browser.diagnosticsHint":
+    "Aktuelle Ereignisse aus dem Automatisierungsbrowser. Sicherheitsblockierungen sind keine Konsolenfehler.",
 
   "agentManager.pr.error.gh_auth.title": "GitHub-Authentifizierung erforderlich",
   "agentManager.pr.error.gh_auth.description":

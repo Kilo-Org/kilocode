@@ -82,6 +82,8 @@ export interface BrowserLabels {
   close: string
   inspect: string
   devtoolsTitle: string
+  diagnostics: string
+  diagnosticsHint: string
   empty: string
   noSession: string
   screenshotAlt: string

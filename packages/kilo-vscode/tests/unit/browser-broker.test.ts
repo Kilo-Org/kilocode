@@ -284,6 +284,7 @@ describe("BrowserBroker", () => {
       const second = await broker.devtools("second", "project", "light")
       expect(first.browserId).not.toBe(second.browserId)
       expect(first.url).not.toContain(env.KILO_BROWSER_BROKER_TOKEN)
+      expect(new URL(first.url).searchParams.has("can_dock")).toBe(false)
       const frontend = await fetch(first.url)
       expect(frontend.status).toBe(200)
       expect(await frontend.text()).toContain('<script src="./kilo-bootstrap.js"></script>')
@@ -414,8 +415,9 @@ describe("BrowserBroker", () => {
     expect(broker.sessions()).toEqual([])
   })
 
-  test("keeps browser contexts isolated by session", async () => {
+  test("keeps browser contexts and HTTP rejection diagnostics isolated by session", async () => {
     const contexts: Array<{ close: () => Promise<void> }> = []
+    const listeners = new Map<string, (value: unknown) => void>()
     let routeHandler:
       | ((
           route: { continue: () => Promise<void>; abort: () => Promise<void> },
@@ -429,7 +431,9 @@ describe("BrowserBroker", () => {
           url: () => "http://localhost:3000",
           title: async () => "Local app",
           screenshot: async () => Buffer.from("jpeg"),
-          on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+          on: (type: string, listener: (value: unknown) => void) => {
+            listeners.set(type, listener)
+          },
           mainFrame: () => undefined,
           goto: async () => undefined,
         }
@@ -447,6 +451,7 @@ describe("BrowserBroker", () => {
       close: async () => undefined,
     }
     const broker = new BrowserBroker({ log: () => {}, launch: async () => browser })
+    brokers.push(broker)
     await broker.open({ sessionId: "one", directory: "/tmp/project" }, "http://localhost:3000")
     await broker.open({ sessionId: "two", directory: "/tmp/project" }, "http://localhost:3000")
     expect(contexts).toHaveLength(2)
@@ -456,12 +461,26 @@ describe("BrowserBroker", () => {
       { url: () => "http://example.com" },
     )
     expect(aborted).toBe(true)
+    const blocked = broker.get("two")
+    expect(blocked).toMatchObject({
+      errors: 1,
+      logs: ["Blocked browser request: http://example.com"],
+      error: undefined,
+    })
+    listeners.get("requestfailed")?.({ url: () => "http://example.com" })
+    expect(broker.get("two")).toEqual(blocked)
+    expect(broker.get("one")).toMatchObject({ errors: 0, logs: [], error: undefined })
     aborted = false
     await routeHandler!(
       { continue: async () => undefined, abort: async () => void (aborted = true) },
       { url: () => "data:text/html,<script>alert(1)</script>", isNavigationRequest: () => true },
     )
     expect(aborted).toBe(true)
+    expect(broker.get("two")).toMatchObject({
+      errors: 2,
+      logs: ["Blocked browser request: http://example.com", "Blocked browser request: null"],
+      error: undefined,
+    })
     await broker.close("one")
     expect(broker.get("two")?.status).toBe("ready")
   })
@@ -744,7 +763,7 @@ describe("BrowserBroker", () => {
     expect(broker.get("feedback", "project")?.logs).toHaveLength(20)
   })
 
-  test("blocks browser popups instead of opening a second page", async () => {
+  test("blocks browser popups without replacing navigation failures", async () => {
     const listeners = new Map<string, (...args: never[]) => void>()
     const page = {
       url: () => "http://localhost:3000/",
@@ -755,13 +774,26 @@ describe("BrowserBroker", () => {
       },
       mainFrame: () => undefined,
       goto: async () => undefined,
+      reload: async () => {
+        throw new Error("Navigation failed")
+      },
     }
     const broker = fixture(page)
     await broker.open({ sessionId: "popup", directory: "/tmp/project" }, "http://localhost:3000/")
     let closed = false
     listeners.get("popup")!({ close: async () => void (closed = true) } as never)
     expect(closed).toBe(true)
-    expect(broker.get("popup")?.error).toBe("Blocked browser popup")
+    expect(broker.get("popup")).toMatchObject({ errors: 1, logs: ["Blocked browser popup"], error: undefined })
+    await expect(broker.refresh("popup")).rejects.toThrow("Navigation failed")
+    closed = false
+    listeners.get("popup")!({ close: async () => void (closed = true) } as never)
+    expect(closed).toBe(true)
+    expect(broker.get("popup")).toMatchObject({
+      status: "error",
+      errors: 1,
+      logs: ["Blocked browser popup"],
+      error: "Navigation failed",
+    })
   })
 
   test("allows only same-origin WebSockets", async () => {
@@ -799,12 +831,19 @@ describe("BrowserBroker", () => {
     })
     expect(connected).toBe(true)
     expect(closed).toBe(false)
+    expect(broker.get("socket")).toMatchObject({ errors: 0, logs: [], error: undefined })
+    connected = false
     await handler!({
       url: () => "ws://localhost:4000/private",
       connectToServer: () => void (connected = true),
       close: async () => void (closed = true),
     })
+    expect(connected).toBe(false)
     expect(closed).toBe(true)
-    expect(broker.get("socket")?.error).toBe("Blocked browser request: ws://localhost:4000")
+    expect(broker.get("socket")).toMatchObject({
+      errors: 1,
+      logs: ["Blocked browser request: ws://localhost:4000"],
+      error: undefined,
+    })
   })
 })

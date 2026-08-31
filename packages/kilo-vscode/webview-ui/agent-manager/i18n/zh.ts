@@ -250,7 +250,9 @@ export const dict = {
   "agentManager.browser.empty": "打开本地应用以在此处预览。",
   "agentManager.browser.noSession": "请先选择 Agent Manager 会话。",
   "agentManager.browser.screenshotAlt": "当前浏览器页面",
-  "agentManager.browser.errors": "{{count}} 个控制台错误",
+  "agentManager.browser.errors": "浏览器问题：{{count}}",
+  "agentManager.browser.diagnostics": "浏览器诊断",
+  "agentManager.browser.diagnosticsHint": "来自自动化浏览器的近期事件。安全拦截不是控制台错误。",
 
   "agentManager.pr.error.gh_auth.title": "需要 GitHub 身份验证",
   "agentManager.pr.error.gh_auth.description": "在终端中运行 'gh auth login' 以恢复 PR 状态。",

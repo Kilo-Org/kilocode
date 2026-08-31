@@ -253,7 +253,10 @@ export const dict = {
   "agentManager.browser.empty": "افتح تطبيقًا محليًا لمعاينته هنا.",
   "agentManager.browser.noSession": "اختر جلسة Agent Manager أولًا.",
   "agentManager.browser.screenshotAlt": "صفحة المتصفح الحالية",
-  "agentManager.browser.errors": "{{count}} أخطاء في وحدة التحكم",
+  "agentManager.browser.errors": "مشكلات المتصفح: {{count}}",
+  "agentManager.browser.diagnostics": "تشخيص المتصفح",
+  "agentManager.browser.diagnosticsHint":
+    "الأحداث الأخيرة من متصفح الأتمتة. عمليات الحظر لأسباب أمنية ليست أخطاء في وحدة التحكم.",
 
   "agentManager.pr.error.gh_auth.title": "مصادقة GitHub مطلوبة",
   "agentManager.pr.error.gh_auth.description": "شغّل 'gh auth login' في الطرفية لاستعادة حالة PR.",

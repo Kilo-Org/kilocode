@@ -263,7 +263,10 @@ export const dict = {
   "agentManager.browser.empty": "Open een lokale applicatie om deze hier te bekijken.",
   "agentManager.browser.noSession": "Selecteer eerst een sessie in Agent Manager.",
   "agentManager.browser.screenshotAlt": "Huidige browserpagina",
-  "agentManager.browser.errors": "{{count}} consolefouten",
+  "agentManager.browser.errors": "Browserproblemen: {{count}}",
+  "agentManager.browser.diagnostics": "Browserdiagnostiek",
+  "agentManager.browser.diagnosticsHint":
+    "Recente gebeurtenissen van de automatiseringsbrowser. Beveiligingsblokkeringen zijn geen consolefouten.",
 
   "agentManager.pr.error.gh_auth.title": "GitHub-authenticatie vereist",
   "agentManager.pr.error.gh_auth.description": "Voer 'gh auth login' uit in je terminal om de PR-status te herstellen.",
