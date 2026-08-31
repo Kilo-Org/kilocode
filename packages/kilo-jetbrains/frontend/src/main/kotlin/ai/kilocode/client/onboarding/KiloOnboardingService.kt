@@ -39,6 +39,12 @@ interface OnboardingController {
 
     /** List-card `Start`: open the onboarding dialog at the first pending step. */
     fun start()
+
+    /**
+     * Drop the current run's `Later` deferral for [id] so the step is offered again as soon as its
+     * provider detects a need. Used by forced reruns (e.g. the migration action).
+     */
+    fun reoffer(id: String)
 }
 
 /**
@@ -112,6 +118,12 @@ class KiloOnboardingService internal constructor(
     override fun skipStep(id: String) {
         providers[id]?.skip()
         capture("Onboarding Step Skipped", mapOf("stepId" to id))
+        cs.launch { redetect() }
+    }
+
+    override fun reoffer(id: String) {
+        if (!deferred.remove(id)) return
+        LOG.info("Onboarding: cleared this-run deferral so the step can be offered again id=$id")
         cs.launch { redetect() }
     }
 

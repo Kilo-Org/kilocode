@@ -19,6 +19,7 @@ class FakeOnboardingController(private val providers: Map<String, OnboardingProv
     val laterSteps = mutableListOf<String>()
     val skipSteps = mutableListOf<String>()
     val starts = mutableListOf<Unit>()
+    val reoffers = mutableListOf<String>()
 
     override fun provider(id: String): OnboardingProvider? = providers[id]
 
@@ -40,5 +41,9 @@ class FakeOnboardingController(private val providers: Map<String, OnboardingProv
 
     override fun start() {
         starts.add(Unit)
+    }
+
+    override fun reoffer(id: String) {
+        reoffers.add(id)
     }
 }

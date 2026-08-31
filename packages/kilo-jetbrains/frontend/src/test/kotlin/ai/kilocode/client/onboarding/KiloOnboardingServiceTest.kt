@@ -115,6 +115,32 @@ class KiloOnboardingServiceTest : BasePlatformTestCase() {
         assertTrue(svc.steps.value.isEmpty())
     }
 
+    fun `test reoffer clears the deferral and offers the step again`() {
+        val a = FakeOnboardingProvider("a").apply { need = OnboardingNeed("A", "a detail") }
+        val svc = service(a)
+        settle()
+
+        svc.later()
+        settle()
+        assertTrue(svc.steps.value.isEmpty())
+
+        svc.reoffer("a")
+        settle()
+
+        assertEquals(listOf("a"), svc.steps.value.map { it.id })
+    }
+
+    fun `test reoffer of a step that was never deferred does nothing`() {
+        val a = FakeOnboardingProvider("a")
+        val svc = service(a)
+        settle()
+
+        svc.reoffer("a")
+        settle()
+
+        assertTrue(svc.steps.value.isEmpty())
+    }
+
     fun `test skipAll calls skip on every current step`() {
         val a = FakeOnboardingProvider("a").apply { need = OnboardingNeed("A", "a detail") }
         val b = FakeOnboardingProvider("b").apply { need = OnboardingNeed("B", "b detail") }
