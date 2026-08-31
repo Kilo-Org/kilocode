@@ -57,7 +57,13 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
     // font-metrics contribution a labelled sibling gets from its non-empty text. That makes an
     // icon-only button's height track the icon instead of the shared labelled-button height whenever
     // the LAF's font metrics are taller than the icon. Measuring through a non-empty placeholder
-    // forces the same icon+text layout path a labelled button uses, so both stay level everywhere.
+    // forces the text layout path a labelled button uses, so both stay level everywhere.
+    //
+    // The probe carries no icon on purpose. Height would otherwise follow whichever is taller, this
+    // button's icon or the text, and icon-only actions rarely carry the same icon size as the
+    // labelled sibling they sit next to — a 13px icon beside a 12px one drifts a pixel taller on
+    // LAFs whose font is shorter than either. Measuring text alone yields the insets+font-metrics
+    // baseline every labelled sibling shares, independent of icon size on both sides.
     //
     // The placeholder goes on a detached probe rather than on this button: setText fires property
     // changes and calls revalidate()/repaint(), and doing that from a size query would invalidate
@@ -71,7 +77,6 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
         button.font = font
         button.border = border
         button.margin = margin
-        button.icon = icon
         return button.preferredSize.height
     }
 

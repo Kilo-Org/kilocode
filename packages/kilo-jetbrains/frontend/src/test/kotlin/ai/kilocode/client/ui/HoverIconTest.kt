@@ -30,6 +30,33 @@ class HoverIconTest : BasePlatformTestCase() {
         assertEquals(icon.preferredSize.height, icon.preferredSize.width)
     }
 
+    fun `test match height does not follow the icon size`() = edtWait {
+        // A labelled sibling rarely carries the same icon size as the icon-only action beside it, so
+        // folding this button's own icon into the measurement makes the two drift apart on any LAF
+        // whose font is shorter than either icon. The matched height must depend only on font+insets.
+        val small = HoverIcon().apply {
+            icon = square(8)
+            match = true
+        }
+        val large = HoverIcon().apply {
+            icon = square(64)
+            match = true
+        }
+
+        assertEquals(small.preferredSize.height, large.preferredSize.height)
+    }
+
+    fun `test match ignores the icon while the plain square path still tracks it`() = edtWait {
+        val matched = HoverIcon().apply {
+            icon = square(64)
+            match = true
+        }
+        val square = HoverIcon().apply { icon = square(64) }
+
+        // Only `match` opts out of icon-driven sizing; the default square path must still grow.
+        assertTrue(square.preferredSize.height > matched.preferredSize.height)
+    }
+
     fun `test measuring does not mutate this button`() = edtWait {
         val icon = HoverIcon().apply {
             this.icon = square(16)
