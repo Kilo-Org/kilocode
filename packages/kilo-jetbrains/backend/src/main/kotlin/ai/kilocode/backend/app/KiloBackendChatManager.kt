@@ -4,7 +4,6 @@ import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ChatEventDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -327,25 +326,22 @@ class KiloBackendChatManager(
             }
     }
 
-    // ------ config update ------
+    // ------ interruption ------
 
-    fun updateConfig(dir: String, update: ConfigUpdateDto) {
-        val http = requireClient()
-        val url = requireBase()
-
-        val partial = KiloCliDataParser.buildConfigPartial(update)
-
-        val request = Request.Builder()
-            .url("$url/global/config")
-            .patch(partial.toRequestBody(JSON_TYPE))
-            .build()
-
-        http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                val msg = response.body?.string() ?: "unknown error"
-                log.warn("config update failed: HTTP ${response.code} — $msg")
-            } else {
-                log.info("Config updated: model=${update.model}, agent=${update.agent}, temp=${update.temperature}")
+    /**
+     * Tell every session in [ids] that the CLI stopped its turn for [reason].
+     *
+     * Synthesized into the same stream the CLI events use so a session's own controller sees it in
+     * order with the abort it explains. The CLI cannot express this itself: it reports a server-side
+     * cancellation as the same `MessageAbortedError` a user Stop produces, so the UI would otherwise
+     * report work nobody stopped as "Stopped".
+     */
+    fun interrupt(ids: Collection<String>, reason: String) {
+        if (ids.isEmpty()) return
+        cs.launch {
+            for (id in ids) {
+                log.warn("${ChatLogSummary.sid(id)} kind=interrupt route=chat-events reason=$reason")
+                _events.emit(ChatEventDto.SessionInterrupted(id, reason))
             }
         }
     }

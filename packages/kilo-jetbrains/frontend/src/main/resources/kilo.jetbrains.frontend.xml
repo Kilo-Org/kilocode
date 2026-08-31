@@ -88,8 +88,16 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
-                id="ai.kilocode.jetbrains.settings.advanced"
+                id="ai.kilocode.jetbrains.settings.integrations"
                 groupWeight="-2"
+                instance="ai.kilocode.client.settings.integrations.IntegrationsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.integrations.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.advanced"
+                groupWeight="-3"
                 instance="ai.kilocode.client.settings.AdvancedConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.advanced.displayName"/>
@@ -183,6 +191,9 @@
 
         <action id="Kilo.ForceMigration"
                 class="ai.kilocode.client.actions.ForceMigrationAction"/>
+
+        <action id="Kilo.OpenSetupScript"
+                class="ai.kilocode.client.actions.OpenSetupScriptAction"/>
 
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.Restart"/>
@@ -282,6 +293,12 @@
         <action id="Kilo.Worktree.OpenDiff"
                 class="ai.kilocode.client.actions.OpenWorktreeDiffAction"/>
 
+        <action id="Kilo.Worktree.OpenLocalDiff"
+                class="ai.kilocode.client.actions.OpenWorktreeLocalDiffAction"/>
+
+        <action id="Kilo.Worktree.RunSetupScript"
+                class="ai.kilocode.client.actions.RunWorktreeSetupScriptAction"/>
+
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
 
@@ -293,6 +310,10 @@
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
             <reference ref="Kilo.Worktree.OpenDiff"/>
+            <reference ref="Kilo.Worktree.OpenLocalDiff"/>
+            <separator/>
+            <reference ref="Kilo.OpenSetupScript"/>
+            <reference ref="Kilo.Worktree.RunSetupScript"/>
             <separator/>
             <reference ref="Kilo.Worktree.Delete"/>
         </group>

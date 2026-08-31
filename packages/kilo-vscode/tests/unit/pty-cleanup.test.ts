@@ -3,7 +3,10 @@ import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { ProjectContext } from "../../src/agent-manager/project/context"
 import type { LifecycleHost } from "../../src/agent-manager/provider-lifecycle"
 import { discardWorktree } from "../../src/agent-manager/discard-worktree"
-import { removePtys } from "../../src/agent-manager/pty-cleanup"
+import { acquirePtyCleanup, removePtys } from "../../src/agent-manager/pty-cleanup"
+import type { ScriptTerminalManager } from "../../src/agent-manager/ScriptTerminalManager"
+import type { SessionTerminalManager } from "../../src/agent-manager/SessionTerminalManager"
+import type { TerminalRouter } from "../../src/agent-manager/terminal-routing"
 
 describe("Agent Manager PTY cleanup", () => {
   it("removes every listed PTY even when one removal fails", async () => {
@@ -34,6 +37,56 @@ describe("Agent Manager PTY cleanup", () => {
     } as unknown as KiloClient
 
     await expect(removePtys(async () => client, "/worktree")).rejects.toThrow("offline")
+  })
+
+  it("closes integrated terminals before removing embedded worktree PTYs", async () => {
+    const calls: string[] = []
+    const client = {
+      v2: {
+        pty: {
+          list: async () => {
+            calls.push("list")
+            return { data: { data: [] } }
+          },
+        },
+      },
+    } as unknown as KiloClient
+    const terminals = {
+      blockDirectory: async () => {
+        calls.push("block-terminals")
+        return () => calls.push("release-terminals")
+      },
+      closeDirectory: async () => calls.push("close-terminals"),
+    } as unknown as TerminalRouter
+    const scripts = {
+      blockDirectory: async () => {
+        calls.push("block-scripts")
+        return () => calls.push("release-scripts")
+      },
+      closeDirectory: async () => calls.push("close-scripts"),
+    } as unknown as ScriptTerminalManager
+    const integrated = {
+      closeDirectory: (dir: string) => calls.push(`integrated:${dir}`),
+    } as unknown as SessionTerminalManager
+
+    const release = await acquirePtyCleanup({
+      directory: "/worktree",
+      terminals,
+      integrated,
+      scripts,
+      getClient: async () => client,
+    })
+    expect(calls).toEqual([
+      "block-terminals",
+      "block-scripts",
+      "integrated:/worktree",
+      "close-terminals",
+      "close-scripts",
+      "list",
+    ])
+
+    release()
+    expect(calls.slice(-2)).toEqual(["release-terminals", "release-scripts"])
   })
 
   it("blocks worktree deletion when PTY cleanup fails", async () => {

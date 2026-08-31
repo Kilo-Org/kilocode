@@ -54,6 +54,7 @@ export class VscodeHost implements Host {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
+        enableForms: true,
         retainContextWhenHidden: true,
         localResourceRoots: [this.extensionUri],
       },
@@ -85,6 +86,7 @@ export class VscodeHost implements Host {
   ): PanelContext {
     panel.webview.options = {
       enableScripts: true,
+      enableForms: true,
       localResourceRoots: [this.extensionUri],
     }
 
@@ -101,6 +103,8 @@ export class VscodeHost implements Host {
       workerUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Agent Manager",
       port,
+      browserAutomation: this.browserAutomation(),
+      frameSrc: ["localhost", "127.0.0.1"].map((host) => `http://${host}:*`).join(" "),
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
@@ -242,6 +246,10 @@ export class VscodeHost implements Host {
 
   multiProject(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
+  }
+
+  browserAutomation(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
   }
 
   readProjects(): unknown {
