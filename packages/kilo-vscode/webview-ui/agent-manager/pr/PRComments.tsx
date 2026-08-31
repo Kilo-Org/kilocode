@@ -7,7 +7,7 @@ import type { PRStatus } from "../../src/types/messages"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { PRCommentCard } from "./PRCommentCard"
 import { SEND_LIMIT, githubUrl, prPayload } from "./pr-comment-payload"
-import { commentKey, commentState, omit, patchCommentState } from "./pr-comment-state"
+import { commentState, omit, patchCommentState } from "./pr-comment-state"
 import type { PRComment } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
 
@@ -26,9 +26,8 @@ export function PRComments(props: Props) {
 
   // Held per worktree outside this component, so a remount does not collapse
   // the threads the user opened.
-  const key = () => commentKey(props.projectId, props.worktreeId)
-  const state = () => commentState(key())
-  const patch = (value: Parameters<typeof patchCommentState>[1]) => patchCommentState(key(), value)
+  const state = () => commentState(props.worktreeId)
+  const patch = (value: Parameters<typeof patchCommentState>[1]) => patchCommentState(props.worktreeId, value)
 
   const resolved = (comment: PRComment) => state().pending[comment.threadId] ?? comment.resolved
   const expandedFor = (comment: PRComment) =>

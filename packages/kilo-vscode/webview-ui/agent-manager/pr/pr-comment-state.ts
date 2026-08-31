@@ -38,10 +38,6 @@ const BLANK: CommentState = Object.freeze({
 
 const [all, setAll] = createSignal<Record<string, CommentState>>({})
 
-export function commentKey(project: string | undefined, worktree: string): string {
-  return JSON.stringify([project ?? "single", worktree])
-}
-
 export function commentState(worktree: string): CommentState {
   return all()[worktree] ?? BLANK
 }

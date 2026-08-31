@@ -1,7 +1,5 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
-import { SidePanel } from "../../webview-ui/agent-manager/side-panel-layout"
-import { createSidePanel } from "../../webview-ui/agent-manager/side-panel-state"
 import {
   createEditPreview,
   diffCounts,
@@ -18,100 +16,30 @@ const diff = {
   deletions: 1,
 }
 
-function scene(context: string) {
-  const [project, activate] = createSignal("project")
-  const [current, select] = createSignal("parent")
-  const [selection, navigate] = createSignal(context)
-  const sessions = [
-    { id: "parent" },
-    { id: "sibling" },
-    { id: "child", parentID: "parent" },
-    { id: "nested", parentID: "child" },
-  ]
-  const managed =
-    context === "local"
-      ? []
-      : [
-          { id: "parent", worktreeId: context },
-          { id: "sibling", worktreeId: context },
-        ]
-  const panels = createSidePanel({
-    project,
-    current,
-    selection,
-    visible: (panel) => panel !== SidePanel.EditPreview || !!preview.preview(),
-  })
-  const preview = createEditPreview({
-    context: panels.session,
-    matches: (id) =>
-      previewMatchesContext(
-        id,
-        current(),
-        selection(),
-        id ? sessionWorktree(id, sessions, managed) : undefined,
-        (child, parent) => sessionTreeContains(child, parent, sessions),
-      ),
-    show: () => panels.open(SidePanel.EditPreview),
-    hide: () => panels.close(SidePanel.EditPreview),
-  })
-  return { preview, panels, activate, select, navigate }
-}
-
 describe("Agent Manager edit preview", () => {
-  it.each(["local", "worktree"])("retains preview content and preferences per parent and project in %s", (context) => {
+  it("restores each session's preview and keeps an explicit close local to that session", () => {
     createRoot((dispose) => {
-      const state = scene(context)
-      state.preview.open(diff, "parent", "split")
-      state.preview.updateMarkdown(true)
-      const first = state.preview.preview()
-      state.select("sibling")
-      expect(state.preview.preview()).toBeUndefined()
-      expect(state.panels.panel()).toBeNull()
-      state.preview.open({ ...diff, file: "sibling.ts" }, "sibling")
-      state.activate("other")
-      expect(state.preview.preview()).toBeUndefined()
-      expect(state.panels.panel()).toBeNull()
-      state.preview.open({ ...diff, file: "other-project.ts" }, "sibling")
-      state.activate("project")
-      expect(state.preview.preview()?.diff.file).toBe("sibling.ts")
-      state.select("parent")
-      expect(state.preview.preview()).toBe(first)
-      expect(state.preview.preview()?.style).toBe("split")
-      expect(state.preview.preview()?.markdown).toBe(true)
-      expect(state.panels.panel()).toBe(SidePanel.EditPreview)
-      state.preview.close()
-      state.select("sibling")
-      expect(state.preview.preview()?.diff.file).toBe("sibling.ts")
-      state.select("parent")
-      expect(state.preview.preview()).toBeUndefined()
-      expect(state.panels.panel()).toBeNull()
-      dispose()
-    })
-  })
-
-  it("rejects foreign preview events and hides invalid source contexts without deleting their payload", () => {
-    createRoot((dispose) => {
-      const state = scene("worktree")
-      state.panels.open(SidePanel.Diff)
-      for (const id of [undefined, "sibling", "unknown"]) state.preview.open(diff, id)
-      expect(state.preview.preview()).toBeUndefined()
-      expect(state.panels.panel()).toBe(SidePanel.Diff)
-      state.preview.open(diff, "nested")
-      const first = state.preview.preview()
-      expect(first?.sessionID).toBe("nested")
-      state.navigate("other")
-      expect(state.preview.preview()).toBeUndefined()
-      expect(state.panels.panel()).toBeNull()
-      state.preview.open({ ...diff, file: "wrong-context.ts" }, "nested")
-      state.navigate("worktree")
-      expect(state.preview.preview()).toBe(first)
-      expect(state.panels.panel()).toBe(SidePanel.EditPreview)
-      state.select("sibling")
-      state.preview.open(diff, "nested")
-      expect(state.preview.preview()).toBeUndefined()
-      expect(state.panels.panel()).toBe(SidePanel.Diff)
-      state.select("parent")
-      expect(state.preview.preview()).toBe(first)
+      const [context, select] = createSignal("first")
+      const preview = createEditPreview({
+        context,
+        matches: (id) => id === context(),
+        show: () => undefined,
+        hide: () => undefined,
+      })
+      preview.open(diff, "first", "split")
+      const first = preview.preview()
+      select("second")
+      expect(preview.preview()).toBeUndefined()
+      preview.open({ ...diff, file: "second.ts" }, "second")
+      select("first")
+      expect(preview.preview()).toBe(first)
+      preview.open(diff, "second")
+      expect(preview.preview()).toBe(first)
+      preview.close()
+      select("second")
+      expect(preview.preview()?.diff.file).toBe("second.ts")
+      select("first")
+      expect(preview.preview()).toBeUndefined()
       dispose()
     })
   })

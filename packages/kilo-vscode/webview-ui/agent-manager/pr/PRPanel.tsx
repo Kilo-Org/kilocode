@@ -11,7 +11,7 @@ import { PRReviewers } from "./PRReviewers"
 import { PRDescription } from "./PRDescription"
 import { PRChecks } from "./PRChecks"
 import { PRComments } from "./PRComments"
-import { commentKey, commentScroll, setCommentScroll } from "./pr-comment-state"
+import { commentScroll, setCommentScroll } from "./pr-comment-state"
 import { PRSummary } from "./PRSummary"
 import { CopyButton } from "./CopyButton"
 import "./pr-panel.css"
@@ -30,7 +30,6 @@ interface PRPanelProps {
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
   const { t } = useLanguage()
-  const key = () => commentKey(props.projectId, props.worktreeId)
   let commentsRef: HTMLDivElement | undefined
   let bodyRef: HTMLDivElement | undefined
   let capture: number | undefined
@@ -48,22 +47,22 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
       const box = node.getBoundingClientRect()
       if (box.bottom <= top) continue
       const id = node.dataset.threadId
-      if (id) setCommentScroll(key(), bodyRef.scrollTop, { id, offset: box.top - top })
+      if (id) setCommentScroll(props.worktreeId, bodyRef.scrollTop, { id, offset: box.top - top })
       return
     }
-    setCommentScroll(key(), bodyRef.scrollTop)
+    setCommentScroll(props.worktreeId, bodyRef.scrollTop)
   }
 
   const reposition = () => {
     if (!bodyRef) return
-    const saved = commentScroll(key())
+    const saved = commentScroll(props.worktreeId)
     if (!saved) return
     const anchor = saved.anchor
     const node = anchor ? bodyRef.querySelector<HTMLElement>(`[data-thread-id="${anchor.id}"]`) : undefined
     if (node && anchor) {
       const delta = node.getBoundingClientRect().top - bodyRef.getBoundingClientRect().top - anchor.offset
       if (Math.abs(delta) >= 1) bodyRef.scrollTop += delta
-      setCommentScroll(key(), bodyRef.scrollTop, anchor)
+      setCommentScroll(props.worktreeId, bodyRef.scrollTop, anchor)
       return
     }
     const max = Math.max(0, bodyRef.scrollHeight - bodyRef.clientHeight)
@@ -82,7 +81,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
     })
   }
 
-  createEffect(on(key, later))
+  createEffect(on(() => props.worktreeId, later))
   createEffect(on(() => props.pr, later, { defer: true }))
 
   onCleanup(() => {
@@ -105,14 +104,12 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
   // Only the selected worktree fetches threads, and that fetch can fail, so a
   // refresh can arrive without comments. Dropping the section would discard the
   // expanded card and the scroll position, so the last list for this PR stays.
-  const comments = createMemo<{ key: string; number: number; value: NonNullable<PRStatus["comments"]> } | undefined>(
-    (prev) => {
-      const next = props.pr.comments
-      if (next) return { key: key(), number: props.pr.number, value: next }
-      if (prev && prev.key === key() && prev.number === props.pr.number) return prev
-      return undefined
-    },
-  )
+  const comments = createMemo<{ number: number; value: NonNullable<PRStatus["comments"]> } | undefined>((prev) => {
+    const next = props.pr.comments
+    if (next) return { number: props.pr.number, value: next }
+    if (prev && prev.number === props.pr.number) return prev
+    return undefined
+  })
 
   return (
     <div class="am-pr-panel am-pr-col">

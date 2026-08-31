@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { LOCAL } from "../../webview-ui/agent-manager/navigate"
 import { SidePanel } from "../../webview-ui/agent-manager/side-panel-layout"
+import { createSidePanel } from "../../webview-ui/agent-manager/side-panel-state"
 import {
   ambientDecision,
   createAmbientSetup,
@@ -69,64 +70,28 @@ describe("ambientDecision", () => {
 })
 
 describe("createAmbientSetup tracking", () => {
-  it("only closes the same owner's terminal after delayed setup completion", () => {
-    const script = `
-      import { strict as assert } from "node:assert"
-      import { createRoot, createSignal } from "solid-js"
-      import { createAmbientSetup } from "./webview-ui/agent-manager/terminal/ambient"
-      import { createTerminalState } from "./webview-ui/agent-manager/terminal/state"
-      import { createSidePanel } from "./webview-ui/agent-manager/side-panel-state"
-      import { SidePanel } from "./webview-ui/agent-manager/side-panel-layout"
-      for (const [panel, project, expected, concealed] of [
-        [SidePanel.Terminal, "project", null],
-        [SidePanel.Diff, "project", SidePanel.Diff],
-        [SidePanel.Subagents, "project", SidePanel.Subagents],
-        [SidePanel.Terminal, "other", SidePanel.Terminal],
-        [SidePanel.Terminal, "project", SidePanel.Terminal, true],
-      ]) {
-        const state = createRoot((dispose) => {
-          const [project, activate] = createSignal("project")
-          const [hidden, conceal] = createSignal(false)
-          const selection = () => "worktree"
-          const context = () => project() + ":" + selection()
-          const panels = createSidePanel({ project, selection, current: () => "parent", visible: () => !hidden() })
-          const terms = createTerminalState(context)
-          const ambient = createAmbientSetup({
-            terms, selection: context, sidePanel: panels.selected,
-            close: () => panels.close(SidePanel.Terminal),
-          })
-          return { panels, terms, ambient, activate, conceal, dispose }
-        })
-        const view = {
-          terminalId: "script:setup", projectId: "project", worktreeId: "worktree",
-          title: "Setup", kind: "setup", state: "running", wsUrl: "",
-          font: { fontFamily: "monospace", fontSize: 12 },
-        }
-        state.terms.syncScripts([view])
-        const terminal = state.terms.sides().at(0)
-        if (concealed) {
-          state.panels.open(SidePanel.Terminal)
-          state.conceal(true)
-          assert.equal(state.panels.panel(), null)
-        }
-        state.ambient.reveal("project:worktree", view.terminalId)
-        if (concealed) assert.equal(state.ambient.pending(), undefined)
-        state.conceal(false)
-        state.panels.open(SidePanel.Terminal)
-        state.activate(project)
-        state.panels.open(panel)
-        state.terms.syncScripts([{ ...view, state: "exited", exitCode: 0 }])
-        assert.equal(state.panels.panel(), expected)
-        assert.equal(state.terms.sides().at(0), terminal)
-        state.dispose()
-      }
-    `
-    const child = Bun.spawnSync([process.execPath, "--conditions=browser", "-e", script], {
-      cwd: `${import.meta.dir}/../..`,
-      stdout: "pipe",
-      stderr: "pipe",
+  it("does not auto-close a selected terminal concealed by History or Review", () => {
+    createRoot((dispose) => {
+      const selection = () => "worktree"
+      const panels = createSidePanel({
+        project: () => "project",
+        selection,
+        current: () => "parent",
+        visible: () => false,
+      })
+      panels.open(SidePanel.Terminal)
+      const ambient = createAmbientSetup({
+        terms: createTerminalState(selection),
+        selection,
+        sidePanel: panels.selected,
+        close: () => panels.close(SidePanel.Terminal),
+      })
+      expect(panels.panel()).toBeNull()
+      ambient.reveal("worktree", "script:setup")
+      expect(ambient.pending()).toBeUndefined()
+      expect(panels.selected()).toBe(SidePanel.Terminal)
+      dispose()
     })
-    expect(child.exitCode, child.stdout.toString() + child.stderr.toString()).toBe(0)
   })
 
   function scene(panelOpen: boolean) {

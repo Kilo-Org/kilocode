@@ -350,8 +350,8 @@ const AgentManagerContent: Component = () => {
     if (!pr) return undefined
     return { pr, selected, wt: worktrees().find((w) => w.id === selected) }
   })
-  const diffs = createWorktreeDiffs(vscode, currentProjectId)
-  createEffect(on(currentProjectId, diffs.reset, { defer: true }))
+  const diffs = createWorktreeDiffs(vscode, activeProjectId)
+  createEffect(on(activeProjectId, diffs.reset, { defer: true }))
   const diffDatas = diffs.diffDatas
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
@@ -501,7 +501,7 @@ const AgentManagerContent: Component = () => {
     remember: () => focusMemory.set(focusKey(), "prompt"),
     restore: () => restoreSession(),
   })
-  const terminalVisible = () => sidePanel() === SidePanel.Terminal
+  const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
   const focusOnDraftChange = () => {
     const key = focusKey()
     const owner = focusMemory.get(key)
@@ -590,7 +590,7 @@ const AgentManagerContent: Component = () => {
     diffDatas,
     diffLoading,
     track: metrics.track,
-    projectId: currentProjectId,
+    projectId: activeProjectId,
   })
   const openApplyDialog = apply.openApplyDialog
   const openWorktreeDirectory = () => {
@@ -609,7 +609,7 @@ const AgentManagerContent: Component = () => {
     if (opening) {
       const sel = selection()
       if (sel && sel !== LOCAL)
-        vscode.postMessage({ type: "agentManager.refreshPR", projectId: currentProjectId(), worktreeId: sel })
+        vscode.postMessage({ type: "agentManager.refreshPR", projectId: activeProjectId(), worktreeId: sel })
     }
   }
   const openSelectedPR = () => {
@@ -1614,7 +1614,7 @@ const AgentManagerContent: Component = () => {
     panelOpen: diffOpen,
     reviewActive,
     vscode,
-    project: currentProjectId,
+    project: activeProjectId,
   })
   // The composite id (ctx#scope) the extension keys diff data by.
   const diffScopeId = review.id
@@ -1655,17 +1655,17 @@ const AgentManagerContent: Component = () => {
 
     if ((panel || active) && id) {
       untrack(() => diffs.retain(id))
-      vscode.postMessage({ type: "agentManager.startDiffWatch", projectId: currentProjectId(), ...wireDiffId(id) })
+      vscode.postMessage({ type: "agentManager.startDiffWatch", projectId: activeProjectId(), ...wireDiffId(id) })
       return
     }
 
     setDiffLoading(false)
-    vscode.postMessage({ type: "agentManager.stopDiffWatch", projectId: currentProjectId() })
+    vscode.postMessage({ type: "agentManager.stopDiffWatch", projectId: activeProjectId() })
   })
 
   onCleanup(() => {
     if (diffOpen() || reviewActive()) {
-      vscode.postMessage({ type: "agentManager.stopDiffWatch", projectId: currentProjectId() })
+      vscode.postMessage({ type: "agentManager.stopDiffWatch", projectId: activeProjectId() })
     }
   })
 
@@ -1699,7 +1699,7 @@ const AgentManagerContent: Component = () => {
     const data = diffDatas()
     const key = diffScopeId()
     if (!key) return []
-    return data[diffDataKey(currentProjectId(), key)] ?? []
+    return data[diffDataKey(activeProjectId(), key)] ?? []
   })
 
   const diffSessionKey = createMemo(() => diffScopeId() ?? "")
@@ -1707,7 +1707,7 @@ const AgentManagerContent: Component = () => {
   const diffNotice = createMemo(() => {
     const key = diffScopeId()
     if (!key) return undefined
-    return diffNotices()[diffDataKey(currentProjectId(), key)]
+    return diffNotices()[diffDataKey(activeProjectId(), key)]
   })
 
   const requestDiffFile = (file: string) => {
@@ -1719,7 +1719,7 @@ const AgentManagerContent: Component = () => {
   const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(diffScopeId))
   const diffLoadingForCurrent = createMemo(() => diffs.diffLoadingFor(diffScopeId))
 
-  const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), vscode, showToast, t, currentProjectId)
+  const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), vscode, showToast, t, activeProjectId)
 
   createEffect(() => diffOpen() && setDiffMounted(true))
 
@@ -2018,7 +2018,7 @@ const AgentManagerContent: Component = () => {
 
   const sideCtl = createSideTerminal({
     handlers: termHandlers,
-    visible: () => sidePanel() === SidePanel.Terminal,
+    visible: () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive(),
     focusedId: () => terms.sideFocusedId(),
     count: () => terms.sidesForContext(terms.sideKey()).length,
     isScript: terms.isScript,
@@ -2590,12 +2590,12 @@ const AgentManagerContent: Component = () => {
                     <DiffPanelCache
                       current={diffScopeId}
                       context={diffCtx}
-                      project={currentProjectId}
-                      active={diffOpen}
+                      project={activeProjectId}
+                      active={() => diffOpen() && !history() && !reviewActive()}
                       data={diffDatas}
                       loading={(key) => diffs.diffLoadingFor(() => key)}
                       loadingFiles={(key) => diffs.diffFileLoadingFor(() => key)}
-                      notice={(key) => diffNotices()[diffDataKey(currentProjectId(), key)]}
+                      notice={(key) => diffNotices()[diffDataKey(activeProjectId(), key)]}
                       comments={(key) =>
                         readReviewComments(reviewCommentsByContext(), currentProjectId() ?? "single", key)
                       }
@@ -2635,7 +2635,7 @@ const AgentManagerContent: Component = () => {
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
                       <PRPanelHost
                         pr={activePR()!.pr}
-                        projectId={currentProjectId()}
+                        projectId={activeProjectId()}
                         worktree={activePR()!.wt}
                         worktreeId={activePR()!.selected}
                         activeTerminalId={terms.activeId()}
@@ -2643,7 +2643,7 @@ const AgentManagerContent: Component = () => {
                         onClose={() => panels.close(SidePanel.PR)}
                       />
                     </Show>
-                    {browser.render(session.currentSessionID, currentProjectId)}
+                    {browser.render(session.currentSessionID, activeProjectId)}
                     <Show when={subagents.tabs().length > 0}>
                       <SubagentPanel
                         tabs={subagents.tabs}
@@ -2713,7 +2713,7 @@ const AgentManagerContent: Component = () => {
                   canComment={scopeCapabilities(review.scope()).comments}
                   comments={reviewComments()}
                   onCommentsChange={setReviewCommentsForSelection}
-                  composer={composers.get(`${currentProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
+                  composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
                   onSendAll={closeReviewTab}
                   onSendClick={() => metrics.track("send_review_comments", "fullscreen_review")}
                   diffStyle={diffStyle.style()}

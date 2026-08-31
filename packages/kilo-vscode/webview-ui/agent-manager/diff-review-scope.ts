@@ -29,10 +29,7 @@ export interface DiffReviewScopeOptions {
 }
 
 export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
-  const scope = createDiffScope(() => {
-    const ctx = opts.ctx()
-    return ctx ? JSON.stringify([opts.project() ?? "single", ctx]) : undefined
-  })
+  const scope = createDiffScope(opts.ctx)
   // The composite id (ctx#scope, or ctx#session:<sid>) the extension keys
   // diff data by. Rebuilds when the active session changes while the Session
   // scope is active, so a session tab switch refetches that session's diff.
