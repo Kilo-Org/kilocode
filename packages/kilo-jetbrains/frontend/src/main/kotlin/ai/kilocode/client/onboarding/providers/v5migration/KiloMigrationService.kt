@@ -160,9 +160,13 @@ class KiloMigrationService internal constructor(
         cs.launch {
             try {
                 call { skip() }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                // Leave the state untouched: nothing was migrated, so the wizard must stay in its
+                // selecting phase. Reporting this as a failed run would offer `Finish`, which
+                // finalizes the migration as completed-with-errors without it ever running.
                 LOG.warn("migration skip failed", e)
-                finishWithError(e.message ?: "Migration skip failed")
                 return@launch
             }
             hide("skip", current?.detection)
@@ -173,8 +177,9 @@ class KiloMigrationService internal constructor(
      * Defer migration — resumes app load without marking any status, so migration is offered
      * again on the next startup.
      *
-     * Suspends until the backend has actually resumed and returns `false` when it did not, so the
-     * caller can keep the wizard offered instead of hiding a still-paused app.
+     * Suspends until the backend has actually resumed and returns `false` when it did not, leaving
+     * the wizard in its selecting phase so the caller keeps it offered instead of hiding a
+     * still-paused app.
      */
     override suspend fun later(): Boolean {
         LOG.info("Migration wizard: user chose later")
@@ -185,8 +190,10 @@ class KiloMigrationService internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            // Same as skip: keep the selecting phase so the step is re-offered with its category
+            // UI intact. An error phase would surface as a failed run whose only exit is `Finish`,
+            // which would finalize a migration the user never ran.
             LOG.warn("migration resume failed", e)
-            finishWithError(e.message ?: "Migration resume failed")
             return false
         }
         hide("later", current?.detection)
