@@ -2903,13 +2903,17 @@ private fun resolveModelSelection(
     valid(providers, mode)?.let { return it }
     valid(providers, global)?.let { return it }
     recent.firstNotNullOfOrNull { valid(providers, it) }?.let { return it }
-    return fallback
+    if (fallback == null) return null
+    valid(providers, fallback)?.let { return it }
+    valid(providers, ModelSelectionDto(KILO_PROVIDER, "kilo-auto/efficient"))?.let { return it }
+    return providers?.providers?.firstNotNullOfOrNull { provider ->
+        provider.models.keys.firstOrNull()?.let { valid(providers, ModelSelectionDto(provider.id, it)) }
+    }
 }
 
 private fun valid(providers: ProvidersDto?, item: ModelSelectionDto?): ModelSelectionDto? {
     if (item == null) return null
     val list = providers?.providers ?: return item
-    if (list.isEmpty()) return item
     val provider = list.firstOrNull { it.id == item.providerID } ?: return null
     if (item.providerID != KILO_PROVIDER && item.providerID !in providers.connected) return null
     if (item.modelID !in provider.models) return null

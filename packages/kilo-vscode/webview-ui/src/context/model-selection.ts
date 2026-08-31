@@ -32,12 +32,23 @@ export function resolveModelSelection(input: {
   recent?: ModelSelection[]
   fallback?: ModelSelection | null
 }): ModelSelection | null {
-  return (
+  const preferred =
     validate(input.providers, input.connected, input.override) ??
     validate(input.providers, input.connected, input.mode) ??
     validate(input.providers, input.connected, input.global) ??
     recent(input.providers, input.connected, input.recent) ??
-    input.fallback ??
-    null
-  )
+    validate(input.providers, input.connected, input.fallback)
+  if (preferred) return preferred
+  if (!input.fallback) return null
+
+  const efficient = validate(input.providers, input.connected, { providerID: "kilo", modelID: "kilo-auto/efficient" })
+  if (efficient) return efficient
+
+  for (const [providerID, provider] of Object.entries(input.providers)) {
+    const modelID = Object.keys(provider.models).at(0)
+    if (!modelID) continue
+    const selection = validate(input.providers, input.connected, { providerID, modelID })
+    if (selection) return selection
+  }
+  return null
 }

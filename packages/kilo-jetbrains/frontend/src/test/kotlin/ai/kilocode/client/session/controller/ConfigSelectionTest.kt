@@ -230,7 +230,7 @@ class ConfigSelectionTest : SessionControllerTestBase() {
         assertEquals("anthropic/claude", m.model.model)
     }
 
-    fun `test no valid candidates falls back to kilo auto`() {
+    fun `test no valid candidates prefers free when present in the catalog`() {
         appRpc.models = ModelStateDto(recent = listOf(ModelSelectionDto("openai", "gpt")))
         appRpc.state.value = KiloAppStateDto(
             KiloAppStatusDto.READY,
@@ -238,19 +238,10 @@ class ConfigSelectionTest : SessionControllerTestBase() {
         )
         projectRpc.state.value = workspaceReady(
             providers = listOf(
-                ProviderDto(
-                    id = "kilo",
-                    name = "Kilo",
-                    models = mapOf("kilo-auto/free" to ModelDto(id = "kilo-auto/free", name = "Auto")),
-                ),
-                ProviderDto(
-                    id = "openai",
-                    name = "OpenAI",
-                    models = mapOf("gpt" to ModelDto(id = "gpt", name = "GPT")),
-                ),
+                provider("kilo", "gpt-5", "kilo-auto/efficient", "kilo-auto/free"),
+                provider("openai", "gpt"),
             ),
-            connected = listOf("kilo"),
-            defaults = emptyMap(),
+            connected = emptyList(),
         )
         val m = controller()
         collect(m)
@@ -258,6 +249,194 @@ class ConfigSelectionTest : SessionControllerTestBase() {
 
         assertEquals("kilo/kilo-auto/free", m.model.defaultModel)
         assertEquals("kilo/kilo-auto/free", m.model.model)
+        assertFalse(m.model.modelOverride)
+    }
+
+    fun `test missing free prefers efficient over the first selectable model`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                provider("openai", "gpt"),
+                provider("kilo", "gpt-5", "kilo-auto/efficient"),
+            ),
+            connected = listOf("openai"),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        assertEquals("kilo/kilo-auto/efficient", m.model.defaultModel)
+        assertEquals("kilo/kilo-auto/efficient", m.model.model)
+        assertFalse(m.model.modelOverride)
+    }
+
+    fun `test stale free selections fall back to efficient`() {
+        appRpc.models = ModelStateDto(
+            model = mapOf("code" to ModelSelectionDto("kilo", "kilo-auto/free")),
+            recent = listOf(ModelSelectionDto("kilo", "kilo-auto/free")),
+        )
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(
+                model = "kilo/kilo-auto/free",
+                agent = mapOf("code" to AgentConfigDto(model = "kilo/kilo-auto/free")),
+            ),
+        )
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(provider("kilo", "gpt-5", "kilo-auto/efficient")),
+            defaults = mapOf("code" to "kilo/kilo-auto/free"),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        assertEquals("kilo/kilo-auto/efficient", m.model.defaultModel)
+        assertEquals("kilo/kilo-auto/efficient", m.model.model)
+        assertFalse(m.model.modelOverride)
+    }
+
+    fun `test missing auto models falls back to the first selectable model`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto())
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                provider("openai", "gpt", "gpt-2"),
+                provider("kilo", "gpt-5"),
+            ),
+            connected = listOf("openai"),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        assertEquals("openai/gpt", m.model.defaultModel)
+        assertEquals("openai/gpt", m.model.model)
+        assertFalse(m.model.modelOverride)
+    }
+
+    fun `test fallback skips disconnected providers and providers without models`() {
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(model = "anthropic/claude"),
+        )
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                provider("anthropic", "claude"),
+                provider("kilo"),
+                provider("openai", "gpt"),
+            ),
+            connected = listOf("openai"),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        assertEquals("openai/gpt", m.model.defaultModel)
+        assertEquals("openai/gpt", m.model.model)
+        assertFalse(m.model.modelOverride)
+    }
+
+    fun `test no selectable models leaves selection null`() {
+        appRpc.models = ModelStateDto(model = mapOf("code" to ModelSelectionDto("openai", "gpt")))
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(model = "kilo/kilo-auto/free"),
+        )
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(provider("kilo"), provider("openai", "gpt")),
+            connected = emptyList(),
+            defaults = mapOf("code" to "kilo/kilo-auto/free"),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        assertNull(m.model.defaultModel)
+        assertNull(m.model.model)
+        assertFalse(m.model.modelOverride)
+    }
+
+    fun `test loaded empty catalog rejects stale selections`() {
+        appRpc.models = ModelStateDto(
+            model = mapOf("code" to ModelSelectionDto("kilo", "kilo-auto/free")),
+            recent = listOf(ModelSelectionDto("kilo", "kilo-auto/free")),
+        )
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(
+                model = "kilo/kilo-auto/free",
+                agent = mapOf("code" to AgentConfigDto(model = "kilo/kilo-auto/free")),
+            ),
+        )
+        projectRpc.state.value = workspaceReady(
+            providers = emptyList(),
+            connected = emptyList(),
+            defaults = mapOf("code" to "kilo/kilo-auto/free"),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        assertNull(m.model.defaultModel)
+        assertNull(m.model.model)
+        assertFalse(m.model.modelOverride)
+    }
+
+    fun `test unloaded catalog keeps free until catalog arrives`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        val m = controller()
+        collect(m)
+        flush()
+        edt { m.selectAgent("code") }
+        flush()
+
+        assertNull(m.model.workspace.providers)
+        assertEquals("kilo/kilo-auto/free", m.model.defaultModel)
+        assertEquals("kilo/kilo-auto/free", m.model.model)
+        assertFalse(m.model.modelOverride)
+
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(provider("kilo", "gpt-5", "kilo-auto/efficient")),
+        )
+        flush()
+
+        assertEquals("kilo/kilo-auto/efficient", m.model.defaultModel)
+        assertEquals("kilo/kilo-auto/efficient", m.model.model)
+        assertFalse(m.model.modelOverride)
+    }
+
+    fun `test unloaded catalog preserves configured and saved selections`() {
+        appRpc.models = ModelStateDto(model = mapOf("code" to ModelSelectionDto("openai", "gpt")))
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(model = "anthropic/claude"),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+        edt { m.selectAgent("code") }
+        flush()
+
+        assertNull(m.model.workspace.providers)
+        assertEquals("anthropic/claude", m.model.defaultModel)
+        assertEquals("openai/gpt", m.model.model)
+        assertTrue(m.model.modelOverride)
+    }
+
+    fun `test provider defaults retain priority before app config loads`() {
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                provider("kilo", "kilo-auto/free", "kilo-auto/efficient"),
+                provider("openai", "gpt"),
+            ),
+            connected = listOf("openai"),
+            defaults = mapOf("code" to "openai/gpt"),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        assertEquals("openai/gpt", m.model.defaultModel)
+        assertEquals("openai/gpt", m.model.model)
         assertFalse(m.model.modelOverride)
     }
 
@@ -358,4 +537,10 @@ class ConfigSelectionTest : SessionControllerTestBase() {
         assertEquals("kilo/gpt-5", appRpc.variants.single().key)
         assertEquals("high", appRpc.variants.single().value)
     }
+
+    private fun provider(id: String, vararg models: String) = ProviderDto(
+        id = id,
+        name = id,
+        models = models.associateWith { ModelDto(id = it, name = it) },
+    )
 }
