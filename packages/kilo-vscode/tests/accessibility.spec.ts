@@ -73,6 +73,62 @@ test.describe("webview accessibility ratchet", () => {
     await expect(list).toBeHidden()
   })
 
+  test("Background agent spinners survive polling updates", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    await page.clock.install()
+    await page.clock.pauseAt(new Date())
+    await page.addInitScript(() => {
+      let revision = 0
+      Object.defineProperty(window, "acquireVsCodeApi", {
+        value: () => ({
+          getState: () => undefined,
+          setState: () => {},
+          postMessage: (message: { type: string; sessionID?: string; requestID?: string }) => {
+            if (message.type !== "requestBackgroundJobs") return
+            revision += 1
+            window.postMessage(
+              {
+                type: "backgroundJobsLoaded",
+                sessionID: message.sessionID,
+                requestID: message.requestID,
+                jobs: [
+                  {
+                    id: "job-spinner",
+                    type: "task",
+                    title: `Agent ${revision}`,
+                    status: revision < 4 ? "running" : "completed",
+                    started_at: 1,
+                    metadata: { parentSessionId: message.sessionID, sessionId: "child-spinner", background: true },
+                  },
+                ],
+              },
+              "*",
+            )
+          },
+        }),
+      })
+    })
+    await open(page, "chat--task-header-background-agents-420")
+    await page.locator('[data-slot="task-header-agents-toggle"]').click()
+    const row = page.locator('[data-slot="task-header-agent"]')
+    await expect(row).toContainText("Agent 1")
+    const node = await row.elementHandle()
+    const spinner = await row.locator('[data-component="spinner"]').elementHandle()
+    expect(spinner).not.toBeNull()
+
+    for (const revision of [2, 3]) {
+      await page.clock.runFor(1000)
+      await expect(row).toContainText(`Agent ${revision}`)
+      expect(await spinner!.evaluate((node) => node.isConnected)).toBe(true)
+    }
+
+    await page.clock.runFor(1000)
+    await expect(row).toHaveAttribute("data-status", "completed")
+    expect(await node!.evaluate((node) => node.isConnected)).toBe(true)
+    await expect(row.locator('[data-component="spinner"]')).toHaveCount(0)
+    await expect(row.getByRole("button", { name: "Dismiss: Agent 4" })).toBeVisible()
+  })
+
   test("Agent Manager keeps virtualized transcript fragments laid out", async ({ page }) => {
     await open(page, "agentmanager--sidebar-search-open")
 
