@@ -65,6 +65,53 @@ class PrResolverTest {
     }
 
     @Test
+    fun `retries without review and ci fields for every wording gh uses to refuse them`() {
+        // A PR the row already shows must survive each of these, so none of them may read as "no PR".
+        val refusals = listOf(
+            """Unknown JSON field: "statusCheckRollup"""",
+            "GraphQL: Resource not accessible by personal access token (repository.pullRequest)",
+            "GraphQL: Field 'statusCheckRollup' doesn't exist on type 'PullRequest'",
+            "GraphQL: Field 'reviewDecision' does not exist on type 'PullRequest'",
+            "HTTP 403: Forbidden (https://api.github.com/graphql)",
+            "your token has insufficient scopes",
+        )
+
+        for (stderr in refusals) {
+            calls.clear()
+            val resolver = resolver(
+                view = { args -> if (args.contains(PR_RICH_FIELDS)) CmdOut(1, "", stderr) else pr(11, "OPEN") },
+            )
+
+            val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+            assertEquals(11, assertNotNull(lookup.pr, "the scalar retry must resolve the PR for: $stderr").number)
+            assertEquals(GhAvailability.OK, lookup.availability)
+        }
+    }
+
+    @Test
+    fun `keeps asking for review and ci fields after one repository refused the token`() {
+        // One resolver serves every checkout, and a permission refusal is per repository and token, so
+        // the restricted worktree must not cost the others their review/CI state.
+        val restricted = "$path-restricted"
+        val resolver = resolver(
+            view = { args ->
+                if (!args.contains(PR_RICH_FIELDS)) pr(11, "OPEN")
+                else CmdOut(1, "", "GraphQL: Resource not accessible by integration (repository.pullRequest)")
+            },
+        )
+        resolver.resolve(restricted, "feature/x", base = "main")
+        calls.clear()
+
+        resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(
+            listOf(listOf("pr", "view", "--json", PR_RICH_FIELDS), listOf("pr", "view", "--json", PR_FIELDS)),
+            calls,
+        )
+    }
+
+    @Test
     fun `stops asking for review and ci fields once gh has refused them`() {
         val resolver = resolver(
             view = { args ->

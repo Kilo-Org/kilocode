@@ -23,22 +23,36 @@ internal const val PR_FIELDS = "number,state,isDraft,url,title"
 /**
  * [PR_FIELDS] plus the review verdict and CI rollup. Both are GraphQL sub-queries rather than scalars,
  * so an older `gh` rejects the field names outright and a restricted token is refused the data. See
- * [richUnsupported] for how that is detected and [PrResolver] for the fallback.
+ * [richRefusal] for how that is detected and [PrResolver] for the fallback.
  */
 internal const val PR_RICH_FIELDS = "$PR_FIELDS,reviewDecision,statusCheckRollup"
+
+/** Why a `gh pr` command refused [PR_RICH_FIELDS], which decides whether the downgrade may latch. */
+internal enum class RichRefusal {
+    /** The `gh` release does not know the field names. True for every repository this process sees. */
+    FIELD,
+
+    /** The token is refused the GraphQL node. Usually specific to one repository or one installation. */
+    ACCESS,
+}
 
 /**
  * Whether a failing `gh pr` command was rejected for asking about review or CI state, rather than for
  * any of the ordinary reasons (no PR, no auth, no network).
  *
- * This has to be distinguished because [prError] treats everything non-auth as "no PR here", so an
- * unsupported field would otherwise make a checkout with a perfectly good PR report no PR at all.
+ * This has to be distinguished because [prError] treats everything non-auth as "no PR here", so a
+ * refused field would otherwise make a checkout with a perfectly good PR report no PR at all. The
+ * wordings match the VS Code poller's: fine-grained PATs say "not accessible by personal access
+ * token", GitHub Apps say "by integration", older GHE reports the GraphQL field as non-existent, and
+ * org policies answer with a scope or forbidden error.
  */
-internal fun richUnsupported(stderr: String): Boolean {
+internal fun richRefusal(stderr: String): RichRefusal? {
     val text = stderr.lowercase()
-    // Old gh rejects the field name; a restricted token is refused the underlying GraphQL node.
-    if (text.contains("unknown json field")) return true
-    return text.contains("resource not accessible by integration")
+    if (text.contains("unknown json field")) return RichRefusal.FIELD
+    if (text.contains("doesn't exist") || text.contains("does not exist")) return RichRefusal.FIELD
+    if (text.contains("not accessible")) return RichRefusal.ACCESS
+    if (text.contains("insufficient") || text.contains("forbidden")) return RichRefusal.ACCESS
+    return null
 }
 
 /**
@@ -95,15 +109,21 @@ internal class PrResolver(
      * Runs a `gh pr` command with the richest field list this `gh` and token have proven they can
      * answer, dropping to [PR_FIELDS] and retrying once when they turn out they cannot.
      *
-     * The downgrade latches, so a release or token without review/CI support costs one extra call in
-     * total rather than one per checkout on every poll.
+     * A [RichRefusal.FIELD] downgrade latches, so a `gh` release without review/CI support costs one
+     * extra call in total rather than one per checkout on every poll. A [RichRefusal.ACCESS] refusal
+     * does not: one resolver serves the whole backend, and the token is usually only refused the node
+     * for the repository that reported it, so latching would strip review/CI from every other
+     * checkout until the IDE restarts.
      */
     private fun query(dir: Path, command: (String) -> List<String>): CmdOut {
         val wanted = if (rich) PR_RICH_FIELDS else PR_FIELDS
         val out = gh(dir, command(wanted))
-        if (out.ok || wanted == PR_FIELDS || !richUnsupported(out.stderr)) return out
-        rich = false
-        LOG.info("gh cannot answer review/CI fields, falling back to scalars: ${out.stderr.trim()}")
+        if (out.ok || wanted == PR_FIELDS) return out
+        val refusal = richRefusal(out.stderr) ?: return out
+        if (refusal == RichRefusal.FIELD) {
+            rich = false
+            LOG.info("gh cannot answer review/CI fields, falling back to scalars: ${out.stderr.trim()}")
+        }
         return gh(dir, command(PR_FIELDS))
     }
 
