@@ -126,7 +126,15 @@ internal class SidePopupController(timers: UiTimerSource = UiTimers) : Disposabl
         if (!onSubject && !onPopup) return hideAll()
         val req = source?.invoke() ?: return hideAll()
         val built = req.build()
-        req.place(built)?.let { open(req, built, it) } ?: hideAll()
+        val spot = req.place(built)
+        if (spot == null) {
+            // The body is live by now — a chat card registered editors on its disposable, a task card
+            // reparented its own view into it — so a placement with nowhere to sit has to release it
+            // rather than drop the reference. Handing it to [body] lets [hideAll] do that.
+            body = built.disposable
+            return hideAll()
+        }
+        open(req, built, spot)
     }
 
     @RequiresEdt

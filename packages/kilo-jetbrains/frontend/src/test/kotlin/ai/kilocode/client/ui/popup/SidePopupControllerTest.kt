@@ -21,12 +21,14 @@ class SidePopupControllerTest : BasePlatformTestCase() {
     private val owners = mutableListOf<Disposable>()
     private var builds = 0
     private var places = 0
+    private val bodies = mutableListOf<Disposable>()
 
     override fun setUp() {
         super.setUp()
         timers = TestUiTimers()
         builds = 0
         places = 0
+        bodies.clear()
     }
 
     override fun tearDown() {
@@ -80,6 +82,11 @@ class SidePopupControllerTest : BasePlatformTestCase() {
         assertNull(field<Any>(controller, "target"))
         assertNull(field<Disposable>(controller, "guard"))
         assertFalse(controller.showing())
+        // The body was built before placement failed, and chat bodies hang editors off it, so a popup
+        // that never opened still has to release it.
+        val body = bodies.single()
+        assertTrue("the unplaced body must be disposed", Disposer.isDisposed(body))
+        assertNull(field<Disposable>(controller, "body"))
     }
 
     fun `test guard is released and replaced across hover cycles`() {
@@ -180,6 +187,7 @@ class SidePopupControllerTest : BasePlatformTestCase() {
 
     private fun content(): SidePopupContent {
         val disposable = Disposer.newDisposable("body")
+        bodies.add(disposable)
         return object : SidePopupContent {
             override val component: JComponent = JPanel()
             override val disposable: Disposable = disposable
