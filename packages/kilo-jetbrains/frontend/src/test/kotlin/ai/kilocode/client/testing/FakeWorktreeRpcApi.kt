@@ -54,9 +54,13 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val ghCalls = CopyOnWriteArrayList<String>()
     /** The `github` flag of each [ghStatus] call, positionally matching [ghCalls]. */
     val ghFlags = CopyOnWriteArrayList<Boolean>()
+    /** The `maxAge` ceiling of each [ghStatus] call, positionally matching [ghCalls]. */
+    val ghAges = CopyOnWriteArrayList<Long?>()
     /** Each [branchStatus] call as directory to `github` flag. */
     val branchCalls = CopyOnWriteArrayList<Pair<String, Boolean>>()
     val prCalls = CopyOnWriteArrayList<String>()
+    /** The `maxAge` ceiling of each [prStatus] call, positionally matching [prCalls]. */
+    val prAges = CopyOnWriteArrayList<Long?>()
     val statsCalls = CopyOnWriteArrayList<String>()
     val dirtyCalls = CopyOnWriteArrayList<String>()
     var beforeCreate: suspend () -> Unit = {}
@@ -108,18 +112,20 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         return dirtyResult
     }
 
-    override suspend fun ghStatus(directory: String, github: Boolean): GhAvailability {
+    override suspend fun ghStatus(directory: String, github: Boolean, maxAge: Long?): GhAvailability {
         assertNotEdt("ghStatus")
         ghCalls.add(directory)
         ghFlags.add(github)
+        ghAges.add(maxAge)
         beforeGhStatus()
         if (!github) return if (ghResult == GhAvailability.GIT_MISSING) ghResult else GhAvailability.OK
         return ghResult
     }
 
-    override suspend fun prStatus(directory: String): WorktreePrListDto {
+    override suspend fun prStatus(directory: String, maxAge: Long?): WorktreePrListDto {
         assertNotEdt("prStatus")
         prCalls.add(directory)
+        prAges.add(maxAge)
         // Snapshot before the gate so a call held open answers with what was configured when it
         // started, letting a test stage a newer result for the calls that follow.
         val answer = prResult
@@ -127,7 +133,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         return answer
     }
 
-    override suspend fun branchStatus(directory: String, github: Boolean): BranchStatusDto {
+    override suspend fun branchStatus(directory: String, github: Boolean, maxAge: Long?): BranchStatusDto {
         assertNotEdt("branchStatus")
         branchCalls.add(directory to github)
         branchThrows?.let { throw it }

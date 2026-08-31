@@ -67,6 +67,25 @@ class GhBannerTest : BasePlatformTestCase() {
         assertNotNull(edt { links(banner).singleOrNull { it.text == "Learn more" } })
     }
 
+    fun `test banner explains a spent github budget and says it recovers on its own`() {
+        edt { service.report(project, GhAvailability.RATE_LIMITED) }
+        pump()
+
+        val banner = edt { GhBanner(project, testRootDisposable) }
+
+        // The badges are stale rather than gone, and there is nothing to authorize or install, so the
+        // banner explains the wait instead of offering an action that would not help.
+        assertTrue(edt { banner.isVisible })
+        assertEquals(
+            "GitHub is rate limiting this token, so pull request badges may be out of date. Kilo retries automatically.",
+            edt { banner.text },
+        )
+        assertNotNull(edt { links(banner).singleOrNull { it.text == "Learn more" } })
+        assertTrue(edt { links(banner).none { it.text == "Authorize" } })
+        // Still a gh problem, so opting out of gh entirely remains on offer.
+        assertNotNull(edt { links(banner).singleOrNull { it.text == "Turn off GitHub integration" } })
+    }
+
     fun `test banner hides immediately when coordinator reports ok`() {
         rpc.ghResult = GhAvailability.UNAUTH
         val banner = edt { GhBanner(project, testRootDisposable) }

@@ -95,10 +95,13 @@ internal class ChangesPanel @RequiresEdt constructor(
         }
         if (state == next) return
         state = next
-        val tip = if (base.isBlank()) {
-            KiloBundle.message("worktree.stats.tooltip", files, additions, deletions)
-        } else {
-            KiloBundle.message("worktree.stats.base.tooltip", files, additions, deletions, base)
+        // A compact summary sits inside a row that already prints the file count and the +/- lines, so
+        // its tooltip only has to say what a click does. The full form is the one that can be squeezed
+        // out of a narrow header, and it keeps the counts and the base branch.
+        val tip = when {
+            mode == Mode.COMPACT -> KiloBundle.message("worktree.stats.tooltip.open")
+            base.isBlank() -> KiloBundle.message("worktree.stats.tooltip", files, additions, deletions)
+            else -> KiloBundle.message("worktree.stats.base.tooltip", files, additions, deletions, base)
         }
         this.base.update(files, additions, deletions, tip)
         local?.update(
