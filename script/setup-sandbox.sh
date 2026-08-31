@@ -41,11 +41,11 @@ setup_java() {
 
   if command -v apt-get >/dev/null 2>&1; then
     echo "Installing openjdk-21-jdk-headless..."
-    apt-get update -qq
-    apt-get install -y -qq openjdk-21-jdk-headless
-    if has_java21; then
-      echo "Java 21: installed"
-      return
+    if apt-get update -qq && apt-get install -y -qq openjdk-21-jdk-headless; then
+      if has_java21; then
+        echo "Java 21: installed"
+        return
+      fi
     fi
   fi
 
@@ -54,13 +54,26 @@ setup_java() {
 
 extract_intercept_ca() {
   rm -f "$state_dir"/chain-*.pem
-  echo | openssl s_client -connect github.com:443 -showcerts 2>/dev/null |
+  local chain
+  # Only trust a chain that verifies against the system trust store. Otherwise an
+  # attacker who can intercept DNS/TCP during bootstrap could feed a self-signed
+  # chain that we then install as the global CA for git and the JVM.
+  # -verify_return_error stops on any verification failure; -verify_hostname
+  # pins the leaf to github.com.
+  if ! chain="$(echo | openssl s_client -connect github.com:443 -showcerts \
+    -verify_return_error -verify_hostname github.com 2>/dev/null)"; then
+    echo "Warning: could not verify the github.com TLS chain against the system trust store; not trusting any intercept CA" >&2
+    return 1
+  fi
+  echo "$chain" |
     awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' |
     awk 'BEGIN { n=0 } /BEGIN CERT/ { n++ } { print > "'"$state_dir"'/chain-" n ".pem" }'
   for f in "$state_dir"/chain-*.pem; do
     [ -e "$f" ] || continue
+    # -F: the issuer DN is compared as a literal string, not a regex (DNs can
+    # contain `.`, `+`, `(`, etc.)
     if openssl x509 -in "$f" -noout -subject 2>/dev/null |
-      grep -q "$(openssl x509 -in "$f" -noout -issuer 2>/dev/null | sed 's/^issuer=//')"; then
+      grep -qF "$(openssl x509 -in "$f" -noout -issuer 2>/dev/null | sed 's/^issuer=//')"; then
       echo "$f"
       return
     fi
@@ -104,14 +117,17 @@ setup_ca() {
   fi
 
   if command -v java >/dev/null 2>&1 && command -v keytool >/dev/null 2>&1; then
-    local cacerts
+    local cacerts alias_name
+    alias_name="kilocode-sandbox-intercept"
     cacerts="$(dirname "$(readlink -f "$(command -v java)")")/../lib/security/cacerts"
     if [ -f "$cacerts" ]; then
-      if ! keytool -importcert -noprompt -alias kilocode-sandbox-intercept \
+      # A changed proxy CA between runs must replace the stale certificate; an
+      # import into an existing alias fails, so drop the alias first. Best-effort
+      # delete: a fresh keystore has no alias yet.
+      keytool -delete -alias "$alias_name" -keystore "$cacerts" -storepass changeit >/dev/null 2>&1 || true
+      if ! keytool -importcert -noprompt -alias "$alias_name" \
         -file "$intercept" -keystore "$cacerts" -storepass changeit >/dev/null 2>&1; then
-        if ! keytool -list -alias kilocode-sandbox-intercept -keystore "$cacerts" -storepass changeit >/dev/null 2>&1; then
-          echo "Warning: could not import CA into JVM cacerts ($cacerts)"
-        fi
+        echo "Warning: could not import CA into JVM cacerts ($cacerts)"
       fi
     fi
   fi
