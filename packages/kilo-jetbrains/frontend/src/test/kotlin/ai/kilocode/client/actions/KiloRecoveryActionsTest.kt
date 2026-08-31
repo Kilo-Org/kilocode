@@ -27,9 +27,11 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Suppress("UnstableApiUsage")
 class KiloRecoveryActionsTest : BasePlatformTestCase() {
@@ -355,8 +357,12 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         await(call)
         assertEquals(1, rpc.setupScriptTargetCalls.size)
 
+        // The fake reads setupScriptExists after the gate, so flipping it here makes the released
+        // background lookup cache "missing" itself. Writing the cache from the test instead would
+        // race that write and lose whenever the coroutine resumed first.
+        rpc.setupScriptExists = false
         gate.complete(Unit)
-        service().setupScript["/test"] = SetupScriptTargetDto("/test/.kilo/setup-script", "/test/.kilo/setup-script", false)
+        assertTrue("background refresh never cached the resolved target", cached("/test") { !it.exists })
 
         val next = event(action, workspace = workspace("/test"))
         update(action, next)
@@ -445,6 +451,14 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
 
     private fun await(signal: CompletableDeferred<Unit>) = runBlocking {
         withTimeout(5_000) { signal.await() }
+    }
+
+    /** Waits for the background setup-script lookup to publish a target matching [want]. */
+    private fun cached(dir: String, want: (SetupScriptTargetDto) -> Boolean): Boolean = runBlocking {
+        withTimeoutOrNull(5_000) {
+            while (service().setupScript[dir]?.let(want) != true) delay(5)
+            true
+        } == true
     }
 
     private fun service(): KiloWorkspaceService = ApplicationManager.getApplication().getService(KiloWorkspaceService::class.java)
