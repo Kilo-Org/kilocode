@@ -31,7 +31,7 @@ If you want to use a private/local inference source, you can:
 1. Set your **main model** to a non-`kilo-auto` provider — a local model (Ollama, LM Studio) or a direct BYOK provider key.
 2. Explicitly set **`small_model`** to a model on that same provider. If you leave it unset while signed in to Kilo Gateway, it falls back to [`kilo-auto/small`](/docs/gateway/models-and-providers#kilo-autosmall) rather than reusing your main model.
 3. Leave **`subagent_model`** unset — it always inherits your main model rather than defaulting to Kilo Gateway, whether or not you're signed in.
-4. For **autocomplete**, switch the provider to a direct Mistral or Inception BYOK key (see the warning below) or disable autocomplete.
+4. For **autocomplete**, switch the provider to a direct Mistral or Inception BYOK key or disable autocomplete.
 
 {% callout type="note" %}
 You can ensure no inference will go through the Kilo Gateway by logging out of the Kilo Gateway in the IDE extension or TUI.
