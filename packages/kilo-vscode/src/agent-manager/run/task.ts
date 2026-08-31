@@ -46,11 +46,7 @@ export async function startVscodeRunTask(config: RunTaskConfig, done: (exit: Run
   }
 
   const execution = await vscode.tasks.executeTask(task)
-  const ended: { resolve?: () => void; reject?: (error: Error) => void } = {}
-  const exit = new Promise<void>((resolve, reject) => {
-    ended.resolve = resolve
-    ended.reject = reject
-  })
+  const ended = Promise.withResolvers<void>()
   let closed = false
   let cleaned = false
   let grace: ReturnType<typeof setTimeout> | undefined
@@ -61,14 +57,14 @@ export async function startVscodeRunTask(config: RunTaskConfig, done: (exit: Run
     processListener.dispose()
     endListener.dispose()
     if (grace) clearTimeout(grace)
-    if (!closed) ended.resolve?.()
+    if (!closed) ended.resolve()
   }
 
   const finish = (exit: RunTaskExit = {}) => {
     if (closed) return
     closed = true
     cleanup()
-    ended.resolve?.()
+    ended.resolve()
     done(exit)
   }
 
@@ -89,10 +85,10 @@ export async function startVscodeRunTask(config: RunTaskConfig, done: (exit: Run
       if (closed) return
       execution.terminate()
       const timeout = setTimeout(() => {
-        ended.reject?.(new Error(`Run task did not stop: ${config.branch}`))
+        ended.reject(new Error(`Run task did not stop: ${config.branch}`))
       }, STOP_TIMEOUT_MS)
       try {
-        await exit
+        await ended.promise
       } finally {
         clearTimeout(timeout)
       }
