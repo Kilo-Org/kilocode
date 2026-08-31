@@ -32,10 +32,11 @@ describe("messageShape", () => {
   test("summarizes roles and part sequences without content", () => {
     const shape = KiloMessageDiagnostics.messageShape(messages)
     expect(shape).toEqual([
-      { index: 0, role: "user", parts: [], providerOptions: undefined },
+      { index: 0, role: "user", contentKind: "string", parts: [], providerOptions: undefined },
       {
         index: 1,
         role: "assistant",
+        contentKind: "array",
         parts: [
           { type: "reasoning" },
           { type: "text" },
@@ -46,12 +47,14 @@ describe("messageShape", () => {
       {
         index: 2,
         role: "tool",
+        contentKind: "array",
         parts: [{ type: "tool-result", toolCallId: "call-1", toolName: "grep" }],
         providerOptions: undefined,
       },
       {
         index: 3,
         role: "assistant",
+        contentKind: "array",
         parts: [{ type: "tool-call", toolCallId: "call-2", toolName: "write" }],
         providerOptions: undefined,
       },
@@ -67,6 +70,35 @@ describe("messageShape", () => {
       },
     ])
     expect(shape[0]?.providerOptions).toEqual(["cacheControl"])
+  })
+
+  test("distinguishes absent content from string content", () => {
+    const shape = KiloMessageDiagnostics.messageShape([
+      { role: "user", content: "plain text" } as ModelMessage,
+      { role: "assistant", content: [{ type: "text", text: "hi" }] },
+      { role: "user" } as ModelMessage,
+    ])
+    expect(shape.map((s) => s.contentKind)).toEqual(["string", "array", "absent"])
+    expect(shape[0]?.parts).toEqual([])
+    expect(shape[2]?.parts).toEqual([])
+  })
+
+  test("degrades malformed runtime parts instead of throwing", () => {
+    // The messages failed schema validation, so parts may be null/primitives at
+    // runtime. Diagnostics on the failure path must never throw.
+    const malformed = {
+      role: "assistant",
+      content: [null, 42, "bare-string", { type: "tool-call" }, { type: "text" }],
+    } as unknown as ModelMessage
+    const shape = KiloMessageDiagnostics.messageShape([malformed])
+    expect(shape[0]?.contentKind).toBe("array")
+    expect(shape[0]?.parts).toEqual([
+      { type: "null" },
+      { type: "42" },
+      { type: "bare-string" },
+      { type: "tool-call", toolCallId: "undefined", toolName: "undefined" },
+      { type: "text" },
+    ])
   })
 })
 
@@ -88,6 +120,17 @@ describe("toolPairing", () => {
     ])
     expect(pairing.totalToolCalls).toBe(0)
     expect(pairing.orphanResultIds).toEqual(["ghost"])
+  })
+
+  test("skips malformed parts instead of throwing", () => {
+    const pairing = KiloMessageDiagnostics.toolPairing([
+      {
+        role: "assistant",
+        content: [null, "nope", { type: "tool-call", toolCallId: "ok" }],
+      } as unknown as ModelMessage,
+    ])
+    expect(pairing.totalToolCalls).toBe(1)
+    expect(pairing.unmatchedCallIds).toEqual(["ok"])
   })
 })
 
