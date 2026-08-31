@@ -6,6 +6,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
@@ -65,6 +66,20 @@ class HeaderPopupBodyTest : BasePlatformTestCase() {
         assertEquals(JBUI.scale(100), body.component.preferredSize.width)
     }
 
+    fun `test a row body asks for the width its children need side by side, up to the max`() {
+        val row = BorderLayoutPanel().apply {
+            addToLeft(box(60))
+            addToCenter(box(200))
+            addToRight(box(40))
+        }
+
+        // A header line carries a state pill, a title, and a toolbar: the widest child (200) is not the
+        // width it needs, and a body measured that way clips its own title.
+        assertEquals(JBUI.scale(300), HeaderPopupBody(row, owner(), UIUtil.getPanelBackground(), maxWidth = 600).component.preferredSize.width)
+        // The cap is still the ceiling, whichever way the width was measured.
+        assertEquals(JBUI.scale(120), HeaderPopupBody(row, owner(), UIUtil.getPanelBackground(), maxWidth = 120).component.preferredSize.width)
+    }
+
     fun `test a sideways scrolling body reserves the bar and a band around it`() {
         val wide = JPanel().apply { preferredSize = Dimension(JBUI.scale(900), JBUI.scale(80)) }
         val plain = HeaderPopupBody(wide, owner(), UIUtil.getPanelBackground(), maxWidth = 300)
@@ -88,6 +103,8 @@ class HeaderPopupBodyTest : BasePlatformTestCase() {
         // never appears.
         assertEquals(JBUI.scale(80) + JBUI.scale(SessionUiStyle.View.Popup.SCROLL_PADDING) * 2, body.component.preferredSize.height)
     }
+
+    private fun box(width: Int) = JPanel().apply { preferredSize = Dimension(JBUI.scale(width), JBUI.scale(20)) }
 
     private fun owner() = Disposer.newDisposable("popup body").also { Disposer.register(testRootDisposable, it) }
 

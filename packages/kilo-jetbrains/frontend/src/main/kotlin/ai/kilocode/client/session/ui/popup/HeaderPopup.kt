@@ -124,7 +124,13 @@ private class HeaderPopupPanel(
         is Container -> {
             val kids = item.components
             if (kids.isEmpty()) (item as? JComponent)?.preferredSize?.width ?: 0
-            else (kids.maxOfOrNull(::contentWidth) ?: 0) + horiz((item as? JComponent)?.insets)
+            // The widest child is the answer for a column, but a row needs all of its children side by
+            // side and only its own layout knows that. Take whichever is wider; the popup's max width is
+            // what keeps the result bounded either way.
+            else maxOf(
+                (kids.maxOfOrNull(::contentWidth) ?: 0) + horiz((item as? JComponent)?.insets),
+                item.preferredSize.width,
+            )
         }
         else -> 0
     }
