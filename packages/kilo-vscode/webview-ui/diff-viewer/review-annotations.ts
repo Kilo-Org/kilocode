@@ -1,4 +1,5 @@
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
+import type { UiI18nParams } from "@kilocode/kilo-ui/context"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { extractLines, type ReviewComment } from "./review-comments"
 import type { ReviewCommentEntry } from "../src/types/messages"
@@ -17,7 +18,7 @@ export interface AnnotationLabels {
   delete: string
 }
 
-export function labels(t: (key: string, params?: Record<string, string | number>) => string): AnnotationLabels {
+export function labels(t: (key: string, params?: UiI18nParams) => string): AnnotationLabels {
   return {
     commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
     editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
@@ -99,7 +100,7 @@ interface AnnotationHandlers {
   deleteComment: (id: string) => void
   cancelDraft: () => void
   labels: AnnotationLabels
-  activeTerminalId?: string
+  activeTerminalId: () => string | undefined
   speech?: {
     active: () => boolean
     render: (meta: AnnotationMeta, textarea: HTMLTextAreaElement) => HTMLElement | undefined
@@ -440,7 +441,7 @@ export function buildReviewAnnotation(
 
   actions.appendChild(
     makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
-      sendReviewComments([comment], handlers.activeTerminalId)
+      sendReviewComments([comment], handlers.activeTerminalId())
       handlers.deleteComment(comment.id)
     }),
   )

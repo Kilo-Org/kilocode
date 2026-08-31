@@ -10,13 +10,7 @@ import type { BrowserFeedbackData } from "../../../../src/shared/browser-feedbac
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
-import type {
-  ClearLegacyDataMessage,
-  FinalizeLegacyMigrationMessage,
-  RequestMigrationDataMessage,
-  SkipLegacyMigrationMessage,
-  StartMigrationMessage,
-} from "./migration"
+import type { RequestMigrationDataMessage, StartMigrationMessage } from "./migration"
 import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
 import type { Activity } from "../../utils/session-activity"
 
@@ -1694,13 +1688,8 @@ export type WebviewMessage =
   | RefreshPRMessage
   | OpenPRMessage
   | CommentActionMessage
-  // legacy-migration start
   | RequestMigrationDataMessage
   | StartMigrationMessage
-  | SkipLegacyMigrationMessage
-  | ClearLegacyDataMessage
-  | FinalizeLegacyMigrationMessage
-  // legacy-migration end
   | ApplyWorktreeDiffMessage
   | RevertWorktreeFileMessage
   | EnhancePromptRequest

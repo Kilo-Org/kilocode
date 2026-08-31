@@ -82,7 +82,6 @@ import type {
   MigrationDataMessage,
   MigrationProgressMessage,
   MigrationSessionProgressMessage,
-  MigrationStateMessage,
 } from "./migration"
 import type { MemoryEventMessage, MemoryLoadedMessage, MemoryOperationResultMessage } from "./memory"
 
@@ -1636,13 +1635,10 @@ export type ExtensionMessage =
   | AgentManagerTerminalErrorMessage
   | AgentManagerTerminalDestinationChangedMessage
   | AgentManagerScriptTerminalsMessage
-  // legacy-migration start
-  | MigrationStateMessage
   | MigrationDataMessage
   | MigrationProgressMessage
   | MigrationSessionProgressMessage
   | MigrationCompleteMessage
-  // legacy-migration end
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
   | ViewSubAgentSessionMessage
