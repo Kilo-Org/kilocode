@@ -192,7 +192,7 @@ jobs:
       - name: Run cross-platform PTY service tests
         if: matrix.settings.run && matrix.settings.pty
         working-directory: packages/core
-        run: bun test test/kilocode/pty-platform.test.ts --timeout 60000
+        run: bun test test/kilocode/pty-platform.test.ts test/kilocode/pty-smoke.test.ts --timeout 60000
 
       - name: Run cross-platform PTY route tests
         if: matrix.settings.run && matrix.settings.pty
