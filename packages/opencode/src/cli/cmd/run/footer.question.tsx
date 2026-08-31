@@ -19,7 +19,6 @@ import { For, Show, createEffect, createMemo, createSignal } from "solid-js"
 import type { QuestionRequest } from "@kilocode/sdk/v2"
 import {
   createQuestionBodyState,
-  questionAdvance, // kilocode_change
   questionConfirm,
   questionCustom,
   questionInfo,
@@ -41,6 +40,7 @@ import {
   questionTabs,
   questionTotal,
 } from "./question.shared"
+import { questionAdvance } from "@/kilocode/cli/cmd/run/question.shared" // kilocode_change
 import { footerWidthPolicy } from "./footer.width"
 import type { RunFooterTheme } from "./theme"
 import type { QuestionReject, QuestionReply } from "./types"
