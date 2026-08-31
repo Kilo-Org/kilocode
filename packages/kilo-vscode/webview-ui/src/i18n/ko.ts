@@ -63,6 +63,13 @@ export const dict = {
 
   "command.provider.connect": "공급자 연결",
 
+  "session.activity.waiting": "답변 또는 승인을 기다리는 중입니다.",
+  "session.activity.error": "오류 또는 연결 끊김.",
+  "session.activity.retry": "자동으로 재시도하는 중입니다.",
+  "session.activity.busy": "진행 중입니다.",
+  "session.activity.done": "턴이 완료되었습니다.",
+  "session.activity.idle": "실행 중이 아닙니다.",
+
   "command.session.new": "새 세션",
   "command.session.show.changes": "변경 사항 보기",
   "command.review.toggle": "검토 토글",
@@ -181,6 +188,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktree 검색",
   "prompt.thinking.tooltip": "추론 강도",
   "prompt.action.send": "전송",
+  "prompt.action.continue": "계속",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
@@ -876,6 +884,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
+  "settings.experimental.taskModelSelection.title": "Task 하위 에이전트 모델 선택",
+  "settings.experimental.taskModelSelection.description":
+    "Task 하위 에이전트에 대해 모델, 제공자 및 추론 수준을 명시적으로 선택합니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
@@ -1231,6 +1242,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} 할 일 완료",
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
+  "task.backgroundAgents.more": "+{{count}}개 더",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",

@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Sağlayıcı bağla",
 
+  "session.activity.waiting": "Yanıt veya onay bekleniyor.",
+  "session.activity.error": "Hata veya bağlantı kaybı.",
+  "session.activity.retry": "Otomatik olarak yeniden deneniyor.",
+  "session.activity.busy": "Devam ediyor.",
+  "session.activity.done": "Tur tamamlandı.",
+  "session.activity.idle": "Çalışmıyor.",
+
   "command.session.new": "Yeni oturum",
   "command.session.show.changes": "Değişiklikleri Göster",
   "command.review.toggle": "İncelemeyi aç/kapat",
@@ -178,6 +185,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktree'leri ara",
   "prompt.thinking.tooltip": "Akıl yürütme eforu",
   "prompt.action.send": "Gönder",
+  "prompt.action.continue": "Devam et",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
@@ -875,6 +883,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
+  "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
+  "settings.experimental.taskModelSelection.description":
+    "Task alt aracıları için model, sağlayıcı ve akıl yürütme çabasını açıkça seçmeye izin verin.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -1225,6 +1236,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} görev tamamlandı",
   "task.backgroundAgents.running.one": "1 arka plan ajanı",
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
+  "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",

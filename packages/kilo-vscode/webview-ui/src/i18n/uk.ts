@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Підключити провайдера",
 
+  "session.activity.waiting": "Очікується відповідь або підтвердження.",
+  "session.activity.error": "Помилка або втрата з'єднання.",
+  "session.activity.retry": "Автоматична повторна спроба.",
+  "session.activity.busy": "Виконується.",
+  "session.activity.done": "Хід завершено.",
+  "session.activity.idle": "Не запущено.",
+
   "command.session.new": "Нова сесія",
   "command.session.show.changes": "Показати зміни",
   "command.review.toggle": "Перемкнути огляд",
@@ -179,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
   "prompt.action.send": "Надіслати",
+  "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
@@ -876,6 +884,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
+  "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
+  "settings.experimental.taskModelSelection.description":
+    "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1224,6 +1235,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} завдань виконано",
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
+  "task.backgroundAgents.more": "+{{count}} ще",
   "task.backgroundAgents.open": "Відкрити фонового агента",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",

@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Connecter un fournisseur",
 
+  "session.activity.waiting": "En attente d’une réponse ou d’une approbation.",
+  "session.activity.error": "Erreur ou connexion perdue.",
+  "session.activity.retry": "Nouvelle tentative automatique.",
+  "session.activity.busy": "En cours.",
+  "session.activity.done": "Tour terminé.",
+  "session.activity.idle": "Inactif.",
+
   "command.session.new": "Nouvelle session",
   "command.session.show.changes": "Afficher les modifications",
   "command.review.toggle": "Basculer la revue",
@@ -179,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "Rechercher des Worktrees",
   "prompt.thinking.tooltip": "Effort de raisonnement",
   "prompt.action.send": "Envoyer",
+  "prompt.action.continue": "Continuer",
   "prompt.action.send.blocked": "Répondez ou rejetez d'abord la question en attente",
   "prompt.action.send.recording": "Transcrire et envoyer",
   "prompt.action.stop": "Arrêter",
@@ -907,6 +915,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
   "settings.experimental.multiProject.description":
     "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
+  "settings.experimental.taskModelSelection.title": "Sélection du modèle des sous-agents Task",
+  "settings.experimental.taskModelSelection.description":
+    "Permet de sélectionner explicitement le modèle, le fournisseur et l'effort de raisonnement des sous-agents Task.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
@@ -1289,6 +1300,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} tâches terminées",
   "task.backgroundAgents.running.one": "1 agent en arrière-plan",
   "task.backgroundAgents.running.many": "{{count}} agents en arrière-plan",
+  "task.backgroundAgents.more": "+{{count}} de plus",
   "task.backgroundAgents.open": "Ouvrir l'agent en arrière-plan",
   "task.backgroundAgents.cancel": "Arrêter",
   "task.backgroundAgents.continueInBackground": "Continuer en arrière-plan",

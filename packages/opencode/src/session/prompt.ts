@@ -89,6 +89,7 @@ import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
+import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1496,6 +1497,7 @@ export const layer = Layer.effect(
         const { user: lastUser, assistant: lastAssistant, finished: lastFinished, tasks } = latest
         // kilocode_change end
 
+        if (input.resume && step === 0 && KiloSessionContinuation.target(msgs) !== input.resume) break // kilocode_change
         if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
 
         const lastAssistantMsg = msgs.findLast(
@@ -1542,6 +1544,7 @@ export const layer = Layer.effect(
         if (
           lastAssistant?.finish &&
           !["tool-calls"].includes(lastAssistant.finish) &&
+          lastAssistant.id !== input.resume && // kilocode_change
           !hasToolCalls &&
           lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn
           userBeforeAssistant // kilocode_change - compare chronology, not generated IDs
@@ -1773,6 +1776,7 @@ export const layer = Layer.effect(
             system,
             messages: [
               ...modelMsgs,
+              ...KiloSessionContinuation.context(!!input.resume && step === 1), // kilocode_change
               ...(isLastStep ? [{ role: "user" as const, content: MAX_STEPS_PROMPT }] : []), // kilocode_change - avoid provider-incompatible assistant prefill
             ],
             tools,
@@ -1912,9 +1916,11 @@ export const layer = Layer.effect(
     )(function* (input: LoopInput) {
       // kilocode_change start
       const session = yield* sessions.get(input.sessionID)
-      yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
-      yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
-      yield* KiloSessionPrompt.recoverFailedAssistant({ sessionID: input.sessionID, status, sessions })
+      if (!input.resume) {
+        yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
+        yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
+        yield* KiloSessionPrompt.recoverFailedAssistant({ sessionID: input.sessionID, status, sessions })
+      }
       yield* KiloSession.publishTurnOpen({ sessionID: input.sessionID })
       return yield* Effect.onExit(
         state.ensureRunning(
@@ -2540,6 +2546,7 @@ export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" |
 
 export class LoopInput extends Schema.Class<LoopInput>("SessionPrompt.LoopInput")({
   sessionID: SessionID,
+  resume: Schema.optional(MessageID), // kilocode_change
   snapshotInitialization: Schema.optional(Schema.Literal("wait")), // kilocode_change
 }) {
   static readonly zod = zod(this)

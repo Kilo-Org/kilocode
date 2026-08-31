@@ -58,6 +58,13 @@ export const dict = {
 
   "command.provider.connect": "Connect provider",
 
+  "session.activity.waiting": "Waiting for an answer or approval.",
+  "session.activity.error": "Error or connection lost.",
+  "session.activity.retry": "Retrying automatically.",
+  "session.activity.busy": "In progress.",
+  "session.activity.done": "Turn completed.",
+  "session.activity.idle": "Not running.",
+
   "command.session.new": "New session",
   "command.session.show.changes": "Show Changes",
   "command.review.toggle": "Toggle review",
@@ -178,6 +185,7 @@ export const dict = {
   "prompt.worktrees.search": "Search worktrees",
   "prompt.thinking.tooltip": "Reasoning effort",
   "prompt.action.send": "Send",
+  "prompt.action.continue": "Continue",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",
   "prompt.action.stop": "Stop",
@@ -865,6 +873,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
   "settings.experimental.multiProject.description":
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
+  "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
+  "settings.experimental.taskModelSelection.description":
+    "Allow task subagents to use an explicitly selected model, provider, and reasoning effort.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
@@ -1244,6 +1255,7 @@ export const dict = {
   "task.backgroundAgents.dismiss": "Dismiss",
   "task.backgroundAgents.clearFinished": "Clear finished",
   "task.backgroundAgents.summary": "{{running}} of {{total}} background agents running",
+  "task.backgroundAgents.more": "+{{count}} more",
   "task.backgroundAgents.status.running": "Running",
   "task.backgroundAgents.status.completed": "Done",
   "task.backgroundAgents.status.cancelled": "Cancelled",

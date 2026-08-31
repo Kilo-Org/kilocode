@@ -1057,6 +1057,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           post: (msg) => this.postMessage(msg),
           browserSettings: () => this.sendBrowserSettings(),
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
+          resume: (sessionID, messageID, requestID) => this.handleResumeSession(sessionID, messageID, requestID),
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
           activity: (state) => {
@@ -1168,7 +1169,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.checkpoint(message.sessionID, () => this.handleUnrevertSession(message.sessionID))
           break
         case "deleteMessage":
-          await this.handleDeleteMessage(message.sessionID, message.messageID)
+          await this.handleDeleteMessage(message.sessionID, message.messageID, message.requestID)
           break
         case "permissionResponse":
           await handlePermissionResponse(
@@ -2462,17 +2463,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async handleDeleteMessage(sessionID: string, messageID: string): Promise<void> {
-    if (!this.client) {
+  private async handleDeleteMessage(sessionID: string, messageID: string, requestID?: string): Promise<void> {
+    const result = {
+      type: "deleteMessageResult" as const,
+      sessionID,
+      messageID,
+      ...(requestID !== undefined ? { requestID } : {}),
+    }
+    const client = this.client
+    if (!client) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend", sessionID })
+      this.postMessage({ ...result, success: false })
       return
     }
 
     try {
-      await this.client.session.deleteMessage(
-        { sessionID, messageID, directory: this.getWorkspaceDirectory(sessionID) },
+      const response = await client.session.deleteMessage(
+        { sessionID, messageID, directory: this.getWorkspaceDirectory(sessionID), queued: true },
         { throwOnError: true },
       )
+      this.postMessage({ ...result, success: response.data === true })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to delete message:", error)
       this.postMessage({
@@ -2480,6 +2490,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         message: getErrorMessage(error) || "Failed to delete message",
         sessionID,
       })
+      this.postMessage({ ...result, success: false })
     }
   }
 
@@ -4241,6 +4252,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return this.aborts.stop(client, sid, dir, (dir, action) =>
       this.connectionService.runExplicitAbort(sid, dir, action),
     )
+  }
+
+  private async handleResumeSession(sessionID: string, messageID: string, requestID: string): Promise<void> {
+    try {
+      if (!this.client) throw new Error("Not connected to CLI backend")
+      const directory = this.getWorkspaceDirectory(sessionID)
+      await this.checkpoints.get(sessionID)
+      await this.client.kilocode.resumeSession(
+        { sessionID, messageID, directory, snapshotInitialization: this.opts.snapshotInitialization },
+        { throwOnError: true },
+      )
+      this.postMessage({ type: "sessionResumeResult", sessionID, requestID })
+    } catch (error) {
+      console.error("[Kilo New] Failed to resume session:", error)
+      this.postMessage({
+        type: "sessionResumeResult",
+        sessionID,
+        requestID,
+        error: getErrorMessage(error) || "Failed to resume session",
+      })
+    }
   }
 
   private async handleAbort(sessionID?: string): Promise<void> {

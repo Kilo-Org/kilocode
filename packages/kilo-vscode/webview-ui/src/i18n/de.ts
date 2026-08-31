@@ -65,6 +65,13 @@ export const dict = {
 
   "command.provider.connect": "Anbieter verbinden",
 
+  "session.activity.waiting": "Warten auf eine Antwort oder Genehmigung.",
+  "session.activity.error": "Fehler oder Verbindung verloren.",
+  "session.activity.retry": "Automatischer erneuter Versuch.",
+  "session.activity.busy": "In Bearbeitung.",
+  "session.activity.done": "Turn abgeschlossen.",
+  "session.activity.idle": "Nicht aktiv.",
+
   "command.session.new": "Neue Sitzung",
   "command.session.show.changes": "Änderungen anzeigen",
   "command.review.toggle": "Überprüfung umschalten",
@@ -184,6 +191,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktrees durchsuchen",
   "prompt.thinking.tooltip": "Reasoning-Aufwand",
   "prompt.action.send": "Senden",
+  "prompt.action.continue": "Fortsetzen",
   "prompt.action.send.blocked": "Beantworten oder verwerfen Sie zuerst die ausstehende Frage",
   "prompt.action.send.recording": "Transkribieren und senden",
   "prompt.action.stop": "Stopp",
@@ -905,6 +913,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
   "settings.experimental.multiProject.description":
     "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
+  "settings.experimental.taskModelSelection.title": "Task-Subagent-Modellauswahl",
+  "settings.experimental.taskModelSelection.description":
+    "Erlaubt die explizite Auswahl von Modell, Anbieter und Schlussfolgerungsaufwand für Task-Subagenten.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",
@@ -1281,6 +1292,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} Aufgaben erledigt",
   "task.backgroundAgents.running.one": "1 Hintergrund-Agent",
   "task.backgroundAgents.running.many": "{{count}} Hintergrund-Agenten",
+  "task.backgroundAgents.more": "+{{count}} weitere",
   "task.backgroundAgents.open": "Hintergrund-Agent öffnen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Im Hintergrund fortsetzen",

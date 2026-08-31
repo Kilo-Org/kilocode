@@ -60,6 +60,13 @@ export const dict = {
 
   "command.provider.connect": "连接提供商",
 
+  "session.activity.waiting": "正在等待回复或批准。",
+  "session.activity.error": "错误或连接已断开。",
+  "session.activity.retry": "正在自动重试。",
+  "session.activity.busy": "进行中。",
+  "session.activity.done": "回合已完成。",
+  "session.activity.idle": "未运行。",
+
   "command.session.new": "新建会话",
   "command.session.show.changes": "显示更改",
   "command.review.toggle": "切换审查",
@@ -178,6 +185,7 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "自动审批已启用。权限请求将自动获批。",
   "prompt.action.autoApprove.disabled": "自动审批已禁用。点击以自动批准权限请求。",
   "prompt.action.send": "发送",
+  "prompt.action.continue": "继续",
   "prompt.action.send.blocked": "请先回答或忽略待处理的问题",
   "prompt.action.send.recording": "转录并发送",
   "prompt.action.stop": "停止",
@@ -850,6 +858,8 @@ export const dict = {
   "settings.experimental.multiProject.title": "多项目 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
+  "settings.experimental.taskModelSelection.title": "Task 子代理模型选择",
+  "settings.experimental.taskModelSelection.description": "允许为 Task 子代理选择指定的模型、提供商和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1187,6 +1197,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} 个待办已完成",
   "task.backgroundAgents.running.one": "1 个后台智能体",
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
+  "task.backgroundAgents.more": "+{{count}} 个",
   "task.backgroundAgents.open": "打开后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",

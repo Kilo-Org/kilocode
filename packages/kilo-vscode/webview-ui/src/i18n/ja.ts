@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "プロバイダーに接続",
 
+  "session.activity.waiting": "回答または承認を待っています。",
+  "session.activity.error": "エラーまたは接続切断。",
+  "session.activity.retry": "自動的に再試行中。",
+  "session.activity.busy": "進行中。",
+  "session.activity.done": "ターン完了。",
+  "session.activity.idle": "実行されていません。",
+
   "command.session.new": "新しいセッション",
   "command.session.show.changes": "変更を表示",
   "command.review.toggle": "レビューの切り替え",
@@ -178,6 +185,7 @@ export const dict = {
   "prompt.worktrees.search": "Worktreeを検索",
   "prompt.thinking.tooltip": "推論の強度",
   "prompt.action.send": "送信",
+  "prompt.action.continue": "続行",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
@@ -879,6 +887,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
+  "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
+  "settings.experimental.taskModelSelection.description":
+    "Task サブエージェントに使用するモデル、プロバイダー、推論の労力を明示的に選択できます。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1244,6 +1255,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} タスク完了",
   "task.backgroundAgents.running.one": "バックグラウンドエージェント 1 件",
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
+  "task.backgroundAgents.more": "+{{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",

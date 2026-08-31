@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "Conectar provedor",
 
+  "session.activity.waiting": "Aguardando uma resposta ou aprovação.",
+  "session.activity.error": "Erro ou conexão perdida.",
+  "session.activity.retry": "Tentando novamente automaticamente.",
+  "session.activity.busy": "Em andamento.",
+  "session.activity.done": "Turno concluído.",
+  "session.activity.idle": "Não está em execução.",
+
   "command.session.new": "Nova sessão",
   "command.session.show.changes": "Mostrar alterações",
   "command.review.toggle": "Alternar revisão",
@@ -178,6 +185,7 @@ export const dict = {
   "prompt.worktrees.search": "Pesquisar Worktrees",
   "prompt.thinking.tooltip": "Esforço de raciocínio",
   "prompt.action.send": "Enviar",
+  "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda ou feche a pergunta pendente primeiro",
   "prompt.action.send.recording": "Transcrever e enviar",
   "prompt.action.stop": "Parar",
@@ -892,6 +900,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
   "settings.experimental.multiProject.description":
     "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",
+  "settings.experimental.taskModelSelection.title": "Seleção de modelo de subagente do Task",
+  "settings.experimental.taskModelSelection.description":
+    "Permite selecionar explicitamente o modelo, o provedor e o esforço de raciocínio dos subagentes do Task.",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",
@@ -1266,6 +1277,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} tarefas concluídas",
   "task.backgroundAgents.running.one": "1 agente em segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes em segundo plano",
+  "task.backgroundAgents.more": "+{{count}} mais",
   "task.backgroundAgents.open": "Abrir agente em segundo plano",
   "task.backgroundAgents.cancel": "Parar",
   "task.backgroundAgents.continueInBackground": "Continuar em segundo plano",

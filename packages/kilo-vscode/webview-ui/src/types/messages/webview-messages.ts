@@ -40,6 +40,13 @@ export interface SendMessageRequest {
   contextDirectory?: string
 }
 
+export interface ResumeSessionRequest {
+  type: "resumeSession"
+  sessionID: string
+  messageID: string
+  requestID: string
+}
+
 export interface AbortRequest {
   type: "abort"
   sessionID: string
@@ -80,6 +87,7 @@ export interface DeleteMessageRequest {
   type: "deleteMessage"
   sessionID: string
   messageID: string
+  requestID?: string
 }
 
 export interface PermissionResponseRequest {
@@ -1504,6 +1512,7 @@ export type WebviewMessage =
   | DocumentCloseMessage
   | DocumentSendCommentsMessage
   | SendMessageRequest
+  | ResumeSessionRequest
   | AbortRequest
   | RequestBackgroundJobsMessage
   | CancelBackgroundJobMessage

@@ -211,6 +211,8 @@ import type {
   KilocodeRemoveSkillResponses,
   KilocodeRemoveSnapshotErrors,
   KilocodeRemoveSnapshotResponses,
+  KilocodeResumeSessionErrors,
+  KilocodeResumeSessionResponses,
   KilocodeSessionImportMessageErrors,
   KilocodeSessionImportMessageResponses,
   KilocodeSessionImportPartErrors,
@@ -4682,6 +4684,7 @@ export class Session2 extends HeyApiClient {
       messageID: string
       directory?: string
       workspace?: string
+      queued?: boolean | "true" | "false"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4694,6 +4697,7 @@ export class Session2 extends HeyApiClient {
             { in: "path", key: "messageID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "queued" },
           ],
         },
       ],
@@ -8321,6 +8325,51 @@ export class SessionImport extends HeyApiClient {
 
 export class Kilocode extends HeyApiClient {
   /**
+   * Resume an interrupted session
+   *
+   * Resume the specified unfinished assistant turn without adding a user message. Active, completed, reverted, and blocked sessions cannot be resumed.
+   */
+  public resumeSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      messageID: string
+      snapshotInitialization?: "wait"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "messageID" },
+            { in: "body", key: "snapshotInitialization" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeResumeSessionResponses,
+      KilocodeResumeSessionErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session/{sessionID}/resume",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * List command files
    *
    * List commands with editable file locations for settings clients.
@@ -8481,10 +8530,10 @@ export class Kilocode extends HeyApiClient {
    * Remove the snapshot repository for an already deleted Agent Manager worktree.
    */
   public removeSnapshot<ThrowOnError extends boolean = false>(
-    parameters?: {
+    parameters: {
       directory?: string
       workspace?: string
-      worktree?: string
+      worktree: string
     },
     options?: Options<never, ThrowOnError>,
   ) {

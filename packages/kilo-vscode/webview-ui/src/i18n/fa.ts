@@ -59,6 +59,13 @@ export const dict = {
 
   "command.provider.connect": "اتصال به ارائه‌دهنده",
 
+  "session.activity.waiting": "در انتظار پاسخ یا تأیید.",
+  "session.activity.error": "خطا یا قطع اتصال.",
+  "session.activity.retry": "تلاش مجدد خودکار.",
+  "session.activity.busy": "در حال انجام.",
+  "session.activity.done": "نوبت به پایان رسید.",
+  "session.activity.idle": "در حال اجرا نیست.",
+
   "command.session.new": "جلسه جدید",
   "command.session.show.changes": "نمایش تغییرات",
   "command.review.toggle": "نمایش/پنهان کردن بررسی",
@@ -179,6 +186,7 @@ export const dict = {
   "prompt.worktrees.search": "جستجوی worktree‌ها",
   "prompt.thinking.tooltip": "میزان استدلال",
   "prompt.action.send": "ارسال",
+  "prompt.action.continue": "ادامه",
   "prompt.action.send.blocked": "ابتدا به سؤال در انتظار پاسخ دهید یا آن را رد کنید",
   "prompt.action.send.recording": "رونویسی و ارسال",
   "prompt.action.stop": "توقف",
@@ -871,6 +879,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
+  "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
+  "settings.experimental.taskModelSelection.description":
+    "انتخاب صریح مدل، ارائه‌دهنده و میزان استدلال برای زیرعامل‌های Task را فعال می‌کند.",
   "settings.experimental.mcpTimeout.title": "زمان‌وقفه MCP (میلی‌ثانیه)",
   "settings.experimental.mcpTimeout.description": "زمان‌وقفه برای درخواست‌های سرور MCP بر حسب میلی‌ثانیه",
   "settings.experimental.remote.title": "کنترل از راه دور",
@@ -1248,6 +1259,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} کار انجام شد",
   "task.backgroundAgents.running.one": "1 عامل پس‌زمینه",
   "task.backgroundAgents.running.many": "{{count}} عامل پس‌زمینه",
+  "task.backgroundAgents.more": "+{{count}} بیشتر",
   "task.backgroundAgents.open": "باز کردن عامل پس‌زمینه",
   "task.backgroundAgents.cancel": "توقف",
   "task.backgroundAgents.continueInBackground": "ادامه در پس‌زمینه",

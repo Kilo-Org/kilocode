@@ -40,6 +40,8 @@ export interface SessionContextValue {
   statusText: Accessor<string | undefined>
   busySince: Accessor<number | undefined>
   submitting: Accessor<boolean>
+  canResume: Accessor<boolean>
+  resume: () => void
   isSubmitting: (id: string) => boolean
   loading: Accessor<boolean>
   loadingOlderMessages: Accessor<boolean>
@@ -73,13 +75,14 @@ export interface SessionContextValue {
   // Tool parts for a specific session, maintained incrementally for streaming views
   getSessionToolParts: (sessionID: string) => ToolPart[]
   getSessionToolCount: (sessionID: string) => number
+  dismissedBackgroundJobs: (sessionID: string) => ReadonlySet<string>
+  dismissBackgroundJobs: (sessionID: string, ids: string[]) => void
 
   // Hidden after model changes so switching models can clear stale provider errors
   // without removing messages and their checkpoint restore actions.
   isErrorHidden: (messageID: string) => boolean
 
   // Move stashed parts into the reactive store for the given message IDs.
-  // Called by VscodeSessionTurn when the virtualizer renders a turn.
   hydrateParts: (messageIDs: string[]) => void
 
   // Todos for current session
@@ -158,7 +161,7 @@ export interface SessionContextValue {
   // Actions
   revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
-  deleteQueuedMessage: (sessionID: string, messageID: string) => void
+  deleteQueuedMessage: (sessionID: string, messageID: string) => Promise<boolean>
   sendMessage: (
     text: string,
     providerID?: string,

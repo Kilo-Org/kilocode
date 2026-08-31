@@ -60,6 +60,13 @@ export const dict = {
 
   "command.provider.connect": "連接供應商",
 
+  "session.activity.waiting": "正在等待回覆或核准。",
+  "session.activity.error": "錯誤或連線已中斷。",
+  "session.activity.retry": "正在自動重試。",
+  "session.activity.busy": "進行中。",
+  "session.activity.done": "回合已完成。",
+  "session.activity.idle": "未執行。",
+
   "command.session.new": "新增工作階段",
   "command.session.show.changes": "顯示變更",
   "command.review.toggle": "切換審查",
@@ -173,6 +180,7 @@ export const dict = {
   "prompt.worktrees.search": "搜尋 Worktree",
   "prompt.thinking.tooltip": "推理強度",
   "prompt.action.send": "傳送",
+  "prompt.action.continue": "繼續",
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",
@@ -810,6 +818,8 @@ export const dict = {
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
+  "settings.experimental.taskModelSelection.title": "Task 子代理模型選擇",
+  "settings.experimental.taskModelSelection.description": "允許為 Task 子代理選擇指定的模型、提供者和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1191,6 +1201,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} 個待辦已完成",
   "task.backgroundAgents.running.one": "1 個背景 Agent",
   "task.backgroundAgents.running.many": "{{count}} 個背景 Agent",
+  "task.backgroundAgents.more": "+{{count}} 個",
   "task.backgroundAgents.open": "開啟背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",
