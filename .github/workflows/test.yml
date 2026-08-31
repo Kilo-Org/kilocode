@@ -200,6 +200,11 @@ jobs:
         run: |
           bun test test/server/httpapi-pty.test.ts --test-name-pattern "serves Agent Manager regular terminal" --timeout 60000
           bun test test/server/httpapi-v2-pty.test.ts --test-name-pattern "serves Agent Manager script terminal" --timeout 60000
+
+      - name: Run Windows worktree cleanup regression
+        if: matrix.settings.run && matrix.settings.pty && runner.os == 'Windows'
+        working-directory: packages/kilo-vscode
+        run: bun test tests/unit/worktree-manager.test.ts --test-name-pattern "keeps a Windows worktree tracked while a live process locks its directory" --timeout 30000
       # kilocode_change end
       # kilocode_change start - ensure the Darwin profile cannot suppress its own validation
       - name: Validate Darwin CLI test profile

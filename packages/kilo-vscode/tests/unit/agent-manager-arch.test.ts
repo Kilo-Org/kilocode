@@ -612,6 +612,12 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("keeps the legacy integrated Run adapter isolated and removable", () => {
     const task = fs.readFileSync(RUN_TASK_FILE, "utf-8")
     expect(task).toContain("vscode.tasks.executeTask")
+    expect(task).toContain("execution.terminate()")
+    expect(task).toContain("Promise.withResolvers<void>()")
+    expect(task).toContain("await ended.promise")
+    expect(task).toContain("STOP_TIMEOUT_MS")
+    expect(task).toContain("ended.resolve()")
+    expect(task.indexOf("vscode.tasks.onDidEndTaskProcess")).toBeLessThan(task.indexOf("vscode.tasks.taskExecutions"))
     expect(task).toContain("Remove this")
     const dest = fs.readFileSync(RUN_DESTINATION_FILE, "utf-8")
     expect(dest).not.toContain('from "vscode"')
