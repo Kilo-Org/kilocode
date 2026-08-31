@@ -618,10 +618,14 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         val label = components(root).filterIsInstance<JBLabel>().single()
         assertEquals(KiloBundle.message("diff.editor.empty"), label.text)
         // The label keeps its preferred size and sits in the middle of both axes rather than being
-        // stretched across the viewport, which is what left-aligned it before.
+        // stretched across the viewport, which is what left-aligned it before. Centerizer computes
+        // each axis as containerSize / 2 - compSize / 2 (Couple.of in Centerizer.getFit), which is not
+        // the same as (containerSize - compSize) / 2 once compSize is odd: integer division of an odd
+        // preferred width/height rounds differently depending on grouping, and a real font on CI does
+        // produce odd label dimensions where a local build with different font metrics may not.
         val size = label.preferredSize
         assertEquals(
-            Rectangle((400 - size.width) / 2, (300 - size.height) / 2, size.width, size.height),
+            Rectangle(400 / 2 - size.width / 2, 300 / 2 - size.height / 2, size.width, size.height),
             label.bounds,
         )
     }
