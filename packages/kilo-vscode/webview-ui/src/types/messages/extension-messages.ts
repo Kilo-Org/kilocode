@@ -102,6 +102,14 @@ export interface FontSizeChangedMessage {
   fontSize: number
 }
 
+export interface DisplaySettingsChangedMessage {
+  type: "displaySettingsChanged"
+  settings: {
+    diffFontSize: number
+    diffSyntaxTheme: string
+  }
+}
+
 export interface GitStatusMessage {
   type: "gitStatus"
   repo: boolean
@@ -1438,6 +1446,7 @@ export type ExtensionMessage =
   | AgentManagerFocusContextRequestedMessage
   | ReadyMessage
   | FontSizeChangedMessage
+  | DisplaySettingsChangedMessage
   | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage

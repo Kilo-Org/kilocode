@@ -308,3 +308,7 @@ export type KiloClawOutMessage =
   | { type: "kiloclaw.typing"; conversationId: string; memberId: string }
   | { type: "kiloclaw.typingStop"; conversationId: string; memberId: string }
   | { type: "fontSizeChanged"; fontSize: number }
+  | {
+      type: "displaySettingsChanged"
+      settings: { diffFontSize: number; diffSyntaxTheme: string }
+    }
