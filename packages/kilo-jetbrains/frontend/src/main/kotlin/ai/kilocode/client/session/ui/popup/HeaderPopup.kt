@@ -72,6 +72,11 @@ private class HeaderPopupPanel(
         isOpaque = false
         viewport.isOpaque = false
         border = JBUI.Borders.empty()
+        // A body that scrolls sideways keeps a band above and below it, so the bar has a row of its own
+        // to sit in and the content is not flush against the balloon edge above it.
+        if (horizontal) {
+            viewportBorder = JBUI.Borders.empty(SessionUiStyle.View.Popup.SCROLL_PADDING, 0)
+        }
     }
 
     init {
@@ -91,8 +96,19 @@ private class HeaderPopupPanel(
         val width = measured.coerceAtLeast(minOf(minWidth, limit)).coerceAtMost(limit)
         fit(child, width)
         val cap = minOf(JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT), capHeight)
-        val height = if (fixedHeight) cap else child.preferredSize.height.coerceAtMost(cap)
+        val height = if (fixedHeight) cap else (child.preferredSize.height + band(width)).coerceAtMost(cap)
         return Dimension(width, height)
+    }
+
+    /**
+     * Height the body cannot use: the padding kept around a sideways-scrolling viewport, plus a row for
+     * the horizontal bar itself when the content is wider than the width the popup settled on. Without
+     * it the bar eats into the viewport and the body sprouts a vertical scrollbar it does not need.
+     */
+    private fun band(width: Int): Int {
+        val insets = scroll.viewportBorder?.getBorderInsets(scroll) ?: return 0
+        val bar = if (contentWidth(child) > width) scroll.horizontalScrollBar.preferredSize.height else 0
+        return insets.top + insets.bottom + bar
     }
 
     private fun contentWidth(item: Component): Int = when (item) {

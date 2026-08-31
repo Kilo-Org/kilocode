@@ -680,7 +680,7 @@ class AgentManagerPanel(
         // the committed and uncommitted counts beside each other. This is only a cap — the popup asks for
         // the width its content needs and [SidePopupGeometry.beside] trims it to the room beside the row,
         // so a narrow window gets a narrow popup rather than one re-pointed above the list.
-        const val POPUP_WIDTH = 920
+        const val POPUP_WIDTH = 1840
         const val POPUP_HEIGHT = 320
     }
 
