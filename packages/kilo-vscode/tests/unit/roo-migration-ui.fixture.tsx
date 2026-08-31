@@ -3,6 +3,7 @@ import { Window } from "happy-dom"
 import type { MigrationSessionInfo, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 const window = new Window({ url: "http://localhost" })
+Object.defineProperty(window, "origin", { value: window.location.origin })
 const style = window.getComputedStyle.bind(window)
 const sent: WebviewMessage[] = []
 Object.assign(globalThis, {
