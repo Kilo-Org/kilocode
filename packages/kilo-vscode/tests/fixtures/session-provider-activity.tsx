@@ -13,9 +13,11 @@ Object.assign(globalThis, {
   window,
   document: window.document,
   navigator: window.navigator,
+  localStorage: window.localStorage,
   Node: window.Node,
   Element: window.Element,
   HTMLElement: window.HTMLElement,
+  HTMLHeadElement: window.HTMLHeadElement,
   HTMLInputElement: window.HTMLInputElement,
   HTMLTextAreaElement: window.HTMLTextAreaElement,
   SVGElement: window.SVGElement,
@@ -23,6 +25,7 @@ Object.assign(globalThis, {
   IntersectionObserver: window.IntersectionObserver,
   ResizeObserver: window.ResizeObserver,
   CustomEvent: window.CustomEvent,
+  customElements: window.customElements,
   Event: window.Event,
   MessageEvent: window.MessageEvent,
   requestAnimationFrame: window.requestAnimationFrame.bind(window),
@@ -32,14 +35,16 @@ Object.assign(globalThis, {
 })
 
 const { render } = await import("solid-js/web")
-const { For, createSignal } = await import("solid-js")
+const { For, Show, createSignal } = await import("solid-js")
 const { WorktreeItem } = await import("../../webview-ui/agent-manager/WorktreeItem")
+const { SubagentPanel } = await import("../../webview-ui/agent-manager/SubagentPanel")
 const { DragDropProvider, SortableProvider } = await import("@thisbeyond/solid-dnd")
 const { renderTab } = await import("../../webview-ui/agent-manager/tab-rendering")
 const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
 const { ServerProvider } = await import("../../webview-ui/src/context/server")
 const { ConfigContext } = await import("../../webview-ui/src/context/config")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
+const { NotificationsProvider } = await import("../../webview-ui/src/context/notifications")
 const { ProviderContext } = await import("../../webview-ui/src/context/provider")
 const { SessionProvider, useSession } = await import("../../webview-ui/src/context/session")
 const { terminal } = await import("../../webview-ui/src/context/session-outcome")
@@ -85,6 +90,8 @@ const language = {
 const ref = { value: undefined as ReturnType<typeof useSession> | undefined }
 const [operation, setOperation] = createSignal(false)
 const [run, setRun] = createSignal(false)
+const [inspector, setInspector] = createSignal(false)
+const [active, setActive] = createSignal("task-child")
 const Probe = () => {
   const session = useSession()
   ref.value = session
@@ -143,6 +150,20 @@ const Probe = () => {
         onCopyPath={() => {}}
         onOpen={() => {}}
       />
+      <Show when={inspector()}>
+        <SubagentPanel
+          tabs={() => ["task-child", "task-grand"].map((id) => ({ id, title: id }))}
+          active={active}
+          visible={() => true}
+          nextKeybind=""
+          closeKeybind=""
+          onSelect={setActive}
+          onClose={() => {}}
+          onCloseOthers={() => {}}
+          onReorder={() => {}}
+          onClosePanel={() => setInspector(false)}
+        />
+      </Show>
     </DragDropProvider>
   )
 }
@@ -158,9 +179,11 @@ const dispose = render(
         <ProviderContext.Provider value={provider as never}>
           <ConfigContext.Provider value={config as never}>
             <LanguageContext.Provider value={language as never}>
-              <SessionProvider>
-                <Probe />
-              </SessionProvider>
+              <NotificationsProvider>
+                <SessionProvider>
+                  <Probe />
+                </SessionProvider>
+              </NotificationsProvider>
             </LanguageContext.Provider>
           </ConfigContext.Provider>
         </ProviderContext.Provider>
@@ -197,7 +220,18 @@ const check = async (id: string, expected: string) => {
   const actual = state(id)
   if (id === "root") card(expected)
   const tab = host.querySelector(`[data-tab-id="${id}"] [data-activity]`)
-  if (id === "root" || id === "background") assert(tab, `Missing rendered tab for ${id}`)
+  if (id === "root" || id === "background" || (inspector() && (id === "task-child" || id === "task-grand"))) {
+    assert(tab, `Missing rendered tab for ${id}`)
+    assert.equal(!!tab.querySelector('[data-component="spinner"]'), expected === "busy" || expected === "retry")
+  }
+  if (tab && (id === "task-child" || id === "task-grand")) {
+    assert.equal(tab.querySelector(".am-tab-icon")?.getAttribute("data-activity"), expected)
+    assert.equal(!!tab.querySelector(".am-tab-icon")?.getAttribute("aria-label"), expected !== "idle")
+    assert.equal(
+      tab.querySelector('[role="tab"]')?.getAttribute("aria-label"),
+      expected === "idle" ? id : `${id}: session.activity.${expected}`,
+    )
+  }
   if (tab && tab.getAttribute("data-activity") !== expected) {
     failures.push(
       `step ${step.value} ${id}: rendered tab expected ${expected}, got ${tab.getAttribute("data-activity")}`,
@@ -267,8 +301,15 @@ try {
   await emit({ type: "sessionStatus", sessionID: "durable-grand", status: "idle" })
 
   await emit({ type: "sessionStatus", sessionID: "task-child", status: "busy" })
+  setInspector(true)
   await check("root", "busy")
   await check("task-child", "busy")
+  await check("task-grand", "idle")
+  assert.equal(value.currentSessionID(), "root")
+  host.querySelector<HTMLElement>('[data-tab-id="task-grand"] [role="tab"]')!.click()
+  await settle()
+  assert.equal(active(), "task-grand")
+  assert.equal(value.currentSessionID(), "root")
   await emit({ type: "sessionStatus", sessionID: "task-child", status: "retry", attempt: 1, message: "retry", next: 1 })
   await check("root", "retry")
   await check("task-child", "retry")
@@ -359,6 +400,11 @@ try {
   await emit({ type: "sessionTurnClosed", sessionID: "task-child", reason: "completed", parentID: "root" })
   await check("task-child", "done")
   await check("root", "idle")
+  setInspector(false)
+  await settle()
+  setInspector(true)
+  await check("task-child", "done")
+  assert.equal(value.currentSessionID(), "root")
   await emit({ type: "sessionTurnClosed", sessionID: "task-child", reason: "error", parentID: "root" })
   await check("task-child", "error")
   await check("root", "idle")
