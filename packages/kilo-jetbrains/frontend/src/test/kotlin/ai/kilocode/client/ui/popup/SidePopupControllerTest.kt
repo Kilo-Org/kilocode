@@ -57,6 +57,21 @@ class SidePopupControllerTest : BasePlatformTestCase() {
         assertEquals(1, builds)
     }
 
+    fun `test a list waits twice as long before building anything`() {
+        val controller = controller(dwell = SidePopupController.LIST_MS)
+        val owner = owner()
+
+        controller.show("row", owner) { request() }
+
+        // The dwell a transcript card uses is not enough here: the pointer travels across neighbouring
+        // rows to reach its target, and each one would otherwise flash a popup on the way past.
+        timers.advanceBy(SidePopupController.SHOW_MS.toLong())
+        assertEquals(0, builds)
+
+        timers.advanceBy(SidePopupController.SHOW_MS.toLong())
+        assertEquals(1, builds)
+    }
+
     fun `test leaving before the dwell cancels the popup outright`() {
         val controller = controller()
         val owner = owner()
@@ -161,8 +176,8 @@ class SidePopupControllerTest : BasePlatformTestCase() {
         assertNull(field<Any>(controller, "target"))
     }
 
-    private fun controller(): SidePopupController {
-        val item = SidePopupController(timers)
+    private fun controller(dwell: Int = SidePopupController.SHOW_MS): SidePopupController {
+        val item = SidePopupController(timers, dwell)
         controllers.add(item)
         return item
     }

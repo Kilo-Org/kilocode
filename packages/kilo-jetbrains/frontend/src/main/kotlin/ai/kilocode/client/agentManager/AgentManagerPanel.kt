@@ -147,7 +147,9 @@ class AgentManagerPanel(
         ),
         onHover = { row -> hover(row) },
     )
-    private val popup = SidePopupController()
+    // Rows are dense and neighbours are only ever passed over on the way somewhere else, so the dwell is
+    // longer here than for a transcript card the pointer goes to on purpose.
+    private val popup = SidePopupController(dwell = SidePopupController.LIST_MS)
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()

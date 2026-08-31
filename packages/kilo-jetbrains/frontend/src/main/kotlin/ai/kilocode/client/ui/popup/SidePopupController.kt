@@ -26,7 +26,16 @@ import java.awt.Component
  * Popup subtree hover is detected via [HoverListener] (an experimental IntelliJ API) so nested editors
  * count as "inside the popup".
  */
-internal class SidePopupController(timers: UiTimerSource = UiTimers) : Disposable {
+internal class SidePopupController(
+    timers: UiTimerSource = UiTimers,
+    /**
+     * How long the pointer has to rest before the body is built. The default suits a transcript card,
+     * which the pointer arrives at deliberately. A dense list should pass [LIST_MS]: there the pointer
+     * crosses several rows on the way to the one it wants, and a short dwell flashes a popup for each of
+     * them.
+     */
+    dwell: Int = SHOW_MS,
+) : Disposable {
     private var target: Any? = null
     private var source: (() -> SidePopupRequest?)? = null
     private var balloon: Balloon? = null
@@ -34,7 +43,7 @@ internal class SidePopupController(timers: UiTimerSource = UiTimers) : Disposabl
     private var guard: Disposable? = null
     private var onSubject = false
     private var onPopup = false
-    private val showTimer = timers.timer(SHOW_MS, repeats = false) { display() }
+    private val showTimer = timers.timer(dwell, repeats = false) { display() }
     private val hideTimer = timers.timer(HIDE_MS, repeats = false) { hideAll() }
 
     /**
@@ -176,8 +185,11 @@ internal class SidePopupController(timers: UiTimerSource = UiTimers) : Disposabl
         req.shown()
     }
 
-    private companion object {
+    internal companion object {
         const val SHOW_MS = 500
+
+        /** Dwell for a list of rows, where the pointer passes over neighbours to reach its target. */
+        const val LIST_MS = SHOW_MS * 2
         const val HIDE_MS = 250
     }
 }
