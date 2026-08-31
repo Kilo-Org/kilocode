@@ -198,6 +198,29 @@ export namespace KiloSessionProcessor {
   /** How long a stream may stay silent before the guard probes connectivity. */
   export const STALL_MS = 10_000
 
+  // Dynamic imports: app-runtime pulls in the session processor, so a static
+  // import here would be circular. The explicit return annotation keeps the
+  // runtime's types out of this module's exported signatures, which would
+  // otherwise make the AppLayer type graph circular as well.
+  async function providerBaseURL(id: ProviderV2.ID | undefined): Promise<string | undefined> {
+    if (!id) return undefined
+    const [runtime, provider] = await Promise.all([
+      import("@/effect/app-runtime").catch(() => undefined),
+      import("@/provider/provider").catch(() => undefined),
+    ])
+    if (!runtime || !provider) return undefined
+    const info = await runtime.AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const svc = yield* provider.Provider.Service
+        return yield* svc.getProvider(id)
+      }),
+    ).catch((err) => {
+      log.warn("offline probe provider lookup failed", { err })
+      return undefined
+    })
+    return info?.options?.baseURL
+  }
+
   /** Synthetic stall failure; its message is matched by SessionNetwork.disconnected(). */
   export class DisconnectedError extends Error {
     constructor() {
@@ -209,17 +232,24 @@ export namespace KiloSessionProcessor {
   /**
    * Fails a stalled attempt (no stream events for `stallMs`) with
    * DisconnectedError when the connectivity probe also fails. A passing probe
-   * resets the clock; tool calls hold it back.
+   * resets the clock; tool calls hold it back. Local providers are probed
+   * directly; remote ones via public hosts.
    */
   export function offlineGuard(input: {
     busy?: () => boolean
     stallMs?: number
     tickMs?: number
     check?: () => Promise<boolean>
+    providerID?: ProviderV2.ID
   }) {
     const stall = input.stallMs ?? STALL_MS
     const tick = input.tickMs ?? 1_000
-    const check = input.check ?? (() => SessionNetwork.probe())
+    const check =
+      input.check ??
+      (async () => {
+        const baseURL = await providerBaseURL(input.providerID)
+        return SessionNetwork.probeProvider(baseURL)
+      })
     const state = { at: Date.now() }
     return {
       touch() {

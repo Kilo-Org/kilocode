@@ -107,3 +107,30 @@ describe("kilocode.session.offlineGuard", () => {
     expect(SessionRetry.retryable(parsed, "test")).toBeDefined()
   })
 })
+
+describe("kilocode.session.probeProvider", () => {
+  test("local/private endpoints are classified", () => {
+    expect(SessionNetwork.local("http://localhost:11434/v1")).toBe(true)
+    expect(SessionNetwork.local("http://127.0.0.1:8080")).toBe(true)
+    expect(SessionNetwork.local("http://192.168.1.5:1234")).toBe(true)
+    expect(SessionNetwork.local("http://10.0.0.2")).toBe(true)
+    expect(SessionNetwork.local("http://myserver:11434")).toBe(true)
+    expect(SessionNetwork.local("http://box.local:11434")).toBe(true)
+    expect(SessionNetwork.local("https://api.openai.com/v1")).toBe(false)
+    expect(SessionNetwork.local(undefined)).toBe(false)
+    expect(SessionNetwork.local("not a url")).toBe(false)
+  })
+
+  test("a reachable local server passes and a dead one fails", async () => {
+    const live = Bun.serve({ port: 0, fetch: () => new Response("ok") })
+    try {
+      expect(await SessionNetwork.probeProvider(`http://localhost:${live.port}`)).toBe(true)
+    } finally {
+      live.stop(true)
+    }
+    const dead = Bun.serve({ port: 0, fetch: () => new Response("ok") })
+    const deadURL = `http://localhost:${dead.port}`
+    dead.stop(true)
+    expect(await SessionNetwork.probeProvider(deadURL)).toBe(false)
+  })
+})
