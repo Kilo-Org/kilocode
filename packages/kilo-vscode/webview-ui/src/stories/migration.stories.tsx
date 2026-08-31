@@ -26,9 +26,6 @@ const RooWizard: Component = () => {
         source: "roo",
         operationId,
         data: {
-          providers: [],
-          mcpServers: [],
-          customModes: [],
           sessions: [
             {
               id: "roo-1",
