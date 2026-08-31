@@ -69,13 +69,6 @@ function enable(ctx: ScenarioContext) {
   return Effect.promise(() => KiloMemory.enable({ ctx: { directory: dir, worktree: dir } }))
 }
 
-// Smallest transcript the session migration accepts: one real user turn and
-// one assistant reply, in the Claude Code JSONL shape.
-const migrate = [
-  '{"type":"user","version":"2.42.0","isSidechain":false,"message":{"id":"msg_001","role":"user","content":[{"type":"text","text":"Hello from the exerciser"}]}}',
-  '{"type":"assistant","version":"2.42.0","isSidechain":false,"message":{"id":"msg_002","role":"assistant","content":[{"type":"text","text":"Hi from the transcript"}]}}',
-].join("\n")
-
 const edit = {
   provider: "kilo",
   model: "inception/mercury-next-edit",
@@ -830,35 +823,37 @@ export const kiloScenarios: Scenario[] = [
       object(body)
       check(body.ok === true && body.id === "prt_httpapi_import", "part import should return imported ID")
     }),
+  // The exerciser runs against a throwaway project directory with no Claude Code
+  // or Codex transcripts on the host, so migration correctly finds nothing to do.
+  // That is the no-op contract; the import itself is covered by
+  // test/kilocode/session-resume-integration.test.ts, which can redirect the
+  // harness discovery roots.
   http.protected
     .post("/kilocode/migrate/sessions", "kilocode.migrate.sessions")
     .withLlm()
     .mutating()
-    .seeded((ctx) => ctx.session({ title: "Migrate session" }))
-    .at((ctx) => ({
-      path: "/kilocode/migrate/sessions",
-      headers: ctx.headers(),
-      body: { sessionID: ctx.state.id, content: migrate },
-    }))
+    .at((ctx) => ({ path: "/kilocode/migrate/sessions", headers: ctx.headers(), body: {} }))
     .json(200, (body) => {
       object(body)
-      check(body.format === "claude", "session migration should detect the Claude transcript format")
-      check(body.messages === 2, "session migration should write both transcript messages")
-      check(typeof body.messageID === "string", "session migration should return the final assistant message ID")
+      array(body.sessions)
+      check(body.sessions.length === 0, "migration should find no sources in a throwaway project")
+      check(body.migrated === 0, "migration should report nothing migrated")
+      check(body.skipped === 0, "migration should report nothing skipped")
       array(body.dropped)
     }),
   http.protected
     .post("/kilocode/migrate/sessions", "kilocode.migrate.sessions.missing")
+    .withLlm()
     .at((ctx) => ({
       path: "/kilocode/migrate/sessions",
       headers: ctx.headers(),
-      body: { sessionID: "ses_httpapi_missing", content: migrate },
+      body: { ids: ["11111111-1111-4111-8111-111111111111"] },
     }))
     .json(422, (body) => {
       object(body)
       check(
-        typeof body.message === "string" && body.message.includes("Session not found"),
-        "migrating into an unknown session should report a user-actionable failure",
+        typeof body.message === "string" && body.message.includes("No Claude Code or OpenAI Codex session found"),
+        "requesting an unknown source ID should report a user-actionable failure",
       )
     }),
   http.protected

@@ -17047,30 +17047,40 @@
             }
           }
         },
-        "description": "Parse a Claude Code or OpenAI Codex JSONL transcript and migrate it into an empty Kilo session.",
-        "summary": "Migrate an external session transcript into Kilo",
+        "description": "Discover Claude Code and OpenAI Codex JSONL transcripts for a directory and migrate them into new Kilo sessions, one session per transcript. Sources that were already migrated are skipped, so calling this repeatedly is a no-op once everything has landed.",
+        "summary": "Migrate external sessions into Kilo",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "sessionID": {
-                    "type": "string",
-                    "description": "Target Kilo session. Must be empty (no existing messages)."
+                  "cwd": {
+                    "type": "string"
                   },
-                  "content": {
-                    "type": "string",
-                    "description": "Raw JSONL transcript content (Claude Code or OpenAI Codex, Anthropic message format)."
+                  "formats": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": ["claude", "codex"]
+                    }
+                  },
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   },
                   "agent": {
                     "type": "string"
                   },
                   "model": {
                     "type": "string"
+                  },
+                  "force": {
+                    "type": "boolean"
                   }
                 },
-                "required": ["sessionID", "content"],
                 "additionalProperties": false
               }
             }
@@ -17145,7 +17155,7 @@
             }
           }
         },
-        "description": "Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each so callers can list migratable sessions before migrating. Read-only; writes nothing.",
+        "description": "Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each, marking the ones already migrated, so callers can render a picker before migrating. Read-only; writes nothing.",
         "summary": "Discover migratable external session transcripts",
         "requestBody": {
           "content": {
@@ -40481,21 +40491,33 @@
         "required": ["operation", "message"],
         "additionalProperties": false
       },
-      "KilocodeMigrateSessionsResult": {
+      "KilocodeMigrateSessionsMigrated": {
         "type": "object",
         "properties": {
-          "messageID": {
+          "id": {
             "type": "string",
-            "description": "Final assistant message written by the migration."
+            "description": "Source session UUID."
           },
           "format": {
             "type": "string",
             "enum": ["claude", "codex"],
-            "description": "Detected transcript format."
+            "description": "Source transcript format."
+          },
+          "sessionID": {
+            "type": "string"
+          },
+          "messageID": {
+            "type": "string"
           },
           "messages": {
-            "type": "number",
-            "description": "Number of messages written to the session."
+            "type": "number"
+          },
+          "skipped": {
+            "type": "boolean",
+            "description": "True when the source had already been migrated and this call did nothing."
+          },
+          "error": {
+            "type": "string"
           },
           "dropped": {
             "type": "array",
@@ -40505,7 +40527,36 @@
             "description": "Human-readable reasons for content that could not be migrated."
           }
         },
-        "required": ["messageID", "format", "messages", "dropped"],
+        "required": ["id", "format", "skipped", "dropped"],
+        "additionalProperties": false
+      },
+      "KilocodeMigrateSessionsResult": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KilocodeMigrateSessionsMigrated"
+            },
+            "description": "Per-source outcomes, most recently modified source first."
+          },
+          "migrated": {
+            "type": "number",
+            "description": "Number of sources migrated by this call."
+          },
+          "skipped": {
+            "type": "number",
+            "description": "Number of sources skipped because they had already been migrated."
+          },
+          "dropped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Reasons transcripts were found but could not be previewed or migrated."
+          }
+        },
+        "required": ["sessions", "migrated", "skipped", "dropped"],
         "additionalProperties": false
       },
       "MigrateFailedError": {
@@ -40564,6 +40615,9 @@
           },
           "model": {
             "$ref": "#/components/schemas/KilocodeMigrateSessionsModel"
+          },
+          "sessionID": {
+            "type": "string"
           }
         },
         "required": ["id", "format", "path", "mtime", "version", "messages"],

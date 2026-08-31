@@ -7944,18 +7944,20 @@ export class BackgroundJob extends HeyApiClient {
 
 export class Migrate extends HeyApiClient {
   /**
-   * Migrate an external session transcript into Kilo
+   * Migrate external sessions into Kilo
    *
-   * Parse a Claude Code or OpenAI Codex JSONL transcript and migrate it into an empty Kilo session.
+   * Discover Claude Code and OpenAI Codex JSONL transcripts for a directory and migrate them into new Kilo sessions, one session per transcript. Sources that were already migrated are skipped, so calling this repeatedly is a no-op once everything has landed.
    */
   public sessions<ThrowOnError extends boolean = false>(
-    parameters: {
+    parameters?: {
       directory?: string
       workspace?: string
-      sessionID: string
-      content: string
+      cwd?: string
+      formats?: Array<"claude" | "codex">
+      ids?: Array<string>
       agent?: string
       model?: string
+      force?: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -7966,10 +7968,12 @@ export class Migrate extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
-            { in: "body", key: "sessionID" },
-            { in: "body", key: "content" },
+            { in: "body", key: "cwd" },
+            { in: "body", key: "formats" },
+            { in: "body", key: "ids" },
             { in: "body", key: "agent" },
             { in: "body", key: "model" },
+            { in: "body", key: "force" },
           ],
         },
       ],
@@ -7993,7 +7997,7 @@ export class Migrate extends HeyApiClient {
   /**
    * Discover migratable external session transcripts
    *
-   * Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each so callers can list migratable sessions before migrating. Read-only; writes nothing.
+   * Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each, marking the ones already migrated, so callers can render a picker before migrating. Read-only; writes nothing.
    */
   public discover<ThrowOnError extends boolean = false>(
     parameters?: {

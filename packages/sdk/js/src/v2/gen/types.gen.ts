@@ -4456,21 +4456,44 @@ export type AnacondaDesktopOperationError = {
   message: string
 }
 
-export type KilocodeMigrateSessionsResult = {
+export type KilocodeMigrateSessionsMigrated = {
   /**
-   * Final assistant message written by the migration.
+   * Source session UUID.
    */
-  messageID: string
+  id: string
   /**
-   * Detected transcript format.
+   * Source transcript format.
    */
   format: "claude" | "codex"
+  sessionID?: string
+  messageID?: string
+  messages?: number
   /**
-   * Number of messages written to the session.
+   * True when the source had already been migrated and this call did nothing.
    */
-  messages: number
+  skipped: boolean
+  error?: string
   /**
    * Human-readable reasons for content that could not be migrated.
+   */
+  dropped: Array<string>
+}
+
+export type KilocodeMigrateSessionsResult = {
+  /**
+   * Per-source outcomes, most recently modified source first.
+   */
+  sessions: Array<KilocodeMigrateSessionsMigrated>
+  /**
+   * Number of sources migrated by this call.
+   */
+  migrated: number
+  /**
+   * Number of sources skipped because they had already been migrated.
+   */
+  skipped: number
+  /**
+   * Reasons transcripts were found but could not be previewed or migrated.
    */
   dropped: Array<string>
 }
@@ -4511,6 +4534,7 @@ export type KilocodeMigrateSessionsDiscovered = {
    */
   messages: number
   model?: KilocodeMigrateSessionsModel
+  sessionID?: string
 }
 
 export type KilocodeMigrateSessionsDiscoverResult = {
@@ -17434,16 +17458,12 @@ export type AnacondaDesktopSyncResponse = AnacondaDesktopSyncResponses[keyof Ana
 
 export type KilocodeMigrateSessionsData = {
   body?: {
-    /**
-     * Target Kilo session. Must be empty (no existing messages).
-     */
-    sessionID: string
-    /**
-     * Raw JSONL transcript content (Claude Code or OpenAI Codex, Anthropic message format).
-     */
-    content: string
+    cwd?: string
+    formats?: Array<"claude" | "codex">
+    ids?: Array<string>
     agent?: string
     model?: string
+    force?: boolean
   }
   path?: never
   query?: {

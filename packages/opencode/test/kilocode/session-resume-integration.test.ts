@@ -1391,3 +1391,210 @@ it.instance(
   { config: cfg },
   30_000,
 )
+
+// ── SessionResumeImport.migrate (migration endpoint logic) ────────────────
+//
+// The HTTP endpoint (POST /kilocode/migrate/sessions) delegates to
+// SessionResumeImport.migrate, which re-discovers server-side, creates one Kilo
+// session per transcript, and records the source on the created session so a
+// second call skips it. These tests drive it through the ResumeRoots seam.
+
+const migrateAt = (roots: { claude: string; codex: string }, input: SessionResumeImport.MigrateInput) =>
+  SessionResumeImport.migrate(input).pipe(
+    Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude, codex: roots.codex }),
+  )
+
+it.instance(
+  "migrate creates a session per discovered transcript and records the source",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const result = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+
+      expect(result.migrated).toBe(1)
+      expect(result.skipped).toBe(0)
+      const entry = result.sessions[0]
+      expect(entry.id).toBe(fixtureUUID)
+      expect(entry.format).toBe("claude")
+      expect(entry.skipped).toBe(false)
+      expect(entry.error).toBeUndefined()
+      expect(entry.messages).toBeGreaterThanOrEqual(10)
+
+      // The transcript landed in the session the result points at.
+      expect(entry.sessionID).toBeString()
+      const created = SessionID.make(entry.sessionID ?? "")
+      const msgs = yield* sessionMessages(created)
+      expect(msgs.length).toBeGreaterThanOrEqual(10)
+      expect(msgs[0].info.role).toBe("user")
+      expect(entry.messageID).toBe(msgs.at(-1)?.info.id)
+
+      // Provenance is persisted on the session, which is what makes a rerun a no-op.
+      const info = yield* sessions.get(created)
+      expect(info.metadata?.migrate).toMatchObject({ format: "claude", id: fixtureUUID })
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate is a no-op on the second call",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const first = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+      expect(first.migrated).toBe(1)
+      const before = (yield* sessions.list()).length
+
+      const second = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+
+      expect(second.migrated).toBe(0)
+      expect(second.skipped).toBe(1)
+      expect(second.sessions[0].skipped).toBe(true)
+      // Points at the session from the first run rather than a new one.
+      expect(second.sessions[0].sessionID).toBe(first.sessions[0].sessionID)
+      expect((yield* sessions.list()).length).toBe(before)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate with force re-migrates an already migrated source",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const first = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+      const before = (yield* sessions.list()).length
+
+      const forced = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build", force: true })
+
+      expect(forced.migrated).toBe(1)
+      expect(forced.skipped).toBe(0)
+      expect(forced.sessions[0].sessionID).not.toBe(first.sessions[0].sessionID)
+      expect((yield* sessions.list()).length).toBe(before + 1)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "discover marks sources that were already migrated",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const content = yield* Effect.promise(() => claudeFixture())
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
+
+      const before = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+      expect(before.sessions[0].sessionID).toBeUndefined()
+
+      const result = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+
+      const after = yield* SessionResumeImport.discover({ cwd: dir, formats: ["claude"] }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
+      expect(after.sessions[0].sessionID).toBe(result.sessions[0].sessionID)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate only touches the requested ids and rejects unknown ones",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const content = yield* Effect.promise(() => claudeFixture())
+      const wanted = "55555555-5555-4555-8555-555555555555"
+      const other = "66666666-6666-4666-8666-666666666666"
+      yield* withClaudeFixtureAt(roots.claude, dir, content, wanted)
+      yield* withClaudeFixtureAt(roots.claude, dir, content, other)
+
+      const result = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build", ids: [wanted] })
+      expect(result.sessions.length).toBe(1)
+      expect(result.sessions[0].id).toBe(wanted)
+
+      const exit = yield* Effect.exit(
+        migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build", ids: ["not-a-known-id"] }),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(JSON.stringify(exit.cause)).toContain("No Claude Code or OpenAI Codex session found")
+      }
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate reports a bad transcript per entry and leaves no session behind",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const good = yield* Effect.promise(() => claudeFixture())
+      const goodID = "77777777-7777-4777-8777-777777777777"
+      const badID = "88888888-8888-4888-8888-888888888888"
+
+      yield* withClaudeFixtureAt(roots.claude, dir, good, goodID)
+      // Parses as Claude but carries no user text, so it is rejected before any write.
+      yield* withClaudeFixtureAt(
+        roots.claude,
+        dir,
+        '{"type":"assistant","version":"2.42.0","message":{"role":"assistant","content":[{"type":"text","text":"Hi"}]}}',
+        badID,
+      )
+
+      const before = (yield* sessions.list()).length
+      const result = yield* migrateAt(roots, { cwd: dir, formats: ["claude"], agent: "build" })
+
+      expect(result.migrated).toBe(1)
+      const bad = result.sessions.find((item) => item.id === badID)
+      expect(bad?.error).toContain("no user messages")
+      expect(bad?.sessionID).toBeUndefined()
+      // Exactly one new session: the good transcript, nothing for the bad one.
+      expect((yield* sessions.list()).length).toBe(before + 1)
+    }),
+  { config: cfg },
+  30_000,
+)
+
+it.instance(
+  "migrate is a no-op when nothing is discovered",
+  () =>
+    Effect.gen(function* () {
+      const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
+      const sessions = yield* Session.Service
+      const before = (yield* sessions.list()).length
+
+      const result = yield* migrateAt(roots, { cwd: dir, agent: "build" })
+
+      expect(result.sessions.length).toBe(0)
+      expect(result.migrated).toBe(0)
+      expect(result.skipped).toBe(0)
+      expect((yield* sessions.list()).length).toBe(before)
+    }),
+  { config: cfg },
+  30_000,
+)

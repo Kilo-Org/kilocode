@@ -10,11 +10,13 @@ export const migrateHandlers = HttpApiBuilder.group(InstanceHttpApi, "migrate", 
     const sessions = Effect.fn("MigrateHttpApi.sessions")(function* (ctx: {
       payload: typeof MigrateSessionsPayload.Type
     }) {
-      const result = yield* SessionResumeImport.fromContent({
-        sessionID: ctx.payload.sessionID,
-        content: ctx.payload.content,
+      const result = yield* SessionResumeImport.migrate({
+        cwd: ctx.payload.cwd,
+        formats: ctx.payload.formats ? [...ctx.payload.formats] : undefined,
+        ids: ctx.payload.ids ? [...ctx.payload.ids] : undefined,
         agent: ctx.payload.agent,
         model: ctx.payload.model,
+        force: ctx.payload.force,
       }).pipe(
         Effect.catch((err) =>
           NamedError.Unknown.isInstance(err)
@@ -23,9 +25,9 @@ export const migrateHandlers = HttpApiBuilder.group(InstanceHttpApi, "migrate", 
         ),
       )
       return {
-        messageID: result.messageID,
-        format: result.format,
-        messages: result.messages,
+        sessions: result.sessions,
+        migrated: result.migrated,
+        skipped: result.skipped,
         dropped: result.dropped,
       }
     })

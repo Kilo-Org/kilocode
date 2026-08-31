@@ -14,11 +14,15 @@ import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 const root = "/kilocode/migrate/sessions"
 
 export const MigrateSessionsPayload = Schema.Struct({
-  sessionID: Schema.String.annotate({
-    description: "Target Kilo session. Must be empty (no existing messages).",
+  cwd: Schema.optional(Schema.String).annotate({
+    description: "Directory whose external sessions to migrate. Defaults to the current instance directory.",
   }),
-  content: Schema.String.annotate({
-    description: "Raw JSONL transcript content (Claude Code or OpenAI Codex, Anthropic message format).",
+  formats: Schema.optional(Schema.Array(Schema.Literals(["claude", "codex"]))).annotate({
+    description: "Transcript formats to consider. Defaults to both.",
+  }),
+  ids: Schema.optional(Schema.Array(Schema.String)).annotate({
+    description:
+      "Only migrate these discovered source session IDs. Omit to migrate every discovered session. Unknown IDs fail the request.",
   }),
   agent: Schema.optional(Schema.String).annotate({
     description: "Agent name to attribute the migrated messages to. Defaults to the default agent.",
@@ -26,14 +30,42 @@ export const MigrateSessionsPayload = Schema.Struct({
   model: Schema.optional(Schema.String).annotate({
     description: "Model reference (providerID/modelID). Defaults to the agent or provider default.",
   }),
+  force: Schema.optional(Schema.Boolean).annotate({
+    description: "Migrate sources again even if they already landed, creating additional Kilo sessions.",
+  }),
 })
 
-const MigrateSessionsResult = Schema.Struct({
-  messageID: Schema.String.annotate({ description: "Final assistant message written by the migration." }),
-  format: Schema.Literals(["claude", "codex"]).annotate({ description: "Detected transcript format." }),
-  messages: Schema.Finite.annotate({ description: "Number of messages written to the session." }),
+const MigrateSessionsMigrated = Schema.Struct({
+  id: Schema.String.annotate({ description: "Source session UUID." }),
+  format: Schema.Literals(["claude", "codex"]).annotate({ description: "Source transcript format." }),
+  sessionID: Schema.optional(Schema.String).annotate({
+    description: "Kilo session holding the transcript. Absent only when the migration failed.",
+  }),
+  messageID: Schema.optional(Schema.String).annotate({
+    description: "Final assistant message written, when this call performed the migration.",
+  }),
+  messages: Schema.optional(Schema.Finite).annotate({
+    description: "Number of messages written, when this call performed the migration.",
+  }),
+  skipped: Schema.Boolean.annotate({
+    description: "True when the source had already been migrated and this call did nothing.",
+  }),
+  error: Schema.optional(Schema.String).annotate({ description: "Why this source could not be migrated." }),
   dropped: Schema.Array(Schema.String).annotate({
     description: "Human-readable reasons for content that could not be migrated.",
+  }),
+}).annotate({ identifier: "KilocodeMigrateSessionsMigrated" })
+
+const MigrateSessionsResult = Schema.Struct({
+  sessions: Schema.Array(MigrateSessionsMigrated).annotate({
+    description: "Per-source outcomes, most recently modified source first.",
+  }),
+  migrated: Schema.Finite.annotate({ description: "Number of sources migrated by this call." }),
+  skipped: Schema.Finite.annotate({
+    description: "Number of sources skipped because they had already been migrated.",
+  }),
+  dropped: Schema.Array(Schema.String).annotate({
+    description: "Reasons transcripts were found but could not be previewed or migrated.",
   }),
 }).annotate({ identifier: "KilocodeMigrateSessionsResult" })
 
@@ -62,6 +94,10 @@ const MigrateSessionsDiscovered = Schema.Struct({
   model: Schema.optional(MigrateSessionsModel).annotate({
     description: "Source model reference, if the transcript records one.",
   }),
+  sessionID: Schema.optional(Schema.String).annotate({
+    description:
+      "Kilo session this transcript was already migrated into. Present means a migration would skip this source.",
+  }),
 }).annotate({ identifier: "KilocodeMigrateSessionsDiscovered" })
 
 const MigrateSessionsDiscoverResult = Schema.Struct({
@@ -89,9 +125,9 @@ export const MigrateApi = HttpApi.make("migrate").add(
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "kilocode.migrate.sessions",
-          summary: "Migrate an external session transcript into Kilo",
+          summary: "Migrate external sessions into Kilo",
           description:
-            "Parse a Claude Code or OpenAI Codex JSONL transcript and migrate it into an empty Kilo session.",
+            "Discover Claude Code and OpenAI Codex JSONL transcripts for a directory and migrate them into new Kilo sessions, one session per transcript. Sources that were already migrated are skipped, so calling this repeatedly is a no-op once everything has landed.",
         }),
       ),
     )
@@ -106,7 +142,7 @@ export const MigrateApi = HttpApi.make("migrate").add(
           identifier: "kilocode.migrate.discover",
           summary: "Discover migratable external session transcripts",
           description:
-            "Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each so callers can list migratable sessions before migrating. Read-only; writes nothing.",
+            "Enumerate Claude Code and OpenAI Codex JSONL transcripts for a directory and preview each, marking the ones already migrated, so callers can render a picker before migrating. Read-only; writes nothing.",
         }),
       ),
     )
