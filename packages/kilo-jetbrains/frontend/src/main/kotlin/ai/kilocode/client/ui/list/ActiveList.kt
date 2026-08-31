@@ -180,6 +180,14 @@ internal class ActiveList(
         search?.textEditor?.isEnabled = !value
         view.setBusy(value)
     }
+
+    /** [ActiveListView.setLocked]: blocks input without painting the busy spinner. */
+    @RequiresEdt
+    fun setLocked(value: Boolean) {
+        search?.isEnabled = !value
+        search?.textEditor?.isEnabled = !value
+        view.setLocked(value)
+    }
 }
 
 internal fun activeListEnterFocus(): Boolean = AdvancedSettings.getBoolean("edit.source.on.enter.key.request.focus.in.editor")

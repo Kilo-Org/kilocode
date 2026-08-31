@@ -336,8 +336,18 @@ internal class ActiveListView(
     @RequiresEdt
     fun setBusy(value: Boolean) {
         checkEdt()
-        if (value) setHovered(-1)
         list.setPaintBusy(value)
+        setLocked(value)
+    }
+
+    /**
+     * Blocks input on the list without the [setBusy] progress spinner. For a list whose own content
+     * already shows the work in flight, where a second spinner would just be noise.
+     */
+    @RequiresEdt
+    fun setLocked(value: Boolean) {
+        checkEdt()
+        if (value) setHovered(-1)
         if (list.isEnabled == !value) return
         list.isEnabled = !value
         list.repaint()

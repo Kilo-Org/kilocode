@@ -9,7 +9,7 @@ import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.diff.KiloDiffEditorService
 import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.migration.FakeMigrationUiController
+import ai.kilocode.client.onboarding.providers.v5migration.FakeMigrationUiController
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef

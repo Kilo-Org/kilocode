@@ -1,4 +1,4 @@
-package ai.kilocode.client.migration
+package ai.kilocode.client.onboarding.providers.v5migration
 
 import ai.kilocode.rpc.dto.LegacyMigrationDetectionDto
 import ai.kilocode.rpc.dto.LegacyMigrationResultItemDto

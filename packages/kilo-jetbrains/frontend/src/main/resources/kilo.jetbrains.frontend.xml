@@ -9,7 +9,8 @@
     <resource-bundle>messages.KiloBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="ai.kilocode.client.migration.KiloMigrationService"/>
+        <applicationService serviceImplementation="ai.kilocode.client.onboarding.providers.v5migration.KiloMigrationService"/>
+        <applicationService serviceImplementation="ai.kilocode.client.onboarding.KiloOnboardingService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
         <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider"/>
 
