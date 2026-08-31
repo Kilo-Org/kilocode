@@ -9,6 +9,32 @@ Here's the honest truth about AI model recommendations: by the time I write them
 
 Instead of maintaining a static list that's perpetually behind, we built something better — a real-time leaderboard showing which models Kilo Code users are actually having success with right now.
 
+## Model Routing and Configuration
+
+Kilo Code doesn't use a single model for everything. There are four separate, independently configurable model slots:
+
+- **Main model** — the primary model your agent uses for coding tasks, chat, and reasoning. This is what you pick with the model selector, `/models`, or the `model` key in `kilo.jsonc`.
+- **Small model** — a lightweight model used for session title generation, commit message generation, and prompt enhancement. Configured with the `small_model` key in `kilo.jsonc`, or the **Small Model** field on the **Settings → Models** tab. If left unset, Kilo resolves it from the model already in use: it first looks for a small/cheap variant on your current provider (e.g. Haiku on Anthropic, Flash on Gemini), and only falls back to [`kilo-auto/small`](/docs/gateway/models-and-providers#kilo-autosmall) if the Kilo Gateway provider is authenticated in your session. If you're not signed in to Kilo at all, the small model tasks above simply reuse your main model instead — they don't reach out to Kilo Gateway on their own.
+- **Subagent model** — the default model for subagents launched by the `task` tool. Configured with the `subagent_model` key in `kilo.jsonc`, or the **Subagent Model** field on the **Settings → Models** tab. If left unset, subagents inherit whichever model the parent agent session is currently using — this slot never calls Kilo Gateway on its own.
+- **Autocomplete model** — the Fill-in-the-Middle (FIM) model used for inline code completions as you type. See [Autocomplete: Provider and Model](/docs/code-with-ai/features/autocomplete#provider-and-model) for how to configure it.
+
+{% callout type="note" %}
+**What doesn't use the small model:** context compaction/summarization and todo-list generation always use your main model, not the small model — despite sounding like lightweight background tasks, they aren't affected by your `small_model` setting.
+{% /callout %}
+
+Each of these can be set independently. There's no single "offline mode" switch — going fully offline or self-hosted comes down to two things:
+
+1. Never sign in to the Kilo Gateway provider (so there's no `kilo-auto/*` fallback for the app to reach for).
+2. Explicitly set your **main model** to a local/BYOK provider (e.g. Ollama, LM Studio, or a direct API key), and set your **autocomplete model** to a direct Mistral or Inception BYOK key — see the warning below, as autocomplete has no local provider option. You can leave `small_model` and `subagent_model` unset — without a signed-in Kilo provider, they'll fall back to your main model rather than to Kilo Gateway.
+
+{% callout type="warning" %}
+**Autocomplete has no local fallback.** Unlike the small and subagent models, autocomplete only supports the Kilo Gateway or a direct BYOK key for Mistral/Inception — if it resolves to Kilo Gateway without valid auth, the request fails outright rather than falling back to a local model. For a fully offline setup, either configure a direct Mistral BYOK key (see [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup)) or disable autocomplete.
+{% /callout %}
+
+{% callout type="note" %}
+Gas Town also exposes its own small model setting, used for session title generation and the `explore` subagent inside your town's containers — see [Gas Town Settings](/docs/code-with-ai/gastown/settings#small-model). It's a separate, town-scoped configuration stored in your town's settings, distinct from the `small_model` key described above.
+{% /callout %}
+
 ## Check the Live Models List
 
 **[👉 See what's working today at kilo.ai/models](https://kilo.ai/models)**

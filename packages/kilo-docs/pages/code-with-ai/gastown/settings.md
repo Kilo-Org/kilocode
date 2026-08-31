@@ -17,15 +17,19 @@ The primary model used by all agents (polecats, refinery, mayor). This affects q
 
 Popular choices:
 - **Kilo Auto Frontier** — highest quality models, best results (recommended)
-- **Kilo Auto Efficient** — cheapest model proven accurate enough for each task, with capability matched to difficulty (minimum for Gas Town)
+- **Kilo Auto Efficient** — cheapest model proven accurate enough for each task, with capability matched to difficulty
+
+{% callout type="note" %}
+You can enter any model ID your account has access to — there's no enforced quality floor. "Kilo Auto Efficient" is a recommendation, not a requirement.
+{% /callout %}
 
 ### Role-Specific Models
 
-Override the default model for specific agent roles. By default, all roles use the town-level model. You can override per-role if you want to optimize cost vs quality for different tasks (e.g., a faster model for the mayor, a stronger model for the refinery).
+Override the default model for specific agent roles — **mayor**, **refinery**, and **polecat**. By default, all roles use the town-level default model. You can override per-role if you want to optimize cost vs quality for different tasks (e.g., a faster model for the mayor, a stronger model for the refinery).
 
 ### Small Model
 
-Used for lightweight tasks (classification, routing, summarization). Usually a smaller, cheaper model.
+Used for session title generation and the `explore` subagent inside your town's containers — not general classification, routing, or summarization. This is a lighter-weight model than your default, and it's independent of the `small_model` config used elsewhere in Kilo Code (see [Model Routing and Configuration](/docs/code-with-ai/agents/model-selection#model-routing-and-configuration)). If left unset, it defaults to Claude Haiku rather than a Kilo-managed default.
 
 ## Git & Authentication
 
