@@ -23,7 +23,9 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -32,6 +34,7 @@ import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.Icon
+import javax.swing.JComponent
 import javax.swing.JSeparator
 import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
@@ -49,7 +52,12 @@ internal class PrHeaderView @RequiresEdt constructor(
     openDiff: () -> Unit,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
     private val status = JBLabel()
-    private val title = SimpleColoredComponent()
+    private val plain = if (stacked) null else SimpleColoredComponent()
+    // A popup title is a whole commit subject and the popup is the place that has room for it, but
+    // SimpleColoredComponent never wraps. The stacked form uses a text area that does and gives up the
+    // grayed number fragment for it — one style for the whole line.
+    private val wrapped = if (stacked) JBTextArea() else null
+    private val title: JComponent = plain ?: wrapped!!
     private val changes = ChangesPanel(mode, onBase = openDiff, onLocal = onLocal)
     // Review then CI verdict, between the state pill and the title: the same order and the same glyphs
     // the worktree rows show, so a header and its row do not disagree about what a PR is waiting on.
@@ -95,10 +103,25 @@ internal class PrHeaderView @RequiresEdt constructor(
         title.border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         title.isOpaque = false
         title.isVisible = false
+        wrapped?.apply {
+            isEditable = false
+            isFocusable = false
+            lineWrap = true
+            wrapStyleWord = true
+            // A text area draws its own field background and reserves its own margin; neither belongs
+            // to a header line.
+            isOpaque = false
+            margin = JBUI.emptyInsets()
+            font = if (titleStyle == SimpleTextAttributes.STYLE_BOLD) JBFont.label().asBold() else JBFont.label()
+            foreground = UIUtil.getLabelForeground()
+        }
         head.isOpaque = false
-        head.addToLeft(statusPane)
+        // A wrapped title makes the header line as tall as the title, so the state pill and the verdict
+        // glyphs pin to the top of it instead of floating down beside the last line of text.
+        val bar = if (stacked) VAlign.TOP else VAlign.CENTER
+        head.addToLeft(statusPane.align(HAlign.LEFT, bar))
         head.addToCenter(title)
-        head.addToRight(actions.align(HAlign.RIGHT, VAlign.CENTER))
+        head.addToRight(actions.align(HAlign.RIGHT, bar))
         if (summary == null) {
             addToCenter(head)
         } else {
@@ -229,7 +252,8 @@ internal class PrHeaderView @RequiresEdt constructor(
         number = null
         body = null
         tip = null
-        title.clear()
+        plain?.clear()
+        wrapped?.text = ""
         title.toolTipText = null
         status.toolTipText = null
         changed()
@@ -255,15 +279,21 @@ internal class PrHeaderView @RequiresEdt constructor(
     @RequiresEdt
     private fun syncText() {
         val number = number ?: return
-        title.clear()
         val body = body
-        val attrs = SimpleTextAttributes(titleStyle, UIUtil.getLabelForeground())
-        if (body == null) {
-            title.append(number, attrs)
+        wrapped?.let {
+            val text = if (body == null) number else "$body $number"
+            if (it.text != text) it.text = text
             return
         }
-        title.append(body, attrs)
-        title.append(" $number", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        val plain = plain ?: return
+        plain.clear()
+        val attrs = SimpleTextAttributes(titleStyle, UIUtil.getLabelForeground())
+        if (body == null) {
+            plain.append(number, attrs)
+            return
+        }
+        plain.append(body, attrs)
+        plain.append(" $number", SimpleTextAttributes.GRAYED_ATTRIBUTES)
     }
 
     @RequiresEdt

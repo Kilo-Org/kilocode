@@ -1,7 +1,9 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
@@ -10,10 +12,12 @@ import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
@@ -105,7 +109,7 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
 
         edt {
             val badge = components(body).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
-            val title = components(body).filterIsInstance<SimpleColoredComponent>().single()
+            val title = components(body).filterIsInstance<JBTextArea>().single()
             val changes = UIUtil.findComponentOfType(body, ChangesPanel::class.java)!!
             val rule = components(body).filterIsInstance<JSeparator>().single { it.orientation == SwingConstants.HORIZONTAL }
             val review = components(body).filterIsInstance<JBLabel>().single { it.text == "Review approved" }
@@ -125,6 +129,46 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test a long title wraps instead of being cut off and keeps the pill at the top`() {
+        val title = "fix(jetbrains): make gh/PR focus sync responsive without overwhelming the backend"
+        val body = body()
+        val disposable = Disposer.newDisposable("popup")
+        Disposer.register(testRootDisposable, disposable)
+
+        val size = edt {
+            body.update(
+                stats = WorktreeStatsDto(path, additions = 3191, deletions = 418, files = 63, ahead = 11, base = "origin/main"),
+                pull = pr(GhReview.APPROVED, GhChecksDto(GhChecks.PENDING, total = 1, pending = 1)).copy(title = title),
+                name = "brave-dune",
+                dirty = null,
+            )
+            // Measured the way the row popup measures it: the cap the panel allows, trimmed to the room
+            // the geometry found beside the row.
+            val content = HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = 920)
+            content.fitWithin(JBUI.scale(420), JBUI.scale(320))
+            content.component.preferredSize.also {
+                content.component.setSize(it)
+                layout(content.component)
+            }
+        }
+
+        edt {
+            val text = components(body).filterIsInstance<JBTextArea>().single()
+            val badge = components(body).filterIsInstance<JBLabel>().single { it.icon is FilledBadgeIcon }
+            val lines = text.height / text.getFontMetrics(text.font).height
+
+            assertTrue("a title this long must wrap, got height ${text.height}", lines >= 2)
+            assertEquals("$title #7", text.text)
+            // Every wrapped line is inside the popup: nothing is cut off horizontally or vertically.
+            assertTrue(text.width > 0)
+            assertTrue("the title overflows the popup", bottom(body, text) <= size.height)
+            assertTrue(right(body, text) <= size.width)
+            // The pill stays on the first line rather than centering against the whole block.
+            assertTrue("the state pill drifted down the title", bottom(body, badge) <= bottom(body, text))
+            assertTrue(top(body, badge) <= top(body, text) + text.getFontMetrics(text.font).height)
+        }
+    }
+
     fun `test a clean worktree drops the rule with the changes row`() {
         val body = body()
 
@@ -139,8 +183,17 @@ class WorktreeRowPopupBodyTest : BasePlatformTestCase() {
     @RequiresEdt
     private fun layout(body: WorktreeRowPopupBody) {
         body.setSize(body.preferredSize)
-        components(body).forEach { if (it is Container) it.doLayout() }
+        layout(body as Component)
     }
+
+    @RequiresEdt
+    private fun layout(root: Component) {
+        components(root).forEach { if (it is Container) it.doLayout() }
+    }
+
+    @RequiresEdt
+    private fun right(body: WorktreeRowPopupBody, child: Component): Int =
+        SwingUtilities.convertPoint(child, 0, 0, body).x + child.width
 
     @RequiresEdt
     private fun top(body: WorktreeRowPopupBody, child: Component): Int = SwingUtilities.convertPoint(child, 0, 0, body).y
