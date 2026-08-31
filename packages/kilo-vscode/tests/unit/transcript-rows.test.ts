@@ -73,6 +73,81 @@ describe("transcriptRows", () => {
     expect(rows[0]).toMatchObject({ type: "assistant", turn: "u1", partial: true, queued: true, live: true })
   })
 
+  it("omits queued user rows without visible content", () => {
+    const cases: Part[][] = [
+      [],
+      [{ ...part("context", "u1"), synthetic: true }],
+      [{ ...part("blank", "u1"), text: " \n\t" }],
+      [{ id: "compact", messageID: "u1", type: "compaction", auto: true }],
+      [{ id: "file", messageID: "u1", type: "file", mime: "text/plain", url: "data:,context" }],
+    ]
+
+    for (const parts of cases) {
+      const rows = transcriptRows(messageTurns([user("u1")]), lookup({ u1: parts }), {
+        queued: new Set(["u1"]),
+      })
+
+      expect(rows).toEqual([])
+    }
+  })
+
+  it("shows a queued message when its visible text arrives after metadata and context", () => {
+    const turns = messageTurns([user("u1")])
+    const opts = { queued: new Set(["u1"]) }
+    const parts: Record<string, Part[]> = {}
+    const get = lookup(parts)
+    const empty = transcriptRows(turns, get, opts)
+    expect(empty).toEqual([])
+
+    parts.u1 = [{ ...part("context", "u1"), synthetic: true }]
+    const hidden = transcriptRows(turns, get, opts, empty)
+    expect(hidden).toEqual([])
+
+    parts.u1 = [...parts.u1, part("prompt", "u1")]
+    const ready = transcriptRows(turns, get, opts, hidden)
+    expect(ready).toHaveLength(1)
+    expect(ready[0]).toMatchObject({ type: "user", key: "u1:user", queued: true, parts: parts.u1 })
+    expect(turns[0]?.user.id).toBe("u1")
+  })
+
+  it("keeps queued image and PDF attachments visible without prompt text", () => {
+    for (const mime of ["image/png", "application/pdf"]) {
+      const parts: Part[] = [
+        { ...part("context", "u1"), synthetic: true },
+        { id: "file", messageID: "u1", type: "file", mime, url: "data:,attachment" },
+      ]
+      const rows = transcriptRows(messageTurns([user("u1")]), lookup({ u1: parts }), {
+        queued: new Set(["u1"]),
+      })
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ type: "user", queued: true, parts })
+    }
+  })
+
+  it("preserves assistant, diff, and error rows when an internal queued user row is hidden", () => {
+    const u1 = user("u1", { summary: { diffs: [{ file: "a.ts" }] } })
+    const a1 = assistant("a1", "u1", { error: { name: "ProviderError" } })
+    const rows = transcriptRows(
+      messageTurns([u1, a1]),
+      lookup({ u1: [{ ...part("context", "u1"), synthetic: true }], a1: [part("reply", "a1")] }),
+      { queued: new Set(["u1"]) },
+    )
+
+    expect(rows.map((row) => `${row.turn}:${row.type}`)).toEqual(["u1:assistant", "u1:diff", "u1:error"])
+    expect(rows[0]?.message).toBe(a1)
+  })
+
+  it("does not show a blank queued row when only a later text part has content", () => {
+    const rows = transcriptRows(
+      messageTurns([user("u1")]),
+      lookup({ u1: [{ ...part("first", "u1"), text: "" }, part("later", "u1")] }),
+      { queued: new Set(["u1"]) },
+    )
+
+    expect(rows).toEqual([])
+  })
+
   it("places only the first visible non-abort error after diffs", () => {
     const u1 = user("u1", { summary: { diffs: [{ file: "a.ts" }] } })
     const a1 = assistant("a1", "u1", { error: { name: "MessageAbortedError" } })
@@ -252,7 +327,8 @@ describe("partitionRows", () => {
     const u1 = user("u1")
     const a1 = assistant("a1", "u1")
     const u2 = user("u2")
-    const first = transcriptRows(messageTurns([u1, a1, u2]), lookup({ a1: [part("p1", "a1")] }), {
+    const parts = { a1: [part("p1", "a1")], u2: [part("up2", "u2")] }
+    const first = transcriptRows(messageTurns([u1, a1, u2]), lookup(parts), {
       live: new Set(["u1"]),
       queued: new Set(["u2"]),
     })
@@ -261,7 +337,7 @@ describe("partitionRows", () => {
     expect(active.direct.map((row) => row.turn)).toEqual(["u1"])
     expect(active.queued.map((row) => row.turn)).toEqual(["u2"])
 
-    const second = transcriptRows(messageTurns([u1, a1, u2]), lookup({ a1: [part("p1", "a1")] }), {
+    const second = transcriptRows(messageTurns([u1, a1, u2]), lookup(parts), {
       live: new Set(["u2"]),
     })
     const handed = partitionRows(second, new Set(["u2"]))
@@ -297,10 +373,14 @@ describe("partitionRows", () => {
     const u1 = user("u1")
     const a1 = assistant("a1", "u1")
     const u2 = user("u2")
-    const rows = transcriptRows(messageTurns([u1, a1, u2]), lookup({ a1: [part("p1", "a1")] }), {
-      live: new Set(["u1"]),
-      queued: new Set(["u2"]),
-    })
+    const rows = transcriptRows(
+      messageTurns([u1, a1, u2]),
+      lookup({ a1: [part("p1", "a1")], u2: [part("up2", "u2")] }),
+      {
+        live: new Set(["u1"]),
+        queued: new Set(["u2"]),
+      },
+    )
     const result = partitionRows(rows, new Set(["u1"]))
 
     expect(result.virtual.map((row) => row.type)).toEqual(["user"])

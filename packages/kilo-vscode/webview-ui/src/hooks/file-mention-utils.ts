@@ -1,3 +1,4 @@
+import fuzzysort from "fuzzysort"
 import type { FileAttachment, FileSearchItem, SessionSearchItem } from "../types/messages"
 import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
 import { TERMINAL_MENTION } from "./terminal-context-utils"
@@ -99,6 +100,13 @@ export function buildMentionResults(
     ...results,
     FILE_PICKER_RESULT,
   ]
+}
+
+export function filterSessions(sessions: SessionSearchItem[], query: string) {
+  if (!query) return sessions.slice(0, 50)
+  return fuzzysort
+    .go(query.toLowerCase(), sessions, { keys: ["title", "worktreeName"], limit: 50 })
+    .map((item) => item.obj)
 }
 
 /** Single-line, safe display/filename forms for a session mention. */

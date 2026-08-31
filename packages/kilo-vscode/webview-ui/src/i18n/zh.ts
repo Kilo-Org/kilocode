@@ -60,6 +60,13 @@ export const dict = {
 
   "command.provider.connect": "连接提供商",
 
+  "session.activity.waiting": "正在等待回复或批准。",
+  "session.activity.error": "错误或连接已断开。",
+  "session.activity.retry": "正在自动重试。",
+  "session.activity.busy": "进行中。",
+  "session.activity.done": "回合已完成。",
+  "session.activity.idle": "未运行。",
+
   "command.session.new": "新建会话",
   "command.session.show.changes": "显示更改",
   "command.review.toggle": "切换审查",
@@ -178,6 +185,7 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "自动审批已启用。权限请求将自动获批。",
   "prompt.action.autoApprove.disabled": "自动审批已禁用。点击以自动批准权限请求。",
   "prompt.action.send": "发送",
+  "prompt.action.continue": "继续",
   "prompt.action.send.blocked": "请先回答或忽略待处理的问题",
   "prompt.action.send.recording": "转录并发送",
   "prompt.action.stop": "停止",
@@ -850,6 +858,8 @@ export const dict = {
   "settings.experimental.multiProject.title": "多项目 Agent Manager",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
+  "settings.experimental.taskModelSelection.title": "Task 子代理模型选择",
+  "settings.experimental.taskModelSelection.description": "允许为 Task 子代理选择指定的模型、提供商和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1005,6 +1015,10 @@ export const dict = {
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
   "settings.context.compaction.title": "压缩",
+  "settings.context.compactionModel.title": "压缩模型",
+  "settings.context.compactionModel.description":
+    "用于自动和手动压缩的模型。留空以使用聊天模型。成本、速度和摘要质量取决于模型。",
+  "settings.context.compactionModel.useChatModel": "使用聊天模型",
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
   "settings.context.prune.title": "修剪旧输出",
@@ -1092,57 +1106,16 @@ export const dict = {
   "question.summary": "第 {{n}} / {{total}} 个问题",
   "common.review": "审查",
 
-  // legacy-migration start
-  "settings.legacyMigration.link": "从旧版迁移",
-  "settings.aboutKiloCode.legacyMigration.title": "旧版迁移",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "从旧版 Kilo Code 安装迁移设置，包括提供商 API 密钥和默认模型。",
   "settings.aboutKiloCode.rooImport.description": "从 Roo Code 安装导入对话历史记录。",
   "settings.aboutKiloCode.rooImport.button": "从 Roo Code 导入会话",
 
-  // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code 新功能",
-  "migration.whatsNew.subtitle": "我们在更快、更高效的基础上重新构建了扩展。",
-  "migration.whatsNew.features.performance.title": "更快的智能体性能",
-  "migration.whatsNew.features.performance.detail":
-    "并行工具调用和子智能体让你的智能体可以同时处理更多任务——减少等待时间，更快交付成果。",
-  "migration.whatsNew.features.interface.title": "简洁的界面",
-  "migration.whatsNew.features.interface.detail": "更少干扰，更易阅读，更快上手。",
-  "migration.whatsNew.features.agentManager.title": "代理管理器",
-  "migration.whatsNew.features.agentManager.detail":
-    "一个统一的界面，可以并行运行多个智能体，每个智能体各自使用独立的 worktree——在同一个地方监控进度、切换上下文和审查变更。",
-  "migration.whatsNew.features.foundation.title": "共享基础",
-  "migration.whatsNew.features.foundation.detail":
-    "所有 Kilo 产品共享一个小巧高效的核心。无论你选择哪种方式工作，都能获得熟悉的体验。",
-  "migration.whatsNew.blogLink": "阅读完整公告",
-  "migration.whatsNew.docsLink": "新功能与常见问题",
-  "migration.whatsNew.continue": "继续",
-
-  // Screen 2 — Migrate Settings
-  "migration.migrate.title": "迁移你的设置",
-  "migration.migrate.subtitle": "我们发现了你之前安装的设置。以下是可以迁移的内容。",
+  "migration.roo.button": "导入会话",
+  "migration.roo.empty": "未找到 Roo Code 会话。",
   "migration.migrate.selectLabel": "选择要迁移的内容",
   "migration.migrate.chatHistory": "聊天会话和历史记录",
-  "migration.migrate.button": "迁移设置",
-  "migration.migrate.skip": "跳过",
-  "migration.migrate.keysDetected": "检测到 {{count}} 个密钥",
-  "migration.migrate.serversConfigured": "已配置 {{count}} 个服务器",
-  "migration.migrate.modesFound": "发现 {{count}} 个模式",
-  "migration.migrate.nothingToMigrate": "在旧版设置中未找到要迁移的内容。",
-
-  // Migrate — item labels (reused from old select keys)
-  "migration.select.providers": "提供商 API 密钥",
-  "migration.select.mcpServers": "MCP 服务器",
-  "migration.select.customModes": "自定义模式 / 代理",
-  "migration.select.defaultModel": "默认模型",
-  "migration.select.autoApproval": "自动审批",
-  "migration.select.language": "界面语言",
-  "migration.select.autocomplete": "自动补全设置",
 
   // Migrate — completion
   "migration.complete.summary": "成功迁移 {{success}}/{{total}} 项。",
-  "migration.complete.cleanup": "清除旧版设置数据",
-  "migration.complete.cleanupDescription": "此操作将从 VS Code 存储中删除旧版设置。您将无法再次运行此迁移。",
   "migration.complete.done": "完成",
   "migration.migrate.sessionsDetected": "检测到 {{count}} 个会话",
   "migration.error.continue": "继续",
@@ -1175,7 +1148,6 @@ export const dict = {
   "migration.sessionFormat.unknownDate": "未知日期",
   "migration.sessionFormat.unknown": "未知",
   "migration.sessionFormat.unknownError": "未知错误",
-  // legacy-migration end
 
   "error.details.show": "详细信息",
 
@@ -1183,6 +1155,7 @@ export const dict = {
   "task.todos.allDone": "{{count}} 个待办已完成",
   "task.backgroundAgents.running.one": "1 个后台智能体",
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
+  "task.backgroundAgents.more": "+{{count}} 个",
   "task.backgroundAgents.open": "打开后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",

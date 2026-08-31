@@ -19,13 +19,10 @@ import type { Provider } from "@/provider/provider"
 import type { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
 import { Skill } from "@/skill"
-import { AbsolutePath } from "@opencode-ai/core/schema"
-import { Location } from "@opencode-ai/core/location"
+// kilocode_change
 import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
-import { Reference } from "@opencode-ai/core/reference"
 import { MCP } from "@/mcp"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
-import { PluginV2 } from "@opencode-ai/core/plugin" // kilocode_change
 
 // kilocode_change start
 import SOUL from "../kilocode/soul.txt"
@@ -114,17 +111,14 @@ const layer = Layer.effect(
       ) {
         const ctx = yield* InstanceState.context
         const cfg = yield* config.get()
-        const references = yield* Effect.gen(function* () {
-          if (Object.keys(cfg.references ?? cfg.reference ?? {}).length) {
-            yield* (yield* PluginV2.Service).wait(PluginV2.ID.make("core/config-reference"))
-          }
-          yield* KiloReference.sync({
+        const references = yield* KiloReference.list(
+          {
             references: cfg.references ?? cfg.reference ?? {},
             directory: ctx.directory,
             worktree: ctx.worktree,
-          })
-          return (yield* (yield* Reference.Service).list()).filter((reference) => reference.description !== undefined)
-        }).pipe(Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) }))))
+          },
+          locations,
+        ).pipe(Effect.map((references) => references.filter((reference) => reference.description !== undefined)))
         return [
           ...KilocodeSystemPrompt.environment({ ctx, model, editor: editorContext }),
           references.length === 0

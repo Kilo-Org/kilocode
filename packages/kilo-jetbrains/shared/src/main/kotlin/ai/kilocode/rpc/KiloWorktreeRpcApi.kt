@@ -8,6 +8,7 @@ import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
@@ -41,14 +42,26 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     suspend fun open(directory: String): Boolean
 
     suspend fun stats(directory: String): WorktreeStatsListDto
-    suspend fun ghStatus(directory: String): GhAvailability
+
+    /**
+     * Uncommitted changes per managed worktree, vs each worktree's own HEAD. Separate from [stats]
+     * because the baseline differs (HEAD vs the base branch) and because it changes on every file
+     * save, so callers may refresh it independently.
+     */
+    suspend fun dirty(directory: String): WorktreeDirtyListDto
+    /**
+     * Resolves gh/git availability for [directory]. When [github] is false, resolves git state
+     * only ([GhAvailability.GIT_MISSING] or [GhAvailability.OK]) and never spawns `gh`.
+     */
+    suspend fun ghStatus(directory: String, github: Boolean = true): GhAvailability
     suspend fun prStatus(directory: String): WorktreePrListDto
 
     /**
      * Single-directory branch status for the chat branch/PR dock: current branch, worktree flag,
      * gh availability, and the PR for the branch (if any). Cached with the same TTL as [prStatus].
+     * When [github] is false, resolves git state only and returns a null PR without spawning `gh`.
      */
-    suspend fun branchStatus(directory: String): BranchStatusDto
+    suspend fun branchStatus(directory: String, github: Boolean = true): BranchStatusDto
 
     /**
      * Moves the session [sessionId] running in [directory] into a fresh worktree on [branch]:
@@ -87,4 +100,13 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
      * `git worktree list` (unknown paths dropped, missing ones appended). Returns true when written.
      */
     suspend fun reorder(directory: String, paths: List<String>): Boolean
+
+    /**
+     * Returns the persisted session-list visibility for [directory], or null when the user has not
+     * chosen a value yet.
+     */
+    suspend fun sessionList(directory: String): Boolean?
+
+    /** Records the session-list visibility for [directory]. Returns true when written. */
+    suspend fun setSessionList(directory: String, visible: Boolean): Boolean
 }

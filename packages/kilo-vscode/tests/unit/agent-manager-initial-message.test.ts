@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { initialMessage, initialVariant, seedInitialVariant } from "../../webview-ui/agent-manager/initial-message"
 
 describe("Agent Manager initial message", () => {
-  it("forwards the selected variant to sendMessage", () => {
+  it.each(["high", ""])("forwards the selected variant %s to sendMessage", (variant) => {
     const msg = initialMessage({
       type: "agentManager.sendInitialMessage",
       projectId: "project-a",
@@ -12,7 +12,7 @@ describe("Agent Manager initial message", () => {
       providerID: "anthropic",
       modelID: "claude-sonnet-4",
       agent: "code",
-      variant: "high",
+      variant,
     })
 
     expect(msg).toEqual({
@@ -23,7 +23,7 @@ describe("Agent Manager initial message", () => {
       providerID: "anthropic",
       modelID: "claude-sonnet-4",
       agent: "code",
-      variant: "high",
+      variant,
       files: undefined,
     })
   })
@@ -38,7 +38,7 @@ describe("Agent Manager initial message", () => {
     ).toBeUndefined()
   })
 
-  it("builds the initial session variant state", () => {
+  it.each(["medium", ""])("builds the initial session variant state for %s", (variant) => {
     const state = initialVariant(
       {
         type: "agentManager.sendInitialMessage",
@@ -46,7 +46,7 @@ describe("Agent Manager initial message", () => {
         worktreeId: "wt-a",
         providerID: "anthropic",
         modelID: "claude-sonnet-4",
-        variant: "medium",
+        variant,
       },
       "code",
     )
@@ -56,7 +56,7 @@ describe("Agent Manager initial message", () => {
       providerID: "anthropic",
       modelID: "claude-sonnet-4",
       agent: "code",
-      value: "medium",
+      value: variant,
     })
   })
 
@@ -75,7 +75,7 @@ describe("Agent Manager initial message", () => {
     ).toBeUndefined()
   })
 
-  it("seeds initial variant state into the session store", () => {
+  it.each(["medium", ""])("seeds initial variant %s into the session store", (variant) => {
     const calls: unknown[] = []
 
     seedInitialVariant(
@@ -89,10 +89,10 @@ describe("Agent Manager initial message", () => {
         worktreeId: "wt-a",
         providerID: "anthropic",
         modelID: "claude-sonnet-4",
-        variant: "medium",
+        variant,
       },
     )
 
-    expect(calls).toEqual([["session-a", "anthropic", "claude-sonnet-4", "medium", "code"]])
+    expect(calls).toEqual([["session-a", "anthropic", "claude-sonnet-4", variant, "code"]])
   })
 })

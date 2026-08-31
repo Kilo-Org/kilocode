@@ -52,6 +52,7 @@ export interface ExperimentalConfig {
   batch_tool?: boolean
   image_generation?: boolean
   image_generation_model?: string
+  task_model_selection?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
@@ -124,9 +125,7 @@ export type KiloEmbeddingModelCatalog = {
 export type IndexingStatus = SdkIndexingStatus
 
 export interface BrowserSettings {
-  enabled: boolean
   useSystemChrome: boolean
-  headless: boolean
 }
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"

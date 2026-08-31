@@ -4,12 +4,19 @@ import {
   messageTurns,
   partitionTurns,
   queuedUserMessageIDs,
+  removeQueuedMessage,
   stableMessageTurns,
   visibleMessages,
   visibleParts,
   type RevertBoundary,
 } from "../../webview-ui/src/context/session-queue"
-import type { Message, Part, SessionStatusInfo } from "../../webview-ui/src/types/messages"
+import type {
+  ExtensionMessage,
+  Message,
+  Part,
+  SessionStatusInfo,
+  WebviewMessage,
+} from "../../webview-ui/src/types/messages"
 
 const base = {
   sessionID: "session",
@@ -632,5 +639,59 @@ describe("activeUserMessageID", () => {
     ]
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_3")
+  })
+})
+
+describe("queued deletion cleanup", () => {
+  const setup = (timeout = 10_000) => {
+    const listeners = new Set<(message: ExtensionMessage) => void>()
+    const sent: WebviewMessage[] = []
+    const promise = removeQueuedMessage(
+      {
+        onMessage: (handler) => {
+          listeners.add(handler)
+          return () => {
+            listeners.delete(handler)
+          }
+        },
+        postMessage: (message) => {
+          sent.push(message)
+        },
+      },
+      "session",
+      "message",
+      timeout,
+    )
+    return {
+      promise,
+      listeners,
+      sent,
+      emit: (message: ExtensionMessage) => listeners.forEach((handler) => handler(message)),
+    }
+  }
+
+  it.each([true, false])("settles only the matching acknowledgment: %p", async (success) => {
+    const state = setup()
+    const request = state.sent.at(0)
+    if (request?.type !== "deleteMessage") throw new Error("Missing deletion request")
+    state.emit({ type: "connectionState", state: "connecting" })
+    state.emit({ ...request, type: "deleteMessageResult", requestID: "unrelated", success: true })
+    expect(state.listeners.size).toBe(1)
+    state.emit({ ...request, type: "deleteMessageResult", success })
+    expect(await state.promise).toBe(success)
+    expect(state.listeners.size).toBe(0)
+  })
+
+  const interruptions: Array<ExtensionMessage | undefined> = [
+    undefined,
+    { type: "connectionState", state: "disconnected" },
+    { type: "connectionState", state: "error" },
+    { type: "sessionDeleted", sessionID: "session" },
+  ]
+  it.each(interruptions)("releases the waiter and listener after timeout or interruption: %p", async (message) => {
+    const state = setup(1)
+    if (message) state.emit(message)
+    expect(await state.promise).toBe(false)
+    expect(state.listeners.size).toBe(0)
   })
 })

@@ -126,7 +126,8 @@ export async function deleteLifecycleWorktree(
     host.post({ type: "error", code: "agentManager.worktreeDeleteFailed", projectId: ctx.id, worktreeId, message })
     return null
   }
-  const retained = new Set(state.getSessions(worktreeId).map((session) => session.id))
+  const managed = state.getSessions(worktreeId)
+  const retained = new Set(managed.map((session) => session.id))
   let client: KiloClient
   try {
     client = host.client()
@@ -158,6 +159,7 @@ export async function deleteLifecycleWorktree(
   // process cleanup cannot leave a live shell rooted in an untracked worktree.
   try {
     host.skipStats(worktreeId)
+    host.stopDiffs(worktree.path, managed)
     await host.removeRun(worktreeId)
   } catch (error) {
     host.unskipStats(worktreeId)
@@ -175,13 +177,16 @@ export async function deleteLifecycleWorktree(
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
   let releasePtyCleanup: () => void
   try {
+    await host.sessions.abort(managed.map((session) => session.id))
+    await Promise.all(managed.map((session) => stopSessionProcesses(client, session.id, worktree.path)))
     releasePtyCleanup = await host.acquirePtyCleanup(worktree.path)
   } catch (error) {
-    host.log(`Failed to remove worktree from disk: ${error}`)
+    host.log(`Failed to stop worktree processes: ${error}`)
     host.unskipStats(worktreeId)
-    return fail("Failed to remove worktree PTYs before deletion")
+    return fail(`Failed to stop worktree processes: ${getErrorMessage(error)}`)
   }
   try {
+    await client.instance.dispose({ directory: worktree.path }, { throwOnError: true })
     await ctx.worktreeManager().removeWorktree(worktree.path, branch)
     await Promise.all(
       [...retained].map((sessionID) =>
@@ -199,17 +204,16 @@ export async function deleteLifecycleWorktree(
         "The worktree was deleted, but its checkpoint data could not be removed. Conversation history is preserved.",
       )
     }
-    const orphaned = state.removeWorktree(worktreeId)
+    state.removeWorktree(worktreeId)
     host.removePR(worktreeId)
     host.forgetName(worktreeId)
-    host.stopDiffs(worktree.path, orphaned)
     for (const sessionID of retained) routeProjectSession(host.sessions, ctx.id, sessionID, ctx.root, ctx.generation)
     host.push()
     host.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
   } catch (error) {
     host.unskipStats(worktreeId)
     host.log(`Failed to delete worktree ${worktreeId}: ${error}`)
-    return fail("Failed to delete the worktree")
+    return fail(`Failed to delete worktree: ${getErrorMessage(error)}`)
   } finally {
     releasePtyCleanup()
   }

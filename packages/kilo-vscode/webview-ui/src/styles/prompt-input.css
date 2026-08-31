@@ -9,15 +9,6 @@
 .prompt-input-container {
   position: relative;
   margin: var(--prompt-min-gutter);
-  border-radius: 0.25rem;
-  background-color: var(--input-base, var(--vscode-input-background, #3c3c3c));
-  border: 1px solid var(--border-weak-base, var(--vscode-input-border, #3c3c3c));
-  box-shadow: none;
-
-  &:focus-within {
-    border-color: var(--border-focus, var(--vscode-focusBorder, #007fd4));
-    box-shadow: none;
-  }
 }
 
 .sr-only {
@@ -494,38 +485,6 @@
   gap: 4px;
   flex: 1;
   min-width: 0;
-
-  [data-component="button"] {
-    height: auto !important;
-    min-height: 22px;
-    padding: 4px 6px !important;
-    font-size: var(--kilo-font-size-12);
-    line-height: normal;
-    border-radius: 6px;
-    background: var(--surface-base);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: none;
-    opacity: 1;
-    gap: 6px;
-    white-space: nowrap;
-    transition: all 150ms;
-    color: var(--text-base, var(--vscode-foreground));
-
-    &[data-expanded] {
-      background: var(--surface-base-hover) !important;
-      background-color: var(--surface-base-hover) !important;
-    }
-
-    &:hover:not(:disabled) {
-      background: var(--surface-base-hover);
-      background-color: var(--surface-base-hover);
-    }
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1px var(--border-focus);
-    }
-  }
 }
 
 /* Remote Settings */
@@ -595,26 +554,7 @@
   flex-shrink: 0;
 
   [data-component="button"] {
-    background: transparent;
-    border: none;
     padding: 4px;
-
-    [data-slot="icon-svg"] {
-      color: var(--icon-base);
-    }
-
-    [data-slot="progress-circle-background"] {
-      stroke: var(--icon-base);
-    }
-
-    [data-slot="progress-circle-progress"] {
-      stroke: var(--border-focus, var(--vscode-focusBorder, #007fd4));
-    }
-  }
-  [data-component="icon-button"] {
-    [data-slot="icon-svg"] {
-      color: var(--icon-base) !important;
-    }
   }
 }
 

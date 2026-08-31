@@ -26,11 +26,13 @@ import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
+import type { SessionContextValue } from "../context/session-types"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import type {
   Message,
+  BrowserReference,
   Part,
   QuestionRequest,
   ReviewComment,
@@ -38,8 +40,10 @@ import type {
   SessionModelUsage,
   SuggestionRequest,
   TodoItem,
+  ToolPart,
 } from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
+import { feedbackMetadata, formatBrowserFeedback } from "../../../src/shared/browser-feedback"
 import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
@@ -264,6 +268,28 @@ function reviewMessage(comments: ReviewCommentEntry[]) {
   return <VscodeUserMessage message={message} parts={parts} />
 }
 
+function browserMessage(references: BrowserReference[]) {
+  const data = { version: 1 as const, references }
+  const message: Message = {
+    id: "browser-user-message",
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: "browser-user-part",
+      sessionID: SESSION_ID,
+      messageID: message.id,
+      type: "text",
+      text: `${formatBrowserFeedback(references)}\n\nPlease fix the selected browser elements.`,
+      metadata: feedbackMetadata(undefined, data),
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
 export const UserMessageReviewComments: Story = {
   name: "User message — interactive review comments",
   render: () => {
@@ -316,6 +342,39 @@ export const UserMessageManyReviewComments: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const UserMessageBrowserFeedback: Story = {
+  name: "User message — browser feedback",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle">
+      <div style={{ "max-height": "620px", padding: "12px" }}>
+        {browserMessage([
+          {
+            id: "browser-1",
+            sessionId: SESSION_ID,
+            selector: "main > button.save",
+            url: "https://example.com/settings",
+            title: "Settings",
+            hierarchy: ["main", "button.save"],
+            text: "Save settings",
+            html: '<button class="save">Save settings</button>',
+            styles: { color: "rgb(30, 30, 30)", backgroundColor: "white" },
+            source: { file: "src/settings.tsx", line: 42, column: 7 },
+          },
+          {
+            id: "browser-2",
+            sessionId: SESSION_ID,
+            selector: "form input[name=email]",
+            url: "https://example.com/settings",
+            title: "Settings",
+            hierarchy: ["main", "form", "input[name=email]"],
+            text: "Email address",
+          },
+        ])}
+      </div>
+    </StoryProviders>
+  ),
 }
 
 /**
@@ -1197,6 +1256,57 @@ export const TaskHeaderWithTodos: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const TaskHeaderBackgroundAgents1280: Story = {
+  name: "TaskHeader background agents, wide",
+  args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
+  render: (args: { names: string[] }) => {
+    const tools: ToolPart[] = args.names.map((description, index) => ({
+      id: `task-${index}`,
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "task",
+      state: { status: "completed", input: { description }, output: "Started background agent", title: description },
+      metadata: { sessionId: `child-${index}`, background: true },
+    }))
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID }),
+      messages: () => headerMessages,
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Investigate request size limits",
+        createdAt: new Date(headerNow).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
+      }),
+      getSessionToolParts: () => tools,
+      allStatusMap: () => Object.fromEntries(tools.map((_, index) => [`child-${index}`, { type: "busy" as const }])),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} noPadding>
+        <SessionContext.Provider value={session as unknown as SessionContextValue}>
+          <TaskHeader />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TaskHeaderBackgroundAgents420: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader background agents, narrow",
+}
+
+export const TaskHeaderBackgroundAgents200: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader background agents, compact",
+}
+
+export const TaskHeaderSingleBackgroundAgent420: Story = {
+  ...TaskHeaderBackgroundAgents1280,
+  name: "TaskHeader single background agent, narrow",
+  args: { names: ["Check request limits"] },
 }
 
 export const TaskHeaderWithTodosAllDone: Story = {

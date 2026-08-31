@@ -344,6 +344,27 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertTrue(html.contains("href=\"native-plan-prompt.txt:37-38\">native-plan-prompt.txt:37-38</a>."))
     }
 
+    fun `test inline code url renders a live anchor that dispatches link events`() {
+        val received = mutableListOf<MdView.LinkEvent>()
+        view.addLinkListener { received.add(it) }
+        view.set("Release PR: `https://example.com/pull/13524`")
+        val pane = htmls().single()
+        val iter = (pane.document as HTMLDocument).getIterator(HTML.Tag.A)
+
+        assertTrue("code span url must render as an anchor", iter.isValid)
+        assertEquals("https://example.com/pull/13524", iter.attributes.getAttribute(HTML.Attribute.HREF))
+
+        val event = HyperlinkEvent(
+            pane,
+            HyperlinkEvent.EventType.ACTIVATED,
+            URI("https://example.com/pull/13524").toURL(),
+            "https://example.com/pull/13524",
+        )
+        pane.hyperlinkListeners.forEach { it.hyperlinkUpdate(event) }
+
+        assertEquals("https://example.com/pull/13524", received.single().href)
+    }
+
     fun `test existing links are not nested as file refs`() {
         view.set("[prompt](packages/opencode/src/session/prompt.ts)")
         val html = view.html()

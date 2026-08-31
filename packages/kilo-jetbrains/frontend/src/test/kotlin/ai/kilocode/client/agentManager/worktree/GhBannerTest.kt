@@ -1,7 +1,9 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.fakeRoot
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.installBrowser
@@ -29,12 +31,14 @@ class GhBannerTest : BasePlatformTestCase() {
         timers = TestUiTimers()
         ApplicationManager.getApplication()
             .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(coroutines.scope, rpc), testRootDisposable)
+        fakeRoot(project, coroutines.scope, testRootDisposable, project.basePath!!)
         service = GhStatusCoordinator(coroutines.scope, timers)
         ApplicationManager.getApplication().replaceService(GhStatusCoordinator::class.java, service, testRootDisposable)
     }
 
     override fun tearDown() {
         try {
+            KiloPluginSettings.unsetGithub()
             coroutines.close(::pump)
         } finally {
             super.tearDown()
@@ -76,6 +80,44 @@ class GhBannerTest : BasePlatformTestCase() {
         edt { service.report(project, GhAvailability.OK) }
         pump()
 
+        assertFalse(edt { banner.isVisible })
+    }
+
+    fun `test banner offers turning the github integration off for gh problems`() {
+        edt { service.report(project, GhAvailability.MISSING) }
+        pump()
+        val banner = edt { GhBanner(project, testRootDisposable) }
+
+        val disable = edt { links(banner).single { it.text == "Turn off GitHub integration" } }
+        assertEquals(
+            "Kilo stops running gh. You can turn this back on in Settings | Tools | Kilo Code | Integrations.",
+            edt { disable.toolTipText },
+        )
+
+        edt { service.report(project, GhAvailability.UNAUTH) }
+        pump()
+        assertNotNull(edt { links(banner).singleOrNull { it.text == "Turn off GitHub integration" } })
+    }
+
+    fun `test banner does not offer turning the integration off for a missing git`() {
+        edt { service.report(project, GhAvailability.GIT_MISSING) }
+        pump()
+        val banner = edt { GhBanner(project, testRootDisposable) }
+
+        assertTrue(edt { links(banner).none { it.text == "Turn off GitHub integration" } })
+    }
+
+    fun `test banner disable action turns the setting off and hides the banner`() {
+        edt { service.report(project, GhAvailability.UNAUTH) }
+        pump()
+        val banner = edt { GhBanner(project, testRootDisposable) }
+        assertTrue(edt { banner.isVisible })
+
+        edt { links(banner).single { it.text == "Turn off GitHub integration" }.doClick() }
+        pump()
+
+        assertFalse(KiloPluginSettings.getGithub())
+        assertEquals(GhAvailability.OK, edt { service.current() })
         assertFalse(edt { banner.isVisible })
     }
 

@@ -2,7 +2,6 @@ package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -57,6 +56,17 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Rename a session. */
     suspend fun rename(id: String, directory: String, title: String): SessionDto
+
+    /**
+     * Create a public share link for a session.
+     *
+     * Requires Kilo credentials and fails when sharing is disabled by config. The CLI collapses every
+     * cause into a bare HTTP 500, so callers cannot tell those apart.
+     */
+    suspend fun share(id: String, directory: String): SessionDto
+
+    /** Revoke a session's public share link. */
+    suspend fun unshare(id: String, directory: String): SessionDto
 
     /** List cloud-backed sessions. */
     suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto
@@ -128,9 +138,6 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Subscribe to streaming chat events for a specific session. */
     suspend fun events(id: String, directory: String): Flow<ChatEventDto>
-
-    /** Update config (model, agent/mode, temperature). */
-    suspend fun updateConfig(directory: String, config: ConfigUpdateDto)
 
     // ------ permission / question resolution ------
 

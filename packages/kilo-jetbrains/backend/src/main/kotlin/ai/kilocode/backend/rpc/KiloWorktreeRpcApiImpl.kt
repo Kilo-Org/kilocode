@@ -1,6 +1,8 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.diff.GitComparison
+import ai.kilocode.backend.diff.runGitCommand
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.parsePrUrl
@@ -14,6 +16,8 @@ import ai.kilocode.rpc.dto.MoveStage
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
+import ai.kilocode.rpc.dto.WorktreeDirtyDto
+import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -56,21 +60,16 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.io.path.fileSize
-import kotlin.io.path.inputStream
-import kotlin.io.path.isRegularFile
 
 class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     companion object {
         internal val LOG = KiloLog.create(KiloWorktreeRpcApiImpl::class.java)
-        private const val BASE_TTL = 60_000L
         private const val GH_PROBE_TTL = 300_000L
         private const val GH_STATUS_TTL = 3_000L
         private const val PR_TTL = 90_000L
     }
 
-    private val bases = ConcurrentHashMap<String, Timed<String>>()
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
     private val resolver = PrResolver(gh = ::runGh, git = ::runGit)
@@ -87,7 +86,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val items = managedWorktrees(parseWorktreeList(res.stdout))
         val alive = items.filter { it.main || Files.isDirectory(Path.of(it.path)) }
         val store = worktreeNameStore(alive)
-        val state = store?.let { syncWorktreeState(it, worktreePaths(alive)) } ?: WorktreeState()
+        val state = store?.let { syncWorktreeState(it, worktreePaths(alive), livePaths(alive)) } ?: WorktreeState()
         val named = overlayWorktreeNames(alive, state.names)
         WorktreeListDto(orderWorktrees(named, state.worktreeOrder))
     }
@@ -152,26 +151,68 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     override suspend fun stats(directory: String): WorktreeStatsListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
-        val res = runGit(root, "worktree", "list", "--porcelain")
-        if (!res.ok) return@withContext WorktreeStatsListDto()
-        val items = managedWorktrees(parseWorktreeList(res.stdout))
+        val items = sync(root) ?: return@withContext WorktreeStatsListDto()
         val fallback = baseBranch(items) ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
     }
 
-    override suspend fun ghStatus(directory: String): GhAvailability = withContext(Dispatchers.IO) {
-        probeGh(Path.of(directory).normalize(), "rpc")
+    override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
+        val root = Path.of(directory).normalize()
+        val items = sync(root) ?: return@withContext WorktreeDirtyListDto()
+        WorktreeDirtyListDto(parallel(items.filter { !it.main }) { item -> dirty(item) })
+    }
+
+    /**
+     * Lists the managed worktrees of [root] after reconciling git's metadata with the disk, so
+     * callers never probe a directory that no longer exists. Returns null when [root] itself is gone
+     * or git cannot list.
+     *
+     * Dropping gone entries from the result is what makes probing safe; the prune is only metadata
+     * hygiene. So the prune runs exclusively when a Kilo-managed worktree is the stale one, and a
+     * mis-parse can at worst skip it — git re-checks every entry on disk and only ever removes
+     * `$GIT_DIR/worktrees` bookkeeping for a checkout it finds missing, never any files, and never a
+     * locked worktree (the documented guard for worktrees on unmounted volumes).
+     */
+    private fun sync(root: Path): List<WorktreeDto>? {
+        if (!Files.isDirectory(root)) {
+            LOG.info("worktree sync skipped, directory does not exist: $root")
+            return null
+        }
+        val res = runGit(root, "worktree", "list", "--porcelain")
+        if (!res.ok) return null
+        val raw = parseWorktreeList(res.stdout)
+        val stale = staleWorktrees(raw)
+        val synced = if (stale.isEmpty()) managedWorktrees(raw) else {
+            LOG.info("worktree sync pruning stale managed worktrees: ${stale.joinToString(", ") { it.path }}")
+            val prune = runGit(root, "worktree", "prune", "-v")
+            if (!prune.ok) LOG.warn("worktree prune during sync failed: exit=${prune.exit} stderr=${snippet(prune.stderr)}")
+            if (prune.ok && prune.stdout.isNotBlank()) LOG.info("worktree sync pruned: ${snippet(prune.stdout)}")
+            val again = runGit(root, "worktree", "list", "--porcelain")
+            if (!again.ok) return null
+            managedWorktrees(parseWorktreeList(again.stdout))
+        }
+        return synced.filter { Files.isDirectory(Path.of(it.path)) }
+    }
+
+    override suspend fun ghStatus(directory: String, github: Boolean): GhAvailability = withContext(Dispatchers.IO) {
+        probeGh(Path.of(directory).normalize(), "rpc", github)
     }
 
     override suspend fun prStatus(directory: String): WorktreePrListDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         prs[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
+        // A gone directory reports nothing and is not cached, so a real availability problem found
+        // from a live directory still reaches the UI.
+        if (!Files.isDirectory(root)) {
+            LOG.info("pr status skipped, directory does not exist: $root")
+            return@withContext WorktreePrListDto()
+        }
         val available = ghAvailable(root)
         if (available != GhAvailability.OK) return@withContext WorktreePrListDto(available).also { prs[directory] = Timed(now, it) }
-        val res = runGit(root, "worktree", "list", "--porcelain")
-        if (!res.ok) return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
-        val all = managedWorktrees(parseWorktreeList(res.stdout))
+        // Sync the worktree list before the per-worktree lookups so a worktree that was added and
+        // then deleted on disk is pruned instead of resolved from a directory that no longer exists.
+        val all = sync(root) ?: return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
         val items = prTargets(all)
         val base = baseBranch(all)
         var status = GhAvailability.OK
@@ -188,14 +229,22 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         dto
     }
 
-    override suspend fun branchStatus(directory: String): BranchStatusDto = withContext(Dispatchers.IO) {
+    override suspend fun branchStatus(directory: String, github: Boolean): BranchStatusDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        branches[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
+        // Keyed by directory + mode so flipping the GitHub integration setting cannot serve a
+        // cross-mode entry (a disabled-mode entry always has a null pr; an enabled-mode entry may
+        // not) for up to PR_TTL after the flip.
+        val key = "$directory|$github"
+        branches[key]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
         val root = Path.of(directory).normalize()
+        if (!Files.isDirectory(root)) {
+            LOG.info("branch status skipped, directory does not exist: $root")
+            return@withContext BranchStatusDto()
+        }
         val branch = runGit(root, "branch", "--show-current").stdout.trim()
         val worktree = isLinkedWorktree(root)
-        val availability = ghAvailable(root)
-        val lookup = if (availability == GhAvailability.OK && branch.isNotBlank()) {
+        val availability = ghAvailable(root, github)
+        val lookup = if (github && availability == GhAvailability.OK && branch.isNotBlank()) {
             resolver.resolve(directory, branch, baseBranch(root))
         } else {
             PrLookup()
@@ -207,7 +256,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             availability = if (availability == GhAvailability.OK) lookup.availability else availability,
             pr = lookup.pr,
         )
-        branches[directory] = Timed(System.currentTimeMillis(), dto)
+        branches[key] = Timed(System.currentTimeMillis(), dto)
         dto
     }
 
@@ -238,7 +287,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             leftover = worktree
             val target = Path.of(worktree.path).normalize()
             emit(MoveProgressDto(MoveStage.TRANSFERRING))
-            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(captured, base, target) }
+            val applied = withContext(Dispatchers.IO) { WorktreeTransfer.apply(captured, target) }
             if (!applied.ok) {
                 leftover = null
                 rollback(directory, worktree, branch, "transfer failure")
@@ -454,7 +503,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                 ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
             return@withContext try {
-                val state = readWorktreeState(store).reconcile(worktreePaths(items))
+                val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
                 val names = state.names.toMutableMap()
                 names[target.path] = title
                 writeWorktreeState(store, state.copy(names = names))
@@ -478,7 +527,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                 ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
             return@withContext try {
-                val state = readWorktreeState(store).reconcile(worktreePaths(items))
+                val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
                 val names = state.names.toMutableMap()
                 // Only adopt while the worktree is still default. A recorded name means the user (or a
                 // prior adoption) already titled it, so leave it untouched and report a no-op.
@@ -502,10 +551,39 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val store = worktreeNameStore(items) ?: return@withContext false
             return@withContext try {
                 val state = readWorktreeState(store)
-                writeWorktreeState(store, state.copy(worktreeOrder = paths).reconcile(worktreePaths(items)))
+                writeWorktreeState(store, state.copy(worktreeOrder = paths).reconcile(worktreePaths(items), livePaths(items)))
                 true
             } catch (e: Exception) {
                 LOG.warn("worktree reorder failed: dir=$directory message=${e.message}", e)
+                false
+            }
+        }
+
+    override suspend fun sessionList(directory: String): Boolean? =
+        withContext(Dispatchers.IO) {
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext null
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items) ?: return@withContext null
+            val target = items.firstOrNull { samePath(it.path, directory) } ?: return@withContext null
+            readWorktreeState(store).sessionList[target.path]
+        }
+
+    override suspend fun setSessionList(directory: String, visible: Boolean): Boolean =
+        withContext(Dispatchers.IO) {
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext false
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items) ?: return@withContext false
+            val target = items.firstOrNull { samePath(it.path, directory) } ?: return@withContext false
+            return@withContext try {
+                val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
+                writeWorktreeState(store, state.copy(sessionList = state.sessionList + (target.path to visible)))
+                true
+            } catch (e: Exception) {
+                LOG.warn("worktree session list state failed: dir=$directory message=${e.message}", e)
                 false
             }
         }
@@ -514,15 +592,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     private fun runGit(base: Path, vararg args: String): CmdOut = runGit(base, args.toList())
 
-    private fun runGit(base: Path, args: List<String>): CmdOut {
-        return try {
-            val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(base.toFile())
-            val out = CapturingProcessHandler(cmd).runProcess(30_000)
-            CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
-        } catch (e: Exception) {
-            CmdOut(-1, "", e.message ?: "git failed")
-        }
-    }
+    private fun runGit(base: Path, args: List<String>): CmdOut = runGitCommand(base, args)
 
     private fun runGh(base: Path, vararg args: String): CmdOut = runGh(base, args.toList())
 
@@ -559,52 +629,47 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     private fun stats(item: WorktreeDto, fallback: String): WorktreeStatsDto {
         val dir = Path.of(item.path).normalize()
-        return runCatching {
-            val base = base(item, fallback)
-            val anc = runGit(dir, "merge-base", "HEAD", base).stdout.trim().takeIf { it.isNotBlank() } ?: base
-            val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc)
-            val tracked = if (diff.ok) parseNumstat(diff.stdout) else emptyList()
-            val untrackedFiles = runGit(dir, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
-                .stdout
-                .lineSequence()
-                .filter { it.isNotBlank() }
-                .toList()
-            val untracked = untrackedFiles.sumOf { countUntracked(dir, it) }
-            val counts = aheadBehind(dir, base)
-            WorktreeStatsDto(
-                item.path,
-                tracked.sumOf { it.additions } + untracked,
-                tracked.sumOf { it.deletions },
-                counts.second,
-                counts.first,
-                files = tracked.size + untrackedFiles.size,
-            )
-        }.getOrElse { err ->
-            LOG.warn("worktree stats failed: path=${item.path} message=${err.message}", err)
-            WorktreeStatsDto(item.path)
-        }
+        val comparison = GitComparison.open(dir, GitComparison.Mode.Base, fallback) ?: return WorktreeStatsDto(item.path)
+        val files = comparison.files(false)
+        val counts = comparison.counts()
+        return WorktreeStatsDto(
+            item.path,
+            additions = files.sumOf { it.additions },
+            deletions = files.sumOf { it.deletions },
+            ahead = counts.second,
+            behind = counts.first,
+            files = files.size,
+            base = comparison.base,
+        )
     }
 
-    private fun base(item: WorktreeDto, fallback: String): String {
-        val now = System.currentTimeMillis()
-        bases[item.path]?.takeIf { now - it.time < BASE_TTL }?.let { return it.value }
+    private fun dirty(item: WorktreeDto): WorktreeDirtyDto {
         val dir = Path.of(item.path).normalize()
-        val upstream = runGit(dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
-        val value = upstream.stdout.trim().takeIf { upstream.ok && it.isNotBlank() } ?: fallback
-        bases[item.path] = Timed(now, value)
-        return value
+        val comparison = GitComparison.open(dir, GitComparison.Mode.Local) ?: return WorktreeDirtyDto(item.path)
+        val files = comparison.files(false)
+        return WorktreeDirtyDto(
+            item.path,
+            additions = files.sumOf { it.additions },
+            deletions = files.sumOf { it.deletions },
+            files = files.size,
+            untracked = files.count { it.status == "untracked" },
+            unpushed = comparison.unpushed(),
+        )
     }
 
-    private fun aheadBehind(dir: Path, base: String): Pair<Int, Int> {
-        val out = runGit(dir, "rev-list", "--left-right", "--count", "$base...HEAD")
-        if (!out.ok) return 0 to 0
-        val parts = out.stdout.trim().split(Regex("\\s+"))
-        return (parts.getOrNull(0)?.toIntOrNull() ?: 0) to (parts.getOrNull(1)?.toIntOrNull() ?: 0)
-    }
-
-    private fun ghAvailable(root: Path): GhAvailability {
-        val status = probeGh(root, "availability")
-        if (status != GhAvailability.MISSING) return status
+    /**
+     * Resolves git/gh availability. When [github] is false, only git presence is checked and `gh`
+     * is never spawned — used while the user has turned off the GitHub integration setting.
+     */
+    private fun ghAvailable(root: Path, github: Boolean = true): GhAvailability {
+        if (!Files.isDirectory(root)) {
+            LOG.info("gh availability skipped dir=$root missing=true")
+            return GhAvailability.OK
+        }
+        val status = probeGh(root, "availability", github)
+        // A git-only probe can only return GIT_MISSING or OK, so the gh-binary re-check below is
+        // unreachable while github is false; the guard documents that explicitly.
+        if (!github || status != GhAvailability.MISSING) return status
         val now = System.currentTimeMillis()
         ghProbe?.takeIf { now - it.time < GH_PROBE_TTL }?.let { return it.value }
         val res = runGh(root, "--version")
@@ -613,20 +678,44 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return value
     }
 
-    private fun probeGh(root: Path, reason: String): GhAvailability = synchronized(ghLock) {
+    /**
+     * Resolves git/gh availability. When [github] is false, resolves git presence only and never
+     * spawns `gh` or touches [ghCache] (the cache mixes gh-auth verdicts with a boolean this probe
+     * would otherwise poison with a git-only "OK").
+     */
+    private fun probeGh(root: Path, reason: String, github: Boolean = true): GhAvailability = synchronized(ghLock) {
+        // A stale/removed worktree directory makes the process spawn fail, which would be
+        // misreported as GIT_MISSING. Treat a missing directory as "nothing to report" and
+        // don't cache it, so the next probe on a real directory still runs.
+        if (!Files.isDirectory(root)) {
+            LOG.info("gh probe skipped reason=$reason dir=$root missing=true")
+            return@synchronized GhAvailability.OK
+        }
         val now = System.currentTimeMillis()
-        ghCache?.takeIf { now - it.time < GH_STATUS_TTL }?.let {
-            LOG.info("gh probe cache hit reason=$reason value=${it.value}")
-            return@synchronized it.value
+        if (github) {
+            ghCache?.takeIf { now - it.time < GH_STATUS_TTL }?.let {
+                LOG.info("gh probe cache hit reason=$reason value=${it.value}")
+                return@synchronized it.value
+            }
         }
         val start = System.currentTimeMillis()
-        LOG.info("gh probe start reason=$reason dir=$root")
+        LOG.info("gh probe start reason=$reason dir=$root github=$github")
         val git = runGit(root, "--version")
         if (!git.ok) {
+            // The directory can disappear between the check above and the spawn; a failed working
+            // directory is not evidence that git is uninstalled, so report nothing in that case.
+            if (badDir(git.stderr)) {
+                LOG.info("gh probe skipped reason=$reason dir=$root badDir=true stderr=${snippet(git.stderr)}")
+                return@synchronized GhAvailability.OK
+            }
             val value = GhAvailability.GIT_MISSING
-            ghCache = Timed(System.currentTimeMillis(), value)
+            if (github) ghCache = Timed(System.currentTimeMillis(), value)
             LOG.info("gh probe result reason=$reason value=$value exit=${git.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(git.stderr)}")
             return@synchronized value
+        }
+        if (!github) {
+            LOG.info("gh probe result reason=$reason value=OK github=false ms=${System.currentTimeMillis() - start}")
+            return@synchronized GhAvailability.OK
         }
         val res = runGh(root, "auth", "status")
         val value = if (res.ok) GhAvailability.OK else classifyGhError(res.stderr.ifBlank { res.stdout })
@@ -639,6 +728,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return text.trim().replace(Regex("\\s+"), " ").take(180)
     }
 
+}
+
+/** True when a process failed because its working directory is gone, not because the tool is absent. */
+internal fun badDir(text: String): Boolean {
+    val msg = text.lowercase()
+    return msg.contains("working directory") && (msg.contains("does not exist") || msg.contains("not a directory"))
 }
 
 internal fun classifyGhError(text: String): GhAvailability {
@@ -741,17 +836,26 @@ private const val WORKTREE_NAMES_FILE = "jetbrains.json"
 private data class WorktreeNamesFile(
     val names: Map<String, String> = emptyMap(),
     val worktreeOrder: List<String> = emptyList(),
+    val sessionList: Map<String, Boolean> = emptyMap(),
 )
 
 internal data class WorktreeState(
     val names: Map<String, String> = emptyMap(),
     val worktreeOrder: List<String> = emptyList(),
+    val sessionList: Map<String, Boolean> = emptyMap(),
 ) {
-    fun reconcile(paths: List<String>): WorktreeState {
+    /**
+     * Drops state for worktrees git no longer reports. Names and order cover linked worktrees only
+     * ([paths]), while the session list is also kept for the main working tree, which has a worktree
+     * editor of its own — hence the wider [live] set.
+     */
+    fun reconcile(paths: List<String>, live: List<String>): WorktreeState {
         val set = paths.toSet()
+        val all = live.toSet()
         val order = (worktreeOrder.filter { it in set } + paths.filter { it !in worktreeOrder }).distinct()
         val next = names.filterKeys { it in set }
-        return WorktreeState(next, order)
+        val visible = sessionList.filterKeys { it in all }
+        return WorktreeState(next, order, visible)
     }
 }
 
@@ -804,6 +908,21 @@ internal fun managedWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
 }
 
 /**
+ * Kilo-managed worktrees under `.kilo/worktrees/` whose checkout is gone. This is the only reason
+ * [KiloWorktreeRpcApiImpl.sync] runs a prune, so a stale worktree the user keeps somewhere else is
+ * never a reason for the plugin to touch git's administrative files on a polling loop.
+ */
+internal fun staleWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
+    val main = items.firstOrNull { it.main } ?: return emptyList()
+    val storage = Path.of(main.path).normalize().resolve(".kilo").resolve("worktrees").normalize()
+    return items.filter { item ->
+        if (item.main) return@filter false
+        if (Path.of(item.path).normalize().parent != storage) return@filter false
+        item.prunable || !Files.isDirectory(Path.of(item.path))
+    }
+}
+
+/**
  * Worktrees eligible for a PR lookup. The main working tree is included — it can sit on a PR branch
  * just like a linked worktree — while detached heads have no branch to resolve and prunable entries
  * have no checkout left.
@@ -843,9 +962,13 @@ internal fun readWorktreeState(file: Path): WorktreeState {
     return try {
         val raw = Files.readString(file)
         val element = json.parseToJsonElement(raw)
-        if (element is JsonObject && ("names" in element || "worktreeOrder" in element)) {
+        if (element is JsonObject && ("names" in element || "worktreeOrder" in element || "sessionList" in element)) {
             val data = json.decodeFromJsonElement<WorktreeNamesFile>(element)
-            return WorktreeState(data.names.filterValues { it.isNotBlank() }, data.worktreeOrder.filter { it.isNotBlank() })
+            return WorktreeState(
+                data.names.filterValues { it.isNotBlank() },
+                data.worktreeOrder.filter { it.isNotBlank() },
+                data.sessionList.filterKeys { it.isNotBlank() },
+            )
         }
         val names = json.decodeFromJsonElement(codec, element).filterValues { it.isNotBlank() }
         WorktreeState(names, names.keys.toList())
@@ -856,8 +979,8 @@ internal fun readWorktreeState(file: Path): WorktreeState {
 }
 
 internal fun writeWorktreeNames(file: Path, names: Map<String, String>) {
-    val order = readWorktreeState(file).worktreeOrder
-    writeWorktreeState(file, WorktreeState(names, order))
+    val state = readWorktreeState(file)
+    writeWorktreeState(file, state.copy(names = names))
 }
 
 internal fun writeWorktreeState(file: Path, state: WorktreeState) {
@@ -865,6 +988,7 @@ internal fun writeWorktreeState(file: Path, state: WorktreeState) {
     val data = WorktreeNamesFile(
         names = state.names.filterValues { it.isNotBlank() },
         worktreeOrder = state.worktreeOrder.filter { it.isNotBlank() }.distinct(),
+        sessionList = state.sessionList.filterKeys { it.isNotBlank() },
     )
     val tmp = Files.createTempFile(file.parent, ".worktree-names", ".tmp")
     try {
@@ -879,9 +1003,9 @@ internal fun writeWorktreeState(file: Path, state: WorktreeState) {
     }
 }
 
-private fun syncWorktreeState(file: Path, paths: List<String>): WorktreeState {
+private fun syncWorktreeState(file: Path, paths: List<String>, live: List<String>): WorktreeState {
     val state = readWorktreeState(file)
-    val next = state.reconcile(paths)
+    val next = state.reconcile(paths, live)
     if (next == state) return next
     try {
         writeWorktreeState(file, next)
@@ -903,12 +1027,17 @@ private fun removeWorktreeState(file: Path, path: String) {
     val state = readWorktreeState(file)
     val names = state.names.filterKeys { !samePath(it, path) }
     val order = state.worktreeOrder.filter { !samePath(it, path) }
-    if (names == state.names && order == state.worktreeOrder) return
-    writeWorktreeState(file, state.copy(names = names, worktreeOrder = order))
+    val visible = state.sessionList.filterKeys { !samePath(it, path) }
+    if (names == state.names && order == state.worktreeOrder && visible == state.sessionList) return
+    writeWorktreeState(file, state.copy(names = names, worktreeOrder = order, sessionList = visible))
 }
 
 private fun worktreePaths(items: List<WorktreeDto>): List<String> {
     return items.filter { !it.main }.map { it.path }
+}
+
+private fun livePaths(items: List<WorktreeDto>): List<String> {
+    return items.map { it.path }
 }
 
 private fun worktreeNameStore(items: List<WorktreeDto>): Path? {
@@ -923,37 +1052,4 @@ private fun samePath(a: String, b: String): Boolean {
 private fun realPath(path: String): Path {
     val file = Path.of(path).normalize()
     return if (Files.exists(file)) file.toRealPath() else file
-}
-
-private fun countUntracked(base: Path, rel: String): Int {
-    return runCatching {
-        val path = base.resolve(rel).normalize()
-        if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > 2 * 1024 * 1024L) return@runCatching 0
-        countLines(path) ?: 0
-    }.getOrElse { err ->
-        KiloWorktreeRpcApiImpl.LOG.debug { "worktree stats untracked read failed: path=$rel message=${err.message}" }
-        0
-    }
-}
-
-private fun countLines(path: Path): Int? {
-    var newlines = 0
-    var last = 0
-    var any = false
-    path.inputStream().buffered().use { input ->
-        val buf = ByteArray(8192)
-        while (true) {
-            val n = input.read(buf)
-            if (n <= 0) break
-            any = true
-            for (i in 0 until n) {
-                val b = buf[i].toInt()
-                if (b == 0) return null
-                if (b == '\n'.code) newlines++
-            }
-            last = buf[n - 1].toInt()
-        }
-    }
-    if (!any) return 0
-    return if (last == '\n'.code) newlines else newlines + 1
 }

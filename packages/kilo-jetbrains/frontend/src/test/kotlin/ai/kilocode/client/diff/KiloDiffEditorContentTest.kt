@@ -497,6 +497,105 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test comparisons validate without sessions and have distinct titles`() {
+        for (comparison in KiloDiffComparison.entries) {
+            assertTrue(KiloDiffEditorKind.isValid(mapOf("source" to comparison.source, "directory" to "/repo")))
+            assertFalse(KiloDiffEditorKind.isValid(mapOf("source" to comparison.source, "directory" to " ")))
+            assertFalse(KiloDiffEditorKind.isValid(mapOf("source" to comparison.source)))
+            assertEquals(comparison.title(null), KiloDiffEditorKind.title(mapOf("source" to comparison.source)))
+            assertEquals(
+                comparison.title("feature/topic"),
+                KiloDiffEditorKind.title(mapOf("source" to comparison.source, "branch" to "feature/topic")),
+            )
+        }
+        assertFalse(KiloDiffComparison.BASE.title(null) == KiloDiffComparison.LOCAL.title(null))
+        assertFalse(KiloDiffEditorKind.isValid(mapOf("source" to "session", "directory" to "/repo")))
+    }
+
+    fun `test comparison panes match source and authoritative contents survive refresh`() {
+        for (source in listOf("branch", "local")) {
+            val labels = diffLabels(source)
+            assertEquals(
+                if (source == "branch") listOf("Base", "HEAD") else listOf("HEAD", "Working tree"),
+                labels.toList(),
+            )
+
+            val first = file("src/App.kt", 1, 1).copy(before = "original revision\n", after = "compared revision\n")
+            val shown = diffRequest(project, first, labels = labels) as SimpleDiffRequest
+            assertEquals(labels.toList(), shown.contentTitles)
+            assertEquals(listOf(first.before, first.after), shown.contents.map(::content))
+
+            // A pure rename (no textual hunk) must still render its authoritative revision contents.
+            val renamed = file("src/Renamed.kt", 0, 0, patch = null, status = "renamed").copy(before = "unchanged\n", after = "unchanged\n")
+            val refreshed = diffRequest(project, renamed, labels = labels) as SimpleDiffRequest
+            assertEquals(labels.toList(), refreshed.contentTitles)
+            assertEquals(listOf(renamed.before, renamed.after), refreshed.contents.map(::content))
+        }
+    }
+
+    fun `test refreshing to a zero line rename keeps it visible and selectable in the tree`() {
+        val parent = Disposer.newDisposable(testRootDisposable)
+        try {
+            val editor = editor(listOf(file("src/App.kt", 1, 1)), parent, source = "branch")
+            val tree = components(editor.component).filterIsInstance<Tree>().single()
+            assertEquals("App.kt", text(tree, leaf(tree)))
+
+            val renamed = file("src/Renamed.kt", 0, 0, patch = null, status = "renamed")
+            editor.applyFiles(listOf(renamed))
+
+            val refreshedTree = components(editor.component).filterIsInstance<Tree>().single()
+            assertEquals("Renamed.kt", text(refreshedTree, leaf(refreshedTree)))
+            assertSame(leaf(refreshedTree), refreshedTree.lastSelectedPathComponent)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test git comparison refresh leaves unsaved editor buffers untouched`() {
+        val psi = myFixture.addFileToProject("src/App.kt", "saved\n")
+        val manager = FileDocumentManager.getInstance()
+        val doc = manager.getDocument(psi.virtualFile)!!
+        ApplicationManager.getApplication().runWriteAction { doc.setText("unsaved\n") }
+        for (source in listOf("branch", "local")) {
+            val parent = Disposer.newDisposable(testRootDisposable)
+            try {
+                val editor = editor(files(), parent, dir = psi.virtualFile.parent.parent.path, source = source)
+                editor.refresh()
+                assertTrue(manager.isDocumentUnsaved(doc))
+                assertEquals("unsaved\n", doc.text)
+            } finally {
+                Disposer.dispose(parent)
+            }
+        }
+    }
+
+    fun `test session refresh still saves unsaved editor buffers`() {
+        val psi = myFixture.addFileToProject("src/App.kt", "saved\n")
+        val manager = FileDocumentManager.getInstance()
+        val doc = manager.getDocument(psi.virtualFile)!!
+        ApplicationManager.getApplication().runWriteAction { doc.setText("unsaved\n") }
+        val parent = Disposer.newDisposable(testRootDisposable)
+        try {
+            val editor = editor(files(), parent, dir = psi.virtualFile.parent.parent.path, source = "session")
+            editor.refresh()
+            assertFalse(manager.isDocumentUnsaved(doc))
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test disposing comparison views cancels pending refreshes`() {
+        for (source in listOf("branch", "local")) {
+            val parent = Disposer.newDisposable(testRootDisposable)
+            val job = Job()
+            val editor = editor(files(), parent, source = source) { job }
+            editor.refresh()
+            assertTrue(job.isActive)
+            Disposer.dispose(parent)
+            assertTrue(job.isCancelled)
+        }
+    }
+
     fun `test reverse sync skips active requested path`() {
         assertNull(reverseSyncTarget("src/App.kt", "src/App.kt", "test/AppTest.kt"))
     }
@@ -551,13 +650,14 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         files: List<DiffFileDto>,
         parent: Disposable,
         dir: String = project.basePath.orEmpty(),
+        source: String = "branch",
         load: ((DiffEditorData) -> Unit) -> Job = { Job().also { it.complete() } },
     ): DiffEditorView {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         Disposer.register(parent) { scope.cancel() }
         return DiffEditorView(
             project,
-            mapOf("directory" to dir, "source" to "branch"),
+            mapOf("directory" to dir, "source" to source),
             files,
             parent,
             "feature/test",

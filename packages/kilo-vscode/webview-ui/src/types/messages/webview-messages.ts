@@ -6,17 +6,13 @@ import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
+import type { BrowserFeedbackData } from "../../../../src/shared/browser-feedback"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
-import type {
-  ClearLegacyDataMessage,
-  FinalizeLegacyMigrationMessage,
-  RequestMigrationDataMessage,
-  SkipLegacyMigrationMessage,
-  StartMigrationMessage,
-} from "./migration"
+import type { RequestMigrationDataMessage, StartMigrationMessage } from "./migration"
 import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
+import type { Activity } from "../../utils/session-activity"
 
 // ============================================
 // Messages FROM webview TO extension
@@ -35,8 +31,16 @@ export interface SendMessageRequest {
   variant?: string
   files?: FileAttachment[]
   review?: ReviewMessageData
+  browserFeedback?: BrowserFeedbackData
   agentManagerContext?: string
   contextDirectory?: string
+}
+
+export interface ResumeSessionRequest {
+  type: "resumeSession"
+  sessionID: string
+  messageID: string
+  requestID: string
 }
 
 export interface AbortRequest {
@@ -79,6 +83,7 @@ export interface DeleteMessageRequest {
   type: "deleteMessage"
   sessionID: string
   messageID: string
+  requestID?: string
 }
 
 export interface PermissionResponseRequest {
@@ -144,6 +149,7 @@ export interface ImportAndSendMessage {
   variant?: string
   files?: FileAttachment[]
   review?: ReviewMessageData
+  browserFeedback?: BrowserFeedbackData
   command?: string
   commandArgs?: string
 }
@@ -1256,6 +1262,28 @@ export interface AgentManagerVisibleSessionMessage {
   sessionID: string | null
 }
 
+export interface AgentManagerBrowserRequestMessage {
+  type:
+    | "agentManager.browser.open"
+    | "agentManager.browser.refresh"
+    | "agentManager.browser.close"
+    | "agentManager.browser.state"
+    | "agentManager.browser.inspect"
+    | "agentManager.browser.input"
+    | "agentManager.browser.devtools"
+  sessionId: string
+  projectId?: string
+  url?: string
+  requestId?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  hover?: boolean
+  click?: boolean
+  theme?: "dark" | "light"
+}
+
 export interface RequestAutoApproveStateMessage {
   type: "requestAutoApproveState"
 }
@@ -1490,11 +1518,13 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | { type: "sessionActivity"; state: Activity }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCloseMessage
   | DocumentSendCommentsMessage
   | SendMessageRequest
+  | ResumeSessionRequest
   | AbortRequest
   | RequestBackgroundJobsMessage
   | CancelBackgroundJobMessage
@@ -1658,13 +1688,8 @@ export type WebviewMessage =
   | RefreshPRMessage
   | OpenPRMessage
   | CommentActionMessage
-  // legacy-migration start
   | RequestMigrationDataMessage
   | StartMigrationMessage
-  | SkipLegacyMigrationMessage
-  | ClearLegacyDataMessage
-  | FinalizeLegacyMigrationMessage
-  // legacy-migration end
   | ApplyWorktreeDiffMessage
   | RevertWorktreeFileMessage
   | EnhancePromptRequest
@@ -1688,6 +1713,7 @@ export type WebviewMessage =
   | AgentManagerOpenSessionsMessage
   | SidebarOpenSessionsMessage
   | AgentManagerVisibleSessionMessage
+  | AgentManagerBrowserRequestMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage
