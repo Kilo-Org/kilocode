@@ -894,6 +894,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
+  "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
+  "settings.experimental.taskModelSelection.description":
+    "Omogućava izričit odabir modela, provajdera i napora zaključivanja za Task podagente.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",

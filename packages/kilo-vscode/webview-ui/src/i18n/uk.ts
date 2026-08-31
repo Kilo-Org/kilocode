@@ -884,6 +884,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
+  "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
+  "settings.experimental.taskModelSelection.description":
+    "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",

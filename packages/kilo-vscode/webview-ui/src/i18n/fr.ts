@@ -915,6 +915,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
   "settings.experimental.multiProject.description":
     "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
+  "settings.experimental.taskModelSelection.title": "Sélection du modèle des sous-agents Task",
+  "settings.experimental.taskModelSelection.description":
+    "Permet de sélectionner explicitement le modèle, le fournisseur et l'effort de raisonnement des sous-agents Task.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",

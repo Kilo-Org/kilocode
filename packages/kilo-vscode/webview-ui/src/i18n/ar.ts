@@ -871,6 +871,9 @@ export const dict = {
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
+  "settings.experimental.taskModelSelection.title": "اختيار نموذج الوكيل الفرعي لـ Task",
+  "settings.experimental.taskModelSelection.description":
+    "السماح باختيار النموذج والمزوّد ومستوى الاستدلال صراحةً للوكلاء الفرعيين في Task.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
