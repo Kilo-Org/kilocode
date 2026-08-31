@@ -897,11 +897,23 @@ private data class ActiveListHeightRow(
     val description: String?,
     val icon: Any?,
     val section: String?,
-    val badges: List<ActiveListBadge>,
+    val badges: List<ActiveListHeightBadge>,
     val trailing: String?,
     val cells: List<ActiveListCell>,
     val disabled: Boolean,
     val progress: String?,
+)
+
+/**
+ * The parts of a badge that can change how tall a row wants to be. [ActiveListBadge.action] and its
+ * tooltip are deliberately left out: an owner is free to build the handler while answering `badges`,
+ * and a fresh lambda per read would make the height key miss on every sync.
+ */
+private data class ActiveListHeightBadge(
+    val text: String,
+    val style: UiStyle.Badge.Style,
+    val id: String?,
+    val icon: Any?,
 )
 
 private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
@@ -912,7 +924,7 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
         item.description,
         item.icon,
         item.section,
-        item.badges,
+        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon) },
         item.trailing,
         item.cells,
         item.disabled,
