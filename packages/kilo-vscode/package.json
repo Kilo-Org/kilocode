@@ -1073,7 +1073,7 @@
         "kilo-code.new.agentManager.terminalButtonDestination": {
           "type": "string",
           "scope": "application",
-          "default": "vscode",
+          "default": "agentManager",
           "enum": [
             "vscode",
             "agentManager"
