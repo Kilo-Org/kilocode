@@ -73,10 +73,30 @@ internal class OnboardingDialog(
     internal val rail = JBList(listModel)
     private val right = JPanel(BorderLayout())
 
+    /**
+     * Longer per-step explanation, shown above the selected step's own content.
+     *
+     * `setCopyable` is what switches [JBLabel] to its editor-pane path; `allowAutoWrapping` is only
+     * honoured there, so both are needed for the text to wrap instead of ellipsizing.
+     */
+    internal val detail = JBLabel().apply {
+        foreground = UiStyle.Colors.weak()
+        border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
+        setCopyable(true)
+        setAllowAutoWrapping(true)
+    }
+
     internal val laterButton = button(KiloBundle.message("onboarding.button.later")) { onLater() }
     internal val skipButton = button(KiloBundle.message("onboarding.button.skip")) { onSkip() }
     internal val runButton = button(KiloBundle.message("onboarding.button.run"), primary = true) { onRun() }
     internal val nextButton = button(KiloBundle.message("onboarding.button.next"), primary = true) { onNext() }
+
+    /** Retained footer row. Order matches the session list card's Skip All / Later / Start. */
+    internal val footer = Stack.horizontal(gap = UiStyle.Gap.sm())
+        .next(skipButton)
+        .next(laterButton)
+        .next(runButton)
+        .next(nextButton)
 
     init {
         title = KiloBundle.message("onboarding.dialog.title")
@@ -147,17 +167,10 @@ internal class OnboardingDialog(
 
     override fun createActions(): Array<Action> = emptyArray()
 
-    override fun createSouthPanel(): JComponent {
-        val actions = Stack.horizontal(gap = UiStyle.Gap.sm())
-            .next(laterButton)
-            .next(skipButton)
-            .next(runButton)
-            .next(nextButton)
-        return JPanel(BorderLayout()).apply {
-            isOpaque = false
-            border = JBUI.Borders.empty(UiStyle.Gap.pad())
-            add(actions, BorderLayout.EAST)
-        }
+    override fun createSouthPanel(): JComponent = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(UiStyle.Gap.pad())
+        add(footer, BorderLayout.EAST)
     }
 
     override fun getPreferredFocusedComponent(): JComponent = rail
@@ -201,6 +214,10 @@ internal class OnboardingDialog(
     private fun syncSelection() {
         val entry = selectedEntry() ?: return
         right.removeAll()
+        // The step's longer `detail` text lives here rather than in the session list card, which
+        // only shows the short title.
+        detail.text = entry.step.need.detail
+        right.add(detail, BorderLayout.NORTH)
         right.add(entry.view.component, BorderLayout.CENTER)
         right.revalidate()
         right.repaint()

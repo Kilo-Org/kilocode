@@ -30,7 +30,7 @@ class MigrationOnboardingProvider(private val migration: MigrationUiController) 
         migration.state.value as? MigrationUiState.Needed ?: return null
         return OnboardingNeed(
             title = KiloBundle.message("onboarding.migration.title"),
-            summary = KiloBundle.message("onboarding.migration.summary"),
+            detail = KiloBundle.message("onboarding.migration.detail"),
         )
     }
 

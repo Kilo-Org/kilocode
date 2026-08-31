@@ -7,10 +7,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 
 /**
- * A single onboarding need discovered by a provider: a title for the step rail / list card, and a
- * plain-text summary of what would run if the user proceeds.
+ * A single onboarding need discovered by a provider.
+ *
+ * The two strings serve different surfaces and should read differently:
+ * - [title] is a short label — one bullet in the session list card, one row in the dialog's step
+ *   rail. Keep it to a few words, e.g. "Migrate from Kilo v5".
+ * - [detail] is the longer explanation shown only in the dedicated dialog UI, above the step's own
+ *   content, e.g. "We found settings from your previous installation...".
  */
-data class OnboardingNeed(val title: String, val summary: String)
+data class OnboardingNeed(val title: String, val detail: String)
 
 /**
  * Run-state of one onboarding step's content, owned and reported by the provider's own

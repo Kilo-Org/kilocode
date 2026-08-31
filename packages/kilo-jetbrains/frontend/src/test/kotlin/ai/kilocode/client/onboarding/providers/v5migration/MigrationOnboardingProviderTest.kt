@@ -25,7 +25,10 @@ class MigrationOnboardingProviderTest : BasePlatformTestCase() {
         controller._state.value = MigrationUiState.Needed(detection = sampleDetection())
         val need = provider.detect()
         assertNotNull(need)
-        assertEquals("Migrate from v5", need!!.title)
+        // Short label for the session card bullet and the dialog rail.
+        assertEquals("Migrate from Kilo v5", need!!.title)
+        // Longer text, shown only in the dedicated dialog UI.
+        assertTrue(need.detail.startsWith("We found settings from your previous installation"))
     }
 
     fun `test detect returns null when hidden`() = runBlocking {

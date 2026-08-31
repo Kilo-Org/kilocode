@@ -6,16 +6,27 @@ import ai.kilocode.client.onboarding.FakeOnboardingStepView
 import ai.kilocode.client.onboarding.OnboardingNeed
 import ai.kilocode.client.onboarding.OnboardingRunState
 import ai.kilocode.client.onboarding.OnboardingStep
+import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 
 @Suppress("UnstableApiUsage")
 class OnboardingDialogTest : BasePlatformTestCase() {
 
-    private fun step(id: String) = OnboardingStep(id, OnboardingNeed("Title $id", "Summary $id"), blocking = true)
+    private fun step(id: String) = OnboardingStep(id, OnboardingNeed("Title $id", "Detail $id"), blocking = true)
 
     /** Drains posted EDT work so the dialog's coroutine-driven run-state watcher has applied. */
     private fun settle() = UIUtil.dispatchAllInvocationEvents()
+
+    /** Buttons in visual (component tree) order. */
+    private fun buttons(root: java.awt.Container): List<javax.swing.JButton> {
+        val found = mutableListOf<javax.swing.JButton>()
+        for (child in root.components) {
+            if (child is javax.swing.JButton) found.add(child)
+            if (child is java.awt.Container) found.addAll(buttons(child))
+        }
+        return found
+    }
 
     fun `test idle step shows later skip run and run is enabled when ready`() {
         val view = FakeOnboardingStepView(ready = true)
@@ -28,6 +39,21 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         assertTrue(dialog.runButton.isVisible)
         assertTrue(dialog.runButton.isEnabled)
         assertFalse(dialog.nextButton.isVisible)
+    }
+
+    fun `test dialog shows the selected step's long detail text`() {
+        val viewA = FakeOnboardingStepView(ready = true)
+        val viewB = FakeOnboardingStepView(ready = true)
+        val providerA = FakeOnboardingProvider("a", newView = { viewA })
+        val providerB = FakeOnboardingProvider("b", newView = { viewB })
+        val controller = FakeOnboardingController(mapOf("a" to providerA, "b" to providerB))
+        val dialog = OnboardingDialog(controller, listOf(step("a"), step("b"))) {}
+
+        // The long detail belongs to this dedicated UI, not the session list card.
+        assertEquals("Detail a", dialog.detail.text)
+
+        dialog.rail.setSelectedValue("b", true)
+        assertEquals("Detail b", dialog.detail.text)
     }
 
     fun `test step state present at construction is reflected without any edt pump`() {
@@ -44,6 +70,25 @@ class OnboardingDialogTest : BasePlatformTestCase() {
         assertFalse(dialog.laterButton.isVisible)
         assertFalse(dialog.skipButton.isVisible)
         assertTrue(dialog.nextButton.isVisible)
+    }
+
+    fun `test footer buttons are ordered skip then later then run`() {
+        val view = FakeOnboardingStepView(ready = true)
+        val provider = FakeOnboardingProvider("a", newView = { view })
+        val controller = FakeOnboardingController(mapOf("a" to provider))
+        val dialog = OnboardingDialog(controller, listOf(step("a"))) {}
+
+        // Matches the session list card's Skip All / Later / Start ordering. Read off the real
+        // footer container, so this reflects child/layout order.
+        val labels = buttons(dialog.footer).filter { it.isVisible }.map { it.text }
+        assertEquals(
+            listOf(
+                KiloBundle.message("onboarding.button.skip"),
+                KiloBundle.message("onboarding.button.later"),
+                KiloBundle.message("onboarding.button.run"),
+            ),
+            labels,
+        )
     }
 
     fun `test run disabled when step not ready`() {

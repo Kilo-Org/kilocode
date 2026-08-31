@@ -105,7 +105,7 @@ class SessionUiOnboardingTest : SessionUiTestBase() {
 
     private fun sampleStep(blocking: Boolean = true) = OnboardingStep(
         id = "sample",
-        need = OnboardingNeed(title = "Migrate from v5", summary = "We found settings to bring over."),
+        need = OnboardingNeed(title = "Migrate from Kilo v5", detail = "We found settings to bring over."),
         blocking = blocking,
     )
 }

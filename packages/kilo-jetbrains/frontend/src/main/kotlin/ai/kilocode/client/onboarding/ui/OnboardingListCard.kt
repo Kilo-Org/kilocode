@@ -27,11 +27,11 @@ class OnboardingListCard : DialogView() {
         setHeader(KiloBundle.message("onboarding.list.title"))
         setActions(
             listOf(
-                DialogView.Action(ACTION_LATER, KiloBundle.message("onboarding.button.later"), primary = false) {
-                    onLater?.invoke()
-                },
                 DialogView.Action(ACTION_SKIP_ALL, KiloBundle.message("onboarding.button.skipAll"), primary = false) {
                     onSkipAll?.invoke()
+                },
+                DialogView.Action(ACTION_LATER, KiloBundle.message("onboarding.button.later"), primary = false) {
+                    onLater?.invoke()
                 },
                 DialogView.Action(ACTION_START, KiloBundle.message("onboarding.button.start"), primary = true) {
                     onStart?.invoke()
@@ -41,11 +41,14 @@ class OnboardingListCard : DialogView() {
     }
 
     /**
-     * Renders the intro plus one bullet per step into the card's description.
+     * Renders the intro plus one short bullet per step into the card's description.
+     *
+     * Only [ai.kilocode.client.onboarding.OnboardingNeed.title] is shown here — the longer
+     * `detail` text belongs to the dedicated dialog UI, and putting it in this narrow card is what
+     * made the bullet wrap over several lines.
      *
      * This deliberately reuses the card's own description text rather than adding per-step labels:
-     * [DialogView] lays that text out width-aware so it wraps, where a plain label would just
-     * ellipsize the step summary.
+     * [DialogView] lays that text out width-aware so it wraps instead of ellipsizing.
      */
     @RequiresEdt
     fun update(steps: List<OnboardingStep>) {
@@ -59,7 +62,7 @@ class OnboardingListCard : DialogView() {
         val intro = KiloBundle.message("onboarding.list.subtitle")
         if (steps.isEmpty()) return intro
         return steps.joinToString(separator = "\n", prefix = "$intro\n\n") {
-            KiloBundle.message("onboarding.list.item", it.need.title, it.need.summary)
+            KiloBundle.message("onboarding.list.item", it.need.title)
         }
     }
 }

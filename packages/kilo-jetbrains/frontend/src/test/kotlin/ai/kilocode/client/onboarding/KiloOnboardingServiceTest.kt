@@ -49,9 +49,9 @@ class KiloOnboardingServiceTest : BasePlatformTestCase() {
     ) { event, props -> telemetry.add(event to props) }
 
     fun `test detection aggregates all providers in order and skips nulls`() {
-        val a = FakeOnboardingProvider("a").apply { need = OnboardingNeed("A", "a summary") }
+        val a = FakeOnboardingProvider("a").apply { need = OnboardingNeed("A", "a detail") }
         val b = FakeOnboardingProvider("b") // need stays null
-        val c = FakeOnboardingProvider("c").apply { need = OnboardingNeed("C", "c summary") }
+        val c = FakeOnboardingProvider("c").apply { need = OnboardingNeed("C", "c detail") }
         val svc = service(a, b, c)
         settle()
 
@@ -64,7 +64,7 @@ class KiloOnboardingServiceTest : BasePlatformTestCase() {
         settle()
         assertTrue(svc.steps.value.isEmpty())
 
-        a.need = OnboardingNeed("A", "a summary")
+        a.need = OnboardingNeed("A", "a detail")
         app.value = KiloAppStateDto(KiloAppStatusDto.READY)
         settle()
         assertEquals(listOf("a"), svc.steps.value.map { it.id })
@@ -77,7 +77,7 @@ class KiloOnboardingServiceTest : BasePlatformTestCase() {
         settle()
         assertTrue(svc.steps.value.isEmpty())
 
-        a.need = OnboardingNeed("A", "a summary")
+        a.need = OnboardingNeed("A", "a detail")
         scope.launch { invalidate.emit(Unit) }
         settle()
         assertEquals(listOf("a"), svc.steps.value.map { it.id })
@@ -86,7 +86,7 @@ class KiloOnboardingServiceTest : BasePlatformTestCase() {
     fun `test identical detection does not re-emit steps`() {
         val invalidate = MutableSharedFlow<Unit>()
         val a = FakeOnboardingProvider("a", invalidateFlow = invalidate).apply {
-            need = OnboardingNeed("A", "a summary")
+            need = OnboardingNeed("A", "a detail")
         }
         val svc = service(a)
         settle()
@@ -98,7 +98,7 @@ class KiloOnboardingServiceTest : BasePlatformTestCase() {
     }
 
     fun `test later defers for this run and calls provider later`() {
-        val a = FakeOnboardingProvider("a").apply { need = OnboardingNeed("A", "a summary") }
+        val a = FakeOnboardingProvider("a").apply { need = OnboardingNeed("A", "a detail") }
         val svc = service(a)
         settle()
         assertEquals(1, svc.steps.value.size)
@@ -116,8 +116,8 @@ class KiloOnboardingServiceTest : BasePlatformTestCase() {
     }
 
     fun `test skipAll calls skip on every current step`() {
-        val a = FakeOnboardingProvider("a").apply { need = OnboardingNeed("A", "a summary") }
-        val b = FakeOnboardingProvider("b").apply { need = OnboardingNeed("B", "b summary") }
+        val a = FakeOnboardingProvider("a").apply { need = OnboardingNeed("A", "a detail") }
+        val b = FakeOnboardingProvider("b").apply { need = OnboardingNeed("B", "b detail") }
         val svc = service(a, b)
         settle()
         assertEquals(2, svc.steps.value.size)
@@ -141,7 +141,7 @@ class KiloOnboardingServiceTest : BasePlatformTestCase() {
         val svc = service(a)
         settle()
 
-        a.need = OnboardingNeed("A", "a summary")
+        a.need = OnboardingNeed("A", "a detail")
         app.value = KiloAppStateDto(KiloAppStatusDto.READY)
         settle()
 
